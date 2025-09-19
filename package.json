@@ -1,0 +1,13 @@
+{
+  "name": "sendgrid-test",
+  "version": "1.0.0",
+  "description": "SendGrid email test",
+  "main": "sendgrid_test.js",
+  "scripts": {
+    "test": "node sendgrid_test.js"
+  },
+  "dependencies": {
+    "@sendgrid/mail": "^7.7.0",
+    "dotenv": "^16.0.3"
+  }
+}

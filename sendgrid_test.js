@@ -90,8 +90,6 @@ P.S. 이번 달 신규 가입 시 첫 달 50% 할인 혜택을 제공합니다.
               <!-- Header -->
               <tr>
                 <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; border-radius: 12px 12px 0 0; text-align: center;">
-                  <!-- 로고 이미지 (URL을 실제 로고 URL로 변경하세요) -->
-                  <img src="https://example.com/logo.png" alt="린다 뷰티" style="max-width: 150px; height: auto; margin-bottom: 20px;">
                   <h1 style="color: #ffffff; font-size: 28px; margin: 0 0 10px 0; font-weight: bold;">린다 뷰티</h1>
                   <p style="color: #ffffff; font-size: 16px; margin: 0; opacity: 0.95;">K-뷰티 글로벌 진출 AI 자동화 솔루션</p>
                 </td>

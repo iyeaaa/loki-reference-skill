@@ -1,8 +1,12 @@
 const express = require('express');
 const multer = require('multer');
 const dotenv = require('dotenv');
+const sgMail = require('@sendgrid/mail');
 
 dotenv.config();
+
+// SendGrid API 키 설정
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,6 +29,177 @@ function decodeBase64(str) {
     return decoded;
   } catch (error) {
     return null;
+  }
+}
+
+// 자동 답장 이메일 발송 함수
+async function sendAutoReply(toEmail, fromEmail) {
+  const now = new Date();
+  const koreanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+  const formattedTime = koreanTime.toLocaleString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+
+  const msg = {
+    to: fromEmail, // 원래 발신자에게 답장
+    from: {
+      email: 'admin@grinda.ai',
+      name: '그린다에이아이 (GRINDA AI)'
+    },
+    replyTo: 'admin@grinda.ai',
+    subject: 'Re: 문의주셔서 감사합니다 - 그린다에이아이',
+    text: `안녕하세요,
+
+그린다에이아이를 찾아주셔서 감사합니다.
+
+고객님의 소중한 문의를 확인했습니다.
+AI 솔루션 전문 담당자가 확인 후 빠른 시일 내에 답변 드리겠습니다.
+
+그린다에이아이는 금융, 세일즈, 엔터테인먼트, 공공 등 다양한 산업에서 검증된 AI 솔루션을 제공하고 있습니다.
+
+업무시간: 평일 09:00 - 18:00
+일반적으로 24시간 이내 회신 드리고 있습니다.
+
+추가 문의사항이 있으시면 언제든지 연락 주시기 바랍니다.
+
+감사합니다.
+
+그린다에이아이 고객지원팀
+📧 admin@grinda.ai
+📍 대전광역시 유성구 대학로 99 대전팁스타운 503호
+💼 사업자등록번호: 309-88-02709
+
+"AI와, 당신의 비즈니스로 미래를 함께 그립니다"
+
+수신 시간: ${formattedTime}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background-color: #f5f7fa;">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f5f7fa;">
+          <tr>
+            <td align="center" style="padding: 40px 20px;">
+              <table cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+
+                <!-- Header -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; border-radius: 12px 12px 0 0; text-align: center;">
+                    <h1 style="color: #ffffff; font-size: 28px; margin: 0 0 10px 0; font-weight: bold;">GRINDA AI</h1>
+                    <p style="color: #ffffff; font-size: 16px; margin: 0; opacity: 0.95;">문의 접수 확인</p>
+                  </td>
+                </tr>
+
+                <!-- Main Content -->
+                <tr>
+                  <td style="padding: 40px 30px;">
+                    <h2 style="color: #333333; font-size: 24px; margin: 0 0 20px 0;">안녕하세요!</h2>
+
+                    <p style="color: #555555; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0;">
+                      그린다에이아이를 찾아주셔서 감사합니다.
+                    </p>
+
+                    <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 25px 0;">
+                      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0;">
+                        <strong>고객님의 소중한 문의를 확인했습니다.</strong><br>
+                        AI 솔루션 전문 담당자가 확인 후 빠른 시일 내에 답변 드리겠습니다.
+                      </p>
+                    </div>
+
+                    <div style="margin: 30px 0;">
+                      <h3 style="color: #333333; font-size: 18px; margin: 0 0 15px 0;">🚀 그린다에이아이 주요 서비스</h3>
+                      <ul style="color: #666666; font-size: 15px; line-height: 1.8; padding-left: 20px;">
+                        <li><strong>Rinda:</strong> B2B 해외 영업 AI 에이전트</li>
+                        <li><strong>FINGU:</strong> 금융 AI 에이전트</li>
+                        <li><strong>맞춤형 LLM:</strong> 기업 특화 AI 구축</li>
+                      </ul>
+                    </div>
+
+                    <div style="background: #f0f4ff; border-radius: 8px; padding: 20px; margin: 25px 0;">
+                      <h4 style="color: #667eea; font-size: 16px; margin: 0 0 10px 0;">✨ 검증된 성과</h4>
+                      <p style="color: #555555; font-size: 14px; line-height: 1.6; margin: 0;">
+                        • 96% 영업비 절감<br>
+                        • 42개 기업과 함께 성장<br>
+                        • ChatGPT 대비 10배 경제성<br>
+                        • 17개국 다국어 지원
+                      </p>
+                    </div>
+
+                    <div style="margin: 30px 0;">
+                      <h3 style="color: #333333; font-size: 18px; margin: 0 0 15px 0;">📌 안내사항</h3>
+                      <ul style="color: #666666; font-size: 15px; line-height: 1.8; padding-left: 20px;">
+                        <li>업무시간: 평일 09:00 - 18:00</li>
+                        <li>일반적으로 24시간 이내 회신 드리고 있습니다</li>
+                        <li>긴급한 문의는 전화로 연락 주시기 바랍니다</li>
+                      </ul>
+                    </div>
+
+                    <div style="background: #fff4e6; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: center;">
+                      <p style="color: #333333; font-size: 15px; margin: 0 0 10px 0;">
+                        <strong>"AI와, 당신의 비즈니스로 미래를 함께 그립니다"</strong>
+                      </p>
+                      <p style="color: #666666; font-size: 14px; margin: 0;">
+                        추가 문의사항이 있으시면 언제든지 연락 주시기 바랍니다.
+                      </p>
+                    </div>
+
+                    <p style="color: #999999; font-size: 14px; margin: 20px 0 0 0;">
+                      수신 시간: ${formattedTime}
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td style="background: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; border-top: 1px solid #e9ecef;">
+                    <div style="text-align: center;">
+                      <h4 style="color: #667eea; font-size: 18px; margin: 0 0 15px 0;">그린다에이아이 고객지원팀</h4>
+                      <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 5px 0;">
+                        📧 admin@grinda.ai<br>
+                        📍 대전광역시 유성구 대학로 99 대전팁스타운 503호<br>
+                        💼 사업자등록번호: 309-88-02709<br>
+                        🌐 대표: 강호진
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `,
+    trackingSettings: {
+      clickTracking: {
+        enable: false
+      },
+      openTracking: {
+        enable: false
+      }
+    }
+  };
+
+  try {
+    await sgMail.send(msg);
+    console.log(`✅ 자동 답장 이메일 발송 성공: ${fromEmail}`);
+    return true;
+  } catch (error) {
+    console.error('❌ 자동 답장 이메일 발송 실패:', error.message);
+    if (error.response) {
+      console.error('에러 상세:', error.response.body);
+    }
+    return false;
   }
 }
 
@@ -237,6 +412,32 @@ app.post('/webhook/inbound', upload.any(), (req, res) => {
   console.log('\n========================================');
   console.log('         이메일 처리 완료 ✓');
   console.log('========================================\n');
+
+  // 수신인이 admin@grinda.ai 또는 rinda@partners.grinda.ai인 경우 자동 답장 발송
+  if (req.body.to && (req.body.to.includes('admin@grinda.ai') || req.body.to.includes('rinda@partners.grinda.ai'))) {
+    console.log('\n📮 [자동 답장 처리]');
+    console.log('├─ 수신인이 자동 답장 대상으로 확인됨:', req.body.to);
+    console.log('├─ 발신자:', req.body.from);
+
+    // 발신자 이메일 추출 (이메일 형식: "Name <email@example.com>" 또는 "email@example.com")
+    const fromMatch = req.body.from.match(/<(.+)>/) || [null, req.body.from];
+    const fromEmail = fromMatch[1] || req.body.from;
+
+    console.log('├─ 답장 대상 이메일:', fromEmail);
+    console.log('└─ 자동 답장 발송 시작...');
+
+    // 비동기로 자동 답장 발송 (응답 지연 방지)
+    sendAutoReply(req.body.to, fromEmail).then(success => {
+      if (success) {
+        console.log('   → 자동 답장 발송 완료 ✓');
+      } else {
+        console.log('   → 자동 답장 발송 실패 ✗');
+      }
+    });
+  } else {
+    console.log('\n📮 [자동 답장 스킵]');
+    console.log('└─ 수신인이 자동 답장 대상이 아님:', req.body.to);
+  }
 
   // SendGrid에 200 응답 반환
   res.status(200).send('OK');

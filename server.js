@@ -185,10 +185,6 @@ app.post('/webhook/inbound', upload.any(), (req, res) => {
     console.log('\n📄 [Raw Email (MIME)]');
     console.log('└─ 크기:', req.body.email.length, '바이트');
 
-    // 전체 email 필드 출력 (요청에 따라)
-    console.log('\n📧 [Email 필드 전체 내용]');
-    console.log('────────────────────────────────────────');
-
     // Content-Transfer-Encoding 확인 및 디코딩
     const contentEncodingMatch = req.body.email.match(/Content-Transfer-Encoding:\s*(base64|quoted-printable)/i);
     if (contentEncodingMatch && contentEncodingMatch[1].toLowerCase() === 'base64') {
@@ -197,16 +193,13 @@ app.post('/webhook/inbound', upload.any(), (req, res) => {
       if (base64BodyMatch && base64BodyMatch[1]) {
         const decodedContent = decodeBase64(base64BodyMatch[1].trim());
         if (decodedContent) {
-          console.log('📝 디코딩된 이메일 내용:');
+          console.log('\n📝 [디코딩된 이메일 내용]');
+          console.log('────────────────────────────────────────');
           console.log(decodedContent);
           console.log('────────────────────────────────────────');
         }
       }
     }
-
-    console.log('\n📄 원본 Raw Email:');
-    console.log(req.body.email);
-    console.log('────────────────────────────────────────');
   }
 
   // 8. 문자 인코딩

@@ -444,11 +444,47 @@ app.post('/webhook/inbound', upload.any(), (req, res) => {
     const fromMatch = req.body.from.match(/<(.+)>/) || [null, req.body.from];
     const fromEmail = fromMatch[1] || req.body.from;
 
+    // 이메일 제목과 본문 추출
+    const emailSubject = req.body.subject || '제목 없음';
+    let emailContent = req.body.text || '';
+
+    // text가 없는 경우 Raw Email에서 본문 추출 시도
+    if (!emailContent && req.body.email) {
+      const rawEmail = req.body.email;
+
+      // Base64로 인코딩된 text/plain 본문 찾기
+      const plainTextMatch = rawEmail.match(/Content-Type:\s*text\/plain[^]*?\r?\n\r?\n([^]*?)(\r?\n--|\r?\n\r?\nContent-Type:|$)/i);
+      if (plainTextMatch && plainTextMatch[1]) {
+        const extractedText = plainTextMatch[1].trim();
+        // Base64 디코딩 시도
+        const decodedText = decodeBase64(extractedText);
+        emailContent = decodedText || extractedText;
+      }
+
+      // 그래도 없으면 Content-Transfer-Encoding: base64 부분 찾기
+      if (!emailContent) {
+        const base64BodyMatch = rawEmail.match(/Content-Transfer-Encoding:\s*base64\s*\r?\n\r?\n([^]*?)(\r?\n--|\r?\n\r?\nContent-Type:|$)/i);
+        if (base64BodyMatch && base64BodyMatch[1]) {
+          const decodedContent = decodeBase64(base64BodyMatch[1].trim());
+          if (decodedContent) {
+            emailContent = decodedContent;
+          }
+        }
+      }
+    }
+
+    // HTML이 있고 text가 없는 경우 HTML에서 텍스트 추출 (간단한 태그 제거)
+    if (!emailContent && req.body.html) {
+      emailContent = req.body.html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
     console.log('├─ 답장 대상 이메일:', fromEmail);
+    console.log('├─ 이메일 제목:', emailSubject);
+    console.log('├─ 이메일 내용 길이:', emailContent.length, '자');
     console.log('└─ 자동 답장 발송 시작...');
 
     // 비동기로 자동 답장 발송 (응답 지연 방지)
-    sendAutoReply(req.body.to, fromEmail).then(success => {
+    sendAutoReply(req.body.to, fromEmail, emailSubject, emailContent).then(success => {
       if (success) {
         console.log('   → 자동 답장 발송 완료 ✓');
       } else {

@@ -33,7 +33,7 @@ function decodeBase64(str) {
 }
 
 // 자동 답장 이메일 발송 함수
-async function sendAutoReply(toEmail, fromEmail) {
+async function sendAutoReply(toEmail, fromEmail, subject, emailContent) {
   const now = new Date();
   const koreanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
   const formattedTime = koreanTime.toLocaleString('ko-KR', {
@@ -46,38 +46,50 @@ async function sendAutoReply(toEmail, fromEmail) {
     hour12: true
   });
 
+  // 이메일 내용 요약 (최대 200자)
+  const contentSummary = emailContent ?
+    (emailContent.length > 200 ? emailContent.substring(0, 200) + '...' : emailContent) :
+    '(내용 없음)';
+
   const msg = {
     to: fromEmail, // 원래 발신자에게 답장
     from: {
       email: 'rinda@partners.grinda.ai',
-      name: 'Rinda Partners - 그린다에이아이'
+      name: '린다 파트너스 (린다 파트너스)'
     },
     replyTo: 'rinda@partners.grinda.ai',
-    subject: 'Re: 문의주셔서 감사합니다 - Rinda Partners',
+    subject: `Re: ${subject || '문의주셔서 감사합니다'}`,
     text: `안녕하세요,
 
-그린다에이아이를 찾아주셔서 감사합니다.
+린다 파트너스를 찾아주셔서 감사합니다.
 
-고객님의 소중한 문의를 확인했습니다.
-AI 솔루션 전문 담당자가 확인 후 빠른 시일 내에 답변 드리겠습니다.
+"${subject || '제목 없음'}"에 대한 문의를 잘 받았습니다.
 
-그린다에이아이는 금융, 세일즈, 엔터테인먼트, 공공 등 다양한 산업에서 검증된 AI 솔루션을 제공하고 있습니다.
+고객님께서 보내주신 내용을 확인했습니다:
+────────────────────────────────
+${contentSummary}
+────────────────────────────────
 
-업무시간: 평일 09:00 - 18:00
-일반적으로 24시간 이내 회신 드리고 있습니다.
+담당자가 내용을 검토한 후 빠른 시일 내에 자세한 답변을 드리겠습니다.
 
-추가 문의사항이 있으시면 언제든지 연락 주시기 바랍니다.
+그린다에이아이는 AI 기술을 통해 B2B 해외 영업을 자동화하는 Rinda 서비스를 비롯하여,
+금융, 세일즈, 엔터테인먼트 등 다양한 산업에서 검증된 AI 솔루션을 제공하고 있습니다.
+
+📌 업무 안내
+• 업무시간: 평일 09:00 - 18:00
+• 응답시간: 일반적으로 24시간 이내
+• 긴급문의: 업무시간 중 유선 연락 가능
 
 감사합니다.
 
-Rinda Partners 고객지원팀
+린다 파트너스 고객지원팀
 📧 rinda@partners.grinda.ai
 📍 대전광역시 유성구 대학로 99 대전팁스타운 503호
 💼 사업자등록번호: 309-88-02709
 
 "AI와, 당신의 비즈니스로 미래를 함께 그립니다"
 
-수신 시간: ${formattedTime}`,
+접수 시간: ${formattedTime}`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -94,7 +106,7 @@ Rinda Partners 고객지원팀
                 <!-- Header -->
                 <tr>
                   <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; border-radius: 12px 12px 0 0; text-align: center;">
-                    <h1 style="color: #ffffff; font-size: 28px; margin: 0 0 10px 0; font-weight: bold;">Rinda Partners</h1>
+                    <h1 style="color: #ffffff; font-size: 28px; margin: 0 0 10px 0; font-weight: bold;">린다 파트너스</h1>
                     <p style="color: #ffffff; font-size: 16px; margin: 0; opacity: 0.95;">문의 접수 확인</p>
                   </td>
                 </tr>
@@ -105,14 +117,23 @@ Rinda Partners 고객지원팀
                     <h2 style="color: #333333; font-size: 24px; margin: 0 0 20px 0;">안녕하세요!</h2>
 
                     <p style="color: #555555; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0;">
-                      그린다에이아이를 찾아주셔서 감사합니다.
+                      린다 파트너스를 찾아주셔서 감사합니다.
                     </p>
 
                     <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 25px 0;">
                       <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0;">
-                        <strong>고객님의 소중한 문의를 확인했습니다.</strong><br>
-                        AI 솔루션 전문 담당자가 확인 후 빠른 시일 내에 답변 드리겠습니다.
+                        <strong>"${subject || '제목 없음'}"</strong>에 대한 문의를 잘 받았습니다.<br><br>
+                        담당자가 내용을 검토한 후 빠른 시일 내에 자세한 답변을 드리겠습니다.
                       </p>
+                    </div>
+
+                    <div style="background: #f0f4ff; border-radius: 8px; padding: 20px; margin: 25px 0;">
+                      <h4 style="color: #667eea; font-size: 16px; margin: 0 0 10px 0;">📋 고객님께서 보내주신 내용</h4>
+                      <div style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; margin-top: 10px;">
+                        <p style="color: #555555; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">
+                          ${contentSummary.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                        </p>
+                      </div>
                     </div>
 
                     <div style="margin: 30px 0;">
@@ -153,7 +174,7 @@ Rinda Partners 고객지원팀
                     </div>
 
                     <p style="color: #999999; font-size: 14px; margin: 20px 0 0 0;">
-                      수신 시간: ${formattedTime}
+                      접수 시간: ${formattedTime}
                     </p>
                   </td>
                 </tr>
@@ -162,7 +183,7 @@ Rinda Partners 고객지원팀
                 <tr>
                   <td style="background: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; border-top: 1px solid #e9ecef;">
                     <div style="text-align: center;">
-                      <h4 style="color: #667eea; font-size: 18px; margin: 0 0 15px 0;">Rinda Partners 고객지원팀</h4>
+                      <h4 style="color: #667eea; font-size: 18px; margin: 0 0 15px 0;">린다 파트너스 고객지원팀</h4>
                       <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 5px 0;">
                         📧 rinda@partners.grinda.ai<br>
                         📍 대전광역시 유성구 대학로 99 대전팁스타운 503호<br>

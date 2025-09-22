@@ -55,41 +55,29 @@ async function sendAutoReply(toEmail, fromEmail, subject, emailContent) {
     to: fromEmail, // 원래 발신자에게 답장
     from: {
       email: 'rinda@partners.grinda.ai',
-      name: '린다 파트너스 (린다 파트너스)'
+      name: '린다 뷰티 (Rinda Beauty)'
     },
     replyTo: 'rinda@partners.grinda.ai',
-    subject: `Re: ${subject || '문의주셔서 감사합니다'}`,
+    subject: `Re: ${subject || '문의 감사합니다'}`,
     text: `안녕하세요,
 
-린다 파트너스를 찾아주셔서 감사합니다.
+소중한 문의 주셔서 감사합니다.
 
-"${subject || '제목 없음'}"에 대한 문의를 잘 받았습니다.
+[접수 정보]
+제목: ${subject || '제목 없음'}
+내용: ${contentSummary}
+접수시간: ${formattedTime}
 
-고객님께서 보내주신 내용을 확인했습니다:
-────────────────────────────────
-${contentSummary}
-────────────────────────────────
+고객님의 문의사항을 확인했으며, 담당자가 내용을 검토 중입니다.
+24시간 이내 상세한 답변을 드리도록 하겠습니다.
 
-담당자가 내용을 검토한 후 빠른 시일 내에 자세한 답변을 드리겠습니다.
-
-그린다에이아이는 AI 기술을 통해 B2B 해외 영업을 자동화하는 Rinda 서비스를 비롯하여,
-금융, 세일즈, 엔터테인먼트 등 다양한 산업에서 검증된 AI 솔루션을 제공하고 있습니다.
-
-📌 업무 안내
-• 업무시간: 평일 09:00 - 18:00
-• 응답시간: 일반적으로 24시간 이내
-• 긴급문의: 업무시간 중 유선 연락 가능
+빠른 상담을 원하시면 아래 링크를 통해 추가 정보를 확인하실 수 있습니다.
+https://rinda.ai/all-in-one
 
 감사합니다.
 
-린다 파트너스 고객지원팀
-📧 rinda@partners.grinda.ai
-📍 대전광역시 유성구 대학로 99 대전팁스타운 503호
-💼 사업자등록번호: 309-88-02709
-
-"AI와, 당신의 비즈니스로 미래를 함께 그립니다"
-
-접수 시간: ${formattedTime}`,
+린다 고객지원팀
+rinda@partners.grinda.ai`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -106,75 +94,77 @@ ${contentSummary}
                 <!-- Header -->
                 <tr>
                   <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; border-radius: 12px 12px 0 0; text-align: center;">
-                    <h1 style="color: #ffffff; font-size: 28px; margin: 0 0 10px 0; font-weight: bold;">린다 파트너스</h1>
-                    <p style="color: #ffffff; font-size: 16px; margin: 0; opacity: 0.95;">문의 접수 확인</p>
+                    <h1 style="color: #ffffff; font-size: 28px; margin: 0 0 10px 0; font-weight: bold;">RINDA</h1>
+                    <p style="color: #ffffff; font-size: 14px; margin: 0; opacity: 0.9;">K-Beauty Global Sales Automation</p>
                   </td>
                 </tr>
 
                 <!-- Main Content -->
                 <tr>
                   <td style="padding: 40px 30px;">
-                    <h2 style="color: #333333; font-size: 24px; margin: 0 0 20px 0;">안녕하세요!</h2>
-
-                    <p style="color: #555555; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0;">
-                      린다 파트너스를 찾아주셔서 감사합니다.
-                    </p>
-
-                    <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 25px 0;">
-                      <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0;">
-                        <strong>"${subject || '제목 없음'}"</strong>에 대한 문의를 잘 받았습니다.<br><br>
-                        담당자가 내용을 검토한 후 빠른 시일 내에 자세한 답변을 드리겠습니다.
+                    <div style="margin: 0 0 25px 0;">
+                      <h2 style="color: #333333; font-size: 20px; margin: 0 0 10px 0;">안녕하세요,</h2>
+                      <p style="color: #555555; font-size: 15px; line-height: 1.6; margin: 0;">
+                        소중한 문의 주셔서 감사합니다.
                       </p>
                     </div>
 
-                    <div style="background: #f0f4ff; border-radius: 8px; padding: 20px; margin: 25px 0;">
-                      <h4 style="color: #667eea; font-size: 16px; margin: 0 0 10px 0;">📋 고객님께서 보내주신 내용</h4>
-                      <div style="background: #ffffff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; margin-top: 10px;">
-                        <p style="color: #555555; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">
-                          ${contentSummary.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                    <!-- 접수 정보 -->
+                    <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 0 0 25px 0;">
+                      <h3 style="color: #667eea; font-size: 16px; margin: 0 0 15px 0;">📋 접수 정보</h3>
+
+                      <div style="margin-bottom: 12px;">
+                        <span style="color: #999999; font-size: 13px;">제목</span>
+                        <p style="color: #333333; font-size: 15px; margin: 5px 0 0 0; font-weight: 500;">
+                          ${subject || '제목 없음'}
+                        </p>
+                      </div>
+
+                      <div style="margin-bottom: 12px;">
+                        <span style="color: #999999; font-size: 13px;">내용</span>
+                        <div style="background: #ffffff; border: 1px solid #e9ecef; border-radius: 4px; padding: 12px; margin-top: 5px;">
+                          <p style="color: #555555; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap; text-align: left;">
+                            ${contentSummary.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <span style="color: #999999; font-size: 13px;">접수시간</span>
+                        <p style="color: #666666; font-size: 14px; margin: 5px 0 0 0;">
+                          ${formattedTime}
                         </p>
                       </div>
                     </div>
 
-                    <div style="margin: 30px 0;">
-                      <h3 style="color: #333333; font-size: 18px; margin: 0 0 15px 0;">🚀 그린다에이아이 주요 서비스</h3>
-                      <ul style="color: #666666; font-size: 15px; line-height: 1.8; padding-left: 20px;">
-                        <li><strong>Rinda:</strong> B2B 해외 영업 AI 에이전트</li>
-                        <li><strong>FINGU:</strong> 금융 AI 에이전트</li>
-                        <li><strong>맞춤형 LLM:</strong> 기업 특화 AI 구축</li>
-                      </ul>
-                    </div>
-
-                    <div style="background: #f0f4ff; border-radius: 8px; padding: 20px; margin: 25px 0;">
-                      <h4 style="color: #667eea; font-size: 16px; margin: 0 0 10px 0;">✨ 검증된 성과</h4>
-                      <p style="color: #555555; font-size: 14px; line-height: 1.6; margin: 0;">
-                        • 96% 영업비 절감<br>
-                        • 42개 기업과 함께 성장<br>
-                        • ChatGPT 대비 10배 경제성<br>
-                        • 17개국 다국어 지원
+                    <!-- 처리 안내 -->
+                    <div style="background: #f0f4ff; border-left: 3px solid #667eea; padding: 15px; margin: 0 0 25px 0;">
+                      <p style="color: #333333; font-size: 15px; line-height: 1.6; margin: 0;">
+                        <strong>고객님의 문의사항을 확인했습니다.</strong><br>
+                        담당자가 내용을 검토 후 <strong>24시간 이내</strong> 상세한 답변을 드리겠습니다.
                       </p>
                     </div>
 
-                    <div style="margin: 30px 0;">
-                      <h3 style="color: #333333; font-size: 18px; margin: 0 0 15px 0;">📌 안내사항</h3>
-                      <ul style="color: #666666; font-size: 15px; line-height: 1.8; padding-left: 20px;">
-                        <li>업무시간: 평일 09:00 - 18:00</li>
-                        <li>일반적으로 24시간 이내 회신 드리고 있습니다</li>
-                        <li>긴급한 문의는 전화로 연락 주시기 바랍니다</li>
-                      </ul>
+                    <!-- 간단한 서비스 안내 -->
+                    <div style="border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin: 0 0 25px 0;">
+                      <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 0;">
+                        린다는 K-뷰티 브랜드의 해외 진출을 돕는 AI 자동화 서비스입니다.<br>
+                        궁금하신 점이 있으시면 아래 링크에서 자세한 정보를 확인하실 수 있습니다.
+                      </p>
+                      <div style="text-align: center; margin-top: 20px;">
+                        <a href="https://rinda.ai/all-in-one" style="display: inline-block; background: #667eea; color: #ffffff; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-size: 14px;">
+                          서비스 자세히 보기
+                        </a>
+                      </div>
                     </div>
 
-                    <div style="background: #fff4e6; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: center;">
-                      <p style="color: #333333; font-size: 15px; margin: 0 0 10px 0;">
-                        <strong>"AI와, 당신의 비즈니스로 미래를 함께 그립니다"</strong>
-                      </p>
-                      <p style="color: #666666; font-size: 14px; margin: 0;">
-                        추가 문의사항이 있으시면 언제든지 연락 주시기 바랍니다.
-                      </p>
-                    </div>
+                    <p style="color: #555555; font-size: 14px; line-height: 1.8; margin: 20px 0;">
+                      추가 문의사항이 있으시면 이 메일에 회신해 주세요.<br>
+                      감사합니다.
+                    </p>
 
-                    <p style="color: #999999; font-size: 14px; margin: 20px 0 0 0;">
-                      접수 시간: ${formattedTime}
+                    <p style="color: #555555; font-size: 14px; margin: 30px 0 0 0;">
+                      <strong>린다 고객지원팀</strong>
                     </p>
                   </td>
                 </tr>
@@ -183,12 +173,9 @@ ${contentSummary}
                 <tr>
                   <td style="background: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; border-top: 1px solid #e9ecef;">
                     <div style="text-align: center;">
-                      <h4 style="color: #667eea; font-size: 18px; margin: 0 0 15px 0;">린다 파트너스 고객지원팀</h4>
-                      <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 5px 0;">
-                        📧 rinda@partners.grinda.ai<br>
-                        📍 대전광역시 유성구 대학로 99 대전팁스타운 503호<br>
-                        💼 사업자등록번호: 309-88-02709<br>
-                        🌐 대표: 강호진
+                      <p style="color: #999999; font-size: 13px; line-height: 1.6; margin: 5px 0;">
+                        📧 rinda@partners.grinda.ai | 🌐 www.rinda.ai<br>
+                        © 2025 Rinda. All rights reserved.
                       </p>
                     </div>
                   </td>

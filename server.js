@@ -17,6 +17,17 @@ const upload = multer({
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
+// Base64 디코딩 헬퍼 함수
+function decodeBase64(str) {
+  try {
+    // Base64 디코딩
+    const decoded = Buffer.from(str, 'base64').toString('utf-8');
+    return decoded;
+  } catch (error) {
+    return null;
+  }
+}
+
 // 헬스체크 엔드포인트
 app.get('/health', (req, res) => {
   res.json({
@@ -61,18 +72,63 @@ app.post('/webhook/inbound', upload.any(), (req, res) => {
 
   // 4. 이메일 본문
   console.log('\n📝 [이메일 본문]');
+
+  // Text 본문 표시
   if (req.body.text) {
-    console.log('├─ Text 본문:');
-    console.log('│  ', req.body.text.substring(0, 100).replace(/\n/g, '\n│   '));
-    console.log('│   (총 ' + req.body.text.length + ' 글자)');
+    console.log('├─ Text 본문 (총 ' + req.body.text.length + ' 글자):');
+    console.log('│');
+    // 전체 본문을 들여쓰기와 함께 표시
+    req.body.text.split('\n').forEach(line => {
+      console.log('│  ', line);
+    });
+    console.log('│');
   } else {
     console.log('├─ Text 본문: 없음');
+
+    // Raw Email에서 본문 추출 시도 (Gmail 등에서 text/html이 별도로 파싱되지 않는 경우)
+    if (req.body.email) {
+      console.log('│  (Raw Email에서 본문 추출 시도...)');
+      const rawEmail = req.body.email;
+
+      // Content-Type: text/plain 부분 찾기
+      const plainTextMatch = rawEmail.match(/Content-Type:\s*text\/plain[^]*?\r?\n\r?\n([^]*?)(\r?\n--|\r?\n\r?\nContent-Type:|$)/i);
+      if (plainTextMatch && plainTextMatch[1]) {
+        const extractedText = plainTextMatch[1].trim();
+
+        // Base64 디코딩 시도
+        const decodedText = decodeBase64(extractedText);
+
+        if (decodedText) {
+          console.log('│  추출된 Text 본문 (Base64 디코딩됨):');
+          console.log('│  ────────────────────────────────────');
+          decodedText.split('\n').forEach(line => {
+            console.log('│   ', line.trim());
+          });
+        } else {
+          console.log('│  추출된 Text 본문 (원본):');
+          extractedText.split('\n').forEach(line => {
+            console.log('│   ', line.trim());
+          });
+        }
+        console.log('│');
+      }
+    }
   }
 
+  // HTML 본문 표시
   if (req.body.html) {
     console.log('└─ HTML 본문: 있음 (' + req.body.html.length + ' 글자)');
   } else {
     console.log('└─ HTML 본문: 없음');
+
+    // Raw Email에서 HTML 추출 시도
+    if (req.body.email) {
+      const rawEmail = req.body.email;
+      const htmlMatch = rawEmail.match(/Content-Type:\s*text\/html[^]*?\r?\n\r?\n([^]*?)(\r?\n--|\r?\n\r?\nContent-Type:|$)/i);
+      if (htmlMatch && htmlMatch[1]) {
+        console.log('   (Raw Email에서 HTML 본문 감지됨)');
+      }
+    }
   }
 
   // 5. 첨부파일
@@ -128,6 +184,29 @@ app.post('/webhook/inbound', upload.any(), (req, res) => {
   if (req.body.email) {
     console.log('\n📄 [Raw Email (MIME)]');
     console.log('└─ 크기:', req.body.email.length, '바이트');
+
+    // 전체 email 필드 출력 (요청에 따라)
+    console.log('\n📧 [Email 필드 전체 내용]');
+    console.log('────────────────────────────────────────');
+
+    // Content-Transfer-Encoding 확인 및 디코딩
+    const contentEncodingMatch = req.body.email.match(/Content-Transfer-Encoding:\s*(base64|quoted-printable)/i);
+    if (contentEncodingMatch && contentEncodingMatch[1].toLowerCase() === 'base64') {
+      // Base64로 인코딩된 본문 찾기
+      const base64BodyMatch = req.body.email.match(/Content-Transfer-Encoding:\s*base64\s*\r?\n\r?\n([^]*?)(\r?\n--|\r?\n\r?\nContent-Type:|$)/i);
+      if (base64BodyMatch && base64BodyMatch[1]) {
+        const decodedContent = decodeBase64(base64BodyMatch[1].trim());
+        if (decodedContent) {
+          console.log('📝 디코딩된 이메일 내용:');
+          console.log(decodedContent);
+          console.log('────────────────────────────────────────');
+        }
+      }
+    }
+
+    console.log('\n📄 원본 Raw Email:');
+    console.log(req.body.email);
+    console.log('────────────────────────────────────────');
   }
 
   // 8. 문자 인코딩

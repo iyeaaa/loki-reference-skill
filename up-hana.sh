@@ -16,7 +16,7 @@ START_TIME=$(date +%s.%N)
 log "스크립트 시작"
 
 SSH_HOST="hana"
-REMOTE_DIR="~/data/sw_package/grinda"
+REMOTE_DIR="~/data/sw_package/send-grid-test"
 log "변수 설정 완료"
 
 # 현재 디렉토리 저장
@@ -24,7 +24,7 @@ CURRENT_DIR=$(pwd)
 log "현재 디렉토리: $CURRENT_DIR"
 
 # 현재 프로젝트 디렉토리 사용
-cd /Users/macminim4pro/Github/1_Projects/vite-hana-lang-connect
+cd /Users/macminim4pro/Github/1_Projects/send-grid-test
 
 log "프로젝트 파일 복사 시작"
 # 원격 서버에 디렉토리가 없으면 생성 (에러 무시)
@@ -63,28 +63,13 @@ log "프로젝트 파일 복사 완료"
 
 log "Hana 서버에 SSH 접속 시작"
 ssh $SSH_HOST << EOF
-    cd ~/data/sw_package/grinda
+    cd ~/data/sw_package/send-grid-test
 
-    cp configs/server/.env.hana server/.env
-    cp configs/admin/.env.hana admin/.env
-    cp docker-compose.hana.yml docker-compose.yml
-    
     # Docker Compose 실행
     sudo docker compose up -d --build
     
     # 컨테이너 상태 확인
     sudo docker compose ps
-
-    # 4가지 작업 병렬로 처리
-    docker save grinda-admin:latest -o grinda-admin.tar
-    aws s3 cp ./grinda-admin.tar s3://langconnect/grinda-admin.tar
-
-    docker save grinda-server:latest -o grinda-server.tar
-    aws s3 cp ./grinda-server.tar s3://langconnect/grinda-server.tar
-
-    docker save grinda-client-spring:latest -o grinda-client-spring.tar
-    aws s3 cp ./grinda-client-spring.tar s3://langconnect/grinda-client-spring.tar
-
 EOF
 log "Hana 서버 SSH 접속 및 Docker Compose 실행 완료"
 

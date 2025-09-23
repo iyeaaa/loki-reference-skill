@@ -1,10 +1,20 @@
-import type React from "react";
+"use client";
 
-export default async function AppLayout({
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+
+export default function DashboardLayout({
 	children,
-}: Readonly<{
+}: {
 	children: React.ReactNode;
-	params: Promise<{ locale: string }>;
-}>) {
-	return <div className="flex min-h-screen flex-col w-full">{children}</div>;
+}) {
+	return (
+		<div className="flex h-screen bg-background">
+			<DashboardSidebar />
+			<div className="flex-1 flex flex-col">
+				<DashboardHeader />
+				<main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
+			</div>
+		</div>
+	);
 }

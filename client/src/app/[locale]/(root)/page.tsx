@@ -1,7 +1,7 @@
-export default async function HomePage() {
-	return (
-		<div className="min-h-screen">
-			<h1>Hello</h1>
-		</div>
-	);
+"use client";
+
+import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
+
+export default function DashboardPage() {
+	return <DashboardOverview />;
 }

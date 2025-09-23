@@ -81,7 +81,6 @@ export default function GlobalError({ error, reset }: ErrorProps) {
 							문의하기
 						</Button>
 					</div>
-
 				</CardContent>
 			</Card>
 		</div>

@@ -1,25 +1,28 @@
+"use client";
+
 import "../globals.css";
 import { notFound } from "next/navigation";
 import Script from "next/script";
+import { SessionProvider } from "next-auth/react";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
+import { ThemeProvider } from "next-themes";
+import { use } from "react";
 import { Toaster } from "react-hot-toast";
 import { geistMono, geistSans } from "@/app/lib/fonts";
 import { routing } from "@/i18n/routing";
-import { ThemeProvider } from "next-themes";
-import { SessionProvider } from "next-auth/react";
 
-export default async function RootLayout({
+export default function RootLayout({
 	children,
 	params,
 }: Readonly<{
 	children: React.ReactNode;
 	params: Promise<{ locale: string }>;
 }>) {
-	const { locale } = await params;
-	console.log("[locale]", locale);
+	const { locale } = use(params);
 	if (!hasLocale(routing.locales, locale)) {
 		notFound();
 	}
+
 	return (
 		<html
 			lang={locale}
@@ -40,14 +43,50 @@ export default async function RootLayout({
 				<SessionProvider>
 					<ThemeProvider
 						attribute="class"
-						defaultTheme="system"
+						defaultTheme="light"
 						enableSystem
 						disableTransitionOnChange
 					>
-						<NextIntlClientProvider>
+						<NextIntlClientProvider locale={locale}>
 							{children}
 						</NextIntlClientProvider>
-						{/* <ChannelIO /> */}
+						<Toaster
+							position="top-right"
+							reverseOrder={false}
+							gutter={8}
+							containerClassName=""
+							containerStyle={{}}
+							toastOptions={{
+								className: "",
+								duration: 4000,
+								style: {
+									background: "#363636",
+									color: "#fff",
+								},
+								success: {
+									duration: 3000,
+									style: {
+										background: "#10b981",
+										color: "#fff",
+									},
+									iconTheme: {
+										primary: "#fff",
+										secondary: "#10b981",
+									},
+								},
+								error: {
+									duration: 4000,
+									style: {
+										background: "#ef4444",
+										color: "#fff",
+									},
+									iconTheme: {
+										primary: "#fff",
+										secondary: "#ef4444",
+									},
+								},
+							}}
+						/>
 					</ThemeProvider>
 				</SessionProvider>
 				<Script
@@ -63,43 +102,6 @@ export default async function RootLayout({
               gtag('config', 'G-M4E7X1PNB7');
             `}
 				</Script>
-				<Toaster
-					position="top-right"
-					reverseOrder={false}
-					gutter={8}
-					containerClassName=""
-					containerStyle={{}}
-					toastOptions={{
-						className: "",
-						duration: 4000,
-						style: {
-							background: "#363636",
-							color: "#fff",
-						},
-						success: {
-							duration: 3000,
-							style: {
-								background: "#10b981",
-								color: "#fff",
-							},
-							iconTheme: {
-								primary: "#fff",
-								secondary: "#10b981",
-							},
-						},
-						error: {
-							duration: 4000,
-							style: {
-								background: "#ef4444",
-								color: "#fff",
-							},
-							iconTheme: {
-								primary: "#fff",
-								secondary: "#ef4444",
-							},
-						},
-					}}
-				/>
 			</body>
 		</html>
 	);

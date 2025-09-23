@@ -24,9 +24,15 @@ app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 // Base64 디코딩 헬퍼 함수
 function decodeBase64(str) {
   try {
+    // 공백과 줄바꿈 제거
+    const cleanStr = str.replace(/[\r\n\s]/g, '');
     // Base64 디코딩
-    const decoded = Buffer.from(str, 'base64').toString('utf-8');
-    return decoded;
+    const decoded = Buffer.from(cleanStr, 'base64').toString('utf-8');
+    // 디코딩 결과가 읽을 수 있는 텍스트인지 확인
+    if (decoded && /^[\x20-\x7E\u00A0-\uFFFF\r\n\t]+$/.test(decoded)) {
+      return decoded;
+    }
+    return null;
   } catch (error) {
     return null;
   }
@@ -35,8 +41,7 @@ function decodeBase64(str) {
 // 자동 답장 이메일 발송 함수
 async function sendAutoReply(toEmail, fromEmail, subject, emailContent) {
   const now = new Date();
-  const koreanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
-  const formattedTime = koreanTime.toLocaleString('ko-KR', {
+  const formattedTime = now.toLocaleString('ko-KR', {
     timeZone: 'Asia/Seoul',
     year: 'numeric',
     month: 'long',
@@ -46,9 +51,9 @@ async function sendAutoReply(toEmail, fromEmail, subject, emailContent) {
     hour12: true
   });
 
-  // 이메일 내용 요약 (최대 200자)
+  // 이메일 내용 요약 (최대 200자) - 앞뒤 공백 제거
   const contentSummary = emailContent ?
-    (emailContent.length > 200 ? emailContent.substring(0, 200) + '...' : emailContent) :
+    (emailContent.trim().length > 200 ? emailContent.trim().substring(0, 200) + '...' : emailContent.trim()) :
     '(내용 없음)';
 
   const msg = {
@@ -66,19 +71,31 @@ async function sendAutoReply(toEmail, fromEmail, subject, emailContent) {
 [접수 정보]
 제목: ${subject || '제목 없음'}
 내용: ${contentSummary}
+
 접수시간: ${formattedTime}
 
 고객님의 문의사항을 확인했으며, 담당자가 내용을 검토 중입니다.
 24시간 이내 상세한 답변을 드리도록 하겠습니다.
 
-빠른 상담을 원하시면 아래 링크를 통해 추가 정보를 확인하실 수 있습니다.
-https://rinda.ai/all-in-one
-
 감사합니다.
 
 린다 고객지원팀
 rinda@partners.grinda.ai`,
-    html: `
+    // 추적 설정 - 텍스트 이메일의 링크는 < > 로 감싸면 원본 URL 표시
+    trackingSettings: {
+      clickTracking: {
+        enable: true,
+        enableText: true
+      },
+      openTracking: {
+        enable: true
+      },
+      subscriptionTracking: {
+        enable: false
+      }
+    }
+    /* HTML 제거 - 텍스트 전용 이메일
+    , html: `
       <!DOCTYPE html>
       <html>
       <head>
@@ -187,15 +204,8 @@ rinda@partners.grinda.ai`,
         </table>
       </body>
       </html>
-    `,
-    trackingSettings: {
-      clickTracking: {
-        enable: false
-      },
-      openTracking: {
-        enable: false
-      }
-    }
+    `
+    */
   };
 
   try {
@@ -445,7 +455,13 @@ app.post('/webhook/inbound', upload.any(), (req, res) => {
         const extractedText = plainTextMatch[1].trim();
         // Base64 디코딩 시도
         const decodedText = decodeBase64(extractedText);
-        emailContent = decodedText || extractedText;
+        // 디코딩 실패 시 원본 텍스트가 이미 디코딩된 것일 수 있음
+        if (decodedText) {
+          emailContent = decodedText.trim();
+        } else if (extractedText && !extractedText.match(/^[A-Za-z0-9+/=\s]+$/)) {
+          // Base64가 아닌 일반 텍스트인 경우
+          emailContent = extractedText.trim();
+        }
       }
 
       // 그래도 없으면 Content-Transfer-Encoding: base64 부분 찾기
@@ -454,7 +470,7 @@ app.post('/webhook/inbound', upload.any(), (req, res) => {
         if (base64BodyMatch && base64BodyMatch[1]) {
           const decodedContent = decodeBase64(base64BodyMatch[1].trim());
           if (decodedContent) {
-            emailContent = decodedContent;
+            emailContent = decodedContent.trim();
           }
         }
       }
@@ -463,6 +479,14 @@ app.post('/webhook/inbound', upload.any(), (req, res) => {
     // HTML이 있고 text가 없는 경우 HTML에서 텍스트 추출 (간단한 태그 제거)
     if (!emailContent && req.body.html) {
       emailContent = req.body.html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    // 최종적으로 이메일 내용 전체 trim 처리
+    emailContent = emailContent.trim();
+
+    // 깨진 문자가 있거나 내용이 없으면 기본 메시지
+    if (!emailContent || emailContent.includes('�')) {
+      emailContent = '(내용을 확인할 수 없습니다. 원본 이메일을 확인해 주세요.)';
     }
 
     console.log('├─ 답장 대상 이메일:', fromEmail);

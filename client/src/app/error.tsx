@@ -1,7 +1,6 @@
 "use client";
 
 import { Bug, Home, Mail, RefreshCw } from "lucide-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -38,17 +37,6 @@ export default function GlobalError({ error, reset }: ErrorProps) {
 		<div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
 			<Card className="w-full max-w-md">
 				<CardHeader className="text-center">
-					{/* TJTENG Logo */}
-					<div className="flex justify-center mb-6">
-						<Image
-							src="/images/tjteng.png"
-							alt="TJTENG 로고"
-							width={100}
-							height={50}
-							className="h-12 w-auto"
-						/>
-					</div>
-
 					{/* Error Icon */}
 					<div className="flex justify-center mb-4">
 						<div className="rounded-full bg-red-100 p-3">
@@ -94,9 +82,6 @@ export default function GlobalError({ error, reset }: ErrorProps) {
 						</Button>
 					</div>
 
-					<div className="text-center text-xs text-gray-400 pt-4">
-						<p>TJTENG 기술지원팀</p>
-					</div>
 				</CardContent>
 			</Card>
 		</div>

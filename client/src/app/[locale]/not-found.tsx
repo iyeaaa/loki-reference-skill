@@ -1,7 +1,6 @@
 "use client";
 
 import { ArrowLeft, Home, Search } from "lucide-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,17 +30,6 @@ export default function LocaleNotFound() {
 		<div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
 			<Card className="w-full max-w-md">
 				<CardHeader className="text-center">
-					{/* TJTENG Logo */}
-					<div className="flex justify-center mb-4">
-						<Image
-							src="/images/tjteng.png"
-							alt="TJTENG 로고"
-							width={80}
-							height={40}
-							className="h-12 w-auto"
-						/>
-					</div>
-
 					<CardTitle className="text-2xl font-bold text-gray-900">
 						페이지를 찾을 수 없습니다
 					</CardTitle>

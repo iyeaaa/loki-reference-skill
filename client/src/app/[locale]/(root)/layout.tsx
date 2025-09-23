@@ -2,7 +2,6 @@ import type React from "react";
 
 export default async function AppLayout({
 	children,
-	// params,
 }: Readonly<{
 	children: React.ReactNode;
 	params: Promise<{ locale: string }>;

@@ -1,0 +1,163 @@
+/* Quill Editor Custom Styles */
+.quill-editor .ql-editor {
+	min-height: 300px;
+	font-size: 14px;
+	line-height: 1.6;
+}
+
+.quill-editor .ql-toolbar {
+	border-top: 1px solid #e5e7eb;
+	border-left: 1px solid #e5e7eb;
+	border-right: 1px solid #e5e7eb;
+	border-bottom: none;
+	border-radius: 0.5rem 0.5rem 0 0;
+	background: #f9fafb;
+}
+
+.quill-editor .ql-container {
+	border-bottom: 1px solid #e5e7eb;
+	border-left: 1px solid #e5e7eb;
+	border-right: 1px solid #e5e7eb;
+	border-top: none;
+	border-radius: 0 0 0.5rem 0.5rem;
+	background: white;
+}
+
+/* Dark mode support */
+.dark .quill-editor .ql-toolbar {
+	background: #374151;
+	border-color: #4b5563;
+	color: #f9fafb;
+}
+
+.dark .quill-editor .ql-container {
+	background: #1f2937;
+	border-color: #4b5563;
+	color: #f9fafb;
+}
+
+.dark .quill-editor .ql-editor {
+	color: #f9fafb;
+}
+
+.dark .quill-editor .ql-editor::before {
+	color: #9ca3af;
+}
+
+/* Toolbar button styles */
+.quill-editor .ql-toolbar .ql-formats {
+	margin-right: 15px;
+}
+
+.quill-editor .ql-toolbar button {
+	width: 28px;
+	height: 28px;
+	border-radius: 0.25rem;
+	margin: 2px;
+}
+
+.quill-editor .ql-toolbar button:hover {
+	background: rgba(59, 130, 246, 0.1);
+}
+
+.quill-editor .ql-toolbar button.ql-active {
+	background: rgba(59, 130, 246, 0.2);
+	color: #3b82f6;
+}
+
+/* Dark mode toolbar buttons */
+.dark .quill-editor .ql-toolbar button {
+	color: #f9fafb;
+}
+
+.dark .quill-editor .ql-toolbar button:hover {
+	background: rgba(59, 130, 246, 0.2);
+}
+
+.dark .quill-editor .ql-toolbar button.ql-active {
+	background: rgba(59, 130, 246, 0.3);
+	color: #60a5fa;
+}
+
+/* Dropdown styles */
+.quill-editor .ql-toolbar .ql-picker {
+	color: inherit;
+}
+
+.quill-editor .ql-toolbar .ql-picker-options {
+	background: white;
+	border: 1px solid #e5e7eb;
+	border-radius: 0.375rem;
+	box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.dark .quill-editor .ql-toolbar .ql-picker-options {
+	background: #374151;
+	border-color: #4b5563;
+	color: #f9fafb;
+}
+
+/* Video and image embed styles */
+.quill-editor .ql-editor img {
+	max-width: 100%;
+	height: auto;
+	border-radius: 0.375rem;
+	margin: 0.5rem 0;
+}
+
+.quill-editor .ql-editor video {
+	max-width: 100%;
+	height: auto;
+	border-radius: 0.375rem;
+	margin: 0.5rem 0;
+}
+
+/* Link styles */
+.quill-editor .ql-editor a {
+	color: #3b82f6;
+	text-decoration: underline;
+}
+
+.dark .quill-editor .ql-editor a {
+	color: #60a5fa;
+}
+
+/* Code block styles */
+.quill-editor .ql-editor pre.ql-syntax {
+	background: #f3f4f6;
+	border-radius: 0.375rem;
+	padding: 1rem;
+	margin: 0.5rem 0;
+	overflow-x: auto;
+	font-family: "Monaco", "Courier New", monospace;
+	font-size: 0.875rem;
+}
+
+.dark .quill-editor .ql-editor pre.ql-syntax {
+	background: #374151;
+	color: #f9fafb;
+}
+
+/* Blockquote styles */
+.quill-editor .ql-editor blockquote {
+	border-left: 4px solid #e5e7eb;
+	padding-left: 1rem;
+	margin: 1rem 0;
+	font-style: italic;
+	color: #6b7280;
+}
+
+.dark .quill-editor .ql-editor blockquote {
+	border-left-color: #4b5563;
+	color: #9ca3af;
+}
+
+/* List styles */
+.quill-editor .ql-editor ul,
+.quill-editor .ql-editor ol {
+	padding-left: 1.5rem;
+}
+
+.quill-editor .ql-editor li {
+	margin: 0.25rem 0;
+}

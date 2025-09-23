@@ -1,0 +1,7 @@
+# .biomeignore
+.next/
+node_modules/
+dist/
+build/
+out/
+*.config.js

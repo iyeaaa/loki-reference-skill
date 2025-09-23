@@ -1,13 +1,13 @@
 services:
-  sendgrid-webhook:
-    build: .
-    container_name: sendgrid-webhook
+  nextjs-app:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: nextjs-sendgrid-webhook
     ports:
       - "3000:3000"
     environment:
       - PORT=3000
       - NODE_ENV=production
-      - DEBUG=false
-    volumes:
-      - ./logs:/app/logs
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
     restart: unless-stopped

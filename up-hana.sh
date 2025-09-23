@@ -51,6 +51,7 @@ rsync -avz --delete ./ $SSH_HOST:$REMOTE_DIR \
     --exclude build \
     --exclude client/node_modules \
     --exclude client/.next \
+    --exclude client/.env.local \
     --exclude client/dist \
     --exclude client/build \
     --exclude admin/node_modules \

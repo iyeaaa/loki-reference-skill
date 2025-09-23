@@ -1,13 +1,48 @@
 services:
-  nextjs-app:
+  admin:
     build:
-      context: ./client
+      context: ./admin
       dockerfile: Dockerfile
-    container_name: nextjs-sendgrid-webhook
     ports:
       - "3000:3000"
+    depends_on:
+      - postgres
+      - redis
     environment:
-      - PORT=3000
       - NODE_ENV=production
-      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
-    restart: unless-stopped
+
+  postgres:
+    image: postgres:17.2
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sendgrid_db
+    volumes:
+      - ~/data/send-grid-test/volumes/postgres:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - ~/data/send-grid-test/volumes/redis:/data
+    restart: always
+    command: redis-server --appendonly yes --requirepass sendgrid_redis_password_2024
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    ports:
+      - "5540:5540"
+    volumes:
+      - ~/data/send-grid-test/volumes/redisinsight:/data
+    depends_on:
+      - redis
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    ports:
+      - "3002:3001"
+    volumes:
+      - ~/data/send-grid-test/volumes/uptime-kuma:/app/data

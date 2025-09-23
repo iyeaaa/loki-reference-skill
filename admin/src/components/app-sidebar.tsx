@@ -1,14 +1,8 @@
 'use client'
 
 import {
-  Archive,
   BarChart3,
-  Brain,
-  Cpu,
-  Database,
-  MessageSquare,
   Settings,
-  TrendingUp,
   Users,
 } from 'lucide-react'
 import Image from 'next/image'
@@ -36,38 +30,6 @@ const menuItems = [
     title: '유저 관리',
     url: '/users',
     icon: Users,
-  },
-  // 추천 기능 관리
-  {
-    title: '추천 모델 관리',
-    url: '/recommendation/models',
-    icon: Brain,
-  },
-  {
-    title: '학습 데이터 관리',
-    url: '/recommendation/data',
-    icon: Database,
-  },
-  {
-    title: '추천 분석',
-    url: '/recommendation/analytics',
-    icon: TrendingUp,
-  },
-  // RAG 기능 관리
-  {
-    title: 'LLM 모델 관리',
-    url: '/rag/models',
-    icon: Cpu,
-  },
-  {
-    title: '벡터 DB 관리',
-    url: '/rag/vectordb',
-    icon: Archive,
-  },
-  {
-    title: '질의응답 관리',
-    url: '/rag/qa',
-    icon: MessageSquare,
   },
 ]
 

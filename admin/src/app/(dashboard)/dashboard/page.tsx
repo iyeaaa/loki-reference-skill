@@ -1,24 +1,15 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Activity, 
-  AlertCircle, 
-  Brain, 
-  Database, 
-  MessageSquare, 
+import {
+  AlertCircle,
   TrendingUp,
-  Users,
-  Zap,
   CheckCircle,
   XCircle,
   Clock,
-  BarChart3,
-  Search,
   FileText,
   GitBranch,
   Cpu

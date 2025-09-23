@@ -22,75 +22,66 @@ async function sendAutoReply(
 	_toEmail: string,
 	fromEmail: string,
 	subject: string,
+	emailContent: string,
 ): Promise<boolean> {
 	const now = new Date();
 	const formattedTime = now.toLocaleString("ko-KR", {
 		timeZone: "Asia/Seoul",
 		year: "numeric",
-		month: "2-digit",
-		day: "2-digit",
+		month: "long",
+		day: "numeric",
 		hour: "2-digit",
 		minute: "2-digit",
-		second: "2-digit",
-		hour12: false,
+		hour12: true,
 	});
 
-	const emailEndings = [
-		"감사합니다.",
-		"좋은 하루 보내세요.",
-		"연락 주셔서 감사합니다.",
-		"빠른 시일 내에 답변 드리겠습니다.",
-		"추가 문의사항이 있으시면 언제든지 연락 주세요.",
-		"항상 최선을 다하겠습니다.",
-		"귀하의 이메일을 잘 받았습니다.",
-		"좋은 하루 되시기 바랍니다.",
-	];
+	const contentSummary = emailContent
+		? emailContent.trim().length > 200
+			? emailContent.trim().substring(0, 200) + "..."
+			: emailContent.trim()
+		: "(내용 없음)";
 
-	const randomEnding =
-		emailEndings[Math.floor(Math.random() * emailEndings.length)];
-
-	const autoReplyMessage = {
+	const msg = {
 		to: fromEmail,
-		from: "hana.lee@gmail.com",
-		subject: `Re: ${subject}`,
-		html: `
-			<div style="font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
-				<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
-					<h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">자동 응답 메일</h1>
-					<p style="color: #f0f0f0; margin: 10px 0 0 0; font-size: 14px;">Auto Reply System</p>
-				</div>
+		from: {
+			email: "rinda@partners.grinda.ai",
+			name: "린다 뷰티 (Rinda Beauty)",
+		},
+		replyTo: "rinda@partners.grinda.ai",
+		subject: `Re: ${subject || "문의 감사합니다"}`,
+		text: `안녕하세요,
 
-				<div style="padding: 40px 30px;">
-					<div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin-bottom: 30px; border-radius: 4px;">
-						<p style="margin: 0; color: #495057; line-height: 1.6;">
-							안녕하세요,<br><br>
-							귀하의 이메일을 잘 받았습니다.<br>
-							빠른 시일 내에 검토 후 답변 드리도록 하겠습니다.<br><br>
-							${randomEnding}
-						</p>
-					</div>
+소중한 문의 주셔서 감사합니다.
 
-					<div style="border-top: 2px solid #e9ecef; padding-top: 20px; margin-top: 30px;">
-						<h3 style="color: #495057; font-size: 16px; margin-bottom: 15px;">📧 원본 메시지 정보</h3>
-						<div style="background-color: #ffffff; border: 1px solid #dee2e6; padding: 15px; border-radius: 4px;">
-							<p style="margin: 5px 0; color: #6c757d; font-size: 13px;"><strong>제목:</strong> ${subject}</p>
-							<p style="margin: 5px 0; color: #6c757d; font-size: 13px;"><strong>수신 시간:</strong> ${formattedTime}</p>
-						</div>
-					</div>
+[접수 정보]
+제목: ${subject || "제목 없음"}
+내용: ${contentSummary}
 
-					<div style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 4px;">
-						<p style="color: #6c757d; font-size: 11px; margin: 0; text-align: center;">
-							이 메일은 자동으로 발송된 메일입니다.<br>
-							This is an automated response email.
-						</p>
-					</div>
-				</div>
-			</div>
-		`,
+접수시간: ${formattedTime}
+
+고객님의 문의사항을 확인했으며, 담당자가 내용을 검토 중입니다.
+24시간 이내 상세한 답변을 드리도록 하겠습니다.
+
+감사합니다.
+
+린다 고객지원팀
+rinda@partners.grinda.ai`,
+		trackingSettings: {
+			clickTracking: {
+				enable: true,
+				enableText: true,
+			},
+			openTracking: {
+				enable: true,
+			},
+			subscriptionTracking: {
+				enable: false,
+			},
+		},
 	};
 
 	try {
-		await sgMail.send(autoReplyMessage);
+		await sgMail.send(msg);
 		console.log(`✅ 자동 답장 이메일 발송 성공: ${fromEmail}`);
 		return true;
 	} catch (error) {
@@ -353,7 +344,8 @@ export async function POST(request: NextRequest) {
 			const autoReplySuccess = await sendAutoReply(
 				parsedFormData.to || "",
 				parsedFormData.from,
-				parsedFormData.subject
+				parsedFormData.subject,
+				parsedFormData.text || parsedFormData.html || ""
 			);
 
 			if (autoReplySuccess) {

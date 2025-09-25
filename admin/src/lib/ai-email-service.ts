@@ -118,8 +118,6 @@ class AIEmailService {
             content: userPrompt,
           },
         ],
-        temperature: 0.7,
-        max_tokens: 500,
       });
 
       const replyContent = completion.choices[0]?.message?.content;

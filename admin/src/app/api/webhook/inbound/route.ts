@@ -341,11 +341,63 @@ export async function POST(request: NextRequest) {
 
 		if (parsedFormData.from && parsedFormData.subject) {
 			console.log("\n📤 자동 답장 발송 시도 중...");
+
+			// 이메일 내용 추출
+			let emailContent = parsedFormData.text || "";
+
+			// text가 없고 html만 있는 경우, HTML 태그 제거하여 텍스트 추출
+			if (!emailContent && parsedFormData.html) {
+				emailContent = parsedFormData.html
+					.replace(/<[^>]*>/g, " ")
+					.replace(/\s+/g, " ")
+					.trim();
+			}
+
+			// email 필드에서 raw 이메일 내용 추출 시도
+			if (!emailContent && body.email) {
+				const rawEmail = body.email;
+				const plainTextMatch = rawEmail.match(
+					/Content-Type:\s*text\/plain[\s\S]*?\r?\n\r?\n([\s\S]*?)(\r?\n--|\r?\n\r?\nContent-Type:|$)/i,
+				);
+				if (plainTextMatch?.[1]) {
+					const extractedText = plainTextMatch[1].trim();
+					const decodedText = decodeBase64(extractedText);
+					if (decodedText) {
+						emailContent = decodedText.trim();
+					} else if (
+						extractedText &&
+						!extractedText.match(/^[A-Za-z0-9+/=\s]+$/)
+					) {
+						emailContent = extractedText.trim();
+					}
+				}
+
+				if (!emailContent) {
+					const base64BodyMatch = rawEmail.match(
+						/Content-Transfer-Encoding:\s*base64\s*\r?\n\r?\n([\s\S]*?)(\r?\n--|\r?\n\r?\nContent-Type:|$)/i,
+					);
+					if (base64BodyMatch?.[1]) {
+						const decodedContent = decodeBase64(base64BodyMatch[1].trim());
+						if (decodedContent) {
+							emailContent = decodedContent.trim();
+						}
+					}
+				}
+			}
+
+			emailContent = emailContent.trim();
+
+			if (!emailContent || emailContent.includes("�")) {
+				emailContent = "(내용을 확인할 수 없습니다. 원본 이메일을 확인해 주세요.)";
+			}
+
+			console.log("├─ 이메일 내용 길이:", emailContent.length, "자");
+
 			const autoReplySuccess = await sendAutoReply(
 				parsedFormData.to || "",
 				parsedFormData.from,
 				parsedFormData.subject,
-				parsedFormData.text || parsedFormData.html || ""
+				emailContent
 			);
 
 			if (autoReplySuccess) {

@@ -158,7 +158,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="p-3 bg-orange-50 rounded-lg space-y-2">
+              <div className="p-3 bg-violet-50 rounded-lg space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium">기술이전 매칭</span>
                   <Badge variant="secondary" className="text-[10px]">Pilot</Badge>
@@ -170,7 +170,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <span className="text-muted-foreground">성공률</span>
-                    <div className="font-semibold text-amber-600">24.3%</div>
+                    <div className="font-semibold text-violet-600">24.3%</div>
                   </div>
                 </div>
               </div>

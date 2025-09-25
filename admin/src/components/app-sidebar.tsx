@@ -22,7 +22,7 @@ import {
 
 const menuItems = [
   {
-    title: 'NTIS 인사이트',
+    title: 'Rinda Expert',
     url: '/dashboard',
     icon: BarChart3,
   },
@@ -45,16 +45,16 @@ export function AppSidebar() {
               <Link href="/dashboard">
                 <div className="flex aspect-square size-10 items-center justify-center">
                   <Image
-                    src="/images/ntis-logo.png"
-                    alt="NTIS 로고"
+                    src="/images/rinda-logo.png"
+                    alt="Rinda Logo"
                     width={40}
                     height={40}
                     className="size-10 object-contain rounded-xl"
                   />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">NTIS AI Insight</span>
-                  <span className="truncate text-xs">AI 기반 데이터 분석 시스템</span>
+                  <span className="truncate font-semibold">Rinda Expert</span>
+                  <span className="truncate text-xs">AI 이메일 자동화 시스템</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -73,16 +73,16 @@ export function AppSidebar() {
                       asChild
                       tooltip={item.title}
                       isActive={isActive}
-                      className={isActive ? 'bg-[#FF6B35]/10 border-r-2 border-[#FF6B35]' : ''}
+                      className={isActive ? 'bg-violet-500/10 border-r-2 border-violet-500' : ''}
                     >
                       <Link href={item.url || '#'}>
                         {item.icon && (
                           <item.icon 
-                            className={isActive ? 'text-[#FF6B35]' : ''} 
+                            className={isActive ? 'text-violet-500' : ''} 
                           />
                         )}
                         <span 
-                          className={isActive ? 'text-[#FF6B35] font-medium' : ''}
+                          className={isActive ? 'text-violet-500 font-medium' : ''}
                         >
                           {item.title}
                         </span>

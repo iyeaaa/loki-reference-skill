@@ -170,9 +170,9 @@ export default function AdminLoginPage() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-orange-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-blue-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#EC7203] mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">로딩 중...</p>
         </div>
       </div>
@@ -182,7 +182,7 @@ export default function AdminLoginPage() {
   const allowedRoles = ['admin', 'internal_reviewer', 'external_reviewer'];
   if (session && session.user?.user_role && allowedRoles.includes(session.user.user_role)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-orange-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-blue-50">
         <div className="text-center">
           <p className="text-gray-600">이미 로그인되어 있습니다. 대시보드로 이동 중...</p>
         </div>
@@ -191,48 +191,48 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-orange-50 via-white to-orange-50">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50 via-white to-blue-50">
       <Card className="w-full max-w-md shadow-2xl border-0">
         <CardHeader className="text-center pb-0">
           <div className="flex justify-center mb-6">
             <div className="relative w-32 h-32">
               <Image
-                src="/images/ntis-logo.png"
-                alt="NTIS Logo"
+                src="/images/rinda-logo.png"
+                alt="Rinda Logo"
                 fill
                 className="object-contain rounded-3xl"
                 priority
               />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-[#EC7203] to-[#F59E0B] bg-clip-text text-transparent">
-            NTIS AI Insight
+          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] bg-clip-text text-transparent">
+            Rinda Expert
           </CardTitle>
           <CardDescription className="text-gray-600 mt-2">
-            AI가 발견하는 R&D 데이터의 새로운 가치
+            AI 기반 이메일 자동화 관리 시스템
             <br />
             <span className="text-sm text-gray-500 mt-2 block">
-              방대한 국가 R&D 데이터에서 AI 기술로 통찰력을 제공합니다.
+              SendGrid를 활용한 효율적인 이메일 마케팅 관리 플랫폼입니다.
             </span>
             <span className="text-sm text-gray-500">
-              인가된 관리자 및 검수자만 접근 가능한 시스템입니다.
+              인가된 관리자만 접근 가능한 시스템입니다.
             </span>
             <br />
-            <span className="text-xs text-amber-600 font-medium mt-2 block">
+            <span className="text-xs text-indigo-600 font-medium mt-2 block">
               ※ 신규 가입 후 관리자 승인이 필요합니다.
             </span>
             <span className="text-xs text-gray-500">
-              ※ 본 시스템은 KISTI 보안 정책에 따라 운영됩니다.
+              ※ 본 시스템은 그린다에이아이 보안 정책에 따라 운영됩니다.
             </span>
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 h-12 bg-gray-100">
-              <TabsTrigger value="login" className="data-[state=active]:bg-white data-[state=active]:text-[#EC7203] font-medium">
+              <TabsTrigger value="login" className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium">
                 로그인
               </TabsTrigger>
-              <TabsTrigger value="signup" className="data-[state=active]:bg-white data-[state=active]:text-[#EC7203] font-medium">
+              <TabsTrigger value="signup" className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium">
                 회원가입
               </TabsTrigger>
             </TabsList>
@@ -248,8 +248,8 @@ export default function AdminLoginPage() {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="admin@kisti.re.kr"
-                      className="pl-10 h-11 border-gray-200 focus:border-[#EC7203] focus:ring-[#EC7203]"
+                      placeholder="admin@rinda.ai"
+                      className="pl-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...loginForm.register("email")}
                       disabled={isLoading}
                     />
@@ -271,7 +271,7 @@ export default function AdminLoginPage() {
                       id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="비밀번호를 입력하세요"
-                      className="pl-10 pr-10 h-11 border-gray-200 focus:border-[#EC7203] focus:ring-[#EC7203]"
+                      className="pl-10 pr-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...loginForm.register("password")}
                       disabled={isLoading}
                     />
@@ -292,7 +292,7 @@ export default function AdminLoginPage() {
 
                 <Button 
                   type="submit" 
-                  className="w-full h-11 bg-gradient-to-r from-[#EC7203] to-[#F59E0B] hover:from-[#D86703] hover:to-[#E88F0A] text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200" 
+                  className="w-full h-11 bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] hover:from-[#5936B1] hover:to-[#2B72E6] text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200" 
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -357,7 +357,7 @@ export default function AdminLoginPage() {
                       id="signup-username"
                       type="text"
                       placeholder="사용자명을 입력하세요"
-                      className="pl-10 h-11 border-gray-200 focus:border-[#EC7203] focus:ring-[#EC7203]"
+                      className="pl-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...signupForm.register("username")}
                       disabled={isLoading}
                     />
@@ -379,7 +379,7 @@ export default function AdminLoginPage() {
                       id="signup-email"
                       type="email"
                       placeholder="이메일을 입력하세요"
-                      className="pl-10 h-11 border-gray-200 focus:border-[#EC7203] focus:ring-[#EC7203]"
+                      className="pl-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...signupForm.register("email")}
                       disabled={isLoading}
                     />
@@ -401,7 +401,7 @@ export default function AdminLoginPage() {
                       id="signup-employee-id"
                       type="text"
                       placeholder="사번을 입력하세요"
-                      className="pl-10 h-11 border-gray-200 focus:border-[#EC7203] focus:ring-[#EC7203]"
+                      className="pl-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...signupForm.register("employeeId")}
                       disabled={isLoading}
                     />
@@ -450,7 +450,7 @@ export default function AdminLoginPage() {
                       id="signup-password"
                       type={showSignupPassword ? "text" : "password"}
                       placeholder="비밀번호를 입력하세요"
-                      className="pl-10 pr-10 h-11 border-gray-200 focus:border-[#EC7203] focus:ring-[#EC7203]"
+                      className="pl-10 pr-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...signupForm.register("password")}
                       disabled={isLoading}
                     />
@@ -479,7 +479,7 @@ export default function AdminLoginPage() {
                       id="signup-confirm-password"
                       type={showConfirmPassword ? "text" : "password"}
                       placeholder="비밀번호를 다시 입력하세요"
-                      className="pl-10 pr-10 h-11 border-gray-200 focus:border-[#EC7203] focus:ring-[#EC7203]"
+                      className="pl-10 pr-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...signupForm.register("confirmPassword")}
                       disabled={isLoading}
                     />
@@ -500,7 +500,7 @@ export default function AdminLoginPage() {
 
                 <Button 
                   type="submit" 
-                  className="w-full h-11 bg-gradient-to-r from-[#EC7203] to-[#F59E0B] hover:from-[#D86703] hover:to-[#E88F0A] text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200" 
+                  className="w-full h-11 bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] hover:from-[#5936B1] hover:to-[#2B72E6] text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200" 
                   disabled={isLoading}
                 >
                   {isLoading ? (

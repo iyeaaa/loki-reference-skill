@@ -3,6 +3,7 @@ import sgMail from "@sendgrid/mail";
 import busboy from "busboy";
 import { type NextRequest, NextResponse } from "next/server";
 import { getAIEmailService, type EmailContext } from "@/lib/ai-email-service";
+import { emailSequenceTracker } from "@/lib/email-sequence-tracker";
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
 
@@ -24,6 +25,8 @@ async function sendAutoReply(
 	fromEmail: string,
 	subject: string,
 	emailContent: string,
+	inReplyTo?: string,
+	references?: string[],
 ): Promise<boolean> {
 	try {
 		// AI 서비스를 사용하여 응답 생성
@@ -50,6 +53,20 @@ async function sendAutoReply(
 			replyText = aiService.generateFallbackReply(emailContext);
 		}
 
+		const messageId = `<${Date.now()}.${Math.random().toString(36).substr(2, 9)}@partners.grinda.ai>`;
+
+		const headers: Record<string, string> = {
+			'Message-ID': messageId,
+		};
+
+		if (inReplyTo) {
+			headers['In-Reply-To'] = inReplyTo;
+		}
+
+		if (references && references.length > 0) {
+			headers['References'] = references.join(' ');
+		}
+
 		const msg = {
 			to: fromEmail,
 			from: {
@@ -59,6 +76,7 @@ async function sendAutoReply(
 			replyTo: "rinda@partners.grinda.ai",
 			subject: `Re: ${subject || "문의 감사합니다"}`,
 			text: replyText,
+			headers,
 			trackingSettings: {
 				clickTracking: {
 					enable: true,
@@ -164,11 +182,34 @@ export async function POST(request: NextRequest) {
 	try {
 		const { formData: body, files } = await parseMultipartFormData(request);
 
+		// Message-ID와 References 헤더 추출
+		let messageId: string | undefined;
+		let inReplyTo: string | undefined;
+		let references: string[] = [];
+
+		// headers 필드에서 Message-ID 추출
+		if (body.headers) {
+			try {
+				const headers = JSON.parse(body.headers);
+				messageId = headers['Message-ID'] || headers['message-id'];
+				inReplyTo = headers['In-Reply-To'] || headers['in-reply-to'];
+				const referencesStr = headers['References'] || headers['references'];
+				if (referencesStr) {
+					references = referencesStr.split(/\s+/).filter((ref: string) => ref.length > 0);
+				}
+			} catch (e) {
+				console.log("헤더 파싱 실패:", e);
+			}
+		}
+
 		console.log("\n📧 [이메일 기본 정보]");
 		console.log("├─ From:", body.from || "없음");
 		console.log("├─ To:", body.to || "없음");
 		console.log("├─ CC:", body.cc || "없음");
-		console.log("└─ Subject:", body.subject || "없음");
+		console.log("├─ Subject:", body.subject || "없음");
+		console.log("├─ Message-ID:", messageId || "없음");
+		console.log("├─ In-Reply-To:", inReplyTo || "없음");
+		console.log("└─ References:", references.length > 0 ? references.join(', ') : "없음");
 
 		console.log("\n🌐 [발신자 정보]");
 		console.log("├─ Sender IP:", body.sender_ip || "없음");
@@ -385,11 +426,18 @@ export async function POST(request: NextRequest) {
 
 			console.log("├─ 이메일 내용 길이:", emailContent.length, "자");
 
+			// 스레드 추적을 위한 References 구성
+			const updatedReferences = messageId
+				? [...references, messageId]
+				: references;
+
 			const autoReplySuccess = await sendAutoReply(
 				parsedFormData.to || "",
 				parsedFormData.from,
 				parsedFormData.subject,
-				emailContent
+				emailContent,
+				messageId,  // In-Reply-To로 사용
+				updatedReferences  // References 체인
 			);
 
 			if (autoReplySuccess) {

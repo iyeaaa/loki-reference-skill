@@ -1,9 +1,12 @@
-import { drizzle } from 'drizzle-orm/postgres-js'
-import postgres from 'postgres'
+import { drizzle } from 'drizzle-orm/node-postgres'
+import { Pool } from 'pg'
 import * as schema from './schema'
 
-const connectionString = process.env.DATABASE_URL ||
-  `postgres://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'postgres'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'postgres'}`
+const connectionString = Bun.env.DATABASE_URL ||
+  `postgres://${Bun.env.DB_USER || 'postgres'}:${Bun.env.DB_PASSWORD || 'postgres'}@${Bun.env.DB_HOST || 'localhost'}:${Bun.env.DB_PORT || '5432'}/${Bun.env.DB_NAME || 'postgres'}`
 
-const client = postgres(connectionString)
-export const db = drizzle(client, { schema })
+const pool = new Pool({
+  connectionString,
+})
+
+export const db = drizzle(pool, { schema })

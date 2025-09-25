@@ -68,7 +68,7 @@ ssh $SSH_HOST << EOF
 
     # Docker Compose 실행
     sudo docker compose up -d --build
-    
+
     # 컨테이너 상태 확인
     sudo docker compose ps
 EOF

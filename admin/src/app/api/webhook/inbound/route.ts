@@ -2,6 +2,7 @@ import { Readable } from "node:stream";
 import sgMail from "@sendgrid/mail";
 import busboy from "busboy";
 import { type NextRequest, NextResponse } from "next/server";
+import { getAIEmailService, type EmailContext } from "@/lib/ai-email-service";
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
 
@@ -24,61 +25,53 @@ async function sendAutoReply(
 	subject: string,
 	emailContent: string,
 ): Promise<boolean> {
-	const now = new Date();
-	const formattedTime = now.toLocaleString("ko-KR", {
-		timeZone: "Asia/Seoul",
-		year: "numeric",
-		month: "long",
-		day: "numeric",
-		hour: "2-digit",
-		minute: "2-digit",
-		hour12: true,
-	});
+	try {
+		// AI 서비스를 사용하여 응답 생성
+		const aiService = getAIEmailService();
+		const emailContext: EmailContext = {
+			fromEmail,
+			subject,
+			content: emailContent,
+			receivedTime: new Date(),
+		};
 
-	const contentSummary = emailContent
-		? emailContent.trim().length > 200
-			? emailContent.trim().substring(0, 200) + "..."
-			: emailContent.trim()
-		: "(내용 없음)";
+		console.log("🤖 AI 응답 생성 중...");
+		const aiResponse = await aiService.generateEmailReply(emailContext);
 
-	const msg = {
-		to: fromEmail,
-		from: {
-			email: "rinda@partners.grinda.ai",
-			name: "린다 뷰티 (Rinda Beauty)",
-		},
-		replyTo: "rinda@partners.grinda.ai",
-		subject: `Re: ${subject || "문의 감사합니다"}`,
-		text: `안녕하세요,
+		let replyText: string;
 
-소중한 문의 주셔서 감사합니다.
+		if (aiResponse.success && aiResponse.replyContent) {
+			// AI 생성 응답 사용
+			replyText = aiResponse.replyContent;
+			console.log("✅ AI 응답 사용");
+		} else {
+			// AI 실패 시 기본 템플릿 사용
+			console.log("⚠️ AI 응답 실패, 기본 템플릿 사용:", aiResponse.error);
+			replyText = aiService.generateFallbackReply(emailContext);
+		}
 
-[접수 정보]
-제목: ${subject || "제목 없음"}
-내용: ${contentSummary}
-
-접수시간: ${formattedTime}
-
-고객님의 문의사항을 확인했으며, 담당자가 내용을 검토 중입니다.
-24시간 이내 상세한 답변을 드리도록 하겠습니다.
-
-감사합니다.
-
-린다 고객지원팀
-rinda@partners.grinda.ai`,
-		trackingSettings: {
-			clickTracking: {
-				enable: true,
-				enableText: true,
+		const msg = {
+			to: fromEmail,
+			from: {
+				email: "rinda@partners.grinda.ai",
+				name: "Rinda Expert - 그린다에이아이",
 			},
-			openTracking: {
-				enable: true,
+			replyTo: "rinda@partners.grinda.ai",
+			subject: `Re: ${subject || "문의 감사합니다"}`,
+			text: replyText,
+			trackingSettings: {
+				clickTracking: {
+					enable: true,
+					enableText: true,
+				},
+				openTracking: {
+					enable: true,
+				},
+				subscriptionTracking: {
+					enable: false,
+				},
 			},
-			subscriptionTracking: {
-				enable: false,
-			},
-		},
-	};
+		};
 
 	try {
 		await sgMail.send(msg);

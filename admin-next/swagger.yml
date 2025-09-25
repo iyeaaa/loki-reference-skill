@@ -1,0 +1,1582 @@
+openapi: 3.0.3
+info:
+  title: NTIS Admin API
+  description: NTIS Admin 시스템의 추천 기능 관리 및 RAG 기능 관리를 위한 REST API
+  version: 1.0.0
+  contact:
+    name: NTIS Admin Team
+    email: admin@ntis.go.kr
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.ntis.go.kr/admin/v1
+    description: Production server
+  - url: https://staging-api.ntis.go.kr/admin/v1
+    description: Staging server
+  - url: http://localhost:8080/admin/v1
+    description: Development server
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Authentication
+    description: 인증 관련 API
+  - name: Recommendation Models
+    description: 추천 모델 관리
+  - name: Recommendation Data
+    description: 학습 데이터 관리
+  - name: Recommendation Analytics
+    description: 추천 분석
+  - name: RAG Models
+    description: LLM 모델 관리
+  - name: RAG VectorDB
+    description: 벡터 DB 관리
+  - name: RAG QA
+    description: 질의응답 관리
+  - name: System
+    description: 시스템 관리
+
+paths:
+  # Authentication APIs
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: 로그인
+      description: 사용자 인증 및 토큰 발급
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  example: admin
+                password:
+                  type: string
+                  format: password
+                  example: password123
+      responses:
+        '200':
+          description: 로그인 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: 토큰 갱신
+      description: Refresh token을 사용하여 새로운 access token 발급
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: 토큰 갱신 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  # Recommendation Model APIs
+  /recommendation/models:
+    get:
+      tags:
+        - Recommendation Models
+      summary: 추천 모델 목록 조회
+      description: 등록된 추천 모델 목록을 조회합니다
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: type
+          in: query
+          description: 모델 유형
+          schema:
+            type: string
+            enum: [project, researcher, reviewer, tech_transfer]
+        - name: status
+          in: query
+          description: 모델 상태
+          schema:
+            type: string
+            enum: [active, training, inactive]
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      models:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/RecommendationModel'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+    
+    post:
+      tags:
+        - Recommendation Models
+      summary: 추천 모델 생성
+      description: 새로운 추천 모델을 생성합니다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRecommendationModel'
+      responses:
+        '201':
+          description: 생성 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /recommendation/models/{modelId}:
+    get:
+      tags:
+        - Recommendation Models
+      summary: 추천 모델 상세 조회
+      description: 특정 추천 모델의 상세 정보를 조회합니다
+      parameters:
+        - $ref: '#/components/parameters/ModelIdParam'
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/RecommendationModelDetail'
+    
+    put:
+      tags:
+        - Recommendation Models
+      summary: 추천 모델 수정
+      description: 추천 모델 정보를 수정합니다
+      parameters:
+        - $ref: '#/components/parameters/ModelIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRecommendationModel'
+      responses:
+        '200':
+          description: 수정 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+    
+    delete:
+      tags:
+        - Recommendation Models
+      summary: 추천 모델 삭제
+      description: 추천 모델을 삭제합니다
+      parameters:
+        - $ref: '#/components/parameters/ModelIdParam'
+      responses:
+        '204':
+          description: 삭제 성공
+
+  /recommendation/models/{modelId}/train:
+    post:
+      tags:
+        - Recommendation Models
+      summary: 모델 학습 시작
+      description: 추천 모델의 학습을 시작합니다
+      parameters:
+        - $ref: '#/components/parameters/ModelIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                datasetId:
+                  type: string
+                validationSplit:
+                  type: number
+                  format: float
+                  example: 0.2
+                testSplit:
+                  type: number
+                  format: float
+                  example: 0.1
+      responses:
+        '202':
+          description: 학습 시작됨
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /recommendation/models/{modelId}/status:
+    patch:
+      tags:
+        - Recommendation Models
+      summary: 모델 활성화/비활성화
+      description: 추천 모델의 활성화 상태를 변경합니다
+      parameters:
+        - $ref: '#/components/parameters/ModelIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: 상태 변경 성공
+
+  # Recommendation Data APIs
+  /recommendation/data-sources:
+    get:
+      tags:
+        - Recommendation Data
+      summary: 데이터 소스 목록 조회
+      description: 학습 데이터 소스 목록을 조회합니다
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [project, researcher, paper, patent]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [synced, syncing, error]
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      sources:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DataSource'
+    
+    post:
+      tags:
+        - Recommendation Data
+      summary: 데이터 소스 생성
+      description: 새로운 데이터 소스를 추가합니다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDataSource'
+      responses:
+        '201':
+          description: 생성 성공
+
+  /recommendation/data-sources/{sourceId}/sync:
+    post:
+      tags:
+        - Recommendation Data
+      summary: 데이터 소스 동기화
+      description: 데이터 소스를 동기화합니다
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '202':
+          description: 동기화 시작됨
+
+  /recommendation/pipelines:
+    get:
+      tags:
+        - Recommendation Data
+      summary: 파이프라인 목록 조회
+      description: 데이터 처리 파이프라인 목록을 조회합니다
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      pipelines:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Pipeline'
+
+  /recommendation/pipelines/{pipelineId}/execute:
+    post:
+      tags:
+        - Recommendation Data
+      summary: 파이프라인 실행
+      description: 데이터 처리 파이프라인을 실행합니다
+      parameters:
+        - name: pipelineId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sourceId:
+                  type: integer
+                targetDataset:
+                  type: string
+      responses:
+        '202':
+          description: 파이프라인 실행 시작됨
+
+  # Recommendation Analytics APIs
+  /recommendation/analytics/metrics:
+    get:
+      tags:
+        - Recommendation Analytics
+      summary: 추천 성과 통계 조회
+      description: 추천 시스템의 성과 지표를 조회합니다
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: modelId
+          in: query
+          schema:
+            type: integer
+        - name: groupBy
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month]
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsMetrics'
+
+  /recommendation/test:
+    post:
+      tags:
+        - Recommendation Analytics
+      summary: 추천 테스트 실행
+      description: 특정 조건으로 추천 결과를 테스트합니다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                modelId:
+                  type: integer
+                userId:
+                  type: string
+                category:
+                  type: string
+                limit:
+                  type: integer
+      responses:
+        '200':
+          description: 테스트 실행 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationTestResult'
+
+  # RAG Model APIs
+  /rag/models:
+    get:
+      tags:
+        - RAG Models
+      summary: LLM 모델 목록 조회
+      description: 등록된 LLM 모델 목록을 조회합니다
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, configuring, error, inactive]
+        - name: provider
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      models:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LLMModel'
+    
+    post:
+      tags:
+        - RAG Models
+      summary: LLM 모델 등록
+      description: 새로운 LLM 모델을 등록합니다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLLMModel'
+      responses:
+        '201':
+          description: 등록 성공
+
+  /rag/models/{modelId}/config:
+    put:
+      tags:
+        - RAG Models
+      summary: LLM 모델 설정 수정
+      description: LLM 모델의 설정을 수정합니다
+      parameters:
+        - $ref: '#/components/parameters/ModelIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LLMModelConfig'
+      responses:
+        '200':
+          description: 수정 성공
+
+  /rag/models/{modelId}/status:
+    get:
+      tags:
+        - RAG Models
+      summary: 모델 상태 조회
+      description: LLM 모델의 상태를 조회합니다
+      parameters:
+        - $ref: '#/components/parameters/ModelIdParam'
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMModelStatus'
+
+  # RAG VectorDB APIs
+  /rag/vectordb/sources:
+    get:
+      tags:
+        - RAG VectorDB
+      summary: 벡터 DB 데이터 소스 목록
+      description: 벡터 DB에 저장된 데이터 소스 목록을 조회합니다
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      sources:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VectorDBSource'
+
+  /rag/vectordb/import:
+    post:
+      tags:
+        - RAG VectorDB
+      summary: 데이터 임포트
+      description: 벡터 DB에 새로운 데이터를 임포트합니다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportVectorData'
+      responses:
+        '202':
+          description: 임포트 시작됨
+
+  /rag/vectordb/sources/{sourceId}/embed:
+    post:
+      tags:
+        - RAG VectorDB
+      summary: 임베딩 작업 시작
+      description: 데이터 소스의 임베딩 작업을 시작합니다
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                embeddingModel:
+                  type: string
+                  example: E5-Large-v2
+                batchSize:
+                  type: integer
+                  example: 100
+                priority:
+                  type: string
+                  enum: [low, medium, high]
+      responses:
+        '202':
+          description: 임베딩 시작됨
+
+  /rag/vectordb/jobs:
+    get:
+      tags:
+        - RAG VectorDB
+      summary: 인덱싱 작업 목록
+      description: 진행 중인 인덱싱 작업 목록을 조회합니다
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      jobs:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/IndexingJob'
+
+  /rag/vectordb/search:
+    post:
+      tags:
+        - RAG VectorDB
+      summary: 벡터 검색 테스트
+      description: 벡터 DB에서 검색을 수행합니다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VectorSearch'
+      responses:
+        '200':
+          description: 검색 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VectorSearchResult'
+
+  # RAG QA APIs
+  /rag/qa/logs:
+    get:
+      tags:
+        - RAG QA
+      summary: 질의응답 로그 조회
+      description: 질의응답 로그를 조회합니다
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - name: modelId
+          in: query
+          schema:
+            type: integer
+        - name: feedback
+          in: query
+          schema:
+            type: string
+            enum: [positive, negative, null]
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      logs:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/QALog'
+
+  /rag/qa/logs/{logId}/feedback:
+    post:
+      tags:
+        - RAG QA
+      summary: 답변 품질 피드백 제출
+      description: 질의응답에 대한 피드백을 제출합니다
+      parameters:
+        - name: logId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QAFeedback'
+      responses:
+        '200':
+          description: 피드백 제출 성공
+
+  /rag/qa/golden-answers:
+    get:
+      tags:
+        - RAG QA
+      summary: Golden Answer 목록 조회
+      description: 표준 답변 템플릿 목록을 조회합니다
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      answers:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GoldenAnswer'
+    
+    post:
+      tags:
+        - RAG QA
+      summary: Golden Answer 생성
+      description: 새로운 표준 답변을 생성합니다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGoldenAnswer'
+      responses:
+        '201':
+          description: 생성 성공
+
+  /rag/qa/golden-answers/{answerId}:
+    put:
+      tags:
+        - RAG QA
+      summary: Golden Answer 수정
+      description: 표준 답변을 수정합니다
+      parameters:
+        - name: answerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGoldenAnswer'
+      responses:
+        '200':
+          description: 수정 성공
+    
+    delete:
+      tags:
+        - RAG QA
+      summary: Golden Answer 삭제
+      description: 표준 답변을 삭제합니다
+      parameters:
+        - name: answerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: 삭제 성공
+
+  /rag/qa/usage:
+    get:
+      tags:
+        - RAG QA
+      summary: API 사용량 통계
+      description: API 사용량 통계를 조회합니다
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today, week, month]
+        - name: groupBy
+          in: query
+          schema:
+            type: string
+            enum: [hour, day, service]
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIUsageStats'
+
+  # System APIs
+  /system/health:
+    get:
+      tags:
+        - System
+      summary: 시스템 상태 조회
+      description: 시스템 전체 상태를 조회합니다
+      security: []
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemHealth'
+
+  /files/upload:
+    post:
+      tags:
+        - System
+      summary: 파일 업로드
+      description: 파일을 업로드합니다
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                type:
+                  type: string
+                  enum: [model, dataset, document]
+                metadata:
+                  type: string
+                  description: JSON 형식의 메타데이터
+      responses:
+        '200':
+          description: 업로드 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileUploadResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: 페이지 번호
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+    
+    LimitParam:
+      name: limit
+      in: query
+      description: 페이지당 항목 수
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+    
+    ModelIdParam:
+      name: modelId
+      in: path
+      description: 모델 ID
+      required: true
+      schema:
+        type: integer
+
+  responses:
+    UnauthorizedError:
+      description: 인증 실패
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    
+    ForbiddenError:
+      description: 권한 부족
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    
+    NotFoundError:
+      description: 리소스를 찾을 수 없음
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    # Common Schemas
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+    
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: AUTH_001
+            message:
+              type: string
+              example: 인증 실패
+            details:
+              type: object
+        timestamp:
+          type: string
+          format: date-time
+    
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    # Auth Schemas
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+            refreshToken:
+              type: string
+            expiresIn:
+              type: integer
+            user:
+              type: object
+              properties:
+                id:
+                  type: integer
+                username:
+                  type: string
+                role:
+                  type: string
+                permissions:
+                  type: array
+                  items:
+                    type: string
+
+    # Recommendation Schemas
+    RecommendationModel:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [project, researcher, reviewer, tech_transfer]
+        version:
+          type: string
+        status:
+          type: string
+          enum: [active, training, inactive]
+        lastTrained:
+          type: string
+          format: date-time
+        metrics:
+          type: object
+          properties:
+            precision:
+              type: number
+            recall:
+              type: number
+            f1Score:
+              type: number
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    
+    RecommendationModelDetail:
+      allOf:
+        - $ref: '#/components/schemas/RecommendationModel'
+        - type: object
+          properties:
+            description:
+              type: string
+            algorithm:
+              type: string
+            hyperparameters:
+              type: object
+            trainingData:
+              type: object
+            performance:
+              type: object
+            nextTraining:
+              type: string
+              format: date-time
+    
+    CreateRecommendationModel:
+      type: object
+      required:
+        - name
+        - type
+        - algorithm
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [project, researcher, reviewer, tech_transfer]
+        algorithm:
+          type: string
+        description:
+          type: string
+        hyperparameters:
+          type: object
+        datasetId:
+          type: string
+    
+    UpdateRecommendationModel:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        hyperparameters:
+          type: object
+        isActive:
+          type: boolean
+
+    DataSource:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        recordCount:
+          type: integer
+        size:
+          type: string
+        integrity:
+          type: number
+        lastUpdated:
+          type: string
+          format: date-time
+        schema:
+          type: object
+    
+    CreateDataSource:
+      type: object
+      required:
+        - name
+        - type
+        - sourceUrl
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        sourceUrl:
+          type: string
+        format:
+          type: string
+        updateSchedule:
+          type: string
+
+    Pipeline:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        schedule:
+          type: string
+        lastRun:
+          type: string
+          format: date-time
+        nextRun:
+          type: string
+          format: date-time
+        status:
+          type: string
+        steps:
+          type: array
+          items:
+            type: string
+
+    AnalyticsMetrics:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            summary:
+              type: object
+              properties:
+                totalImpressions:
+                  type: integer
+                totalClicks:
+                  type: integer
+                averageCTR:
+                  type: number
+                activeUsers:
+                  type: integer
+            trends:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                  impressions:
+                    type: integer
+                  clicks:
+                    type: integer
+                  ctr:
+                    type: number
+                  uniqueUsers:
+                    type: integer
+
+    RecommendationTestResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            recommendations:
+              type: array
+              items:
+                type: object
+                properties:
+                  itemId:
+                    type: string
+                  title:
+                    type: string
+                  score:
+                    type: number
+                  reason:
+                    type: string
+
+    # RAG Schemas
+    LLMModel:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          example: Kisti 고니
+        alias:
+          type: string
+          example: KistiGoni
+        provider:
+          type: string
+        version:
+          type: string
+        status:
+          type: string
+          enum: [active, configuring, error, inactive]
+        apiEndpoint:
+          type: string
+        parameters:
+          type: string
+        quantization:
+          type: string
+        performance:
+          type: object
+          properties:
+            responseTime:
+              type: integer
+            errorRate:
+              type: number
+            dailyCalls:
+              type: integer
+        isActive:
+          type: boolean
+    
+    CreateLLMModel:
+      type: object
+      required:
+        - name
+        - alias
+        - provider
+        - apiEndpoint
+      properties:
+        name:
+          type: string
+          enum: 
+            - Kisti 고니
+            - DeepSeek R1
+            - Llama 4 34B
+            - Mixtral 8x22b
+            - gpt-oss-20b
+            - Qwen3-30B-A3B
+        alias:
+          type: string
+          enum:
+            - KistiGoni
+            - DeepSeek
+            - Llama4
+            - Mixtral
+            - GPTOss
+            - Qwen3
+        provider:
+          type: string
+        version:
+          type: string
+        apiEndpoint:
+          type: string
+        apiKey:
+          type: string
+        parameters:
+          type: string
+        quantization:
+          type: object
+          properties:
+            method:
+              type: string
+            bits:
+              type: integer
+    
+    LLMModelConfig:
+      type: object
+      properties:
+        quantization:
+          type: object
+          properties:
+            method:
+              type: string
+            bits:
+              type: integer
+        knowledgeDistillation:
+          type: boolean
+        cacheSize:
+          type: integer
+        maxTokens:
+          type: integer
+        temperature:
+          type: number
+    
+    LLMModelStatus:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            modelId:
+              type: integer
+            status:
+              type: string
+            health:
+              type: object
+            usage:
+              type: object
+
+    VectorDBSource:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        documents:
+          type: integer
+        size:
+          type: string
+        lastIndexed:
+          type: string
+          format: date-time
+        indexingProgress:
+          type: integer
+        embeddingModel:
+          type: string
+    
+    ImportVectorData:
+      type: object
+      required:
+        - name
+        - type
+        - sourceUrl
+        - embeddingModel
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        sourceUrl:
+          type: string
+        embeddingModel:
+          type: string
+        chunkSize:
+          type: integer
+        overlap:
+          type: integer
+
+    IndexingJob:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        progress:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+        estimatedCompletion:
+          type: string
+          format: date-time
+
+    VectorSearch:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+        sources:
+          type: array
+          items:
+            type: string
+        limit:
+          type: integer
+        threshold:
+          type: number
+    
+    VectorSearchResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            results:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  source:
+                    type: string
+                  title:
+                    type: string
+                  score:
+                    type: number
+                  content:
+                    type: string
+                  metadata:
+                    type: object
+            queryTime:
+              type: integer
+
+    QALog:
+      type: object
+      properties:
+        id:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        userId:
+          type: string
+        question:
+          type: string
+        answer:
+          type: string
+        modelId:
+          type: integer
+        modelName:
+          type: string
+        sources:
+          type: array
+          items:
+            type: object
+        responseTime:
+          type: integer
+        feedback:
+          type: string
+        tokens:
+          type: object
+          properties:
+            input:
+              type: integer
+            output:
+              type: integer
+    
+    QAFeedback:
+      type: object
+      required:
+        - feedback
+      properties:
+        feedback:
+          type: string
+          enum: [positive, negative]
+        reason:
+          type: string
+        comment:
+          type: string
+
+    GoldenAnswer:
+      type: object
+      properties:
+        id:
+          type: integer
+        question:
+          type: string
+        answer:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    
+    CreateGoldenAnswer:
+      type: object
+      required:
+        - question
+        - answer
+        - category
+      properties:
+        question:
+          type: string
+        answer:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    APIUsageStats:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            summary:
+              type: object
+              properties:
+                totalCalls:
+                  type: integer
+                internalCalls:
+                  type: integer
+                externalCalls:
+                  type: integer
+                avgResponseTime:
+                  type: number
+            breakdown:
+              type: object
+
+    SystemHealth:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+            services:
+              type: object
+            resources:
+              type: object
+            timestamp:
+              type: string
+              format: date-time
+
+    FileUploadResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            fileId:
+              type: string
+            filename:
+              type: string
+            size:
+              type: string
+            url:
+              type: string

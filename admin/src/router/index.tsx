@@ -5,6 +5,7 @@ import DashboardLayout from '../layouts/DashboardLayout';
 import LoginPage from '../pages/LoginPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
 import UsersPage from '../pages/users/UsersPage';
+import BulletinBoardPage from '../pages/bulletin/BulletinBoardPage';
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>;
@@ -34,6 +35,10 @@ export const router = createBrowserRouter([
           {
             path: 'users',
             element: <UsersPage />,
+          },
+          {
+            path: 'bulletin',
+            element: <BulletinBoardPage />,
           },
         ],
       },

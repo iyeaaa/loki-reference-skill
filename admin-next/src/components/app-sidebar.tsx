@@ -1,10 +1,13 @@
+'use client'
+
 import {
   BarChart3,
   Settings,
   Users,
-  ClipboardList,
 } from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import Image from 'next/image'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
   Sidebar,
   SidebarContent,
@@ -28,16 +31,10 @@ const menuItems = [
     url: '/users',
     icon: Users,
   },
-  {
-    title: '게시판 테스트',
-    url: '/bulletin',
-    icon: ClipboardList,
-  },
 ]
 
 export function AppSidebar() {
-  const location = useLocation()
-  const pathname = location.pathname
+  const pathname = usePathname()
 
   return (
     <Sidebar collapsible="icon">
@@ -45,11 +42,13 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link to="/dashboard">
+              <Link href="/dashboard">
                 <div className="flex aspect-square size-10 items-center justify-center">
-                  <img
+                  <Image
                     src="/images/rinda-logo.png"
                     alt="Rinda Logo"
+                    width={40}
+                    height={40}
                     className="size-10 object-contain rounded-xl"
                   />
                 </div>
@@ -76,13 +75,13 @@ export function AppSidebar() {
                       isActive={isActive}
                       className={isActive ? 'bg-violet-500/10 border-r-2 border-violet-500' : ''}
                     >
-                      <Link to={item.url || '#'}>
+                      <Link href={item.url || '#'}>
                         {item.icon && (
-                          <item.icon
-                            className={isActive ? 'text-violet-500' : ''}
+                          <item.icon 
+                            className={isActive ? 'text-violet-500' : ''} 
                           />
                         )}
-                        <span
+                        <span 
                           className={isActive ? 'text-violet-500 font-medium' : ''}
                         >
                           {item.title}
@@ -104,7 +103,7 @@ export function AppSidebar() {
               tooltip="설정"
               isActive={pathname === '/settings'}
             >
-              <Link to="/settings">
+              <Link href="/settings">
                 <Settings />
                 <span>설정</span>
               </Link>

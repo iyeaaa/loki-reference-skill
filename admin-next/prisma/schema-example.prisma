@@ -1,0 +1,45 @@
+// 이 파일은 예시입니다. 실제 schema.prisma에 추가하세요.
+
+model EmailThread {
+  id               String           @id @default(cuid())
+  initialMessageId String
+  buyerEmail       String
+  subject          String
+  status           ThreadStatus     @default(ACTIVE)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  sequences        EmailSequence[]
+
+  @@index([buyerEmail])
+  @@index([status, updatedAt])
+}
+
+model EmailSequence {
+  id             String    @id @default(cuid())
+  threadId       String
+  thread         EmailThread @relation(fields: [threadId], references: [id])
+  messageId      String    @unique
+  inReplyTo      String?
+  references     String[]
+  sequenceNumber Int
+  direction      EmailDirection
+  fromEmail      String
+  toEmail        String
+  subject        String
+  content        String    @db.Text
+  aiGenerated    Boolean   @default(false)
+  sentAt         DateTime
+
+  @@index([threadId, sequenceNumber])
+  @@index([messageId])
+}
+
+enum ThreadStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum EmailDirection {
+  INBOUND
+  OUTBOUND
+}

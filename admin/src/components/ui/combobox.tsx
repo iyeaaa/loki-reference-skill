@@ -55,8 +55,8 @@ export function Combobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0 bg-background">
-        <Command className="bg-background">
+      <PopoverContent className="w-full p-0 bg-white dark:bg-gray-950 border">
+        <Command className="bg-white dark:bg-gray-950">
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>

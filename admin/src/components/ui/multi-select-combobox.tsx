@@ -136,8 +136,8 @@ export function MultiSelectCombobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0 bg-background" align="start">
-        <Command shouldFilter={false} className="bg-background">
+      <PopoverContent className="w-full p-0 bg-white dark:bg-gray-950 border" align="start">
+        <Command shouldFilter={false} className="bg-white dark:bg-gray-950">
           <CommandInput
             placeholder={searchPlaceholder}
             value={searchValue}

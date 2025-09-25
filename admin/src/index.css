@@ -107,7 +107,6 @@
 @layer base {
   * {
     border-color: hsl(var(--border));
-    outline-color: hsl(var(--ring) / 0.5);
   }
   body {
     background-color: hsl(var(--background));

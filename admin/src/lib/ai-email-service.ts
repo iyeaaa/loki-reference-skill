@@ -135,18 +135,19 @@ class AIEmailService {
         success: true,
         replyContent,
       };
-    } catch (error: any) {
-      console.error("❌ AI 응답 생성 실패:", error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류 발생';
+      console.error("❌ AI 응답 생성 실패:", errorMessage);
 
       // 에러 타입에 따른 처리
-      if (error.code === 'insufficient_quota') {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'insufficient_quota') {
         return {
           success: false,
           error: "OpenAI API 사용량 한도 초과",
         };
       }
 
-      if (error.status === 401) {
+      if (error && typeof error === 'object' && 'status' in error && error.status === 401) {
         return {
           success: false,
           error: "OpenAI API 키 인증 실패",
@@ -155,7 +156,7 @@ class AIEmailService {
 
       return {
         success: false,
-        error: error.message || "알 수 없는 오류 발생",
+        error: errorMessage,
       };
     }
   }

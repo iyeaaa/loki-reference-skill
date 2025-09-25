@@ -73,7 +73,6 @@ async function sendAutoReply(
 			},
 		};
 
-	try {
 		await sgMail.send(msg);
 		console.log(`✅ 자동 답장 이메일 발송 성공: ${fromEmail}`);
 		return true;

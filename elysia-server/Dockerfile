@@ -1,20 +1,21 @@
-FROM oven/bun:1.1.42-alpine
+FROM oven/bun:1-alpine
 
 WORKDIR /app
 
 # Copy package files
-COPY package.json yarn.lock .yarnrc.yml ./
-COPY .yarn .yarn
+COPY package.json ./
+COPY yarn.lock* ./
+COPY .yarnrc.yml* ./
+COPY .yarn* ./.yarn
 
-# Install dependencies with Yarn Berry
-RUN corepack enable && \
-    corepack prepare yarn@stable --activate && \
-    yarn install --immutable
+# Install dependencies
+RUN bun install --frozen-lockfile
 
 # Copy source code
 COPY src ./src
 COPY tsconfig.json ./
 COPY drizzle.config.ts ./
+COPY .env* ./
 
 # Expose port
 EXPOSE 3001

@@ -32,17 +32,6 @@ services:
     networks:
       - app-network
 
-  admin-bulletin:
-    build:
-      context: ./admin-bulletin
-      dockerfile: Dockerfile
-    ports:
-      - "3003:80"
-    depends_on:
-      - elysia-server
-    networks:
-      - app-network
-
   postgres:
     image: postgres:17.2
     ports:

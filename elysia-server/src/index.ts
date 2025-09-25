@@ -2,6 +2,10 @@ import { Elysia, t } from 'elysia'
 import { cors } from '@elysiajs/cors'
 import { swagger } from '@elysiajs/swagger'
 import { PostDrizzleService } from './services/post-drizzle.service'
+import { migrateDatabase } from './db/migrate'
+
+// Initialize database
+migrateDatabase().catch(console.error)
 
 const postService = new PostDrizzleService()
 

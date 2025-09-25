@@ -1,13 +1,29 @@
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
+
+# Install build dependencies for native modules
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Enable corepack for Yarn Berry
+RUN corepack enable
 
 # Copy package files
 COPY package*.json ./
 COPY yarn.lock ./
+COPY .yarnrc.yml ./
+COPY .yarn ./.yarn
 
-# Install dependencies
-RUN yarn install --frozen-lockfile
+# Set environment variable to skip SWC binary check
+ENV SKIP_SWCPACK_POSTINSTALL=true
+
+# Install dependencies with retry logic
+RUN yarn install --immutable || yarn install --immutable --mode=skip-build
 
 # Copy source code
 COPY . .

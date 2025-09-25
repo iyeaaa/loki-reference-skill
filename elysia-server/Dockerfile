@@ -4,21 +4,23 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json ./
-COPY yarn.lock* ./
-COPY .yarnrc.yml* ./
-COPY .yarn* ./.yarn
+COPY bun.lockb* ./
 
-# Install dependencies
-RUN bun install --frozen-lockfile
+# Install dependencies using bun
+RUN bun install --frozen-lockfile || bun install
 
-# Copy source code
+# Copy source code and configuration files
 COPY src ./src
 COPY tsconfig.json ./
 COPY drizzle.config.ts ./
+COPY drizzle ./drizzle
 COPY .env* ./
+
+# Generate Drizzle migrations if needed
+RUN bun run db:generate || true
 
 # Expose port
 EXPOSE 3001
 
-# Run the application
-CMD ["bun", "run", "src/index.ts"]
+# Run the application using bun
+CMD ["bun", "run", "start"]

@@ -372,6 +372,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@prisma/client@npm:^6.16.2":
+  version: 6.16.2
+  resolution: "@prisma/client@npm:6.16.2"
+  peerDependencies:
+    prisma: "*"
+    typescript: ">=5.1.0"
+  peerDependenciesMeta:
+    prisma:
+      optional: true
+    typescript:
+      optional: true
+  checksum: 10c0/2d3356d18de6411dc61b701dfea2a4fc052913f7f7c6019d4cf477a2d391c7ca0adf1601f1d2b9030b5a1c2479b4d7d5b128e1b413218c1b12cd58f1091d2d1a
+  languageName: node
+  linkType: hard
+
 "@radix-ui/number@npm:1.1.1":
   version: 1.1.1
   resolution: "@radix-ui/number@npm:1.1.1"
@@ -2278,6 +2293,7 @@ __metadata:
   dependencies:
     "@eslint/js": "npm:^9.36.0"
     "@hookform/resolvers": "npm:^5.2.2"
+    "@prisma/client": "npm:^6.16.2"
     "@radix-ui/react-accordion": "npm:^1.2.12"
     "@radix-ui/react-alert-dialog": "npm:^1.1.15"
     "@radix-ui/react-aspect-ratio": "npm:^1.1.7"
@@ -2324,6 +2340,7 @@ __metadata:
     input-otp: "npm:^1.4.2"
     lucide-react: "npm:^0.544.0"
     next-themes: "npm:^0.4.6"
+    openai: "npm:^5.23.0"
     postcss: "npm:^8.5.6"
     react: "npm:^19.1.1"
     react-day-picker: "npm:^9.11.0"
@@ -3873,6 +3890,23 @@ __metadata:
   version: 4.1.1
   resolution: "object-assign@npm:4.1.1"
   checksum: 10c0/1f4df9945120325d041ccf7b86f31e8bcc14e73d29171e37a7903050e96b81323784ec59f93f102ec635bcf6fa8034ba3ea0a8c7e69fa202b87ae3b6cec5a414
+  languageName: node
+  linkType: hard
+
+"openai@npm:^5.23.0":
+  version: 5.23.0
+  resolution: "openai@npm:5.23.0"
+  peerDependencies:
+    ws: ^8.18.0
+    zod: ^3.23.8
+  peerDependenciesMeta:
+    ws:
+      optional: true
+    zod:
+      optional: true
+  bin:
+    openai: bin/cli
+  checksum: 10c0/564ea5c1a5b15cf243f2da274e69f9679e8227b9fb9081d1a86d02ad86ff2972d0e142e361ae1772675c594caf68100f0e36eb8212a879aebeca000f98e46c6a
   languageName: node
   linkType: hard
 

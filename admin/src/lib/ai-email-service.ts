@@ -47,7 +47,8 @@ class AIEmailService {
       "강호진 대표(010-6326-9009)에게 직접 연락 부탁드립니다."
 
       [미팅 제안 시]
-      간단히: "자세한 상담을 위해 30분 무료 데모를 제안드립니다.
+      "더 자세히 도와드리기 위해 30분 정도 시간 내어 직접 설명드리고 싶습니다.
+
       🗓️ https://calendly.com/grindaai/rinda-demo"`;
 
       const userPrompt = `고객 이메일:

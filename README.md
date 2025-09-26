@@ -1,39 +1,53 @@
-# SendGrid 이메일 서비스
+# SendGrid 이메일 서비스 & 관리 시스템
 
 ## 📋 프로젝트 개요
 
-SendGrid API를 활용한 이메일 송수신 및 자동화 시스템입니다. 이메일 대량 발송, 웹훅을 통한 인바운드 이메일 처리, 자동 답장 기능을 제공합니다.
+SendGrid API를 활용한 이메일 송수신 자동화 시스템과 관리 대시보드입니다. 이메일 대량 발송, 웹훅을 통한 인바운드 이메일 처리, AI 기반 자동 답장, 그리고 실시간 모니터링 기능을 제공합니다.
 
 ### 주요 기능
 - 📤 **이메일 대량 발송**: SendGrid API를 통한 마케팅 이메일 발송
 - 📥 **인바운드 이메일 처리**: SendGrid Inbound Parse 웹훅으로 수신 이메일 실시간 처리
-- 🔄 **자동 답장**: admin@grinda.ai로 수신된 이메일에 자동 답장
-- 🐳 **Docker 컨테이너화**: 배포 및 운영 간소화
+- 🤖 **AI 자동 답장**: OpenAI를 활용한 지능형 자동 답장 시스템
+- 📊 **관리 대시보드**: React 기반 이메일 관리 인터페이스
+- 🎯 **게시판 CRUD**: PostgreSQL 기반 게시판 시스템
+- 🐳 **완전한 컨테이너화**: Docker Compose를 통한 원클릭 배포
 
 ## 🏗 프로젝트 구조
 
 ```
 send-grid-test/
-├── server.js              # 메인 웹훅 서버 (Express)
-├── sendgrid_test.js       # 이메일 발송 테스트 스크립트
-├── docker-compose.yml     # Docker 컨테이너 구성
-├── Dockerfile            # Docker 이미지 빌드 설정
-├── package.json          # Node.js 의존성 관리
-├── .env                  # 환경 변수 (API 키 등)
-├── .env.example          # 환경 변수 템플릿
-├── SENDGRID_SETUP.md     # SendGrid 설정 가이드
-├── up-hana.sh            # 서버 배포 스크립트
-└── logs/                 # 로그 디렉토리
+├── admin/                 # React 관리 대시보드 (Vite)
+│   ├── src/
+│   ├── package.json
+│   └── Dockerfile
+├── admin-next/           # Next.js 관리 대시보드
+│   ├── src/
+│   │   └── app/api/     # API 라우트
+│   ├── package.json
+│   └── Dockerfile
+├── elysia-server/        # Bun + Elysia 백엔드 서버
+│   ├── src/
+│   │   ├── index.ts     # 메인 서버
+│   │   ├── lib/         # 유틸리티 모듈
+│   │   ├── db/          # 데이터베이스 설정
+│   │   └── services/    # 비즈니스 로직
+│   ├── package.json
+│   └── Dockerfile
+├── docker-compose.yml    # Docker 오케스트레이션
+├── .env                  # 환경 변수
+└── deploy-hana.sh       # 배포 스크립트
 ```
 
 ## 🚀 시작하기
 
 ### 필수 요구사항
-- Node.js 18.0.0 이상
-- Docker & Docker Compose (선택사항)
+- Docker & Docker Compose
+- Node.js 20+ (로컬 개발용)
+- Bun 1.2+ (Elysia 서버용)
 - SendGrid 계정 및 API 키
+- OpenAI API 키 (AI 답장용)
 
-### 설치
+### 빠른 시작 (Docker Compose)
 
 1. **저장소 클론**
 ```bash
@@ -41,12 +55,7 @@ git clone <repository-url>
 cd send-grid-test
 ```
 
-2. **의존성 설치**
-```bash
-npm install
-```
-
-3. **환경 변수 설정**
+2. **환경 변수 설정**
 ```bash
 cp .env.example .env
 ```
@@ -55,128 +64,107 @@ cp .env.example .env
 ```env
 SENDGRID_API_KEY=your_sendgrid_api_key
 OPENAI_API_KEY=your_openai_api_key
-PORT=3000
 ```
 
-### 실행 방법
-
-#### 로컬 실행
+3. **전체 스택 실행**
 ```bash
-# 개발 모드 (nodemon)
-npm run dev
+# 모든 서비스 시작
+docker-compose up -d
 
-# 프로덕션 모드
-npm start
+# 특정 서비스만 시작
+docker-compose up -d postgres redis elysia-server admin
 ```
 
-#### Docker로 실행
-```bash
-# 빌드 및 실행
-docker-compose up -d --build
+## 🎯 서비스 구성
 
-# 로그 확인
-docker logs -f sendgrid-webhook
-```
+### 핵심 서비스
+
+| 서비스 | 포트 | 설명 | 기술 스택 |
+|--------|------|------|-----------|
+| admin | 3000 | React 관리 대시보드 | Vite + React + TypeScript |
+| elysia-server | 3001 | 백엔드 API 서버 | Bun + Elysia + TypeScript |
+| postgres | 5432 | 데이터베이스 | PostgreSQL 17.2 |
+| redis | 6379 | 캐시 & 세션 스토어 | Redis 7.4 |
+| redisinsight | 5540 | Redis 관리 도구 | RedisInsight |
+| uptime-kuma | 3002 | 서비스 모니터링 | Uptime Kuma |
 
 ## 📡 API 엔드포인트
 
-### 1. 헬스체크
-- **GET** `/health`
-- 서버 상태 확인
+### Elysia Server (포트 3001)
 
-**응답 예시:**
+#### 1. 헬스체크
+- **GET** `/health`, `/api/health`
 ```json
 {
   "status": "ok",
-  "timestamp": "2024-09-22T06:00:00.000Z"
+  "timestamp": "2025-09-25T17:02:39.838Z"
 }
 ```
 
-### 2. 인바운드 이메일 웹훅
-- **POST** `/webhook/inbound`
-- SendGrid Inbound Parse 웹훅 수신
-- admin@grinda.ai로 수신 시 자동 답장 발송
-
-**주요 처리 내용:**
-- 발신자/수신자 정보 파싱
-- 이메일 본문 (text/html) 처리
-- Base64 인코딩된 내용 디코딩
-- 첨부파일 정보 추출
-- SPF/DKIM 검증 정보
-- 스팸 점수 확인
-
-### 3. 이메일 저장 웹훅
-- **POST** `/webhook/inbound-store`
-- 수신 이메일을 메모리에 저장
-
-### 4. 이메일 목록 조회
-- **GET** `/emails`
-- 최근 수신된 이메일 50개 조회
-
-**응답 예시:**
+#### 2. 이메일 관리
+- **GET** `/api/emails` - 이메일 목록 조회
 ```json
 {
   "count": 10,
-  "emails": [
-    {
-      "id": 1234567890,
-      "timestamp": "2024-09-22T06:00:00.000Z",
-      "from": "sender@example.com",
-      "to": "admin@grinda.ai",
-      "subject": "문의 메일",
-      "text": "본문 내용...",
-      "attachments": []
-    }
-  ]
+  "emails": [...]
 }
 ```
 
-## 📧 이메일 발송 기능
+#### 3. SendGrid 웹훅
+- **POST** `/api/webhook/inbound` - 인바운드 이메일 처리 & AI 자동 답장
+- **POST** `/api/webhook/inbound-store` - 이메일 저장 전용
 
-### sendgrid_test.js
-마케팅 이메일 대량 발송 스크립트
+#### 4. 게시판 CRUD
+- **GET** `/api/posts` - 게시글 목록
+- **POST** `/api/posts` - 게시글 생성
+- **PUT** `/api/posts/:id` - 게시글 수정
+- **DELETE** `/api/posts/:id` - 게시글 삭제
 
-**주요 설정:**
-- `TOTAL_EMAILS`: 발송할 이메일 개수
-- `INTERVAL_SECONDS`: 발송 간격 (초)
+## 🤖 AI 자동 답장 시스템
 
-**실행 방법:**
+### 특징
+- OpenAI GPT 모델을 활용한 지능형 응답 생성
+- 이메일 스레드 추적 (Message-ID, In-Reply-To, References)
+- 한국어/영어 자동 감지 및 응답
+- Fallback 템플릿 지원 (AI 실패 시)
+
+### 작동 조건
+- admin@grinda.ai 또는 rinda@partners.grinda.ai로 수신된 이메일
+- 자동으로 발신자에게 맞춤형 답장 발송
+
+## 🔧 로컬 개발
+
+### Elysia 서버
 ```bash
-node sendgrid_test.js
+cd elysia-server
+bun install
+bun run dev  # 개발 모드 (watch)
 ```
 
-**발송 내용:**
-- 그린다에이아이(GRINDA AI) 서비스 소개
-- Rinda (B2B 해외 영업 AI 에이전트) 홍보
-- HTML 템플릿 기반 이메일
+### Admin 대시보드
+```bash
+cd admin
+yarn install
+yarn dev     # Vite 개발 서버
+```
 
-## 🔄 자동 답장 기능
+### Admin-Next
+```bash
+cd admin-next
+npm install
+npm run dev  # Next.js 개발 서버
+```
 
-admin@grinda.ai로 이메일 수신 시 자동으로 답장을 발송합니다.
-
-### 자동 답장 내용
-- 문의 접수 확인
-- 주요 서비스 소개 (Rinda, FINGU, 맞춤형 LLM)
-- 검증된 성과 안내
-- 업무 시간 및 응답 시간 안내
-
-### 조건
-- 수신자가 `admin@grinda.ai`인 경우에만 작동
-- 비동기 처리로 웹훅 응답 지연 방지
-
-## 🔧 SendGrid 설정
+## 📧 SendGrid 설정
 
 ### Inbound Parse 설정
 
-1. **SendGrid 대시보드에서 Inbound Parse 설정**
+1. **SendGrid 대시보드 설정**
    - Settings > Inbound Parse > Add Host & URL
+   - Domain: `grinda.ai`
+   - URL: `http://your-server:3001/api/webhook/inbound`
 
-2. **설정 값:**
-   - **Subdomain**: `parse` (선택사항)
-   - **Domain**: `grinda.ai`
-   - **Destination URL**: `http://your-server:3000/webhook/inbound`
-
-3. **DNS MX 레코드 설정:**
+2. **DNS MX 레코드**
 ```
 Type: MX
 Host: parse
@@ -184,67 +172,109 @@ Value: mx.sendgrid.net
 Priority: 10
 ```
 
-4. **추가 옵션:**
+3. **옵션 활성화**
    - ✅ Check incoming emails for spam
    - ✅ POST the raw, full MIME message
 
-자세한 설정은 [SENDGRID_SETUP.md](./SENDGRID_SETUP.md) 참조
+## 🚢 프로덕션 배포
 
-## 🚢 배포
+### Docker Compose 배포
+```bash
+# 이미지 빌드
+docker-compose build
+
+# 서비스 시작
+docker-compose up -d
+
+# 로그 확인
+docker-compose logs -f elysia-server
+```
 
 ### 서버 배포 스크립트
 ```bash
-./up-hana.sh
+./deploy-hana.sh
 ```
 
-**스크립트 기능:**
-- 프로젝트 파일을 원격 서버로 동기화 (rsync)
-- Docker Compose로 서비스 재시작
-- node_modules, .git 등 불필요한 파일 제외
+배포 서버: 15.165.2.108 (AWS EC2)
 
-### 배포 환경
-- 서버: 15.165.2.108 (AWS EC2)
-- 포트: 3000
-- 컨테이너: sendgrid-webhook
+## 📊 모니터링
 
-## 📝 로깅
+### Uptime Kuma
+- URL: http://localhost:3002
+- 모든 서비스 상태 실시간 모니터링
+- 알림 설정 가능
 
-- 모든 수신 이메일 정보를 콘솔에 상세히 출력
-- 이메일 기본 정보 (발신자, 수신자, 제목)
-- 보안 검증 정보 (SPF, DKIM, 스팸 점수)
-- 본문 내용 (text/html)
-- 첨부파일 정보
-- 헤더 정보
+### RedisInsight
+- URL: http://localhost:5540
+- Redis 데이터 시각화
+- 실시간 명령어 실행
 
 ## 🔒 보안 고려사항
 
-- SendGrid API 키는 환경 변수로 관리
-- .env 파일은 .gitignore에 포함
-- 프로덕션 환경에서는 HTTPS 사용 권장
-- 스팸 필터링 및 검증 기능 활성화
+- API 키는 환경 변수로 관리 (.env)
+- .env 파일은 절대 커밋하지 않음
+- 프로덕션에서 HTTPS 필수
+- PostgreSQL 비밀번호 강화 필요
+- Redis 비밀번호 설정됨
 
-## 🛠 개발 명령어
+## 📦 기술 스택
+
+### Backend
+- **Bun**: 1.2+ - JavaScript 런타임
+- **Elysia**: 1.4+ - 웹 프레임워크
+- **PostgreSQL**: 17.2 - 데이터베이스
+- **Redis**: 7.4 - 캐싱
+- **SendGrid**: 이메일 서비스
+- **OpenAI**: AI 응답 생성
+
+### Frontend
+- **React**: 18+ - UI 라이브러리
+- **Vite**: 5+ - 빌드 도구
+- **TypeScript**: 5+ - 타입 안정성
+- **TailwindCSS**: 스타일링
+
+### DevOps
+- **Docker**: 컨테이너화
+- **Docker Compose**: 오케스트레이션
+- **Nginx**: 리버스 프록시
+
+## 🛠 유용한 명령어
 
 ```bash
-# 개발 서버 실행
-npm run dev
+# Docker 관련
+docker-compose ps              # 서비스 상태 확인
+docker-compose logs -f [서비스명]  # 로그 확인
+docker-compose restart [서비스명]  # 서비스 재시작
+docker-compose down            # 전체 중지
+docker-compose up -d --build   # 재빌드 및 시작
 
-# 프로덕션 실행
-npm start
+# 데이터베이스 접속
+docker exec -it send-grid-test-postgres-1 psql -U postgres
 
-# 테스트
-npm test
-
-# 린트
-npm run lint
+# Redis CLI
+docker exec -it send-grid-test-redis-1 redis-cli -a sendgrid_redis_password_2024
 ```
 
-## 📦 주요 의존성
+## 📝 환경 변수
 
-- **express**: ^4.18.2 - 웹 서버 프레임워크
-- **@sendgrid/mail**: ^8.1.6 - SendGrid API 클라이언트
-- **multer**: ^1.4.5 - 파일 업로드 처리
-- **dotenv**: ^16.3.1 - 환경 변수 관리
+```env
+# SendGrid
+SENDGRID_API_KEY=your_sendgrid_api_key
+
+# OpenAI
+OPENAI_API_KEY=your_openai_api_key
+
+# Database
+DB_HOST=localhost  # Docker: postgres
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=postgres
+
+# Server
+NODE_ENV=development
+PORT=3001
+```
 
 ## 👥 회사 정보
 
@@ -253,8 +283,14 @@ npm run lint
 - 주소: 대전광역시 유성구 대학로 99 대전팁스타운 503호
 - 사업자등록번호: 309-88-02709
 - 이메일: admin@grinda.ai
+- 웹사이트: https://grinda.ai
 - 슬로건: "AI와, 당신의 비즈니스로 미래를 함께 그립니다"
 
 ## 📄 라이선스
 
 이 프로젝트는 그린다에이아이의 내부 프로젝트입니다.
+
+---
+
+**Last Updated**: 2025-09-26
+**Version**: 2.0.0

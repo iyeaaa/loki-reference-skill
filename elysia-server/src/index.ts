@@ -3,6 +3,7 @@ import { cors } from '@elysiajs/cors'
 import { swagger } from '@elysiajs/swagger'
 import { migrateDatabase } from './db/migrate'
 import { config } from './config'
+import { errorHandler } from './plugins/error-handler.plugin'
 
 // Import routes
 import { healthRoutes } from './routes/health.routes'
@@ -14,6 +15,7 @@ import { postRoutes } from './routes/post.routes'
 migrateDatabase().catch(console.error)
 
 const app = new Elysia()
+  .use(errorHandler)  // Apply global error handler
   .use(cors())
   .use(swagger({
     documentation: {

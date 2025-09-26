@@ -1,26 +1,17 @@
 import { Elysia, t } from 'elysia'
 import { PostDrizzleService } from '../services/post-drizzle.service'
+import { NotFoundError } from '../utils/errors'
 
 const postService = new PostDrizzleService()
 
 export const postRoutes = new Elysia({ prefix: '/api/posts' })
   .get('/', async () => {
-    try {
-      const posts = await postService.getAllPosts()
-      return { success: true, data: posts }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      return { success: false, error: errorMessage }
-    }
+    const posts = await postService.getAllPosts()
+    return { success: true, data: posts }
   })
   .post('/', async ({ body }) => {
-    try {
-      const post = await postService.createPost(body)
-      return { success: true, data: post }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      return { success: false, error: errorMessage }
-    }
+    const post = await postService.createPost(body)
+    return { success: true, data: post }
   }, {
     body: t.Object({
       title: t.String({ minLength: 1, maxLength: 255 }),
@@ -29,16 +20,11 @@ export const postRoutes = new Elysia({ prefix: '/api/posts' })
     })
   })
   .put('/:id', async ({ params, body }) => {
-    try {
-      const post = await postService.updatePost(parseInt(params.id), body)
-      if (!post) {
-        return { success: false, error: 'Post not found' }
-      }
-      return { success: true, data: post }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      return { success: false, error: errorMessage }
+    const post = await postService.updatePost(parseInt(params.id), body)
+    if (!post) {
+      throw new NotFoundError('Post not found')
     }
+    return { success: true, data: post }
   }, {
     params: t.Object({
       id: t.String()
@@ -50,16 +36,11 @@ export const postRoutes = new Elysia({ prefix: '/api/posts' })
     })
   })
   .delete('/:id', async ({ params }) => {
-    try {
-      const success = await postService.deletePost(parseInt(params.id))
-      if (!success) {
-        return { success: false, error: 'Post not found' }
-      }
-      return { success: true, message: 'Post deleted successfully' }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      return { success: false, error: errorMessage }
+    const success = await postService.deletePost(parseInt(params.id))
+    if (!success) {
+      throw new NotFoundError('Post not found')
     }
+    return { success: true, message: 'Post deleted successfully' }
   }, {
     params: t.Object({
       id: t.String()

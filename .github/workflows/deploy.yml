@@ -3,8 +3,6 @@ name: Deploy to EC2
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
   deploy:
@@ -51,13 +49,74 @@ jobs:
         ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
           cd ~/send-grid-test
 
-          # Docker Compose로 빌드 및 배포
-          docker compose down
-          docker compose up -d --build
+          # 이전 컨테이너 백업 (롤백용)
+          docker compose ps -q > /tmp/previous_containers.txt
 
-          # 사용하지 않는 이미지 정리
+          # 새 이미지 빌드 (캐싱 활용)
+          docker compose build --pull
+
+          # Blue-Green 배포: 새 컨테이너 시작 후 이전 컨테이너 종료
+          docker compose up -d --no-build --remove-orphans
+
+          # 헬스체크 대기 (최대 60초)
+          echo "Waiting for services to be healthy..."
+          HEALTH_CHECK_TIMEOUT=60
+          HEALTH_CHECK_INTERVAL=5
+          ELAPSED=0
+
+          while [ $ELAPSED -lt $HEALTH_CHECK_TIMEOUT ]; do
+            # admin 서비스 헬스체크 (Next.js API health endpoint)
+            ADMIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health || echo "000")
+            # elysia-server 서비스 헬스체크
+            ELYSIA_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/health || echo "000")
+
+            if [ "$ADMIN_STATUS" = "200" ] && [ "$ELYSIA_STATUS" = "200" ]; then
+              echo "✅ All services are healthy!"
+              break
+            fi
+
+            echo "Waiting for services... (Admin: $ADMIN_STATUS, Elysia: $ELYSIA_STATUS)"
+            sleep $HEALTH_CHECK_INTERVAL
+            ELAPSED=$((ELAPSED + HEALTH_CHECK_INTERVAL))
+          done
+
+          # 헬스체크 실패 시 롤백
+          if [ $ELAPSED -ge $HEALTH_CHECK_TIMEOUT ]; then
+            echo "❌ Health check failed. Rolling back..."
+            docker compose down
+            if [ -f /tmp/previous_containers.txt ]; then
+              # 이전 컨테이너로 롤백 시도
+              docker compose up -d --no-build
+            fi
+            exit 1
+          fi
+
+          # 배포 성공 시 사용하지 않는 이미지 정리
           docker image prune -f
 
-          # 컨테이너 상태 확인
+          # 최종 컨테이너 상태 확인
+          echo "\n📦 Container Status:"
           docker compose ps
+
+          # 서비스 로그 확인 (최근 10줄)
+          echo "\n📋 Recent Logs:"
+          docker compose logs --tail=10
         EOF
+
+    - name: Verify deployment
+      run: |
+        echo "Verifying deployment from GitHub Actions..."
+        sleep 5
+
+        # 외부에서 서비스 접근 확인
+        ADMIN_CHECK=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.EC2_HOST }}:3000/health || echo "000")
+        ELYSIA_CHECK=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.EC2_HOST }}:3001/health || echo "000")
+
+        if [ "$ADMIN_CHECK" != "200" ] || [ "$ELYSIA_CHECK" != "200" ]; then
+          echo "❌ Deployment verification failed!"
+          echo "Admin service: $ADMIN_CHECK, Elysia service: $ELYSIA_CHECK"
+          exit 1
+        fi
+
+        echo "✅ Deployment verified successfully!"
+        echo "Admin service: $ADMIN_CHECK, Elysia service: $ELYSIA_CHECK"

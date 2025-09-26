@@ -1,0 +1,63 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+    - name: Add EC2 to known hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Prepare environment files
+      run: |
+        # 환경변수 파일 생성
+        echo "${{ secrets.ADMIN_ENV }}" > ./admin/.env
+        echo "${{ secrets.ELYSIA_SERVER_ENV }}" > ./elysia-server/.env
+
+    - name: Deploy to EC2
+      run: |
+        # EC2에 디렉토리 생성
+        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "mkdir -p ~/send-grid-test"
+
+        # rsync로 파일 전송 (node_modules, .git 등 제외)
+        rsync -avz --delete \
+          --exclude='.git/' \
+          --exclude='node_modules/' \
+          --exclude='dist/' \
+          --exclude='.next/' \
+          --exclude='.turbo/' \
+          --exclude='*.log' \
+          --exclude='.DS_Store' \
+          ./ ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/send-grid-test/
+
+    - name: Build and deploy with Docker Compose
+      run: |
+        ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
+          cd ~/send-grid-test
+
+          # Docker Compose로 빌드 및 배포
+          docker compose down
+          docker compose up -d --build
+
+          # 사용하지 않는 이미지 정리
+          docker image prune -f
+
+          # 컨테이너 상태 확인
+          docker compose ps
+        EOF

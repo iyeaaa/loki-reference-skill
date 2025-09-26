@@ -46,11 +46,11 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link to="/dashboard">
-                <div className="flex aspect-square size-10 items-center justify-center">
+                <div className="flex aspect-square size-8 items-center justify-center group-data-[collapsible=icon]:size-8">
                   <img
                     src="/images/rinda-logo.png"
                     alt="Rinda Logo"
-                    className="size-10 object-contain rounded-xl"
+                    className="size-8 object-contain rounded-xl"
                   />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">

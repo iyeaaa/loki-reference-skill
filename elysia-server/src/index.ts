@@ -11,7 +11,6 @@ import { healthRoutes } from './routes/health.routes'
 import { emailRoutes } from './routes/email.routes'
 import { webhookRoutes } from './routes/webhook.routes'
 import { postRoutes } from './routes/post.routes'
-import { testErrorRoutes } from './routes/test-error.routes'
 
 // Initialize database
 migrateDatabase().catch(console.error)
@@ -29,14 +28,13 @@ const app = new Elysia()
       }
     }
   }))
-  .get('/', () => 'Bulletin Board API')
+  .get('/', () => ({ message: 'Bulletin Board API', version: '1.0.0' }))
 
   // Register routes
   .use(healthRoutes)
   .use(emailRoutes)
   .use(webhookRoutes)
   .use(postRoutes)
-  // .use(testErrorRoutes)  // Temporarily disabled for testing
 
   .listen(config.port)
 

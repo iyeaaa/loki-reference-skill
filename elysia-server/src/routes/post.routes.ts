@@ -7,11 +7,11 @@ const postService = new PostDrizzleService()
 export const postRoutes = new Elysia({ prefix: '/api/posts' })
   .get('/', async () => {
     const posts = await postService.getAllPosts()
-    return { success: true, data: posts }
+    return posts  // responseTransformer가 자동으로 CommonResponse로 변환
   })
   .post('/', async ({ body }) => {
     const post = await postService.createPost(body)
-    return { success: true, data: post }
+    return post  // responseTransformer가 자동으로 CommonResponse로 변환
   }, {
     body: t.Object({
       title: t.String({ minLength: 1, maxLength: 255 }),
@@ -22,9 +22,9 @@ export const postRoutes = new Elysia({ prefix: '/api/posts' })
   .put('/:id', async ({ params, body }) => {
     const post = await postService.updatePost(parseInt(params.id), body)
     if (!post) {
-      throw new NotFoundError('Post not found')
+      throw new NotFoundError('게시글을 찾을 수 없습니다.')
     }
-    return { success: true, data: post }
+    return post
   }, {
     params: t.Object({
       id: t.String()
@@ -38,9 +38,9 @@ export const postRoutes = new Elysia({ prefix: '/api/posts' })
   .delete('/:id', async ({ params }) => {
     const success = await postService.deletePost(parseInt(params.id))
     if (!success) {
-      throw new NotFoundError('Post not found')
+      throw new NotFoundError('게시글을 찾을 수 없습니다.')
     }
-    return { success: true, message: 'Post deleted successfully' }
+    return { id: params.id }  // 삭제된 ID 반환
   }, {
     params: t.Object({
       id: t.String()

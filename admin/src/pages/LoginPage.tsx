@@ -69,12 +69,23 @@ export default function AdminLoginPage() {
     },
   });
 
+  // Check if already logged in
   useEffect(() => {
-    const allowedRoles = ['admin', 'internal_reviewer', 'external_reviewer'];
-    if (session && session.user?.user_role && allowedRoles.includes(session.user.user_role)) {
-      router.push("/");
+    const token = localStorage.getItem('authToken');
+    const user = localStorage.getItem('user');
+
+    if (token && user) {
+      try {
+        const userData = JSON.parse(user);
+        const allowedRoles = ['admin', 'internal_reviewer', 'external_reviewer'];
+        if (userData?.user_role && allowedRoles.includes(userData.user_role)) {
+          navigate("/");
+        }
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
     }
-  }, [session, router]);
+  }, [navigate]);
 
   // Fetch departments for signup form
   useEffect(() => {
@@ -164,14 +175,19 @@ export default function AdminLoginPage() {
   }
 
   const allowedRoles = ['admin', 'internal_reviewer', 'external_reviewer'];
-  if (session && session.user?.user_role && allowedRoles.includes(session.user.user_role)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-blue-50">
-        <div className="text-center">
-          <p className="text-gray-600">이미 로그인되어 있습니다. 대시보드로 이동 중...</p>
+  const token = localStorage.getItem('authToken');
+  const storedUser = localStorage.getItem('user');
+  if (token && storedUser) {
+    const userData = JSON.parse(storedUser);
+    if (userData?.user_role && allowedRoles.includes(userData.user_role)) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-blue-50">
+          <div className="text-center">
+            <p className="text-gray-600">이미 로그인되어 있습니다. 대시보드로 이동 중...</p>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 
   return (

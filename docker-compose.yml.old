@@ -1,21 +1,4 @@
 services:
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - /etc/letsencrypt/live/sendgrinda.cloud/fullchain.pem:/etc/nginx/ssl/certificate.pem:ro
-      - /etc/letsencrypt/live/sendgrinda.cloud/privkey.pem:/etc/nginx/ssl/private.key:ro
-    depends_on:
-      - admin
-      - elysia-server
-      - uptime-kuma
-      - redisinsight
-    networks:
-      - app-network
-
   admin:
     build:
       context: ./admin

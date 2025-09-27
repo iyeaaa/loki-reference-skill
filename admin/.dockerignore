@@ -3,7 +3,6 @@ dist
 .git
 .gitignore
 README.md
-.env
 .vscode
 .idea
 npm-debug.log*

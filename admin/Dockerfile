@@ -25,10 +25,10 @@ ENV SKIP_SWCPACK_POSTINSTALL=true
 # Install dependencies with retry logic
 RUN yarn install --immutable || yarn install --immutable --mode=skip-build
 
-# Copy source code
+# Copy source code including .env file
 COPY . .
 
-# Build the application
+# Build the application (.env file will be automatically loaded by Vite)
 RUN yarn build
 
 # Production stage

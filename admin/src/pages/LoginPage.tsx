@@ -51,7 +51,6 @@ export default function AdminLoginPage() {
   const signupConfirmPasswordId = useId()
 
   const [isLoading, setIsLoading] = useState(false)
-  const [departments, setDepartments] = useState<{ id: string; name: string; code: string }[]>([])
   const [filteredDepartments, setFilteredDepartments] = useState<
     { id: string; name: string; code: string }[]
   >([])
@@ -100,63 +99,51 @@ export default function AdminLoginPage() {
     }
   }, [navigate])
 
-  // Fetch all departments initially
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      try {
-        const data = await departmentsApi.getDepartments()
-        setDepartments(
-          data.map((dept) => ({
-            id: dept.id,
-            name: dept.name,
-            code: dept.code,
-          }))
-        )
-        setFilteredDepartments(
-          data.map((dept) => ({
-            id: dept.id,
-            name: dept.name,
-            code: dept.code,
-          }))
-        )
-      } catch (error) {
-        console.error("Failed to fetch departments:", error)
+  // Fetch departments (with optional search)
+  const fetchDepartments = async (search?: string) => {
+    setSearchLoading(true)
+    try {
+      const data = await departmentsApi.getDepartments(search)
+      setFilteredDepartments(
+        data.map((dept) => ({
+          id: dept.id,
+          name: dept.name,
+          code: dept.code,
+        }))
+      )
+    } catch (error) {
+      console.error("Failed to fetch departments:", error)
+      if (!search) {
         toast.error("부서 목록을 불러오는데 실패했습니다.")
       }
+      setFilteredDepartments([])
+    } finally {
+      setSearchLoading(false)
     }
+  }
 
+  // Fetch all departments initially
+  useEffect(() => {
     fetchDepartments()
   }, [])
 
   // Search departments with debounce
   useEffect(() => {
-    const searchDepartments = async () => {
-      if (!departmentSearch || departmentSearch.trim() === "") {
-        setFilteredDepartments(departments)
-        return
-      }
-
-      setSearchLoading(true)
-      try {
-        const data = await departmentsApi.getDepartments(departmentSearch)
-        setFilteredDepartments(
-          data.map((dept) => ({
-            id: dept.id,
-            name: dept.name,
-            code: dept.code,
-          }))
-        )
-      } catch (error) {
-        console.error("Failed to search departments:", error)
-        setFilteredDepartments([])
-      } finally {
-        setSearchLoading(false)
-      }
+    // Skip if this is the initial render (already fetched in mount effect)
+    if (departmentSearch === "") {
+      // If search is cleared, fetch all departments again
+      fetchDepartments()
+      return
     }
 
-    const debounceTimer = setTimeout(searchDepartments, 300)
+    const debounceTimer = setTimeout(() => {
+      // Only fetch with search term if it's not empty
+      if (departmentSearch && departmentSearch.trim()) {
+        fetchDepartments(departmentSearch.trim())
+      }
+    }, 300)
     return () => clearTimeout(debounceTimer)
-  }, [departmentSearch, departments])
+  }, [departmentSearch])
 
   const onLoginSubmit = async (data: LoginFormValues) => {
     setIsLoading(true)

@@ -4,7 +4,6 @@ dist
 .gitignore
 README.md
 .env
-.env.local
 .vscode
 .idea
 npm-debug.log*

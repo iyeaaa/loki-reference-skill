@@ -1,4 +1,5 @@
 import { createBrowserRouter } from "react-router-dom"
+import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { AuthProvider } from "@/lib/auth-provider"
 import DashboardLayout from "../layouts/DashboardLayout"
 import RootLayout from "../layouts/RootLayout"
@@ -27,7 +28,11 @@ export const router = createBrowserRouter([
       },
       {
         path: "/",
-        element: <DashboardLayout />,
+        element: (
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        ),
         children: [
           {
             index: true,

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useCurrentUser, useDepartments, useVerifyToken } from "@/lib/api"
 import { useLoginMutation, useSignupMutation } from "@/lib/api/hooks/auth"
+import { useAuth } from "@/lib/auth-provider"
 
 const loginSchema = z.object({
   email: z.string().email("올바른 이메일 주소를 입력해주세요"),
@@ -40,6 +41,7 @@ type SignupFormValues = z.infer<typeof signupSchema>
 
 export default function AdminLoginPage() {
   const navigate = useNavigate()
+  const { user, isLoading: authLoading } = useAuth()
 
   const loginEmailId = useId()
   const loginPasswordId = useId()
@@ -60,7 +62,7 @@ export default function AdminLoginPage() {
   const signupMutation = useSignupMutation()
   const { data: departmentsData, isLoading: searchLoading } = useDepartments(departmentSearch)
   const { data: currentUser } = useCurrentUser()
-  const { data: isTokenValid } = useVerifyToken(!!currentUser)
+  useVerifyToken(!!currentUser)
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -82,15 +84,12 @@ export default function AdminLoginPage() {
     },
   })
 
-  // Check if already logged in using TanStack Query
+  // Check if already logged in and redirect to dashboard using useAuth hook
   useEffect(() => {
-    if (currentUser && isTokenValid) {
-      const allowedRoles = ["admin", "internal_reviewer", "external_reviewer"]
-      if (currentUser?.userRole && allowedRoles.includes(currentUser.userRole)) {
-        navigate("/")
-      }
+    if (!authLoading && user) {
+      navigate("/dashboard", { replace: true })
     }
-  }, [currentUser, isTokenValid, navigate])
+  }, [authLoading, user, navigate])
 
   const onLoginSubmit = async (data: LoginFormValues) => {
     await loginMutation.mutateAsync(data)
@@ -121,6 +120,15 @@ export default function AdminLoginPage() {
     : []
 
   const isLoading = loginMutation.isPending || signupMutation.isPending
+
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50 via-white to-blue-50">

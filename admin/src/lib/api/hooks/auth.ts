@@ -36,7 +36,6 @@ export function useCurrentUser() {
 // 3. Mutations
 // useMutation: 특정 데이터를 서버에 전송하고, 응답 데이터를 처리하는 작업을 담당. 서버 데이터 변경이 필요한 경우(POST/PUT/PATCH/DELETE) 사용. 로딩/에러/성공 상태 자동 관리, 요청 종료 후 관련 쿼리 자동 갱신 가능.
 export function useLoginMutation() {
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -49,7 +48,9 @@ export function useLoginMutation() {
       queryClient.invalidateQueries({ queryKey: authKeys.verify() })
 
       toast.success("로그인되었습니다.")
-      navigate("/dashboard")
+
+      // Force a page reload to ensure auth context is updated
+      window.location.href = "/dashboard"
     },
     onError: (error: Error) => {
       toast.error(error.message || "로그인에 실패했습니다.")

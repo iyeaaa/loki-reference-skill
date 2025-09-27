@@ -1,433 +1,379 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
-  AlertCircle,
+  Mail,
+  Users,
+  Send,
+  Clock,
   TrendingUp,
+  AlertCircle,
   CheckCircle,
   XCircle,
-  Clock,
-  FileText,
-  GitBranch,
-  Cpu
+  Zap,
+  Target,
+  Activity,
+  ArrowUpRight,
+  BarChart3,
+  Calendar,
+  MoreHorizontal,
+  PauseCircle,
+  PlayCircle,
+  RefreshCw
 } from 'lucide-react'
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
-     
-
-      {/* 2. AI R&D 추천 서비스 인사이트 */}
-      <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-3">
-          {/* 추천 품질 및 성과 */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">추천 클릭률 (CTR)</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="text-center py-2">
-                <div className="text-3xl font-bold text-primary">34.2%</div>
-                <div className="text-xs text-muted-foreground">전체 평균 CTR</div>
-              </div>
-              <div className="space-y-2 pt-2 border-t">
-                {[
-                  { type: '과제 추천', ctr: 42.3, trend: 'up' },
-                  { type: '연구자 추천', ctr: 38.7, trend: 'up' },
-                  { type: '논문 추천', ctr: 31.2, trend: 'down' },
-                  { type: '기관 추천', ctr: 28.9, trend: 'stable' },
-                  { type: '특허 추천', ctr: 26.4, trend: 'up' }
-                ].map((item) => (
-                  <div key={item.type} className="flex items-center justify-between">
-                    <span className="text-xs">{item.type}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold">{item.ctr}%</span>
-                      {item.trend === 'up' && <TrendingUp className="h-3 w-3 text-green-600" />}
-                      {item.trend === 'down' && <TrendingUp className="h-3 w-3 text-red-600 rotate-180" />}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Top 5 추천 콘텐츠 */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Top 5 추천 콘텐츠</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Tabs defaultValue="projects" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 h-8">
-                  <TabsTrigger value="projects" className="text-xs">과제</TabsTrigger>
-                  <TabsTrigger value="researchers" className="text-xs">연구자</TabsTrigger>
-                  <TabsTrigger value="papers" className="text-xs">논문</TabsTrigger>
-                </TabsList>
-                <TabsContent value="projects" className="space-y-2 mt-2">
-                  {[
-                    'AI 기반 신약개발 플랫폼',
-                    '차세대 배터리 소재 연구',
-                    '양자컴퓨팅 알고리즘 개발',
-                    '탄소중립 에너지 시스템',
-                    '바이오 헬스케어 빅데이터'
-                  ].map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-xs">
-                      <span className="truncate flex-1">{idx + 1}. {item}</span>
-                      <Badge variant="secondary" className="text-[10px]">
-                        {1234 - idx * 123}
-                      </Badge>
-                    </div>
-                  ))}
-                </TabsContent>
-                <TabsContent value="researchers" className="space-y-2 mt-2">
-                  {[
-                    '김철수 (KAIST)',
-                    '이영희 (서울대)',
-                    '박민수 (POSTECH)',
-                    '정하나 (연세대)',
-                    '최동욱 (GIST)'
-                  ].map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-xs">
-                      <span className="truncate flex-1">{idx + 1}. {item}</span>
-                      <Badge variant="secondary" className="text-[10px]">
-                        {987 - idx * 98}
-                      </Badge>
-                    </div>
-                  ))}
-                </TabsContent>
-                <TabsContent value="papers" className="space-y-2 mt-2">
-                  {[
-                    'Transformer 기반 추천시스템',
-                    'GNN을 활용한 신소재 예측',
-                    '연합학습 프레임워크 연구',
-                    '자율주행 인지 알고리즘',
-                    '양자 머신러닝 최적화'
-                  ].map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-xs">
-                      <span className="truncate flex-1">{idx + 1}. {item}</span>
-                      <Badge variant="secondary" className="text-[10px]">
-                        {765 - idx * 76}
-                      </Badge>
-                    </div>
-                  ))}
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-
-          {/* 신규 추천 기능 분석 */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">신규 추천 기능</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="p-3 bg-blue-50 rounded-lg space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium">협업연구자 추천</span>
-                  <Badge className="text-[10px]">Beta</Badge>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-muted-foreground">사용횟수</span>
-                    <div className="font-semibold">3,847</div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">CTR</span>
-                    <div className="font-semibold text-green-600">41.2%</div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="p-3 bg-purple-50 rounded-lg space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium">평가위원 추천</span>
-                  <Badge className="text-[10px]">Beta</Badge>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-muted-foreground">사용횟수</span>
-                    <div className="font-semibold">1,234</div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">CTR</span>
-                    <div className="font-semibold text-green-600">38.9%</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3 bg-violet-50 rounded-lg space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium">기술이전 매칭</span>
-                  <Badge variant="secondary" className="text-[10px]">Pilot</Badge>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-muted-foreground">매칭시도</span>
-                    <div className="font-semibold">892</div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">성공률</span>
-                    <div className="font-semibold text-violet-600">24.3%</div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+    <div className="space-y-6 h-full overflow-y-auto p-6">
+      {/* 헤더 섹션 */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold">이메일 캠페인 대시보드</h1>
+          <p className="text-muted-foreground">AI 기반 이메일 마케팅 자동화 플랫폼</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            새로고침
+          </Button>
+          <Button size="sm">
+            <Mail className="h-4 w-4 mr-2" />
+            새 캠페인
+          </Button>
         </div>
       </div>
 
-      {/* 3. LLM 질의응답 서비스 인사이트 */}
-      <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {/* 질의응답 사용 통계 */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">질의응답 통계</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground">총 질의</div>
-                  <div className="text-lg font-semibold">128,492</div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground">평균/세션</div>
-                  <div className="text-lg font-semibold">4.8</div>
-                </div>
-              </div>
-              <div className="pt-2 border-t space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">단순 질문</span>
-                  <span>45%</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">복합 질문</span>
-                  <span>38%</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">추천 질문</span>
-                  <span>17%</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* 핵심 지표 카드 */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>오늘 발송</CardDescription>
+            <CardTitle className="text-2xl">45,284</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center text-xs text-muted-foreground">
+              <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
+              <span className="text-green-500">+12.5%</span>
+              <span className="ml-1">전일 대비</span>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* 주요 질문 키워드 */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">인기 키워드</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  { word: 'AI', size: 'lg' },
-                  { word: '신소재', size: 'md' },
-                  { word: '바이오', size: 'lg' },
-                  { word: '에너지', size: 'md' },
-                  { word: '반도체', size: 'lg' },
-                  { word: '양자', size: 'sm' },
-                  { word: '탄소중립', size: 'md' },
-                  { word: '빅데이터', size: 'sm' },
-                  { word: '로봇', size: 'sm' },
-                  { word: '헬스케어', size: 'md' }
-                ].map((item) => (
-                  <Badge 
-                    key={item.word} 
-                    variant="secondary"
-                    className={`
-                      ${item.size === 'lg' ? 'text-sm px-2.5 py-1' : ''}
-                      ${item.size === 'md' ? 'text-xs px-2 py-0.5' : ''}
-                      ${item.size === 'sm' ? 'text-[10px] px-1.5 py-0' : ''}
-                    `}
-                  >
-                    {item.word}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>오픈율</CardDescription>
+            <CardTitle className="text-2xl">68.4%</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Progress value={68.4} className="h-2" />
+            <p className="text-xs text-muted-foreground mt-2">업계 평균 23.9%</p>
+          </CardContent>
+        </Card>
 
-          {/* 답변 품질 */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">답변 만족도</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-center items-center py-2">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">97%</div>
-                  <div className="text-xs text-muted-foreground">긍정 평가</div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3 text-green-600" />
-                  <span>좋아요: 124K</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <XCircle className="h-3 w-3 text-red-600" />
-                  <span>싫어요: 4K</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>클릭률</CardDescription>
+            <CardTitle className="text-2xl">24.8%</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Progress value={24.8} className="h-2" />
+            <p className="text-xs text-muted-foreground mt-2">업계 평균 7.8%</p>
+          </CardContent>
+        </Card>
 
-        </div>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>전환율</CardDescription>
+            <CardTitle className="text-2xl">8.2%</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center text-xs text-muted-foreground">
+              <Activity className="h-3 w-3 mr-1 text-green-500" />
+              <span className="text-green-500">+3.1%</span>
+              <span className="ml-1">주간 평균</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* 4. 데이터 및 AI 모델 관리 */}
-      <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* 데이터 파이프라인 현황 */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <GitBranch className="h-4 w-4" />
-                데이터 파이프라인
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                {[
-                  { source: '과제 데이터', lastSync: '10분 전', status: 'success', count: '892K' },
-                  { source: '성과 데이터', lastSync: '25분 전', status: 'success', count: '1.2M' },
-                  { source: '연구자 정보', lastSync: '1시간 전', status: 'success', count: '234K' },
-                  { source: '논문 메타데이터', lastSync: '2시간 전', status: 'success', count: '3.4M' },
-                  { source: '특허 정보', lastSync: '3시간 전', status: 'success', count: '567K' }
-                ].map((item) => (
-                  <div key={item.source} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+      {/* 실시간 캠페인 현황 */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-lg">실시간 캠페인 현황</CardTitle>
+            <Button variant="ghost" size="sm">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {[
+              {
+                name: '블랙프라이데이 특별 프로모션',
+                status: 'active',
+                type: 'bulk',
+                sent: 32450,
+                total: 45000,
+                openRate: 72.3,
+                clickRate: 28.9,
+                progress: 72
+              },
+              {
+                name: '신규 가입자 온보딩 시퀀스',
+                status: 'active',
+                type: 'sequence',
+                sent: 1234,
+                total: 1500,
+                openRate: 84.2,
+                clickRate: 45.6,
+                progress: 82
+              },
+              {
+                name: '재구매 유도 캠페인',
+                status: 'paused',
+                type: 'ai',
+                sent: 8920,
+                total: 15000,
+                openRate: 65.1,
+                clickRate: 22.3,
+                progress: 59
+              },
+              {
+                name: 'VIP 고객 맞춤형 오퍼',
+                status: 'scheduled',
+                type: 'ai',
+                sent: 0,
+                total: 3200,
+                openRate: 0,
+                clickRate: 0,
+                progress: 0
+              }
+            ].map((campaign, idx) => (
+              <div key={idx} className="space-y-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <FileText className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs font-medium">{item.source}</span>
+                      <h4 className="font-medium">{campaign.name}</h4>
+                      <Badge variant={
+                        campaign.type === 'bulk' ? 'default' :
+                        campaign.type === 'sequence' ? 'secondary' : 'outline'
+                      } className="text-xs">
+                        {campaign.type === 'bulk' ? '대량발송' :
+                         campaign.type === 'sequence' ? '시퀀스' : 'AI 최적화'}
+                      </Badge>
+                      {campaign.status === 'active' && (
+                        <Badge className="text-xs bg-green-500">
+                          <PlayCircle className="h-3 w-3 mr-1" />
+                          진행중
+                        </Badge>
+                      )}
+                      {campaign.status === 'paused' && (
+                        <Badge variant="secondary" className="text-xs">
+                          <PauseCircle className="h-3 w-3 mr-1" />
+                          일시정지
+                        </Badge>
+                      )}
+                      {campaign.status === 'scheduled' && (
+                        <Badge variant="outline" className="text-xs">
+                          <Clock className="h-3 w-3 mr-1" />
+                          예약됨
+                        </Badge>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="text-[10px]">{item.count}</Badge>
-                      <span className="text-xs text-muted-foreground">{item.lastSync}</span>
-                      {item.status === 'success' && <CheckCircle className="h-3 w-3 text-green-600" />}
-                      {item.status === 'warning' && <AlertCircle className="h-3 w-3 text-yellow-600" />}
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <span>{campaign.sent.toLocaleString()} / {campaign.total.toLocaleString()} 발송</span>
+                      {campaign.sent > 0 && (
+                        <>
+                          <span>오픈율 {campaign.openRate}%</span>
+                          <span>클릭률 {campaign.clickRate}%</span>
+                        </>
+                      )}
                     </div>
                   </div>
-                ))}
+                  <Button variant="ghost" size="sm">
+                    <ArrowUpRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Progress value={campaign.progress} className="h-2" />
               </div>
-              
-              <Alert className="py-2">
-                <AlertDescription className="text-xs">
-                  벡터 DB: 5.6M 문서 | 최종 업데이트: 2024-01-11 14:30
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* AI 최적화 인사이트 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Zap className="h-5 w-5" />
+              AI 최적화 인사이트
+            </CardTitle>
+            <CardDescription>실시간 AI 분석 및 추천</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="font-medium mb-1">발송 시간 최적화</div>
+                  <div className="text-xs">
+                    타겟 고객의 이메일 오픈 패턴 분석 결과, 오후 2-4시 발송 시 오픈율이 23% 증가합니다.
+                  </div>
+                  <Button variant="link" className="h-auto p-0 mt-2 text-xs">
+                    적용하기 →
+                  </Button>
                 </AlertDescription>
               </Alert>
-            </CardContent>
-          </Card>
 
-          {/* AI 모델 운영 현황 */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Cpu className="h-4 w-4" />
-                AI 모델 운영
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-3">
-                <div className="p-3 border rounded-lg space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">주 LLM 모델</span>
-                    <Badge>Active</Badge>
+              <Alert>
+                <Target className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="font-medium mb-1">제목 최적화 제안</div>
+                  <div className="text-xs">
+                    이모지 사용과 개인화된 제목으로 CTR 15% 상승 예상
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-muted-foreground">모델명</span>
-                      <div className="font-mono">Qwen3-30B-A3B</div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">버전</span>
-                      <div className="font-mono">v2.4.0</div>
-                    </div>
+                  <div className="mt-2 p-2 bg-muted rounded text-xs font-mono">
+                    "🎯 {name}님, 단독 혜택이 도착했습니다"
                   </div>
-                  <div className="flex items-center gap-4 text-xs">
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground">GPU:</span>
-                      <span>68%</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground">Mem:</span>
-                      <span>48GB/64GB</span>
-                    </div>
-                  </div>
-                </div>
+                </AlertDescription>
+              </Alert>
 
-                <div className="p-3 border rounded-lg space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">보조 모델 풀</span>
-                    <Badge variant="secondary">5 Active</Badge>
+              <Alert>
+                <BarChart3 className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="font-medium mb-1">세그먼트 성과</div>
+                  <div className="text-xs">
+                    VIP 고객 그룹의 전환율이 일반 그룹 대비 3.2배 높습니다.
                   </div>
-                  <div className="grid grid-cols-2 gap-1 text-[10px]">
-                    <div className="flex items-center gap-1">
-                      <CheckCircle className="h-2 w-2 text-green-600" />
-                      <span className="font-mono">Kisti 고니</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <CheckCircle className="h-2 w-2 text-green-600" />
-                      <span className="font-mono">DeepSeek R1</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <CheckCircle className="h-2 w-2 text-green-600" />
-                      <span className="font-mono">Llama 4 34B</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <CheckCircle className="h-2 w-2 text-green-600" />
-                      <span className="font-mono">Mixtral 8x22b</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <CheckCircle className="h-2 w-2 text-green-600" />
-                      <span className="font-mono">gpt-oss-20b</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Clock className="h-2 w-2" />
-                      <span>Load Balanced</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                </AlertDescription>
+              </Alert>
+            </div>
+          </CardContent>
+        </Card>
 
-              <div className="pt-2 border-t">
-                <div className="text-xs font-medium mb-2">모델 성능 추이</div>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">CTR (7일)</span>
-                    <div className="flex items-center gap-1">
-                      <span>34.2%</span>
-                      <TrendingUp className="h-3 w-3 text-green-600" />
+        {/* 시퀀스 성과 분석 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <RefreshCw className="h-5 w-5" />
+              시퀀스 캠페인 성과
+            </CardTitle>
+            <CardDescription>자동화 시퀀스 퍼포먼스</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="onboarding" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="onboarding">온보딩</TabsTrigger>
+                <TabsTrigger value="nurture">육성</TabsTrigger>
+                <TabsTrigger value="winback">재활성화</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="onboarding" className="space-y-4">
+                <div className="space-y-3">
+                  {[
+                    { step: '환영 이메일', day: 0, sent: 2341, openRate: 92, clickRate: 45 },
+                    { step: '기능 소개', day: 3, sent: 2089, openRate: 78, clickRate: 32 },
+                    { step: '사용 팁', day: 7, sent: 1876, openRate: 65, clickRate: 28 },
+                    { step: '성공 사례', day: 14, sent: 1654, openRate: 58, clickRate: 24 },
+                  ].map((step, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold">
+                          {idx + 1}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{step.step}</p>
+                          <p className="text-xs text-muted-foreground">Day {step.day}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs">
+                        <div className="text-right">
+                          <p className="font-medium">{step.openRate}%</p>
+                          <p className="text-muted-foreground">오픈</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">{step.clickRate}%</p>
+                          <p className="text-muted-foreground">클릭</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">답변 만족도 (7일)</span>
-                    <div className="flex items-center gap-1">
-                      <span>97%</span>
-                      <TrendingUp className="h-3 w-3 text-green-600" />
-                    </div>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Drift Score</span>
-                    <div className="flex items-center gap-1">
-                      <span>0.03</span>
-                      <Badge variant="outline" className="text-[10px] ml-1">정상</Badge>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </TabsContent>
+
+              <TabsContent value="nurture" className="space-y-4">
+                <div className="text-center py-8 text-muted-foreground">
+                  육성 시퀀스 데이터 로딩중...
+                </div>
+              </TabsContent>
+
+              <TabsContent value="winback" className="space-y-4">
+                <div className="text-center py-8 text-muted-foreground">
+                  재활성화 시퀀스 데이터 로딩중...
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* 시스템 알림 */}
+      {/* 예약된 캠페인 */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              예약된 캠페인
+            </CardTitle>
+            <Badge variant="outline">다음 24시간</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[
+              { time: '14:00', name: 'VIP 고객 맞춤형 오퍼', recipients: 3200, type: 'AI 최적화' },
+              { time: '18:00', name: '주말 특가 알림', recipients: 45000, type: '대량 발송' },
+              { time: '내일 09:00', name: '월요일 뉴스레터', recipients: 28500, type: '대량 발송' },
+              { time: '내일 11:00', name: '장바구니 이탈 리마인더', recipients: 892, type: '시퀀스' }
+            ].map((schedule, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">{schedule.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {schedule.recipients.toLocaleString()}명 • {schedule.type}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">{schedule.time}</Badge>
+                  <Button variant="ghost" size="sm">
+                    <MoreHorizontal className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 시스템 상태 */}
       <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          <span className="font-medium">시스템 공지:</span> 다음 주 화요일(1/16) 02:00-04:00 정기 점검이 예정되어 있습니다. LLM 모델 업그레이드 및 벡터 DB 인덱스 재구성 작업이 진행됩니다.
+        <CheckCircle className="h-4 w-4" />
+        <AlertDescription className="flex items-center justify-between">
+          <span>
+            <span className="font-medium">시스템 정상:</span> 모든 서비스가 정상적으로 작동중입니다.
+            SendGrid API 응답시간: 124ms
+          </span>
+          <Badge className="bg-green-500">정상</Badge>
         </AlertDescription>
       </Alert>
     </div>

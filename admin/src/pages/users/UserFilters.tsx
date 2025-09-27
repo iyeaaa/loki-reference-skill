@@ -35,8 +35,6 @@ export function UserFilters({
 }: UserFiltersProps) {
   const roles = [
     { value: "admin", label: "관리자" },
-    { value: "internal_reviewer", label: "내부 검수자" },
-    { value: "external_reviewer", label: "외부 검수자" },
     { value: "user", label: "사용자" },
   ]
 

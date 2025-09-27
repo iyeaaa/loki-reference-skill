@@ -10,14 +10,22 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 // Import API and types
-import { usersApi } from "@/lib/api/services/users"
+import {
+  useBulkUpdateRole,
+  useBulkUpdateStatus,
+  useDeleteUser,
+  useUpdateUser,
+  useUsers,
+} from "@/lib/api/hooks/users"
+import { departmentsApi } from "@/lib/api/services/departments"
+import { languagesApi } from "@/lib/api/services/languages"
 import type {
   Department,
   Language,
   UpdateUserRequest,
   User,
   UserRole,
-  UsersApiParams,
+  UsersParams,
 } from "@/lib/api/types/user"
 import { formatRelativeTime } from "@/lib/date-utils"
 import { BulkActionModal } from "./BulkActionModal"
@@ -26,18 +34,14 @@ import { UserFilters } from "./UserFilters"
 import { UserForm } from "./UserForm"
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [languages, setLanguages] = useState<Language[]>([])
 
-  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [selectedRoles, setSelectedRoles] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [total, setTotal] = useState(0)
   const [pageInputValue, setPageInputValue] = useState("1")
   const [limit] = useState(10)
 
@@ -49,44 +53,40 @@ export default function UsersPage() {
     "status" | "role" | "department" | "edit_languages" | "review_languages" | null
   >(null)
 
-  const loadUsers = useCallback(async () => {
-    try {
-      const params: UsersApiParams = {
-        page: currentPage,
-        limit: limit,
-        roles: selectedRoles.length > 0 ? selectedRoles : undefined,
-        statuses:
-          selectedStatuses.length > 0
-            ? selectedStatuses.map((s) => (s === "active" ? "true" : "false"))
-            : undefined,
-        departments: selectedDepartments.length > 0 ? selectedDepartments : undefined,
-        search: search || undefined,
-      }
-      const response = await usersApi.getUsers(params)
+  // Build params for API call
+  const params: UsersParams = {
+    page: currentPage,
+    limit: limit,
+    role:
+      selectedRoles.length === 1
+        ? (selectedRoles[0] as UserRole)
+        : selectedRoles.length > 0
+          ? "all"
+          : undefined,
+    status:
+      selectedStatuses.length === 1
+        ? selectedStatuses[0]
+        : selectedStatuses.length > 0
+          ? "all"
+          : undefined,
+    search: search || undefined,
+  }
 
-      // Debug: Log the response
-      console.log("Users API Response:", response)
-      if (response.users && response.users.length > 0) {
-        console.log("First user data:", {
-          username: response.users[0].username,
-          edit_languages: response.users[0].edit_languages,
-          review_languages: response.users[0].review_languages,
-        })
-      }
+  // Use React Query hook for fetching users
+  const { data: usersData, isLoading: loading } = useUsers(params)
+  const users = usersData?.users || []
+  const totalPages = usersData?.totalPages || 1
+  const total = usersData?.total || 0
 
-      setUsers(response.users || [])
-      setTotalPages(response.total_pages || 1)
-      setTotal(response.total || 0)
-    } catch (error) {
-      toast.error("사용자 목록을 불러오는데 실패했습니다.")
-      console.error("Failed to load users:", error)
-    }
-  }, [currentPage, limit, search, selectedRoles, selectedStatuses, selectedDepartments])
+  const updateUser = useUpdateUser()
+  const deleteUser = useDeleteUser()
+  const bulkUpdateStatus = useBulkUpdateStatus()
+  const bulkUpdateRole = useBulkUpdateRole()
 
   const loadDepartments = useCallback(async () => {
     try {
-      const response = await usersApi.getDepartments()
-      setDepartments(response.departments || [])
+      const response = await departmentsApi.list()
+      setDepartments(response || [])
     } catch (error) {
       console.error("Failed to load departments:", error)
     }
@@ -94,8 +94,8 @@ export default function UsersPage() {
 
   const loadLanguages = useCallback(async () => {
     try {
-      const response = await usersApi.getLanguages()
-      setLanguages(response.languages || [])
+      const response = await languagesApi.list()
+      setLanguages(response || [])
     } catch (error) {
       console.error("Failed to load languages:", error)
     }
@@ -103,27 +103,22 @@ export default function UsersPage() {
 
   // Load initial data
   useEffect(() => {
-    Promise.all([loadUsers(), loadDepartments(), loadLanguages()]).finally(() => setLoading(false))
-  }, [loadUsers, loadDepartments, loadLanguages])
-
-  // Load users when filters change
-  useEffect(() => {
-    if (!loading) {
-      loadUsers()
-    }
-  }, [loadUsers, loading])
+    Promise.all([loadDepartments(), loadLanguages()])
+  }, [loadDepartments, loadLanguages])
 
   const handleUpdateUser = async (userData: unknown) => {
     if (!editingUser) return
-    try {
-      await usersApi.updateUser(editingUser.id, userData as UpdateUserRequest)
-      toast.success("사용자가 수정되었습니다.")
-      setEditingUser(null)
-      await loadUsers()
-    } catch (error) {
-      toast.error("사용자 수정에 실패했습니다.")
-      console.error("Failed to update user:", error)
-    }
+    updateUser.mutate(
+      {
+        userId: editingUser.id,
+        data: userData as Partial<User>,
+      },
+      {
+        onSuccess: () => {
+          setEditingUser(null)
+        },
+      }
+    )
   }
 
   const handleBulkDelete = async () => {
@@ -136,14 +131,10 @@ export default function UsersPage() {
     )
       return
 
-    try {
-      await Promise.all(selectedUsers.map((userId) => usersApi.deleteUser(userId)))
-      toast.success(`${selectedUsers.length}명의 사용자가 삭제되었습니다.`)
-      setSelectedUsers([])
-      await loadUsers()
-    } catch {
-      toast.error("사용자 삭제에 실패했습니다.")
+    for (const userId of selectedUsers) {
+      await deleteUser.mutateAsync(userId)
     }
+    setSelectedUsers([])
   }
 
   // const handleDeleteUser = async (user: User) => {
@@ -165,29 +156,25 @@ export default function UsersPage() {
       return
     }
 
-    try {
-      if (actionType === "status") {
-        const isActive = value === "active"
-        await usersApi.bulkUpdateStatus({ user_ids: selectedUsers, is_active: isActive })
-        const action = isActive ? "활성화" : "비활성화"
-        toast.success(`${selectedUsers.length}명의 사용자가 ${action}되었습니다.`)
-      } else if (actionType === "role") {
-        await usersApi.bulkUpdateRole({ user_ids: selectedUsers, user_role: value as UserRole })
-        toast.success(`${selectedUsers.length}명의 사용자 역할이 변경되었습니다.`)
-      } else if (actionType === "edit_languages" || actionType === "review_languages") {
-        const updateData =
-          actionType === "edit_languages"
-            ? { user_ids: selectedUsers, edit_languages: value as string[] }
-            : { user_ids: selectedUsers, review_languages: value as string[] }
-        await usersApi.bulkUpdateLanguages(updateData)
-        const languageType = actionType === "edit_languages" ? "편집" : "검수"
-        toast.success(`${selectedUsers.length}명의 ${languageType} 언어가 변경되었습니다.`)
-      }
-      setSelectedUsers([])
-      await loadUsers()
-    } catch (error) {
-      toast.error("일괄 변경에 실패했습니다.")
-      console.error("Failed to bulk update:", error)
+    if (actionType === "status") {
+      const isActive = value === "active"
+      bulkUpdateStatus.mutate(
+        { userIds: selectedUsers, isActive },
+        {
+          onSuccess: () => {
+            setSelectedUsers([])
+          },
+        }
+      )
+    } else if (actionType === "role") {
+      bulkUpdateRole.mutate(
+        { userIds: selectedUsers, role: value as string },
+        {
+          onSuccess: () => {
+            setSelectedUsers([])
+          },
+        }
+      )
     }
   }
 
@@ -251,10 +238,6 @@ export default function UsersPage() {
     switch (role) {
       case "admin":
         return "관리자"
-      case "internal_reviewer":
-        return "내부 검수자"
-      case "external_reviewer":
-        return "외부 검수자"
       default:
         return "사용자"
     }
@@ -457,22 +440,22 @@ export default function UsersPage() {
                       </td>
                       <td className="p-2 whitespace-nowrap text-sm">
                         <Badge variant={getRoleBadgeVariant()} className="text-xs">
-                          {getRoleText(user.user_role)}
+                          {getRoleText(user.userRole)}
                         </Badge>
                       </td>
                       <td
                         className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 truncate max-w-[9rem]"
-                        title={user.department_name || "-"}
+                        title={user.departmentName || "-"}
                       >
-                        {user.department_name || "-"}
+                        {user.departmentName || "-"}
                       </td>
                       <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                        {user.employee_id || "-"}
+                        {user.employeeId || "-"}
                       </td>
                       <td className="p-2 whitespace-nowrap text-sm">
                         <div className="flex flex-wrap gap-1 max-w-[11rem]">
-                          {user.edit_languages && user.edit_languages.length > 0 ? (
-                            user.edit_languages.map((lang) => {
+                          {user.editLanguages && user.editLanguages.length > 0 ? (
+                            user.editLanguages.map((lang) => {
                               const langInfo =
                                 typeof lang === "string"
                                   ? languages.find((l) => l.code === lang)
@@ -496,8 +479,8 @@ export default function UsersPage() {
                       </td>
                       <td className="p-2 whitespace-nowrap text-sm">
                         <div className="flex flex-wrap gap-1 max-w-[11rem]">
-                          {user.review_languages && user.review_languages.length > 0 ? (
-                            user.review_languages.map((lang) => {
+                          {user.reviewLanguages && user.reviewLanguages.length > 0 ? (
+                            user.reviewLanguages.map((lang) => {
                               const langInfo =
                                 typeof lang === "string"
                                   ? languages.find((l) => l.code === lang)
@@ -520,13 +503,13 @@ export default function UsersPage() {
                         </div>
                       </td>
                       <td className="p-2 whitespace-nowrap text-sm">
-                        <Badge variant="outline">{user.is_active ? "활성" : "비활성"}</Badge>
+                        <Badge variant="outline">{user.isActive ? "활성" : "비활성"}</Badge>
                       </td>
                       <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
-                        {formatRelativeTime(user.last_login_at || null)}
+                        {formatRelativeTime(user.lastLoginAt || null)}
                       </td>
                       <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
-                        {formatRelativeTime(user.created_at)}
+                        {formatRelativeTime(user.createdAt)}
                       </td>
                       <td className="sticky right-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
                         <Button
@@ -677,20 +660,22 @@ export default function UsersPage() {
 
       {/* Edit User Dialog */}
       <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>사용자 수정</DialogTitle>
+        <DialogContent className="max-w-3xl max-h-[90vh]">
+          <DialogHeader className="pb-4 border-b">
+            <DialogTitle className="text-xl font-semibold">사용자 정보 수정</DialogTitle>
           </DialogHeader>
-          {editingUser && (
-            <UserForm
-              user={editingUser}
-              isEdit={true}
-              departments={departments}
-              languages={languages}
-              onSave={handleUpdateUser}
-              onCancel={() => setEditingUser(null)}
-            />
-          )}
+          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+            {editingUser && (
+              <UserForm
+                user={editingUser}
+                isEdit={true}
+                departments={departments}
+                languages={languages}
+                onSave={handleUpdateUser}
+                onCancel={() => setEditingUser(null)}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -715,7 +700,6 @@ export default function UsersPage() {
         userCount={selectedUsers.length}
         actionType={bulkActionType}
         departments={departments}
-        languages={languages}
       />
     </div>
   )

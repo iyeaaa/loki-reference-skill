@@ -100,7 +100,7 @@ export function useBulkUpdateStatus() {
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: userKeys.lists() })
       queryClient.invalidateQueries({ queryKey: userKeys.stats() })
-      toast.success(`${response.updated_count}명의 사용자 상태가 업데이트되었습니다`)
+      toast.success(`${response.updatedCount || 0}명의 사용자 상태가 업데이트되었습니다`)
     },
     onError: (error: Error) => {
       toast.error(error.message || "사용자 상태 업데이트에 실패했습니다")
@@ -117,7 +117,7 @@ export function useBulkUpdateRole() {
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: userKeys.lists() })
       queryClient.invalidateQueries({ queryKey: userKeys.stats() })
-      toast.success(`${response.updated_count}명의 사용자 역할이 업데이트되었습니다`)
+      toast.success(`${response.updatedCount || 0}명의 사용자 역할이 업데이트되었습니다`)
     },
     onError: (error: Error) => {
       toast.error(error.message || "사용자 역할 업데이트에 실패했습니다")
@@ -134,7 +134,7 @@ export function useBulkUpdateDepartment() {
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: userKeys.lists() })
       queryClient.invalidateQueries({ queryKey: userKeys.stats() })
-      toast.success(`${response.updated_count}명의 사용자 부서가 업데이트되었습니다`)
+      toast.success(`${response.updatedCount || 0}명의 사용자 부서가 업데이트되었습니다`)
     },
     onError: (error: Error) => {
       toast.error(error.message || "사용자 부서 업데이트에 실패했습니다")

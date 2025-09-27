@@ -141,8 +141,6 @@ export function BulkActionModal({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">관리자</SelectItem>
-                  <SelectItem value="internal_reviewer">내부 검수자</SelectItem>
-                  <SelectItem value="external_reviewer">외부 검수자</SelectItem>
                   <SelectItem value="user">사용자</SelectItem>
                 </SelectContent>
               </Select>

@@ -1,40 +1,20 @@
-import { eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { db } from '../db/index'
-import { departments, users } from '../db/schema/users'
+import { departments } from '../db/schema/users'
 
-// ====================================
-// DEPARTMENT QUERIES
-// ====================================
+// List all departments
+export async function listDepartments() {
+  const result = await db.select().from(departments).orderBy(departments.name)
+  return result
+}
 
-// GetDepartment :one
+// Get department by ID
 export async function getDepartment(id: string) {
   const result = await db.select().from(departments).where(eq(departments.id, id)).limit(1)
-
   return result[0]
 }
 
-// ListDepartments :many (Active departments only)
-export async function listDepartments() {
-  const result = await db
-    .select()
-    .from(departments)
-    .where(eq(departments.isActive, true))
-    .orderBy(sql`${departments.name} COLLATE "ko-KR-x-icu"`)
-
-  return result
-}
-
-// ListAllDepartments :many (All departments)
-export async function listAllDepartments() {
-  const result = await db
-    .select()
-    .from(departments)
-    .orderBy(sql`${departments.name} COLLATE "ko-KR-x-icu"`)
-
-  return result
-}
-
-// CreateDepartment :one
+// Create department
 export async function createDepartment(data: {
   name: string
   code: string
@@ -50,18 +30,17 @@ export async function createDepartment(data: {
       isActive: data.isActive ?? true,
     })
     .returning()
-
   return newDepartment
 }
 
-// UpdateDepartment :one
+// Update department
 export async function updateDepartment(
   id: string,
   data: {
     name: string
     code: string
     description?: string
-    isActive: boolean
+    isActive?: boolean
   },
 ) {
   const [updatedDepartment] = await db
@@ -75,21 +54,11 @@ export async function updateDepartment(
     })
     .where(eq(departments.id, id))
     .returning()
-
   return updatedDepartment
 }
 
-// DeleteDepartment :exec
+// Delete department
 export async function deleteDepartment(id: string) {
-  await db.delete(departments).where(eq(departments.id, id))
-}
-
-// CountUsersByDepartment :one
-export async function countUsersByDepartment(departmentId: string) {
-  const result = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(users)
-    .where(eq(users.departmentId, departmentId))
-
-  return result[0]?.count ?? 0
+  const result = await db.delete(departments).where(eq(departments.id, id)).returning()
+  return result.length > 0
 }

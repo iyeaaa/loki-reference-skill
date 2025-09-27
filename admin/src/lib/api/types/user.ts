@@ -1,6 +1,6 @@
 // User Management API Types (aligned with database schema)
 
-export type UserRole = "admin" | "user" | "internal_reviewer" | "external_reviewer"
+export type UserRole = "admin" | "user"
 
 export interface Language {
   id: string

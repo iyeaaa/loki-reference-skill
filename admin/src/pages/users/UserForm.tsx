@@ -12,10 +12,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
-import { DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Select,
@@ -24,13 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { Department, Language, User } from "@/lib/api/types/user"
+import type { Department, User } from "@/lib/api/types/user"
 
 interface UserFormProps {
   user?: User
   isEdit?: boolean
   departments: Department[]
-  languages: Language[]
+  languages?: any[]
   onSave: (userData: unknown) => Promise<void> | void
   onCancel: () => void
 }
@@ -39,11 +37,12 @@ export function UserForm({
   user,
   isEdit = false,
   departments = [],
-  languages = [],
+  languages,
   onSave,
   onCancel,
 }: UserFormProps) {
   const usernameId = useId()
+  const emailId = useId()
   const employeeIdFormId = useId()
   const passwordId = useId()
   const isActiveId = useId()
@@ -52,14 +51,10 @@ export function UserForm({
     username: user?.username || "",
     email: user?.email || "",
     password: "",
-    user_role: user?.user_role || ("user" as const),
-    is_active: user?.is_active ?? true,
-    department_id: user?.department_id || "",
-    employee_id: user?.employee_id || "",
-    edit_languages:
-      user?.edit_languages?.map((lang) => (typeof lang === "string" ? lang : lang.code)) || [],
-    review_languages:
-      user?.review_languages?.map((lang) => (typeof lang === "string" ? lang : lang.code)) || [],
+    userRole: user?.userRole || ("user" as const),
+    isActive: user?.isActive ?? true,
+    departmentId: user?.departmentId || "",
+    employeeId: user?.employeeId || "",
   })
   const [departmentOpen, setDepartmentOpen] = useState(false)
   const [departmentSearch, setDepartmentSearch] = useState("")
@@ -93,22 +88,34 @@ export function UserForm({
       </div>
 
       <div className="space-y-2">
+        <Label htmlFor={emailId}>이메일</Label>
+        <Input
+          id={emailId}
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor={employeeIdFormId}>사번</Label>
         <Input
           id={employeeIdFormId}
-          value={formData.employee_id}
-          onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
+          value={formData.employeeId}
+          onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
+          required
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="user_role">역할</Label>
         <Select
-          value={formData.user_role}
+          value={formData.userRole}
           onValueChange={(value) =>
             setFormData({
               ...formData,
-              user_role: value as "admin" | "internal_reviewer" | "external_reviewer" | "user",
+              userRole: value as "admin" | "user",
             })
           }
         >
@@ -117,8 +124,6 @@ export function UserForm({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="user">사용자</SelectItem>
-            <SelectItem value="internal_reviewer">내부 검수자</SelectItem>
-            <SelectItem value="external_reviewer">외부 검수자</SelectItem>
             <SelectItem value="admin">관리자</SelectItem>
           </SelectContent>
         </Select>
@@ -134,8 +139,8 @@ export function UserForm({
               aria-expanded={departmentOpen}
               className="w-full justify-between font-normal"
             >
-              {formData.department_id
-                ? departments.find((dept) => dept.id === formData.department_id)?.name
+              {formData.departmentId
+                ? departments.find((dept) => dept.id === formData.departmentId)?.name
                 : "부서 선택"}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
@@ -157,8 +162,7 @@ export function UserForm({
                       onSelect={(currentValue) => {
                         setFormData({
                           ...formData,
-                          department_id:
-                            currentValue === formData.department_id ? "" : currentValue,
+                          departmentId: currentValue === formData.departmentId ? "" : currentValue,
                         })
                         setDepartmentOpen(false)
                         setDepartmentSearch("")
@@ -166,7 +170,7 @@ export function UserForm({
                     >
                       <Check
                         className={`mr-2 h-4 w-4 ${
-                          formData.department_id === dept.id ? "opacity-100" : "opacity-0"
+                          formData.departmentId === dept.id ? "opacity-100" : "opacity-0"
                         }`}
                       />
                       {dept.name} ({dept.code})
@@ -193,79 +197,23 @@ export function UserForm({
         </div>
       )}
 
-      <div className="space-y-2">
-        <Label>편집 권한 언어</Label>
-        <MultiSelectCombobox
-          options={languages
-            .filter((lang) => lang.is_active)
-            .map((lang) => ({
-              value: lang.code,
-              label: lang.name,
-              sublabel: lang.code,
-            }))}
-          value={formData.edit_languages}
-          onValueChange={(values) => setFormData({ ...formData, edit_languages: values })}
-          placeholder="편집 언어 선택..."
-          searchPlaceholder="언어 검색..."
-          emptyText="언어를 찾을 수 없습니다."
-        />
-        {formData.edit_languages.length > 0 && (
-          <p className="text-xs text-muted-foreground mt-1">
-            선택된 언어:{" "}
-            {formData.edit_languages
-              .map((code) => {
-                const lang = languages.find((l) => l.code === code)
-                return lang ? lang.name : code
-              })
-              .join(", ")}
-          </p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label>검수 권한 언어</Label>
-        <MultiSelectCombobox
-          options={languages
-            .filter((lang) => lang.is_active)
-            .map((lang) => ({
-              value: lang.code,
-              label: lang.name,
-              sublabel: lang.code,
-            }))}
-          value={formData.review_languages}
-          onValueChange={(values) => setFormData({ ...formData, review_languages: values })}
-          placeholder="검수 언어 선택..."
-          searchPlaceholder="언어 검색..."
-          emptyText="언어를 찾을 수 없습니다."
-        />
-        {formData.review_languages.length > 0 && (
-          <p className="text-xs text-muted-foreground mt-1">
-            선택된 언어:{" "}
-            {formData.review_languages
-              .map((code) => {
-                const lang = languages.find((l) => l.code === code)
-                return lang ? lang.name : code
-              })
-              .join(", ")}
-          </p>
-        )}
-      </div>
-
       <div className="flex items-center space-x-2">
         <Checkbox
           id={isActiveId}
-          checked={formData.is_active}
-          onCheckedChange={(checked) => setFormData({ ...formData, is_active: !!checked })}
+          checked={formData.isActive}
+          onCheckedChange={(checked) => setFormData({ ...formData, isActive: !!checked })}
         />
         <Label htmlFor={isActiveId}>활성 상태</Label>
       </div>
 
-      <DialogFooter>
+      <div className="flex justify-end gap-3 pt-4 border-t">
         <Button type="button" variant="outline" onClick={onCancel}>
           취소
         </Button>
-        <Button type="submit">{isEdit ? "수정" : "생성"}</Button>
-      </DialogFooter>
+        <Button type="submit" className="min-w-[100px]">
+          {isEdit ? "수정 완료" : "생성"}
+        </Button>
+      </div>
     </form>
   )
 }

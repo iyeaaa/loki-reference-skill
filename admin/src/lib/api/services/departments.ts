@@ -1,39 +1,32 @@
 import { apiFetch } from "@/lib/api/client"
-import type { Department, DepartmentCreateRequest, DepartmentUpdateRequest } from "../types"
-export const departmentApi = {
-  list: (search?: string) => {
-    const params = search ? `?search=${encodeURIComponent(search)}` : ""
-    return apiFetch<Department[]>(`/api/v1/departments${params}`)
+import type { Department } from "../types/user"
+
+export const departmentsApi = {
+  list: () => {
+    return apiFetch<Department[]>("/api/v1/departments")
   },
 
   get: (id: string) => {
     return apiFetch<Department>(`/api/v1/departments/${id}`)
   },
 
-  create: (data: DepartmentCreateRequest) => {
-    return apiFetch<Department>("/api/v1/admin/departments", {
+  create: (data: Partial<Department>) => {
+    return apiFetch<Department>("/api/v1/departments", {
       method: "POST",
       body: JSON.stringify(data),
     })
   },
 
-  update: (id: string, data: DepartmentUpdateRequest) => {
-    return apiFetch<Department>(`/api/v1/admin/departments/${id}`, {
+  update: (id: string, data: Partial<Department>) => {
+    return apiFetch<Department>(`/api/v1/departments/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     })
   },
 
   delete: (id: string) => {
-    return apiFetch(`/api/v1/admin/departments/${id}`, {
+    return apiFetch(`/api/v1/departments/${id}`, {
       method: "DELETE",
-    })
-  },
-
-  toggleStatus: (id: string, isActive: boolean) => {
-    return apiFetch<Department>(`/api/v1/admin/departments/${id}/status`, {
-      method: "PATCH",
-      body: JSON.stringify({ isActive }),
     })
   },
 }

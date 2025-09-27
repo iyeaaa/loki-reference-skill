@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import toast from "react-hot-toast"
-import { departmentApi } from "../services/departments"
+import { departmentsApi } from "../services/departments"
 import type { DepartmentCreateRequest, DepartmentUpdateRequest } from "../types"
 
 // 1. Query Keys
@@ -15,7 +15,7 @@ export const departmentKeys = {
 export function useDepartments(search?: string) {
   return useQuery({
     queryKey: departmentKeys.list(search),
-    queryFn: () => departmentApi.list(search),
+    queryFn: () => departmentsApi.list(),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   })
@@ -24,7 +24,7 @@ export function useDepartments(search?: string) {
 export function useDepartment(id: string, enabled = true) {
   return useQuery({
     queryKey: departmentKeys.detail(id),
-    queryFn: () => departmentApi.get(id),
+    queryFn: () => departmentsApi.get(id),
     enabled,
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
@@ -36,7 +36,7 @@ export function useCreateDepartment() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: DepartmentCreateRequest) => departmentApi.create(data),
+    mutationFn: (data: DepartmentCreateRequest) => departmentsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: departmentKeys.lists() })
       toast.success("부서가 생성되었습니다")
@@ -52,7 +52,7 @@ export function useUpdateDepartment() {
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: DepartmentUpdateRequest }) =>
-      departmentApi.update(id, data),
+      departmentsApi.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: departmentKeys.detail(variables.id) })
       queryClient.invalidateQueries({ queryKey: departmentKeys.lists() })
@@ -68,7 +68,7 @@ export function useDeleteDepartment() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => departmentApi.delete(id),
+    mutationFn: (id: string) => departmentsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: departmentKeys.lists() })
       toast.success("부서가 삭제되었습니다")
@@ -84,7 +84,7 @@ export function useToggleDepartmentStatus() {
 
   return useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      departmentApi.toggleStatus(id, isActive),
+      departmentsApi.update(id, { isActive }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: departmentKeys.detail(variables.id) })
       queryClient.invalidateQueries({ queryKey: departmentKeys.lists() })

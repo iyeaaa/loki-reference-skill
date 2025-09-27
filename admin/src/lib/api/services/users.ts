@@ -4,54 +4,92 @@ export const usersApi = {
   list: (params?: UsersParams) => {
     const searchParams = new URLSearchParams()
 
-    if (params?.page) searchParams.append("page", params.page.toString())
-    if (params?.limit) searchParams.append("limit", params.limit.toString())
-    if (params?.search) searchParams.append("search", params.search)
+    const page = params?.page || 1
+    const limit = params?.limit || 10
+    const offset = (page - 1) * limit
 
-    if (params?.roles?.length) {
-      searchParams.append("roles", params.roles.join(","))
-    } else if (params?.role && params.role !== "all") {
+    searchParams.append("limit", limit.toString())
+    searchParams.append("offset", offset.toString())
+
+    if (params?.search) searchParams.append("search", params.search)
+    if (params?.role && params.role !== "all") {
       searchParams.append("role", params.role)
     }
-
-    if (params?.statuses?.length) {
-      searchParams.append("isActive", params.statuses.join(","))
-    } else if (params?.status && params.status !== "all") {
+    if (params?.status && params.status !== "all") {
       searchParams.append("isActive", params.status === "active" ? "true" : "false")
     }
 
-    if (params?.departments?.length) {
-      searchParams.append("departmentIds", params.departments.join(","))
-    }
-
     const query = searchParams.toString()
-    return apiFetch<UsersResponse>(`/api/v1/admin/users${query ? `?${query}` : ""}`)
+    return apiFetch<{
+      data: User[]
+      total: number
+      limit: number
+      offset: number
+    }>(`/api/v1/users/search${query ? `?${query}` : ""}`).then((response) => ({
+      users: response.data,
+      total: response.total,
+      page,
+      limit,
+      totalPages: Math.ceil(response.total / limit),
+    }))
   },
 
   get: (userId: string) => {
-    return apiFetch<User>(`/api/v1/admin/users/${userId}`)
+    return apiFetch<User>(`/api/v1/users/${userId}`)
   },
 
-  stats: () => {
-    return apiFetch<UserStats>("/api/v1/admin/users/stats")
+  stats: async () => {
+    const response = await apiFetch<{
+      data: User[]
+      total: number
+    }>("/api/v1/users?limit=1000")
+
+    const users = response.data
+    const stats: UserStats = {
+      total: response.total,
+      active: users.filter((u) => u.isActive).length,
+      inactive: users.filter((u) => !u.isActive).length,
+      byRole: {
+        admin: users.filter((u) => u.userRole === "admin").length,
+        user: users.filter((u) => u.userRole === "user").length,
+        internalReviewer: 0,
+        externalReviewer: 0,
+      },
+    }
+    return stats
   },
 
-  create: (data: Partial<User>) => {
-    return apiFetch<User>("/api/v1/admin/users", {
+  create: (data: any) => {
+    return apiFetch<User>("/api/v1/users", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        username: data.username,
+        email: data.email,
+        passwordHash: data.password || "",
+        userRole: data.userRole,
+        isActive: data.isActive,
+        departmentId: data.departmentId,
+        employeeId: data.employeeId,
+      }),
     })
   },
 
   update: (userId: string, data: Partial<User>) => {
-    return apiFetch<User>(`/api/v1/admin/users/${userId}`, {
+    return apiFetch<User>(`/api/v1/users/${userId}`, {
       method: "PUT",
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        username: data.username,
+        email: data.email,
+        userRole: data.userRole,
+        isActive: data.isActive,
+        departmentId: data.departmentId,
+        employeeId: data.employeeId,
+      }),
     })
   },
 
   delete: (userId: string) => {
-    return apiFetch(`/api/v1/admin/users/${userId}`, {
+    return apiFetch(`/api/v1/users/${userId}`, {
       method: "DELETE",
     })
   },
@@ -87,9 +125,9 @@ export const usersApi = {
   },
 
   changePassword: (userId: string, newPassword: string) => {
-    return apiFetch(`/api/v1/admin/users/${userId}/password`, {
-      method: "POST",
-      body: JSON.stringify({ password: newPassword }),
+    return apiFetch(`/api/v1/users/${userId}/password`, {
+      method: "PATCH",
+      body: JSON.stringify({ passwordHash: newPassword }),
     })
   },
 }

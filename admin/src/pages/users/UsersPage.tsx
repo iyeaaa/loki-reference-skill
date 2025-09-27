@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+// Import API and types
+import { usersApi } from "@/lib/api/services/users"
 import type {
   Department,
   Language,
@@ -17,8 +19,6 @@ import type {
   UserRole,
   UsersApiParams,
 } from "@/lib/api/types/user"
-// Import API and types
-import { usersApi } from "@/lib/api/users"
 import { formatRelativeTime } from "@/lib/date-utils"
 import { BulkActionModal } from "./BulkActionModal"
 import { PasswordChangeDialog } from "./PasswordChangeDialog"

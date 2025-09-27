@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button"
 import { DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { usersApi } from "@/lib/api/services/users"
 import type { User } from "@/lib/api/types/user"
-import { usersApi } from "@/lib/api/users"
 
 interface PasswordChangeDialogProps {
   user: User
@@ -28,7 +28,7 @@ export function PasswordChangeDialog({ user, onClose }: PasswordChangeDialogProp
 
     setLoading(true)
     try {
-      await usersApi.changePassword(user.id, { new_password: newPassword })
+      await usersApi.changePassword(user.id, newPassword)
       toast.success("비밀번호가 변경되었습니다.")
       onClose()
     } catch {

@@ -1,15 +1,42 @@
-// API Clients
+// ========================================
+// TanStack Query Hooks & Types
+// ========================================
 
-export { AuthApi, authApi } from "./auth"
-export { BaseApiClient } from "./base"
-export { UsersApi, usersApi } from "./users"
-
-// Create unified api client instance
-import { AuthApi } from "./auth"
-export const apiClient = {
-  auth: new AuthApi(),
-}
-
-export type * from "./auth"
-// Types
-export type * from "./types/user"
+// Token Management
+export { getToken, removeToken, setToken } from "./client"
+// Auth Hooks
+export {
+  authKeys,
+  useCurrentUser,
+  useLoginMutation,
+  useLogoutMutation,
+  useRefreshToken,
+  useSignupMutation,
+  useVerifyToken,
+} from "./hooks/auth"
+// Department Hooks
+export {
+  departmentKeys,
+  useCreateDepartment,
+  useDeleteDepartment,
+  useDepartment,
+  useDepartments,
+  useToggleDepartmentStatus,
+  useUpdateDepartment,
+} from "./hooks/departments"
+// User Hooks
+export {
+  useBulkUpdateDepartment,
+  useBulkUpdateRole,
+  useBulkUpdateStatus,
+  useChangePassword,
+  useCreateUser,
+  useDeleteUser,
+  userKeys,
+  useUpdateUser,
+  useUser,
+  useUserStats,
+  useUsers,
+} from "./hooks/users"
+// Re-export all types
+export type * from "./types"

@@ -2,7 +2,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { CreditCard, Eye, EyeOff, Lock, Mail, User } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { useForm } from "react-hook-form"
-import toast from "react-hot-toast"
 import { useNavigate } from "react-router-dom"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
@@ -11,8 +10,8 @@ import { Combobox } from "@/components/ui/combobox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { authApi } from "@/lib/api"
-import { departmentsApi } from "@/lib/api/departments"
+import { useCurrentUser, useDepartments, useVerifyToken } from "@/lib/api"
+import { useLoginMutation, useSignupMutation } from "@/lib/api/hooks/auth"
 
 const loginSchema = z.object({
   email: z.string().email("올바른 이메일 주소를 입력해주세요"),
@@ -50,16 +49,18 @@ export default function AdminLoginPage() {
   const signupPasswordId = useId()
   const signupConfirmPasswordId = useId()
 
-  const [isLoading, setIsLoading] = useState(false)
-  const [filteredDepartments, setFilteredDepartments] = useState<
-    { id: string; name: string; code: string }[]
-  >([])
   const [departmentSearch, setDepartmentSearch] = useState("")
-  const [searchLoading, setSearchLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showSignupPassword, setShowSignupPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [activeTab, setActiveTab] = useState("login")
+
+  // TanStack Query hooks
+  const loginMutation = useLoginMutation()
+  const signupMutation = useSignupMutation()
+  const { data: departmentsData, isLoading: searchLoading } = useDepartments(departmentSearch)
+  const { data: currentUser } = useCurrentUser()
+  const { data: isTokenValid } = useVerifyToken(!!currentUser)
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -81,127 +82,44 @@ export default function AdminLoginPage() {
     },
   })
 
-  // Check if already logged in
+  // Check if already logged in using TanStack Query
   useEffect(() => {
-    const token = localStorage.getItem("authToken")
-    const user = localStorage.getItem("user")
-
-    if (token && user) {
-      try {
-        const userData = JSON.parse(user)
-        const allowedRoles = ["admin", "internal_reviewer", "external_reviewer"]
-        if (userData?.user_role && allowedRoles.includes(userData.user_role)) {
-          navigate("/")
-        }
-      } catch (error) {
-        console.error("Error parsing user data:", error)
+    if (currentUser && isTokenValid) {
+      const allowedRoles = ["admin", "internal_reviewer", "external_reviewer"]
+      if (currentUser?.user_role && allowedRoles.includes(currentUser.user_role)) {
+        navigate("/")
       }
     }
-  }, [navigate])
-
-  // Fetch departments (with optional search)
-  const fetchDepartments = async (search?: string) => {
-    setSearchLoading(true)
-    try {
-      const data = await departmentsApi.getDepartments(search)
-      setFilteredDepartments(
-        data.map((dept) => ({
-          id: dept.id,
-          name: dept.name,
-          code: dept.code,
-        }))
-      )
-    } catch (error) {
-      console.error("Failed to fetch departments:", error)
-      if (!search) {
-        toast.error("부서 목록을 불러오는데 실패했습니다.")
-      }
-      setFilteredDepartments([])
-    } finally {
-      setSearchLoading(false)
-    }
-  }
-
-  // Fetch all departments initially
-  useEffect(() => {
-    fetchDepartments()
-  }, [])
-
-  // Search departments with debounce
-  useEffect(() => {
-    // Skip if this is the initial render (already fetched in mount effect)
-    if (departmentSearch === "") {
-      // If search is cleared, fetch all departments again
-      fetchDepartments()
-      return
-    }
-
-    const debounceTimer = setTimeout(() => {
-      // Only fetch with search term if it's not empty
-      if (departmentSearch && departmentSearch.trim()) {
-        fetchDepartments(departmentSearch.trim())
-      }
-    }, 300)
-    return () => clearTimeout(debounceTimer)
-  }, [departmentSearch])
+  }, [currentUser, isTokenValid, navigate])
 
   const onLoginSubmit = async (data: LoginFormValues) => {
-    setIsLoading(true)
-    try {
-      // Authenticate with backend API using authApi
-      const authData = await authApi.emailLogin({
-        email: data.email,
-        password: data.password,
-      })
-
-      // Store auth token and navigate
-      localStorage.setItem("authToken", authData.token)
-      localStorage.setItem("user", JSON.stringify(authData.user))
-
-      toast.success("로그인이 완료되었습니다!")
-      navigate("/")
-    } catch (error: unknown) {
-      console.error("로그인 오류:", error)
-      if (error instanceof Error) {
-        toast.error(error.message)
-      } else {
-        toast.error("로그인 중 오류가 발생했습니다.\n관리자에게 문의하세요.")
-      }
-    } finally {
-      setIsLoading(false)
-    }
+    await loginMutation.mutateAsync(data)
   }
 
   const onSignupSubmit = async (data: SignupFormValues) => {
-    setIsLoading(true)
-    try {
-      const response = await authApi.signup({
-        username: data.username,
-        email: data.email,
-        password: data.password,
-        department_id: data.departmentId,
-        employee_id: data.employeeId,
-      })
+    await signupMutation.mutateAsync({
+      username: data.username,
+      email: data.email,
+      password: data.password,
+      department_id: data.departmentId,
+      employee_id: data.employeeId,
+    })
 
-      toast.success(
-        response.message || "회원가입이 완료되었습니다! 관리자 승인 후 사용할 수 있습니다."
-      )
-      signupForm.reset()
-
-      // Set email in login form and switch to login tab
-      loginForm.setValue("email", data.email)
-      setActiveTab("login")
-    } catch (error: unknown) {
-      console.error("회원가입 오류:", error)
-      if (error instanceof Error) {
-        toast.error(error.message)
-      } else {
-        toast.error("회원가입 중 오류가 발생했습니다.")
-      }
-    } finally {
-      setIsLoading(false)
-    }
+    // After successful signup, clear form and switch to login tab with prefilled email
+    signupForm.reset()
+    loginForm.setValue("email", data.email)
+    setActiveTab("login")
   }
+
+  // Format departments for Combobox
+  const filteredDepartments =
+    departmentsData?.map((dept) => ({
+      id: dept.id,
+      name: dept.name,
+      code: dept.code,
+    })) || []
+
+  const isLoading = loginMutation.isPending || signupMutation.isPending
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50 via-white to-blue-50">

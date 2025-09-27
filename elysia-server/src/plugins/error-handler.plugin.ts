@@ -8,6 +8,9 @@ export const errorHandler = new Elysia({ name: 'error-handler' })
     // 로그 출력
     console.error(`[${new Date().toISOString()}] Error ${code} at ${path}:`, error)
 
+    // Content-Type을 JSON으로 명시적 설정
+    set.headers['content-type'] = 'application/json'
+
     // 에러 타입별 처리
     switch (code) {
       case 'VALIDATION':

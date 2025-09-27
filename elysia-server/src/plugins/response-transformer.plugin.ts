@@ -9,8 +9,7 @@ export const responseTransformer = (app: Elysia) =>
       typeof response === 'object' &&
       'success' in response &&
       'code' in response &&
-      'message' in response &&
-      'data' in response
+      'message' in response
     ) {
       return response
     }

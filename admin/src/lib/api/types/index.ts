@@ -1,42 +1,8 @@
-// Re-export user types first to make Department available
-export * from "./user"
+// ========================================
+// Centralized Type Definitions
+// ========================================
 
-// Base API Response Types
-export interface ApiResponse<T = unknown> {
-  success: boolean
-  code: string
-  message: string
-  data: T
-  timestamp: string
-}
-
-export interface ApiError {
-  error: string
-  message?: string
-  statusCode?: number
-  timestamp?: string
-}
-
-// Pagination Types
-export interface PaginationParams {
-  page?: number
-  limit?: number
-  sort?: string
-  order?: "asc" | "desc"
-}
-
-export interface PaginatedResponse<T> {
-  items: T[]
-  total: number
-  page: number
-  limit: number
-  totalPages: number
-}
-
-// Import Department type from user module
-import type { Department } from "./user"
-
-// Department Response Type
-export interface DepartmentsResponse {
-  departments: Department[]
-}
+// Re-export all types from individual files
+export type * from "./auth"
+export type * from "./department"
+export type * from "./user"

@@ -2,6 +2,7 @@ import { Elysia, t } from 'elysia'
 import * as userService from '../services/user.service'
 import * as authService from '../services/auth.service'
 import { UnauthorizedError, BadRequestError } from '../utils/errors'
+import { errorResponse, ResponseCode } from '../types/response.types'
 
 const loginSchema = t.Object({
   email: t.String({ format: 'email' }),
@@ -18,24 +19,27 @@ const signupSchema = t.Object({
 
 export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
   // Login endpoint
-  .post('/login', async ({ body }) => {
+  .post('/login', async ({ body, set }) => {
     const { email, password } = body
 
     // Get user by email
     const user = await userService.getUserByEmail(email)
     if (!user) {
-      throw new UnauthorizedError('이메일 또는 비밀번호가 올바르지 않습니다.')
+      set.status = 401
+      return errorResponse('이메일 또는 비밀번호가 올바르지 않습니다.', ResponseCode.UNAUTHORIZED)
     }
 
     // Check if user is active
     if (!user.isActive) {
-      throw new UnauthorizedError('비활성화된 계정입니다. 관리자에게 문의하세요.')
+      set.status = 401
+      return errorResponse('비활성화된 계정입니다. 관리자에게 문의하세요.', ResponseCode.UNAUTHORIZED)
     }
 
     // Verify password
     const isValidPassword = await authService.verifyPassword(password, user.passwordHash || '')
     if (!isValidPassword) {
-      throw new UnauthorizedError('이메일 또는 비밀번호가 올바르지 않습니다.')
+      set.status = 401
+      return errorResponse('이메일 또는 비밀번호가 올바르지 않습니다.', ResponseCode.UNAUTHORIZED)
     }
 
     // Update last login
@@ -70,11 +74,12 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
   })
 
   // Signup endpoint
-  .post('/signup', async ({ body }) => {
+  .post('/signup', async ({ body, set }) => {
     // Check if user already exists
     const existingUser = await userService.checkAccountExists(body.email)
     if (existingUser) {
-      throw new BadRequestError('이미 등록된 이메일입니다.')
+      set.status = 400
+      return errorResponse('이미 등록된 이메일입니다.', ResponseCode.BAD_REQUEST)
     }
 
     // Hash password
@@ -92,7 +97,8 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
     })
 
     if (!newUser) {
-      throw new BadRequestError('사용자 생성에 실패했습니다.')
+      set.status = 400
+      return errorResponse('사용자 생성에 실패했습니다.', ResponseCode.BAD_REQUEST)
     }
 
     return {
@@ -108,17 +114,19 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
   })
 
   // Verify token endpoint
-  .post('/verify', async ({ headers }) => {
+  .post('/verify', async ({ headers, set }) => {
     const token = headers.authorization?.replace('Bearer ', '')
     if (!token) {
-      throw new UnauthorizedError('인증 토큰이 없습니다.')
+      set.status = 401
+      return errorResponse('인증 토큰이 없습니다.', ResponseCode.UNAUTHORIZED)
     }
 
     const payload = await authService.verifyToken(token)
     const user = await userService.getUser(payload.userId)
 
     if (!user) {
-      throw new UnauthorizedError('유효하지 않은 토큰입니다.')
+      set.status = 401
+      return errorResponse('유효하지 않은 토큰입니다.', ResponseCode.UNAUTHORIZED)
     }
 
     return {
@@ -140,10 +148,11 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
   })
 
   // Refresh token endpoint
-  .post('/refresh', async ({ headers }) => {
+  .post('/refresh', async ({ headers, set }) => {
     const token = headers.authorization?.replace('Bearer ', '')
     if (!token) {
-      throw new UnauthorizedError('인증 토큰이 없습니다.')
+      set.status = 401
+      return errorResponse('인증 토큰이 없습니다.', ResponseCode.UNAUTHORIZED)
     }
 
     const payload = await authService.verifyToken(token)
@@ -159,10 +168,11 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
   })
 
   // Admin check endpoint
-  .get('/admin-check', async ({ headers }) => {
+  .get('/admin-check', async ({ headers, set }) => {
     const token = headers.authorization?.replace('Bearer ', '')
     if (!token) {
-      throw new UnauthorizedError('인증 토큰이 없습니다.')
+      set.status = 401
+      return errorResponse('인증 토큰이 없습니다.', ResponseCode.UNAUTHORIZED)
     }
 
     const payload = await authService.verifyToken(token)

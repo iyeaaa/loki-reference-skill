@@ -103,7 +103,7 @@ export interface BulkUpdateLanguagesRequest {
 }
 
 // API Response Types (aligned with Go handlers)
-export interface UsersApiResponse {
+export interface UsersResponse {
   users: User[]
   total: number
   page: number
@@ -126,7 +126,7 @@ export interface BulkUpdateResponse {
 }
 
 // API Params Types (aligned with Go handlers)
-export interface UsersApiParams {
+export interface UsersParams {
   page?: number
   limit?: number
   role?: UserRole | "all"

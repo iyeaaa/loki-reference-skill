@@ -58,7 +58,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
     volumes:
-      - ~/data/send-grid-test/volumes/postgres:/var/lib/postgresql/data
+      - ./volumes/postgres:/var/lib/postgresql/data
     networks:
       - app-network
 
@@ -67,7 +67,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - ~/data/send-grid-test/volumes/redis:/data
+      - ./volumes/redis:/data
     restart: always
     command: redis-server --appendonly yes --requirepass sendgrid_redis_password_2024
     networks:
@@ -78,7 +78,7 @@ services:
     ports:
       - "5540:5540"
     volumes:
-      - ~/data/send-grid-test/volumes/redisinsight:/data
+      - ./volumes/redisinsight:/data
     depends_on:
       - redis
     networks:
@@ -89,7 +89,7 @@ services:
     ports:
       - "3002:3001"
     volumes:
-      - ~/data/send-grid-test/volumes/uptime-kuma:/app/data
+      - ./volumes/uptime-kuma:/app/data
     networks:
       - app-network
 

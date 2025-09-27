@@ -1,9 +1,6 @@
-import { db } from '../db/index'
-import {
-  departments,
-  users
-} from '../db/schema/users'
 import { eq, sql } from 'drizzle-orm'
+import { db } from '../db/index'
+import { departments, users } from '../db/schema/users'
 
 // ====================================
 // DEPARTMENT QUERIES
@@ -11,11 +8,7 @@ import { eq, sql } from 'drizzle-orm'
 
 // GetDepartment :one
 export async function getDepartment(id: string) {
-  const result = await db
-    .select()
-    .from(departments)
-    .where(eq(departments.id, id))
-    .limit(1)
+  const result = await db.select().from(departments).where(eq(departments.id, id)).limit(1)
 
   return result[0]
 }
@@ -54,7 +47,7 @@ export async function createDepartment(data: {
       name: data.name,
       code: data.code,
       description: data.description,
-      isActive: data.isActive ?? true
+      isActive: data.isActive ?? true,
     })
     .returning()
 
@@ -69,7 +62,7 @@ export async function updateDepartment(
     code: string
     description?: string
     isActive: boolean
-  }
+  },
 ) {
   const [updatedDepartment] = await db
     .update(departments)
@@ -78,7 +71,7 @@ export async function updateDepartment(
       code: data.code,
       description: data.description,
       isActive: data.isActive,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     })
     .where(eq(departments.id, id))
     .returning()

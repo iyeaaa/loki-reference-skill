@@ -27,7 +27,7 @@ export const ResponseCode = {
   INSUFFICIENT_PERMISSION: 'B004',
 } as const
 
-export type ResponseCodeType = typeof ResponseCode[keyof typeof ResponseCode]
+export type ResponseCodeType = (typeof ResponseCode)[keyof typeof ResponseCode]
 
 // 공통 응답 인터페이스
 export interface CommonResponse<T = any> {
@@ -43,14 +43,14 @@ export interface CommonResponse<T = any> {
 export function successResponse<T>(
   data: T,
   message: string = '정상 처리되었습니다.',
-  code: ResponseCodeType = ResponseCode.SUCCESS
+  code: ResponseCodeType = ResponseCode.SUCCESS,
 ): CommonResponse<T> {
   return {
     success: true,
     code,
     message,
     data,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   }
 }
 
@@ -58,34 +58,49 @@ export function successResponse<T>(
 export function errorResponse(
   message: string,
   code: ResponseCodeType = ResponseCode.INTERNAL_ERROR,
-  path?: string
+  path?: string,
 ): CommonResponse {
   return {
     success: false,
     code,
     message,
     timestamp: new Date().toISOString(),
-    path
+    path,
   }
 }
 
 // HTTP 상태 코드와 응답 코드 매핑
 export function getResponseCodeByStatus(status: number): ResponseCodeType {
   switch (status) {
-    case 200: return ResponseCode.SUCCESS
-    case 201: return ResponseCode.CREATED
-    case 202: return ResponseCode.ACCEPTED
-    case 204: return ResponseCode.NO_CONTENT
-    case 400: return ResponseCode.BAD_REQUEST
-    case 401: return ResponseCode.UNAUTHORIZED
-    case 403: return ResponseCode.FORBIDDEN
-    case 404: return ResponseCode.NOT_FOUND
-    case 409: return ResponseCode.CONFLICT
-    case 422: return ResponseCode.VALIDATION_ERROR
-    case 429: return ResponseCode.TOO_MANY_REQUESTS
-    case 500: return ResponseCode.INTERNAL_ERROR
-    case 501: return ResponseCode.NOT_IMPLEMENTED
-    case 503: return ResponseCode.SERVICE_UNAVAILABLE
-    default: return ResponseCode.INTERNAL_ERROR
+    case 200:
+      return ResponseCode.SUCCESS
+    case 201:
+      return ResponseCode.CREATED
+    case 202:
+      return ResponseCode.ACCEPTED
+    case 204:
+      return ResponseCode.NO_CONTENT
+    case 400:
+      return ResponseCode.BAD_REQUEST
+    case 401:
+      return ResponseCode.UNAUTHORIZED
+    case 403:
+      return ResponseCode.FORBIDDEN
+    case 404:
+      return ResponseCode.NOT_FOUND
+    case 409:
+      return ResponseCode.CONFLICT
+    case 422:
+      return ResponseCode.VALIDATION_ERROR
+    case 429:
+      return ResponseCode.TOO_MANY_REQUESTS
+    case 500:
+      return ResponseCode.INTERNAL_ERROR
+    case 501:
+      return ResponseCode.NOT_IMPLEMENTED
+    case 503:
+      return ResponseCode.SERVICE_UNAVAILABLE
+    default:
+      return ResponseCode.INTERNAL_ERROR
   }
 }

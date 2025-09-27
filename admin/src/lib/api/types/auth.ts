@@ -11,23 +11,23 @@ export interface SignupRequest {
   username: string
   email: string
   password: string
-  department_id: string
-  employee_id: string
+  departmentId: string
+  employeeId: string
 }
 
 export interface AuthUser {
   id: string
   username: string
   email: string
-  user_role: string
-  is_active: boolean
-  department_id: string
-  employee_id: string
-  created_at: string
-  updated_at: string
-  last_login_at?: string
-  department_name?: string
-  department_code?: string
+  userRole: string
+  isActive: boolean
+  departmentId: string
+  employeeId: string
+  createdAt: string
+  updatedAt: string
+  lastLoginAt?: string
+  departmentName?: string
+  departmentCode?: string
 }
 
 export interface AuthResponse {

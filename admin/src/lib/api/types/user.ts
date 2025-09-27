@@ -6,16 +6,16 @@ export interface Language {
   id: string
   code: string
   name: string
-  native_name: string
-  is_active: boolean
+  nativeName: string
+  isActive: boolean
 }
 
 export interface LanguageInfo {
   id: string
   code: string
   name: string
-  native_name: string
-  is_active: boolean
+  nativeName: string
+  isActive: boolean
 }
 
 export interface Department {
@@ -23,9 +23,9 @@ export interface Department {
   name: string
   code: string
   description?: string
-  is_active: boolean
-  created_at: string
-  updated_at: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 // Aligned with database schema and Go handlers
@@ -33,28 +33,28 @@ export interface User {
   id: string
   username: string
   email: string
-  user_role: UserRole
-  is_active: boolean
-  department_id: string
-  employee_id: string
-  created_at: string
-  updated_at: string
-  last_login_at?: string
-  department_name: string
-  department_code: string
-  edit_languages?: LanguageInfo[]
-  review_languages?: LanguageInfo[]
+  userRole: UserRole
+  isActive: boolean
+  departmentId: string
+  employeeId: string
+  createdAt: string
+  updatedAt: string
+  lastLoginAt?: string
+  departmentName: string
+  departmentCode: string
+  editLanguages?: LanguageInfo[]
+  reviewLanguages?: LanguageInfo[]
 }
 
 export interface UserStats {
   total: number
   active: number
   inactive: number
-  by_role: {
+  byRole: {
     admin: number
     user: number
-    internal_reviewer: number
-    external_reviewer: number
+    internalReviewer: number
+    externalReviewer: number
   }
 }
 
@@ -63,43 +63,43 @@ export interface CreateUserRequest {
   username: string
   email: string
   password: string
-  user_role: UserRole
-  is_active?: boolean
-  department_id: string
-  employee_id: string
-  edit_languages?: string[]
-  review_languages?: string[]
+  userRole: UserRole
+  isActive?: boolean
+  departmentId: string
+  employeeId: string
+  editLanguages?: string[]
+  reviewLanguages?: string[]
 }
 
 export interface UpdateUserRequest {
   username: string
   email: string
-  user_role: UserRole
-  is_active?: boolean
-  department_id: string
-  employee_id: string
-  edit_languages?: string[]
-  review_languages?: string[]
+  userRole: UserRole
+  isActive?: boolean
+  departmentId: string
+  employeeId: string
+  editLanguages?: string[]
+  reviewLanguages?: string[]
 }
 
 export interface ChangePasswordRequest {
-  new_password: string
+  newPassword: string
 }
 
 export interface BulkUpdateStatusRequest {
-  user_ids: string[]
-  is_active: boolean
+  userIds: string[]
+  isActive: boolean
 }
 
 export interface BulkUpdateRoleRequest {
-  user_ids: string[]
-  user_role: UserRole
+  userIds: string[]
+  userRole: UserRole
 }
 
 export interface BulkUpdateLanguagesRequest {
-  user_ids: string[]
-  edit_languages?: string[]
-  review_languages?: string[]
+  userIds: string[]
+  editLanguages?: string[]
+  reviewLanguages?: string[]
 }
 
 // API Response Types (aligned with Go handlers)
@@ -108,7 +108,7 @@ export interface UsersResponse {
   total: number
   page: number
   limit: number
-  total_pages: number
+  totalPages: number
 }
 
 export interface DepartmentsApiResponse {

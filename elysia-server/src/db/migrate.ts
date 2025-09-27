@@ -1,5 +1,5 @@
-import { db } from './drizzle'
 import { sql } from 'drizzle-orm'
+import { db } from './drizzle'
 
 export async function migrateDatabase() {
   try {

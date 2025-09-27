@@ -2,3 +2,6 @@
 
 # Change to admin directory and run lint-staged
 cd admin && npx lint-staged
+
+# Change to elysia-server directory and run biome check
+cd ../elysia-server && bun run lint:check

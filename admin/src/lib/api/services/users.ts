@@ -15,13 +15,13 @@ export const usersApi = {
     }
 
     if (params?.statuses?.length) {
-      searchParams.append("is_active", params.statuses.join(","))
+      searchParams.append("isActive", params.statuses.join(","))
     } else if (params?.status && params.status !== "all") {
-      searchParams.append("is_active", params.status === "active" ? "true" : "false")
+      searchParams.append("isActive", params.status === "active" ? "true" : "false")
     }
 
     if (params?.departments?.length) {
-      searchParams.append("department_ids", params.departments.join(","))
+      searchParams.append("departmentIds", params.departments.join(","))
     }
 
     const query = searchParams.toString()
@@ -57,31 +57,31 @@ export const usersApi = {
   },
 
   bulkUpdateStatus: (userIds: string[], isActive: boolean) => {
-    return apiFetch<{ updated_count: number }>("/api/v1/admin/users/bulk/status", {
+    return apiFetch<{ updatedCount: number }>("/api/v1/admin/users/bulk/status", {
       method: "PUT",
       body: JSON.stringify({
-        user_ids: userIds,
-        is_active: isActive,
+        userIds,
+        isActive,
       }),
     })
   },
 
   bulkUpdateRole: (userIds: string[], role: string) => {
-    return apiFetch<{ updated_count: number }>("/api/v1/admin/users/bulk/role", {
+    return apiFetch<{ updatedCount: number }>("/api/v1/admin/users/bulk/role", {
       method: "PUT",
       body: JSON.stringify({
-        user_ids: userIds,
-        user_role: role,
+        userIds,
+        userRole: role,
       }),
     })
   },
 
   bulkUpdateDepartment: (userIds: string[], departmentId: string) => {
-    return apiFetch<{ updated_count: number }>("/api/v1/admin/users/bulk/department", {
+    return apiFetch<{ updatedCount: number }>("/api/v1/admin/users/bulk/department", {
       method: "PUT",
       body: JSON.stringify({
-        user_ids: userIds,
-        department_id: departmentId,
+        userIds,
+        departmentId,
       }),
     })
   },

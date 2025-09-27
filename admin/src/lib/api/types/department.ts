@@ -6,27 +6,27 @@ export interface Department {
   id: string
   name: string
   code: string
-  parent_id?: string | null
+  parentId?: string | null
   description?: string | null
-  is_active: boolean
-  created_at: string
-  updated_at: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface DepartmentCreateRequest {
   name: string
   code: string
-  parent_id?: string | null
+  parentId?: string | null
   description?: string | null
-  is_active?: boolean
+  isActive?: boolean
 }
 
 export interface DepartmentUpdateRequest {
   name?: string
   code?: string
-  parent_id?: string | null
+  parentId?: string | null
   description?: string | null
-  is_active?: boolean
+  isActive?: boolean
 }
 
 export interface DepartmentsResponse {

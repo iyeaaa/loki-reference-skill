@@ -1,10 +1,10 @@
+import { Readable } from 'node:stream'
 import busboy from 'busboy'
-import { Readable } from 'stream'
-import { FormData, FileData } from '../models/email.model'
+import type { FileData, FormData } from '../models/email.model'
 
 export function parseMultipartFormData(
   contentType: string | null,
-  body: ArrayBuffer
+  body: ArrayBuffer,
 ): Promise<{ formData: FormData; files: FileData[] }> {
   return new Promise((resolve, reject) => {
     const formData: FormData = {}
@@ -12,8 +12,8 @@ export function parseMultipartFormData(
 
     const bb = busboy({
       headers: {
-        'content-type': contentType || ''
-      }
+        'content-type': contentType || '',
+      },
     })
 
     bb.on('field', (name: string, value: string) => {
@@ -33,7 +33,7 @@ export function parseMultipartFormData(
           originalname: info.filename,
           mimetype: info.mimeType,
           buffer: Buffer.concat(chunks),
-          size: Buffer.concat(chunks).length
+          size: Buffer.concat(chunks).length,
         })
       })
     })

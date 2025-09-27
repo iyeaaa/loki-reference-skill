@@ -86,7 +86,7 @@ export default function AdminLoginPage() {
   useEffect(() => {
     if (currentUser && isTokenValid) {
       const allowedRoles = ["admin", "internal_reviewer", "external_reviewer"]
-      if (currentUser?.user_role && allowedRoles.includes(currentUser.user_role)) {
+      if (currentUser?.userRole && allowedRoles.includes(currentUser.userRole)) {
         navigate("/")
       }
     }
@@ -101,8 +101,8 @@ export default function AdminLoginPage() {
       username: data.username,
       email: data.email,
       password: data.password,
-      department_id: data.departmentId,
-      employee_id: data.employeeId,
+      departmentId: data.departmentId,
+      employeeId: data.employeeId,
     })
 
     // After successful signup, clear form and switch to login tab with prefilled email
@@ -112,12 +112,13 @@ export default function AdminLoginPage() {
   }
 
   // Format departments for Combobox
-  const filteredDepartments =
-    departmentsData?.map((dept) => ({
-      id: dept.id,
-      name: dept.name,
-      code: dept.code,
-    })) || []
+  const filteredDepartments = Array.isArray(departmentsData)
+    ? departmentsData.map((dept) => ({
+        id: dept.id,
+        name: dept.name,
+        code: dept.code,
+      }))
+    : []
 
   const isLoading = loginMutation.isPending || signupMutation.isPending
 

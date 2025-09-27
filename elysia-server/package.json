@@ -11,9 +11,14 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "bun src/db/seed.ts"
+    "db:seed": "bun src/db/seed.ts",
+    "lint": "biome check --write ./src",
+    "lint:check": "biome check ./src",
+    "format": "biome format --write ./src",
+    "format:check": "biome format ./src"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.2.4",
     "@types/bun": "latest",
     "dotenv": "^17.2.2",
     "drizzle-kit": "^0.31.4"

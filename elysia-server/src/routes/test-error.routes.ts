@@ -1,15 +1,15 @@
 import { Elysia, t } from 'elysia'
 import {
   AppError,
-  ValidationError,
-  NotFoundError,
   BadRequestError,
-  UnauthorizedError,
-  ForbiddenError,
   ConflictError,
-  TooManyRequestsError,
+  ForbiddenError,
   InternalServerError,
-  ServiceUnavailableError
+  NotFoundError,
+  ServiceUnavailableError,
+  TooManyRequestsError,
+  UnauthorizedError,
+  ValidationError,
 } from '../utils/errors'
 
 export const testErrorRoutes = new Elysia({ prefix: '/api/test-errors' })
@@ -62,20 +62,24 @@ export const testErrorRoutes = new Elysia({ prefix: '/api/test-errors' })
   })
 
   // Test validation error from Elysia
-  .post('/validation-test', ({ body }) => {
-    return { received: body }
-  }, {
-    body: t.Object({
-      name: t.String({ minLength: 3 }),
-      age: t.Number({ minimum: 0 })
-    })
-  })
+  .post(
+    '/validation-test',
+    ({ body }) => {
+      return { received: body }
+    },
+    {
+      body: t.Object({
+        name: t.String({ minLength: 3 }),
+        age: t.Number({ minimum: 0 }),
+      }),
+    },
+  )
 
   // Successful endpoint for comparison
   .get('/success', () => {
     return {
       success: true,
       message: 'This endpoint works correctly',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }
   })

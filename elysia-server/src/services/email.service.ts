@@ -1,5 +1,5 @@
 import sgMail from '@sendgrid/mail'
-import { getAIEmailService, type EmailContext } from '../lib/ai-email-service'
+import { type EmailContext, getAIEmailService } from '../lib/ai-email-service'
 import { decodeBase64 } from '../utils/string.util'
 
 // Initialize SendGrid
@@ -14,7 +14,7 @@ class EmailService {
     subject: string,
     emailContent: string,
     inReplyTo?: string,
-    references?: string[]
+    references?: string[],
   ): Promise<boolean> {
     try {
       const aiService = getAIEmailService()
@@ -22,7 +22,7 @@ class EmailService {
         fromEmail,
         subject,
         content: emailContent,
-        receivedTime: new Date()
+        receivedTime: new Date(),
       }
 
       console.log('🤖 AI 응답 생성 중...')
@@ -41,7 +41,7 @@ class EmailService {
       const messageId = `<${Date.now()}.${Math.random().toString(36).substring(2, 11)}@partners.grinda.ai>`
 
       const headers: Record<string, string> = {
-        'Message-ID': messageId
+        'Message-ID': messageId,
       }
 
       if (inReplyTo) {
@@ -49,14 +49,14 @@ class EmailService {
       }
 
       if (references && references.length > 0) {
-        headers['References'] = references.join(' ')
+        headers.References = references.join(' ')
       }
 
       const msg = {
         to: fromEmail,
         from: {
           email: 'rinda@partners.grinda.ai',
-          name: 'Rinda Expert - 그린다에이아이'
+          name: 'Rinda Expert - 그린다에이아이',
         },
         replyTo: 'rinda@partners.grinda.ai',
         subject: `Re: ${subject || '문의 감사합니다'}`,
@@ -65,15 +65,15 @@ class EmailService {
         trackingSettings: {
           clickTracking: {
             enable: true,
-            enableText: true
+            enableText: true,
           },
           openTracking: {
-            enable: true
+            enable: true,
           },
           subscriptionTracking: {
-            enable: false
-          }
-        }
+            enable: false,
+          },
+        },
       }
 
       await sgMail.send(msg)
@@ -94,7 +94,7 @@ class EmailService {
 
   async processAttachments(
     attachmentsJson: string,
-    attachmentInfo?: string
+    attachmentInfo?: string,
   ): Promise<{ filename: string; content: string }[]> {
     console.log('\n📎 [첨부파일 정보]')
     console.log('├─ attachment-info:', attachmentInfo || '없음')
@@ -128,13 +128,14 @@ class EmailService {
 
         return {
           ...attachment,
-          content: decodedContent
+          content: decodedContent,
         }
       })
 
-      const parsedAttachments = decodedAttachments.filter(
-        (att) => att.content !== null
-      ) as { filename: string; content: string }[]
+      const parsedAttachments = decodedAttachments.filter((att) => att.content !== null) as {
+        filename: string
+        content: string
+      }[]
 
       if (parsedAttachments.length > 0) {
         console.log(`└─ ✅ 디코딩 성공: ${parsedAttachments.length}/${attachments.length}개 파일`)
@@ -159,7 +160,7 @@ class EmailService {
 
     if (!emailContent && rawEmail) {
       const plainTextMatch = rawEmail.match(
-        /Content-Type:\s*text\/plain[\s\S]*?\r?\n\r?\n([\s\S]*?)(\r?\n--|\r?\n\r?\nContent-Type:|$)/i
+        /Content-Type:\s*text\/plain[\s\S]*?\r?\n\r?\n([\s\S]*?)(\r?\n--|\r?\n\r?\nContent-Type:|$)/i,
       )
       if (plainTextMatch?.[1]) {
         const extractedText = plainTextMatch[1].trim()
@@ -173,7 +174,7 @@ class EmailService {
 
       if (!emailContent) {
         const base64BodyMatch = rawEmail.match(
-          /Content-Transfer-Encoding:\s*base64\s*\r?\n\r?\n([\s\S]*?)(\r?\n--|\r?\n\r?\nContent-Type:|$)/i
+          /Content-Transfer-Encoding:\s*base64\s*\r?\n\r?\n([\s\S]*?)(\r?\n--|\r?\n\r?\nContent-Type:|$)/i,
         )
         if (base64BodyMatch?.[1]) {
           const decodedContent = decodeBase64(base64BodyMatch[1].trim())

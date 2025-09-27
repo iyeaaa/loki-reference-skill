@@ -70,13 +70,16 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
       return null as T
     }
 
-    return await response.json()
-  } catch (error) {
-    if (error instanceof Error) {
-      toast.error(error.message)
-    } else {
-      toast.error("An unexpected error occurred")
+    const result = await response.json()
+
+    // Handle wrapped API responses from Elysia backend
+    if (result && typeof result === "object" && "success" in result && "data" in result) {
+      return result.data as T
     }
+
+    return result as T
+  } catch (error) {
+    // Don't show toast here - let the hooks handle error messaging
     throw error
   }
 }

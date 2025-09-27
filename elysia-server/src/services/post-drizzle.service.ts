@@ -1,6 +1,6 @@
+import { desc, eq } from 'drizzle-orm'
 import { db } from '../db/drizzle'
 import { posts } from '../db/schema'
-import { eq, desc } from 'drizzle-orm'
 import type { CreatePostDto, UpdatePostDto } from '../models/post.model'
 
 export class PostDrizzleService {
@@ -14,11 +14,14 @@ export class PostDrizzleService {
   }
 
   async createPost(data: CreatePostDto) {
-    const result = await db.insert(posts).values({
-      title: data.title,
-      content: data.content,
-      author: data.author,
-    }).returning()
+    const result = await db
+      .insert(posts)
+      .values({
+        title: data.title,
+        content: data.content,
+        author: data.author,
+      })
+      .returning()
     return result[0]
   }
 
@@ -34,10 +37,7 @@ export class PostDrizzleService {
 
     updateData.updatedAt = new Date()
 
-    const result = await db.update(posts)
-      .set(updateData)
-      .where(eq(posts.id, id))
-      .returning()
+    const result = await db.update(posts).set(updateData).where(eq(posts.id, id)).returning()
 
     return result[0] || null
   }

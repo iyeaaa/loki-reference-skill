@@ -1,5 +1,5 @@
-import { Elysia } from 'elysia'
-import { successResponse, ResponseCode, getResponseCodeByStatus } from '../types/response.types'
+import type { Elysia } from 'elysia'
+import { getResponseCodeByStatus, ResponseCode, successResponse } from '../types/response.types'
 
 export const responseTransformer = (app: Elysia) =>
   app.onAfterHandle(({ response, set, request }) => {
@@ -22,7 +22,8 @@ export const responseTransformer = (app: Elysia) =>
 
     // HTTP 메서드와 상태 코드에 따른 메시지 결정
     let message = '정상 처리되었습니다.'
-    let code = getResponseCodeByStatus(set.status || 200)
+    const statusCode = typeof set.status === 'number' ? set.status : 200
+    let code = getResponseCodeByStatus(statusCode)
 
     // POST 요청의 경우 201 Created
     if (request.method === 'POST' && (set.status === 200 || set.status === 201)) {

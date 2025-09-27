@@ -1,9 +1,6 @@
+import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
 import { db } from '../db/index'
-import {
-  users,
-  departments
-} from '../db/schema/users'
-import { eq, ilike, or, and, sql, desc } from 'drizzle-orm'
+import { departments, users } from '../db/schema/users'
 
 // ====================================
 // USER CRUD OPERATIONS
@@ -25,7 +22,7 @@ export async function getUser(id: string) {
       updatedAt: users.updatedAt,
       lastLoginAt: users.lastLoginAt,
       departmentName: departments.name,
-      departmentCode: departments.code
+      departmentCode: departments.code,
     })
     .from(users)
     .innerJoin(departments, eq(users.departmentId, departments.id))
@@ -54,7 +51,7 @@ export async function createUser(data: {
       userRole: data.userRole || 'user',
       isActive: data.isActive ?? true,
       departmentId: data.departmentId,
-      employeeId: data.employeeId
+      employeeId: data.employeeId,
     })
     .returning({
       id: users.id,
@@ -65,7 +62,7 @@ export async function createUser(data: {
       departmentId: users.departmentId,
       employeeId: users.employeeId,
       createdAt: users.createdAt,
-      updatedAt: users.updatedAt
+      updatedAt: users.updatedAt,
     })
 
   return newUser
@@ -81,7 +78,7 @@ export async function updateUser(
     isActive: boolean
     departmentId: string
     employeeId: string
-  }
+  },
 ) {
   const [updatedUser] = await db
     .update(users)
@@ -92,7 +89,7 @@ export async function updateUser(
       isActive: data.isActive,
       departmentId: data.departmentId,
       employeeId: data.employeeId,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     })
     .where(eq(users.id, id))
     .returning({
@@ -104,7 +101,7 @@ export async function updateUser(
       departmentId: users.departmentId,
       employeeId: users.employeeId,
       createdAt: users.createdAt,
-      updatedAt: users.updatedAt
+      updatedAt: users.updatedAt,
     })
 
   return updatedUser
@@ -134,7 +131,7 @@ export async function listUsers(limit: number, offset: number) {
       updatedAt: users.updatedAt,
       lastLoginAt: users.lastLoginAt,
       departmentName: departments.name,
-      departmentCode: departments.code
+      departmentCode: departments.code,
     })
     .from(users)
     .innerJoin(departments, eq(users.departmentId, departments.id))
@@ -153,7 +150,7 @@ export async function listUsersWithFilters(
     role?: 'admin' | 'user'
     isActive?: boolean
     search?: string
-  }
+  },
 ) {
   const conditions = []
 
@@ -170,8 +167,8 @@ export async function listUsersWithFilters(
       or(
         ilike(users.email, `%${filters.search}%`),
         ilike(users.username, `%${filters.search}%`),
-        ilike(users.employeeId, `%${filters.search}%`)
-      )!
+        ilike(users.employeeId, `%${filters.search}%`),
+      )!,
     )
   }
 
@@ -190,7 +187,7 @@ export async function listUsersWithFilters(
       updatedAt: users.updatedAt,
       lastLoginAt: users.lastLoginAt,
       departmentName: departments.name,
-      departmentCode: departments.code
+      departmentCode: departments.code,
     })
     .from(users)
     .innerJoin(departments, eq(users.departmentId, departments.id))
@@ -218,7 +215,7 @@ export async function getUserByEmail(email: string) {
       updatedAt: users.updatedAt,
       lastLoginAt: users.lastLoginAt,
       departmentName: departments.name,
-      departmentCode: departments.code
+      departmentCode: departments.code,
     })
     .from(users)
     .innerJoin(departments, eq(users.departmentId, departments.id))
@@ -240,16 +237,11 @@ export async function getAssignableUsers() {
       departmentId: users.departmentId,
       employeeId: users.employeeId,
       departmentName: departments.name,
-      departmentCode: departments.code
+      departmentCode: departments.code,
     })
     .from(users)
     .innerJoin(departments, eq(users.departmentId, departments.id))
-    .where(
-      and(
-        eq(users.isActive, true),
-        eq(users.userRole, 'admin')
-      )
-    )
+    .where(and(eq(users.isActive, true), eq(users.userRole, 'admin')))
     .orderBy(users.username)
 
   return result
@@ -261,9 +253,7 @@ export async function getAssignableUsers() {
 
 // CountUsers :one
 export async function countUsers() {
-  const result = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(users)
+  const result = await db.select({ count: sql<number>`count(*)::int` }).from(users)
 
   return result[0]?.count ?? 0
 }
@@ -289,8 +279,8 @@ export async function countUsersWithFilters(filters?: {
       or(
         ilike(users.email, `%${filters.search}%`),
         ilike(users.username, `%${filters.search}%`),
-        ilike(users.employeeId, `%${filters.search}%`)
-      )!
+        ilike(users.employeeId, `%${filters.search}%`),
+      )!,
     )
   }
 
@@ -324,7 +314,7 @@ export async function updateUserPassword(id: string, passwordHash: string) {
     .update(users)
     .set({
       passwordHash,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     })
     .where(eq(users.id, id))
     .returning({
@@ -332,7 +322,7 @@ export async function updateUserPassword(id: string, passwordHash: string) {
       username: users.username,
       email: users.email,
       userRole: users.userRole,
-      isActive: users.isActive
+      isActive: users.isActive,
     })
 
   return updatedUser
@@ -356,14 +346,14 @@ export async function createOrUpdateGoogleUser(data: {
       isActive: data.isActive ?? true,
       departmentId: data.departmentId,
       employeeId: data.employeeId,
-      lastLoginAt: new Date()
+      lastLoginAt: new Date(),
     })
     .onConflictDoUpdate({
       target: users.email,
       set: {
         lastLoginAt: new Date(),
-        updatedAt: new Date()
-      }
+        updatedAt: new Date(),
+      },
     })
     .returning({
       id: users.id,
@@ -375,7 +365,7 @@ export async function createOrUpdateGoogleUser(data: {
       employeeId: users.employeeId,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
-      lastLoginAt: users.lastLoginAt
+      lastLoginAt: users.lastLoginAt,
     })
 
   return upsertedUser
@@ -387,7 +377,7 @@ export async function updateLastLogin(id: string) {
     .update(users)
     .set({
       lastLoginAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     })
     .where(eq(users.id, id))
 }

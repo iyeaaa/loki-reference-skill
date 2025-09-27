@@ -1,5 +1,5 @@
 import { pool } from '../db/config'
-import type { Post, CreatePostDto, UpdatePostDto } from '../models/post.model'
+import type { CreatePostDto, Post, UpdatePostDto } from '../models/post.model'
 
 export class PostService {
   async getAllPosts(): Promise<Post[]> {
@@ -16,7 +16,7 @@ export class PostService {
     const { title, content, author } = data
     const result = await pool.query(
       'INSERT INTO posts (title, content, author) VALUES ($1, $2, $3) RETURNING *',
-      [title, content, author]
+      [title, content, author],
     )
     return result.rows[0]
   }

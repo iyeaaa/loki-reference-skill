@@ -1,25 +1,25 @@
-import { OpenAI } from "openai";
+import { OpenAI } from 'openai'
 
 interface EmailContext {
-  fromEmail: string;
-  subject: string;
-  content: string;
-  receivedTime: Date;
+  fromEmail: string
+  subject: string
+  content: string
+  receivedTime: Date
 }
 
 interface AIEmailResponse {
-  success: boolean;
-  replyContent?: string;
-  error?: string;
+  success: boolean
+  replyContent?: string
+  error?: string
 }
 
 class AIEmailService {
-  private openai: OpenAI;
+  private openai: OpenAI
 
   constructor(apiKey: string) {
     this.openai = new OpenAI({
       apiKey: apiKey,
-    });
+    })
   }
 
   /**
@@ -49,7 +49,7 @@ class AIEmailService {
       [미팅 제안 시]
       "더 자세히 도와드리기 위해 30분 정도 시간 내어 직접 설명드리고 싶습니다.
 
-      🗓️ https://calendly.com/grindaai/rinda-demo"`;
+      🗓️ https://calendly.com/grindaai/rinda-demo"`
 
       const userPrompt = `고객 이메일:
       발신자: ${context.fromEmail}
@@ -57,58 +57,63 @@ class AIEmailService {
       내용: ${context.content}
 
       위 문의에 대해 5-7문장 이내로 간결하게 답변하세요.
-      인사말 포함, 핵심 답변, 필요시 미팅 링크만 포함하세요.`;
+      인사말 포함, 핵심 답변, 필요시 미팅 링크만 포함하세요.`
 
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-5",
+        model: 'gpt-5',
         messages: [
           {
-            role: "system",
+            role: 'system',
             content: systemPrompt,
           },
           {
-            role: "user",
+            role: 'user',
             content: userPrompt,
           },
         ],
-      });
+      })
 
-      const replyContent = completion.choices[0]?.message?.content;
+      const replyContent = completion.choices[0]?.message?.content
 
       if (!replyContent) {
-        throw new Error("AI 응답 생성 실패");
+        throw new Error('AI 응답 생성 실패')
       }
 
-      console.log("✅ AI 응답 생성 성공");
-      console.log(`- 사용된 토큰: ${completion.usage?.total_tokens}`);
+      console.log('✅ AI 응답 생성 성공')
+      console.log(`- 사용된 토큰: ${completion.usage?.total_tokens}`)
 
       return {
         success: true,
         replyContent,
-      };
+      }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류 발생';
-      console.error("❌ AI 응답 생성 실패:", errorMessage);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류 발생'
+      console.error('❌ AI 응답 생성 실패:', errorMessage)
 
       // 에러 타입에 따른 처리
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'insufficient_quota') {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'insufficient_quota'
+      ) {
         return {
           success: false,
-          error: "OpenAI API 사용량 한도 초과",
-        };
+          error: 'OpenAI API 사용량 한도 초과',
+        }
       }
 
       if (error && typeof error === 'object' && 'status' in error && error.status === 401) {
         return {
           success: false,
-          error: "OpenAI API 키 인증 실패",
-        };
+          error: 'OpenAI API 키 인증 실패',
+        }
       }
 
       return {
         success: false,
         error: errorMessage,
-      };
+      }
     }
   }
 
@@ -119,33 +124,33 @@ class AIEmailService {
     return `안녕하세요,
 
 문의 주셔서 감사합니다.
-"${context.subject || "문의사항"}"에 대해 확인했습니다.
+"${context.subject || '문의사항'}"에 대해 확인했습니다.
 
 담당자가 24시간 이내 답변 드리겠습니다.
 
 감사합니다.
 
 Rinda Expert 팀
-📧 rinda@partners.grinda.ai`;
+📧 rinda@partners.grinda.ai`
   }
 }
 
 // 싱글톤 인스턴스
-let aiEmailServiceInstance: AIEmailService | null = null;
+let aiEmailServiceInstance: AIEmailService | null = null
 
 /**
  * AI 이메일 서비스 인스턴스 가져오기
  */
 export function getAIEmailService(): AIEmailService {
   if (!aiEmailServiceInstance) {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) {
-      throw new Error("OPENAI_API_KEY 환경변수가 설정되지 않았습니다");
+      throw new Error('OPENAI_API_KEY 환경변수가 설정되지 않았습니다')
     }
-    aiEmailServiceInstance = new AIEmailService(apiKey);
+    aiEmailServiceInstance = new AIEmailService(apiKey)
   }
-  return aiEmailServiceInstance;
+  return aiEmailServiceInstance
 }
 
-export type { EmailContext, AIEmailResponse };
-export { AIEmailService };
+export type { EmailContext, AIEmailResponse }
+export { AIEmailService }

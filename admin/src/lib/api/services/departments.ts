@@ -33,7 +33,7 @@ export const departmentApi = {
   toggleStatus: (id: string, isActive: boolean) => {
     return apiFetch<Department>(`/api/v1/admin/departments/${id}/status`, {
       method: "PATCH",
-      body: JSON.stringify({ is_active: isActive }),
+      body: JSON.stringify({ isActive }),
     })
   },
 }

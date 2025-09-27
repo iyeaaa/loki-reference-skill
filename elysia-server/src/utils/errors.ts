@@ -7,7 +7,7 @@ export class AppError extends Error {
     message: string,
     statusCode: number = 500,
     code: string = 'INTERNAL_ERROR',
-    isOperational: boolean = true
+    isOperational: boolean = true,
   ) {
     super(message)
     this.name = 'AppError'

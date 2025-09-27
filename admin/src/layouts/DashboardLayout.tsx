@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { AppSidebar } from '@/components/app-sidebar'
+import { AppSidebar } from '@/components/AppSidebar'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -14,7 +14,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
-import { ProfileCard } from '@/components/profile-card'
+import { ProfileCard } from '@/components/ProfileCard'
 import { User } from 'lucide-react'
 
 const getPageName = (pathname: string) => {

@@ -13,7 +13,7 @@ import { webhookRoutes } from './routes/webhook.routes'
 import { postRoutes } from './routes/post.routes'
 import { authRoutes } from './routes/auth.routes'
 import { publicRoutes } from './routes/public.routes'
-import { userRoutes, departmentRoutes } from './routes/users'
+import { userRoutes, departmentRoutes } from './routes/users.routes'
 
 // Initialize database
 migrateDatabase().catch(console.error)

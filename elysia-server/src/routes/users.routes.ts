@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia'
-import * as userService from '../services/userService'
-import * as departmentService from '../services/departmentService'
+import * as userService from '../services/user.service'
+import * as departmentService from '../services/department.service'
 
 const userSchema = t.Object({
   username: t.String({ minLength: 1, maxLength: 50 }),

@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia'
-import * as departmentService from '../services/departmentService'
+import * as departmentService from '../services/department.service'
 
 export const publicRoutes = new Elysia({ prefix: '/api/v1/public' })
   // Get all active departments (no authentication required)

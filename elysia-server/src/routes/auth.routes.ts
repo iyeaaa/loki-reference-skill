@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia'
-import * as userService from '../services/userService'
-import * as authService from '../services/authService'
+import * as userService from '../services/user.service'
+import * as authService from '../services/auth.service'
 import { UnauthorizedError, BadRequestError } from '../utils/errors'
 
 const loginSchema = t.Object({

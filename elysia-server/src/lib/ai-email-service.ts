@@ -23,7 +23,7 @@ class AIEmailService {
   }
 
   /**
-   * AI를 사용하여 고객 이메일에 대한 응답 생성
+   * AI를 사용하여 고객 이메일에 대한 응답 생성 (sendgrid inbound parse)
    */
   async generateEmailReply(context: EmailContext): Promise<AIEmailResponse> {
     try {

@@ -6,6 +6,7 @@ import LoginPage from '../pages/LoginPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
 import UsersPage from '../pages/users/UsersPage';
 import BulletinBoardPage from '../pages/bulletin/BulletinBoardPage';
+import EnvTestPage from '../pages/EnvTestPage';
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>;
@@ -39,6 +40,10 @@ export const router = createBrowserRouter([
           {
             path: 'bulletin',
             element: <BulletinBoardPage />,
+          },
+          {
+            path: 'env-test',
+            element: <EnvTestPage />,
           },
         ],
       },

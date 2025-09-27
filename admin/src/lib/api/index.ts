@@ -1,14 +1,15 @@
 // API Clients
-export { BaseApiClient } from './base'
-export { UsersApi, usersApi } from './users'
-export { AuthApi, authApi } from './auth'
+
+export { AuthApi, authApi } from "./auth"
+export { BaseApiClient } from "./base"
+export { UsersApi, usersApi } from "./users"
 
 // Create unified api client instance
-import { AuthApi } from './auth'
+import { AuthApi } from "./auth"
 export const apiClient = {
-  auth: new AuthApi()
+  auth: new AuthApi(),
 }
 
+export type * from "./auth"
 // Types
-export type * from './types/user'
-export type * from './auth'
+export type * from "./types/user"

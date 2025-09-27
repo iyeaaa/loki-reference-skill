@@ -1,6 +1,8 @@
-import React, { useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
-import { AppSidebar } from '@/components/AppSidebar'
+import { User } from "lucide-react"
+import { useState } from "react"
+import { Outlet, useLocation } from "react-router-dom"
+import { AppSidebar } from "@/components/AppSidebar"
+import { ProfileCard } from "@/components/ProfileCard"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -8,27 +10,22 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb'
-import { Separator } from '@/components/ui/separator'
-import {
-  SidebarProvider,
-  SidebarTrigger,
-} from '@/components/ui/sidebar'
-import { ProfileCard } from '@/components/ProfileCard'
-import { User } from 'lucide-react'
+} from "@/components/ui/breadcrumb"
+import { Separator } from "@/components/ui/separator"
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 
 const getPageName = (pathname: string) => {
   switch (pathname) {
-    case '/dashboard':
-      return '시스템 모니터링'
-    case '/users':
-      return '유저 관리'
-    case '/translations':
-      return '번역 관리'
-    case '/settings':
-      return '설정'
+    case "/dashboard":
+      return "시스템 모니터링"
+    case "/users":
+      return "유저 관리"
+    case "/translations":
+      return "번역 관리"
+    case "/settings":
+      return "설정"
     default:
-      return 'Overview'
+      return "Overview"
   }
 }
 
@@ -70,7 +67,9 @@ export default function DashboardLayout() {
             </div>
           </header>
           <main className="flex-1 overflow-hidden">
-            <div className="h-full p-4"><Outlet /></div>
+            <div className="h-full p-4">
+              <Outlet />
+            </div>
           </main>
         </div>
 
@@ -79,23 +78,24 @@ export default function DashboardLayout() {
           isOpen={showProfileCard}
           onClose={() => setShowProfileCard(false)}
           user={{
-            name: JSON.parse(localStorage.getItem('user') || '{}')?.username || 'Admin',
-            email: JSON.parse(localStorage.getItem('user') || '{}')?.email || '',
+            name: JSON.parse(localStorage.getItem("user") || "{}")?.username || "Admin",
+            email: JSON.parse(localStorage.getItem("user") || "{}")?.email || "",
             image: null,
-            user_role: JSON.parse(localStorage.getItem('user') || '{}')?.user_role || 'user',
-            department_name: JSON.parse(localStorage.getItem('user') || '{}')?.department_name || null,
-            employee_id: JSON.parse(localStorage.getItem('user') || '{}')?.employee_id || null,
+            user_role: JSON.parse(localStorage.getItem("user") || "{}")?.user_role || "user",
+            department_name:
+              JSON.parse(localStorage.getItem("user") || "{}")?.department_name || null,
+            employee_id: JSON.parse(localStorage.getItem("user") || "{}")?.employee_id || null,
           }}
-          isAdmin={JSON.parse(localStorage.getItem('user') || '{}')?.user_role === 'admin'}
+          isAdmin={JSON.parse(localStorage.getItem("user") || "{}")?.user_role === "admin"}
           onAdminClick={() => {
             setShowProfileCard(false)
             // Already in admin panel
           }}
           onLogout={() => {
             setShowProfileCard(false)
-            localStorage.removeItem('authToken')
-            localStorage.removeItem('user')
-            window.location.href = '/login'
+            localStorage.removeItem("authToken")
+            localStorage.removeItem("user")
+            window.location.href = "/login"
           }}
         />
       </SidebarProvider>

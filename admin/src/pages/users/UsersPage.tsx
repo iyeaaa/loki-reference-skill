@@ -1,66 +1,53 @@
-'use client'
+"use client"
 
-import { useState, useEffect, useCallback } from 'react'
-import { formatRelativeTime } from '@/lib/date-utils'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle
-} from '@/components/ui/dialog'
-import { Checkbox } from '@/components/ui/checkbox'
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Search, 
-  Edit, 
-  Trash2, 
-  X,
-  UserCheck,
-  Shield
-} from 'lucide-react'
-import toast from 'react-hot-toast'
-import { UserFilters } from './UserFilters'
-import { BulkActionModal } from './BulkActionModal'
-import { UserForm } from './UserForm'
-import { PasswordChangeDialog } from './PasswordChangeDialog'
-
-// Import API and types
-import { usersApi } from '@/lib/api/users'
+import { ChevronLeft, ChevronRight, Edit, Search, Shield, Trash2, UserCheck, X } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import toast from "react-hot-toast"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import type {
-  User,
-  UserRole,
   Department,
   Language,
   UpdateUserRequest,
-  UsersApiParams
-} from '@/lib/api/types/user'
+  User,
+  UserRole,
+  UsersApiParams,
+} from "@/lib/api/types/user"
+// Import API and types
+import { usersApi } from "@/lib/api/users"
+import { formatRelativeTime } from "@/lib/date-utils"
+import { BulkActionModal } from "./BulkActionModal"
+import { PasswordChangeDialog } from "./PasswordChangeDialog"
+import { UserFilters } from "./UserFilters"
+import { UserForm } from "./UserForm"
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [languages, setLanguages] = useState<Language[]>([])
-  
+
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState("")
   const [selectedRoles, setSelectedRoles] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
-  const [pageInputValue, setPageInputValue] = useState('1')
+  const [pageInputValue, setPageInputValue] = useState("1")
   const [limit] = useState(10)
-  
+
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [passwordChangeUser, setPasswordChangeUser] = useState<User | null>(null)
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [showBulkActionModal, setShowBulkActionModal] = useState(false)
-  const [bulkActionType, setBulkActionType] = useState<'status' | 'role' | 'department' | 'edit_languages' | 'review_languages' | null>(null)
+  const [bulkActionType, setBulkActionType] = useState<
+    "status" | "role" | "department" | "edit_languages" | "review_languages" | null
+  >(null)
 
   const loadUsers = useCallback(async () => {
     try {
@@ -68,58 +55,56 @@ export default function UsersPage() {
         page: currentPage,
         limit: limit,
         roles: selectedRoles.length > 0 ? selectedRoles : undefined,
-        statuses: selectedStatuses.length > 0 ? selectedStatuses.map(s => s === 'active' ? 'true' : 'false') : undefined,
+        statuses:
+          selectedStatuses.length > 0
+            ? selectedStatuses.map((s) => (s === "active" ? "true" : "false"))
+            : undefined,
         departments: selectedDepartments.length > 0 ? selectedDepartments : undefined,
-        search: search || undefined
+        search: search || undefined,
       }
       const response = await usersApi.getUsers(params)
-      
+
       // Debug: Log the response
-      console.log('Users API Response:', response)
+      console.log("Users API Response:", response)
       if (response.users && response.users.length > 0) {
-        console.log('First user data:', {
+        console.log("First user data:", {
           username: response.users[0].username,
           edit_languages: response.users[0].edit_languages,
           review_languages: response.users[0].review_languages,
         })
       }
-      
+
       setUsers(response.users || [])
       setTotalPages(response.total_pages || 1)
       setTotal(response.total || 0)
     } catch (error) {
       toast.error("사용자 목록을 불러오는데 실패했습니다.")
-      console.error('Failed to load users:', error)
+      console.error("Failed to load users:", error)
     }
   }, [currentPage, limit, search, selectedRoles, selectedStatuses, selectedDepartments])
 
-  const loadDepartments = async () => {
+  const loadDepartments = useCallback(async () => {
     try {
       const response = await usersApi.getDepartments()
       setDepartments(response.departments || [])
     } catch (error) {
-      console.error('Failed to load departments:', error)
+      console.error("Failed to load departments:", error)
     }
-  }
+  }, [])
 
-  const loadLanguages = async () => {
+  const loadLanguages = useCallback(async () => {
     try {
       const response = await usersApi.getLanguages()
       setLanguages(response.languages || [])
     } catch (error) {
-      console.error('Failed to load languages:', error)
+      console.error("Failed to load languages:", error)
     }
-  }
-
+  }, [])
 
   // Load initial data
   useEffect(() => {
-    Promise.all([
-      loadUsers(),
-      loadDepartments(),
-      loadLanguages()
-    ]).finally(() => setLoading(false))
-  }, [loadUsers])
+    Promise.all([loadUsers(), loadDepartments(), loadLanguages()]).finally(() => setLoading(false))
+  }, [loadUsers, loadDepartments, loadLanguages])
 
   // Load users when filters change
   useEffect(() => {
@@ -127,7 +112,6 @@ export default function UsersPage() {
       loadUsers()
     }
   }, [loadUsers, loading])
-
 
   const handleUpdateUser = async (userData: unknown) => {
     if (!editingUser) return
@@ -138,28 +122,33 @@ export default function UsersPage() {
       await loadUsers()
     } catch (error) {
       toast.error("사용자 수정에 실패했습니다.")
-      console.error('Failed to update user:', error)
+      console.error("Failed to update user:", error)
     }
   }
 
   const handleBulkDelete = async () => {
     if (selectedUsers.length === 0) return
-    
-    if (!confirm(`선택한 ${selectedUsers.length}명의 사용자를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`)) return
-    
+
+    if (
+      !confirm(
+        `선택한 ${selectedUsers.length}명의 사용자를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`
+      )
+    )
+      return
+
     try {
-      await Promise.all(selectedUsers.map(userId => usersApi.deleteUser(userId)))
+      await Promise.all(selectedUsers.map((userId) => usersApi.deleteUser(userId)))
       toast.success(`${selectedUsers.length}명의 사용자가 삭제되었습니다.`)
       setSelectedUsers([])
       await loadUsers()
     } catch {
-      toast.error('사용자 삭제에 실패했습니다.')
+      toast.error("사용자 삭제에 실패했습니다.")
     }
   }
 
   // const handleDeleteUser = async (user: User) => {
   //   if (!confirm(`${user.username} 사용자를 삭제하시겠습니까?`)) return
-  //   
+  //
   //   try {
   //     await usersApi.deleteUser(user.id)
   //     toast.success("사용자가 삭제되었습니다.")
@@ -175,33 +164,36 @@ export default function UsersPage() {
       toast.error("선택된 사용자가 없습니다.")
       return
     }
-    
+
     try {
-      if (actionType === 'status') {
-        const isActive = value === 'active'
+      if (actionType === "status") {
+        const isActive = value === "active"
         await usersApi.bulkUpdateStatus({ user_ids: selectedUsers, is_active: isActive })
-        const action = isActive ? '활성화' : '비활성화'
+        const action = isActive ? "활성화" : "비활성화"
         toast.success(`${selectedUsers.length}명의 사용자가 ${action}되었습니다.`)
-      } else if (actionType === 'role') {
+      } else if (actionType === "role") {
         await usersApi.bulkUpdateRole({ user_ids: selectedUsers, user_role: value as UserRole })
         toast.success(`${selectedUsers.length}명의 사용자 역할이 변경되었습니다.`)
-      } else if (actionType === 'edit_languages' || actionType === 'review_languages') {
-        const updateData = actionType === 'edit_languages' 
-          ? { user_ids: selectedUsers, edit_languages: value as string[] }
-          : { user_ids: selectedUsers, review_languages: value as string[] }
+      } else if (actionType === "edit_languages" || actionType === "review_languages") {
+        const updateData =
+          actionType === "edit_languages"
+            ? { user_ids: selectedUsers, edit_languages: value as string[] }
+            : { user_ids: selectedUsers, review_languages: value as string[] }
         await usersApi.bulkUpdateLanguages(updateData)
-        const languageType = actionType === 'edit_languages' ? '편집' : '검수'
+        const languageType = actionType === "edit_languages" ? "편집" : "검수"
         toast.success(`${selectedUsers.length}명의 ${languageType} 언어가 변경되었습니다.`)
       }
       setSelectedUsers([])
       await loadUsers()
     } catch (error) {
       toast.error("일괄 변경에 실패했습니다.")
-      console.error('Failed to bulk update:', error)
+      console.error("Failed to bulk update:", error)
     }
   }
 
-  const openBulkActionModal = (type: 'status' | 'role' | 'department' | 'edit_languages' | 'review_languages') => {
+  const openBulkActionModal = (
+    type: "status" | "role" | "department" | "edit_languages" | "review_languages"
+  ) => {
     if (selectedUsers.length === 0) {
       toast.error("선택된 사용자가 없습니다.")
       return
@@ -214,9 +206,9 @@ export default function UsersPage() {
     setSelectedRoles([])
     setSelectedStatuses([])
     setSelectedDepartments([])
-    setSearch('')
+    setSearch("")
     setCurrentPage(1)
-    setPageInputValue('1')
+    setPageInputValue("1")
   }
 
   // Pagination input handlers
@@ -225,7 +217,7 @@ export default function UsersPage() {
   }
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handlePageInputSubmit()
     }
   }
@@ -235,7 +227,7 @@ export default function UsersPage() {
   }
 
   const handlePageInputSubmit = () => {
-    const page = parseInt(pageInputValue)
+    const page = parseInt(pageInputValue, 10)
     const maxPage = totalPages
     if (page >= 1 && page <= maxPage) {
       setCurrentPage(page)
@@ -246,30 +238,30 @@ export default function UsersPage() {
   }
 
   const toggleUserSelection = (userId: string) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId) 
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
+    setSelectedUsers((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
     )
   }
 
   const toggleAllUsers = () => {
-    setSelectedUsers(prev => 
-      prev.length === users.length ? [] : users.map(u => u.id)
-    )
+    setSelectedUsers((prev) => (prev.length === users.length ? [] : users.map((u) => u.id)))
   }
 
   const getRoleText = (role: string) => {
     switch (role) {
-      case 'admin': return '관리자'
-      case 'internal_reviewer': return '내부 검수자'
-      case 'external_reviewer': return '외부 검수자'
-      default: return '사용자'
+      case "admin":
+        return "관리자"
+      case "internal_reviewer":
+        return "내부 검수자"
+      case "external_reviewer":
+        return "외부 검수자"
+      default:
+        return "사용자"
     }
   }
 
   const getRoleBadgeVariant = () => {
-    return 'outline' as const
+    return "outline" as const
   }
 
   if (loading) {
@@ -310,7 +302,7 @@ export default function UsersPage() {
                 onChange={(e) => {
                   setSearch(e.target.value)
                   setCurrentPage(1)
-                  setPageInputValue('1')
+                  setPageInputValue("1")
                 }}
                 className="pl-10 w-full"
               />
@@ -318,9 +310,9 @@ export default function UsersPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setSearch('')
+                    setSearch("")
                     setCurrentPage(1)
-                    setPageInputValue('1')
+                    setPageInputValue("1")
                   }}
                   className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
                 >
@@ -344,40 +336,32 @@ export default function UsersPage() {
             {/* Bulk Actions - shown when items are selected */}
             {selectedUsers.length > 0 && (
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => openBulkActionModal('status')}
-                >
+                <Button variant="outline" size="sm" onClick={() => openBulkActionModal("status")}>
                   <UserCheck className="h-4 w-4 mr-1" />
                   상태 변경
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => openBulkActionModal('role')}
-                >
+                <Button variant="outline" size="sm" onClick={() => openBulkActionModal("role")}>
                   <Shield className="h-4 w-4 mr-1" />
                   역할 변경
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  onClick={() => openBulkActionModal('department')}
+                  onClick={() => openBulkActionModal("department")}
                 >
                   부서 변경
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  onClick={() => openBulkActionModal('edit_languages')}
+                  onClick={() => openBulkActionModal("edit_languages")}
                 >
                   편집 언어
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  onClick={() => openBulkActionModal('review_languages')}
+                  onClick={() => openBulkActionModal("review_languages")}
                 >
                   검수 언어
                 </Button>
@@ -396,11 +380,11 @@ export default function UsersPage() {
 
           {/* Users Table */}
           <div className="rounded-md border">
-            <div 
-              className="overflow-x-auto overflow-y-visible" 
-              style={{ 
-                scrollbarGutter: 'stable',
-                WebkitOverflowScrolling: 'touch'
+            <div
+              className="overflow-x-auto overflow-y-visible"
+              style={{
+                scrollbarGutter: "stable",
+                WebkitOverflowScrolling: "touch",
               }}
             >
               <table className="w-full min-w-[1800px]">
@@ -412,102 +396,152 @@ export default function UsersPage() {
                         onCheckedChange={toggleAllUsers}
                       />
                     </th>
-                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">사용자명</th>
-                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">이메일</th>
-                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">역할</th>
-                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">부서</th>
-                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">사번</th>
-                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">편집언어</th>
-                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">검수언어</th>
-                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">상태</th>
-                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">최근로그인</th>
-                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">생성일</th>
-                    <th className="sticky right-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700">편집</th>
+                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      사용자명
+                    </th>
+                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      이메일
+                    </th>
+                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      역할
+                    </th>
+                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      부서
+                    </th>
+                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      사번
+                    </th>
+                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      편집언어
+                    </th>
+                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      검수언어
+                    </th>
+                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      상태
+                    </th>
+                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      최근로그인
+                    </th>
+                    <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      생성일
+                    </th>
+                    <th className="sticky right-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700">
+                      편집
+                    </th>
                   </tr>
                 </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <td className="sticky left-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
-                      <Checkbox
-                        checked={selectedUsers.includes(user.id)}
-                        onCheckedChange={() => toggleUserSelection(user.id)}
-                      />
-                    </td>
-                    <td className="p-2 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[7rem]" title={user.username}>
-                      {user.username}
-                    </td>
-                    <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 truncate max-w-[12rem]" title={user.email}>
-                      {user.email}
-                    </td>
-                    <td className="p-2 whitespace-nowrap text-sm">
-                      <Badge variant={getRoleBadgeVariant()} className="text-xs">
-                        {getRoleText(user.user_role)}
-                      </Badge>
-                    </td>
-                    <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 truncate max-w-[9rem]" title={user.department_name || '-'}>
-                      {user.department_name || '-'}
-                    </td>
-                    <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                      {user.employee_id || '-'}
-                    </td>
-                    <td className="p-2 whitespace-nowrap text-sm">
-                      <div className="flex flex-wrap gap-1 max-w-[11rem]">
-                        {user.edit_languages && user.edit_languages.length > 0 
-                          ? user.edit_languages.map((lang) => {
-                              const langInfo = typeof lang === 'string' 
-                                ? languages.find(l => l.code === lang)
-                                : lang;
-                              return (
-                                <Badge key={langInfo?.code || (typeof lang === 'string' ? lang : lang.code)} variant="outline" className="text-xs">
-                                  {langInfo?.name || (typeof lang === 'string' ? lang : lang.name)}
-                                </Badge>
-                              );
-                            })
-                          : <span className="text-xs text-muted-foreground">없음</span>}
-                      </div>
-                    </td>
-                    <td className="p-2 whitespace-nowrap text-sm">
-                      <div className="flex flex-wrap gap-1 max-w-[11rem]">
-                        {user.review_languages && user.review_languages.length > 0
-                          ? user.review_languages.map((lang) => {
-                              const langInfo = typeof lang === 'string' 
-                                ? languages.find(l => l.code === lang)
-                                : lang;
-                              return (
-                                <Badge key={langInfo?.code || (typeof lang === 'string' ? lang : lang.code)} variant="outline" className="text-xs">
-                                  {langInfo?.name || (typeof lang === 'string' ? lang : lang.name)}
-                                </Badge>
-                              );
-                            })
-                          : <span className="text-xs text-muted-foreground">없음</span>}
-                      </div>
-                    </td>
-                    <td className="p-2 whitespace-nowrap text-sm">
-                      <Badge variant="outline">
-                        {user.is_active ? '활성' : '비활성'}
-                      </Badge>
-                    </td>
-                    <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
-                      {formatRelativeTime(user.last_login_at || null)}
-                    </td>
-                    <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
-                      {formatRelativeTime(user.created_at)}
-                    </td>
-                    <td className="sticky right-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditingUser(user)}
-                        className="text-xs h-8 px-3"
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {users.map((user) => (
+                    <tr
+                      key={user.id}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <td className="sticky left-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
+                        <Checkbox
+                          checked={selectedUsers.includes(user.id)}
+                          onCheckedChange={() => toggleUserSelection(user.id)}
+                        />
+                      </td>
+                      <td
+                        className="p-2 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[7rem]"
+                        title={user.username}
                       >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        {user.username}
+                      </td>
+                      <td
+                        className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 truncate max-w-[12rem]"
+                        title={user.email}
+                      >
+                        {user.email}
+                      </td>
+                      <td className="p-2 whitespace-nowrap text-sm">
+                        <Badge variant={getRoleBadgeVariant()} className="text-xs">
+                          {getRoleText(user.user_role)}
+                        </Badge>
+                      </td>
+                      <td
+                        className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 truncate max-w-[9rem]"
+                        title={user.department_name || "-"}
+                      >
+                        {user.department_name || "-"}
+                      </td>
+                      <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        {user.employee_id || "-"}
+                      </td>
+                      <td className="p-2 whitespace-nowrap text-sm">
+                        <div className="flex flex-wrap gap-1 max-w-[11rem]">
+                          {user.edit_languages && user.edit_languages.length > 0 ? (
+                            user.edit_languages.map((lang) => {
+                              const langInfo =
+                                typeof lang === "string"
+                                  ? languages.find((l) => l.code === lang)
+                                  : lang
+                              return (
+                                <Badge
+                                  key={
+                                    langInfo?.code || (typeof lang === "string" ? lang : lang.code)
+                                  }
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  {langInfo?.name || (typeof lang === "string" ? lang : lang.name)}
+                                </Badge>
+                              )
+                            })
+                          ) : (
+                            <span className="text-xs text-muted-foreground">없음</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-2 whitespace-nowrap text-sm">
+                        <div className="flex flex-wrap gap-1 max-w-[11rem]">
+                          {user.review_languages && user.review_languages.length > 0 ? (
+                            user.review_languages.map((lang) => {
+                              const langInfo =
+                                typeof lang === "string"
+                                  ? languages.find((l) => l.code === lang)
+                                  : lang
+                              return (
+                                <Badge
+                                  key={
+                                    langInfo?.code || (typeof lang === "string" ? lang : lang.code)
+                                  }
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  {langInfo?.name || (typeof lang === "string" ? lang : lang.name)}
+                                </Badge>
+                              )
+                            })
+                          ) : (
+                            <span className="text-xs text-muted-foreground">없음</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-2 whitespace-nowrap text-sm">
+                        <Badge variant="outline">{user.is_active ? "활성" : "비활성"}</Badge>
+                      </td>
+                      <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                        {formatRelativeTime(user.last_login_at || null)}
+                      </td>
+                      <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                        {formatRelativeTime(user.created_at)}
+                      </td>
+                      <td className="sticky right-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingUser(user)}
+                          className="text-xs h-8 px-3"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -518,11 +552,11 @@ export default function UsersPage() {
               <div className="text-sm text-muted-foreground">
                 {total > 0 ? (
                   <>
-                    {((currentPage - 1) * limit) + 1}-
-                    {Math.min(currentPage * limit, total)} / {total.toLocaleString()}개 표시
+                    {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
+                    {total.toLocaleString()}개 표시
                   </>
                 ) : (
-                  '0개 표시'
+                  "0개 표시"
                 )}
               </div>
             </div>
@@ -533,7 +567,7 @@ export default function UsersPage() {
               <Button
                 onClick={() => {
                   setCurrentPage(1)
-                  setPageInputValue('1')
+                  setPageInputValue("1")
                 }}
                 disabled={currentPage === 1 || loading}
                 variant="outline"
@@ -562,14 +596,8 @@ export default function UsersPage() {
               {/* Page Numbers */}
               {(() => {
                 const maxVisiblePages = 5
-                let startPage = Math.max(
-                  1,
-                  currentPage - Math.floor(maxVisiblePages / 2)
-                )
-                const endPage = Math.min(
-                  totalPages,
-                  startPage + maxVisiblePages - 1
-                )
+                let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2))
+                const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1)
 
                 if (endPage - startPage + 1 < maxVisiblePages) {
                   startPage = Math.max(1, endPage - maxVisiblePages + 1)
@@ -629,9 +657,7 @@ export default function UsersPage() {
 
             {/* Page Jump */}
             <div className="flex items-center justify-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                페이지:
-              </span>
+              <span className="text-sm text-muted-foreground">페이지:</span>
               <Input
                 type="number"
                 min="1"
@@ -643,14 +669,11 @@ export default function UsersPage() {
                 className="w-20 h-8 text-sm text-center"
                 disabled={loading}
               />
-              <span className="text-sm text-muted-foreground">
-                / {totalPages || 1}
-              </span>
+              <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
             </div>
           </div>
         </CardContent>
       </Card>
-
 
       {/* Edit User Dialog */}
       <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>

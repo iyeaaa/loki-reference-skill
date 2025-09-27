@@ -1,31 +1,28 @@
-'use client'
+"use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
-  Mail,
-  Users,
-  Send,
-  Clock,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  Zap,
-  Target,
   Activity,
+  AlertCircle,
   ArrowUpRight,
   BarChart3,
   Calendar,
+  CheckCircle,
+  Clock,
+  Mail,
   MoreHorizontal,
   PauseCircle,
   PlayCircle,
-  RefreshCw
-} from 'lucide-react'
+  RefreshCw,
+  Target,
+  TrendingUp,
+  Zap,
+} from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function DashboardPage() {
   return (
@@ -42,8 +39,7 @@ export default function DashboardPage() {
             새로고침
           </Button>
           <Button size="sm">
-            <Mail className="h-4 w-4 mr-2" />
-            새 캠페인
+            <Mail className="h-4 w-4 mr-2" />새 캠페인
           </Button>
         </div>
       </div>
@@ -115,71 +111,83 @@ export default function DashboardPage() {
           <div className="space-y-4">
             {[
               {
-                name: '블랙프라이데이 특별 프로모션',
-                status: 'active',
-                type: 'bulk',
+                name: "블랙프라이데이 특별 프로모션",
+                status: "active",
+                type: "bulk",
                 sent: 32450,
                 total: 45000,
                 openRate: 72.3,
                 clickRate: 28.9,
-                progress: 72
+                progress: 72,
               },
               {
-                name: '신규 가입자 온보딩 시퀀스',
-                status: 'active',
-                type: 'sequence',
+                name: "신규 가입자 온보딩 시퀀스",
+                status: "active",
+                type: "sequence",
                 sent: 1234,
                 total: 1500,
                 openRate: 84.2,
                 clickRate: 45.6,
-                progress: 82
+                progress: 82,
               },
               {
-                name: '재구매 유도 캠페인',
-                status: 'paused',
-                type: 'ai',
+                name: "재구매 유도 캠페인",
+                status: "paused",
+                type: "ai",
                 sent: 8920,
                 total: 15000,
                 openRate: 65.1,
                 clickRate: 22.3,
-                progress: 59
+                progress: 59,
               },
               {
-                name: 'VIP 고객 맞춤형 오퍼',
-                status: 'scheduled',
-                type: 'ai',
+                name: "VIP 고객 맞춤형 오퍼",
+                status: "scheduled",
+                type: "ai",
                 sent: 0,
                 total: 3200,
                 openRate: 0,
                 clickRate: 0,
-                progress: 0
-              }
+                progress: 0,
+              },
             ].map((campaign, idx) => (
-              <div key={idx} className="space-y-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+              <div
+                key={idx}
+                className="space-y-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+              >
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <h4 className="font-medium">{campaign.name}</h4>
-                      <Badge variant={
-                        campaign.type === 'bulk' ? 'default' :
-                        campaign.type === 'sequence' ? 'secondary' : 'outline'
-                      } className="text-xs">
-                        {campaign.type === 'bulk' ? '대량발송' :
-                         campaign.type === 'sequence' ? '시퀀스' : 'AI 최적화'}
+                      <Badge
+                        variant={
+                          campaign.type === "bulk"
+                            ? "default"
+                            : campaign.type === "sequence"
+                              ? "secondary"
+                              : "outline"
+                        }
+                        className="text-xs"
+                      >
+                        {campaign.type === "bulk"
+                          ? "대량발송"
+                          : campaign.type === "sequence"
+                            ? "시퀀스"
+                            : "AI 최적화"}
                       </Badge>
-                      {campaign.status === 'active' && (
+                      {campaign.status === "active" && (
                         <Badge className="text-xs bg-green-500">
                           <PlayCircle className="h-3 w-3 mr-1" />
                           진행중
                         </Badge>
                       )}
-                      {campaign.status === 'paused' && (
+                      {campaign.status === "paused" && (
                         <Badge variant="secondary" className="text-xs">
                           <PauseCircle className="h-3 w-3 mr-1" />
                           일시정지
                         </Badge>
                       )}
-                      {campaign.status === 'scheduled' && (
+                      {campaign.status === "scheduled" && (
                         <Badge variant="outline" className="text-xs">
                           <Clock className="h-3 w-3 mr-1" />
                           예약됨
@@ -187,7 +195,9 @@ export default function DashboardPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span>{campaign.sent.toLocaleString()} / {campaign.total.toLocaleString()} 발송</span>
+                      <span>
+                        {campaign.sent.toLocaleString()} / {campaign.total.toLocaleString()} 발송
+                      </span>
                       {campaign.sent > 0 && (
                         <>
                           <span>오픈율 {campaign.openRate}%</span>
@@ -224,7 +234,8 @@ export default function DashboardPage() {
                 <AlertDescription>
                   <div className="font-medium mb-1">발송 시간 최적화</div>
                   <div className="text-xs">
-                    타겟 고객의 이메일 오픈 패턴 분석 결과, 오후 2-4시 발송 시 오픈율이 23% 증가합니다.
+                    타겟 고객의 이메일 오픈 패턴 분석 결과, 오후 2-4시 발송 시 오픈율이 23%
+                    증가합니다.
                   </div>
                   <Button variant="link" className="h-auto p-0 mt-2 text-xs">
                     적용하기 →
@@ -236,9 +247,7 @@ export default function DashboardPage() {
                 <Target className="h-4 w-4" />
                 <AlertDescription>
                   <div className="font-medium mb-1">제목 최적화 제안</div>
-                  <div className="text-xs">
-                    이모지 사용과 개인화된 제목으로 CTR 15% 상승 예상
-                  </div>
+                  <div className="text-xs">이모지 사용과 개인화된 제목으로 CTR 15% 상승 예상</div>
                   <div className="mt-2 p-2 bg-muted rounded text-xs font-mono">
                     "🎯 {name}님, 단독 혜택이 도착했습니다"
                   </div>
@@ -278,12 +287,15 @@ export default function DashboardPage() {
               <TabsContent value="onboarding" className="space-y-4">
                 <div className="space-y-3">
                   {[
-                    { step: '환영 이메일', day: 0, sent: 2341, openRate: 92, clickRate: 45 },
-                    { step: '기능 소개', day: 3, sent: 2089, openRate: 78, clickRate: 32 },
-                    { step: '사용 팁', day: 7, sent: 1876, openRate: 65, clickRate: 28 },
-                    { step: '성공 사례', day: 14, sent: 1654, openRate: 58, clickRate: 24 },
+                    { step: "환영 이메일", day: 0, sent: 2341, openRate: 92, clickRate: 45 },
+                    { step: "기능 소개", day: 3, sent: 2089, openRate: 78, clickRate: 32 },
+                    { step: "사용 팁", day: 7, sent: 1876, openRate: 65, clickRate: 28 },
+                    { step: "성공 사례", day: 14, sent: 1654, openRate: 58, clickRate: 24 },
                   ].map((step, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-3 border rounded-lg"
+                    >
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold">
                           {idx + 1}
@@ -338,10 +350,15 @@ export default function DashboardPage() {
         <CardContent>
           <div className="space-y-3">
             {[
-              { time: '14:00', name: 'VIP 고객 맞춤형 오퍼', recipients: 3200, type: 'AI 최적화' },
-              { time: '18:00', name: '주말 특가 알림', recipients: 45000, type: '대량 발송' },
-              { time: '내일 09:00', name: '월요일 뉴스레터', recipients: 28500, type: '대량 발송' },
-              { time: '내일 11:00', name: '장바구니 이탈 리마인더', recipients: 892, type: '시퀀스' }
+              { time: "14:00", name: "VIP 고객 맞춤형 오퍼", recipients: 3200, type: "AI 최적화" },
+              { time: "18:00", name: "주말 특가 알림", recipients: 45000, type: "대량 발송" },
+              { time: "내일 09:00", name: "월요일 뉴스레터", recipients: 28500, type: "대량 발송" },
+              {
+                time: "내일 11:00",
+                name: "장바구니 이탈 리마인더",
+                recipients: 892,
+                type: "시퀀스",
+              },
             ].map((schedule, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center gap-3">
@@ -354,7 +371,9 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="text-xs">{schedule.time}</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    {schedule.time}
+                  </Badge>
                   <Button variant="ghost" size="sm">
                     <MoreHorizontal className="h-3 w-3" />
                   </Button>

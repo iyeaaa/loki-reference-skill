@@ -1,10 +1,5 @@
-import {
-  BarChart3,
-  Settings,
-  Users,
-  ClipboardList,
-} from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import { BarChart3, ClipboardList, Settings, Users } from "lucide-react"
+import { Link, useLocation } from "react-router-dom"
 import {
   Sidebar,
   SidebarContent,
@@ -15,22 +10,22 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from '@/components/ui/sidebar'
+} from "@/components/ui/sidebar"
 
 const menuItems = [
   {
-    title: 'Rinda Expert',
-    url: '/dashboard',
+    title: "Rinda Expert",
+    url: "/dashboard",
     icon: BarChart3,
   },
   {
-    title: '유저 관리',
-    url: '/users',
+    title: "유저 관리",
+    url: "/users",
     icon: Users,
   },
   {
-    title: '게시판 테스트',
-    url: '/bulletin',
+    title: "게시판 테스트",
+    url: "/bulletin",
     icon: ClipboardList,
   },
 ]
@@ -74,17 +69,11 @@ export function AppSidebar() {
                       asChild
                       tooltip={item.title}
                       isActive={isActive}
-                      className={isActive ? 'bg-violet-500/10 border-r-2 border-violet-500' : ''}
+                      className={isActive ? "bg-violet-500/10 border-r-2 border-violet-500" : ""}
                     >
-                      <Link to={item.url || '#'}>
-                        {item.icon && (
-                          <item.icon
-                            className={isActive ? 'text-violet-500' : ''}
-                          />
-                        )}
-                        <span
-                          className={isActive ? 'text-violet-500 font-medium' : ''}
-                        >
+                      <Link to={item.url || "#"}>
+                        {item.icon && <item.icon className={isActive ? "text-violet-500" : ""} />}
+                        <span className={isActive ? "text-violet-500 font-medium" : ""}>
                           {item.title}
                         </span>
                       </Link>
@@ -99,11 +88,7 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              tooltip="설정"
-              isActive={pathname === '/settings'}
-            >
+            <SidebarMenuButton asChild tooltip="설정" isActive={pathname === "/settings"}>
               <Link to="/settings">
                 <Settings />
                 <span>설정</span>

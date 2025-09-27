@@ -1,0 +1,9 @@
+{
+  "*.{ts,tsx,js,jsx}": [
+    "biome check --write",
+    "bash -c 'tsc --noEmit'"
+  ],
+  "*.{json,css,md}": [
+    "biome format --write"
+  ]
+}

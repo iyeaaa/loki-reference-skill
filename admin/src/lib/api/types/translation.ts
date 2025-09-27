@@ -12,7 +12,13 @@ export interface Translation {
   created_by: string | null
   created_at: string
   updated_at: string
-  review_status?: 'pending' | 'external_review' | 'internal_review' | 'approved' | 'rejected' | 'revision_required'
+  review_status?:
+    | "pending"
+    | "external_review"
+    | "internal_review"
+    | "approved"
+    | "rejected"
+    | "revision_required"
 }
 
 export interface TranslationWithUser extends Translation {
@@ -74,7 +80,7 @@ export interface TranslationStats {
 export interface TranslateRequest {
   text: string
   targetLang: string
-  target_lang?: string  // For backward compatibility
+  target_lang?: string // For backward compatibility
   element_context?: Record<string, unknown>
 }
 

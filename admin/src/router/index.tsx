@@ -1,28 +1,32 @@
-import { createBrowserRouter } from 'react-router-dom';
-import { AuthProvider } from '@/lib/auth-provider';
-import RootLayout from '../layouts/RootLayout';
-import DashboardLayout from '../layouts/DashboardLayout';
-import LoginPage from '../pages/LoginPage';
-import DashboardPage from '../pages/dashboard/DashboardPage';
-import UsersPage from '../pages/users/UsersPage';
-import BulletinBoardPage from '../pages/bulletin/BulletinBoardPage';
-import EnvTestPage from '../pages/EnvTestPage';
+import { createBrowserRouter } from "react-router-dom"
+import { AuthProvider } from "@/lib/auth-provider"
+import DashboardLayout from "../layouts/DashboardLayout"
+import RootLayout from "../layouts/RootLayout"
+import BulletinBoardPage from "../pages/bulletin/BulletinBoardPage"
+import DashboardPage from "../pages/dashboard/DashboardPage"
+import EnvTestPage from "../pages/EnvTestPage"
+import LoginPage from "../pages/LoginPage"
+import UsersPage from "../pages/users/UsersPage"
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>;
+  return <AuthProvider>{children}</AuthProvider>
 }
 
 export const router = createBrowserRouter([
   {
-    path: '/',
-    element: <AuthWrapper><RootLayout /></AuthWrapper>,
+    path: "/",
+    element: (
+      <AuthWrapper>
+        <RootLayout />
+      </AuthWrapper>
+    ),
     children: [
       {
-        path: 'login',
+        path: "login",
         element: <LoginPage />,
       },
       {
-        path: '/',
+        path: "/",
         element: <DashboardLayout />,
         children: [
           {
@@ -30,23 +34,23 @@ export const router = createBrowserRouter([
             element: <DashboardPage />,
           },
           {
-            path: 'dashboard',
+            path: "dashboard",
             element: <DashboardPage />,
           },
           {
-            path: 'users',
+            path: "users",
             element: <UsersPage />,
           },
           {
-            path: 'bulletin',
+            path: "bulletin",
             element: <BulletinBoardPage />,
           },
           {
-            path: 'env-test',
+            path: "env-test",
             element: <EnvTestPage />,
           },
         ],
       },
     ],
   },
-]);
+])

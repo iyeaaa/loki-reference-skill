@@ -1,18 +1,18 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client"
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient()
 
 export interface EmailThreadData {
-  threadId?: string;
-  messageId: string;
-  inReplyTo?: string;
-  references?: string[];
-  fromEmail: string;
-  toEmail: string;
-  subject: string;
-  content: string;
-  direction: 'inbound' | 'outbound';
-  aiGenerated?: boolean;
+  threadId?: string
+  messageId: string
+  inReplyTo?: string
+  references?: string[]
+  fromEmail: string
+  toEmail: string
+  subject: string
+  content: string
+  direction: "inbound" | "outbound"
+  aiGenerated?: boolean
 }
 
 export class EmailSequenceTracker {
@@ -24,11 +24,11 @@ export class EmailSequenceTracker {
     if (data.inReplyTo) {
       const existingSequence = await prisma.emailSequence.findFirst({
         where: { messageId: data.inReplyTo },
-        include: { thread: true }
-      });
+        include: { thread: true },
+      })
 
       if (existingSequence) {
-        return existingSequence.thread;
+        return existingSequence.thread
       }
     }
 
@@ -36,43 +36,43 @@ export class EmailSequenceTracker {
     if (data.references && data.references.length > 0) {
       const existingSequence = await prisma.emailSequence.findFirst({
         where: {
-          messageId: { in: data.references }
+          messageId: { in: data.references },
         },
         include: { thread: true },
-        orderBy: { sequenceNumber: 'desc' }
-      });
+        orderBy: { sequenceNumber: "desc" },
+      })
 
       if (existingSequence) {
-        return existingSequence.thread;
+        return existingSequence.thread
       }
     }
 
     // 3. 제목으로 스레드 찾기 (Re: 제거)
-    const cleanSubject = this.cleanSubject(data.subject);
+    const cleanSubject = this.cleanSubject(data.subject)
     const existingThread = await prisma.emailThread.findFirst({
       where: {
-        buyerEmail: data.direction === 'inbound' ? data.fromEmail : data.toEmail,
+        buyerEmail: data.direction === "inbound" ? data.fromEmail : data.toEmail,
         subject: cleanSubject,
-        status: 'active',
+        status: "active",
         updatedAt: {
-          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7일 이내
-        }
-      }
-    });
+          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7일 이내
+        },
+      },
+    })
 
     if (existingThread) {
-      return existingThread;
+      return existingThread
     }
 
     // 4. 새 스레드 생성
     return await prisma.emailThread.create({
       data: {
         initialMessageId: data.messageId,
-        buyerEmail: data.direction === 'inbound' ? data.fromEmail : data.toEmail,
+        buyerEmail: data.direction === "inbound" ? data.fromEmail : data.toEmail,
         subject: cleanSubject,
-        status: 'active'
-      }
-    });
+        status: "active",
+      },
+    })
   }
 
   /**
@@ -80,15 +80,15 @@ export class EmailSequenceTracker {
    */
   async addToSequence(data: EmailThreadData) {
     // 스레드 찾기 또는 생성
-    const thread = await this.findOrCreateThread(data);
+    const thread = await this.findOrCreateThread(data)
 
     // 현재 스레드의 마지막 시퀀스 번호 가져오기
     const lastSequence = await prisma.emailSequence.findFirst({
       where: { threadId: thread.id },
-      orderBy: { sequenceNumber: 'desc' }
-    });
+      orderBy: { sequenceNumber: "desc" },
+    })
 
-    const sequenceNumber = lastSequence ? lastSequence.sequenceNumber + 1 : 1;
+    const sequenceNumber = lastSequence ? lastSequence.sequenceNumber + 1 : 1
 
     // 시퀀스 추가
     const sequence = await prisma.emailSequence.create({
@@ -104,17 +104,17 @@ export class EmailSequenceTracker {
         subject: data.subject,
         content: data.content,
         aiGenerated: data.aiGenerated || false,
-        sentAt: new Date()
-      }
-    });
+        sentAt: new Date(),
+      },
+    })
 
     // 스레드 업데이트 시간 갱신
     await prisma.emailThread.update({
       where: { id: thread.id },
-      data: { updatedAt: new Date() }
-    });
+      data: { updatedAt: new Date() },
+    })
 
-    return { thread, sequence };
+    return { thread, sequence }
   }
 
   /**
@@ -123,8 +123,8 @@ export class EmailSequenceTracker {
   async getThreadHistory(threadId: string) {
     return await prisma.emailSequence.findMany({
       where: { threadId },
-      orderBy: { sequenceNumber: 'asc' }
-    });
+      orderBy: { sequenceNumber: "asc" },
+    })
   }
 
   /**
@@ -135,44 +135,42 @@ export class EmailSequenceTracker {
       where: { buyerEmail },
       include: {
         sequences: {
-          orderBy: { sequenceNumber: 'desc' },
-          take: 1
-        }
+          orderBy: { sequenceNumber: "desc" },
+          take: 1,
+        },
       },
-      orderBy: { updatedAt: 'desc' }
-    });
+      orderBy: { updatedAt: "desc" },
+    })
   }
 
   /**
    * 제목 정리 (Re:, Fwd: 등 제거)
    */
   private cleanSubject(subject: string): string {
-    return subject
-      .replace(/^(Re:\s*|Fwd:\s*|Fw:\s*)+/gi, '')
-      .trim();
+    return subject.replace(/^(Re:\s*|Fwd:\s*|Fw:\s*)+/gi, "").trim()
   }
 
   /**
    * 스레드 상태 변경
    */
-  async updateThreadStatus(threadId: string, status: 'active' | 'closed') {
+  async updateThreadStatus(threadId: string, status: "active" | "closed") {
     return await prisma.emailThread.update({
       where: { id: threadId },
-      data: { status }
-    });
+      data: { status },
+    })
   }
 
   /**
    * AI 응답 컨텍스트 구성
    */
   async buildAIContext(threadId: string) {
-    const history = await this.getThreadHistory(threadId);
+    const history = await this.getThreadHistory(threadId)
 
     return {
       thread: await prisma.emailThread.findUnique({
-        where: { id: threadId }
+        where: { id: threadId },
       }),
-      history: history.map(seq => ({
+      history: history.map((seq) => ({
         sequenceNumber: seq.sequenceNumber,
         direction: seq.direction,
         from: seq.fromEmail,
@@ -180,12 +178,12 @@ export class EmailSequenceTracker {
         subject: seq.subject,
         content: seq.content,
         sentAt: seq.sentAt,
-        aiGenerated: seq.aiGenerated
+        aiGenerated: seq.aiGenerated,
       })),
       totalExchanges: Math.floor(history.length / 2),
-      lastInteraction: history[history.length - 1]?.sentAt
-    };
+      lastInteraction: history[history.length - 1]?.sentAt,
+    }
   }
 }
 
-export const emailSequenceTracker = new EmailSequenceTracker();
+export const emailSequenceTracker = new EmailSequenceTracker()

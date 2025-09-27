@@ -1,8 +1,8 @@
 "use client"
 
-import * as React from "react"
 import { Check, ChevronsUpDown, X } from "lucide-react"
-import { cn } from "@/lib/utils"
+import * as React from "react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -12,13 +12,9 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Badge } from "@/components/ui/badge"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { cn } from "@/lib/utils"
 
 export interface MultiSelectOption {
   value: string
@@ -96,37 +92,49 @@ export function MultiSelectCombobox({
             {selectedOptions.length > 0 ? (
               selectedOptions.length <= 3 ? (
                 selectedOptions.map((option) => (
-                  <Badge
-                    key={option.value}
-                    variant="outline"
-                    className="mr-1"
-                  >
+                  <Badge key={option.value} variant="outline" className="mr-1">
                     {option.label}
-                    <span
-                      className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer"
+                    <button
+                      type="button"
+                      className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer bg-transparent border-0 p-0"
                       onMouseDown={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
                       }}
                       onClick={(e) => handleRemove(option.value, e)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          handleRemove(option.value, e)
+                        }
+                      }}
+                      aria-label={`Remove ${option.label}`}
                     >
                       <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                    </span>
+                    </button>
                   </Badge>
                 ))
               ) : (
                 <Badge variant="outline" className="mr-1">
                   {selectedOptions.length}개 선택됨
-                  <span
-                    className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer"
+                  <button
+                    type="button"
+                    className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer bg-transparent border-0 p-0"
                     onMouseDown={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
                     }}
                     onClick={handleClear}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        handleClear(e)
+                      }
+                    }}
+                    aria-label="Clear all selections"
                   >
                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                  </span>
+                  </button>
                 </Badge>
               )
             ) : (
@@ -153,7 +161,7 @@ export function MultiSelectCombobox({
                       if (value.length === filteredOptions.length) {
                         onValueChange?.([])
                       } else {
-                        onValueChange?.(filteredOptions.map(o => o.value))
+                        onValueChange?.(filteredOptions.map((o) => o.value))
                       }
                     }}
                     className="font-semibold"
@@ -184,9 +192,7 @@ export function MultiSelectCombobox({
                       <div className="flex items-center gap-2">
                         <span>{option.label}</span>
                         {option.sublabel && (
-                          <span className="text-muted-foreground text-xs">
-                            ({option.sublabel})
-                          </span>
+                          <span className="text-muted-foreground text-xs">({option.sublabel})</span>
                         )}
                       </div>
                     </div>

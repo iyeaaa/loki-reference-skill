@@ -1,10 +1,10 @@
-'use client'
+"use client"
 
-import { X } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox'
+import { X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox"
 
 interface Department {
   id: string
@@ -31,23 +31,23 @@ export function UserFilters({
   onRoleChange,
   onStatusChange,
   onDepartmentChange,
-  onClearFilters
+  onClearFilters,
 }: UserFiltersProps) {
   const roles = [
-    { value: 'admin', label: '관리자' },
-    { value: 'internal_reviewer', label: '내부 검수자' },
-    { value: 'external_reviewer', label: '외부 검수자' },
-    { value: 'user', label: '사용자' }
+    { value: "admin", label: "관리자" },
+    { value: "internal_reviewer", label: "내부 검수자" },
+    { value: "external_reviewer", label: "외부 검수자" },
+    { value: "user", label: "사용자" },
   ]
 
   const statuses = [
-    { value: 'active', label: '활성' },
-    { value: 'inactive', label: '비활성' }
+    { value: "active", label: "활성" },
+    { value: "inactive", label: "비활성" },
   ]
 
   const toggleRole = (role: string) => {
     if (selectedRoles.includes(role)) {
-      onRoleChange(selectedRoles.filter(r => r !== role))
+      onRoleChange(selectedRoles.filter((r) => r !== role))
     } else {
       onRoleChange([...selectedRoles, role])
     }
@@ -55,16 +55,14 @@ export function UserFilters({
 
   const toggleStatus = (status: string) => {
     if (selectedStatuses.includes(status)) {
-      onStatusChange(selectedStatuses.filter(s => s !== status))
+      onStatusChange(selectedStatuses.filter((s) => s !== status))
     } else {
       onStatusChange([...selectedStatuses, status])
     }
   }
 
-
-  const hasActiveFilters = selectedRoles.length > 0 || 
-                           selectedStatuses.length > 0 || 
-                           selectedDepartments.length > 0
+  const hasActiveFilters =
+    selectedRoles.length > 0 || selectedStatuses.length > 0 || selectedDepartments.length > 0
 
   return (
     <Card>
@@ -74,15 +72,20 @@ export function UserFilters({
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-16">역할</span>
             <div className="flex flex-wrap gap-3">
-              {roles.map(role => (
-                <label key={role.value} className="flex items-center space-x-2 cursor-pointer">
+              {roles.map((role) => (
+                <div key={role.value} className="flex items-center space-x-2">
                   <Checkbox
                     id={`role-${role.value}`}
                     checked={selectedRoles.includes(role.value)}
                     onCheckedChange={() => toggleRole(role.value)}
                   />
-                  <span className="text-sm select-none">{role.label}</span>
-                </label>
+                  <label
+                    htmlFor={`role-${role.value}`}
+                    className="text-sm select-none cursor-pointer"
+                  >
+                    {role.label}
+                  </label>
+                </div>
               ))}
             </div>
           </div>
@@ -91,28 +94,35 @@ export function UserFilters({
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-16">상태</span>
             <div className="flex flex-wrap gap-3">
-              {statuses.map(status => (
-                <label key={status.value} className="flex items-center space-x-2 cursor-pointer">
+              {statuses.map((status) => (
+                <div key={status.value} className="flex items-center space-x-2">
                   <Checkbox
                     id={`status-${status.value}`}
                     checked={selectedStatuses.includes(status.value)}
                     onCheckedChange={() => toggleStatus(status.value)}
                   />
-                  <span className="text-sm select-none">{status.label}</span>
-                </label>
+                  <label
+                    htmlFor={`status-${status.value}`}
+                    className="text-sm select-none cursor-pointer"
+                  >
+                    {status.label}
+                  </label>
+                </div>
               ))}
             </div>
           </div>
 
           {/* Department Filter */}
           <div className="flex items-start gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-16 pt-2">부서</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-16 pt-2">
+              부서
+            </span>
             <div className="flex-1 max-w-md">
               <MultiSelectCombobox
-                options={departments.map(dept => ({
+                options={departments.map((dept) => ({
                   value: dept.id,
                   label: dept.name,
-                  sublabel: dept.code
+                  sublabel: dept.code,
                 }))}
                 value={selectedDepartments}
                 onValueChange={onDepartmentChange}
@@ -128,8 +138,8 @@ export function UserFilters({
         {hasActiveFilters && (
           <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
             <div className="flex flex-wrap gap-2">
-              {selectedRoles.map(role => {
-                const roleLabel = roles.find(r => r.value === role)?.label || role
+              {selectedRoles.map((role) => {
+                const roleLabel = roles.find((r) => r.value === role)?.label || role
                 return (
                   <span
                     key={role}
@@ -146,8 +156,8 @@ export function UserFilters({
                   </span>
                 )
               })}
-              {selectedStatuses.map(status => {
-                const statusLabel = statuses.find(s => s.value === status)?.label || status
+              {selectedStatuses.map((status) => {
+                const statusLabel = statuses.find((s) => s.value === status)?.label || status
                 return (
                   <span
                     key={status}
@@ -164,8 +174,8 @@ export function UserFilters({
                   </span>
                 )
               })}
-              {selectedDepartments.map(deptId => {
-                const dept = departments.find(d => d.id === deptId)
+              {selectedDepartments.map((deptId) => {
+                const dept = departments.find((d) => d.id === deptId)
                 return (
                   <span
                     key={deptId}
@@ -174,7 +184,9 @@ export function UserFilters({
                     부서: {dept?.name || deptId}
                     <button
                       type="button"
-                      onClick={() => onDepartmentChange(selectedDepartments.filter(d => d !== deptId))}
+                      onClick={() =>
+                        onDepartmentChange(selectedDepartments.filter((d) => d !== deptId))
+                      }
                       className="ml-1 hover:text-purple-600 dark:hover:text-purple-200"
                     >
                       <X className="w-3 h-3" />
@@ -189,12 +201,7 @@ export function UserFilters({
         {/* Clear Filters Button at Bottom */}
         {hasActiveFilters && (
           <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClearFilters}
-              className="text-xs"
-            >
+            <Button variant="ghost" size="sm" onClick={onClearFilters} className="text-xs">
               <X className="w-3 h-3 mr-1" />
               필터 초기화
             </Button>

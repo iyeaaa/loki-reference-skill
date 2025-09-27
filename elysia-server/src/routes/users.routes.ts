@@ -1,6 +1,5 @@
 import { Elysia, t } from 'elysia'
 import * as userService from '../services/user.service'
-import * as departmentService from '../services/department.service'
 
 const userSchema = t.Object({
   username: t.String({ minLength: 1, maxLength: 50 }),
@@ -205,97 +204,6 @@ export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
     } catch (error) {
       return { error: 'Failed to update last login' }
     }
-  }, {
-    params: t.Object({
-      id: t.String({ format: 'uuid' })
-    })
-  })
-
-// Department routes
-export const departmentRoutes = new Elysia({ prefix: '/api/v1/departments' })
-  // Get department by ID
-  .get('/:id', async ({ params: { id } }) => {
-    const department = await departmentService.getDepartment(id)
-    if (!department) {
-      return { error: 'Department not found' }
-    }
-    return department
-  }, {
-    params: t.Object({
-      id: t.String({ format: 'uuid' })
-    })
-  })
-
-  // List active departments
-  .get('/', async () => {
-    const departments = await departmentService.listDepartments()
-    return departments
-  })
-
-  // List all departments
-  .get('/all', async () => {
-    const departments = await departmentService.listAllDepartments()
-    return departments
-  })
-
-  // Create department
-  .post('/', async ({ body }) => {
-    try {
-      const department = await departmentService.createDepartment(body)
-      return department
-    } catch (error) {
-      return { error: 'Failed to create department' }
-    }
-  }, {
-    body: t.Object({
-      name: t.String({ minLength: 1, maxLength: 100 }),
-      code: t.String({ minLength: 1, maxLength: 20 }),
-      description: t.Optional(t.String()),
-      isActive: t.Optional(t.Boolean())
-    })
-  })
-
-  // Update department
-  .put('/:id', async ({ params: { id }, body }) => {
-    try {
-      const department = await departmentService.updateDepartment(id, body)
-      if (!department) {
-        return { error: 'Department not found' }
-      }
-      return department
-    } catch (error) {
-      return { error: 'Failed to update department' }
-    }
-  }, {
-    params: t.Object({
-      id: t.String({ format: 'uuid' })
-    }),
-    body: t.Object({
-      name: t.String({ minLength: 1, maxLength: 100 }),
-      code: t.String({ minLength: 1, maxLength: 20 }),
-      description: t.Optional(t.String()),
-      isActive: t.Boolean()
-    })
-  })
-
-  // Delete department
-  .delete('/:id', async ({ params: { id } }) => {
-    try {
-      await departmentService.deleteDepartment(id)
-      return { success: true }
-    } catch (error) {
-      return { error: 'Failed to delete department' }
-    }
-  }, {
-    params: t.Object({
-      id: t.String({ format: 'uuid' })
-    })
-  })
-
-  // Count users in department
-  .get('/:id/users/count', async ({ params: { id } }) => {
-    const count = await departmentService.countUsersByDepartment(id)
-    return { count }
   }, {
     params: t.Object({
       id: t.String({ format: 'uuid' })

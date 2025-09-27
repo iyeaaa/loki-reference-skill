@@ -1,19 +1,9 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
-import { DialogFooter } from '@/components/ui/dialog'
-import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox'
+import { Check, ChevronsUpDown } from "lucide-react"
+import { useId, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Command,
   CommandEmpty,
@@ -21,18 +11,20 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/command'
+} from "@/components/ui/command"
+import { DialogFooter } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { Check, ChevronsUpDown } from 'lucide-react'
-import type {
-  User,
-  Department,
-  Language,
-} from '@/lib/api/types/user'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import type { Department, Language, User } from "@/lib/api/types/user"
 
 interface UserFormProps {
   user?: User
@@ -43,38 +35,45 @@ interface UserFormProps {
   onCancel: () => void
 }
 
-export function UserForm({ 
-  user, 
+export function UserForm({
+  user,
   isEdit = false,
-  departments = [], 
+  departments = [],
   languages = [],
-  onSave, 
-  onCancel 
+  onSave,
+  onCancel,
 }: UserFormProps) {
+  const usernameId = useId()
+  const employeeIdFormId = useId()
+  const passwordId = useId()
+  const isActiveId = useId()
+
   const [formData, setFormData] = useState({
-    username: user?.username || '',
-    email: user?.email || '',
-    password: '',
-    user_role: user?.user_role || 'user' as const,
+    username: user?.username || "",
+    email: user?.email || "",
+    password: "",
+    user_role: user?.user_role || ("user" as const),
     is_active: user?.is_active ?? true,
     department_id: user?.department_id || "",
-    employee_id: user?.employee_id || '',
-    edit_languages: user?.edit_languages?.map(lang => typeof lang === 'string' ? lang : lang.code) || [],
-    review_languages: user?.review_languages?.map(lang => typeof lang === 'string' ? lang : lang.code) || []
+    employee_id: user?.employee_id || "",
+    edit_languages:
+      user?.edit_languages?.map((lang) => (typeof lang === "string" ? lang : lang.code)) || [],
+    review_languages:
+      user?.review_languages?.map((lang) => (typeof lang === "string" ? lang : lang.code)) || [],
   })
   const [departmentOpen, setDepartmentOpen] = useState(false)
-  const [departmentSearch, setDepartmentSearch] = useState('')
+  const [departmentSearch, setDepartmentSearch] = useState("")
 
-  const filteredDepartments = departments.filter(dept => 
-    dept.name.toLowerCase().includes(departmentSearch.toLowerCase()) ||
-    dept.code.toLowerCase().includes(departmentSearch.toLowerCase())
+  const filteredDepartments = departments.filter(
+    (dept) =>
+      dept.name.toLowerCase().includes(departmentSearch.toLowerCase()) ||
+      dept.code.toLowerCase().includes(departmentSearch.toLowerCase())
   )
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (isEdit && !formData.password) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...dataWithoutPassword } = formData
+      const { password: _password, ...dataWithoutPassword } = formData
       onSave(dataWithoutPassword)
     } else {
       onSave(formData)
@@ -84,27 +83,35 @@ export function UserForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="username">사용자명</Label>
+        <Label htmlFor={usernameId}>사용자명</Label>
         <Input
-          id="username"
+          id={usernameId}
           value={formData.username}
-          onChange={(e) => setFormData({...formData, username: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
           required
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="employee_id">사번</Label>
+        <Label htmlFor={employeeIdFormId}>사번</Label>
         <Input
-          id="employee_id"
+          id={employeeIdFormId}
           value={formData.employee_id}
-          onChange={(e) => setFormData({...formData, employee_id: e.target.value})}
+          onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="user_role">역할</Label>
-        <Select value={formData.user_role} onValueChange={(value) => setFormData({...formData, user_role: value as 'admin' | 'internal_reviewer' | 'external_reviewer' | 'user'})}>
+        <Select
+          value={formData.user_role}
+          onValueChange={(value) =>
+            setFormData({
+              ...formData,
+              user_role: value as "admin" | "internal_reviewer" | "external_reviewer" | "user",
+            })
+          }
+        >
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
@@ -148,9 +155,13 @@ export function UserForm({
                       key={dept.id}
                       value={dept.id}
                       onSelect={(currentValue) => {
-                        setFormData({...formData, department_id: currentValue === formData.department_id ? "" : currentValue})
+                        setFormData({
+                          ...formData,
+                          department_id:
+                            currentValue === formData.department_id ? "" : currentValue,
+                        })
                         setDepartmentOpen(false)
-                        setDepartmentSearch('')
+                        setDepartmentSearch("")
                       }}
                     >
                       <Check
@@ -170,12 +181,12 @@ export function UserForm({
 
       {!isEdit && (
         <div className="space-y-2">
-          <Label htmlFor="password">비밀번호</Label>
+          <Label htmlFor={passwordId}>비밀번호</Label>
           <Input
-            id="password"
+            id={passwordId}
             type="password"
             value={formData.password}
-            onChange={(e) => setFormData({...formData, password: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             required={!isEdit}
             minLength={8}
           />
@@ -186,24 +197,27 @@ export function UserForm({
         <Label>편집 권한 언어</Label>
         <MultiSelectCombobox
           options={languages
-            .filter(lang => lang.is_active)
-            .map(lang => ({
+            .filter((lang) => lang.is_active)
+            .map((lang) => ({
               value: lang.code,
               label: lang.name,
-              sublabel: lang.code
+              sublabel: lang.code,
             }))}
           value={formData.edit_languages}
-          onValueChange={(values) => setFormData({...formData, edit_languages: values})}
+          onValueChange={(values) => setFormData({ ...formData, edit_languages: values })}
           placeholder="편집 언어 선택..."
           searchPlaceholder="언어 검색..."
           emptyText="언어를 찾을 수 없습니다."
         />
         {formData.edit_languages.length > 0 && (
           <p className="text-xs text-muted-foreground mt-1">
-            선택된 언어: {formData.edit_languages.map(code => {
-              const lang = languages.find(l => l.code === code);
-              return lang ? lang.name : code;
-            }).join(', ')}
+            선택된 언어:{" "}
+            {formData.edit_languages
+              .map((code) => {
+                const lang = languages.find((l) => l.code === code)
+                return lang ? lang.name : code
+              })
+              .join(", ")}
           </p>
         )}
       </div>
@@ -212,44 +226,45 @@ export function UserForm({
         <Label>검수 권한 언어</Label>
         <MultiSelectCombobox
           options={languages
-            .filter(lang => lang.is_active)
-            .map(lang => ({
+            .filter((lang) => lang.is_active)
+            .map((lang) => ({
               value: lang.code,
               label: lang.name,
-              sublabel: lang.code
+              sublabel: lang.code,
             }))}
           value={formData.review_languages}
-          onValueChange={(values) => setFormData({...formData, review_languages: values})}
+          onValueChange={(values) => setFormData({ ...formData, review_languages: values })}
           placeholder="검수 언어 선택..."
           searchPlaceholder="언어 검색..."
           emptyText="언어를 찾을 수 없습니다."
         />
         {formData.review_languages.length > 0 && (
           <p className="text-xs text-muted-foreground mt-1">
-            선택된 언어: {formData.review_languages.map(code => {
-              const lang = languages.find(l => l.code === code);
-              return lang ? lang.name : code;
-            }).join(', ')}
+            선택된 언어:{" "}
+            {formData.review_languages
+              .map((code) => {
+                const lang = languages.find((l) => l.code === code)
+                return lang ? lang.name : code
+              })
+              .join(", ")}
           </p>
         )}
       </div>
 
       <div className="flex items-center space-x-2">
         <Checkbox
-          id="is_active"
+          id={isActiveId}
           checked={formData.is_active}
-          onCheckedChange={(checked) => setFormData({...formData, is_active: !!checked})}
+          onCheckedChange={(checked) => setFormData({ ...formData, is_active: !!checked })}
         />
-        <Label htmlFor="is_active">활성 상태</Label>
+        <Label htmlFor={isActiveId}>활성 상태</Label>
       </div>
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
           취소
         </Button>
-        <Button type="submit">
-          {isEdit ? '수정' : '생성'}
-        </Button>
+        <Button type="submit">{isEdit ? "수정" : "생성"}</Button>
       </DialogFooter>
     </form>
   )

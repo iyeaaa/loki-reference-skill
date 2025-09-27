@@ -1,18 +1,13 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import {
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import toast from 'react-hot-toast'
-import { usersApi } from '@/lib/api/users'
-import type { User } from '@/lib/api/types/user'
+import { useId, useState } from "react"
+import toast from "react-hot-toast"
+import { Button } from "@/components/ui/button"
+import { DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import type { User } from "@/lib/api/types/user"
+import { usersApi } from "@/lib/api/users"
 
 interface PasswordChangeDialogProps {
   user: User
@@ -20,7 +15,8 @@ interface PasswordChangeDialogProps {
 }
 
 export function PasswordChangeDialog({ user, onClose }: PasswordChangeDialogProps) {
-  const [newPassword, setNewPassword] = useState('')
+  const passwordId = useId()
+  const [newPassword, setNewPassword] = useState("")
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,9 +44,9 @@ export function PasswordChangeDialog({ user, onClose }: PasswordChangeDialogProp
       </DialogHeader>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <Label htmlFor="new_password">새 비밀번호</Label>
+          <Label htmlFor={passwordId}>새 비밀번호</Label>
           <Input
-            id="new_password"
+            id={passwordId}
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
@@ -59,9 +55,11 @@ export function PasswordChangeDialog({ user, onClose }: PasswordChangeDialogProp
           />
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>취소</Button>
+          <Button type="button" variant="outline" onClick={onClose}>
+            취소
+          </Button>
           <Button type="submit" disabled={loading}>
-            {loading ? '변경 중...' : '비밀번호 변경'}
+            {loading ? "변경 중..." : "비밀번호 변경"}
           </Button>
         </DialogFooter>
       </form>

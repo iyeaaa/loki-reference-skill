@@ -1,18 +1,8 @@
-'use client'
+"use client"
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
-import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox'
-import { useState } from 'react'
+import { Check, ChevronsUpDown } from "lucide-react"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
 import {
   Command,
   CommandEmpty,
@@ -20,20 +10,32 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/command'
+} from "@/components/ui/command"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { Check, ChevronsUpDown } from 'lucide-react'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface BulkActionModalProps {
   isOpen: boolean
   onClose: () => void
   onConfirm: (action: string, value: string | string[]) => void
   userCount: number
-  actionType: 'status' | 'role' | 'department' | 'edit_languages' | 'review_languages' | null
+  actionType: "status" | "role" | "department" | "edit_languages" | "review_languages" | null
   departments?: Array<{ id: string; name: string; code: string }>
   languages?: Array<{ code: string; name: string; is_active: boolean }>
 }
@@ -45,15 +47,15 @@ export function BulkActionModal({
   userCount,
   actionType,
   departments = [],
-  languages = []
+  languages = [],
 }: BulkActionModalProps) {
-  const [selectedValue, setSelectedValue] = useState<string>('')
+  const [selectedValue, setSelectedValue] = useState<string>("")
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([])
   const [departmentOpen, setDepartmentOpen] = useState(false)
-  const [departmentSearch, setDepartmentSearch] = useState('')
+  const [departmentSearch, setDepartmentSearch] = useState("")
 
   const handleConfirm = () => {
-    if (actionType === 'edit_languages' || actionType === 'review_languages') {
+    if (actionType === "edit_languages" || actionType === "review_languages") {
       if (selectedLanguages.length > 0) {
         onConfirm(actionType, selectedLanguages)
         setSelectedLanguages([])
@@ -61,47 +63,48 @@ export function BulkActionModal({
       }
     } else if (selectedValue && actionType) {
       onConfirm(actionType, selectedValue)
-      setSelectedValue('')
+      setSelectedValue("")
       onClose()
     }
   }
 
-  const filteredDepartments = departments.filter(dept => 
-    dept.name.toLowerCase().includes(departmentSearch.toLowerCase()) ||
-    dept.code.toLowerCase().includes(departmentSearch.toLowerCase())
+  const filteredDepartments = departments.filter(
+    (dept) =>
+      dept.name.toLowerCase().includes(departmentSearch.toLowerCase()) ||
+      dept.code.toLowerCase().includes(departmentSearch.toLowerCase())
   )
 
   const getTitle = () => {
     switch (actionType) {
-      case 'status':
-        return '사용자 상태 일괄 변경'
-      case 'role':
-        return '사용자 역할 일괄 변경'
-      case 'department':
-        return '사용자 부서 일괄 변경'
-      case 'edit_languages':
-        return '편집 언어 일괄 변경'
-      case 'review_languages':
-        return '검수 언어 일괄 변경'
+      case "status":
+        return "사용자 상태 일괄 변경"
+      case "role":
+        return "사용자 역할 일괄 변경"
+      case "department":
+        return "사용자 부서 일괄 변경"
+      case "edit_languages":
+        return "편집 언어 일괄 변경"
+      case "review_languages":
+        return "검수 언어 일괄 변경"
       default:
-        return '일괄 작업'
+        return "일괄 작업"
     }
   }
 
   const getDescription = () => {
     switch (actionType) {
-      case 'status':
+      case "status":
         return `선택된 ${userCount}명의 사용자 상태를 변경합니다.`
-      case 'role':
+      case "role":
         return `선택된 ${userCount}명의 사용자 역할을 변경합니다.`
-      case 'department':
+      case "department":
         return `선택된 ${userCount}명의 사용자 부서를 변경합니다.`
-      case 'edit_languages':
+      case "edit_languages":
         return `선택된 ${userCount}명의 편집 언어를 변경합니다.`
-      case 'review_languages':
+      case "review_languages":
         return `선택된 ${userCount}명의 검수 언어를 변경합니다.`
       default:
-        return ''
+        return ""
     }
   }
 
@@ -112,9 +115,9 @@ export function BulkActionModal({
           <DialogTitle>{getTitle()}</DialogTitle>
           <DialogDescription>{getDescription()}</DialogDescription>
         </DialogHeader>
-        
+
         <div className="py-4 space-y-4">
-          {actionType === 'status' && (
+          {actionType === "status" && (
             <div className="space-y-2">
               <Label>변경할 상태</Label>
               <Select value={selectedValue} onValueChange={setSelectedValue}>
@@ -128,8 +131,8 @@ export function BulkActionModal({
               </Select>
             </div>
           )}
-          
-          {actionType === 'role' && (
+
+          {actionType === "role" && (
             <div className="space-y-2">
               <Label>변경할 역할</Label>
               <Select value={selectedValue} onValueChange={setSelectedValue}>
@@ -145,8 +148,8 @@ export function BulkActionModal({
               </Select>
             </div>
           )}
-          
-          {actionType === 'department' && (
+
+          {actionType === "department" && (
             <div className="space-y-2">
               <Label>변경할 부서</Label>
               <Popover open={departmentOpen} onOpenChange={setDepartmentOpen}>
@@ -180,7 +183,7 @@ export function BulkActionModal({
                             onSelect={(currentValue) => {
                               setSelectedValue(currentValue === selectedValue ? "" : currentValue)
                               setDepartmentOpen(false)
-                              setDepartmentSearch('')
+                              setDepartmentSearch("")
                             }}
                           >
                             <Check
@@ -199,16 +202,16 @@ export function BulkActionModal({
             </div>
           )}
 
-          {actionType === 'edit_languages' && (
+          {actionType === "edit_languages" && (
             <div className="space-y-2">
               <Label>편집 권한 언어</Label>
               <MultiSelectCombobox
                 options={languages
-                  .filter(lang => lang.is_active)
-                  .map(lang => ({
+                  .filter((lang) => lang.is_active)
+                  .map((lang) => ({
                     value: lang.code,
                     label: lang.name,
-                    sublabel: lang.code
+                    sublabel: lang.code,
                   }))}
                 value={selectedLanguages}
                 onValueChange={setSelectedLanguages}
@@ -219,16 +222,16 @@ export function BulkActionModal({
             </div>
           )}
 
-          {actionType === 'review_languages' && (
+          {actionType === "review_languages" && (
             <div className="space-y-2">
               <Label>검수 권한 언어</Label>
               <MultiSelectCombobox
                 options={languages
-                  .filter(lang => lang.is_active)
-                  .map(lang => ({
+                  .filter((lang) => lang.is_active)
+                  .map((lang) => ({
                     value: lang.code,
                     label: lang.name,
-                    sublabel: lang.code
+                    sublabel: lang.code,
                   }))}
                 value={selectedLanguages}
                 onValueChange={setSelectedLanguages}
@@ -239,16 +242,16 @@ export function BulkActionModal({
             </div>
           )}
         </div>
-        
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             취소
           </Button>
-          <Button 
-            onClick={handleConfirm} 
+          <Button
+            onClick={handleConfirm}
             disabled={
-              (actionType === 'edit_languages' || actionType === 'review_languages') 
-                ? selectedLanguages.length === 0 
+              actionType === "edit_languages" || actionType === "review_languages"
+                ? selectedLanguages.length === 0
                 : !selectedValue
             }
           >

@@ -1,14 +1,14 @@
 import { BaseApiClient } from "./base"
 import type {
+  BulkUpdateTranslationsRequest,
+  CreateTranslationRequest,
+  TranslateRequest,
+  TranslateResponse,
   Translation,
   TranslationStats,
-  CreateTranslationRequest,
-  UpdateTranslationRequest,
-  BulkUpdateTranslationsRequest,
-  TranslationsApiResponse,
   TranslationsApiParams,
-  TranslateRequest,
-  TranslateResponse
+  TranslationsApiResponse,
+  UpdateTranslationRequest,
 } from "./types/translation"
 
 export class TranslationsApi extends BaseApiClient {
@@ -17,7 +17,7 @@ export class TranslationsApi extends BaseApiClient {
    */
   async getTranslations(params?: TranslationsApiParams): Promise<TranslationsApiResponse> {
     const searchParams = new URLSearchParams()
-    
+
     if (params?.page) searchParams.append("page", params.page.toString())
     if (params?.limit) searchParams.append("limit", params.limit.toString())
     if (params?.search) searchParams.append("search", params.search)
@@ -31,7 +31,7 @@ export class TranslationsApi extends BaseApiClient {
 
     const query = searchParams.toString()
     const url = `/api/v1/admin/translations${query ? `?${query}` : ""}`
-    
+
     return this.request<TranslationsApiResponse>(url)
   }
 
@@ -74,7 +74,9 @@ export class TranslationsApi extends BaseApiClient {
   /**
    * Bulk update translations
    */
-  async bulkUpdateTranslations(data: BulkUpdateTranslationsRequest): Promise<{ message: string; updated: number }> {
+  async bulkUpdateTranslations(
+    data: BulkUpdateTranslationsRequest
+  ): Promise<{ message: string; updated: number }> {
     return this.request("/api/v1/admin/translations/bulk-update", {
       method: "POST",
       body: JSON.stringify(data),
@@ -103,10 +105,11 @@ export class TranslationsApi extends BaseApiClient {
    */
   async exportTranslations(params?: TranslationsApiParams): Promise<Blob> {
     const searchParams = new URLSearchParams()
-    
+
     if (params?.search) searchParams.append("search", params.search)
     if (params?.target_language) searchParams.append("target_language", params.target_language)
-    if (params?.translation_engine) searchParams.append("translation_engine", params.translation_engine)
+    if (params?.translation_engine)
+      searchParams.append("translation_engine", params.translation_engine)
     if (params?.review_status) searchParams.append("review_status", params.review_status)
     if (params?.created_by) searchParams.append("created_by", params.created_by)
     if (params?.date_from) searchParams.append("date_from", params.date_from)
@@ -114,7 +117,7 @@ export class TranslationsApi extends BaseApiClient {
 
     const query = searchParams.toString()
     const url = `/api/v1/admin/translations/export${query ? `?${query}` : ""}`
-    
+
     const response = await fetch(`${this.baseURL}${url}`, {
       method: "GET",
       headers: {
@@ -133,7 +136,9 @@ export class TranslationsApi extends BaseApiClient {
   /**
    * Import translations from Excel/CSV
    */
-  async importTranslations(file: File): Promise<{ message: string; imported: number; failed: number }> {
+  async importTranslations(
+    file: File
+  ): Promise<{ message: string; imported: number; failed: number }> {
     const formData = new FormData()
     formData.append("file", file)
 
@@ -165,7 +170,9 @@ export class TranslationsApi extends BaseApiClient {
    * Get translations by context (page, component, etc.)
    */
   async getTranslationsByContext(contextKey: string, contextValue: string): Promise<Translation[]> {
-    return this.request<Translation[]>(`/api/v1/admin/translations/context/${contextKey}/${contextValue}`)
+    return this.request<Translation[]>(
+      `/api/v1/admin/translations/context/${contextKey}/${contextValue}`
+    )
   }
 
   /**
@@ -192,7 +199,7 @@ export class TranslationsApi extends BaseApiClient {
     total_pages: number
   }> {
     const searchParams = new URLSearchParams()
-    
+
     if (params?.page) searchParams.append("page", params.page.toString())
     if (params?.limit) searchParams.append("limit", params.limit.toString())
     if (params?.search) searchParams.append("search", params.search)
@@ -203,7 +210,7 @@ export class TranslationsApi extends BaseApiClient {
 
     const query = searchParams.toString()
     const url = `/api/v1/admin/translations/matrix${query ? `?${query}` : ""}`
-    
+
     return this.request(url)
   }
 }

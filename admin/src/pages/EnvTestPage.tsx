@@ -1,10 +1,13 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function EnvTestPage() {
-  const envVars = Object.keys(import.meta.env).reduce((acc, key) => {
-    acc[key] = import.meta.env[key];
-    return acc;
-  }, {} as Record<string, any>);
+  const envVars = Object.keys(import.meta.env).reduce(
+    (acc, key) => {
+      acc[key] = import.meta.env[key]
+      return acc
+    },
+    {} as Record<string, string | boolean | undefined>
+  )
 
   return (
     <div className="container mx-auto p-6">
@@ -17,9 +20,7 @@ export default function EnvTestPage() {
             <div>
               <h3 className="text-lg font-semibold mb-2">현재 설정된 환경변수</h3>
               <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
-                <pre className="text-sm overflow-auto">
-                  {JSON.stringify(envVars, null, 2)}
-                </pre>
+                <pre className="text-sm overflow-auto">{JSON.stringify(envVars, null, 2)}</pre>
               </div>
             </div>
 
@@ -65,7 +66,8 @@ export default function EnvTestPage() {
                 <div className="flex items-center gap-2">
                   <span className="font-medium">Departments Endpoint:</span>
                   <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-xs">
-                    {(import.meta.env.VITE_API_URL || "http://localhost:3001") + "/api/v1/public/departments"}
+                    {(import.meta.env.VITE_API_URL || "http://localhost:3001") +
+                      "/api/v1/public/departments"}
                   </code>
                 </div>
               </div>
@@ -74,5 +76,5 @@ export default function EnvTestPage() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

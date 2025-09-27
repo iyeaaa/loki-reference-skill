@@ -1,53 +1,66 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Combobox } from "@/components/ui/combobox";
-import { Mail, Lock, User, CreditCard, Eye, EyeOff } from "lucide-react";
-import toast from "react-hot-toast";
-import { authApi } from "@/lib/api";
-import { publicDepartmentsApi } from "@/lib/api/public";
+import { zodResolver } from "@hookform/resolvers/zod"
+import { CreditCard, Eye, EyeOff, Lock, Mail, User } from "lucide-react"
+import { useEffect, useId, useState } from "react"
+import { useForm } from "react-hook-form"
+import toast from "react-hot-toast"
+import { useNavigate } from "react-router-dom"
+import * as z from "zod"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Combobox } from "@/components/ui/combobox"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { authApi } from "@/lib/api"
+import { departmentsApi } from "@/lib/api/departments"
 
 const loginSchema = z.object({
   email: z.string().email("올바른 이메일 주소를 입력해주세요"),
   password: z.string().min(6, "비밀번호는 최소 6자 이상이어야 합니다"),
-});
+})
 
-const signupSchema = z.object({
-  username: z.string().min(3, "사용자명은 최소 3자 이상이어야 합니다").max(50, "사용자명은 최대 50자까지 가능합니다"),
-  email: z.string().email("올바른 이메일 주소를 입력해주세요"),
-  password: z.string().min(6, "비밀번호는 최소 6자 이상이어야 합니다"),
-  confirmPassword: z.string(),
-  employeeId: z.string().min(1, "사번을 입력해주세요").max(20, "사번은 최대 20자까지 가능합니다"),
-  departmentId: z.string().min(1, "부서를 선택해주세요"),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "비밀번호가 일치하지 않습니다",
-  path: ["confirmPassword"],
-});
+const signupSchema = z
+  .object({
+    username: z
+      .string()
+      .min(3, "사용자명은 최소 3자 이상이어야 합니다")
+      .max(50, "사용자명은 최대 50자까지 가능합니다"),
+    email: z.string().email("올바른 이메일 주소를 입력해주세요"),
+    password: z.string().min(6, "비밀번호는 최소 6자 이상이어야 합니다"),
+    confirmPassword: z.string(),
+    employeeId: z.string().min(1, "사번을 입력해주세요").max(20, "사번은 최대 20자까지 가능합니다"),
+    departmentId: z.string().min(1, "부서를 선택해주세요"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "비밀번호가 일치하지 않습니다",
+    path: ["confirmPassword"],
+  })
 
-type LoginFormValues = z.infer<typeof loginSchema>;
-type SignupFormValues = z.infer<typeof signupSchema>;
+type LoginFormValues = z.infer<typeof loginSchema>
+type SignupFormValues = z.infer<typeof signupSchema>
 
 export default function AdminLoginPage() {
-  const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [departments, setDepartments] = useState<{id: string, name: string, code: string}[]>([]);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showSignupPassword, setShowSignupPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [activeTab, setActiveTab] = useState("login");
+  const navigate = useNavigate()
+
+  const loginEmailId = useId()
+  const loginPasswordId = useId()
+  const signupUsernameId = useId()
+  const signupEmailId = useId()
+  const signupEmployeeId = useId()
+  const signupPasswordId = useId()
+  const signupConfirmPasswordId = useId()
+
+  const [isLoading, setIsLoading] = useState(false)
+  const [departments, setDepartments] = useState<{ id: string; name: string; code: string }[]>([])
+  const [filteredDepartments, setFilteredDepartments] = useState<
+    { id: string; name: string; code: string }[]
+  >([])
+  const [departmentSearch, setDepartmentSearch] = useState("")
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showSignupPassword, setShowSignupPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [activeTab, setActiveTab] = useState("login")
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -55,7 +68,7 @@ export default function AdminLoginPage() {
       email: "",
       password: "",
     },
-  });
+  })
 
   const signupForm = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -67,74 +80,113 @@ export default function AdminLoginPage() {
       employeeId: "",
       departmentId: "",
     },
-  });
+  })
 
   // Check if already logged in
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    const user = localStorage.getItem('user');
+    const token = localStorage.getItem("authToken")
+    const user = localStorage.getItem("user")
 
     if (token && user) {
       try {
-        const userData = JSON.parse(user);
-        const allowedRoles = ['admin', 'internal_reviewer', 'external_reviewer'];
+        const userData = JSON.parse(user)
+        const allowedRoles = ["admin", "internal_reviewer", "external_reviewer"]
         if (userData?.user_role && allowedRoles.includes(userData.user_role)) {
-          navigate("/");
+          navigate("/")
         }
       } catch (error) {
-        console.error("Error parsing user data:", error);
+        console.error("Error parsing user data:", error)
       }
     }
-  }, [navigate]);
+  }, [navigate])
 
-  // Fetch departments for signup form
+  // Fetch all departments initially
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const data = await publicDepartmentsApi.getDepartments();
-        setDepartments(data.map(dept => ({
-          id: dept.id,
-          name: dept.name,
-          code: dept.code
-        })));
+        const data = await departmentsApi.getDepartments()
+        setDepartments(
+          data.map((dept) => ({
+            id: dept.id,
+            name: dept.name,
+            code: dept.code,
+          }))
+        )
+        setFilteredDepartments(
+          data.map((dept) => ({
+            id: dept.id,
+            name: dept.name,
+            code: dept.code,
+          }))
+        )
       } catch (error) {
-        console.error("Failed to fetch departments:", error);
-        toast.error("부서 목록을 불러오는데 실패했습니다.");
+        console.error("Failed to fetch departments:", error)
+        toast.error("부서 목록을 불러오는데 실패했습니다.")
       }
-    };
-    
-    fetchDepartments();
-  }, []);
+    }
+
+    fetchDepartments()
+  }, [])
+
+  // Search departments with debounce
+  useEffect(() => {
+    const searchDepartments = async () => {
+      if (!departmentSearch || departmentSearch.trim() === "") {
+        setFilteredDepartments(departments)
+        return
+      }
+
+      setSearchLoading(true)
+      try {
+        const data = await departmentsApi.getDepartments(departmentSearch)
+        setFilteredDepartments(
+          data.map((dept) => ({
+            id: dept.id,
+            name: dept.name,
+            code: dept.code,
+          }))
+        )
+      } catch (error) {
+        console.error("Failed to search departments:", error)
+        setFilteredDepartments([])
+      } finally {
+        setSearchLoading(false)
+      }
+    }
+
+    const debounceTimer = setTimeout(searchDepartments, 300)
+    return () => clearTimeout(debounceTimer)
+  }, [departmentSearch, departments])
 
   const onLoginSubmit = async (data: LoginFormValues) => {
-    setIsLoading(true);
+    setIsLoading(true)
     try {
       // Authenticate with backend API using authApi
       const authData = await authApi.emailLogin({
         email: data.email,
         password: data.password,
-      });
+      })
 
       // Store auth token and navigate
-      localStorage.setItem('authToken', authData.token);
-      localStorage.setItem('user', JSON.stringify(authData.user));
+      localStorage.setItem("authToken", authData.token)
+      localStorage.setItem("user", JSON.stringify(authData.user))
 
-      toast.success("로그인이 완료되었습니다!");
-      navigate("/");
+      toast.success("로그인이 완료되었습니다!")
+      navigate("/")
     } catch (error: unknown) {
-      console.error("로그인 오류:", error);
+      console.error("로그인 오류:", error)
       if (error instanceof Error) {
-        toast.error(error.message);
+        toast.error(error.message)
       } else {
-        toast.error("로그인 중 오류가 발생했습니다.\n관리자에게 문의하세요.");
+        toast.error("로그인 중 오류가 발생했습니다.\n관리자에게 문의하세요.")
       }
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const onSignupSubmit = async (data: SignupFormValues) => {
-    setIsLoading(true);
+    setIsLoading(true)
     try {
       const response = await authApi.signup({
         username: data.username,
@@ -142,27 +194,27 @@ export default function AdminLoginPage() {
         password: data.password,
         department_id: data.departmentId,
         employee_id: data.employeeId,
-      });
+      })
 
-      toast.success(response.message || "회원가입이 완료되었습니다! 관리자 승인 후 사용할 수 있습니다.");
-      signupForm.reset();
-      
+      toast.success(
+        response.message || "회원가입이 완료되었습니다! 관리자 승인 후 사용할 수 있습니다."
+      )
+      signupForm.reset()
+
       // Set email in login form and switch to login tab
-      loginForm.setValue("email", data.email);
-      setActiveTab("login");
+      loginForm.setValue("email", data.email)
+      setActiveTab("login")
     } catch (error: unknown) {
-      console.error("회원가입 오류:", error);
+      console.error("회원가입 오류:", error)
       if (error instanceof Error) {
-        toast.error(error.message);
+        toast.error(error.message)
       } else {
-        toast.error("회원가입 중 오류가 발생했습니다.");
+        toast.error("회원가입 중 오류가 발생했습니다.")
       }
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
-
-
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50 via-white to-blue-50">
@@ -191,14 +243,20 @@ export default function AdminLoginPage() {
         <CardContent className="pt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 h-12 bg-gray-100">
-              <TabsTrigger value="login" className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium">
+              <TabsTrigger
+                value="login"
+                className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium"
+              >
                 로그인
               </TabsTrigger>
-              <TabsTrigger value="signup" className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium">
+              <TabsTrigger
+                value="signup"
+                className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium"
+              >
                 회원가입
               </TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="login" className="space-y-4 mt-6">
               <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                 <div className="space-y-2">
@@ -208,7 +266,7 @@ export default function AdminLoginPage() {
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      id="email"
+                      id={loginEmailId}
                       type="email"
                       placeholder="admin@rinda.ai"
                       className="pl-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
@@ -230,7 +288,7 @@ export default function AdminLoginPage() {
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      id="password"
+                      id={loginPasswordId}
                       type={showPassword ? "text" : "password"}
                       placeholder="비밀번호를 입력하세요"
                       className="pl-10 pr-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
@@ -317,7 +375,7 @@ export default function AdminLoginPage() {
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      id="signup-username"
+                      id={signupUsernameId}
                       type="text"
                       placeholder="사용자명을 입력하세요"
                       className="pl-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
@@ -339,7 +397,7 @@ export default function AdminLoginPage() {
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      id="signup-email"
+                      id={signupEmailId}
                       type="email"
                       placeholder="이메일을 입력하세요"
                       className="pl-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
@@ -361,7 +419,7 @@ export default function AdminLoginPage() {
                   <div className="relative">
                     <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      id="signup-employee-id"
+                      id={signupEmployeeId}
                       type="text"
                       placeholder="사번을 입력하세요"
                       className="pl-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
@@ -381,19 +439,20 @@ export default function AdminLoginPage() {
                     부서
                   </Label>
                   <Combobox
-                    options={departments.map((dept) => ({
+                    options={filteredDepartments.map((dept) => ({
                       value: dept.id,
                       label: dept.name,
                       sublabel: dept.code,
                     }))}
                     value={signupForm.watch("departmentId")}
                     onValueChange={(value) => {
-                      signupForm.setValue("departmentId", value);
-                      signupForm.clearErrors("departmentId");
+                      signupForm.setValue("departmentId", value)
+                      signupForm.clearErrors("departmentId")
                     }}
+                    onSearchChange={setDepartmentSearch}
                     placeholder="부서를 선택하세요"
                     searchPlaceholder="부서명 또는 코드로 검색..."
-                    emptyText="일치하는 부서가 없습니다"
+                    emptyText={searchLoading ? "검색 중..." : "일치하는 부서가 없습니다"}
                     disabled={isLoading}
                   />
                   {signupForm.formState.errors.departmentId && (
@@ -410,7 +469,7 @@ export default function AdminLoginPage() {
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      id="signup-password"
+                      id={signupPasswordId}
                       type={showSignupPassword ? "text" : "password"}
                       placeholder="비밀번호를 입력하세요"
                       className="pl-10 pr-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
@@ -422,7 +481,11 @@ export default function AdminLoginPage() {
                       onClick={() => setShowSignupPassword(!showSignupPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
-                      {showSignupPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showSignupPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                   {signupForm.formState.errors.password && (
@@ -433,13 +496,16 @@ export default function AdminLoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-confirm-password" className="text-sm font-medium text-gray-700">
+                  <Label
+                    htmlFor="signup-confirm-password"
+                    className="text-sm font-medium text-gray-700"
+                  >
                     비밀번호 확인
                   </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      id="signup-confirm-password"
+                      id={signupConfirmPasswordId}
                       type={showConfirmPassword ? "text" : "password"}
                       placeholder="비밀번호를 다시 입력하세요"
                       className="pl-10 pr-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
@@ -451,7 +517,11 @@ export default function AdminLoginPage() {
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
-                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                   {signupForm.formState.errors.confirmPassword && (
@@ -482,5 +552,5 @@ export default function AdminLoginPage() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

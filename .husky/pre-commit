@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Change to admin directory and run lint-staged
+cd admin && npx lint-staged

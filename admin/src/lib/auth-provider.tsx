@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, type ReactNode, useContext, useEffect, useState } from "react"
 
 interface User {
   id: string
@@ -25,17 +25,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Check for existing auth token on mount
-    const token = localStorage.getItem('authToken')
-    const userData = localStorage.getItem('user')
+    const token = localStorage.getItem("authToken")
+    const userData = localStorage.getItem("user")
 
     if (token && userData) {
       try {
         const parsedUser = JSON.parse(userData)
         setUser(parsedUser)
       } catch (error) {
-        console.error('Failed to parse user data:', error)
-        localStorage.removeItem('authToken')
-        localStorage.removeItem('user')
+        console.error("Failed to parse user data:", error)
+        localStorage.removeItem("authToken")
+        localStorage.removeItem("user")
       }
     }
 
@@ -43,16 +43,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = (token: string, userData: User) => {
-    localStorage.setItem('authToken', token)
-    localStorage.setItem('user', JSON.stringify(userData))
+    localStorage.setItem("authToken", token)
+    localStorage.setItem("user", JSON.stringify(userData))
     setUser(userData)
   }
 
   const logout = () => {
-    localStorage.removeItem('authToken')
-    localStorage.removeItem('user')
+    localStorage.removeItem("authToken")
+    localStorage.removeItem("user")
     setUser(null)
-    window.location.href = '/login'
+    window.location.href = "/login"
   }
 
   return (
@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error("useAuth must be used within an AuthProvider")
   }
   return context
 }

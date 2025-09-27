@@ -27,7 +27,7 @@ const updateUserSchema = t.Object({
   employeeId: t.String({ maxLength: 20 })
 })
 
-export const userRoutes = new Elysia({ prefix: '/users' })
+export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
   // Get user by ID
   .get('/:id', async ({ params: { id } }) => {
     const user = await userService.getUser(id)
@@ -212,7 +212,7 @@ export const userRoutes = new Elysia({ prefix: '/users' })
   })
 
 // Department routes
-export const departmentRoutes = new Elysia({ prefix: '/departments' })
+export const departmentRoutes = new Elysia({ prefix: '/api/v1/departments' })
   // Get department by ID
   .get('/:id', async ({ params: { id } }) => {
     const department = await departmentService.getDepartment(id)

@@ -11,6 +11,9 @@ import { healthRoutes } from './routes/health.routes'
 import { emailRoutes } from './routes/email.routes'
 import { webhookRoutes } from './routes/webhook.routes'
 import { postRoutes } from './routes/post.routes'
+import { authRoutes } from './routes/auth.routes'
+import { publicRoutes } from './routes/public.routes'
+import { userRoutes, departmentRoutes } from './routes/users'
 
 // Initialize database
 migrateDatabase().catch(console.error)
@@ -35,6 +38,10 @@ const app = new Elysia()
   .use(emailRoutes)
   .use(webhookRoutes)
   .use(postRoutes)
+  .use(authRoutes)
+  .use(publicRoutes)
+  .use(userRoutes)
+  .use(departmentRoutes)
 
   .listen(config.port)
 

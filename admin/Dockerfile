@@ -37,7 +37,7 @@ FROM nginx:alpine
 # Copy built files from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx configuration if exists
+# Copy nginx configuration for SPA
 RUN echo 'server { \
     listen 3000; \
     server_name localhost; \
@@ -45,14 +45,6 @@ RUN echo 'server { \
     index index.html; \
     location / { \
         try_files $uri $uri/ /index.html; \
-    } \
-    location /api { \
-        proxy_pass http://elysia-server:3001; \
-        proxy_http_version 1.1; \
-        proxy_set_header Upgrade $http_upgrade; \
-        proxy_set_header Connection "upgrade"; \
-        proxy_set_header Host $host; \
-        proxy_cache_bypass $http_upgrade; \
     } \
 }' > /etc/nginx/conf.d/default.conf
 

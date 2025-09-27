@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "biome check ./src",
     "build": "yarn type-check && vite build",
     "type-check": "tsc --noEmit",
     "lint": "biome check --write ./src",

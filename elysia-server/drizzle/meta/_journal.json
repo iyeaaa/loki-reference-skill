@@ -8,6 +8,13 @@
       "when": 1758979467461,
       "tag": "0000_flaky_cassandra_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1758998257417,
+      "tag": "0001_goofy_mister_fear",
+      "breakpoints": true
     }
   ]
 }

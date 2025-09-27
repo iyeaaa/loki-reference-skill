@@ -3,12 +3,9 @@ import type { ResponseCodeType } from '../types/response.types'
 import { errorResponse, getResponseCodeByStatus, ResponseCode } from '../types/response.types'
 import { handleDatabaseError, isDatabaseError } from '../utils/db-error-handler'
 
-export const errorHandler = new Elysia({ name: 'error-handler' })
-  .onError(({ code, error, set, request }) => {
+export const errorHandler = new Elysia({ name: 'error-handler' }).onError(
+  ({ code, error, set, request }) => {
     const path = request.url
-
-    // 로그 출력
-    console.error(`[${new Date().toISOString()}] Error ${code} at ${path}:`, error)
 
     // Content-Type을 JSON으로 명시적 설정
     set.headers['content-type'] = 'application/json'
@@ -70,9 +67,5 @@ export const errorHandler = new Elysia({ name: 'error-handler' })
         set.status = 500
         return errorResponse('알 수 없는 오류가 발생했습니다.', ResponseCode.INTERNAL_ERROR, path)
     }
-  })
-  .onAfterResponse(({ request, set }) => {
-    // 응답 로깅 (선택적)
-    const timestamp = new Date().toISOString()
-    console.log(`[${timestamp}] ${request.method} ${request.url} - ${set.status}`)
-  })
+  },
+)

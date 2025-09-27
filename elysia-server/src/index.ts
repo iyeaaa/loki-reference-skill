@@ -5,6 +5,7 @@ import { config } from './config'
 import { migrateDatabase } from './db/migrate'
 import { errorHandler } from './plugins/error-handler.plugin'
 import { responseTransformer } from './plugins/response-transformer.plugin'
+import { simpleLogger } from './plugins/simple-logger.plugin'
 import { authRoutes } from './routes/auth.routes'
 import { departmentsRoutes } from './routes/departments.routes'
 import { emailRoutes } from './routes/email.routes'
@@ -18,6 +19,11 @@ import { webhookRoutes } from './routes/webhook.routes'
 migrateDatabase().catch(console.error)
 
 const app = new Elysia()
+  .use(simpleLogger) // Apply logger first
+  .onError(({ error }) => {
+    console.error('Application Error:', error)
+    throw error
+  })
   .use(errorHandler) // Apply global error handler
   .use(responseTransformer) // Apply response transformer
   .use(cors())

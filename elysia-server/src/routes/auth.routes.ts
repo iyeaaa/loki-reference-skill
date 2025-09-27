@@ -83,39 +83,66 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
   .post(
     '/signup',
     async ({ body, set }) => {
-      // Check if user already exists
-      const existingUser = await userService.checkAccountExists(body.email)
-      if (existingUser) {
-        set.status = 400
-        return errorResponse('이미 등록된 이메일입니다.', ResponseCode.BAD_REQUEST)
-      }
+      try {
+        // Check if user already exists
+        const existingUser = await userService.checkAccountExists(body.email)
+        if (existingUser) {
+          set.status = 400
+          return errorResponse('이미 등록된 이메일입니다.', ResponseCode.BAD_REQUEST)
+        }
 
-      // Hash password
-      const passwordHash = await authService.hashPassword(body.password)
+        // Hash password
+        const passwordHash = await authService.hashPassword(body.password)
 
-      // Create user (default to inactive, needs admin approval)
-      const newUser = await userService.createUser({
-        username: body.username,
-        email: body.email,
-        passwordHash,
-        userRole: 'user',
-        isActive: false, // Needs admin approval
-        departmentId: body.departmentId,
-        employeeId: body.employeeId,
-      })
+        // Create user (default to inactive, needs admin approval)
+        const newUser = await userService.createUser({
+          username: body.username,
+          email: body.email,
+          passwordHash,
+          userRole: 'user',
+          isActive: false, // Needs admin approval
+          departmentId: body.departmentId,
+          employeeId: body.employeeId,
+        })
 
-      if (!newUser) {
-        set.status = 400
-        return errorResponse('사용자 생성에 실패했습니다.', ResponseCode.BAD_REQUEST)
-      }
+        if (!newUser) {
+          set.status = 400
+          return errorResponse('사용자 생성에 실패했습니다.', ResponseCode.BAD_REQUEST)
+        }
 
-      return {
-        message: '회원가입이 완료되었습니다. 관리자 승인 후 사용할 수 있습니다.',
-        user: {
-          id: newUser.id,
-          username: newUser.username,
-          email: newUser.email,
-        },
+        return {
+          message: '회원가입이 완료되었습니다. 관리자 승인 후 사용할 수 있습니다.',
+          user: {
+            id: newUser.id,
+            username: newUser.username,
+            email: newUser.email,
+          },
+        }
+      } catch (error) {
+        console.error('Signup error:', error)
+        if (error instanceof Error) {
+          // 더 구체적인 에러 메시지 제공
+          if (error.message.includes('duplicate key value')) {
+            set.status = 400
+            if (error.message.includes('username')) {
+              return errorResponse('이미 사용 중인 사용자명입니다.', ResponseCode.BAD_REQUEST)
+            }
+            if (error.message.includes('email')) {
+              return errorResponse('이미 등록된 이메일입니다.', ResponseCode.BAD_REQUEST)
+            }
+            if (error.message.includes('employee_id')) {
+              return errorResponse('이미 등록된 사원번호입니다.', ResponseCode.BAD_REQUEST)
+            }
+          }
+
+          if (error.message.includes('foreign key constraint')) {
+            set.status = 400
+            return errorResponse('존재하지 않는 부서입니다.', ResponseCode.BAD_REQUEST)
+          }
+        }
+
+        set.status = 500
+        return errorResponse('회원가입 중 오류가 발생했습니다.', ResponseCode.INTERNAL_ERROR)
       }
     },
     {

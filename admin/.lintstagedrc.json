@@ -1,9 +1,9 @@
 {
   "*.{ts,tsx,js,jsx}": [
-    "biome check --write",
-    "bash -c 'tsc --noEmit'"
+    "biome check --write --no-errors-on-unmatched",
+    "bash -c 'yarn type-check'"
   ],
   "*.{json,css,md}": [
-    "biome format --write"
+    "biome format --write --no-errors-on-unmatched"
   ]
 }

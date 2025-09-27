@@ -181,20 +181,10 @@ export default function AdminLoginPage() {
             Rinda Expert
           </CardTitle>
           <CardDescription className="text-gray-600 mt-2">
-            AI 기반 이메일 자동화 관리 시스템
+            스마트한 이메일 마케팅 솔루션
             <br />
-            <span className="text-sm text-gray-500 mt-2 block">
-              SendGrid를 활용한 효율적인 이메일 마케팅 관리 플랫폼입니다.
-            </span>
-            <span className="text-sm text-gray-500">
-              인가된 관리자만 접근 가능한 시스템입니다.
-            </span>
-            <br />
-            <span className="text-xs text-indigo-600 font-medium mt-2 block">
-              ※ 신규 가입 후 관리자 승인이 필요합니다.
-            </span>
-            <span className="text-xs text-gray-500">
-              ※ 본 시스템은 그린다에이아이 보안 정책에 따라 운영됩니다.
+            <span className="text-xs text-indigo-600 font-medium mt-3 block">
+              ※ 관리자 승인 후 이용 가능
             </span>
           </CardDescription>
         </CardHeader>
@@ -262,9 +252,10 @@ export default function AdminLoginPage() {
                   )}
                 </div>
 
-                <Button 
-                  type="submit" 
-                  className="w-full h-11 bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] hover:from-[#5936B1] hover:to-[#2B72E6] text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200" 
+                <Button
+                  type="submit"
+                  size="xl"
+                  className="w-full bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] hover:from-[#5936B1] hover:to-[#2B72E6] text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -470,9 +461,10 @@ export default function AdminLoginPage() {
                   )}
                 </div>
 
-                <Button 
-                  type="submit" 
-                  className="w-full h-11 bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] hover:from-[#5936B1] hover:to-[#2B72E6] text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200" 
+                <Button
+                  type="submit"
+                  size="xl"
+                  className="w-full bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] hover:from-[#5936B1] hover:to-[#2B72E6] text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
                   disabled={isLoading}
                 >
                   {isLoading ? (

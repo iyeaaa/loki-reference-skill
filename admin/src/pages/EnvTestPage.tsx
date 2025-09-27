@@ -59,13 +59,13 @@ export default function EnvTestPage() {
                 <div className="flex items-center gap-2">
                   <span className="font-medium">Base URL:</span>
                   <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">
-                    {import.meta.env.VITE_API_URL || "http://localhost:9888"}
+                    {import.meta.env.VITE_API_URL || "http://localhost:3001"}
                   </code>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-medium">Departments Endpoint:</span>
                   <code className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-xs">
-                    {(import.meta.env.VITE_API_URL || "http://localhost:9888") + "/api/v1/public/departments"}
+                    {(import.meta.env.VITE_API_URL || "http://localhost:3001") + "/api/v1/public/departments"}
                   </code>
                 </div>
               </div>

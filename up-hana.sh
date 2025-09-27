@@ -75,4 +75,4 @@ EOF
 log "Hana 서버 SSH 접속 및 Docker Compose 실행 완료"
 
 # curl -X GET http://15.165.2.108:9888/api/v1/public/departments 
-# curl -X GET http://localhost:9888/api/v1/public/departments 
+# curl -X GET http://localhost:3001/api/v1/public/departments 

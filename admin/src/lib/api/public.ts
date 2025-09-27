@@ -1,6 +1,6 @@
-import type { Department } from "./types/user";
+import type { Department, ApiResponse, DepartmentsResponse } from "./types";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:9888";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 /**
  * Public API client for unauthenticated requests
@@ -11,7 +11,7 @@ export class PublicApiClient {
     options?: RequestInit
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
-    
+
     const config: RequestInit = {
       ...options,
       headers: {
@@ -22,10 +22,10 @@ export class PublicApiClient {
 
     try {
       const response = await fetch(url, config);
-      
+
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ 
-          error: `HTTP error! status: ${response.status}` 
+        const error = await response.json().catch(() => ({
+          error: `HTTP error! status: ${response.status}`
         }));
         throw new Error(error.error || `Request failed with status ${response.status}`);
       }
@@ -46,8 +46,12 @@ export class PublicDepartmentsApi extends PublicApiClient {
    * Get all departments (no authentication required)
    */
   async getDepartments(): Promise<Department[]> {
-    const response = await this.request<{ departments: Department[] }>("/api/v1/public/departments");
-    return response.departments || [];
+    const response = await this.request<ApiResponse<DepartmentsResponse>>("/api/v1/public/departments");
+    // Handle wrapped response structure
+    if (response.success && response.data?.departments) {
+      return response.data.departments;
+    }
+    return [];
   }
 }
 

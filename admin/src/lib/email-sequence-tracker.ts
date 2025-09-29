@@ -170,16 +170,27 @@ export class EmailSequenceTracker {
       thread: await prisma.emailThread.findUnique({
         where: { id: threadId },
       }),
-      history: history.map((seq) => ({
-        sequenceNumber: seq.sequenceNumber,
-        direction: seq.direction,
-        from: seq.fromEmail,
-        to: seq.toEmail,
-        subject: seq.subject,
-        content: seq.content,
-        sentAt: seq.sentAt,
-        aiGenerated: seq.aiGenerated,
-      })),
+      history: history.map(
+        (seq: {
+          sequenceNumber: number
+          direction: string
+          fromEmail: string
+          toEmail: string
+          subject: string
+          content: string
+          sentAt: Date
+          aiGenerated: boolean
+        }) => ({
+          sequenceNumber: seq.sequenceNumber,
+          direction: seq.direction,
+          from: seq.fromEmail,
+          to: seq.toEmail,
+          subject: seq.subject,
+          content: seq.content,
+          sentAt: seq.sentAt,
+          aiGenerated: seq.aiGenerated,
+        })
+      ),
       totalExchanges: Math.floor(history.length / 2),
       lastInteraction: history[history.length - 1]?.sentAt,
     }

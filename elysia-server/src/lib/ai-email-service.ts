@@ -70,7 +70,7 @@ class AIEmailService {
         throw new Error('AI 응답 생성 실패')
       }
 
-      console.log('✅ AI 응답 생성 성공');
+      console.log('✅ AI 응답 생성 성공')
       console.log(`내용: ${text}`)
 
       return {

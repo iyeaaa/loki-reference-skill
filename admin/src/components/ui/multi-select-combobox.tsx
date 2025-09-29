@@ -68,12 +68,12 @@ export function MultiSelectCombobox({
     onValueChange?.(newValue)
   }
 
-  const handleRemove = (optionValue: string, e: React.MouseEvent) => {
+  const handleRemove = (optionValue: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation()
     onValueChange?.(value.filter((v) => v !== optionValue))
   }
 
-  const handleClear = (e: React.MouseEvent) => {
+  const handleClear = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation()
     onValueChange?.([])
   }

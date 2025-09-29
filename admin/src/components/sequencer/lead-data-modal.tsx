@@ -1,27 +1,27 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { Modal } from "@/components/ui/modal";
-import { Button } from "@/components/ui/button";
-import type { Lead } from "../../lib/atoms";
-import { LeadDataDisplay } from "./lead-data-display";
+import { useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Modal } from "@/components/ui/modal"
+import type { Lead } from "../../lib/atoms"
+import { LeadDataDisplay } from "./lead-data-display"
 
 interface LeadDataModalProps {
-  open: boolean;
-  onClose: () => void;
-  leads: Lead[];
+  open: boolean
+  onClose: () => void
+  leads: Lead[]
 }
 
 export function LeadDataModal({ open, onClose, leads }: LeadDataModalProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterBy, setFilterBy] = useState<"all" | "company" | "email">("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterBy, setFilterBy] = useState<"all" | "company" | "email">("all")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
 
   // 검색어나 필터 변경 시 첫 페이지로 이동
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, filterBy]);
+    setCurrentPage(1)
+  }, [])
 
   return (
     <Modal
@@ -51,5 +51,5 @@ export function LeadDataModal({ open, onClose, leads }: LeadDataModalProps) {
         />
       </div>
     </Modal>
-  );
+  )
 }

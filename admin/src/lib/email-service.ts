@@ -1,3 +1,1 @@
-export type EmailRecipient = { email: string; name?: string };
-
-
+export type EmailRecipient = { email: string; name?: string }

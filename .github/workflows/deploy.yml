@@ -5,8 +5,81 @@ on:
     branches: [ "main" ]
 
 jobs:
-  deploy:
+  # Frontend 타입 체크
+  frontend-check:
+    name: Frontend - Admin Dashboard Check
     runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Yarn Berry
+      run: |
+        corepack enable
+        corepack prepare yarn@4.10.3 --activate
+
+    - name: Frontend - Install Dependencies
+      working-directory: ./admin
+      run: |
+        echo "📦 Installing frontend dependencies..."
+        yarn install --immutable
+
+    - name: Frontend - TypeScript Check
+      working-directory: ./admin
+      run: |
+        echo "🔍 Frontend TypeScript type checking..."
+        yarn type-check
+
+    - name: Frontend - Lint Check
+      working-directory: ./admin
+      run: |
+        echo "✨ Frontend Biome lint checking..."
+        yarn lint:check
+
+  # Backend 타입 체크
+  backend-check:
+    name: Backend - Elysia Server Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: 'latest'
+
+    - name: Backend - Install Dependencies
+      working-directory: ./elysia-server
+      run: |
+        echo "📦 Installing backend dependencies..."
+        bun install
+
+    - name: Backend - TypeScript Check
+      working-directory: ./elysia-server
+      run: |
+        echo "🔍 Backend TypeScript type checking..."
+        bun run tsc --noEmit || (bun add -d typescript && bun run tsc --noEmit)
+
+    - name: Backend - Lint Check
+      working-directory: ./elysia-server
+      run: |
+        echo "✨ Backend Biome lint checking..."
+        bun run lint:check
+
+  # 전체 검증 완료 후 배포
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: [frontend-check, backend-check]
+    if: success()
 
     steps:
     - name: Checkout code

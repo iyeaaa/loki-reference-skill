@@ -1,17 +1,17 @@
-import { type ReactNode } from "react";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "lucide-react"
+import type { ReactNode } from "react"
 
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
 
-export type NodeStatus = "loading" | "success" | "error" | "initial";
+export type NodeStatus = "loading" | "success" | "error" | "initial"
 
-export type NodeStatusVariant = "overlay" | "border";
+export type NodeStatusVariant = "overlay" | "border"
 
 export type NodeStatusIndicatorProps = {
-  status?: NodeStatus;
-  variant?: NodeStatusVariant;
-  children: ReactNode;
-};
+  status?: NodeStatus
+  variant?: NodeStatusVariant
+  children: ReactNode
+}
 
 export const SpinnerLoadingIndicator = ({ children }: { children: ReactNode }) => {
   return (
@@ -25,8 +25,8 @@ export const SpinnerLoadingIndicator = ({ children }: { children: ReactNode }) =
         <LoaderCircle className="absolute left-[calc(50%-0.75rem)] top-[calc(50%-0.75rem)] size-6 animate-spin text-blue-700" />
       </div>
     </div>
-  );
-};
+  )
+}
 
 export const BorderLoadingIndicator = ({ children }: { children: ReactNode }) => {
   return (
@@ -55,8 +55,8 @@ export const BorderLoadingIndicator = ({ children }: { children: ReactNode }) =>
       </div>
       {children}
     </>
-  );
-};
+  )
+}
 
 const StatusBorder = ({ children, className }: { children: ReactNode; className?: string }) => {
   return (
@@ -64,32 +64,34 @@ const StatusBorder = ({ children, className }: { children: ReactNode; className?
       <div
         className={cn(
           "absolute -left-[1px] -top-[1px] h-[calc(100%+2px)] w-[calc(100%+2px)] rounded-[7px] border-2",
-          className,
+          className
         )}
       />
       {children}
     </>
-  );
-};
+  )
+}
 
-export const NodeStatusIndicator = ({ status, variant = "border", children }: NodeStatusIndicatorProps) => {
+export const NodeStatusIndicator = ({
+  status,
+  variant = "border",
+  children,
+}: NodeStatusIndicatorProps) => {
   switch (status) {
     case "loading":
       switch (variant) {
         case "overlay":
-          return <SpinnerLoadingIndicator>{children}</SpinnerLoadingIndicator>;
+          return <SpinnerLoadingIndicator>{children}</SpinnerLoadingIndicator>
         case "border":
-          return <BorderLoadingIndicator>{children}</BorderLoadingIndicator>;
+          return <BorderLoadingIndicator>{children}</BorderLoadingIndicator>
         default:
-          return <>{children}</>;
+          return <>{children}</>
       }
     case "success":
-      return <StatusBorder className="border-emerald-600">{children}</StatusBorder>;
+      return <StatusBorder className="border-emerald-600">{children}</StatusBorder>
     case "error":
-      return <StatusBorder className="border-red-400">{children}</StatusBorder>;
+      return <StatusBorder className="border-red-400">{children}</StatusBorder>
     default:
-      return <>{children}</>;
+      return <>{children}</>
   }
-};
-
-
+}

@@ -1,4 +1,4 @@
-import { BarChart3, ClipboardList, Settings, Users, Notebook } from "lucide-react"
+import { BarChart3, ClipboardList, Notebook, Settings, Users } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import {
   Sidebar,
@@ -22,11 +22,6 @@ const menuItems = [
     title: "유저 관리",
     url: "/users",
     icon: Users,
-  },
-  {
-    title: "게시판 테스트",
-    url: "/bulletin",
-    icon: ClipboardList,
   },
   {
     title: "Email Sequence",

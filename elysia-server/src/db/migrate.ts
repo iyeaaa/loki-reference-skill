@@ -28,7 +28,9 @@ export async function migrateDatabase() {
       )
     `)
 
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS address_book_groups_name_idx ON address_book_groups (name)`) 
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS address_book_groups_name_idx ON address_book_groups (name)`,
+    )
 
     // Create address book contacts table
     await db.execute(sql`
@@ -41,8 +43,12 @@ export async function migrateDatabase() {
       )
     `)
 
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS address_book_contacts_group_id_idx ON address_book_contacts (group_id)`) 
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS address_book_contacts_email_idx ON address_book_contacts (email)`) 
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS address_book_contacts_group_id_idx ON address_book_contacts (group_id)`,
+    )
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS address_book_contacts_email_idx ON address_book_contacts (email)`,
+    )
 
     console.log('✅ Database migration completed successfully')
   } catch (error) {

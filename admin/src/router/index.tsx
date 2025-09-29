@@ -3,14 +3,13 @@ import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { AuthProvider } from "@/lib/auth-provider"
 import DashboardLayout from "../layouts/DashboardLayout"
 import RootLayout from "../layouts/RootLayout"
-import BulletinBoardPage from "../pages/bulletin/BulletinBoardPage"
+import AddressBookGroupPage from "../pages/address-book/AddressBookGroupPage"
+import AddressBookListPage from "../pages/address-book/AddressBookListPage"
 import DashboardPage from "../pages/dashboard/DashboardPage"
 import EnvTestPage from "../pages/EnvTestPage"
+import WorkspaceFlowPage from "../pages/email-sequence/WorkspaceFlowPage"
 // import TestEmailSequencePage from "../pages/email-sequence/TestEmailSequencePage"
 import WorkspaceListPage from "../pages/email-sequence/WorkspaceListPage"
-import WorkspaceFlowPage from "../pages/email-sequence/WorkspaceFlowPage"
-import AddressBookListPage from "../pages/address-book/AddressBookListPage"
-import AddressBookGroupPage from "../pages/address-book/AddressBookGroupPage"
 import LoginPage from "../pages/LoginPage"
 import UsersPage from "../pages/users/UsersPage"
 
@@ -50,10 +49,6 @@ export const router = createBrowserRouter([
           {
             path: "users",
             element: <UsersPage />,
-          },
-          {
-            path: "bulletin",
-            element: <BulletinBoardPage />,
           },
           {
             path: "env-test",

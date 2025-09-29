@@ -25,6 +25,8 @@ import { NODE_TYPE_COLORS } from "@/components/sequencer/colors";
 import { useAtom } from "jotai";
 import { leadsAtom } from "../../lib/atoms";
 import type { Lead } from "../../lib/atoms";
+import { useEffect } from "react";
+import { addressBookApi, type AddressBookGroup } from "@/lib/api/services/address-book";
 import { generateEmailDraft } from "../../lib/openai-client";
 
 type BuyerImportData = {
@@ -45,6 +47,9 @@ export const BuyerImportNode = memo(
     } = useReactFlow();
     const [open, setOpen] = useState(false);
     const [leads, setLeads] = useAtom(leadsAtom);
+    const [groupOpen, setGroupOpen] = useState(false);
+    const [groups, setGroups] = useState<AddressBookGroup[]>([]);
+    // selectedGroupId는 현재 UI 반영에는 직접 사용되지 않아 제거
     const [newCompany, setNewCompany] = useState("");
     const [newEmail, setNewEmail] = useState("");
     const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -278,6 +283,21 @@ export const BuyerImportNode = memo(
       setOpen(false);
     };
 
+    useEffect(() => {
+      if (!groupOpen) return;
+      (async () => {
+        const res = await addressBookApi.listGroups({ limit: 100 });
+        setGroups(res.groups);
+      })();
+    }, [groupOpen]);
+
+    const handleSelectGroup = async (groupId: string) => {
+      const res = await addressBookApi.listContacts(groupId, { limit: 1000 });
+      const imported: Lead[] = res.contacts.map((c) => ({ id: c.id, company: c.company, email: c.email }));
+      setLeads(imported);
+      setGroupOpen(false);
+    };
+
     const handleAddDraft = () => {
       const me = getNode(id);
       const x = me?.position.x ?? 0;
@@ -410,6 +430,19 @@ export const BuyerImportNode = memo(
           >
             리드 데이터 관리
           </Button>
+          <div className="mt-2 flex gap-2">
+            <Button
+              variant="secondary"
+              className="nodrag flex-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setGroupOpen(true);
+              }}
+            >
+              주소록에서 선택
+            </Button>
+          </div>
         </BaseNodeContent>
         <BaseNodeFooter>
           <Button disabled={!hasLeads} className="nodrag w-full" onClick={handleAddDraft} data-no-drag="true">
@@ -510,6 +543,39 @@ export const BuyerImportNode = memo(
                   </table>
                 </div>
               </div>
+            )}
+          </div>
+        </Modal>
+
+        <Modal
+          open={groupOpen}
+          onClose={() => setGroupOpen(false)}
+          title="주소록에서 그룹 선택"
+          footer={
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setGroupOpen(false)}>
+                닫기
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-2">
+            {groups.length === 0 ? (
+              <div className="text-sm text-muted-foreground">그룹이 없습니다. 먼저 주소록에서 그룹을 생성하세요.</div>
+            ) : (
+              <ul className="divide-y">
+                {groups.map((g) => (
+                  <li key={g.id} className="p-2 flex items-center gap-2">
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{g.name}</div>
+                      {g.description && (
+                        <div className="text-xs text-muted-foreground">{g.description}</div>
+                      )}
+                    </div>
+                    <Button size="sm" onClick={() => handleSelectGroup(g.id)}>선택</Button>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         </Modal>

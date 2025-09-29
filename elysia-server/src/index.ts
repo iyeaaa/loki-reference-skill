@@ -15,6 +15,7 @@ import { postRoutes } from './routes/post.routes'
 import { userRoutes } from './routes/users.routes'
 import { webhookRoutes } from './routes/webhook.routes'
 import { aiRoutes } from './routes/ai.routes'
+import { addressBookRoutes } from './routes/address-book.routes'
 
 // Initialize database
 migrateDatabase().catch(console.error)
@@ -27,7 +28,7 @@ const app = new Elysia()
   })
   .use(errorHandler) // Apply global error handler
   .use(responseTransformer) // Apply response transformer
-  .use(cors())
+  .use(cors()) // 에러는 뜨지만 문제 없음
   .use(
     swagger({
       documentation: {
@@ -46,6 +47,7 @@ const app = new Elysia()
   .use(emailRoutes)
   .use(webhookRoutes)
   .use(aiRoutes)
+  .use(addressBookRoutes)
   .use(postRoutes)
   .use(authRoutes)
   .use(departmentsRoutes)

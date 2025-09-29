@@ -9,6 +9,8 @@ import EnvTestPage from "../pages/EnvTestPage"
 // import TestEmailSequencePage from "../pages/email-sequence/TestEmailSequencePage"
 import WorkspaceListPage from "../pages/email-sequence/WorkspaceListPage"
 import WorkspaceFlowPage from "../pages/email-sequence/WorkspaceFlowPage"
+import AddressBookListPage from "../pages/address-book/AddressBookListPage"
+import AddressBookGroupPage from "../pages/address-book/AddressBookGroupPage"
 import LoginPage from "../pages/LoginPage"
 import UsersPage from "../pages/users/UsersPage"
 
@@ -64,6 +66,14 @@ export const router = createBrowserRouter([
           {
             path: "email-sequence/workspace",
             element: <WorkspaceFlowPage />,
+          },
+          {
+            path: "address-book",
+            element: <AddressBookListPage />,
+          },
+          {
+            path: "address-book/:groupId",
+            element: <AddressBookGroupPage />,
           },
         ],
       },

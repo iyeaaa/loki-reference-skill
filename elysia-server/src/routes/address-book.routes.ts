@@ -1,0 +1,101 @@
+import { Elysia, t } from 'elysia'
+import * as addressBook from '../services/address-book.service'
+
+export const addressBookRoutes = new Elysia({ prefix: '/api/v1/address-book' })
+  // Groups
+  .get(
+    '/groups',
+    async ({ query }) => {
+      const limit = parseInt(query.limit || '10', 10)
+      const offset = parseInt(query.offset || '0', 10)
+      const search = query.search
+      const { groups, total } = await addressBook.listGroups(limit, offset, search)
+      return { data: groups, total, limit, offset }
+    },
+    {
+      query: t.Object({
+        limit: t.Optional(t.String()),
+        offset: t.Optional(t.String()),
+        search: t.Optional(t.String()),
+      }),
+    },
+  )
+  .post(
+    '/groups',
+    async ({ body }) => {
+      return await addressBook.createGroup(body)
+    },
+    {
+      body: t.Object({
+        name: t.String({ minLength: 1, maxLength: 120 }),
+        description: t.Optional(t.String({ maxLength: 255 })),
+      }),
+    },
+  )
+  .put(
+    '/groups/:id',
+    async ({ params: { id }, body }) => {
+      return await addressBook.updateGroup(id, body)
+    },
+    {
+      params: t.Object({ id: t.String({ format: 'uuid' }) }),
+      body: t.Object({
+        name: t.Optional(t.String({ minLength: 1, maxLength: 120 })),
+        description: t.Optional(t.String({ maxLength: 255 })),
+      }),
+    },
+  )
+  .delete(
+    '/groups/:id',
+    async ({ params: { id } }) => {
+      await addressBook.deleteGroup(id)
+      return { success: true }
+    },
+    {
+      params: t.Object({ id: t.String({ format: 'uuid' }) }),
+    },
+  )
+  // Contacts
+  .get(
+    '/groups/:id/contacts',
+    async ({ params: { id }, query }) => {
+      const limit = parseInt(query.limit || '10', 10)
+      const offset = parseInt(query.offset || '0', 10)
+      const search = query.search
+      const { contacts, total } = await addressBook.listContacts(id, limit, offset, search)
+      return { data: contacts, total, limit, offset }
+    },
+    {
+      params: t.Object({ id: t.String({ format: 'uuid' }) }),
+      query: t.Object({
+        limit: t.Optional(t.String()),
+        offset: t.Optional(t.String()),
+        search: t.Optional(t.String()),
+      }),
+    },
+  )
+  .post(
+    '/groups/:id/contacts',
+    async ({ params: { id }, body }) => {
+      return await addressBook.addContact(id, body)
+    },
+    {
+      params: t.Object({ id: t.String({ format: 'uuid' }) }),
+      body: t.Object({
+        company: t.String({ minLength: 1, maxLength: 160 }),
+        email: t.String({ format: 'email', maxLength: 200 }),
+      }),
+    },
+  )
+  .delete(
+    '/contacts/:contactId',
+    async ({ params: { contactId } }) => {
+      await addressBook.deleteContact(contactId)
+      return { success: true }
+    },
+    {
+      params: t.Object({ contactId: t.String({ format: 'uuid' }) }),
+    },
+  )
+
+

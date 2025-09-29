@@ -11,3 +11,4 @@ export const posts = pgTable('posts', {
 
 // Re-export user schema
 export * from './schema/users'
+export * from './schema/address-book'

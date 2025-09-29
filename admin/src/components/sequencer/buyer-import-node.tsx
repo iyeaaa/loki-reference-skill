@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { Handle, Position, useReactFlow } from "@xyflow/react";
 import type { Node, Edge } from "@xyflow/react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import {
   BaseNodeHeader,
   BaseNodeHeaderTitle,
 } from "@/components/base-node";
-import { Upload, Trash, Play, Database } from "lucide-react";
+import { Upload, Trash, Database } from "lucide-react";
 import { NODE_TYPE_COLORS } from "@/components/sequencer/colors";
 import { useAtom } from "jotai";
 import { leadsAtom } from "../../lib/atoms";
@@ -20,6 +20,7 @@ import { generateEmailDraft } from "../../lib/openai-client";
 import { addressBookApi } from "@/lib/api/services/address-book";
 import { AddressBookModal } from "./address-book-modal";
 import { LeadDataModal } from "./lead-data-modal";
+import { useSequenceControl } from "@/lib/sequence-control-context";
 
 type BuyerImportData = {
   title?: string;
@@ -43,17 +44,20 @@ export const BuyerImportNode = memo(
     const [addressBookModalOpen, setAddressBookModalOpen] = useState(false);
     const [leadDataModalOpen, setLeadDataModalOpen] = useState(false);
 
-    const findConnectedNodes = (
-      sourceId: string
-    ): { node: Node; edge: Edge }[] => {
-      const edges = getEdges().filter((edge) => edge.source === sourceId);
-      return edges.flatMap((edge) => {
-        const node = getNodes().find((n) => n.id === edge.target);
-        return node ? [{ node, edge }] : [];
-      });
-    };
+    const { registerExecutor } = useSequenceControl();
 
-    const executeEmailDraftNode = async (node: Node) => {
+    const findConnectedNodes = useCallback(
+      (sourceId: string): { node: Node; edge: Edge }[] => {
+        const edges = getEdges().filter((edge) => edge.source === sourceId);
+        return edges.flatMap((edge) => {
+          const node = getNodes().find((n) => n.id === edge.target);
+          return node ? [{ node, edge }] : [];
+        });
+      },
+      [getEdges, getNodes]
+    );
+
+    const executeEmailDraftNode = useCallback(async (node: Node) => {
       if (node.type !== "emailDraft") return null;
 
       setNodes((nodes) =>
@@ -118,17 +122,15 @@ export const BuyerImportNode = memo(
 
         return null;
       }
-    };
+    }, [setNodes]);
 
-    const executeSendNode = async (
-      node: Node,
-      emailData: { subject: string; body: string }
-    ) => {
-      if (node.type !== "sendNode") return false;
+    const executeSendNode = useCallback(
+      async (node: Node, emailData: { subject: string; body: string }) => {
+        if (node.type !== "sendNode") return false;
 
-      setNodes((nodes) =>
-        nodes.map((n) => {
-          if (n.id === node.id) {
+        setNodes((nodes) =>
+          nodes.map((n) => {
+            if (n.id === node.id) {
             return {
               ...n,
               data: {
@@ -211,9 +213,9 @@ export const BuyerImportNode = memo(
 
         return false;
       }
-    };
+    }, [leads, setNodes]);
 
-    const executeSequence = async () => {
+    const executeSequence = useCallback(async () => {
       if (leads.length === 0) {
         alert(
           "바이어 리드 데이터가 없습니다. 리드 데이터를 추가한 후 다시 시도해주세요."
@@ -258,7 +260,14 @@ export const BuyerImportNode = memo(
           }`
         );
       }
-    };
+    }, [executeEmailDraftNode, executeSendNode, findConnectedNodes, id, leads]);
+
+    useEffect(() => {
+      const unregister = registerExecutor(executeSequence);
+      return () => {
+        unregister();
+      };
+    }, [executeSequence, registerExecutor]);
 
     const handleAddDraft = () => {
       const me = getNode(id);
@@ -309,21 +318,6 @@ export const BuyerImportNode = memo(
               <BaseNodeHeaderTitle>
                 {data.title ?? "바이어 리스트 불러오기"}
               </BaseNodeHeaderTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-2 h-6 px-2 nodrag"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  executeSequence();
-                }}
-                title="시퀀스 자동 실행"
-                disabled={leads.length === 0}
-              >
-                시퀀스 자동 실행
-                <Play className="size-4 ml-1 text-green-600" />
-              </Button>
             </div>
             <Button
               variant="outline"

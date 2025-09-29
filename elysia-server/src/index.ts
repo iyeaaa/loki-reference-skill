@@ -32,14 +32,15 @@ const app = new Elysia()
     swagger({
       documentation: {
         info: {
-          title: 'Bulletin Board API',
-          version: '1.0.0',
-          description: 'Simple CRUD API for bulletin board',
+          title: 'SendGrid Email Service API',
+          version: '2.1.0',
+          description:
+            'SendGrid 기반 이메일 관리 시스템 - 이메일 송수신, AI 자동 답장, 주소록 관리, 사용자 인증',
         },
       },
     }),
   )
-  .get('/', () => ({ message: 'Bulletin Board API', version: '1.0.0' }))
+  .get('/', () => ({ message: 'SendGrid Email Service API', version: '2.1.0' }))
 
   // Register routes
   .use(healthRoutes)

@@ -3,6 +3,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
 /* Always show horizontal scrollbar for tables */
 .overflow-x-auto {
   overflow-x: auto !important;

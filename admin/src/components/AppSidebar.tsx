@@ -28,6 +28,11 @@ const menuItems = [
     url: "/bulletin",
     icon: ClipboardList,
   },
+  {
+    title: "Email Sequence",
+    url: "/email-sequence",
+    icon: ClipboardList,
+  },
 ]
 
 export function AppSidebar() {

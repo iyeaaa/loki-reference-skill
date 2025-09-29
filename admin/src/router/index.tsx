@@ -6,6 +6,9 @@ import RootLayout from "../layouts/RootLayout"
 import BulletinBoardPage from "../pages/bulletin/BulletinBoardPage"
 import DashboardPage from "../pages/dashboard/DashboardPage"
 import EnvTestPage from "../pages/EnvTestPage"
+// import TestEmailSequencePage from "../pages/email-sequence/TestEmailSequencePage"
+import WorkspaceListPage from "../pages/email-sequence/WorkspaceListPage"
+import WorkspaceFlowPage from "../pages/email-sequence/WorkspaceFlowPage"
 import LoginPage from "../pages/LoginPage"
 import UsersPage from "../pages/users/UsersPage"
 
@@ -53,6 +56,14 @@ export const router = createBrowserRouter([
           {
             path: "env-test",
             element: <EnvTestPage />,
+          },
+          {
+            path: "email-sequence",
+            element: <WorkspaceListPage />,
+          },
+          {
+            path: "email-sequence/workspace",
+            element: <WorkspaceFlowPage />,
           },
         ],
       },

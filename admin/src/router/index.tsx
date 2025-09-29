@@ -6,10 +6,12 @@ import RootLayout from "../layouts/RootLayout"
 import CampaignsPage from "../pages/campaigns"
 import CustomerGroupsPage from "../pages/customer-groups"
 import DashboardPage from "../pages/dashboard/DashboardPage"
+import EmailTemplatesPage from "../pages/email-templates"
 import LoginPage from "../pages/LoginPage"
 import LeadsPage from "../pages/leads"
 import RepliedEmailsPage from "../pages/replied-emails"
 import SequencesPage from "../pages/sequences"
+import SettingsPage from "../pages/settings"
 import UsersPage from "../pages/users/UsersPage"
 import WorkspacesPage from "../pages/workspaces"
 
@@ -63,6 +65,10 @@ export const router = createBrowserRouter([
             element: <SequencesPage />,
           },
           {
+            path: "email-templates",
+            element: <EmailTemplatesPage />,
+          },
+          {
             path: "replied-emails",
             element: <RepliedEmailsPage />,
           },
@@ -73,6 +79,10 @@ export const router = createBrowserRouter([
           {
             path: "users",
             element: <UsersPage />,
+          },
+          {
+            path: "settings",
+            element: <SettingsPage />,
           },
         ],
       },

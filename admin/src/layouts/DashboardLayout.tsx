@@ -72,8 +72,8 @@ function DashboardContent() {
             </button>
           </div>
         </header>
-        <main className="flex-1 overflow-hidden">
-          <div className="h-full p-4">
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-4">
             <Outlet />
           </div>
         </main>
@@ -112,22 +112,20 @@ const getPageName = (pathname: string) => {
   switch (pathname) {
     case "/dashboard":
       return "고객 모니터링"
-    case "/campaigns":
-      return "캠페인"
     case "/leads":
       return "전체 고객 관리"
     case "/customer-groups":
       return "고객 그룹 관리"
     case "/sequences":
       return "팔로우업 시퀀스 관리"
+    case "/email-templates":
+      return "메일 템플릿 관리"
     case "/replied-emails":
-      return "답장 관리"
+      return "고객 답장 관리"
     case "/workspaces":
-      return "워크스페이스"
+      return "워크스페이스 관리"
     case "/users":
-      return "사용자"
-    case "/translations":
-      return "번역 관리"
+      return "유저 관리"
     case "/settings":
       return "설정"
     default:

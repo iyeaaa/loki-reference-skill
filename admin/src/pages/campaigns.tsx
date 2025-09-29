@@ -1,19 +1,4 @@
-import {
-  Activity,
-  Calendar,
-  Clock,
-  Filter,
-  Mail,
-  MoreHorizontal,
-  Pause,
-  Play,
-  Plus,
-  Search,
-  Target,
-  TrendingUp,
-  Users,
-  Zap,
-} from "lucide-react"
+import { Activity, Filter, Mail, MoreHorizontal, Plus, Search } from "lucide-react"
 import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -147,26 +132,11 @@ export default function CampaignsPage() {
   const getStatusBadge = (status: Campaign["status"]) => {
     switch (status) {
       case "active":
-        return (
-          <Badge className="bg-green-500">
-            <Play className="h-3 w-3 mr-1" />
-            진행중
-          </Badge>
-        )
+        return <Badge variant="default">진행중</Badge>
       case "paused":
-        return (
-          <Badge variant="secondary">
-            <Pause className="h-3 w-3 mr-1" />
-            일시정지
-          </Badge>
-        )
+        return <Badge variant="secondary">일시정지</Badge>
       case "scheduled":
-        return (
-          <Badge variant="outline">
-            <Clock className="h-3 w-3 mr-1" />
-            예약됨
-          </Badge>
-        )
+        return <Badge variant="outline">예약됨</Badge>
       case "completed":
         return <Badge variant="default">완료</Badge>
       case "draft":
@@ -177,26 +147,11 @@ export default function CampaignsPage() {
   const getTypeBadge = (type: Campaign["type"]) => {
     switch (type) {
       case "email":
-        return (
-          <Badge variant="outline">
-            <Mail className="h-3 w-3 mr-1" />
-            이메일
-          </Badge>
-        )
+        return <Badge variant="outline">이메일</Badge>
       case "sequence":
-        return (
-          <Badge variant="outline">
-            <Zap className="h-3 w-3 mr-1" />
-            시퀀스
-          </Badge>
-        )
+        return <Badge variant="outline">시퀀스</Badge>
       case "ai-optimized":
-        return (
-          <Badge variant="outline">
-            <Target className="h-3 w-3 mr-1" />
-            AI 최적화
-          </Badge>
-        )
+        return <Badge variant="outline">AI 최적화</Badge>
     }
   }
 
@@ -321,10 +276,7 @@ export default function CampaignsPage() {
                       <h3 className="font-semibold text-lg">{campaign.name}</h3>
                       {getStatusBadge(campaign.status)}
                       {getTypeBadge(campaign.type)}
-                      <Badge variant="secondary">
-                        <Users className="h-3 w-3 mr-1" />
-                        {campaign.targetGroup}
-                      </Badge>
+                      <Badge variant="secondary">{campaign.targetGroup}</Badge>
                     </div>
 
                     <div className="grid grid-cols-5 gap-4 text-sm">
@@ -337,12 +289,7 @@ export default function CampaignsPage() {
                       </div>
                       <div>
                         <p className="text-muted-foreground">오픈율</p>
-                        <p className="font-medium flex items-center">
-                          {campaign.openRate}%
-                          {campaign.openRate > 60 && (
-                            <TrendingUp className="h-3 w-3 ml-1 text-green-500" />
-                          )}
-                        </p>
+                        <p className="font-medium">{campaign.openRate}%</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">클릭률</p>
@@ -356,8 +303,7 @@ export default function CampaignsPage() {
                         <p className="text-muted-foreground">
                           {campaign.scheduledDate ? "예약 시간" : "생성일"}
                         </p>
-                        <p className="font-medium flex items-center">
-                          <Calendar className="h-3 w-3 mr-1" />
+                        <p className="font-medium">
                           {campaign.scheduledDate || campaign.createdDate}
                         </p>
                       </div>

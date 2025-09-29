@@ -1,13 +1,15 @@
-name: Deploy to EC2
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main, develop, 'feature/**', 'refactor/**']
+  pull_request:
+    branches: [main, develop]
 
 jobs:
-  # Frontend 타입 체크
+  # Frontend 타입 체크 및 린트
   frontend-check:
-    name: Frontend - Admin Dashboard Check
+    name: Frontend - Type Check & Lint
     runs-on: ubuntu-latest
 
     steps:
@@ -19,32 +21,36 @@ jobs:
       with:
         node-version: '20'
 
-    - name: Install Yarn Berry
+    - name: Setup Yarn Berry
       run: |
         corepack enable
         corepack prepare yarn@4.10.3 --activate
 
-    - name: Frontend - Install Dependencies
-      working-directory: ./admin
-      run: |
-        echo "📦 Installing frontend dependencies..."
-        yarn install --immutable
+    - name: Cache Yarn dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          admin/.yarn/cache
+          admin/.pnp.*
+        key: ${{ runner.os }}-yarn-${{ hashFiles('admin/yarn.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-yarn-
 
-    - name: Frontend - TypeScript Check
+    - name: Install dependencies
       working-directory: ./admin
-      run: |
-        echo "🔍 Frontend TypeScript type checking..."
-        yarn type-check
+      run: yarn install --immutable
 
-    - name: Frontend - Lint Check
+    - name: TypeScript type check
       working-directory: ./admin
-      run: |
-        echo "✨ Frontend Biome lint checking..."
-        yarn lint:check
+      run: yarn type-check
 
-  # Backend 타입 체크
+    - name: Biome lint check
+      working-directory: ./admin
+      run: yarn lint:check || yarn run biome check ./src
+
+  # Backend 타입 체크 및 린트
   backend-check:
-    name: Backend - Elysia Server Check
+    name: Backend - Type Check & Lint
     runs-on: ubuntu-latest
 
     steps:
@@ -56,30 +62,34 @@ jobs:
       with:
         bun-version: 'latest'
 
-    - name: Backend - Install Dependencies
-      working-directory: ./elysia-server
-      run: |
-        echo "📦 Installing backend dependencies..."
-        bun install
+    - name: Cache Bun dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          elysia-server/node_modules
+          ~/.bun/install/cache
+        key: ${{ runner.os }}-bun-${{ hashFiles('elysia-server/package.json', 'elysia-server/bun.lockb') }}
+        restore-keys: |
+          ${{ runner.os }}-bun-
 
-    - name: Backend - TypeScript Check
+    - name: Install dependencies
       working-directory: ./elysia-server
-      run: |
-        echo "🔍 Backend TypeScript type checking..."
-        bun run tsc --noEmit || (bun add -d typescript && bun run tsc --noEmit)
+      run: bun install
 
-    - name: Backend - Lint Check
+    - name: TypeScript type check
       working-directory: ./elysia-server
-      run: |
-        echo "✨ Backend Biome lint checking..."
-        bun run lint:check
+      run: bun run tsc --noEmit || (bun add -d typescript && bun run tsc --noEmit)
 
-  # 전체 검증 완료 후 배포
+    - name: Biome lint check
+      working-directory: ./elysia-server
+      run: bun run lint:check
+
+  # Main 브랜치 푸시 시에만 배포
   deploy:
     name: Deploy to EC2
     runs-on: ubuntu-latest
     needs: [frontend-check, backend-check]
-    if: success()
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
     - name: Checkout code

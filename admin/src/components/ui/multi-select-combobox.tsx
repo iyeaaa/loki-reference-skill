@@ -92,9 +92,11 @@ export function MultiSelectCombobox({
                 selectedOptions.map((option) => (
                   <Badge key={option.value} variant="outline" className="mr-1">
                     {option.label}
-                    <button
-                      type="button"
-                      className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer bg-transparent border-0 p-0"
+                    {/* biome-ignore lint/a11y/useSemanticElements: Avoiding nested button elements */}
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer bg-transparent border-0 p-0 inline-flex items-center"
                       onMouseDown={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
@@ -109,15 +111,17 @@ export function MultiSelectCombobox({
                       aria-label={`Remove ${option.label}`}
                     >
                       <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                    </button>
+                    </span>
                   </Badge>
                 ))
               ) : (
                 <Badge variant="outline" className="mr-1">
                   {selectedOptions.length}개 선택됨
-                  <button
-                    type="button"
-                    className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer bg-transparent border-0 p-0"
+                  {/* biome-ignore lint/a11y/useSemanticElements: Avoiding nested button elements */}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer bg-transparent border-0 p-0 inline-flex items-center"
                     onMouseDown={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
@@ -132,7 +136,7 @@ export function MultiSelectCombobox({
                     aria-label="Clear all selections"
                   >
                     <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                  </button>
+                  </span>
                 </Badge>
               )
             ) : (

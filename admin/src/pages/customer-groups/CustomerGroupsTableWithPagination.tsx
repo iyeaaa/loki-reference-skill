@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Edit, UserPlus, Users } from "lucide-react"
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -29,14 +29,33 @@ export function CustomerGroupsTableWithPagination({
 }: CustomerGroupsTableWithPaginationProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
+  const [currentWorkspace, setCurrentWorkspace] = useState(() =>
+    localStorage.getItem("selectedWorkspace") || "all"
+  )
   const limit = 10
+
+  // localStorage 변경 감지
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const workspace = localStorage.getItem("selectedWorkspace") || "all"
+      if (workspace !== currentWorkspace) {
+        setCurrentWorkspace(workspace)
+        setCurrentPage(1) // 워크스페이스 변경 시 첫 페이지로
+      }
+    }, 100)
+
+    return () => clearInterval(interval)
+  }, [currentWorkspace])
+
+  const workspaceFilter = currentWorkspace === "all" ? undefined : [currentWorkspace]
 
   // Build params for API call
   const params: CustomerGroupsParams = {
     page: currentPage,
     limit: limit,
     search: searchQuery || undefined,
-    workspaceIds: selectedWorkspaces.length > 0 ? selectedWorkspaces : undefined,
+    workspaceIds:
+      workspaceFilter || (selectedWorkspaces.length > 0 ? selectedWorkspaces : undefined),
   }
 
   // Use React Query hook for fetching customer groups

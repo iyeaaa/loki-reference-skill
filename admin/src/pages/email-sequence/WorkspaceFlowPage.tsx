@@ -1,25 +1,23 @@
-import ReactFlowApp from "@/components/react-flow-app";
-import { useAtom } from "jotai";
-import { selectedWorkspaceIdAtom, workspacesAtom } from "@/lib/workspace";
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAtom } from "jotai"
+import { useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+import ReactFlowApp from "@/components/react-flow-app"
+import { selectedWorkspaceIdAtom, workspacesAtom } from "@/lib/workspace"
 
 export default function WorkspaceFlowPage() {
-  const navigate = useNavigate();
-  const [selected] = useAtom(selectedWorkspaceIdAtom);
-  const [workspaces] = useAtom(workspacesAtom);
+  const navigate = useNavigate()
+  const [selected] = useAtom(selectedWorkspaceIdAtom)
+  const [workspaces] = useAtom(workspacesAtom)
 
   useEffect(() => {
     if (!selected || !workspaces.find((w) => w.id === selected)) {
-      navigate("/email-sequence");
+      navigate("/email-sequence")
     }
-  }, [selected, workspaces, navigate]);
+  }, [selected, workspaces, navigate])
 
   return (
     <div className="h-[calc(100vh-4rem)] w-full">
       <ReactFlowApp />
     </div>
-  );
+  )
 }
-
-

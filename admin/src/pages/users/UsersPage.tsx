@@ -19,14 +19,7 @@ import {
 } from "@/lib/api/hooks/users"
 import { departmentsApi } from "@/lib/api/services/departments"
 import { languagesApi } from "@/lib/api/services/languages"
-import type {
-  Department,
-  Language,
-  UpdateUserRequest,
-  User,
-  UserRole,
-  UsersParams,
-} from "@/lib/api/types/user"
+import type { Department, Language, User, UserRole, UsersParams } from "@/lib/api/types/user"
 import { formatRelativeTime } from "@/lib/date-utils"
 import { BulkActionModal } from "./BulkActionModal"
 import { PasswordChangeDialog } from "./PasswordChangeDialog"

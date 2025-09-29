@@ -9,6 +9,6 @@ export const posts = pgTable('posts', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
 
+export * from './schema/address-book'
 // Re-export user schema
 export * from './schema/users'
-export * from './schema/address-book'

@@ -143,5 +143,3 @@ export const addressBookRoutes = new Elysia({ prefix: '/api/v1/address-book' })
       }),
     },
   )
-
-

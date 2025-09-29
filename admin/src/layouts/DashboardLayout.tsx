@@ -1,3 +1,4 @@
+import { useAtomValue } from "jotai"
 import { Play, User } from "lucide-react"
 import { useState } from "react"
 import { Outlet, useLocation } from "react-router-dom"
@@ -14,12 +15,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { useAtomValue } from "jotai"
 import { leadsAtom } from "@/lib/atoms"
-import {
-  SequenceControlProvider,
-  useSequenceControl,
-} from "@/lib/sequence-control-context"
+import { SequenceControlProvider, useSequenceControl } from "@/lib/sequence-control-context"
 
 const getPageName = (pathname: string) => {
   switch (pathname) {
@@ -99,9 +96,7 @@ function DashboardLayoutContent() {
                   onClick={handleExecuteSequence}
                   disabled={!hasLeads || executingSequence}
                   title={
-                    hasLeads
-                      ? "시퀀스를 자동으로 실행합니다"
-                      : "바이어 리드 데이터가 필요합니다"
+                    hasLeads ? "시퀀스를 자동으로 실행합니다" : "바이어 리드 데이터가 필요합니다"
                   }
                 >
                   {executingSequence ? "실행 중..." : "시퀀스 자동 실행"}

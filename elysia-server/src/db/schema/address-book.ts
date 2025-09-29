@@ -72,5 +72,3 @@ export type AddressBookGroup = typeof addressBookGroups.$inferSelect
 export type NewAddressBookGroup = typeof addressBookGroups.$inferInsert
 export type AddressBookContact = typeof addressBookContacts.$inferSelect
 export type NewAddressBookContact = typeof addressBookContacts.$inferInsert
-
-

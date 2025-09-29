@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# Change to admin directory and run lint-staged
-cd admin && npx lint-staged
+# Change to admin directory and run biome check with yarn
+cd admin && yarn run check
 
-# Change to elysia-server directory and run biome check
+# Change to elysia-server directory and run biome check with bun
 cd ../elysia-server && bun run lint:check

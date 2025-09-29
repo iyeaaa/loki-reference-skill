@@ -1,5 +1,3 @@
-import toast from "react-hot-toast"
-
 // API Configuration
 export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001"
 
@@ -46,40 +44,34 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     const mutableHeaders = headers as Record<string, string>
     delete mutableHeaders["Content-Type"]
   }
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  })
 
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      let message: string
-      try {
-        const errorData = JSON.parse(errorText)
-        message = errorData.message || errorData.error || `Request failed (${response.status})`
-      } catch {
-        message = errorText.trim() || `Request failed (${response.status})`
-      }
-      throw new Error(message)
+  if (!response.ok) {
+    const errorText = await response.text()
+    let message: string
+    try {
+      const errorData = JSON.parse(errorText)
+      message = errorData.message || errorData.error || `Request failed (${response.status})`
+    } catch {
+      message = errorText.trim() || `Request failed (${response.status})`
     }
-
-    // Handle 204 No Content
-    if (response.status === 204) {
-      return null as T
-    }
-
-    const result = await response.json()
-
-    // Handle wrapped API responses from Elysia backend
-    if (result && typeof result === "object" && "success" in result && "data" in result) {
-      return result.data as T
-    }
-
-    return result as T
-  } catch (error) {
-    // Don't show toast here - let the hooks handle error messaging
-    throw error
+    throw new Error(message)
   }
+
+  // Handle 204 No Content
+  if (response.status === 204) {
+    return null as T
+  }
+
+  const result = await response.json()
+
+  // Handle wrapped API responses from Elysia backend
+  if (result && typeof result === "object" && "success" in result && "data" in result) {
+    return result.data as T
+  }
+
+  return result as T
 }

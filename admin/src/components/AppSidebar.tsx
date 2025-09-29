@@ -1,4 +1,4 @@
-import { BarChart3, ClipboardList, Settings, Users, Notebook } from "lucide-react"
+import { BarChart3, ClipboardList, Notebook, Settings, Users } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import {
   Sidebar,

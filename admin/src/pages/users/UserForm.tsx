@@ -28,7 +28,6 @@ interface UserFormProps {
   user?: User
   isEdit?: boolean
   departments: Department[]
-  languages?: any[]
   onSave: (userData: unknown) => Promise<void> | void
   onCancel: () => void
 }
@@ -37,7 +36,6 @@ export function UserForm({
   user,
   isEdit = false,
   departments = [],
-  languages,
   onSave,
   onCancel,
 }: UserFormProps) {

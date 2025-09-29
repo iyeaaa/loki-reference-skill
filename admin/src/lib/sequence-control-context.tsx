@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react"
 import type { ReactNode } from "react"
+import { createContext, useCallback, useContext, useMemo, useState } from "react"
 
 type SequenceExecutor = (() => Promise<void>) | undefined
 
@@ -32,11 +32,7 @@ export function SequenceControlProvider({ children }: { children: ReactNode }) {
     [executor, registerExecutor]
   )
 
-  return (
-    <SequenceControlContext.Provider value={value}>
-      {children}
-    </SequenceControlContext.Provider>
-  )
+  return <SequenceControlContext.Provider value={value}>{children}</SequenceControlContext.Provider>
 }
 
 export function useSequenceControl() {

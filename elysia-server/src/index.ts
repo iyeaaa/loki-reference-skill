@@ -6,6 +6,8 @@ import { migrateDatabase } from './db/migrate'
 import { errorHandler } from './plugins/error-handler.plugin'
 import { responseTransformer } from './plugins/response-transformer.plugin'
 import { simpleLogger } from './plugins/simple-logger.plugin'
+import { addressBookRoutes } from './routes/address-book.routes'
+import { aiRoutes } from './routes/ai.routes'
 import { authRoutes } from './routes/auth.routes'
 import { departmentsRoutes } from './routes/departments.routes'
 import { emailRoutes } from './routes/email.routes'
@@ -14,8 +16,6 @@ import { healthRoutes } from './routes/health.routes'
 import { postRoutes } from './routes/post.routes'
 import { userRoutes } from './routes/users.routes'
 import { webhookRoutes } from './routes/webhook.routes'
-import { aiRoutes } from './routes/ai.routes'
-import { addressBookRoutes } from './routes/address-book.routes'
 
 // Initialize database
 migrateDatabase().catch(console.error)

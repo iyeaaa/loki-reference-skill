@@ -1,80 +1,63 @@
-import { useAtom } from "jotai";
-import { useState, useEffect } from "react";
-import { leadsAtom, emailDraftsAtom } from "../lib/atoms";
-import { Modal } from "./ui/modal";
+import { useAtom } from "jotai"
+import { useEffect, useId, useState } from "react"
+import { emailDraftsAtom, leadsAtom } from "../lib/atoms"
+import { Modal } from "./ui/modal"
 
-export default function EmailDraftModal({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+export default function EmailDraftModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
 
   return (
-    <Modal
-      className="w-[900px] fixed"
-      open={open}
-      onClose={onClose}
-      title="이메일 초안 작성"
-    >
+    <Modal className="w-[900px] fixed" open={open} onClose={onClose} title="이메일 초안 작성">
       {/* 빈 컨텐츠 */}
       <div className="flex gap-4 ">
-        <SelectableLeadsList
-          onSelectLead={setSelectedLeadId}
-          selectedLeadId={selectedLeadId}
-        />
+        <SelectableLeadsList onSelectLead={setSelectedLeadId} selectedLeadId={selectedLeadId} />
         <EmailDraftContent selectedLeadId={selectedLeadId} />
       </div>
     </Modal>
-  );
+  )
 }
 
 const SelectableLeadsList = ({
   onSelectLead,
   selectedLeadId,
 }: {
-  onSelectLead: (id: string) => void;
-  selectedLeadId: string | null;
+  onSelectLead: (id: string) => void
+  selectedLeadId: string | null
 }) => {
-  const [leads] = useAtom(leadsAtom);
-  const [emailDrafts] = useAtom(emailDraftsAtom);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const [leads] = useAtom(leadsAtom)
+  const [emailDrafts] = useAtom(emailDraftsAtom)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 5
 
-  const totalPages = Math.ceil(leads.length / itemsPerPage);
+  const totalPages = Math.ceil(leads.length / itemsPerPage)
 
-  const currentLeads = leads.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const currentLeads = leads.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   return (
     <div className="w-[200px] flex flex-col">
       <div className="flex-1 flex flex-col gap-4 py-2">
         {currentLeads.map((lead) => (
-          <div
+          <button
+            type="button"
             onClick={() => onSelectLead(lead.id)}
             key={lead.id}
-            className={`cursor-pointer p-2 rounded ${
+            className={`w-full text-left cursor-pointer p-2 rounded ${
               selectedLeadId === lead.id ? "bg-blue-100" : "hover:bg-gray-50"
             }`}
           >
             <p className="font-semibold">{lead.company}</p>
             <p className="text-[10px] text-gray-500">{lead.email}</p>
             {emailDrafts[lead.id] && (
-              <div className="mt-1 text-[10px] text-green-600">
-                저장된 초안 있음
-              </div>
+              <div className="mt-1 text-[10px] text-green-600">저장된 초안 있음</div>
             )}
-          </div>
+          </button>
         ))}
       </div>
 
       {/* Pagination controls */}
       <div className="flex justify-between items-center border-t border-gray-200 pt-2 mt-2 px-2">
         <button
+          type="button"
           onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
           disabled={currentPage === 1}
           className="text-sm px-2 py-1 disabled:opacity-50"
@@ -85,9 +68,8 @@ const SelectableLeadsList = ({
           {currentPage} / {totalPages}
         </span>
         <button
-          onClick={() =>
-            setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-          }
+          type="button"
+          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
           disabled={currentPage === totalPages}
           className="text-sm px-2 py-1 disabled:opacity-50"
         >
@@ -95,91 +77,85 @@ const SelectableLeadsList = ({
         </button>
       </div>
     </div>
-  );
-};
+  )
+}
 
-const EmailDraftContent = ({
-  selectedLeadId,
-}: {
-  selectedLeadId: string | null;
-}) => {
-  const [leads] = useAtom(leadsAtom);
-  const [emailDrafts, setEmailDrafts] = useAtom(emailDraftsAtom);
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-  const [saveStatus, setSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
+const EmailDraftContent = ({ selectedLeadId }: { selectedLeadId: string | null }) => {
+  const [leads] = useAtom(leadsAtom)
+  const [emailDrafts, setEmailDrafts] = useAtom(emailDraftsAtom)
+  const [subject, setSubject] = useState("")
+  const [body, setBody] = useState("")
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
+  const subjectInputId = useId()
+  const bodyTextareaId = useId()
 
   // Find the selected lead
-  const selectedLead = selectedLeadId
-    ? leads.find((lead) => lead.id === selectedLeadId)
-    : null;
+  const selectedLead = selectedLeadId ? leads.find((lead) => lead.id === selectedLeadId) : null
 
   // Load draft when lead changes
   useEffect(() => {
     if (selectedLeadId) {
-      const draft = emailDrafts[selectedLeadId];
+      const draft = emailDrafts[selectedLeadId]
       if (draft) {
-        setSubject(draft.subject);
-        setBody(draft.body);
+        setSubject(draft.subject)
+        setBody(draft.body)
       } else {
         // Reset form if no draft exists
-        setSubject("");
-        setBody("");
+        setSubject("")
+        setBody("")
       }
     }
-    setSaveStatus("idle");
-  }, [selectedLeadId, emailDrafts]);
+    setSaveStatus("idle")
+  }, [selectedLeadId, emailDrafts])
 
   const handleSave = () => {
-    if (!selectedLeadId) return;
+    if (!selectedLeadId) return
 
-    setSaveStatus("saving");
+    setSaveStatus("saving")
     try {
       // Update the drafts atom
       setEmailDrafts((prev) => ({
         ...prev,
         [selectedLeadId]: { subject, body },
-      }));
+      }))
 
-      setSaveStatus("saved");
+      setSaveStatus("saved")
 
       // Reset status after 2 seconds
       setTimeout(() => {
-        setSaveStatus("idle");
-      }, 2000);
+        setSaveStatus("idle")
+      }, 2000)
     } catch (error) {
-      console.error("Failed to save draft:", error);
-      setSaveStatus("error");
+      console.error("Failed to save draft:", error)
+      setSaveStatus("error")
     }
-  };
+  }
 
   return (
     <div className="p-4 flex flex-col gap-6 w-full">
       {selectedLead ? (
         <>
           <div className="text-sm mb-2">
-            <span className="font-medium">선택된 회사:</span>{" "}
-            {selectedLead.company} ({selectedLead.email})
+            <span className="font-medium">선택된 회사:</span> {selectedLead.company} (
+            {selectedLead.email})
           </div>
 
           <div className="flex flex-col gap-2">
-            <label htmlFor="subject">제목</label>
+            <label htmlFor={subjectInputId}>제목</label>
             <input
               className="w-full border border-gray-200 p-2 rounded-2xl"
               type="text"
-              id="subject"
+              id={subjectInputId}
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <label htmlFor="body">본문</label>
+            <label htmlFor={bodyTextareaId}>본문</label>
             <textarea
               className="w-full border border-gray-200 p-2 rounded-2xl resize-none"
-              id="body"
+              id={bodyTextareaId}
               rows={7}
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -188,6 +164,7 @@ const EmailDraftContent = ({
 
           <div className="flex justify-end gap-2">
             <button
+              type="button"
               onClick={handleSave}
               disabled={saveStatus === "saving"}
               className="px-4 py-2 bg-black text-white rounded hover:bg-black/80 disabled:opacity-50"
@@ -195,10 +172,10 @@ const EmailDraftContent = ({
               {saveStatus === "saving"
                 ? "저장 중..."
                 : saveStatus === "saved"
-                ? "저장됨"
-                : saveStatus === "error"
-                ? "저장 실패"
-                : "임시 저장"}
+                  ? "저장됨"
+                  : saveStatus === "error"
+                    ? "저장 실패"
+                    : "임시 저장"}
             </button>
           </div>
         </>
@@ -208,5 +185,5 @@ const EmailDraftContent = ({
         </div>
       )}
     </div>
-  );
-};
+  )
+}

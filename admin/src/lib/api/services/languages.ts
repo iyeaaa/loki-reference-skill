@@ -1,4 +1,3 @@
-import { apiFetch } from "@/lib/api/client"
 import type { Language } from "../types/user"
 
 export const languagesApi = {

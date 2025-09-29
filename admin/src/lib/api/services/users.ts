@@ -1,5 +1,16 @@
 import { apiFetch } from "@/lib/api/client"
-import type { User, UserStats, UsersParams, UsersResponse } from "../types"
+import type { User, UserStats, UsersParams } from "../types"
+
+interface CreateUserData {
+  username: string
+  email: string
+  password?: string
+  userRole: string
+  isActive: boolean
+  departmentId: number
+  employeeId: string
+}
+
 export const usersApi = {
   list: (params?: UsersParams) => {
     const searchParams = new URLSearchParams()
@@ -59,7 +70,7 @@ export const usersApi = {
     return stats
   },
 
-  create: (data: any) => {
+  create: (data: CreateUserData) => {
     return apiFetch<User>("/api/v1/users", {
       method: "POST",
       body: JSON.stringify({

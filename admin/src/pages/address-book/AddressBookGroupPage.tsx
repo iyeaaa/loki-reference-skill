@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
-import { addressBookApi, type AddressBookContact, type AddressBookGroup } from "@/lib/api/services/address-book"
 import { Button } from "@/components/ui/button"
+import {
+  type AddressBookContact,
+  type AddressBookGroup,
+  addressBookApi,
+} from "@/lib/api/services/address-book"
 
 export default function AddressBookGroupPage() {
   const params = useParams()
@@ -41,11 +45,23 @@ export default function AddressBookGroupPage() {
   return (
     <div className="p-4 space-y-4">
       <div className="text-xl font-semibold">{group.name}</div>
-      {group.description && <div className="text-sm text-muted-foreground">{group.description}</div>}
+      {group.description && (
+        <div className="text-sm text-muted-foreground">{group.description}</div>
+      )}
 
       <div className="flex items-center gap-2">
-        <input className="border rounded px-2 py-1" placeholder="회사명" value={company} onChange={(e) => setCompany(e.target.value)} />
-        <input className="border rounded px-2 py-1" placeholder="이메일" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input
+          className="border rounded px-2 py-1"
+          placeholder="회사명"
+          value={company}
+          onChange={(e) => setCompany(e.target.value)}
+        />
+        <input
+          className="border rounded px-2 py-1"
+          placeholder="이메일"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
         <Button onClick={add}>추가</Button>
       </div>
 
@@ -71,7 +87,9 @@ export default function AddressBookGroupPage() {
                   <td className="px-2 py-1 font-medium">{c.company}</td>
                   <td className="px-2 py-1 text-muted-foreground text-xs">
                     {c.industryType && <div>{c.industryType}</div>}
-                    {c.productCategory && <div className="text-xs opacity-70">{c.productCategory}</div>}
+                    {c.productCategory && (
+                      <div className="text-xs opacity-70">{c.productCategory}</div>
+                    )}
                   </td>
                   <td className="px-2 py-1 text-muted-foreground text-xs">{c.country}</td>
                   <td className="px-2 py-1 text-muted-foreground text-xs max-w-[200px]">
@@ -100,7 +118,9 @@ export default function AddressBookGroupPage() {
                     )}
                   </td>
                   <td className="px-2 py-1 text-right">
-                    <Button variant="ghost" size="sm" onClick={() => remove(c.id)}>삭제</Button>
+                    <Button variant="ghost" size="sm" onClick={() => remove(c.id)}>
+                      삭제
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -111,5 +131,3 @@ export default function AddressBookGroupPage() {
     </div>
   )
 }
-
-

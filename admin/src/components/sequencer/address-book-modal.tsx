@@ -1,14 +1,10 @@
-"use client";
+"use client"
 
-import { useState, useEffect, useMemo } from "react";
-import { Modal } from "@/components/ui/modal";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
-import {
-  addressBookApi,
-  type AddressBookGroup,
-} from "@/lib/api/services/address-book";
+import { Search } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Modal } from "@/components/ui/modal"
 import {
   Pagination,
   PaginationContent,
@@ -17,70 +13,63 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination";
+} from "@/components/ui/pagination"
+import { type AddressBookGroup, addressBookApi } from "@/lib/api/services/address-book"
 
 interface AddressBookModalProps {
-  open: boolean;
-  onClose: () => void;
-  onSelectGroup: (groupId: string) => Promise<void>;
+  open: boolean
+  onClose: () => void
+  onSelectGroup: (groupId: string) => Promise<void>
 }
 
-export function AddressBookModal({
-  open,
-  onClose,
-  onSelectGroup,
-}: AddressBookModalProps) {
-  const [groups, setGroups] = useState<AddressBookGroup[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+export function AddressBookModal({ open, onClose, onSelectGroup }: AddressBookModalProps) {
+  const [groups, setGroups] = useState<AddressBookGroup[]>([])
+  const [loading, setLoading] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   // 그룹 데이터 로드
   useEffect(() => {
-    if (!open) return;
+    if (!open) return
 
     const fetchGroups = async () => {
-      setLoading(true);
+      setLoading(true)
       try {
-        const res = await addressBookApi.listGroups({ limit: 100 });
-        setGroups(res.groups);
+        const res = await addressBookApi.listGroups({ limit: 100 })
+        setGroups(res.groups)
       } catch (error) {
-        console.error("주소록 그룹 로드 오류:", error);
+        console.error("주소록 그룹 로드 오류:", error)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchGroups();
-  }, [open]);
+    fetchGroups()
+  }, [open])
 
   // 검색 필터링된 그룹
   const filteredGroups = useMemo(() => {
-    if (!searchTerm) return groups;
+    if (!searchTerm) return groups
 
-    const term = searchTerm.toLowerCase();
+    const term = searchTerm.toLowerCase()
     return groups.filter(
       (group) =>
-        group.name.toLowerCase().includes(term) ||
-        (group.description && group.description.toLowerCase().includes(term))
-    );
-  }, [groups, searchTerm]);
+        group.name.toLowerCase().includes(term) || group.description?.toLowerCase().includes(term)
+    )
+  }, [groups, searchTerm])
 
   // 페이지네이션
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredGroups.length / itemsPerPage)
-  );
+  const totalPages = Math.max(1, Math.ceil(filteredGroups.length / itemsPerPage))
   const paginatedGroups = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredGroups.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredGroups, currentPage, itemsPerPage]);
+    const startIndex = (currentPage - 1) * itemsPerPage
+    return filteredGroups.slice(startIndex, startIndex + itemsPerPage)
+  }, [filteredGroups, currentPage])
 
   // 검색어 변경 시 첫 페이지로 이동
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
+    setCurrentPage(1)
+  }, [])
 
   return (
     <Modal
@@ -110,9 +99,7 @@ export function AddressBookModal({
         {loading ? (
           <div className="text-center py-8">
             <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent"></div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              그룹 로딩 중...
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">그룹 로딩 중...</p>
           </div>
         ) : groups.length === 0 ? (
           <div className="text-sm text-muted-foreground text-center py-8">
@@ -141,10 +128,7 @@ export function AddressBookModal({
                         {group.description || "-"}
                       </td>
                       <td className="px-4 py-2">
-                        <Button
-                          size="sm"
-                          onClick={() => onSelectGroup(group.id)}
-                        >
+                        <Button size="sm" onClick={() => onSelectGroup(group.id)}>
                           선택
                         </Button>
                       </td>
@@ -160,13 +144,9 @@ export function AddressBookModal({
                   <PaginationContent>
                     <PaginationItem>
                       <PaginationPrevious
-                        onClick={() =>
-                          setCurrentPage(Math.max(1, currentPage - 1))
-                        }
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                         className={
-                          currentPage === 1
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer"
+                          currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"
                         }
                       />
                     </PaginationItem>
@@ -174,9 +154,7 @@ export function AddressBookModal({
                     {/* First page */}
                     {currentPage > 2 && (
                       <PaginationItem>
-                        <PaginationLink onClick={() => setCurrentPage(1)}>
-                          1
-                        </PaginationLink>
+                        <PaginationLink onClick={() => setCurrentPage(1)}>1</PaginationLink>
                       </PaginationItem>
                     )}
 
@@ -190,9 +168,7 @@ export function AddressBookModal({
                     {/* Previous page */}
                     {currentPage > 1 && (
                       <PaginationItem>
-                        <PaginationLink
-                          onClick={() => setCurrentPage(currentPage - 1)}
-                        >
+                        <PaginationLink onClick={() => setCurrentPage(currentPage - 1)}>
                           {currentPage - 1}
                         </PaginationLink>
                       </PaginationItem>
@@ -206,9 +182,7 @@ export function AddressBookModal({
                     {/* Next page */}
                     {currentPage < totalPages && (
                       <PaginationItem>
-                        <PaginationLink
-                          onClick={() => setCurrentPage(currentPage + 1)}
-                        >
+                        <PaginationLink onClick={() => setCurrentPage(currentPage + 1)}>
                           {currentPage + 1}
                         </PaginationLink>
                       </PaginationItem>
@@ -224,9 +198,7 @@ export function AddressBookModal({
                     {/* Last page */}
                     {currentPage < totalPages - 1 && (
                       <PaginationItem>
-                        <PaginationLink
-                          onClick={() => setCurrentPage(totalPages)}
-                        >
+                        <PaginationLink onClick={() => setCurrentPage(totalPages)}>
                           {totalPages}
                         </PaginationLink>
                       </PaginationItem>
@@ -234,9 +206,7 @@ export function AddressBookModal({
 
                     <PaginationItem>
                       <PaginationNext
-                        onClick={() =>
-                          setCurrentPage(Math.min(totalPages, currentPage + 1))
-                        }
+                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                         className={
                           currentPage === totalPages
                             ? "pointer-events-none opacity-50"
@@ -252,5 +222,5 @@ export function AddressBookModal({
         )}
       </div>
     </Modal>
-  );
+  )
 }

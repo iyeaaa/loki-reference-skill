@@ -36,7 +36,7 @@ export default function DashboardLayout() {
   const [showProfileCard, setShowProfileCard] = useState(false)
 
   return (
-    <div className="h-screen flex overflow-hidden bg-gradient-to-br from-violet-50 via-white to-purple-50">
+    <div className="h-screen flex overflow-hidden bg-background">
       <SidebarProvider>
         <AppSidebar />
         <div className="flex-1 flex flex-col overflow-hidden">

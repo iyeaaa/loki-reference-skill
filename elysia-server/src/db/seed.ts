@@ -18,6 +18,7 @@ import {
   workspaceMembers,
   workspaces,
 } from './schema'
+import { eq } from 'drizzle-orm'
 
 async function seed() {
   console.log('🌱 시드 데이터 생성 시작...\n')
@@ -47,8 +48,19 @@ async function seed() {
       },
       { name: '개발팀', code: 'DEV', description: '그린다에이아이 개발팀', isActive: true },
     ]
-    const insertedDepartments = await db.insert(departments).values(departmentSeeds).returning()
-    console.log(`✅ ${insertedDepartments.length}개 부서 생성 완료\n`)
+
+    const insertedDepartments = []
+    for (const dept of departmentSeeds) {
+      const existing = await db.select().from(departments).where(eq(departments.name, dept.name)).limit(1)
+      if (existing.length === 0) {
+        const [inserted] = await db.insert(departments).values(dept).returning()
+        insertedDepartments.push(inserted)
+      } else {
+        console.log(`  ⏭️  부서 '${dept.name}' 이미 존재, 건너뜀`)
+        insertedDepartments.push(existing[0])
+      }
+    }
+    console.log(`✅ ${insertedDepartments.filter(d => d).length}개 부서 처리 완료\n`)
 
     // 2. 사용자 데이터 생성
     console.log('👤 사용자 데이터 생성 중...')
@@ -99,45 +111,67 @@ async function seed() {
         isActive: true,
       },
     ]
-    const insertedUsers = await db.insert(users).values(userSeeds).returning()
-    console.log(`✅ ${insertedUsers.length}명 사용자 생성 완료\n`)
+
+    const insertedUsers = []
+    for (const user of userSeeds) {
+      const existing = await db.select().from(users).where(eq(users.email, user.email)).limit(1)
+      if (existing.length === 0) {
+        const [inserted] = await db.insert(users).values(user).returning()
+        insertedUsers.push(inserted)
+      } else {
+        console.log(`  ⏭️  사용자 '${user.email}' 이미 존재, 건너뜀`)
+        insertedUsers.push(existing[0])
+      }
+    }
+    console.log(`✅ ${insertedUsers.filter(u => u).length}명 사용자 처리 완료\n`)
 
     // 3. 워크스페이스 데이터 생성
     console.log('🏢 워크스페이스 데이터 생성 중...')
     const workspaceSeeds = [
       {
-        name: '그린다AI 메인 워크스페이스',
-        description: '그린다AI의 주요 영업 및 마케팅 워크스페이스',
+        name: '퓨어글로우 코스메틱',
+        description: '천연 화장품 전문 브랜드의 해외 바이어 개척 워크스페이스',
         ownerId: insertedUsers[0].id,
         isActive: true,
       },
       {
-        name: '파트너사 관리',
-        description: '파트너사 및 제휴사 관리용 워크스페이스',
+        name: '블룸에센스',
+        description: 'K-뷰티 스킨케어 브랜드의 글로벌 B2B 영업 워크스페이스',
         ownerId: insertedUsers[1].id,
         isActive: true,
       },
       {
-        name: '해외 영업팀',
-        description: '글로벌 시장 개척을 위한 워크스페이스',
+        name: '루나뷰티랩',
+        description: '기능성 화장품 ODM/OEM 전문기업 해외 파트너 발굴',
         ownerId: insertedUsers[2].id,
         isActive: true,
       },
       {
-        name: '이벤트 마케팅',
-        description: '온/오프라인 이벤트 및 캠페인 관리',
+        name: '아쿠아실크',
+        description: '수분크림 전문 브랜드의 동남아/중동 바이어 컨택',
         ownerId: insertedUsers[0].id,
         isActive: true,
       },
       {
-        name: '고객 성공팀',
-        description: '기존 고객 관리 및 성공 지원',
+        name: '센티드가든',
+        description: '향수 및 바디케어 브랜드의 유럽/미주 시장 진출',
         ownerId: insertedUsers[3].id,
         isActive: true,
       },
     ]
-    const insertedWorkspaces = await db.insert(workspaces).values(workspaceSeeds).returning()
-    console.log(`✅ ${insertedWorkspaces.length}개 워크스페이스 생성 완료\n`)
+
+    const insertedWorkspaces = []
+    for (const workspace of workspaceSeeds) {
+      const existing = await db.select().from(workspaces).where(eq(workspaces.name, workspace.name)).limit(1)
+      if (existing.length === 0) {
+        const [inserted] = await db.insert(workspaces).values(workspace).returning()
+        insertedWorkspaces.push(inserted)
+      } else {
+        console.log(`  ⏭️  워크스페이스 '${workspace.name}' 이미 존재, 건너뜀`)
+        insertedWorkspaces.push(existing[0])
+      }
+    }
+    console.log(`✅ ${insertedWorkspaces.filter(w => w).length}개 워크스페이스 처리 완료\n`)
 
     // 4. 워크스페이스 멤버 데이터 생성
     console.log('👥 워크스페이스 멤버 데이터 생성 중...')
@@ -260,49 +294,49 @@ async function seed() {
       .returning()
     console.log(`✅ ${insertedEmailAccounts.length}개 이메일 계정 생성 완료\n`)
 
-    // 6. 리드 데이터 생성
+    // 6. 리드 데이터 생성 (해외 바이어)
     console.log('🎯 리드 데이터 생성 중...')
     const leadSeeds = [
       {
         workspaceId: insertedWorkspaces[0].id,
-        companyName: '테크스타트업 주식회사',
-        foundCompanyName: 'TechStartup Inc.',
-        websiteUrl: 'https://techstartup.co.kr',
-        finalUrl: 'https://techstartup.co.kr',
+        companyName: 'Sephora Asia Pacific',
+        foundCompanyName: 'Sephora Asia Pacific Ltd.',
+        websiteUrl: 'https://sephora.sg',
+        finalUrl: 'https://sephora.sg',
         httpStatus: 200,
         nameUrlMatch: true,
-        businessType: 'IT서비스',
+        businessType: '뷰티 리테일',
         isBusinessTypeMatched: true,
-        description: 'B2B SaaS 솔루션을 제공하는 스타트업',
-        address: '서울시 강남구 테헤란로 123',
-        country: '대한민국',
-        city: '서울',
-        state: '서울특별시',
-        foundedYear: 2020,
-        employeeCount: '50-100',
+        description: '동남아시아 최대 뷰티 리테일 체인',
+        address: '8 Marina View, Marina Bay Financial Centre',
+        country: '싱가포르',
+        city: 'Singapore',
+        state: 'Singapore',
+        foundedYear: 2010,
+        employeeCount: '1000-5000',
         leadSource: 'website_crawl',
         leadStatus: 'new' as const,
-        leadScore: 75,
+        leadScore: 95,
         createdBy: insertedUsers[0].id,
         collectedAt: new Date(),
       },
       {
         workspaceId: insertedWorkspaces[0].id,
-        companyName: '글로벌커머스',
-        foundCompanyName: 'Global Commerce',
-        websiteUrl: 'https://globalcommerce.com',
-        finalUrl: 'https://globalcommerce.com',
+        companyName: 'Beauty Bay',
+        foundCompanyName: 'Beauty Bay Ltd.',
+        websiteUrl: 'https://beautybay.com',
+        finalUrl: 'https://beautybay.com',
         httpStatus: 200,
         nameUrlMatch: true,
-        businessType: '이커머스',
+        businessType: '온라인 뷰티 리테일',
         isBusinessTypeMatched: true,
-        description: '글로벌 온라인 쇼핑몰 플랫폼',
-        address: '서울시 송파구 올림픽로 456',
-        country: '대한민국',
-        city: '서울',
-        state: '서울특별시',
-        foundedYear: 2018,
-        employeeCount: '100-500',
+        description: '영국 기반 글로벌 온라인 뷰티 플랫폼',
+        address: 'Manchester Science Park, Manchester',
+        country: '영국',
+        city: 'Manchester',
+        state: 'England',
+        foundedYear: 1999,
+        employeeCount: '200-500',
         leadSource: 'referral',
         leadStatus: 'contacted' as const,
         leadScore: 85,
@@ -310,22 +344,22 @@ async function seed() {
         collectedAt: new Date(),
       },
       {
-        workspaceId: insertedWorkspaces[0].id,
-        companyName: '스마트팩토리',
-        foundCompanyName: 'Smart Factory',
-        websiteUrl: 'https://smartfactory.co.kr',
-        finalUrl: 'https://smartfactory.co.kr',
+        workspaceId: insertedWorkspaces[1].id,
+        companyName: 'Watsons Thailand',
+        foundCompanyName: 'Watsons Personal Care Stores (Thailand) Ltd.',
+        websiteUrl: 'https://watsons.co.th',
+        finalUrl: 'https://watsons.co.th',
         httpStatus: 200,
         nameUrlMatch: true,
-        businessType: '제조업',
+        businessType: '드럭스토어 체인',
         isBusinessTypeMatched: true,
-        description: 'AI 기반 스마트 제조 솔루션',
-        address: '경기도 성남시 분당구 판교로 789',
-        country: '대한민국',
-        city: '성남',
-        state: '경기도',
-        foundedYear: 2019,
-        employeeCount: '20-50',
+        description: '태국 최대 헬스&뷰티 리테일 체인',
+        address: 'Central World, Bangkok',
+        country: '태국',
+        city: 'Bangkok',
+        state: 'Bangkok',
+        foundedYear: 1996,
+        employeeCount: '5000-10000',
         leadSource: 'linkedin',
         leadStatus: 'qualified' as const,
         leadScore: 90,
@@ -333,48 +367,48 @@ async function seed() {
         collectedAt: new Date(),
       },
       {
-        workspaceId: insertedWorkspaces[1].id,
-        companyName: '헬스케어이노베이션',
-        foundCompanyName: 'Healthcare Innovation',
-        websiteUrl: 'https://healthinno.com',
-        finalUrl: 'https://healthinno.com',
+        workspaceId: insertedWorkspaces[2].id,
+        companyName: 'Douglas GmbH',
+        foundCompanyName: 'Douglas Holding AG',
+        websiteUrl: 'https://douglas.de',
+        finalUrl: 'https://douglas.de',
         httpStatus: 200,
         nameUrlMatch: true,
-        businessType: '헬스케어',
+        businessType: '퍼퓸&코스메틱 리테일',
         isBusinessTypeMatched: true,
-        description: '디지털 헬스케어 플랫폼',
-        address: '서울시 서초구 반포대로 321',
-        country: '대한민국',
-        city: '서울',
-        state: '서울특별시',
-        foundedYear: 2021,
-        employeeCount: '10-20',
+        description: '유럽 최대 향수 및 화장품 유통업체',
+        address: 'Kabeler Straße 4, Düsseldorf',
+        country: '독일',
+        city: 'Düsseldorf',
+        state: 'North Rhine-Westphalia',
+        foundedYear: 1910,
+        employeeCount: '10000+',
         leadSource: 'event',
         leadStatus: 'new' as const,
-        leadScore: 70,
+        leadScore: 88,
         createdBy: insertedUsers[1].id,
         collectedAt: new Date(),
       },
       {
-        workspaceId: insertedWorkspaces[2].id,
-        companyName: 'FinTech Solutions',
-        foundCompanyName: 'FinTech Solutions Ltd.',
-        websiteUrl: 'https://fintechsolutions.io',
-        finalUrl: 'https://fintechsolutions.io',
+        workspaceId: insertedWorkspaces[3].id,
+        companyName: 'Noon UAE',
+        foundCompanyName: 'Noon E-Commerce',
+        websiteUrl: 'https://noon.com',
+        finalUrl: 'https://noon.com',
         httpStatus: 200,
         nameUrlMatch: true,
-        businessType: '금융IT',
+        businessType: '이커머스 플랫폼',
         isBusinessTypeMatched: true,
-        description: '블록체인 기반 금융 솔루션',
-        address: '서울시 영등포구 여의도동 555',
-        country: '대한민국',
-        city: '서울',
-        state: '서울특별시',
-        foundedYear: 2017,
-        employeeCount: '200-500',
+        description: '중동 지역 대표 이커머스 플랫폼',
+        address: 'Emaar Square, Downtown Dubai',
+        country: '아랍에미리트',
+        city: 'Dubai',
+        state: 'Dubai',
+        foundedYear: 2016,
+        employeeCount: '1000-5000',
         leadSource: 'partner',
         leadStatus: 'contacted' as const,
-        leadScore: 80,
+        leadScore: 82,
         createdBy: insertedUsers[2].id,
         collectedAt: new Date(),
       },

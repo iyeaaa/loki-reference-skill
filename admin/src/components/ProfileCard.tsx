@@ -116,7 +116,7 @@ export function ProfileCard({ isOpen, onClose, user, onLogout }: ProfileCardProp
             )}
           </div>
 
-          <div className="px-4">
+          <div className="px-4 pt-4">
             <Button
               onClick={onLogout}
               variant="outline"
@@ -128,7 +128,7 @@ export function ProfileCard({ isOpen, onClose, user, onLogout }: ProfileCardProp
             </Button>
           </div>
 
-          <div className="px-4 pb-2 pt-1">
+          <div className="px-4 pb-4 pt-3">
             <div className="flex justify-center gap-4 text-xs text-gray-500 dark:text-gray-400">
               <button
                 type="button"

@@ -45,11 +45,11 @@ export default function DashboardPage() {
       {/* 핵심 지표 카드 */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-3">
             <CardDescription>오늘 발송</CardDescription>
             <CardTitle className="text-2xl">45,284</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-4">
             <div className="flex items-center text-xs text-muted-foreground">
               <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
               <span className="text-green-500">+12.5%</span>
@@ -59,33 +59,33 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-3">
             <CardDescription>오픈율</CardDescription>
             <CardTitle className="text-2xl">68.4%</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-4">
             <Progress value={68.4} className="h-2" />
             <p className="text-xs text-muted-foreground mt-2">업계 평균 23.9%</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-3">
             <CardDescription>클릭률</CardDescription>
             <CardTitle className="text-2xl">24.8%</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-4">
             <Progress value={24.8} className="h-2" />
             <p className="text-xs text-muted-foreground mt-2">업계 평균 7.8%</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-3">
             <CardDescription>전환율</CardDescription>
             <CardTitle className="text-2xl">8.2%</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-4">
             <div className="flex items-center text-xs text-muted-foreground">
               <Activity className="h-3 w-3 mr-1 text-green-500" />
               <span className="text-green-500">+3.1%</span>

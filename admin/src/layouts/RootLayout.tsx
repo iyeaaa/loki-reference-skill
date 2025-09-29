@@ -5,7 +5,7 @@ import { Outlet } from "react-router-dom"
 export default function RootLayout() {
   React.useEffect(() => {
     document.documentElement.lang = "ko"
-    document.title = "하나 랭커넥트 관리자 시스템"
+    document.title = "sendgrinda"
   }, [])
 
   return (

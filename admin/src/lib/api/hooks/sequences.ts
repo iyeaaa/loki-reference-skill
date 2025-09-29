@@ -1,0 +1,304 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import toast from "react-hot-toast"
+import { sequencesApi } from "../services/sequences"
+import type {
+  BulkEnrollRequest,
+  BulkUpdateSequenceStatusRequest,
+  CreateEnrollmentRequest,
+  CreateSequenceRequest,
+  CreateSequenceStepRequest,
+  SequencesParams,
+  UpdateSequenceRequest,
+} from "../types/sequence"
+
+// Query Keys
+export const sequenceKeys = {
+  all: ["sequences"] as const,
+  lists: () => [...sequenceKeys.all, "list"] as const,
+  list: (params?: SequencesParams) => [...sequenceKeys.lists(), params] as const,
+  detail: (id: string) => [...sequenceKeys.all, "detail", id] as const,
+  steps: (sequenceId: string) => [...sequenceKeys.all, "steps", sequenceId] as const,
+  enrollments: (sequenceId: string) => [...sequenceKeys.all, "enrollments", sequenceId] as const,
+  enrollmentsList: (sequenceId: string, page?: number) =>
+    [...sequenceKeys.enrollments(sequenceId), page] as const,
+  workspace: (workspaceId: string) => [...sequenceKeys.all, "workspace", workspaceId] as const,
+}
+
+// Queries
+export function useSequences(params?: SequencesParams) {
+  return useQuery({
+    queryKey: sequenceKeys.list(params),
+    queryFn: () => sequencesApi.list(params),
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+  })
+}
+
+export function useSequence(sequenceId: string, enabled = true) {
+  return useQuery({
+    queryKey: sequenceKeys.detail(sequenceId),
+    queryFn: () => sequencesApi.get(sequenceId),
+    enabled,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
+}
+
+export function useSequenceSteps(sequenceId: string, enabled = true) {
+  return useQuery({
+    queryKey: sequenceKeys.steps(sequenceId),
+    queryFn: () => sequencesApi.getSteps(sequenceId),
+    enabled,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
+}
+
+export function useSequenceEnrollments(sequenceId: string, page = 1, limit = 10, enabled = true) {
+  return useQuery({
+    queryKey: sequenceKeys.enrollmentsList(sequenceId, page),
+    queryFn: () => sequencesApi.getEnrollments(sequenceId, page, limit),
+    enabled,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+  })
+}
+
+export function useSequencesByWorkspace(workspaceId: string, enabled = true) {
+  return useQuery({
+    queryKey: sequenceKeys.workspace(workspaceId),
+    queryFn: () => sequencesApi.getByWorkspace(workspaceId),
+    enabled,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
+}
+
+// Mutations
+export function useCreateSequence() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreateSequenceRequest) => sequencesApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.lists() })
+      toast.success("시퀀스가 생성되었습니다")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "시퀀스 생성에 실패했습니다")
+    },
+  })
+}
+
+export function useUpdateSequence() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ sequenceId, data }: { sequenceId: string; data: UpdateSequenceRequest }) =>
+      sequencesApi.update(sequenceId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.detail(variables.sequenceId) })
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.lists() })
+      toast.success("시퀀스 정보가 업데이트되었습니다")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "시퀀스 업데이트에 실패했습니다")
+    },
+  })
+}
+
+export function useDeleteSequence() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (sequenceId: string) => sequencesApi.delete(sequenceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.lists() })
+      toast.success("시퀀스가 삭제되었습니다")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "시퀀스 삭제에 실패했습니다")
+    },
+  })
+}
+
+export function useCreateSequenceStep(sequenceId?: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreateSequenceStepRequest & { sequenceId?: string }) => {
+      const id = data.sequenceId || sequenceId
+      if (!id) throw new Error("sequenceId is required")
+      return sequencesApi.createStep(id, data)
+    },
+    onSuccess: (_, variables) => {
+      const id = variables.sequenceId || sequenceId
+      if (id) {
+        queryClient.invalidateQueries({ queryKey: sequenceKeys.steps(id) })
+        queryClient.invalidateQueries({ queryKey: sequenceKeys.detail(id) })
+        queryClient.invalidateQueries({ queryKey: sequenceKeys.lists() })
+      }
+      toast.success("시퀀스 스텝이 생성되었습니다")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "시퀀스 스텝 생성에 실패했습니다")
+    },
+  })
+}
+
+export function useUpdateSequenceStep(sequenceId?: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      sequenceId: seqId,
+      stepId,
+      data,
+    }: {
+      sequenceId?: string
+      stepId: string
+      data: CreateSequenceStepRequest
+    }) => {
+      const id = seqId || sequenceId
+      if (!id) throw new Error("sequenceId is required")
+      return sequencesApi.updateStep(id, stepId, data)
+    },
+    onSuccess: (_, variables) => {
+      const id = variables.sequenceId || sequenceId
+      if (id) {
+        queryClient.invalidateQueries({ queryKey: sequenceKeys.steps(id) })
+        queryClient.invalidateQueries({ queryKey: sequenceKeys.detail(id) })
+        queryClient.invalidateQueries({ queryKey: sequenceKeys.lists() })
+      }
+      toast.success("시퀀스 스텝이 업데이트되었습니다")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "시퀀스 스텝 업데이트에 실패했습니다")
+    },
+  })
+}
+
+export function useDeleteSequenceStep(sequenceId?: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ sequenceId: seqId, stepId }: { sequenceId?: string; stepId: string }) => {
+      const id = seqId || sequenceId
+      if (!id) throw new Error("sequenceId is required")
+      return sequencesApi.deleteStep(id, stepId)
+    },
+    onSuccess: (_, variables) => {
+      const id = variables.sequenceId || sequenceId
+      if (id) {
+        queryClient.invalidateQueries({ queryKey: sequenceKeys.steps(id) })
+        queryClient.invalidateQueries({ queryKey: sequenceKeys.detail(id) })
+        queryClient.invalidateQueries({ queryKey: sequenceKeys.lists() })
+      }
+      toast.success("시퀀스 스텝이 삭제되었습니다")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "시퀀스 스텝 삭제에 실패했습니다")
+    },
+  })
+}
+
+export function useCreateEnrollment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ sequenceId, data }: { sequenceId: string; data: CreateEnrollmentRequest }) =>
+      sequencesApi.createEnrollment(sequenceId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.enrollments(variables.sequenceId) })
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.detail(variables.sequenceId) })
+      toast.success("시퀀스에 등록되었습니다")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "시퀀스 등록에 실패했습니다")
+    },
+  })
+}
+
+export function useUpdateEnrollmentStatus() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      sequenceId,
+      enrollmentId,
+      status,
+    }: {
+      sequenceId: string
+      enrollmentId: string
+      status: string
+    }) => sequencesApi.updateEnrollmentStatus(sequenceId, enrollmentId, status),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.enrollments(variables.sequenceId) })
+      toast.success("등록 상태가 업데이트되었습니다")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "등록 상태 업데이트에 실패했습니다")
+    },
+  })
+}
+
+export function useBulkUpdateSequenceStatus() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: BulkUpdateSequenceStatusRequest) => sequencesApi.bulkUpdateStatus(data),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.lists() })
+      toast.success(`${response.updatedCount || 0}개의 시퀀스 상태가 업데이트되었습니다`)
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "시퀀스 상태 업데이트에 실패했습니다")
+    },
+  })
+}
+
+export function useBulkDeleteSequences() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (sequenceIds: string[]) => sequencesApi.bulkDelete(sequenceIds),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.lists() })
+      toast.success(`${response.deletedCount || 0}개의 시퀀스가 삭제되었습니다`)
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "시퀀스 삭제에 실패했습니다")
+    },
+  })
+}
+
+export function useBulkEnroll() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: BulkEnrollRequest) => sequencesApi.bulkEnroll(data),
+    onSuccess: (response, variables) => {
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.enrollments(variables.sequenceId) })
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.detail(variables.sequenceId) })
+      toast.success(`${response.enrolledCount || 0}명이 시퀀스에 등록되었습니다`)
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "시퀀스 등록에 실패했습니다")
+    },
+  })
+}
+
+export function useBulkUnenroll() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (enrollmentIds: string[]) => sequencesApi.bulkUnenroll(enrollmentIds),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.enrollments })
+      toast.success(`${response.unenrolledCount || 0}명이 시퀀스에서 해제되었습니다`)
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "시퀀스 해제에 실패했습니다")
+    },
+  })
+}

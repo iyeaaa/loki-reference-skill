@@ -1,5 +1,3 @@
-"use client"
-
 import { useId, useState } from "react"
 import toast from "react-hot-toast"
 import { Button } from "@/components/ui/button"

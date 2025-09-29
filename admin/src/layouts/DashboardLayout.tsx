@@ -1,5 +1,5 @@
 import { User } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 import { AppSidebar } from "@/components/AppSidebar"
 import { ProfileCard } from "@/components/ProfileCard"
@@ -13,23 +13,28 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import type { WorkspaceOption } from "@/components/ui/workspace-selector"
 import { WorkspaceSelector } from "@/components/ui/workspace-selector"
+import { useWorkspaces } from "@/lib/api/hooks/workspaces"
 
 function DashboardContent() {
   const location = useLocation()
   const pathname = location.pathname
   const pageName = getPageName(pathname)
   const [showProfileCard, setShowProfileCard] = useState(false)
-  const [selectedWorkspace, setSelectedWorkspace] = useState<string>("workspace1")
+  const [selectedWorkspace, setSelectedWorkspace] = useState<string>(() => {
+    return localStorage.getItem("selectedWorkspace") || "all"
+  })
   const { state } = useSidebar()
 
-  // 예시 워크스페이스 데이터
-  const workspaces: WorkspaceOption[] = [
-    { value: "workspace1", label: "루카스에듀테인먼트", sublabel: "lukas@tam9.me" },
-    { value: "workspace2", label: "예지상사", sublabel: "yamy0612@naver.com" },
-    { value: "workspace3", label: "익투스", sublabel: "ictuskorea@gmail.com" },
-    { value: "workspace4", label: "리오닉스", sublabel: "rionix@kakao.com" },
-    { value: "workspace5", label: "브이시드니", sublabel: "vmsydney@gmail.com" },
-  ]
+  // API에서 워크스페이스 목록 가져오기
+  const { data: workspacesData } = useWorkspaces({ limit: 100 })
+
+  // Workspace를 WorkspaceOption으로 변환
+  const workspaces: WorkspaceOption[] =
+    workspacesData?.workspaces.map((ws) => ({
+      value: ws.id,
+      label: ws.name,
+      sublabel: ws.description || "",
+    })) || []
 
   const isSidebarCollapsed = state === "collapsed"
 
@@ -38,6 +43,21 @@ function DashboardContent() {
     { value: "all", label: "전체", sublabel: "모든 워크스페이스 보기" },
     ...workspaces,
   ]
+
+  // 선택된 워크스페이스를 localStorage에 저장
+  useEffect(() => {
+    localStorage.setItem("selectedWorkspace", selectedWorkspace)
+  }, [selectedWorkspace])
+
+  // 워크스페이스 목록이 로드되었을 때, 선택된 워크스페이스가 유효한지 확인
+  useEffect(() => {
+    if (workspaces.length > 0 && selectedWorkspace !== "all") {
+      const isValid = workspaces.some((ws) => ws.value === selectedWorkspace)
+      if (!isValid) {
+        setSelectedWorkspace("all")
+      }
+    }
+  }, [workspaces, selectedWorkspace])
 
   return (
     <>

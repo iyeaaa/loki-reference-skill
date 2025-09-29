@@ -1,5 +1,3 @@
-"use client"
-
 import { Search, Shield, Trash2, UserCheck, X } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"

@@ -82,8 +82,14 @@ export function AppSidebar({
   const location = useLocation()
   const pathname = location.pathname
 
+  // "전체" 옵션을 포함한 워크스페이스 목록 생성
+  const workspaceOptions: WorkspaceOption[] = [
+    { value: "all", label: "전체", sublabel: "모든 워크스페이스 보기" },
+    ...workspaces,
+  ]
+
   // 선택된 워크스페이스의 이름 가져오기
-  const selectedWorkspaceData = workspaces.find((w) => w.value === selectedWorkspace)
+  const selectedWorkspaceData = workspaceOptions.find((w) => w.value === selectedWorkspace)
   const workspaceLabel = selectedWorkspaceData?.label || "워크스페이스"
 
   return (
@@ -110,14 +116,14 @@ export function AppSidebar({
         </SidebarMenu>
 
         {/* 워크스페이스 선택 */}
-        {workspaces.length > 0 && (
+        {workspaceOptions.length > 1 && (
           <div className="group-data-[collapsible=icon]:hidden">
             <div className="flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70">
               워크스페이스 선택
             </div>
             <div className="px-2 pb-2">
               <WorkspaceSelector
-                options={workspaces}
+                options={workspaceOptions}
                 value={selectedWorkspace}
                 onValueChange={onWorkspaceChange}
                 className="w-full"

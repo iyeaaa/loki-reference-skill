@@ -33,6 +33,12 @@ function DashboardContent() {
 
   const isSidebarCollapsed = state === "collapsed"
 
+  // "전체" 옵션을 포함한 워크스페이스 목록 생성
+  const workspaceOptions: WorkspaceOption[] = [
+    { value: "all", label: "전체", sublabel: "모든 워크스페이스 보기" },
+    ...workspaces,
+  ]
+
   return (
     <>
       <AppSidebar
@@ -47,7 +53,7 @@ function DashboardContent() {
             <Separator orientation="vertical" className="mr-2 h-4" />
             {isSidebarCollapsed && (
               <WorkspaceSelector
-                options={workspaces}
+                options={workspaceOptions}
                 value={selectedWorkspace}
                 onValueChange={setSelectedWorkspace}
                 className="mr-2"

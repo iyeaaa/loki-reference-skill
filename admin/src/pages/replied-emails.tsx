@@ -14,29 +14,38 @@ export default function RepliedEmailsPage() {
   const replies = [
     {
       id: 1,
-      from: "kim@company.com",
-      name: "김철수",
-      subject: "Re: 신규 서비스 안내",
+      from: "buyer@nordstrom.com",
+      name: "Sarah Johnson",
+      subject: "Re: K-Beauty Product Line Introduction",
       date: "2024-09-29 14:30",
-      campaign: "프로모션",
+      campaign: "미국 백화점 바이어",
       sentiment: "positive",
     },
     {
       id: 2,
-      from: "park@startup.com",
-      name: "박영희",
-      subject: "Re: 환영합니다!",
+      from: "purchasing@matsukiyo.co.jp",
+      name: "田中太郎",
+      subject: "Re: 新製品のご提案",
       date: "2024-09-29 11:20",
-      campaign: "온보딩",
-      sentiment: "neutral",
+      campaign: "일본 드럭스토어",
+      sentiment: "positive",
     },
     {
       id: 3,
-      from: "lee@corp.com",
-      name: "이민수",
-      subject: "Re: 특별 혜택 안내",
+      from: "buyer@organic-beauty.eu",
+      name: "Marie Dubois",
+      subject: "Re: Organic Skincare Partnership",
       date: "2024-09-28 16:45",
-      campaign: "리텐션",
+      campaign: "유럽 오가닉",
+      sentiment: "neutral",
+    },
+    {
+      id: 4,
+      from: "contact@sea-distributor.com",
+      name: "Nguyen Van A",
+      subject: "Re: Distribution Partnership Inquiry",
+      date: "2024-09-28 10:15",
+      campaign: "동남아 디스트리뷰터",
       sentiment: "positive",
     },
   ]
@@ -46,34 +55,34 @@ export default function RepliedEmailsPage() {
       <div className="grid gap-4 md:grid-cols-4 mb-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">총 답장</CardTitle>
+            <CardTitle className="text-sm">총 바이어 답장</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">234</div>
+            <div className="text-2xl font-bold">87</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">오늘 답장</CardTitle>
+            <CardTitle className="text-sm">오늘 받은 답장</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">4</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">긍정 답장</CardTitle>
+            <CardTitle className="text-sm">미팅 요청 답장</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">156</div>
+            <div className="text-2xl font-bold">32</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">답장율</CardTitle>
+            <CardTitle className="text-sm">바이어 응답률</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8.7%</div>
+            <div className="text-2xl font-bold">18.4%</div>
           </CardContent>
         </Card>
       </div>
@@ -82,17 +91,17 @@ export default function RepliedEmailsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
-            최근 답장
+            최근 바이어 답장
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>고객</TableHead>
+                <TableHead>바이어</TableHead>
                 <TableHead>제목</TableHead>
-                <TableHead>캠페인</TableHead>
-                <TableHead>감정</TableHead>
+                <TableHead>컨택 대상</TableHead>
+                <TableHead>반응</TableHead>
                 <TableHead>날짜</TableHead>
               </TableRow>
             </TableHeader>
@@ -111,7 +120,7 @@ export default function RepliedEmailsPage() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span>{reply.subject}</span>
+                      <span className="text-sm">{reply.subject}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -119,7 +128,7 @@ export default function RepliedEmailsPage() {
                   </TableCell>
                   <TableCell>
                     <Badge variant={reply.sentiment === "positive" ? "default" : "secondary"}>
-                      {reply.sentiment === "positive" ? "긍정" : "중립"}
+                      {reply.sentiment === "positive" ? "미팅 관심" : "정보 요청"}
                     </Badge>
                   </TableCell>
                   <TableCell>

@@ -22,6 +22,47 @@ const updateUserSchema = t.Object({
 })
 
 export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
+  // Search users with filters (must be before /:id route)
+  .get(
+    '/search',
+    async ({ query }) => {
+      const limit = parseInt(query.limit || '10', 10)
+      const offset = parseInt(query.offset || '0', 10)
+
+      // Parse departmentIds from comma-separated string
+      const departmentIds = query.departmentIds
+        ? query.departmentIds.split(',').filter(Boolean)
+        : undefined
+
+      const filters = {
+        role: query.role as any,
+        isActive: query.isActive ? query.isActive === 'true' : undefined,
+        search: query.search,
+        departmentIds,
+      }
+
+      const users = await userService.listUsersWithFilters(limit, offset, filters)
+      const total = await userService.countUsersWithFilters(filters)
+
+      return {
+        data: users,
+        total,
+        limit,
+        offset,
+      }
+    },
+    {
+      query: t.Object({
+        limit: t.Optional(t.String()),
+        offset: t.Optional(t.String()),
+        role: t.Optional(t.String()),
+        isActive: t.Optional(t.String()),
+        search: t.Optional(t.String()),
+        departmentIds: t.Optional(t.String()),
+      }),
+    },
+  )
+
   // Get user by ID
   .get(
     '/:id',
@@ -106,40 +147,6 @@ export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
       query: t.Object({
         limit: t.Optional(t.String()),
         offset: t.Optional(t.String()),
-      }),
-    },
-  )
-
-  // Search users with filters
-  .get(
-    '/search',
-    async ({ query }) => {
-      const limit = parseInt(query.limit || '10', 10)
-      const offset = parseInt(query.offset || '0', 10)
-
-      const filters = {
-        role: query.role as any,
-        isActive: query.isActive ? query.isActive === 'true' : undefined,
-        search: query.search,
-      }
-
-      const users = await userService.listUsersWithFilters(limit, offset, filters)
-      const total = await userService.countUsersWithFilters(filters)
-
-      return {
-        data: users,
-        total,
-        limit,
-        offset,
-      }
-    },
-    {
-      query: t.Object({
-        limit: t.Optional(t.String()),
-        offset: t.Optional(t.String()),
-        role: t.Optional(t.String()),
-        isActive: t.Optional(t.String()),
-        search: t.Optional(t.String()),
       }),
     },
   )

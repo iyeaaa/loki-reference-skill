@@ -29,6 +29,9 @@ export const usersApi = {
     if (params?.status && params.status !== "all") {
       searchParams.append("isActive", params.status === "active" ? "true" : "false")
     }
+    if (params?.departmentIds && params.departmentIds.length > 0) {
+      searchParams.append("departmentIds", params.departmentIds.join(","))
+    }
 
     const query = searchParams.toString()
     return apiFetch<{

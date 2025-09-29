@@ -1,4 +1,4 @@
-import { BarChart3, ClipboardList, Settings, Users } from "lucide-react"
+import { BarChart3, GitBranch, Settings, UserCheck, Users } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import {
   Sidebar,
@@ -14,7 +14,7 @@ import {
 
 const menuItems = [
   {
-    title: "Rinda Expert",
+    title: "대시보드",
     url: "/dashboard",
     icon: BarChart3,
   },
@@ -24,9 +24,14 @@ const menuItems = [
     icon: Users,
   },
   {
-    title: "Email Sequence",
-    url: "/email-sequence",
-    icon: ClipboardList,
+    title: "시퀀스 관리",
+    url: "/sequences",
+    icon: GitBranch,
+  },
+  {
+    title: "고객 관리",
+    url: "/leads",
+    icon: UserCheck,
   },
 ]
 

@@ -1,6 +1,16 @@
 "use client"
 
-import { ChevronLeft, ChevronRight, Edit, Search, Shield, Trash2, UserCheck, X } from "lucide-react"
+import {
+  ChevronLeft,
+  ChevronRight,
+  Edit,
+  Loader2,
+  Search,
+  Shield,
+  Trash2,
+  UserCheck,
+  X,
+} from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { Badge } from "@/components/ui/badge"
@@ -28,7 +38,8 @@ import { UserForm } from "./UserForm"
 export default function UsersPage() {
   const [departments, setDepartments] = useState<Department[]>([])
 
-  const [search, setSearch] = useState("")
+  const [searchInput, setSearchInput] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
   const [selectedRoles, setSelectedRoles] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([])
@@ -60,11 +71,12 @@ export default function UsersPage() {
         : selectedStatuses.length > 0
           ? "all"
           : undefined,
-    search: search || undefined,
+    search: searchQuery || undefined,
+    departmentIds: selectedDepartments.length > 0 ? selectedDepartments : undefined,
   }
 
   // Use React Query hook for fetching users
-  const { data: usersData, isLoading: loading } = useUsers(params)
+  const { data: usersData, isLoading: loading, isFetching } = useUsers(params)
   const users = usersData?.users || []
   const totalPages = usersData?.totalPages || 1
   const total = usersData?.total || 0
@@ -171,11 +183,24 @@ export default function UsersPage() {
     setShowBulkActionModal(true)
   }
 
+  const handleSearch = () => {
+    setSearchQuery(searchInput)
+    setCurrentPage(1)
+    setPageInputValue("1")
+  }
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSearch()
+    }
+  }
+
   const clearFilters = () => {
     setSelectedRoles([])
     setSelectedStatuses([])
     setSelectedDepartments([])
-    setSearch("")
+    setSearchInput("")
+    setSearchQuery("")
     setCurrentPage(1)
     setPageInputValue("1")
   }
@@ -229,7 +254,10 @@ export default function UsersPage() {
     return "outline" as const
   }
 
-  if (loading) {
+  // Only show loading screen on initial load, not while searching
+  const isInitialLoading = loading && !usersData
+
+  if (isInitialLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-lg">로딩 중...</div>
@@ -262,20 +290,21 @@ export default function UsersPage() {
             <div className="relative w-full md:w-[400px]">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="사용자명, 이메일, 사번으로 검색..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setCurrentPage(1)
-                  setPageInputValue("1")
-                }}
-                className="pl-10 w-full"
+                placeholder="사용자명, 이메일, 사번으로 검색... (엔터)"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                className="pl-10 pr-10 w-full"
               />
-              {search && (
+              {isFetching && (
+                <Loader2 className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground animate-spin" />
+              )}
+              {searchInput && !isFetching && (
                 <button
                   type="button"
                   onClick={() => {
-                    setSearch("")
+                    setSearchInput("")
+                    setSearchQuery("")
                     setCurrentPage(1)
                     setPageInputValue("1")
                   }}
@@ -528,7 +557,7 @@ export default function UsersPage() {
                   setCurrentPage(1)
                   setPageInputValue("1")
                 }}
-                disabled={currentPage === 1 || loading}
+                disabled={currentPage === 1 || isFetching}
                 variant="outline"
                 size="sm"
                 className="px-3"
@@ -543,7 +572,7 @@ export default function UsersPage() {
                   setCurrentPage(newPage)
                   setPageInputValue(newPage.toString())
                 }}
-                disabled={currentPage === 1 || loading}
+                disabled={currentPage === 1 || isFetching}
                 variant="outline"
                 size="sm"
                 className="px-3"
@@ -571,7 +600,7 @@ export default function UsersPage() {
                         setCurrentPage(i)
                         setPageInputValue(i.toString())
                       }}
-                      disabled={loading}
+                      disabled={isFetching}
                       variant={i === currentPage ? "default" : "outline"}
                       size="sm"
                       className="px-3 min-w-[40px]"
@@ -590,7 +619,7 @@ export default function UsersPage() {
                   setCurrentPage(newPage)
                   setPageInputValue(newPage.toString())
                 }}
-                disabled={currentPage >= totalPages || loading}
+                disabled={currentPage >= totalPages || isFetching}
                 variant="outline"
                 size="sm"
                 className="px-3"
@@ -605,7 +634,7 @@ export default function UsersPage() {
                   setCurrentPage(totalPages)
                   setPageInputValue(totalPages.toString())
                 }}
-                disabled={currentPage >= totalPages || loading}
+                disabled={currentPage >= totalPages || isFetching}
                 variant="outline"
                 size="sm"
                 className="px-3"
@@ -626,7 +655,7 @@ export default function UsersPage() {
                 onKeyDown={handlePageInputKeyDown}
                 onBlur={handlePageInputBlur}
                 className="w-20 h-8 text-sm text-center"
-                disabled={loading}
+                disabled={isFetching}
               />
               <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
             </div>

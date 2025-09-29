@@ -49,7 +49,7 @@ export async function createUser(data: {
       email: data.email,
       passwordHash: data.passwordHash || null,
       userRole: data.userRole || 'user',
-      isActive: data.isActive ?? true,
+      isActive: data.isActive !== undefined ? data.isActive : true,
       departmentId: data.departmentId,
       employeeId: data.employeeId,
     })
@@ -150,6 +150,7 @@ export async function listUsersWithFilters(
     role?: 'admin' | 'user'
     isActive?: boolean
     search?: string
+    departmentIds?: string[]
   },
 ) {
   const conditions = []
@@ -170,6 +171,10 @@ export async function listUsersWithFilters(
         ilike(users.employeeId, `%${filters.search}%`),
       )!,
     )
+  }
+
+  if (filters?.departmentIds && filters.departmentIds.length > 0) {
+    conditions.push(or(...filters.departmentIds.map((id) => eq(users.departmentId, id)))!)
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -263,6 +268,7 @@ export async function countUsersWithFilters(filters?: {
   role?: 'admin' | 'user'
   isActive?: boolean
   search?: string
+  departmentIds?: string[]
 }) {
   const conditions = []
 
@@ -282,6 +288,10 @@ export async function countUsersWithFilters(filters?: {
         ilike(users.employeeId, `%${filters.search}%`),
       )!,
     )
+  }
+
+  if (filters?.departmentIds && filters.departmentIds.length > 0) {
+    conditions.push(or(...filters.departmentIds.map((id) => eq(users.departmentId, id)))!)
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined

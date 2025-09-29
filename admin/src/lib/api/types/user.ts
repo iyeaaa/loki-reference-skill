@@ -134,5 +134,6 @@ export interface UsersParams {
   status?: string // 'active', 'inactive', 'all'
   statuses?: string[] // Multiple statuses filter
   departments?: string[] // Multiple departments filter
+  departmentIds?: string[] // Department IDs for filtering
   search?: string
 }

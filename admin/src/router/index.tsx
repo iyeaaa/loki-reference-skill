@@ -5,6 +5,8 @@ import DashboardLayout from "../layouts/DashboardLayout"
 import RootLayout from "../layouts/RootLayout"
 import DashboardPage from "../pages/dashboard/DashboardPage"
 import LoginPage from "../pages/LoginPage"
+import LeadsPage from "../pages/leads"
+import SequencesPage from "../pages/sequences"
 import UsersPage from "../pages/users/UsersPage"
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
@@ -43,6 +45,14 @@ export const router = createBrowserRouter([
           {
             path: "users",
             element: <UsersPage />,
+          },
+          {
+            path: "sequences",
+            element: <SequencesPage />,
+          },
+          {
+            path: "leads",
+            element: <LeadsPage />,
           },
         ],
       },

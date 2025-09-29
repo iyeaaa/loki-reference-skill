@@ -5,7 +5,7 @@ import { Outlet } from "react-router-dom"
 export default function RootLayout() {
   React.useEffect(() => {
     document.documentElement.lang = "ko"
-    document.title = "sendgrinda"
+    document.title = "Send Grinda AI Email Marketing"
   }, [])
 
   return (

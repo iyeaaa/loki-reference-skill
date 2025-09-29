@@ -284,10 +284,15 @@ export const BuyerImportNode = memo(
     const handleSelectGroup = async (groupId: string) => {
       try {
         const res = await addressBookApi.listContacts(groupId, { limit: 1000 });
-        const imported: Lead[] = res.contacts.map((c) => ({
+        const imported = res.contacts.map((c) => ({
           id: c.id,
           company: c.company,
           email: c.email,
+          industryType: c.industryType || undefined,
+          productCategory: c.productCategory || undefined,
+          country: c.country || undefined,
+          description: c.description || undefined,
+          website: c.websiteUrl || undefined,
         }));
         setLeads(imported);
         setAddressBookModalOpen(false);

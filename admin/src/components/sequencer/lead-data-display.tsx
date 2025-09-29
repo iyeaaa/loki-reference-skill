@@ -21,8 +21,17 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
+// Lead 타입 확장
+interface EnhancedLead extends Lead {
+  industryType?: string;
+  productCategory?: string;
+  country?: string;
+  description?: string;
+  website?: string;
+}
+
 interface LeadDataDisplayProps {
-  leads: Lead[];
+  leads: EnhancedLead[];
   searchTerm: string;
   onSearchChange: (value: string) => void;
   filterBy: "all" | "company" | "email";
@@ -57,7 +66,12 @@ export function LeadDataDisplay({
       } else {
         return (
           lead.company.toLowerCase().includes(term) ||
-          lead.email.toLowerCase().includes(term)
+          lead.email.toLowerCase().includes(term) ||
+          (lead.description && lead.description.toLowerCase().includes(term)) ||
+          (lead.industryType &&
+            lead.industryType.toLowerCase().includes(term)) ||
+          (lead.country && lead.country.toLowerCase().includes(term)) ||
+          (lead.website && lead.website.toLowerCase().includes(term))
         );
       }
     });
@@ -82,7 +96,7 @@ export function LeadDataDisplay({
   }
 
   return (
-    <div className="space-y-4 w-[800px]">
+    <div className="space-y-4">
       <div className="text-sm font-medium">
         리드 데이터 ({filteredLeads.length}개)
       </div>
@@ -131,20 +145,56 @@ export function LeadDataDisplay({
         </div>
       </div>
 
-      <div className="border rounded">
+      <div className="border rounded overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
             <tr>
-              <th className="px-4 py-2 text-left">회사명</th>
-              <th className="px-4 py-2 text-left">이메일</th>
+              <th className="px-2 py-1 text-left min-w-[120px]">회사명</th>
+              <th className="px-2 py-1 text-left min-w-[80px]">산업</th>
+              <th className="px-2 py-1 text-left min-w-[80px]">국가</th>
+              <th className="px-2 py-1 text-left min-w-[200px]">설명</th>
+              <th className="px-2 py-1 text-left min-w-[150px]">이메일</th>
+              <th className="px-2 py-1 text-left min-w-[100px]">웹사이트</th>
             </tr>
           </thead>
           <tbody>
             {paginatedLeads.map((lead) => (
-              <tr key={lead.id} className="border-t">
-                <td className="px-4 py-2">{lead.company}</td>
-                <td className="px-4 py-2 text-muted-foreground">
+              <tr key={lead.id} className="border-t hover:bg-muted/30">
+                <td className="px-2 py-1 font-medium">{lead.company}</td>
+                <td className="px-2 py-1 text-muted-foreground text-xs">
+                  {lead.industryType && <div>{lead.industryType}</div>}
+                  {lead.productCategory && (
+                    <div className="text-xs opacity-70">
+                      {lead.productCategory}
+                    </div>
+                  )}
+                </td>
+                <td className="px-2 py-1 text-muted-foreground text-xs">
+                  {lead.country || "-"}
+                </td>
+                <td className="px-2 py-1 text-muted-foreground text-xs">
+                  {lead.description || "-"}
+                </td>
+                <td className="px-2 py-1 text-muted-foreground">
                   {lead.email}
+                </td>
+                <td className="px-2 py-1 text-muted-foreground text-xs">
+                  {lead.website ? (
+                    <a
+                      href={
+                        lead.website.startsWith("http")
+                          ? lead.website
+                          : `https://${lead.website}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline"
+                    >
+                      {lead.website}
+                    </a>
+                  ) : (
+                    "-"
+                  )}
                 </td>
               </tr>
             ))}

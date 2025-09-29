@@ -1,5 +1,14 @@
 import { API_BASE_URL } from "@/lib/api/client"
-import type { Lead } from "@/lib/atoms"
+
+export interface Lead {
+  id: string
+  company: string
+  description?: string
+  industryType?: string
+  productCategory?: string
+  country?: string
+  website?: string
+}
 
 export async function generateEmailDraft(
   prompt: string

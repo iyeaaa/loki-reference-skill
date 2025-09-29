@@ -18,8 +18,7 @@ import {
   useUsers,
 } from "@/lib/api/hooks/users"
 import { departmentsApi } from "@/lib/api/services/departments"
-import { languagesApi } from "@/lib/api/services/languages"
-import type { Department, Language, User, UserRole, UsersParams } from "@/lib/api/types/user"
+import type { Department, User, UserRole, UsersParams } from "@/lib/api/types/user"
 import { formatRelativeTime } from "@/lib/date-utils"
 import { BulkActionModal } from "./BulkActionModal"
 import { PasswordChangeDialog } from "./PasswordChangeDialog"
@@ -28,7 +27,6 @@ import { UserForm } from "./UserForm"
 
 export default function UsersPage() {
   const [departments, setDepartments] = useState<Department[]>([])
-  const [languages, setLanguages] = useState<Language[]>([])
 
   const [search, setSearch] = useState("")
   const [selectedRoles, setSelectedRoles] = useState<string[]>([])
@@ -85,19 +83,10 @@ export default function UsersPage() {
     }
   }, [])
 
-  const loadLanguages = useCallback(async () => {
-    try {
-      const response = await languagesApi.list()
-      setLanguages(response || [])
-    } catch (error) {
-      console.error("Failed to load languages:", error)
-    }
-  }, [])
-
   // Load initial data
   useEffect(() => {
-    Promise.all([loadDepartments(), loadLanguages()])
-  }, [loadDepartments, loadLanguages])
+    loadDepartments()
+  }, [loadDepartments])
 
   const handleUpdateUser = async (userData: unknown) => {
     if (!editingUser) return
@@ -449,10 +438,7 @@ export default function UsersPage() {
                         <div className="flex flex-wrap gap-1 max-w-[11rem]">
                           {user.editLanguages && user.editLanguages.length > 0 ? (
                             user.editLanguages.map((lang) => {
-                              const langInfo =
-                                typeof lang === "string"
-                                  ? languages.find((l) => l.code === lang)
-                                  : lang
+                              const langInfo = typeof lang === "string" ? null : lang
                               return (
                                 <Badge
                                   key={
@@ -461,7 +447,7 @@ export default function UsersPage() {
                                   variant="outline"
                                   className="text-xs"
                                 >
-                                  {langInfo?.name || (typeof lang === "string" ? lang : lang.name)}
+                                  {typeof lang === "string" ? lang : lang.name}
                                 </Badge>
                               )
                             })
@@ -474,10 +460,7 @@ export default function UsersPage() {
                         <div className="flex flex-wrap gap-1 max-w-[11rem]">
                           {user.reviewLanguages && user.reviewLanguages.length > 0 ? (
                             user.reviewLanguages.map((lang) => {
-                              const langInfo =
-                                typeof lang === "string"
-                                  ? languages.find((l) => l.code === lang)
-                                  : lang
+                              const langInfo = typeof lang === "string" ? null : lang
                               return (
                                 <Badge
                                   key={
@@ -486,7 +469,7 @@ export default function UsersPage() {
                                   variant="outline"
                                   className="text-xs"
                                 >
-                                  {langInfo?.name || (typeof lang === "string" ? lang : lang.name)}
+                                  {typeof lang === "string" ? lang : lang.name}
                                 </Badge>
                               )
                             })

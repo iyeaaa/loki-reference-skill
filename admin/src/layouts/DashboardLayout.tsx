@@ -1,5 +1,4 @@
-import { useAtomValue } from "jotai"
-import { Play, User } from "lucide-react"
+import { User } from "lucide-react"
 import { useState } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 import { AppSidebar } from "@/components/AppSidebar"
@@ -12,11 +11,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { leadsAtom } from "@/lib/atoms"
-import { SequenceControlProvider, useSequenceControl } from "@/lib/sequence-control-context"
 
 const getPageName = (pathname: string) => {
   switch (pathname) {
@@ -34,37 +30,10 @@ const getPageName = (pathname: string) => {
 }
 
 export default function DashboardLayout() {
-  return (
-    <SequenceControlProvider>
-      <DashboardLayoutContent />
-    </SequenceControlProvider>
-  )
-}
-
-function DashboardLayoutContent() {
   const location = useLocation()
   const pathname = location.pathname
   const pageName = getPageName(pathname)
   const [showProfileCard, setShowProfileCard] = useState(false)
-  const { executor } = useSequenceControl()
-  const leads = useAtomValue(leadsAtom)
-  const [executingSequence, setExecutingSequence] = useState(false)
-
-  const canExecuteSequence = Boolean(executor)
-  const hasLeads = leads.length > 0
-
-  const handleExecuteSequence = async () => {
-    if (!executor || !hasLeads) {
-      return
-    }
-
-    try {
-      setExecutingSequence(true)
-      await executor()
-    } finally {
-      setExecutingSequence(false)
-    }
-  }
 
   return (
     <div className="h-screen flex overflow-hidden bg-background">
@@ -88,21 +57,6 @@ function DashboardLayoutContent() {
               </Breadcrumb>
             </div>
             <div className="ml-auto flex items-center gap-7 px-4">
-              {canExecuteSequence && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1"
-                  onClick={handleExecuteSequence}
-                  disabled={!hasLeads || executingSequence}
-                  title={
-                    hasLeads ? "시퀀스를 자동으로 실행합니다" : "바이어 리드 데이터가 필요합니다"
-                  }
-                >
-                  {executingSequence ? "실행 중..." : "시퀀스 자동 실행"}
-                  <Play className="h-4 w-4 text-green-600" />
-                </Button>
-              )}
               <button
                 type="button"
                 onClick={() => setShowProfileCard(!showProfileCard)}

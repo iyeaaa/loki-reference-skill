@@ -1,0 +1,191 @@
+// Email Management API Types (aligned with backend database schema)
+
+export type EmailDirection = "outbound" | "inbound"
+
+export type EmailStatus =
+  | "draft"
+  | "scheduled"
+  | "queued"
+  | "sent"
+  | "delivered"
+  | "opened"
+  | "clicked"
+  | "replied"
+  | "bounced"
+  | "failed"
+  | "spam"
+  | "unsubscribed"
+
+export type EmailBounceType = "soft" | "hard" | "block"
+
+export type EmailThreadStatus = "active" | "archived" | "snoozed"
+
+export type EmailReplySentiment =
+  | "positive"
+  | "neutral"
+  | "negative"
+  | "interested"
+  | "not_interested"
+
+export type EmailEventType =
+  | "processed"
+  | "delivered"
+  | "open"
+  | "click"
+  | "bounce"
+  | "dropped"
+  | "deferred"
+  | "spam_report"
+  | "unsubscribe"
+
+export interface Email {
+  id: string
+  workspaceId: string
+  userEmailAccountId: string
+  leadId?: string | null
+  sequenceId?: string | null
+  stepId?: string | null
+  direction: EmailDirection
+  fromEmail: string
+  toEmail: string
+  ccEmails?: string[] | null
+  bccEmails?: string[] | null
+  subject?: string | null
+  bodyText?: string | null
+  bodyHtml?: string | null
+  status: EmailStatus
+  // Timing
+  scheduledAt?: string | null
+  sentAt?: string | null
+  deliveredAt?: string | null
+  openedAt?: string | null
+  clickedAt?: string | null
+  repliedAt?: string | null
+  // Bounce information
+  bounceType?: EmailBounceType | null
+  bounceReason?: string | null
+  errorMessage?: string | null
+  // Provider IDs
+  sendgridMessageId?: string | null
+  messageId?: string | null
+  inReplyTo?: string | null
+  // Thread relationship
+  threadId?: string | null
+  // Engagement metrics
+  openCount: number
+  clickCount: number
+  // Unsubscribe/spam
+  unsubscribedAt?: string | null
+  spamReportedAt?: string | null
+  // Retry logic
+  retryCount: number
+  lastRetryAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface EmailThread {
+  id: string
+  workspaceId: string
+  leadId?: string | null
+  subject?: string | null
+  firstEmailId?: string | null
+  lastEmailId?: string | null
+  lastActivityAt?: string | null
+  status: EmailThreadStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export interface EmailReply {
+  id: string
+  workspaceId: string
+  originalEmailId: string
+  replyEmailId: string
+  sentiment?: EmailReplySentiment | null
+  intent?: string | null
+  aiSummary?: string | null
+  isRead: boolean
+  assignedTo?: string | null
+  createdAt: string
+}
+
+export interface EmailEvent {
+  id: string
+  emailId: string
+  eventType: EmailEventType
+  timestamp: string
+  sendgridEventId?: string | null
+  userAgent?: string | null
+  ipAddress?: string | null
+  url?: string | null // For click events
+  bounceType?: string | null
+  bounceReason?: string | null
+  smtpResponse?: string | null
+  rawEventData?: Record<string, unknown> | null
+  processed: boolean
+  createdAt: string
+}
+
+export interface SendEmailRequest {
+  workspaceId: string
+  userEmailAccountId: string
+  toEmail: string
+  subject: string
+  bodyText?: string
+  bodyHtml?: string
+  ccEmails?: string[]
+  bccEmails?: string[]
+  leadId?: string
+  sequenceId?: string
+  stepId?: string
+  replyTo?: string
+  inReplyTo?: string
+  references?: string[]
+  scheduledAt?: string // ISO 8601 datetime for scheduled sending
+}
+
+export interface CreateEmailRequest {
+  workspaceId: string
+  userEmailAccountId: string
+  leadId?: string
+  sequenceId?: string
+  stepId?: string
+  direction: EmailDirection
+  fromEmail: string
+  toEmail: string
+  ccEmails?: string[]
+  bccEmails?: string[]
+  subject?: string
+  bodyText?: string
+  bodyHtml?: string
+  status?: EmailStatus
+  scheduledAt?: string
+}
+
+export interface UpdateEmailStatusRequest {
+  status: EmailStatus
+}
+
+export interface EmailsResponse {
+  data: Email[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface EmailsParams {
+  page?: number
+  limit?: number
+  status?: EmailStatus | "all"
+  direction?: EmailDirection | "all"
+  workspaceId?: string
+  leadId?: string
+  sequenceId?: string
+  search?: string
+}
+
+export interface BulkUpdateEmailStatusRequest {
+  emailIds: string[]
+  status: EmailStatus
+}

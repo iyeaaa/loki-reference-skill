@@ -1,0 +1,145 @@
+// Sequence Management API Types (aligned with backend database schema)
+
+export type SequenceStatus = "draft" | "active" | "paused" | "archived"
+
+export type EnrollmentStatus =
+  | "active"
+  | "paused"
+  | "completed"
+  | "stopped"
+  | "bounced"
+  | "unsubscribed"
+
+export type StepExecutionStatus = "pending" | "scheduled" | "sent" | "failed" | "skipped"
+
+export interface Sequence {
+  id: string
+  workspaceId: string
+  name: string
+  description?: string | null
+  status: SequenceStatus
+  createdBy?: string | null
+  createdAt: string
+  updatedAt: string
+  // Extended fields from backend joins
+  workspaceName?: string
+  createdByUsername?: string
+  createdByEmail?: string
+  stepsCount?: number
+  enrollmentsCount?: number
+}
+
+export interface SequenceStep {
+  id: string
+  sequenceId: string
+  stepOrder: number
+  delayDays: number
+  emailSubject: string
+  emailBodyText?: string | null
+  emailBodyHtml?: string | null
+  emailTemplateId?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SequenceEnrollment {
+  id: string
+  sequenceId: string
+  leadId: string
+  userEmailAccountId: string
+  currentStepOrder: number
+  status: EnrollmentStatus
+  enrolledBy?: string | null
+  enrolledAt: string
+  firstEmailSentAt?: string | null
+  lastEmailSentAt?: string | null
+  completedAt?: string | null
+  stoppedAt?: string | null
+  nextStepScheduledAt?: string | null
+}
+
+export interface SequenceStepExecution {
+  id: string
+  enrollmentId: string
+  stepId: string
+  stepOrder: number
+  status: StepExecutionStatus
+  scheduledAt: string
+  executedAt?: string | null
+  errorMessage?: string | null
+  emailId?: string | null
+  createdAt: string
+}
+
+export interface CreateSequenceRequest {
+  workspaceId: string
+  name: string
+  description?: string
+  status?: SequenceStatus
+  createdBy?: string
+}
+
+export interface UpdateSequenceRequest {
+  name: string
+  description?: string
+  status: SequenceStatus
+}
+
+export interface CreateSequenceStepRequest {
+  stepOrder: number
+  delayDays: number
+  emailSubject: string
+  emailBodyText?: string
+  emailBodyHtml?: string
+  emailTemplateId?: string
+}
+
+export interface CreateEnrollmentRequest {
+  leadId: string
+  userEmailAccountId: string
+  enrolledBy?: string
+  status?: EnrollmentStatus
+}
+
+export interface SequencesResponse {
+  data: Sequence[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface SequenceEnrollmentsResponse {
+  data: SequenceEnrollment[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface SequencesParams {
+  page?: number
+  limit?: number
+  status?: SequenceStatus | "all"
+  search?: string
+  workspaceIds?: string[]
+  createdByIds?: string[]
+}
+
+export interface BulkUpdateSequenceStatusRequest {
+  sequenceIds: string[]
+  status: SequenceStatus
+}
+
+export interface BulkEnrollRequest {
+  sequenceId: string
+  leadIds: string[]
+  userEmailAccountId: string
+  enrolledBy?: string
+}
+
+export interface BulkUnenrollRequest {
+  enrollmentIds: string[]
+}
+
+// Type aliases for form inputs
+export type SequenceStepCreateInput = CreateSequenceStepRequest
+export type SequenceStepUpdateInput = CreateSequenceStepRequest

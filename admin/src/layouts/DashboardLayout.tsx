@@ -26,6 +26,8 @@ const getPageName = (pathname: string) => {
       return "설정"
     case "/replied-emails":
       return "답장 받은 이메일"
+    case "/workspaces":
+      return "워크스페이스 관리"
     default:
       return "Overview"
   }

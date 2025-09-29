@@ -1,4 +1,4 @@
-import { BarChart3, GitBranch, Mail, Settings, UserCheck, Users } from "lucide-react"
+import { BarChart3, Building2, GitBranch, Mail, Settings, UserCheck, Users } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import {
   Sidebar,
@@ -6,27 +6,20 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
 } from "@/components/ui/sidebar"
 
-const menuItems = [
+// 워크스페이스 종속 기능 (중요도 순)
+const workspaceMenuItems = [
   {
     title: "모니터링",
     url: "/dashboard",
     icon: BarChart3,
-  },
-  {
-    title: "유저 관리",
-    url: "/users",
-    icon: Users,
-  },
-  {
-    title: "시퀀스 관리",
-    url: "/sequences",
-    icon: GitBranch,
   },
   {
     title: "고객 관리",
@@ -34,9 +27,28 @@ const menuItems = [
     icon: UserCheck,
   },
   {
+    title: "시퀀스 관리",
+    url: "/sequences",
+    icon: GitBranch,
+  },
+  {
     title: "답장 받은 이메일",
     url: "/replied-emails",
     icon: Mail,
+  },
+]
+
+// 관리자 기능
+const adminMenuItems = [
+  {
+    title: "워크스페이스 관리",
+    url: "/workspaces",
+    icon: Building2,
+  },
+  {
+    title: "유저 관리",
+    url: "/users",
+    icon: Users,
   },
 ]
 
@@ -68,10 +80,43 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
+        {/* 워크스페이스 기능 */}
         <SidebarGroup>
+          <SidebarGroupLabel>워크스페이스</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => {
+              {workspaceMenuItems.map((item) => {
+                const isActive = pathname === item.url
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={item.title}
+                      isActive={isActive}
+                      className={isActive ? "bg-violet-500/10 border-r-2 border-violet-500" : ""}
+                    >
+                      <Link to={item.url || "#"}>
+                        {item.icon && <item.icon className={isActive ? "text-violet-500" : ""} />}
+                        <span className={isActive ? "text-violet-500 font-medium" : ""}>
+                          {item.title}
+                        </span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        {/* 관리자 기능 */}
+        <SidebarGroup>
+          <SidebarGroupLabel>관리</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {adminMenuItems.map((item) => {
                 const isActive = pathname === item.url
                 return (
                   <SidebarMenuItem key={item.title}>

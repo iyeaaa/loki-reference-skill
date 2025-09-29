@@ -49,23 +49,56 @@ export default function AddressBookGroupPage() {
         <Button onClick={add}>추가</Button>
       </div>
 
-      <div className="border rounded">
+      <div className="border rounded overflow-x-auto">
         {contacts.length === 0 ? (
-          <div className="p-3 text-sm text-muted-foreground">바이어가 없습니다. 추가해보세요.</div>
+          <div className="p-3 text-sm text-muted-foreground">연락처가 없습니다. 추가해보세요.</div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
-                <th className="px-2 py-1 text-left">회사명</th>
-                <th className="px-2 py-1 text-left">이메일</th>
+                <th className="px-2 py-1 text-left min-w-[120px]">회사명</th>
+                <th className="px-2 py-1 text-left min-w-[80px]">산업</th>
+                <th className="px-2 py-1 text-left min-w-[80px]">국가</th>
+                <th className="px-2 py-1 text-left min-w-[200px]">설명</th>
+                <th className="px-2 py-1 text-left min-w-[150px]">이메일</th>
+                <th className="px-2 py-1 text-left min-w-[100px]">웹사이트</th>
                 <th className="w-16"></th>
               </tr>
             </thead>
             <tbody>
               {contacts.map((c) => (
-                <tr key={c.id} className="border-t">
-                  <td className="px-2 py-1">{c.company}</td>
-                  <td className="px-2 py-1 text-muted-foreground">{c.email}</td>
+                <tr key={c.id} className="border-t hover:bg-muted/30">
+                  <td className="px-2 py-1 font-medium">{c.company}</td>
+                  <td className="px-2 py-1 text-muted-foreground text-xs">
+                    {c.industryType && <div>{c.industryType}</div>}
+                    {c.productCategory && <div className="text-xs opacity-70">{c.productCategory}</div>}
+                  </td>
+                  <td className="px-2 py-1 text-muted-foreground text-xs">{c.country}</td>
+                  <td className="px-2 py-1 text-muted-foreground text-xs max-w-[200px]">
+                    {c.description ? (
+                      <div className="truncate" title={c.description}>
+                        {c.description}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground/50">-</span>
+                    )}
+                  </td>
+                  <td className="px-2 py-1 text-muted-foreground text-xs">{c.email}</td>
+                  <td className="px-2 py-1 text-xs">
+                    {c.websiteUrl ? (
+                      <a
+                        href={c.websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline truncate block max-w-[100px]"
+                        title={c.websiteUrl}
+                      >
+                        웹사이트
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground/50">-</span>
+                    )}
+                  </td>
                   <td className="px-2 py-1 text-right">
                     <Button variant="ghost" size="sm" onClick={() => remove(c.id)}>삭제</Button>
                   </td>

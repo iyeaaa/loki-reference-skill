@@ -15,6 +15,13 @@
       "when": 1758998257417,
       "tag": "0001_goofy_mister_fear",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1759125899281,
+      "tag": "0002_dark_dazzler",
+      "breakpoints": true
     }
   ]
 }

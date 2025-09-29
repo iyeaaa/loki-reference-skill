@@ -1,4 +1,5 @@
-import { OpenAI } from 'openai'
+import { createOpenAI } from '@ai-sdk/openai'
+import { generateText } from 'ai'
 
 interface EmailContext {
   fromEmail: string
@@ -14,10 +15,10 @@ interface AIEmailResponse {
 }
 
 class AIEmailService {
-  private openai: OpenAI
+  private openai: ReturnType<typeof createOpenAI>
 
   constructor(apiKey: string) {
-    this.openai = new OpenAI({
+    this.openai = createOpenAI({
       apiKey: apiKey,
     })
   }
@@ -59,32 +60,22 @@ class AIEmailService {
       위 문의에 대해 5-7문장 이내로 간결하게 답변하세요.
       인사말 포함, 핵심 답변, 필요시 미팅 링크만 포함하세요.`
 
-      const completion = await this.openai.chat.completions.create({
-        model: 'gpt-5',
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
+      const { text } = await generateText({
+        model: this.openai('gpt-4o-mini'),
+        system: systemPrompt,
+        prompt: userPrompt,
       })
 
-      const replyContent = completion.choices[0]?.message?.content
-
-      if (!replyContent) {
+      if (!text || text.trim().length === 0) {
         throw new Error('AI 응답 생성 실패')
       }
 
-      console.log('✅ AI 응답 생성 성공')
-      console.log(`- 사용된 토큰: ${completion.usage?.total_tokens}`)
+      console.log('✅ AI 응답 생성 성공');
+      console.log(`내용: ${text}`)
 
       return {
         success: true,
-        replyContent,
+        replyContent: text,
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류 발생'

@@ -133,40 +133,70 @@ export function UsersTableWithPagination({
             WebkitOverflowScrolling: "touch",
           }}
         >
-          <table className="w-full min-w-[1800px]">
+          <table className="w-full" style={{ tableLayout: "auto" }}>
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="sticky left-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700">
+                <th
+                  className="sticky left-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
+                  style={{ width: "1%", whiteSpace: "nowrap" }}
+                >
                   <Checkbox
                     checked={users.length > 0 && selectedUsers.length === users.length}
                     onCheckedChange={handleToggleAll}
                   />
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  style={{ minWidth: "100px" }}
+                >
                   사용자명
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  style={{ minWidth: "200px" }}
+                >
                   이메일
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  style={{ width: "1%", whiteSpace: "nowrap" }}
+                >
                   역할
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  style={{ minWidth: "120px" }}
+                >
                   부서
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  style={{ width: "1%", whiteSpace: "nowrap" }}
+                >
                   사번
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  style={{ width: "1%", whiteSpace: "nowrap" }}
+                >
                   상태
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  style={{ width: "1%", whiteSpace: "nowrap" }}
+                >
                   최근로그인
                 </th>
-                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  style={{ width: "1%", whiteSpace: "nowrap" }}
+                >
                   생성일
                 </th>
-                <th className="sticky right-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700">
+                <th
+                  className="sticky right-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
+                  style={{ width: "1%", whiteSpace: "nowrap" }}
+                >
                   편집
                 </th>
               </tr>
@@ -184,14 +214,26 @@ export function UsersTableWithPagination({
                     />
                   </td>
                   <td
-                    className="p-2 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[7rem]"
+                    className="p-2 text-sm font-medium text-gray-900 dark:text-gray-100"
                     title={user.username}
+                    style={{
+                      maxWidth: "200px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
                   >
                     {user.username}
                   </td>
                   <td
-                    className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 truncate max-w-[12rem]"
+                    className="p-2 text-sm text-gray-900 dark:text-gray-100"
                     title={user.email}
+                    style={{
+                      maxWidth: "300px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
                   >
                     {user.email}
                   </td>
@@ -201,8 +243,14 @@ export function UsersTableWithPagination({
                     </Badge>
                   </td>
                   <td
-                    className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 truncate max-w-[9rem]"
+                    className="p-2 text-sm text-gray-900 dark:text-gray-100"
                     title={user.departmentName || "-"}
+                    style={{
+                      maxWidth: "200px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
                   >
                     {user.departmentName || "-"}
                   </td>

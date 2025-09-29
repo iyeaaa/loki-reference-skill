@@ -11,7 +11,7 @@ import { authRoutes } from './routes/auth.routes'
 import { departmentsRoutes } from './routes/departments.routes'
 // Import routes
 import { healthRoutes } from './routes/health.routes'
-import { userRoutes } from './routes/users.routes'
+import { adminUserRoutes, userRoutes } from './routes/users.routes'
 import { webhookRoutes } from './routes/webhook.routes'
 
 // Initialize database
@@ -47,6 +47,7 @@ const app = new Elysia()
   .use(authRoutes)
   .use(departmentsRoutes)
   .use(userRoutes)
+  .use(adminUserRoutes)
 
   .listen(config.port)
 

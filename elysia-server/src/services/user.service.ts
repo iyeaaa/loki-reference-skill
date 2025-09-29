@@ -391,3 +391,49 @@ export async function updateLastLogin(id: string) {
     })
     .where(eq(users.id, id))
 }
+
+// ====================================
+// BULK UPDATE OPERATIONS
+// ====================================
+
+// BulkUpdateStatus :exec
+export async function bulkUpdateStatus(userIds: string[], isActive: boolean) {
+  const result = await db
+    .update(users)
+    .set({
+      isActive,
+      updatedAt: new Date(),
+    })
+    .where(or(...userIds.map((id) => eq(users.id, id)))!)
+    .returning({ id: users.id })
+
+  return result.length
+}
+
+// BulkUpdateRole :exec
+export async function bulkUpdateRole(userIds: string[], userRole: 'admin' | 'user') {
+  const result = await db
+    .update(users)
+    .set({
+      userRole,
+      updatedAt: new Date(),
+    })
+    .where(or(...userIds.map((id) => eq(users.id, id)))!)
+    .returning({ id: users.id })
+
+  return result.length
+}
+
+// BulkUpdateDepartment :exec
+export async function bulkUpdateDepartment(userIds: string[], departmentId: string) {
+  const result = await db
+    .update(users)
+    .set({
+      departmentId,
+      updatedAt: new Date(),
+    })
+    .where(or(...userIds.map((id) => eq(users.id, id)))!)
+    .returning({ id: users.id })
+
+  return result.length
+}

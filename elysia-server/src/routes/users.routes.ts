@@ -234,3 +234,50 @@ export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
       }),
     },
   )
+
+// Admin bulk update routes
+export const adminUserRoutes = new Elysia({ prefix: '/api/v1/admin/users' })
+  // Bulk update status
+  .put(
+    '/bulk/status',
+    async ({ body }) => {
+      const updatedCount = await userService.bulkUpdateStatus(body.userIds, body.isActive)
+      return { updatedCount }
+    },
+    {
+      body: t.Object({
+        userIds: t.Array(t.String({ format: 'uuid' })),
+        isActive: t.Boolean(),
+      }),
+    },
+  )
+
+  // Bulk update role
+  .put(
+    '/bulk/role',
+    async ({ body }) => {
+      const updatedCount = await userService.bulkUpdateRole(body.userIds, body.userRole)
+      return { updatedCount }
+    },
+    {
+      body: t.Object({
+        userIds: t.Array(t.String({ format: 'uuid' })),
+        userRole: t.Union([t.Literal('admin'), t.Literal('user')]),
+      }),
+    },
+  )
+
+  // Bulk update department
+  .put(
+    '/bulk/department',
+    async ({ body }) => {
+      const updatedCount = await userService.bulkUpdateDepartment(body.userIds, body.departmentId)
+      return { updatedCount }
+    },
+    {
+      body: t.Object({
+        userIds: t.Array(t.String({ format: 'uuid' })),
+        departmentId: t.String({ format: 'uuid' }),
+      }),
+    },
+  )

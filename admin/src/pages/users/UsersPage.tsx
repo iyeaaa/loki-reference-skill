@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input"
 // Import API and types
 import {
+  useBulkUpdateDepartment,
   useBulkUpdateRole,
   useBulkUpdateStatus,
   useDeleteUser,
@@ -43,6 +44,7 @@ export default function UsersPage() {
   const deleteUser = useDeleteUser()
   const bulkUpdateStatus = useBulkUpdateStatus()
   const bulkUpdateRole = useBulkUpdateRole()
+  const bulkUpdateDepartment = useBulkUpdateDepartment()
 
   const loadDepartments = useCallback(async () => {
     try {
@@ -130,6 +132,15 @@ export default function UsersPage() {
     } else if (actionType === "role") {
       bulkUpdateRole.mutate(
         { userIds: selectedUsers, role: value as string },
+        {
+          onSuccess: () => {
+            setSelectedUsers([])
+          },
+        }
+      )
+    } else if (actionType === "department") {
+      bulkUpdateDepartment.mutate(
+        { userIds: selectedUsers, departmentId: value as string },
         {
           onSuccess: () => {
             setSelectedUsers([])

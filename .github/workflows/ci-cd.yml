@@ -1,15 +1,13 @@
-name: CI/CD Pipeline
+name: Main Branch CI/CD
 
 on:
   push:
-    branches: [main, develop, 'feature/**', 'refactor/**']
-  pull_request:
-    branches: [main, develop]
+    branches: [main]
 
 jobs:
-  # Frontend 타입 체크 및 린트
+  # Frontend 타입 체크
   frontend-check:
-    name: Frontend - Type Check & Lint
+    name: Frontend Type Check
     runs-on: ubuntu-latest
 
     steps:
@@ -26,16 +24,6 @@ jobs:
         corepack enable
         corepack prepare yarn@4.10.3 --activate
 
-    - name: Cache Yarn dependencies
-      uses: actions/cache@v3
-      with:
-        path: |
-          admin/.yarn/cache
-          admin/.pnp.*
-        key: ${{ runner.os }}-yarn-${{ hashFiles('admin/yarn.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-yarn-
-
     - name: Install dependencies
       working-directory: ./admin
       run: yarn install --immutable
@@ -46,11 +34,11 @@ jobs:
 
     - name: Biome lint check
       working-directory: ./admin
-      run: yarn lint:check || yarn run biome check ./src
+      run: yarn lint:check
 
-  # Backend 타입 체크 및 린트
+  # Backend 타입 체크
   backend-check:
-    name: Backend - Type Check & Lint
+    name: Backend Type Check
     runs-on: ubuntu-latest
 
     steps:
@@ -61,16 +49,6 @@ jobs:
       uses: oven-sh/setup-bun@v1
       with:
         bun-version: 'latest'
-
-    - name: Cache Bun dependencies
-      uses: actions/cache@v3
-      with:
-        path: |
-          elysia-server/node_modules
-          ~/.bun/install/cache
-        key: ${{ runner.os }}-bun-${{ hashFiles('elysia-server/package.json', 'elysia-server/bun.lockb') }}
-        restore-keys: |
-          ${{ runner.os }}-bun-
 
     - name: Install dependencies
       working-directory: ./elysia-server
@@ -84,12 +62,11 @@ jobs:
       working-directory: ./elysia-server
       run: bun run lint:check
 
-  # Main 브랜치 푸시 시에만 배포
+  # 타입 체크 통과 후 배포
   deploy:
-    name: Deploy to EC2
+    name: Deploy to Production
     runs-on: ubuntu-latest
     needs: [frontend-check, backend-check]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
     - name: Checkout code
@@ -107,7 +84,6 @@ jobs:
 
     - name: Prepare environment files
       run: |
-        # 환경변수 파일 생성
         echo "${{ secrets.ADMIN_ENV }}" > ./admin/.env
         echo "${{ secrets.ELYSIA_SERVER_ENV }}" > ./elysia-server/.env
 
@@ -148,9 +124,7 @@ jobs:
           ELAPSED=0
 
           while [ $ELAPSED -lt $HEALTH_CHECK_TIMEOUT ]; do
-            # admin 서비스 헬스체크 (Next.js API health endpoint)
             ADMIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health || echo "000")
-            # elysia-server 서비스 헬스체크
             ELYSIA_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/health || echo "000")
 
             if [ "$ADMIN_STATUS" = "200" ] && [ "$ELYSIA_STATUS" = "200" ]; then
@@ -178,11 +152,11 @@ jobs:
           docker image prune -f
 
           # 최종 컨테이너 상태 확인
-          echo "\n📦 Container Status:"
+          echo -e "\n📦 Container Status:"
           docker compose ps
 
           # 서비스 로그 확인 (최근 10줄)
-          echo "\n📋 Recent Logs:"
+          echo -e "\n📋 Recent Logs:"
           docker compose logs --tail=10
         EOF
 

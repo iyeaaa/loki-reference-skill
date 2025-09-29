@@ -1,4 +1,4 @@
-import { User } from "lucide-react"
+import { ChevronRight, User } from "lucide-react"
 import { useState } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 import { AppSidebar } from "@/components/AppSidebar"
@@ -6,24 +6,26 @@ import { ProfileCard } from "@/components/ProfileCard"
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import type { WorkspaceOption } from "@/components/ui/workspace-selector"
+import { WorkspaceSelector } from "@/components/ui/workspace-selector"
 
 const getPageName = (pathname: string) => {
   switch (pathname) {
     case "/dashboard":
-      return "시스템 모니터링"
+      return "모니터링"
     case "/users":
       return "유저 관리"
     case "/translations":
       return "번역 관리"
     case "/settings":
       return "설정"
+    case "/replied-emails":
+      return "답장 받은 이메일"
     default:
       return "Overview"
   }
@@ -34,6 +36,16 @@ export default function DashboardLayout() {
   const pathname = location.pathname
   const pageName = getPageName(pathname)
   const [showProfileCard, setShowProfileCard] = useState(false)
+  const [selectedWorkspace, setSelectedWorkspace] = useState<string>("workspace1")
+
+  // 예시 워크스페이스 데이터
+  const workspaces: WorkspaceOption[] = [
+    { value: "workspace1", label: "루카스에듀테인먼트", sublabel: "lukas@tam9.me" },
+    { value: "workspace2", label: "예지상사", sublabel: "yamy0612@naver.com" },
+    { value: "workspace3", label: "익투스", sublabel: "ictuskorea@gmail.com" },
+    { value: "workspace4", label: "리오닉스", sublabel: "rionix@kakao.com" },
+    { value: "workspace5", label: "브이시드니", sublabel: "vmsydney@gmail.com" },
+  ]
 
   return (
     <div className="h-screen flex overflow-hidden bg-background">
@@ -44,12 +56,15 @@ export default function DashboardLayout() {
             <div className="flex items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
-              <Breadcrumb>
+              <WorkspaceSelector
+                options={workspaces}
+                value={selectedWorkspace}
+                onValueChange={setSelectedWorkspace}
+                className="mr-2"
+              />
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <Breadcrumb className="ml-2">
                 <BreadcrumbList>
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="/dashboard">Rinda Expert</BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
                   <BreadcrumbItem>
                     <BreadcrumbPage>{pageName}</BreadcrumbPage>
                   </BreadcrumbItem>

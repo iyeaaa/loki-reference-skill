@@ -144,7 +144,7 @@ export default function AdminLoginPage() {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] bg-clip-text text-transparent">
-            Rinda Expert
+            Send Grinda
           </CardTitle>
           <CardDescription className="text-gray-600 mt-2">
             스마트한 이메일 마케팅 솔루션

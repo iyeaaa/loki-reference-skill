@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "bun src/index.ts",
-    "prebuild": "biome check ./src",
-    "build": "bun build src/index.ts --target bun --outdir dist",
+    "build": "biome check ./src && bun build src/index.ts --target bun --outdir dist",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",

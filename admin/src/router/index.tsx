@@ -6,6 +6,7 @@ import RootLayout from "../layouts/RootLayout"
 import DashboardPage from "../pages/dashboard/DashboardPage"
 import LoginPage from "../pages/LoginPage"
 import LeadsPage from "../pages/leads"
+import RepliedEmailsPage from "../pages/replied-emails"
 import SequencesPage from "../pages/sequences"
 import UsersPage from "../pages/users/UsersPage"
 
@@ -53,6 +54,10 @@ export const router = createBrowserRouter([
           {
             path: "leads",
             element: <LeadsPage />,
+          },
+          {
+            path: "replied-emails",
+            element: <RepliedEmailsPage />,
           },
         ],
       },

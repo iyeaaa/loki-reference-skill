@@ -1,4 +1,4 @@
-import { BarChart3, GitBranch, Settings, UserCheck, Users } from "lucide-react"
+import { BarChart3, GitBranch, Mail, Settings, UserCheck, Users } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import {
   Sidebar,
@@ -14,7 +14,7 @@ import {
 
 const menuItems = [
   {
-    title: "대시보드",
+    title: "모니터링",
     url: "/dashboard",
     icon: BarChart3,
   },
@@ -32,6 +32,11 @@ const menuItems = [
     title: "고객 관리",
     url: "/leads",
     icon: UserCheck,
+  },
+  {
+    title: "답장 받은 이메일",
+    url: "/replied-emails",
+    icon: Mail,
   },
 ]
 
@@ -54,7 +59,7 @@ export function AppSidebar() {
                   />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Rinda Expert</span>
+                  <span className="truncate font-semibold">Send Grinda</span>
                   <span className="truncate text-xs">AI 이메일 자동화 시스템</span>
                 </div>
               </Link>

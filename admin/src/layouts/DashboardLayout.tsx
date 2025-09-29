@@ -47,7 +47,7 @@ export default function DashboardLayout() {
               <Breadcrumb>
                 <BreadcrumbList>
                   <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href="/dashboard">SendGrid Admin</BreadcrumbLink>
+                    <BreadcrumbLink href="/dashboard">Rinda Expert</BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator className="hidden md:block" />
                   <BreadcrumbItem>

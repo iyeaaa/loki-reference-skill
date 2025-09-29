@@ -3,18 +3,34 @@ import {
   Calendar,
   Download,
   Filter,
+  Hash,
   Mail,
-  Phone,
+  MoreHorizontal,
   Plus,
-  Star,
+  Search,
+  Tag,
+  TrendingUp,
   Upload,
   UserCheck,
+  Users,
+  X,
 } from "lucide-react"
 import { useState } from "react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { Progress } from "@/components/ui/progress"
 import {
   Select,
   SelectContent,
@@ -25,260 +41,442 @@ import {
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
 
-const leadsData = [
-  {
-    id: 1,
-    name: "김철수",
-    email: "kimcs@company.com",
-    company: "테크놀로지 주식회사",
-    phone: "010-1234-5678",
-    status: "hot",
-    score: 95,
-    lastContact: "2024-01-20",
-    source: "웹사이트",
-    assignedTo: "이영희",
-  },
-  {
-    id: 2,
-    name: "박영희",
-    email: "park@startup.com",
-    company: "스타트업 벤처스",
-    phone: "010-2345-6789",
-    status: "warm",
-    score: 75,
-    lastContact: "2024-01-18",
-    source: "링크드인",
-    assignedTo: "김민수",
-  },
-  {
-    id: 3,
-    name: "이민수",
-    email: "lee@enterprise.co.kr",
-    company: "엔터프라이즈 솔루션",
-    phone: "010-3456-7890",
-    status: "cold",
-    score: 40,
-    lastContact: "2024-01-15",
-    source: "추천",
-    assignedTo: "박지훈",
-  },
-  {
-    id: 4,
-    name: "정수진",
-    email: "jung@consulting.com",
-    company: "컨설팅 그룹",
-    phone: "010-4567-8901",
-    status: "qualified",
-    score: 88,
-    lastContact: "2024-01-19",
-    source: "세미나",
-    assignedTo: "이영희",
-  },
-  {
-    id: 5,
-    name: "최동욱",
-    email: "choi@manufacturing.kr",
-    company: "제조산업 코리아",
-    phone: "010-5678-9012",
-    status: "warm",
-    score: 65,
-    lastContact: "2024-01-17",
-    source: "광고",
-    assignedTo: "김민수",
-  },
-]
+interface Lead {
+  id: number
+  name: string
+  email: string
+  company: string
+  phone: string
+  status: "new" | "contacted" | "qualified" | "proposal" | "negotiation" | "closed"
+  score: number
+  tags: string[]
+  groups: string[]
+  lastContact: string
+  nextAction: string
+  lifetime_value: number
+  email_opens: number
+  email_clicks: number
+  source: string
+}
 
 export default function LeadsPage() {
-  const [leads] = useState(leadsData)
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
+  const [selectedLeads, setSelectedLeads] = useState<number[]>([])
+  const [filterStatus, setFilterStatus] = useState<string>("all")
+  const [filterGroup, setFilterGroup] = useState<string>("all")
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "hot":
-        return <Badge className="bg-red-500">Hot</Badge>
-      case "warm":
-        return <Badge className="bg-orange-500">Warm</Badge>
-      case "cold":
-        return <Badge className="bg-blue-500">Cold</Badge>
-      case "qualified":
-        return <Badge className="bg-green-500">Qualified</Badge>
-      default:
-        return <Badge>{status}</Badge>
+  // 예시 고객 데이터
+  const leads: Lead[] = [
+    {
+      id: 1,
+      name: "김철수",
+      email: "kimcs@techcorp.com",
+      company: "테크놀로지 주식회사",
+      phone: "010-1234-5678",
+      status: "qualified",
+      score: 95,
+      tags: ["VIP", "기업고객"],
+      groups: ["VIP 고객", "재구매 고객"],
+      lastContact: "2시간 전",
+      nextAction: "계약서 발송",
+      lifetime_value: 5240000,
+      email_opens: 45,
+      email_clicks: 23,
+      source: "웹사이트",
+    },
+    {
+      id: 2,
+      name: "박영희",
+      email: "park@design.com",
+      company: "디자인 스튜디오",
+      phone: "010-2345-6789",
+      status: "proposal",
+      score: 78,
+      tags: ["신규", "관심고객"],
+      groups: ["신규 가입자"],
+      lastContact: "1일 전",
+      nextAction: "팔로우업 전화",
+      lifetime_value: 1280000,
+      email_opens: 12,
+      email_clicks: 5,
+      source: "추천",
+    },
+    {
+      id: 3,
+      name: "이민수",
+      email: "lee@startup.io",
+      company: "스타트업 벤처스",
+      phone: "010-3456-7890",
+      status: "new",
+      score: 62,
+      tags: ["잠재고객"],
+      groups: ["신규 가입자"],
+      lastContact: "3일 전",
+      nextAction: "웰컴 이메일",
+      lifetime_value: 0,
+      email_opens: 3,
+      email_clicks: 1,
+      source: "광고",
+    },
+    {
+      id: 4,
+      name: "정수진",
+      email: "jung@retail.kr",
+      company: "리테일 매니지먼트",
+      phone: "010-4567-8901",
+      status: "negotiation",
+      score: 88,
+      tags: ["우선협상", "대형거래"],
+      groups: ["VIP 고객"],
+      lastContact: "5시간 전",
+      nextAction: "가격 협상",
+      lifetime_value: 8920000,
+      email_opens: 67,
+      email_clicks: 34,
+      source: "이벤트",
+    },
+    {
+      id: 5,
+      name: "최동훈",
+      email: "choi@media.com",
+      company: "미디어 그룹",
+      phone: "010-5678-9012",
+      status: "contacted",
+      score: 45,
+      tags: ["휴면"],
+      groups: ["휴면 고객"],
+      lastContact: "2주 전",
+      nextAction: "재활성화 캠페인",
+      lifetime_value: 450000,
+      email_opens: 8,
+      email_clicks: 2,
+      source: "소셜미디어",
+    },
+  ]
+
+  const stats = {
+    total: leads.length,
+    new: leads.filter((l) => l.status === "new").length,
+    qualified: leads.filter((l) => l.status === "qualified").length,
+    avgScore: Math.round(leads.reduce((acc, l) => acc + l.score, 0) / leads.length),
+    totalValue: leads.reduce((acc, l) => acc + l.lifetime_value, 0),
+  }
+
+  const getStatusBadge = (status: Lead["status"]) => {
+    const statusMap = {
+      new: { label: "신규", className: "bg-blue-500" },
+      contacted: { label: "연락됨", className: "bg-yellow-500" },
+      qualified: { label: "검증됨", className: "bg-green-500" },
+      proposal: { label: "제안", className: "bg-purple-500" },
+      negotiation: { label: "협상", className: "bg-orange-500" },
+      closed: { label: "성사", className: "bg-gray-500" },
     }
+    const { label, className } = statusMap[status]
+    return <Badge className={className}>{label}</Badge>
   }
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600"
     if (score >= 60) return "text-yellow-600"
-    return "text-gray-600"
+    if (score >= 40) return "text-orange-600"
+    return "text-red-600"
   }
 
-  const filteredLeads = leads.filter((lead) => {
-    const matchesSearch =
-      lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.company.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || lead.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedLeads(leads.map((l) => l.id))
+    } else {
+      setSelectedLeads([])
+    }
+  }
+
+  const handleSelectLead = (leadId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedLeads([...selectedLeads, leadId])
+    } else {
+      setSelectedLeads(selectedLeads.filter((id) => id !== leadId))
+    }
+  }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
+    <div className="space-y-6 h-full overflow-y-auto p-6">
+      {/* 헤더 */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">고객 관리</h1>
-          <p className="text-gray-500 mt-2">잠재 고객을 추적하고 관리하세요</p>
+          <h1 className="text-2xl font-bold">전체 고객</h1>
+          <p className="text-muted-foreground">모든 고객 정보 관리 및 상태 추적</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline">
-            <Upload className="mr-2 h-4 w-4" />
+            <Upload className="h-4 w-4 mr-2" />
             가져오기
           </Button>
           <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="h-4 w-4 mr-2" />
             내보내기
           </Button>
-          <Button className="bg-violet-600 hover:bg-violet-700">
-            <Plus className="mr-2 h-4 w-4" />새 고객 추가
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />새 고객
           </Button>
         </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      {/* 통계 카드 */}
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 고객</CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-3">
+            <CardDescription>전체 고객</CardDescription>
+            <CardTitle className="text-2xl">{stats.total}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,245</div>
-            <p className="text-xs text-muted-foreground">+20.1% 지난 달 대비</p>
+            <div className="flex items-center text-xs text-muted-foreground">
+              <Users className="h-3 w-3 mr-1" />
+              활성 고객
+            </div>
           </CardContent>
         </Card>
+
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hot 리드</CardTitle>
-            <Star className="h-4 w-4 text-red-500" />
+          <CardHeader className="pb-3">
+            <CardDescription>신규 고객</CardDescription>
+            <CardTitle className="text-2xl">{stats.new}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">145</div>
-            <p className="text-xs text-muted-foreground">즉시 팔로우업 필요</p>
+            <div className="flex items-center text-xs text-green-500">
+              <TrendingUp className="h-3 w-3 mr-1" />
+              +12% 증가
+            </div>
           </CardContent>
         </Card>
+
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">전환율</CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-3">
+            <CardDescription>검증된 고객</CardDescription>
+            <CardTitle className="text-2xl">{stats.qualified}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12.5%</div>
-            <p className="text-xs text-muted-foreground">업계 평균 10%</p>
+            <div className="flex items-center text-xs text-muted-foreground">
+              <UserCheck className="h-3 w-3 mr-1" />
+              구매 가능성 높음
+            </div>
           </CardContent>
         </Card>
+
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">평균 스코어</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-3">
+            <CardDescription>평균 점수</CardDescription>
+            <CardTitle className="text-2xl">{stats.avgScore}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">73</div>
-            <p className="text-xs text-muted-foreground">+5 포인트 상승</p>
+            <Progress value={stats.avgScore} className="h-2" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>총 가치</CardDescription>
+            <CardTitle className="text-xl">₩{(stats.totalValue / 1000000).toFixed(1)}M</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center text-xs text-muted-foreground">
+              <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
+              생애 가치
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>고객 목록</CardTitle>
-          <CardDescription>모든 잠재 고객을 검색하고 필터링하세요</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4 mb-4">
-            <div className="flex-1">
-              <Input
-                placeholder="이름, 이메일, 회사명으로 검색..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="상태 필터" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">모든 상태</SelectItem>
-                <SelectItem value="hot">Hot</SelectItem>
-                <SelectItem value="warm">Warm</SelectItem>
-                <SelectItem value="cold">Cold</SelectItem>
-                <SelectItem value="qualified">Qualified</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline">
-              <Filter className="mr-2 h-4 w-4" />
-              고급 필터
-            </Button>
+      {/* 필터 및 액션 바 */}
+      <div className="space-y-4">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="이름, 이메일, 회사로 검색..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
           </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="상태" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 상태</SelectItem>
+              <SelectItem value="new">신규</SelectItem>
+              <SelectItem value="contacted">연락됨</SelectItem>
+              <SelectItem value="qualified">검증됨</SelectItem>
+              <SelectItem value="proposal">제안</SelectItem>
+              <SelectItem value="negotiation">협상</SelectItem>
+              <SelectItem value="closed">성사</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterGroup} onValueChange={setFilterGroup}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="그룹" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 그룹</SelectItem>
+              <SelectItem value="vip">VIP 고객</SelectItem>
+              <SelectItem value="new">신규 가입자</SelectItem>
+              <SelectItem value="inactive">휴면 고객</SelectItem>
+              <SelectItem value="repeat">재구매 고객</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="icon">
+            <Filter className="h-4 w-4" />
+          </Button>
+        </div>
 
-          {/* Leads Table */}
-          <Table>
-            <TableCaption>현재 등록된 모든 고객 목록입니다</TableCaption>
-            <TableHeader>
-              <TableRow>
-                <TableHead>이름</TableHead>
-                <TableHead>이메일</TableHead>
-                <TableHead>회사</TableHead>
-                <TableHead>전화번호</TableHead>
-                <TableHead>상태</TableHead>
-                <TableHead>스코어</TableHead>
-                <TableHead>마지막 접촉</TableHead>
-                <TableHead>출처</TableHead>
-                <TableHead>담당자</TableHead>
-                <TableHead className="text-right">액션</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredLeads.map((lead) => (
-                <TableRow key={lead.id}>
-                  <TableCell className="font-medium">{lead.name}</TableCell>
-                  <TableCell>{lead.email}</TableCell>
-                  <TableCell>{lead.company}</TableCell>
-                  <TableCell>{lead.phone}</TableCell>
-                  <TableCell>{getStatusBadge(lead.status)}</TableCell>
-                  <TableCell>
+        {/* 선택된 항목 액션 바 */}
+        {selectedLeads.length > 0 && (
+          <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">{selectedLeads.length}개 선택됨</span>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedLeads([])}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                <Tag className="h-3 w-3 mr-1" />
+                태그 추가
+              </Button>
+              <Button variant="outline" size="sm">
+                <Users className="h-3 w-3 mr-1" />
+                그룹에 추가
+              </Button>
+              <Button variant="outline" size="sm">
+                <Mail className="h-3 w-3 mr-1" />
+                이메일 보내기
+              </Button>
+              <Button variant="outline" size="sm" className="text-red-600">
+                삭제
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 고객 테이블 */}
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[50px]">
+                <Checkbox
+                  checked={selectedLeads.length === leads.length}
+                  onCheckedChange={handleSelectAll}
+                />
+              </TableHead>
+              <TableHead>고객</TableHead>
+              <TableHead>회사</TableHead>
+              <TableHead>상태</TableHead>
+              <TableHead>점수</TableHead>
+              <TableHead>그룹</TableHead>
+              <TableHead>참여도</TableHead>
+              <TableHead>생애가치</TableHead>
+              <TableHead>다음 액션</TableHead>
+              <TableHead className="w-[50px]"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {leads.map((lead) => (
+              <TableRow key={lead.id}>
+                <TableCell>
+                  <Checkbox
+                    checked={selectedLeads.includes(lead.id)}
+                    onCheckedChange={(checked) => handleSelectLead(lead.id, checked as boolean)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>{lead.name.substring(0, 2)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium">{lead.name}</div>
+                      <div className="text-xs text-muted-foreground">{lead.email}</div>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Building className="h-4 w-4 text-muted-foreground" />
+                    <span>{lead.company}</span>
+                  </div>
+                </TableCell>
+                <TableCell>{getStatusBadge(lead.status)}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
                     <span className={`font-semibold ${getScoreColor(lead.score)}`}>
                       {lead.score}
                     </span>
-                  </TableCell>
-                  <TableCell>{lead.lastContact}</TableCell>
-                  <TableCell>{lead.source}</TableCell>
-                  <TableCell>{lead.assignedTo}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button size="sm" variant="ghost">
-                        <Mail className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost">
-                        <Phone className="h-4 w-4" />
-                      </Button>
+                    <Progress value={lead.score} className="w-[60px] h-2" />
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {lead.groups.map((group, idx) => (
+                      <Badge key={idx} variant="outline" className="text-xs">
+                        {group}
+                      </Badge>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="text-xs space-y-1">
+                    <div className="flex items-center gap-1">
+                      <Mail className="h-3 w-3" />
+                      <span>{lead.email_opens} 오픈</span>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
+                    <div className="flex items-center gap-1">
+                      <Hash className="h-3 w-3" />
+                      <span>{lead.email_clicks} 클릭</span>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="font-medium">₩{(lead.lifetime_value / 1000000).toFixed(1)}M</div>
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-1">
+                    <div className="text-sm font-medium">{lead.nextAction}</div>
+                    <div className="text-xs text-muted-foreground flex items-center">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      {lead.lastContact}
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>작업</DropdownMenuLabel>
+                      <DropdownMenuItem>상세 보기</DropdownMenuItem>
+                      <DropdownMenuItem>편집</DropdownMenuItem>
+                      <DropdownMenuItem>이메일 보내기</DropdownMenuItem>
+                      <DropdownMenuItem>통화 기록</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-red-600">삭제</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </Card>
     </div>
   )

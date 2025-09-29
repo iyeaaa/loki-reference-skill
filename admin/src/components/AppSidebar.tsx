@@ -1,4 +1,13 @@
-import { BarChart3, Building2, GitBranch, Mail, Settings, UserCheck, Users } from "lucide-react"
+import {
+  BarChart3,
+  Building2,
+  GitBranch,
+  Mail,
+  Settings,
+  UserCheck,
+  Users,
+  UsersRound,
+} from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import {
   Sidebar,
@@ -13,32 +22,39 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
+import type { WorkspaceOption } from "@/components/ui/workspace-selector"
+import { WorkspaceSelector } from "@/components/ui/workspace-selector"
 
-// 워크스페이스 종속 기능 (중요도 순)
-const workspaceMenuItems = [
+// 워크스페이스 고객 관리
+const customerMenuItems = [
   {
-    title: "모니터링",
+    title: "고객 모니터링",
     url: "/dashboard",
     icon: BarChart3,
   },
   {
-    title: "고객 관리",
+    title: "전체 고객 관리",
     url: "/leads",
     icon: UserCheck,
   },
   {
-    title: "시퀀스 관리",
+    title: "고객 그룹 관리",
+    url: "/customer-groups",
+    icon: UsersRound,
+  },
+  {
+    title: "팔로우업 시퀀스 관리",
     url: "/sequences",
     icon: GitBranch,
   },
   {
-    title: "답장 받은 이메일",
+    title: "답장 관리",
     url: "/replied-emails",
     icon: Mail,
   },
 ]
 
-// 관리자 기능
+// 시스템 관리
 const adminMenuItems = [
   {
     title: "워크스페이스 관리",
@@ -52,9 +68,23 @@ const adminMenuItems = [
   },
 ]
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  workspaces?: WorkspaceOption[]
+  selectedWorkspace?: string
+  onWorkspaceChange?: (value: string) => void
+}
+
+export function AppSidebar({
+  workspaces = [],
+  selectedWorkspace = "",
+  onWorkspaceChange,
+}: AppSidebarProps) {
   const location = useLocation()
   const pathname = location.pathname
+
+  // 선택된 워크스페이스의 이름 가져오기
+  const selectedWorkspaceData = workspaces.find((w) => w.value === selectedWorkspace)
+  const workspaceLabel = selectedWorkspaceData?.label || "워크스페이스"
 
   return (
     <Sidebar collapsible="icon">
@@ -78,14 +108,34 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+
+        {/* 워크스페이스 선택 */}
+        {workspaces.length > 0 && (
+          <div className="group-data-[collapsible=icon]:hidden">
+            <div className="flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70">
+              워크스페이스 선택
+            </div>
+            <div className="px-2 pb-2">
+              <WorkspaceSelector
+                options={workspaces}
+                value={selectedWorkspace}
+                onValueChange={onWorkspaceChange}
+                className="w-full"
+              />
+            </div>
+          </div>
+        )}
       </SidebarHeader>
       <SidebarContent>
-        {/* 워크스페이스 기능 */}
+        {/* 워크스페이스 고객 관리 */}
         <SidebarGroup>
-          <SidebarGroupLabel>워크스페이스</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            <span className="font-semibold">{workspaceLabel}</span>
+            <span className="ml-1">고객 관리</span>
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {workspaceMenuItems.map((item) => {
+              {customerMenuItems.map((item) => {
                 const isActive = pathname === item.url
                 return (
                   <SidebarMenuItem key={item.title}>
@@ -111,9 +161,9 @@ export function AppSidebar() {
 
         <SidebarSeparator />
 
-        {/* 관리자 기능 */}
+        {/* 시스템 관리 */}
         <SidebarGroup>
-          <SidebarGroupLabel>관리</SidebarGroupLabel>
+          <SidebarGroupLabel>시스템 관리</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {adminMenuItems.map((item) => {

@@ -31,6 +31,7 @@ interface WorkspaceSelectorProps {
   className?: string
   disabled?: boolean
   maxHeight?: number
+  compact?: boolean
 }
 
 export function WorkspaceSelector({
@@ -43,6 +44,7 @@ export function WorkspaceSelector({
   className,
   disabled = false,
   maxHeight = 300,
+  compact = false,
 }: WorkspaceSelectorProps) {
   const [open, setOpen] = React.useState(false)
   const [searchValue, setSearchValue] = React.useState("")
@@ -73,24 +75,32 @@ export function WorkspaceSelector({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("justify-between min-w-[200px]", className)}
+          className={cn(
+            "justify-between min-w-[200px] max-w-full overflow-hidden",
+            compact ? "h-10" : "h-auto py-2",
+            className
+          )}
           disabled={disabled}
         >
-          <div className="flex items-center gap-2 flex-1 text-left">
+          <div className="flex items-center gap-2 flex-1 text-left overflow-hidden min-w-0">
             <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
             {selectedOption ? (
-              <div className="flex-1 truncate">
-                <span className="font-medium">
-                  {selectedOption.label}
+              compact ? (
+                <span className="font-medium truncate text-sm">{selectedOption.label}</span>
+              ) : (
+                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                  <span className="font-medium truncate text-sm leading-tight">
+                    {selectedOption.label}
+                  </span>
                   {selectedOption.sublabel && (
-                    <span className="text-muted-foreground text-xs ml-1">
-                      ({selectedOption.sublabel})
+                    <span className="text-muted-foreground text-xs truncate leading-tight">
+                      {selectedOption.sublabel}
                     </span>
                   )}
-                </span>
-              </div>
+                </div>
+              )
             ) : (
-              <span className="text-muted-foreground">{placeholder}</span>
+              <span className="text-muted-foreground truncate">{placeholder}</span>
             )}
           </div>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -117,19 +127,17 @@ export function WorkspaceSelector({
                   >
                     <Check
                       className={cn(
-                        "mr-2 h-4 w-4",
+                        "mr-2 h-4 w-4 shrink-0",
                         value === option.value ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    <div className="flex-1">
-                      <span className="font-medium">
-                        {option.label}
-                        {option.sublabel && (
-                          <span className="text-muted-foreground text-xs ml-1">
-                            ({option.sublabel})
-                          </span>
-                        )}
-                      </span>
+                    <div className="flex-1 overflow-hidden min-w-0">
+                      <span className="font-medium block truncate">{option.label}</span>
+                      {option.sublabel && (
+                        <span className="text-muted-foreground text-xs block truncate">
+                          {option.sublabel}
+                        </span>
+                      )}
                     </div>
                   </CommandItem>
                 ))}

@@ -1,5 +1,5 @@
-import { emails } from '../lib/email-storage'
 import type { Email, FileData, FormData } from '../models/email.model'
+import { emails } from '../types/email-storage'
 import { emailService } from './email.service'
 
 class WebhookService {

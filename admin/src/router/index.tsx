@@ -5,7 +5,6 @@ import DashboardLayout from "../layouts/DashboardLayout"
 import RootLayout from "../layouts/RootLayout"
 import AddressBookGroupPage from "../pages/address-book/AddressBookGroupPage"
 import AddressBookListPage from "../pages/address-book/AddressBookListPage"
-import BulletinBoardPage from "../pages/bulletin/BulletinBoardPage"
 import DashboardPage from "../pages/dashboard/DashboardPage"
 import EnvTestPage from "../pages/EnvTestPage"
 import WorkspaceFlowPage from "../pages/email-sequence/WorkspaceFlowPage"
@@ -50,10 +49,6 @@ export const router = createBrowserRouter([
           {
             path: "users",
             element: <UsersPage />,
-          },
-          {
-            path: "bulletin",
-            element: <BulletinBoardPage />,
           },
           {
             path: "env-test",

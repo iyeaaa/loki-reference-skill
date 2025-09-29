@@ -24,11 +24,6 @@ const menuItems = [
     icon: Users,
   },
   {
-    title: "게시판 테스트",
-    url: "/bulletin",
-    icon: ClipboardList,
-  },
-  {
     title: "Email Sequence",
     url: "/email-sequence",
     icon: ClipboardList,

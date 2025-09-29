@@ -13,7 +13,6 @@ import { departmentsRoutes } from './routes/departments.routes'
 import { emailRoutes } from './routes/email.routes'
 // Import routes
 import { healthRoutes } from './routes/health.routes'
-import { postRoutes } from './routes/post.routes'
 import { userRoutes } from './routes/users.routes'
 import { webhookRoutes } from './routes/webhook.routes'
 
@@ -48,7 +47,6 @@ const app = new Elysia()
   .use(webhookRoutes)
   .use(aiRoutes)
   .use(addressBookRoutes)
-  .use(postRoutes)
   .use(authRoutes)
   .use(departmentsRoutes)
   .use(userRoutes)

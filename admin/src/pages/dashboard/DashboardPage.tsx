@@ -247,7 +247,7 @@ export default function DashboardPage() {
                   <div className="font-medium mb-1">제목 최적화 제안</div>
                   <div className="text-xs">이모지 사용과 개인화된 제목으로 CTR 15% 상승 예상</div>
                   <div className="mt-2 p-2 bg-muted rounded text-xs font-mono">
-                    "🎯 {name}님, 단독 혜택이 도착했습니다"
+                    {'"🎯 {name}님, 단독 혜택이 도착했습니다"'}
                   </div>
                 </AlertDescription>
               </Alert>

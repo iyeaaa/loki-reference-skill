@@ -1,262 +1,149 @@
-# SendGrid 이메일 서비스 & 관리 시스템
+# SendGrid 이메일 서비스 플랫폼
 
-## 📋 프로젝트 개요
+## 프로젝트 개요
 
-SendGrid API를 활용한 이메일 송수신 자동화 시스템과 관리 대시보드입니다. 이메일 대량 발송, 웹훅을 통한 인바운드 이메일 처리, AI 기반 자동 답장, 그리고 실시간 모니터링 기능을 제공합니다.
+SendGrid API를 활용한 종합 이메일 관리 시스템입니다. 이메일 송수신, AI 자동 답장, 주소록 관리, 사용자 인증 등의 기능을 제공합니다.
 
-### 주요 기능
-- 📤 **이메일 대량 발송**: SendGrid API를 통한 마케팅 이메일 발송
-- 📥 **인바운드 이메일 처리**: SendGrid Inbound Parse 웹훅으로 수신 이메일 실시간 처리
-- 🤖 **AI 자동 답장**: OpenAI를 활용한 지능형 자동 답장 시스템
-- 📊 **관리 대시보드**: React 기반 이메일 관리 인터페이스
-- 🎯 **게시판 CRUD**: PostgreSQL 기반 게시판 시스템
-- 🐳 **완전한 컨테이너화**: Docker Compose를 통한 원클릭 배포
+## 주요 기능
 
-## 🏗 프로젝트 구조
+### 이메일 서비스
+- **대량 이메일 발송**: SendGrid API를 통한 마케팅 이메일 발송
+- **인바운드 이메일 처리**: SendGrid Inbound Parse 웹훅을 통한 실시간 이메일 수신
+- **AI 자동 답장**: OpenAI GPT를 활용한 지능형 자동 답장 시스템
+- **이메일 스레드 관리**: Message-ID 기반 이메일 대화 추적
+
+### 사용자 관리
+- **JWT 기반 인증**: 안전한 사용자 인증 시스템
+- **부서 관리**: 조직 구조 및 부서별 권한 관리
+- **주소록**: 연락처 CRUD 및 그룹 관리
+
+### 관리 대시보드
+- **React 기반 UI**: 최신 React 19 및 Vite로 구축된 반응형 대시보드
+- **실시간 모니터링**: 이메일 발송 상태 및 시스템 상태 확인
+- **데이터 시각화**: Recharts를 활용한 통계 차트
+
+## 기술 스택
+
+### Backend (Elysia Server)
+- **Runtime**: Bun 1.2+
+- **Framework**: Elysia.js 1.4+
+- **Database**: PostgreSQL 17.2 + Drizzle ORM
+- **Cache**: Redis 7.4
+- **AI**: OpenAI API
+- **Email**: SendGrid API
+- **Authentication**: JWT
+
+### Frontend (Admin Dashboard)
+- **Framework**: React 19 + TypeScript
+- **Build Tool**: Vite 7 (Rolldown)
+- **Styling**: TailwindCSS v4 + shadcn/ui
+- **State Management**: Jotai + React Query
+- **UI Components**: Radix UI
+- **Code Quality**: Biome + Husky
+
+### DevOps
+- **Container**: Docker + Docker Compose
+- **Proxy**: Nginx
+- **Monitoring**: Uptime Kuma
+- **Redis GUI**: RedisInsight
+
+## 프로젝트 구조
 
 ```
 send-grid-test/
-├── admin/                 # React 관리 대시보드 (Vite)
+├── admin/                      # React 관리자 대시보드
 │   ├── src/
+│   │   ├── components/        # React 컴포넌트
+│   │   ├── pages/            # 페이지 컴포넌트
+│   │   ├── hooks/            # Custom React Hooks
+│   │   ├── lib/              # 유틸리티 함수
+│   │   └── router/           # React Router 설정
 │   ├── package.json
 │   └── Dockerfile
-├── admin-next/           # Next.js 관리 대시보드
+│
+├── elysia-server/             # Bun + Elysia 백엔드 서버
 │   ├── src/
-│   │   └── app/api/     # API 라우트
+│   │   ├── index.ts          # 메인 서버
+│   │   ├── config/           # 설정 파일
+│   │   ├── db/               # 데이터베이스 (Drizzle)
+│   │   ├── routes/           # API 라우트
+│   │   ├── services/         # 비즈니스 로직
+│   │   ├── plugins/          # Elysia 플러그인
+│   │   └── lib/              # 유틸리티
 │   ├── package.json
 │   └── Dockerfile
-├── elysia-server/        # Bun + Elysia 백엔드 서버
-│   ├── src/
-│   │   ├── index.ts     # 메인 서버
-│   │   ├── lib/         # 유틸리티 모듈
-│   │   ├── db/          # 데이터베이스 설정
-│   │   └── services/    # 비즈니스 로직
-│   ├── package.json
-│   └── Dockerfile
-├── docker-compose.yml    # Docker 오케스트레이션
-├── .env                  # 환경 변수
-└── deploy-hana.sh       # 배포 스크립트
+│
+├── docker-compose.yml         # Docker 오케스트레이션
+├── nginx.conf                # Nginx 설정
+├── deploy-hana.sh            # 배포 스크립트
+└── up-hana.sh                # 서버 시작 스크립트
 ```
 
-## 🚀 시작하기
+## API 엔드포인트
+
+### 헬스체크
+- `GET /health` - 서버 상태 확인
+- `GET /api/health` - API 서버 상태
+
+### 인증
+- `POST /api/auth/register` - 회원가입
+- `POST /api/auth/login` - 로그인
+- `GET /api/auth/me` - 현재 사용자 정보
+
+### 이메일
+- `GET /api/emails` - 이메일 목록 조회
+- `POST /api/emails/send` - 이메일 발송
+- `POST /api/emails/send-bulk` - 대량 이메일 발송
+
+### SendGrid 웹훅
+- `POST /api/webhook/inbound` - 인바운드 이메일 처리 & AI 자동 답장
+- `POST /api/webhook/inbound-store` - 이메일 저장 전용
+
+### AI
+- `POST /api/ai/generate-reply` - AI 답장 생성
+- `POST /api/ai/analyze` - 이메일 내용 분석
+
+### 주소록
+- `GET /api/address-book` - 주소록 조회
+- `POST /api/address-book` - 연락처 추가
+- `PUT /api/address-book/:id` - 연락처 수정
+- `DELETE /api/address-book/:id` - 연락처 삭제
+
+### 사용자 관리
+- `GET /api/users` - 사용자 목록
+- `GET /api/users/:id` - 사용자 상세
+- `PUT /api/users/:id` - 사용자 정보 수정
+- `DELETE /api/users/:id` - 사용자 삭제
+
+### 부서 관리
+- `GET /api/departments` - 부서 목록
+- `POST /api/departments` - 부서 생성
+- `PUT /api/departments/:id` - 부서 수정
+- `DELETE /api/departments/:id` - 부서 삭제
+
+## 시작하기
 
 ### 필수 요구사항
 - Docker & Docker Compose
-- Node.js 20+ (로컬 개발용)
-- Bun 1.2+ (Elysia 서버용)
+- Node.js 20+
+- Bun 1.2+
 - SendGrid 계정 및 API 키
-- OpenAI API 키 (AI 답장용)
+- OpenAI API 키 (AI 기능용)
 
-### 빠른 시작 (Docker Compose)
+### 빠른 시작
 
-1. **저장소 클론**
+#### 1. 저장소 클론
 ```bash
-git clone <repository-url>
+git clone git@github.com:CheolheeLee0/send-grid-test.git
 cd send-grid-test
 ```
 
-2. **환경 변수 설정**
+#### 2. 환경 변수 설정
 ```bash
 cp .env.example .env
 ```
 
 `.env` 파일 편집:
-```env
-SENDGRID_API_KEY=your_sendgrid_api_key
-OPENAI_API_KEY=your_openai_api_key
-```
-
-3. **전체 스택 실행**
-```bash
-# 모든 서비스 시작
-docker-compose up -d
-
-# 특정 서비스만 시작
-docker-compose up -d postgres redis elysia-server admin
-```
-
-## 🎯 서비스 구성
-
-### 핵심 서비스
-
-| 서비스 | 포트 | 설명 | 기술 스택 |
-|--------|------|------|-----------|
-| admin | 3000 | React 관리 대시보드 | Vite + React + TypeScript |
-| elysia-server | 3001 | 백엔드 API 서버 | Bun + Elysia + TypeScript |
-| postgres | 5432 | 데이터베이스 | PostgreSQL 17.2 |
-| redis | 6379 | 캐시 & 세션 스토어 | Redis 7.4 |
-| redisinsight | 5540 | Redis 관리 도구 | RedisInsight |
-| uptime-kuma | 3002 | 서비스 모니터링 | Uptime Kuma |
-
-## 📡 API 엔드포인트
-
-### Elysia Server (포트 3001)
-
-#### 1. 헬스체크
-- **GET** `/health`, `/api/health`
-```json
-{
-  "status": "ok",
-  "timestamp": "2025-09-25T17:02:39.838Z"
-}
-```
-
-#### 2. 이메일 관리
-- **GET** `/api/emails` - 이메일 목록 조회
-```json
-{
-  "count": 10,
-  "emails": [...]
-}
-```
-
-#### 3. SendGrid 웹훅
-- **POST** `/api/webhook/inbound` - 인바운드 이메일 처리 & AI 자동 답장
-- **POST** `/api/webhook/inbound-store` - 이메일 저장 전용
-
-#### 4. 게시판 CRUD
-- **GET** `/api/posts` - 게시글 목록
-- **POST** `/api/posts` - 게시글 생성
-- **PUT** `/api/posts/:id` - 게시글 수정
-- **DELETE** `/api/posts/:id` - 게시글 삭제
-
-## 🤖 AI 자동 답장 시스템
-
-### 특징
-- OpenAI GPT 모델을 활용한 지능형 응답 생성
-- 이메일 스레드 추적 (Message-ID, In-Reply-To, References)
-- 한국어/영어 자동 감지 및 응답
-- Fallback 템플릿 지원 (AI 실패 시)
-
-### 작동 조건
-- admin@grinda.ai 또는 rinda@partners.grinda.ai로 수신된 이메일
-- 자동으로 발신자에게 맞춤형 답장 발송
-
-## 🔧 로컬 개발
-
-### Elysia 서버
-```bash
-cd elysia-server
-bun install
-bun run dev  # 개발 모드 (watch)
-```
-
-### Admin 대시보드
-```bash
-cd admin
-yarn install
-yarn dev     # Vite 개발 서버
-```
-
-### Admin-Next
-```bash
-cd admin-next
-npm install
-npm run dev  # Next.js 개발 서버
-```
-
-## 📧 SendGrid 설정
-
-### Inbound Parse 설정
-
-1. **SendGrid 대시보드 설정**
-   - Settings > Inbound Parse > Add Host & URL
-   - Domain: `grinda.ai`
-   - URL: `http://your-server:3001/api/webhook/inbound`
-
-2. **DNS MX 레코드**
-```
-Type: MX
-Host: parse
-Value: mx.sendgrid.net
-Priority: 10
-```
-
-3. **옵션 활성화**
-   - ✅ Check incoming emails for spam
-   - ✅ POST the raw, full MIME message
-
-## 🚢 프로덕션 배포
-
-### Docker Compose 배포
-```bash
-# 이미지 빌드
-docker-compose build
-
-# 서비스 시작
-docker-compose up -d
-
-# 로그 확인
-docker-compose logs -f elysia-server
-```
-
-### 서버 배포 스크립트
-```bash
-./deploy-hana.sh
-```
-
-배포 서버: 15.165.2.108 (AWS EC2)
-
-## 📊 모니터링
-
-### Uptime Kuma
-- URL: http://localhost:3002
-- 모든 서비스 상태 실시간 모니터링
-- 알림 설정 가능
-
-### RedisInsight
-- URL: http://localhost:5540
-- Redis 데이터 시각화
-- 실시간 명령어 실행
-
-## 🔒 보안 고려사항
-
-- API 키는 환경 변수로 관리 (.env)
-- .env 파일은 절대 커밋하지 않음
-- 프로덕션에서 HTTPS 필수
-- PostgreSQL 비밀번호 강화 필요
-- Redis 비밀번호 설정됨
-
-## 📦 기술 스택
-
-### Backend
-- **Bun**: 1.2+ - JavaScript 런타임
-- **Elysia**: 1.4+ - 웹 프레임워크
-- **PostgreSQL**: 17.2 - 데이터베이스
-- **Redis**: 7.4 - 캐싱
-- **SendGrid**: 이메일 서비스
-- **OpenAI**: AI 응답 생성
-
-### Frontend
-- **React**: 18+ - UI 라이브러리
-- **Vite**: 5+ - 빌드 도구
-- **TypeScript**: 5+ - 타입 안정성
-- **TailwindCSS**: 스타일링
-
-### DevOps
-- **Docker**: 컨테이너화
-- **Docker Compose**: 오케스트레이션
-- **Nginx**: 리버스 프록시
-
-## 🛠 유용한 명령어
-
-```bash
-# Docker 관련
-docker-compose ps              # 서비스 상태 확인
-docker-compose logs -f [서비스명]  # 로그 확인
-docker-compose restart [서비스명]  # 서비스 재시작
-docker-compose down            # 전체 중지
-docker-compose up -d --build   # 재빌드 및 시작
-
-# 데이터베이스 접속
-docker exec -it send-grid-test-postgres-1 psql -U postgres
-
-# Redis CLI
-docker exec -it send-grid-test-redis-1 redis-cli -a sendgrid_redis_password_2024
-```
-
-## 📝 환경 변수
-
 ```env
 # SendGrid
 SENDGRID_API_KEY=your_sendgrid_api_key
@@ -265,18 +152,168 @@ SENDGRID_API_KEY=your_sendgrid_api_key
 OPENAI_API_KEY=your_openai_api_key
 
 # Database
-DB_HOST=localhost  # Docker: postgres
+DB_HOST=postgres  # Docker 사용시
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=postgres
 DB_NAME=postgres
 
+# Redis
+REDIS_HOST=redis  # Docker 사용시
+REDIS_PORT=6379
+REDIS_PASSWORD=sendgrid_redis_password_2024
+
+# JWT
+JWT_SECRET=your_jwt_secret_key
+
 # Server
-NODE_ENV=development
+NODE_ENV=production
 PORT=3001
 ```
 
-## 👥 회사 정보
+#### 3. Docker Compose로 실행
+```bash
+# 모든 서비스 시작
+docker-compose up -d
+
+# 특정 서비스만 시작
+docker-compose up -d postgres redis elysia-server admin
+```
+
+## 로컬 개발
+
+### Backend 개발
+```bash
+cd elysia-server
+bun install
+bun run dev  # 개발 서버 시작 (watch 모드)
+```
+
+### Frontend 개발
+```bash
+cd admin
+yarn install
+yarn dev     # Vite 개발 서버 시작
+```
+
+### 데이터베이스 마이그레이션
+```bash
+cd elysia-server
+bun run db:generate  # 마이그레이션 파일 생성
+bun run db:migrate   # 마이그레이션 실행
+bun run db:studio    # Drizzle Studio 실행
+```
+
+## 서비스 포트
+
+| 서비스 | 포트 | 설명 |
+|--------|------|------|
+| Admin Dashboard | 3000 | React 관리자 대시보드 |
+| Elysia Server | 3001 | 백엔드 API 서버 |
+| PostgreSQL | 5432 | 메인 데이터베이스 |
+| Redis | 6379 | 캐시 & 세션 스토어 |
+| RedisInsight | 5540 | Redis 관리 도구 |
+| Uptime Kuma | 3002 | 서비스 모니터링 |
+
+## SendGrid 설정
+
+### Inbound Parse 웹훅 설정
+
+1. **SendGrid 대시보드**
+   - Settings > Inbound Parse > Add Host & URL
+   - Domain: `grinda.ai`
+   - URL: `https://your-domain.com/api/webhook/inbound`
+
+2. **DNS MX 레코드 설정**
+   ```
+   Type: MX
+   Host: parse
+   Value: mx.sendgrid.net
+   Priority: 10
+   ```
+
+3. **옵션 설정**
+   - ✅ Check incoming emails for spam
+   - ✅ POST the raw, full MIME message
+
+## 배포
+
+### 프로덕션 배포
+```bash
+# 배포 스크립트 실행
+./deploy-hana.sh
+
+# 또는 수동으로
+docker-compose build
+docker-compose up -d
+```
+
+### 서버 정보
+- Production URL: https://sendgrinda.cloud
+- Server IP: 15.165.2.108 (AWS EC2)
+
+## 유용한 명령어
+
+```bash
+# Docker 관리
+docker-compose ps                    # 서비스 상태 확인
+docker-compose logs -f [서비스명]    # 로그 확인
+docker-compose restart [서비스명]    # 서비스 재시작
+docker-compose down                  # 전체 중지
+docker-compose up -d --build         # 재빌드 및 시작
+
+# 데이터베이스 접속
+docker exec -it send-grid-test-postgres-1 psql -U postgres
+
+# Redis CLI
+docker exec -it send-grid-test-redis-1 redis-cli -a sendgrid_redis_password_2024
+
+# 로그 확인
+docker-compose logs -f elysia-server
+docker-compose logs -f admin
+```
+
+## 코드 품질
+
+### Linting & Formatting
+```bash
+# Backend
+cd elysia-server
+bun run lint       # Biome 린트 실행
+bun run format     # Biome 포맷팅
+
+# Frontend
+cd admin
+yarn lint          # Biome 린트 실행
+yarn format        # Biome 포맷팅
+yarn check         # 린트 + 타입 체크
+```
+
+### Git Hooks
+프로젝트는 Husky를 사용하여 커밋 전 자동으로 코드 품질을 검사합니다.
+
+## 모니터링
+
+### Uptime Kuma
+- URL: http://localhost:3002
+- 모든 서비스의 상태를 실시간으로 모니터링
+- 알림 설정 가능 (Email, Slack, Discord 등)
+
+### RedisInsight
+- URL: http://localhost:5540
+- Redis 데이터 시각화
+- 실시간 명령어 실행 및 모니터링
+
+## 보안 고려사항
+
+- 모든 API 키는 환경 변수로 관리
+- JWT 기반 인증 시스템
+- HTTPS 강제 적용 (프로덕션)
+- Redis 비밀번호 설정
+- PostgreSQL 접근 제한
+- CORS 정책 적용
+
+## 회사 정보
 
 **그린다에이아이 (GRINDA AI)**
 - 대표: 강호진
@@ -284,13 +321,12 @@ PORT=3001
 - 사업자등록번호: 309-88-02709
 - 이메일: admin@grinda.ai
 - 웹사이트: https://grinda.ai
-- 슬로건: "AI와, 당신의 비즈니스로 미래를 함께 그립니다"
 
-## 📄 라이선스
+## 라이선스
 
 이 프로젝트는 그린다에이아이의 내부 프로젝트입니다.
 
 ---
 
-**Last Updated**: 2025-09-26
-**Version**: 2.0.0
+**Version**: 2.1.0
+**Last Updated**: 2025-09-30

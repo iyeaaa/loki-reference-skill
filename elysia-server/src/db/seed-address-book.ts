@@ -252,30 +252,36 @@ async function seedAddressBook() {
       console.log(`👥 Adding contacts for user: ${userId}`)
 
       // Add fashion agency contacts
-      for (const company of fashionAgencies) {
-        await db.insert(addressBookContacts).values({
-          userId,
-          groupId: fashionGroup.id,
-          ...company,
-        })
+      if (fashionGroup) {
+        for (const company of fashionAgencies) {
+          await db.insert(addressBookContacts).values({
+            userId,
+            groupId: fashionGroup.id,
+            ...company,
+          })
+        }
       }
 
       // Add tech company contacts
-      for (const company of techCompanies) {
-        await db.insert(addressBookContacts).values({
-          userId,
-          groupId: techGroup.id,
-          ...company,
-        })
+      if (techGroup) {
+        for (const company of techCompanies) {
+          await db.insert(addressBookContacts).values({
+            userId,
+            groupId: techGroup.id,
+            ...company,
+          })
+        }
       }
 
       // Add consulting firm contacts
-      for (const company of consultingFirms) {
-        await db.insert(addressBookContacts).values({
-          userId,
-          groupId: consultingGroup.id,
-          ...company,
-        })
+      if (consultingGroup) {
+        for (const company of consultingFirms) {
+          await db.insert(addressBookContacts).values({
+            userId,
+            groupId: consultingGroup.id,
+            ...company,
+          })
+        }
       }
 
       console.log(`✅ Completed seeding for user: ${userId}`)

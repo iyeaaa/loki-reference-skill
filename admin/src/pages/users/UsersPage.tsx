@@ -663,7 +663,6 @@ export default function UsersPage() {
                 user={editingUser}
                 isEdit={true}
                 departments={departments}
-                languages={languages}
                 onSave={handleUpdateUser}
                 onCancel={() => setEditingUser(null)}
               />

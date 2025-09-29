@@ -52,11 +52,11 @@ export async function listGroups(userId: string, limit: number, offset: number, 
     .orderBy(desc(addressBookGroups.createdAt))
     .limit(limit)
     .offset(offset)
-  const [{ count }] = await db
+  const countResult = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(addressBookGroups)
     .where(where)
-  return { groups, total: count }
+  return { groups, total: countResult[0]?.count ?? 0 }
 }
 
 export async function addContact(
@@ -124,9 +124,9 @@ export async function listContacts(
     .orderBy(desc(addressBookContacts.createdAt))
     .limit(limit)
     .offset(offset)
-  const [{ count }] = await db
+  const countResult = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(addressBookContacts)
     .where(where)
-  return { contacts, total: count }
+  return { contacts, total: countResult[0]?.count ?? 0 }
 }

@@ -46,7 +46,15 @@ export function useCreateUser() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: Partial<User>) => usersApi.create(data),
+    mutationFn: (data: {
+      username: string
+      email: string
+      password?: string
+      userRole: string
+      isActive: boolean
+      departmentId: number
+      employeeId: string
+    }) => usersApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: userKeys.lists() })
       queryClient.invalidateQueries({ queryKey: userKeys.stats() })

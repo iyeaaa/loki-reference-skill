@@ -6,11 +6,9 @@ import { migrateDatabase } from './db/migrate'
 import { errorHandler } from './plugins/error-handler.plugin'
 import { responseTransformer } from './plugins/response-transformer.plugin'
 import { simpleLogger } from './plugins/simple-logger.plugin'
-import { addressBookRoutes } from './routes/address-book.routes'
 import { aiRoutes } from './routes/ai.routes'
 import { authRoutes } from './routes/auth.routes'
 import { departmentsRoutes } from './routes/departments.routes'
-import { emailRoutes } from './routes/email.routes'
 // Import routes
 import { healthRoutes } from './routes/health.routes'
 import { userRoutes } from './routes/users.routes'
@@ -44,10 +42,8 @@ const app = new Elysia()
 
   // Register routes
   .use(healthRoutes)
-  .use(emailRoutes)
   .use(webhookRoutes)
   .use(aiRoutes)
-  .use(addressBookRoutes)
   .use(authRoutes)
   .use(departmentsRoutes)
   .use(userRoutes)

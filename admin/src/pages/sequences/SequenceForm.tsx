@@ -1,6 +1,6 @@
-import { Check, ChevronsUpDown } from "lucide-react"
-import { useId, useState } from "react"
-import { Button } from "@/components/ui/button"
+import { Check, ChevronsUpDown } from "lucide-react";
+import { useId, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -8,58 +8,74 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+} from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence"
-import type { Workspace } from "@/lib/api/types/workspace"
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence";
+import {
+  useSuspenseWorkspaces,
+  useWorkspaces,
+} from "@/lib/api/hooks/workspaces";
+import { useCustomerGroupsByWorkspace } from "@/lib/api/hooks/customer-groups";
 
 interface SequenceFormProps {
-  sequence?: Sequence
-  isEdit?: boolean
-  workspaces: Workspace[]
-  onSave: (sequenceData: unknown) => Promise<void> | void
-  onCancel: () => void
+  sequence?: Sequence;
+  isEdit?: boolean;
+  onSave: (sequenceData: unknown) => Promise<void> | void;
+  onCancel: () => void;
 }
 
 export function SequenceForm({
   sequence,
   isEdit = false,
-  workspaces = [],
   onSave,
   onCancel,
 }: SequenceFormProps) {
-  const nameId = useId()
-  const descriptionId = useId()
+  const {
+    data: { workspaces },
+  } = useSuspenseWorkspaces();
+  const nameId = useId();
+  const descriptionId = useId();
 
   const [formData, setFormData] = useState({
     name: sequence?.name || "",
     description: sequence?.description || "",
     workspaceId: sequence?.workspaceId || "",
     status: (sequence?.status || "draft") as SequenceStatus,
-  })
-  const [workspaceOpen, setWorkspaceOpen] = useState(false)
-  const [workspaceSearch, setWorkspaceSearch] = useState("")
+    customerGroupId: "",
+  });
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [workspaceSearch, setWorkspaceSearch] = useState("");
+  const { data: customerGroups } = useCustomerGroupsByWorkspace(
+    formData.workspaceId,
+    Boolean(formData.workspaceId)
+  );
+
+  console.log("customerGroups", customerGroups);
 
   const filteredWorkspaces = workspaces.filter(
     (workspace) =>
       workspace.name.toLowerCase().includes(workspaceSearch.toLowerCase()) ||
       workspace.id.toLowerCase().includes(workspaceSearch.toLowerCase())
-  )
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSave(formData)
-  }
+    e.preventDefault();
+    onSave(formData);
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -79,13 +95,15 @@ export function SequenceForm({
         <Textarea
           id={descriptionId}
           value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, description: e.target.value })
+          }
           placeholder="시퀀스에 대한 설명을 입력하세요..."
           rows={4}
         />
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 relative">
         <Label htmlFor="workspace">워크스페이스</Label>
         <Popover open={workspaceOpen} onOpenChange={setWorkspaceOpen}>
           <PopoverTrigger asChild>
@@ -97,8 +115,8 @@ export function SequenceForm({
               disabled={isEdit}
             >
               {formData.workspaceId
-                ? workspaces.find((ws) => ws.id === formData.workspaceId)?.name ||
-                  formData.workspaceId
+                ? workspaces.find((ws) => ws.id === formData.workspaceId)
+                    ?.name || formData.workspaceId
                 : "워크스페이스 선택"}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
@@ -120,15 +138,20 @@ export function SequenceForm({
                       onSelect={(currentValue) => {
                         setFormData({
                           ...formData,
-                          workspaceId: currentValue === formData.workspaceId ? "" : currentValue,
-                        })
-                        setWorkspaceOpen(false)
-                        setWorkspaceSearch("")
+                          workspaceId:
+                            currentValue === formData.workspaceId
+                              ? ""
+                              : currentValue,
+                        });
+                        setWorkspaceOpen(false);
+                        setWorkspaceSearch("");
                       }}
                     >
                       <Check
                         className={`mr-2 h-4 w-4 ${
-                          formData.workspaceId === workspace.id ? "opacity-100" : "opacity-0"
+                          formData.workspaceId === workspace.id
+                            ? "opacity-100"
+                            : "opacity-0"
                         }`}
                       />
                       {workspace.name}
@@ -140,8 +163,47 @@ export function SequenceForm({
           </PopoverContent>
         </Popover>
         {isEdit && (
-          <p className="text-xs text-muted-foreground">워크스페이스는 생성 후 변경할 수 없습니다</p>
+          <p className="text-xs text-muted-foreground">
+            워크스페이스는 생성 후 변경할 수 없습니다
+          </p>
         )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="customerGroup">고객그룹</Label>
+        <Select
+          value={formData.customerGroupId}
+          onValueChange={(value) =>
+            setFormData({ ...formData, customerGroupId: value })
+          }
+          disabled={!formData.workspaceId}
+        >
+          <SelectTrigger>
+            <SelectValue
+              placeholder={
+                formData.workspaceId
+                  ? "고객그룹 선택"
+                  : "먼저 워크스페이스를 선택하세요"
+              }
+            />
+          </SelectTrigger>
+          {customerGroups && customerGroups.length === 0 && (
+            <SelectContent>
+              <SelectItem disabled value="none">
+                고객그룹이 없습니다.
+              </SelectItem>
+            </SelectContent>
+          )}
+          {customerGroups && customerGroups.length > 0 && (
+            <SelectContent>
+              {customerGroups.map((group) => (
+                <SelectItem key={group.id} value={group.id}>
+                  {group.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          )}
+        </Select>
       </div>
 
       <div className="space-y-2">
@@ -176,5 +238,5 @@ export function SequenceForm({
         </Button>
       </div>
     </form>
-  )
+  );
 }

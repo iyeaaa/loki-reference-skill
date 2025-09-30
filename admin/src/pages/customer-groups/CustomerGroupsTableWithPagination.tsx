@@ -10,7 +10,6 @@ import { formatRelativeTime } from "@/lib/date-utils"
 
 interface CustomerGroupsTableWithPaginationProps {
   searchQuery: string
-  selectedWorkspaces: string[]
   selectedCustomerGroups: string[]
   onToggleCustomerGroup: (customerGroupId: string) => void
   onToggleAll: (customerGroupIds: string[]) => void
@@ -20,7 +19,6 @@ interface CustomerGroupsTableWithPaginationProps {
 
 export function CustomerGroupsTableWithPagination({
   searchQuery,
-  selectedWorkspaces,
   selectedCustomerGroups,
   onToggleCustomerGroup,
   onToggleAll,
@@ -54,8 +52,7 @@ export function CustomerGroupsTableWithPagination({
     page: currentPage,
     limit: limit,
     search: searchQuery || undefined,
-    workspaceIds:
-      workspaceFilter || (selectedWorkspaces.length > 0 ? selectedWorkspaces : undefined),
+    workspaceIds: workspaceFilter,
   }
 
   // Use React Query hook for fetching customer groups
@@ -135,7 +132,7 @@ export function CustomerGroupsTableWithPagination({
                   <Checkbox
                     checked={
                       customerGroups.length > 0 &&
-                      selectedCustomerGroups.length === customerGroups.length
+                      selectedCustomerGroups?.length === customerGroups.length
                     }
                     onCheckedChange={handleToggleAll}
                   />
@@ -192,7 +189,7 @@ export function CustomerGroupsTableWithPagination({
                 >
                   <td className="sticky left-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
                     <Checkbox
-                      checked={selectedCustomerGroups.includes(group.id)}
+                      checked={selectedCustomerGroups?.includes(group.id) || false}
                       onCheckedChange={() => onToggleCustomerGroup(group.id)}
                     />
                   </td>

@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Edit } from "lucide-react"
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -11,7 +11,6 @@ import { formatRelativeTime } from "@/lib/date-utils"
 interface SequencesTableWithPaginationProps {
   searchQuery: string
   selectedStatuses: string[]
-  selectedWorkspaces: string[]
   selectedSequences: string[]
   onToggleSequence: (sequenceId: string) => void
   onToggleAll: (sequenceIds: string[]) => void
@@ -21,7 +20,6 @@ interface SequencesTableWithPaginationProps {
 export function SequencesTableWithPagination({
   searchQuery,
   selectedStatuses,
-  selectedWorkspaces,
   selectedSequences,
   onToggleSequence,
   onToggleAll,
@@ -29,20 +27,38 @@ export function SequencesTableWithPagination({
 }: SequencesTableWithPaginationProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
+  const [currentWorkspace, setCurrentWorkspace] = useState(
+    () => localStorage.getItem("selectedWorkspace") || "all"
+  )
   const limit = 10
+
+  // localStorage 변경 감지
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const workspace = localStorage.getItem("selectedWorkspace") || "all"
+      if (workspace !== currentWorkspace) {
+        setCurrentWorkspace(workspace)
+        setCurrentPage(1) // 워크스페이스 변경 시 첫 페이지로
+      }
+    }, 100)
+
+    return () => clearInterval(interval)
+  }, [currentWorkspace])
+
+  const workspaceFilter = currentWorkspace === "all" ? undefined : [currentWorkspace]
 
   // Build params for API call
   const params: SequencesParams = {
     page: currentPage,
     limit: limit,
     status:
-      selectedStatuses.length === 1
+      selectedStatuses?.length === 1
         ? (selectedStatuses[0] as SequenceStatus)
-        : selectedStatuses.length > 0
+        : selectedStatuses?.length > 0
           ? "all"
           : undefined,
     search: searchQuery || undefined,
-    workspaceIds: selectedWorkspaces.length > 0 ? selectedWorkspaces : undefined,
+    workspaceIds: workspaceFilter,
   }
 
   // Use React Query hook for fetching sequences
@@ -150,7 +166,7 @@ export function SequencesTableWithPagination({
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   <Checkbox
-                    checked={sequences.length > 0 && selectedSequences.length === sequences.length}
+                    checked={sequences.length > 0 && selectedSequences?.length === sequences.length}
                     onCheckedChange={handleToggleAll}
                   />
                 </th>
@@ -218,7 +234,7 @@ export function SequencesTableWithPagination({
                 >
                   <td className="sticky left-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
                     <Checkbox
-                      checked={selectedSequences.includes(sequence.id)}
+                      checked={selectedSequences?.includes(sequence.id) || false}
                       onCheckedChange={() => onToggleSequence(sequence.id)}
                     />
                   </td>

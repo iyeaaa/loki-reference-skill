@@ -142,7 +142,7 @@ export async function listUsers(limit: number, offset: number) {
   return result
 }
 
-// GetAllUsers - 페이지네이션 없이 모든 유저 조회 (active 유저만)
+// GetAllUsers - 페이지네이션 없이 모든 유저 조회 (모든 유저)
 export async function getAllUsers() {
   const result = await db
     .select({
@@ -161,7 +161,6 @@ export async function getAllUsers() {
     })
     .from(users)
     .innerJoin(departments, eq(users.departmentId, departments.id))
-    .where(eq(users.isActive, true))
     .orderBy(desc(users.createdAt))
 
   return result

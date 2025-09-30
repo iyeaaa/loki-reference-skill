@@ -43,7 +43,7 @@ function DashboardContent() {
   const isSidebarCollapsed = state === "collapsed"
 
   // 워크스페이스 선택기를 숨길 페이지 목록
-  const hideWorkspaceSelector = ["/customer-groups", "/sequences"].includes(pathname)
+  const hideWorkspaceSelector = false
 
   // "전체" 옵션을 포함한 워크스페이스 목록 생성 (useMemo로 메모이제이션)
   const workspaceOptions: WorkspaceOption[] = useMemo(

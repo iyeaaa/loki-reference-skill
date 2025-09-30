@@ -1,14 +1,6 @@
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -30,6 +22,7 @@ import {
   useWorkspaces,
 } from "@/lib/api/hooks/workspaces";
 import { useCustomerGroupsByWorkspace } from "@/lib/api/hooks/customer-groups";
+import { ScrollArea } from "@radix-ui/react-scroll-area";
 
 interface SequenceFormProps {
   sequence?: Sequence;
@@ -46,10 +39,7 @@ export function SequenceForm({
 }: SequenceFormProps) {
   const {
     data: { workspaces },
-  } = useSuspenseWorkspaces();
-  const nameId = useId();
-  const descriptionId = useId();
-
+  } = useSuspenseWorkspaces({ limit: 100 });
   const [formData, setFormData] = useState({
     name: sequence?.name || "",
     description: sequence?.description || "",
@@ -57,12 +47,15 @@ export function SequenceForm({
     status: (sequence?.status || "draft") as SequenceStatus,
     customerGroupId: "",
   });
-  const [workspaceOpen, setWorkspaceOpen] = useState(false);
-  const [workspaceSearch, setWorkspaceSearch] = useState("");
   const { data: customerGroups } = useCustomerGroupsByWorkspace(
     formData.workspaceId,
     Boolean(formData.workspaceId)
   );
+  const nameId = useId();
+  const descriptionId = useId();
+
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [workspaceSearch, setWorkspaceSearch] = useState("");
 
   console.log("customerGroups", customerGroups);
 
@@ -103,70 +96,34 @@ export function SequenceForm({
         />
       </div>
 
-      <div className="space-y-2 relative">
-        <Label htmlFor="workspace">워크스페이스</Label>
-        <Popover open={workspaceOpen} onOpenChange={setWorkspaceOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={workspaceOpen}
-              className="w-full justify-between font-normal"
-              disabled={isEdit}
-            >
-              {formData.workspaceId
-                ? workspaces.find((ws) => ws.id === formData.workspaceId)
-                    ?.name || formData.workspaceId
-                : "워크스페이스 선택"}
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-full p-0">
-            <Command>
-              <CommandInput
-                placeholder="워크스페이스 검색..."
-                value={workspaceSearch}
-                onValueChange={setWorkspaceSearch}
-              />
-              <CommandList>
-                <CommandEmpty>워크스페이스를 찾을 수 없습니다.</CommandEmpty>
-                <CommandGroup>
-                  {filteredWorkspaces.map((workspace) => (
-                    <CommandItem
-                      key={workspace.id}
-                      value={workspace.id}
-                      onSelect={(currentValue) => {
-                        setFormData({
-                          ...formData,
-                          workspaceId:
-                            currentValue === formData.workspaceId
-                              ? ""
-                              : currentValue,
-                        });
-                        setWorkspaceOpen(false);
-                        setWorkspaceSearch("");
-                      }}
-                    >
-                      <Check
-                        className={`mr-2 h-4 w-4 ${
-                          formData.workspaceId === workspace.id
-                            ? "opacity-100"
-                            : "opacity-0"
-                        }`}
-                      />
-                      {workspace.name}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-        {isEdit && (
-          <p className="text-xs text-muted-foreground">
-            워크스페이스는 생성 후 변경할 수 없습니다
-          </p>
-        )}
+      <div className="space-y-2">
+        <Label htmlFor="customerGroup">워크스페이스</Label>
+        <Select
+          value={formData.workspaceId}
+          onValueChange={(value) =>
+            setFormData({ ...formData, workspaceId: value })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="워크스페이스 선택" />
+          </SelectTrigger>
+          {workspaces && workspaces.length === 0 && (
+            <SelectContent>
+              <SelectItem disabled value="none">
+                워크스페이스가 없습니다.
+              </SelectItem>
+            </SelectContent>
+          )}
+          {workspaces && workspaces.length > 0 && (
+            <SelectContent className="mt-2 max-h-64 overflow-y-auto">
+              {workspaces.map((workspace) => (
+                <SelectItem key={workspace.id} value={workspace.id}>
+                  {workspace.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          )}
+        </Select>
       </div>
 
       <div className="space-y-2">

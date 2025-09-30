@@ -20,6 +20,7 @@ import { adminLeadRoutes, leadRoutes } from './routes/leads.routes'
 import { adminSequenceRoutes, sequenceRoutes } from './routes/sequences.routes'
 import { adminUserRoutes, userRoutes } from './routes/users.routes'
 import { webhookRoutes } from './routes/webhook.routes'
+import { workflowEmailRoutes } from './routes/workflow-emails.routes'
 import { adminWorkspaceRoutes, workspaceRoutes } from './routes/workspaces.routes'
 import { startEmailSequenceWorker } from './workers/email-sequence-worker'
 
@@ -74,6 +75,7 @@ const app = new Elysia()
   .use(adminLeadRoutes)
   .use(sequenceRoutes)
   .use(adminSequenceRoutes)
+  .use(workflowEmailRoutes)
   .use(activityLogRoutes)
 
   .listen(config.port)

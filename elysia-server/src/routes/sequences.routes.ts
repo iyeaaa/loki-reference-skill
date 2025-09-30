@@ -9,18 +9,22 @@ const sequenceSchema = t.Object({
   status: t.Optional(
     t.Union([t.Literal('draft'), t.Literal('active'), t.Literal('paused'), t.Literal('archived')]),
   ),
+  workflowData: t.Optional(t.String()),
   createdBy: t.Optional(t.String({ format: 'uuid' })),
 })
 
 const updateSequenceSchema = t.Object({
-  name: t.String({ minLength: 1, maxLength: 255 }),
+  name: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
   description: t.Optional(t.String()),
-  status: t.Union([
-    t.Literal('draft'),
-    t.Literal('active'),
-    t.Literal('paused'),
-    t.Literal('archived'),
-  ]),
+  status: t.Optional(
+    t.Union([
+      t.Literal('draft'),
+      t.Literal('active'),
+      t.Literal('paused'),
+      t.Literal('archived'),
+    ]),
+  ),
+  workflowData: t.Optional(t.String()),
 })
 
 const sequenceStepSchema = t.Object({

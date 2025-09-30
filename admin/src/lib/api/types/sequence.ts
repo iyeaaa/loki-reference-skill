@@ -18,6 +18,7 @@ export interface Sequence {
   name: string
   description?: string | null
   status: SequenceStatus
+  workflowData?: string | null
   createdBy?: string | null
   createdAt: string
   updatedAt: string
@@ -80,9 +81,10 @@ export interface CreateSequenceRequest {
 }
 
 export interface UpdateSequenceRequest {
-  name: string
+  name?: string
   description?: string
-  status: SequenceStatus
+  status?: SequenceStatus
+  workflowData?: string
 }
 
 export interface CreateSequenceStepRequest {
@@ -162,3 +164,12 @@ export interface EnrollmentWithDetails extends SequenceEnrollment {
 // Type aliases for form inputs
 export type SequenceStepCreateInput = CreateSequenceStepRequest
 export type SequenceStepUpdateInput = CreateSequenceStepRequest
+
+// Workflow Node Statistics
+export interface NodeStatistics {
+  nodeId: string
+  sentCount: number
+  repliedCount: number
+  waitingCount: number
+  completedCount: number
+}

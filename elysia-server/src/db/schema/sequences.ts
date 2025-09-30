@@ -51,6 +51,7 @@ export const sequences = pgTable(
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
     status: sequenceStatusEnum('status').notNull().default('draft'),
+    workflowData: text('workflow_data'), // JSON data for React Flow workflow
     createdBy: uuid('created_by').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

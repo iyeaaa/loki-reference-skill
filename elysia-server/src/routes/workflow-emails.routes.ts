@@ -1,0 +1,259 @@
+import { Elysia, t } from 'elysia'
+import { getAIWorkflowEmailService } from '../services/ai-workflow-email.service'
+import * as workflowEmailService from '../services/workflow-email.service'
+import { errorResponse, ResponseCode } from '../types/response.types'
+
+// Schema for creating generated email (reserved for future use)
+// const generatedEmailSchema = t.Object({
+//   leadId: t.String({ format: 'uuid' }),
+//   subject: t.String({ minLength: 1 }),
+//   bodyText: t.Optional(t.String()),
+//   bodyHtml: t.Optional(t.String()),
+//   status: t.Optional(
+//     t.Union([
+//       t.Literal('pending'),
+//       t.Literal('generating'),
+//       t.Literal('generated'),
+//       t.Literal('edited'),
+//       t.Literal('failed'),
+//     ]),
+//   ),
+//   generationMode: t.Optional(t.Union([t.Literal('ai'), t.Literal('manual'), t.Literal('template')])),
+//   aiPrompt: t.Optional(t.String()),
+//   aiModel: t.Optional(t.String()),
+// })
+
+const updateEmailSchema = t.Object({
+  subject: t.Optional(t.String({ minLength: 1 })),
+  bodyText: t.Optional(t.String()),
+  bodyHtml: t.Optional(t.String()),
+})
+
+const generateAllEmailsSchema = t.Object({
+  mode: t.Union([t.Literal('ai'), t.Literal('manual')]),
+  aiPrompt: t.Optional(t.String()),
+  aiModel: t.Optional(t.String()),
+  templateSubject: t.Optional(t.String()),
+  templateBody: t.Optional(t.String()),
+})
+
+export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
+  // Get all generated emails for a node
+  .get('/:id/nodes/:nodeId/generated-emails', async ({ params }) => {
+    const { id: sequenceId, nodeId } = params
+
+    const emails = await workflowEmailService.getGeneratedEmailsByNode(sequenceId, nodeId)
+    return emails
+  })
+
+  // Generate emails for all leads (manual template or AI)
+  .post(
+    '/:id/nodes/:nodeId/generate-emails',
+    async ({ params, body }) => {
+      const { id: sequenceId, nodeId } = params
+
+      // Get all leads in sequence
+      const leads = await workflowEmailService.getSequenceLeads(sequenceId)
+
+      if (leads.length === 0) {
+        return {
+          message: '시퀀스에 등록된 연락처가 없습니다',
+          generated: 0,
+          total: 0,
+        }
+      }
+
+      let generated = 0
+      let failed = 0
+      const errors: Array<{ leadId: string; error: string }> = []
+
+      for (const lead of leads) {
+        try {
+          let subject = ''
+          let bodyText = ''
+          let bodyHtml = ''
+          let emailStatus: 'pending' | 'generating' | 'generated' | 'edited' | 'failed' = 'generated'
+          let generationError: string | undefined
+
+          if (body.mode === 'manual') {
+            // 템플릿 변수 치환
+            subject = workflowEmailService.replaceTemplateVariables(body.templateSubject || '', {
+              companyName: lead.companyName || '',
+              contactName: lead.contactName || '',
+              contactEmail: lead.contactEmail || '',
+              industry: lead.industry || '',
+            })
+
+            bodyText = workflowEmailService.replaceTemplateVariables(body.templateBody || '', {
+              companyName: lead.companyName || '',
+              contactName: lead.contactName || '',
+              contactEmail: lead.contactEmail || '',
+              industry: lead.industry || '',
+            })
+          } else {
+            // AI mode - 실제 AI 생성
+            try {
+              const aiService = getAIWorkflowEmailService()
+              const generatedEmail = await aiService.generateEmail({
+                prompt: body.aiPrompt || '',
+                lead: {
+                  companyName: lead.companyName || '',
+                  contactName: lead.contactName,
+                  contactEmail: lead.contactEmail || '',
+                  industry: lead.industry,
+                  website: lead.website,
+                  size: lead.size,
+                },
+                model: body.aiModel,
+              })
+
+              subject = generatedEmail.subject
+              bodyText = generatedEmail.bodyText
+              bodyHtml = generatedEmail.bodyHtml || ''
+            } catch (aiError) {
+              // AI 생성 실패 시 템플릿 폴백
+              console.error(`AI generation failed for ${lead.companyName}, using fallback`)
+              subject = `${lead.companyName}님께`
+              bodyText = `안녕하세요,\n\n${lead.companyName} 담당자님께 연락드립니다.\n\n[AI 생성 실패 - 수동 편집 필요]`
+              emailStatus = 'failed'
+              generationError = aiError instanceof Error ? aiError.message : 'AI generation failed'
+            }
+          }
+
+          await workflowEmailService.upsertGeneratedEmail({
+            sequenceId,
+            nodeId,
+            leadId: lead.id,
+            subject,
+            bodyText,
+            bodyHtml,
+            status: emailStatus,
+            generationMode: body.mode,
+            aiPrompt: body.aiPrompt,
+            aiModel: body.aiModel,
+            generationError,
+            contextSnapshot: {
+              companyName: lead.companyName,
+              contactName: lead.contactName,
+              contactEmail: lead.contactEmail,
+              industry: lead.industry,
+            },
+          })
+
+          generated++
+        } catch (error) {
+          errors.push({
+            leadId: lead.id,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          })
+          failed++
+        }
+      }
+
+      return {
+        message: '이메일 생성이 완료되었습니다',
+        generated,
+        total: leads.length,
+        failed: errors.length,
+        errors: errors.length > 0 ? errors : undefined,
+      }
+    },
+    {
+      body: generateAllEmailsSchema,
+    },
+  )
+
+  // Get single generated email
+  .get('/:id/nodes/:nodeId/generated-emails/:emailId', async ({ params }) => {
+    const { emailId } = params
+
+    const email = await workflowEmailService.getGeneratedEmail(emailId)
+    if (!email) {
+      return errorResponse('이메일을 찾을 수 없습니다', ResponseCode.NOT_FOUND)
+    }
+
+    return email
+  })
+
+  // Update generated email
+  .patch(
+    '/:id/nodes/:nodeId/generated-emails/:emailId',
+    async ({ params, body }) => {
+      const { emailId } = params
+
+      const updated = await workflowEmailService.updateGeneratedEmail(emailId, {
+        ...body,
+        status: 'edited',
+      })
+
+      if (!updated) {
+        return errorResponse('이메일 업데이트에 실패했습니다', ResponseCode.NOT_FOUND)
+      }
+
+      return updated
+    },
+    {
+      body: updateEmailSchema,
+    },
+  )
+
+  // Delete generated email
+  .delete('/:id/nodes/:nodeId/generated-emails/:emailId', async ({ params }) => {
+    const { emailId } = params
+
+    await workflowEmailService.deleteGeneratedEmail(emailId)
+    return { message: '이메일이 삭제되었습니다' }
+  })
+
+  // Regenerate single email (AI mode)
+  .post('/:id/nodes/:nodeId/generated-emails/:emailId/regenerate', async ({ params }) => {
+    const { emailId } = params
+
+    const email = await workflowEmailService.getGeneratedEmail(emailId)
+    if (!email) {
+      return errorResponse('이메일을 찾을 수 없습니다', ResponseCode.NOT_FOUND)
+    }
+
+    // AI 재생성
+    if (email.generationMode === 'ai' && email.aiPrompt) {
+      try {
+        const aiService = getAIWorkflowEmailService()
+        const regenerated = await aiService.generateEmail({
+          prompt: email.aiPrompt,
+          lead: {
+            companyName: email.companyName || '',
+            contactName: email.contactName,
+            contactEmail: email.contactEmail || '',
+            industry: email.industry,
+          },
+          model: email.aiModel || undefined,
+        })
+
+        const updated = await workflowEmailService.updateGeneratedEmail(emailId, {
+          subject: regenerated.subject,
+          bodyText: regenerated.bodyText,
+          status: 'generated',
+        })
+
+        return {
+          message: 'AI 재생성이 완료되었습니다',
+          email: updated,
+        }
+      } catch (error) {
+        return errorResponse(
+          error instanceof Error ? error.message : 'AI 재생성에 실패했습니다',
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    }
+
+    return errorResponse('AI 모드가 아니거나 프롬프트가 없습니다', ResponseCode.BAD_REQUEST)
+  })
+
+  // Delete all generated emails for a node
+  .delete('/:id/nodes/:nodeId/generated-emails', async ({ params }) => {
+    const { id: sequenceId, nodeId } = params
+
+    await workflowEmailService.deleteGeneratedEmailsByNode(sequenceId, nodeId)
+    return { message: '모든 이메일이 삭제되었습니다' }
+  })

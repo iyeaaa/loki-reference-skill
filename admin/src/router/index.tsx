@@ -11,6 +11,7 @@ import LoginPage from "../pages/LoginPage"
 import LeadsPage from "../pages/leads"
 import RepliedEmailsPage from "../pages/replied-emails"
 import SequencesPage from "../pages/sequences"
+import SequenceDesigner from "../pages/sequences/designer/SequenceDesigner"
 import SettingsPage from "../pages/settings"
 import UsersPage from "../pages/users/UsersPage"
 import WorkspacesPage from "../pages/workspaces"
@@ -63,6 +64,10 @@ export const router = createBrowserRouter([
           {
             path: "sequences",
             element: <SequencesPage />,
+          },
+          {
+            path: "sequences/:id/designer",
+            element: <SequenceDesigner />,
           },
           {
             path: "email-templates",

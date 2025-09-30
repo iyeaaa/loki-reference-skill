@@ -1,5 +1,6 @@
-import { ChevronLeft, ChevronRight, Edit } from "lucide-react"
+import { ChevronLeft, ChevronRight, Edit, Workflow } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -25,6 +26,7 @@ export function SequencesTableWithPagination({
   onToggleAll,
   onEditSequence,
 }: SequencesTableWithPaginationProps) {
+  const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
   const [currentWorkspace, setCurrentWorkspace] = useState(
@@ -222,7 +224,7 @@ export function SequencesTableWithPagination({
                   className="sticky right-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
-                  편집
+                  작업
                 </th>
               </tr>
             </thead>
@@ -301,14 +303,26 @@ export function SequencesTableWithPagination({
                     {formatRelativeTime(sequence.createdAt)}
                   </td>
                   <td className="sticky right-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onEditSequence(sequence)}
-                      className="text-xs h-8 px-3"
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/sequences/${sequence.id}/designer`)}
+                        className="text-xs h-8 px-3"
+                        title="노드 편집"
+                      >
+                        <Workflow className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onEditSequence(sequence)}
+                        className="text-xs h-8 px-3"
+                        title="시퀀스 편집"
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}

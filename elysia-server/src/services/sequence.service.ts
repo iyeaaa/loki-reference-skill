@@ -25,6 +25,7 @@ export async function getSequence(id: string) {
       name: sequences.name,
       description: sequences.description,
       status: sequences.status,
+      workflowData: sequences.workflowData,
       createdBy: sequences.createdBy,
       createdAt: sequences.createdAt,
       updatedAt: sequences.updatedAt,
@@ -47,6 +48,7 @@ export async function createSequence(data: {
   name: string
   description?: string
   status?: 'draft' | 'active' | 'paused' | 'archived'
+  workflowData?: string
   createdBy?: string
 }) {
   const [newSequence] = await db
@@ -56,6 +58,7 @@ export async function createSequence(data: {
       name: data.name,
       description: data.description || null,
       status: data.status || 'draft',
+      workflowData: data.workflowData || null,
       createdBy: data.createdBy || null,
     })
     .returning({
@@ -64,6 +67,7 @@ export async function createSequence(data: {
       name: sequences.name,
       description: sequences.description,
       status: sequences.status,
+      workflowData: sequences.workflowData,
       createdBy: sequences.createdBy,
       createdAt: sequences.createdAt,
       updatedAt: sequences.updatedAt,
@@ -76,19 +80,24 @@ export async function createSequence(data: {
 export async function updateSequence(
   id: string,
   data: {
-    name: string
+    name?: string
     description?: string
-    status: 'draft' | 'active' | 'paused' | 'archived'
+    status?: 'draft' | 'active' | 'paused' | 'archived'
+    workflowData?: string
   },
 ) {
+  const updateData: Record<string, unknown> = {
+    updatedAt: new Date(),
+  }
+  
+  if (data.name !== undefined) updateData.name = data.name
+  if (data.description !== undefined) updateData.description = data.description
+  if (data.status !== undefined) updateData.status = data.status
+  if (data.workflowData !== undefined) updateData.workflowData = data.workflowData
+
   const [updatedSequence] = await db
     .update(sequences)
-    .set({
-      name: data.name,
-      description: data.description,
-      status: data.status,
-      updatedAt: new Date(),
-    })
+    .set(updateData)
     .where(eq(sequences.id, id))
     .returning({
       id: sequences.id,
@@ -96,6 +105,7 @@ export async function updateSequence(
       name: sequences.name,
       description: sequences.description,
       status: sequences.status,
+      workflowData: sequences.workflowData,
       createdAt: sequences.createdAt,
       updatedAt: sequences.updatedAt,
     })

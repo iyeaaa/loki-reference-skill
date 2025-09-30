@@ -14,12 +14,10 @@ import {
   useBulkDeleteSequences,
   useBulkUpdateSequenceStatus,
   useCreateSequence,
-  useDeleteSequence,
   useUpdateSequence,
 } from "@/lib/api/hooks/sequences";
 import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence";
 import { BulkActionModal } from "./BulkActionModal";
-import { SequenceDetailTabs } from "./SequenceDetailTabs";
 import { SequenceFilters } from "./SequenceFilters";
 import { SequenceForm } from "./SequenceForm";
 import { SequencesTableWithPagination } from "./SequencesTableWithPagination";
@@ -39,7 +37,6 @@ export default function SequencesPage() {
 
   const createSequence = useCreateSequence();
   const updateSequence = useUpdateSequence();
-  const _deleteSequence = useDeleteSequence();
   const bulkUpdateStatus = useBulkUpdateSequenceStatus();
   const bulkDeleteSequences = useBulkDeleteSequences();
 
@@ -269,25 +266,20 @@ export default function SequencesPage() {
         open={!!editingSequence}
         onOpenChange={() => setEditingSequence(null)}
       >
-        <DialogContent className="max-w-5xl max-h-[90vh]">
+        <DialogContent className="max-w-2xl">
           <DialogHeader className="pb-4 border-b">
             <DialogTitle className="text-xl font-semibold">
-              시퀀스 관리
+              시퀀스 기본 정보 편집
             </DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="py-4">
             {editingSequence && (
-              <div className="space-y-6">
-                <SequenceForm
-                  sequence={editingSequence}
-                  isEdit={true}
-                  onSave={handleUpdateSequence}
-                  onCancel={() => setEditingSequence(null)}
-                />
-                <div className="border-t pt-6">
-                  <SequenceDetailTabs sequenceId={editingSequence.id} />
-                </div>
-              </div>
+              <SequenceForm
+                sequence={editingSequence}
+                isEdit={true}
+                onSave={handleUpdateSequence}
+                onCancel={() => setEditingSequence(null)}
+              />
             )}
           </div>
         </DialogContent>

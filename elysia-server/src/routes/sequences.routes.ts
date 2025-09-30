@@ -11,6 +11,7 @@ const sequenceSchema = t.Object({
   ),
   workflowData: t.Optional(t.String()),
   createdBy: t.Optional(t.String({ format: 'uuid' })),
+  customerGroupId: t.Optional(t.String({ format: 'uuid' })),
 })
 
 const updateSequenceSchema = t.Object({
@@ -25,6 +26,7 @@ const updateSequenceSchema = t.Object({
     ]),
   ),
   workflowData: t.Optional(t.String()),
+  customerGroupId: t.Optional(t.String({ format: 'uuid' })),
 })
 
 const sequenceStepSchema = t.Object({

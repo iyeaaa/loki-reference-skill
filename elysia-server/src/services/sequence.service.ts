@@ -1,5 +1,6 @@
 import { and, desc, eq, ilike, lte, or, sql } from 'drizzle-orm'
 import { db } from '../db/index'
+import { customerGroups } from '../db/schema/customer-groups'
 import { userEmailAccounts } from '../db/schema/email-accounts'
 import { leadContacts } from '../db/schema/lead-details'
 import { leads } from '../db/schema/leads'
@@ -22,6 +23,7 @@ export async function getSequence(id: string) {
     .select({
       id: sequences.id,
       workspaceId: sequences.workspaceId,
+      customerGroupId: sequences.customerGroupId,
       name: sequences.name,
       description: sequences.description,
       status: sequences.status,
@@ -30,11 +32,13 @@ export async function getSequence(id: string) {
       createdAt: sequences.createdAt,
       updatedAt: sequences.updatedAt,
       workspaceName: workspaces.name,
+      customerGroupName: customerGroups.name,
       createdByUsername: users.username,
       createdByEmail: users.email,
     })
     .from(sequences)
     .innerJoin(workspaces, eq(sequences.workspaceId, workspaces.id))
+    .leftJoin(customerGroups, eq(sequences.customerGroupId, customerGroups.id))
     .leftJoin(users, eq(sequences.createdBy, users.id))
     .where(eq(sequences.id, id))
     .limit(1)
@@ -45,6 +49,7 @@ export async function getSequence(id: string) {
 // CreateSequence :one
 export async function createSequence(data: {
   workspaceId: string
+  customerGroupId?: string
   name: string
   description?: string
   status?: 'draft' | 'active' | 'paused' | 'archived'
@@ -55,6 +60,7 @@ export async function createSequence(data: {
     .insert(sequences)
     .values({
       workspaceId: data.workspaceId,
+      customerGroupId: data.customerGroupId || null,
       name: data.name,
       description: data.description || null,
       status: data.status || 'draft',
@@ -64,6 +70,7 @@ export async function createSequence(data: {
     .returning({
       id: sequences.id,
       workspaceId: sequences.workspaceId,
+      customerGroupId: sequences.customerGroupId,
       name: sequences.name,
       description: sequences.description,
       status: sequences.status,
@@ -84,6 +91,7 @@ export async function updateSequence(
     description?: string
     status?: 'draft' | 'active' | 'paused' | 'archived'
     workflowData?: string
+    customerGroupId?: string
   },
 ) {
   const updateData: Record<string, unknown> = {
@@ -94,6 +102,7 @@ export async function updateSequence(
   if (data.description !== undefined) updateData.description = data.description
   if (data.status !== undefined) updateData.status = data.status
   if (data.workflowData !== undefined) updateData.workflowData = data.workflowData
+  if (data.customerGroupId !== undefined) updateData.customerGroupId = data.customerGroupId
 
   const [updatedSequence] = await db
     .update(sequences)
@@ -102,6 +111,7 @@ export async function updateSequence(
     .returning({
       id: sequences.id,
       workspaceId: sequences.workspaceId,
+      customerGroupId: sequences.customerGroupId,
       name: sequences.name,
       description: sequences.description,
       status: sequences.status,
@@ -128,6 +138,7 @@ export async function listSequences(limit: number, offset: number) {
     .select({
       id: sequences.id,
       workspaceId: sequences.workspaceId,
+      customerGroupId: sequences.customerGroupId,
       name: sequences.name,
       description: sequences.description,
       status: sequences.status,
@@ -135,10 +146,12 @@ export async function listSequences(limit: number, offset: number) {
       createdAt: sequences.createdAt,
       updatedAt: sequences.updatedAt,
       workspaceName: workspaces.name,
+      customerGroupName: customerGroups.name,
       createdByUsername: users.username,
     })
     .from(sequences)
     .innerJoin(workspaces, eq(sequences.workspaceId, workspaces.id))
+    .leftJoin(customerGroups, eq(sequences.customerGroupId, customerGroups.id))
     .leftJoin(users, eq(sequences.createdBy, users.id))
     .orderBy(desc(sequences.createdAt))
     .limit(limit)
@@ -206,9 +219,12 @@ export async function listSequencesWithFilters(
         FROM ${sequenceEnrollments}
         WHERE ${sequenceEnrollments.sequenceId} = ${sequences.id}
       )`,
+      customerGroupId: sequences.customerGroupId,
+      customerGroupName: customerGroups.name,
     })
     .from(sequences)
     .innerJoin(workspaces, eq(sequences.workspaceId, workspaces.id))
+    .leftJoin(customerGroups, eq(sequences.customerGroupId, customerGroups.id))
     .leftJoin(users, eq(sequences.createdBy, users.id))
     .where(whereClause)
     .orderBy(desc(sequences.createdAt))
@@ -223,12 +239,15 @@ export async function getSequencesByWorkspace(workspaceId: string) {
   const result = await db
     .select({
       id: sequences.id,
+      customerGroupId: sequences.customerGroupId,
       name: sequences.name,
       description: sequences.description,
       status: sequences.status,
       createdAt: sequences.createdAt,
+      customerGroupName: customerGroups.name,
     })
     .from(sequences)
+    .leftJoin(customerGroups, eq(sequences.customerGroupId, customerGroups.id))
     .where(eq(sequences.workspaceId, workspaceId))
     .orderBy(desc(sequences.createdAt))
 
@@ -628,6 +647,8 @@ export async function bulkEnrollWithScheduling(data: {
   // Update nextStepScheduledAt for enrollments
   for (const enrollment of enrollments) {
     const firstStep = steps[0]
+    if (!firstStep) continue
+    
     const nextScheduledAt = new Date(
       new Date(enrollment.enrolledAt).getTime() + firstStep.delayDays * 24 * 60 * 60 * 1000,
     )

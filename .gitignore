@@ -49,3 +49,4 @@ client/.env.development
 next-env.d.ts
 
 sh
+elysia-server/index

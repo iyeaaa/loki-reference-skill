@@ -1,5 +1,9 @@
-cd admin && yarn lint
-cd ../elysia-server && bun lint
+#!/bin/bash
+
+set -e
+
+(cd admin && yarn lint)
+(cd elysia-server && bun lint)
 
 # 고객 모니터링: 캠페인이 없으므로 제거해줘. 시퀀스로 해주고 뷰티 업체 기준으로 할 것이여서 해당 내용으로 해줘.최근 시퀀스 성과로 해줘.
 # 전체 고객 관리: CSV 업로드 기능 추가해줘.발송 히스토리 볼수 있게 버튼 추가해줘. 소속 그룹 이름도 표시해줘. 그룹 보기 버튼도 추가하여 클릭하면 고객 그룹 관리 화면으로 이동하게 해줘. 

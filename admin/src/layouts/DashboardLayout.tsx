@@ -60,7 +60,7 @@ function DashboardContent() {
       pathname,
       selectedWorkspace,
     })
-  }, [workspaces, workspaceOptions, hideWorkspaceSelector, pathname, selectedWorkspace])
+  }, [workspaces, workspaceOptions, pathname, selectedWorkspace])
 
   // 선택된 워크스페이스를 localStorage에 저장
   useEffect(() => {

@@ -10,4 +10,17 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    // 파일 해시를 사용하여 캐시 무효화
+    rollupOptions: {
+      output: {
+        // 청크 파일명에 해시 포함
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
+      },
+    },
+    // 매니페스트 파일 생성 (선택적)
+    manifest: true,
+  },
 })

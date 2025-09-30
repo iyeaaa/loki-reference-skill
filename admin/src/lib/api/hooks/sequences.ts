@@ -302,3 +302,21 @@ export function useBulkUnenroll() {
     },
   })
 }
+
+export function useBulkEnrollWithScheduling() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ sequenceId, data }: { sequenceId: string; data: { leadIds: string[]; userEmailAccountId: string; enrolledBy?: string } }) =>
+      sequencesApi.bulkEnrollWithScheduling(sequenceId, data),
+    onSuccess: (response, variables) => {
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.enrollments(variables.sequenceId) })
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.detail(variables.sequenceId) })
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.lists() })
+      toast.success(`${response.enrolledCount || 0}명이 시퀀스에 등록되고 ${response.scheduledExecutions || 0}개의 이메일이 스케줄되었습니다`)
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "시퀀스 등록에 실패했습니다")
+    },
+  })
+}

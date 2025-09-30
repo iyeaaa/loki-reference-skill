@@ -402,3 +402,54 @@ export async function getUserWorkspaces(userId: string) {
 
   return result
 }
+
+// GetAllUserRelatedWorkspaces - 소유하거나 멤버인 워크스페이스 모두 반환
+export async function getAllUserRelatedWorkspaces(userId: string) {
+  // 소유한 워크스페이스
+  const ownedWorkspaces = await db
+    .select({
+      id: workspaces.id,
+      name: workspaces.name,
+      description: workspaces.description,
+      isActive: workspaces.isActive,
+      ownerId: workspaces.ownerId,
+      createdAt: workspaces.createdAt,
+      updatedAt: workspaces.updatedAt,
+    })
+    .from(workspaces)
+    .where(eq(workspaces.ownerId, userId))
+    .orderBy(desc(workspaces.createdAt))
+
+  // 멤버인 워크스페이스
+  const memberWorkspaces = await db
+    .select({
+      id: workspaces.id,
+      name: workspaces.name,
+      description: workspaces.description,
+      isActive: workspaces.isActive,
+      ownerId: workspaces.ownerId,
+      createdAt: workspaces.createdAt,
+      updatedAt: workspaces.updatedAt,
+    })
+    .from(workspaceMembers)
+    .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+    .where(and(eq(workspaceMembers.userId, userId), eq(workspaceMembers.status, 'active')))
+    .orderBy(desc(workspaces.createdAt))
+
+  // 중복 제거 (소유자이면서 멤버인 경우)
+  const workspaceMap = new Map()
+
+  // 소유한 워크스페이스 먼저 추가
+  for (const ws of ownedWorkspaces) {
+    workspaceMap.set(ws.id, ws)
+  }
+
+  // 멤버인 워크스페이스 추가 (중복되지 않는 것만)
+  for (const ws of memberWorkspaces) {
+    if (!workspaceMap.has(ws.id)) {
+      workspaceMap.set(ws.id, ws)
+    }
+  }
+
+  return Array.from(workspaceMap.values())
+}

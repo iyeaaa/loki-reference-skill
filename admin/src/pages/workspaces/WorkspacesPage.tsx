@@ -40,8 +40,8 @@ export default function WorkspacesPage() {
 
   const loadUsers = useCallback(async () => {
     try {
-      const response = await usersApi.list({ limit: 1000 })
-      setUsers(response.users || [])
+      const allUsers = await usersApi.getAll()
+      setUsers(allUsers || [])
     } catch (error) {
       console.error("Failed to load users:", error)
     }

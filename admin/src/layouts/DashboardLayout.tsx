@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import type { WorkspaceOption } from "@/components/ui/workspace-selector"
 import { WorkspaceSelector } from "@/components/ui/workspace-selector"
-import { useWorkspaces } from "@/lib/api/hooks/workspaces"
+import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 
 function DashboardContent() {
   const location = useLocation()
@@ -25,12 +25,16 @@ function DashboardContent() {
   })
   const { state } = useSidebar()
 
-  // API에서 워크스페이스 목록 가져오기
-  const { data: workspacesData } = useWorkspaces({ limit: 100 })
+  // 현재 로그인한 유저의 ID 가져오기
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
+  const userId = currentUser?.id || ""
+
+  // 유저가 소유하거나 멤버인 워크스페이스 목록 가져오기
+  const { data: userWorkspaces } = useUserWorkspaces(userId, !!userId)
 
   // Workspace를 WorkspaceOption으로 변환
   const workspaces: WorkspaceOption[] =
-    workspacesData?.workspaces.map((ws) => ({
+    userWorkspaces?.map((ws) => ({
       value: ws.id,
       label: ws.name,
       sublabel: ws.description || "",
@@ -38,11 +42,25 @@ function DashboardContent() {
 
   const isSidebarCollapsed = state === "collapsed"
 
+  // 워크스페이스 선택기를 숨길 페이지 목록
+  const hideWorkspaceSelector = ["/customer-groups", "/sequences"].includes(pathname)
+
   // "전체" 옵션을 포함한 워크스페이스 목록 생성
   const workspaceOptions: WorkspaceOption[] = [
     { value: "all", label: "전체", sublabel: "모든 워크스페이스 보기" },
     ...workspaces,
   ]
+
+  // 디버깅: 워크스페이스 정보 확인
+  useEffect(() => {
+    console.log("Workspace Debug:", {
+      workspaces,
+      workspaceOptions,
+      hideWorkspaceSelector,
+      pathname,
+      selectedWorkspace,
+    })
+  }, [workspaces, workspaceOptions, hideWorkspaceSelector, pathname, selectedWorkspace])
 
   // 선택된 워크스페이스를 localStorage에 저장
   useEffect(() => {
@@ -65,13 +83,14 @@ function DashboardContent() {
         workspaces={workspaces}
         selectedWorkspace={selectedWorkspace}
         onWorkspaceChange={setSelectedWorkspace}
+        hideWorkspaceSelector={hideWorkspaceSelector}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="flex h-16 shrink-0 items-center gap-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 z-50">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
-            {isSidebarCollapsed && (
+            {isSidebarCollapsed && !hideWorkspaceSelector && (
               <WorkspaceSelector
                 options={workspaceOptions}
                 value={selectedWorkspace}

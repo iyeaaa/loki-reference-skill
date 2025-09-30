@@ -142,6 +142,31 @@ export async function listUsers(limit: number, offset: number) {
   return result
 }
 
+// GetAllUsers - 페이지네이션 없이 모든 유저 조회 (active 유저만)
+export async function getAllUsers() {
+  const result = await db
+    .select({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      userRole: users.userRole,
+      isActive: users.isActive,
+      departmentId: users.departmentId,
+      employeeId: users.employeeId,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
+      lastLoginAt: users.lastLoginAt,
+      departmentName: departments.name,
+      departmentCode: departments.code,
+    })
+    .from(users)
+    .innerJoin(departments, eq(users.departmentId, departments.id))
+    .where(eq(users.isActive, true))
+    .orderBy(desc(users.createdAt))
+
+  return result
+}
+
 // ListUsersWithFilters :many
 export async function listUsersWithFilters(
   limit: number,

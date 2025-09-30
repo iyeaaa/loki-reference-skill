@@ -162,6 +162,36 @@ async function seed() {
         ownerId: insertedUsers[3]!.id,
         isActive: true,
       },
+      {
+        name: '루카스에듀테인먼트',
+        description: '교육 콘텐츠 및 엔터테인먼트 서비스의 글로벌 확장',
+        ownerId: insertedUsers[4]!.id,
+        isActive: true,
+      },
+      {
+        name: '예지상사',
+        description: '종합 무역 및 유통 서비스의 해외 바이어 네트워크 구축',
+        ownerId: insertedUsers[0]!.id,
+        isActive: true,
+      },
+      {
+        name: '익투스',
+        description: 'IT 서비스 및 솔루션의 글로벌 파트너십 개발',
+        ownerId: insertedUsers[1]!.id,
+        isActive: true,
+      },
+      {
+        name: '리오닉스',
+        description: '엔진 오일 첨가제 및 화학 제품의 해외 유통망 확대',
+        ownerId: insertedUsers[2]!.id,
+        isActive: true,
+      },
+      {
+        name: '브이시드니',
+        description: '뷰티 컨설팅 및 마케팅 서비스의 호주/아시아 시장 진출',
+        ownerId: insertedUsers[3]!.id,
+        isActive: true,
+      },
     ]
 
     const insertedWorkspaces: (typeof workspaces.$inferSelect)[] = []
@@ -183,48 +213,53 @@ async function seed() {
 
     // 4. 워크스페이스 멤버 데이터 생성
     console.log('👥 워크스페이스 멤버 데이터 생성 중...')
-    const memberSeeds = [
-      {
-        workspaceId: insertedWorkspaces[0]!.id,
-        userId: insertedUsers[0]!.id,
-        role: 'owner' as const,
-        invitedBy: insertedUsers[0]!.id,
-        joinedAt: new Date(),
-        status: 'active' as const,
-      },
-      {
-        workspaceId: insertedWorkspaces[0]!.id,
-        userId: insertedUsers[1]!.id,
-        role: 'admin' as const,
-        invitedBy: insertedUsers[0]!.id,
-        joinedAt: new Date(),
-        status: 'active' as const,
-      },
-      {
-        workspaceId: insertedWorkspaces[0]!.id,
-        userId: insertedUsers[2]!.id,
-        role: 'member' as const,
-        invitedBy: insertedUsers[0]!.id,
-        joinedAt: new Date(),
-        status: 'active' as const,
-      },
-      {
-        workspaceId: insertedWorkspaces[1]!.id,
-        userId: insertedUsers[1]!.id,
-        role: 'owner' as const,
-        invitedBy: insertedUsers[1]!.id,
-        joinedAt: new Date(),
-        status: 'active' as const,
-      },
-      {
-        workspaceId: insertedWorkspaces[2]!.id,
-        userId: insertedUsers[2]!.id,
-        role: 'owner' as const,
-        invitedBy: insertedUsers[2]!.id,
-        joinedAt: new Date(),
-        status: 'active' as const,
-      },
-    ]
+    const memberSeeds = []
+
+    // 각 워크스페이스에 owner 멤버 추가 (처음 5개는 기존 로직 유지)
+    insertedWorkspaces.forEach((workspace, index) => {
+      if (index < 5) {
+        // 기존 워크스페이스들에 대한 멤버 설정
+        memberSeeds.push({
+          workspaceId: workspace.id,
+          userId: workspace.ownerId,
+          role: 'owner' as const,
+          invitedBy: workspace.ownerId,
+          joinedAt: new Date(),
+          status: 'active' as const,
+        })
+
+        // 첫 번째 워크스페이스에 추가 멤버들
+        if (index === 0) {
+          memberSeeds.push({
+            workspaceId: workspace.id,
+            userId: insertedUsers[1]!.id,
+            role: 'admin' as const,
+            invitedBy: workspace.ownerId,
+            joinedAt: new Date(),
+            status: 'active' as const,
+          })
+          memberSeeds.push({
+            workspaceId: workspace.id,
+            userId: insertedUsers[2]!.id,
+            role: 'member' as const,
+            invitedBy: workspace.ownerId,
+            joinedAt: new Date(),
+            status: 'active' as const,
+          })
+        }
+      } else {
+        // 새로운 워크스페이스들에 대한 owner 멤버 설정
+        memberSeeds.push({
+          workspaceId: workspace.id,
+          userId: workspace.ownerId,
+          role: 'owner' as const,
+          invitedBy: workspace.ownerId,
+          joinedAt: new Date(),
+          status: 'active' as const,
+        })
+      }
+    })
+
     const insertedMembers = await db.insert(workspaceMembers).values(memberSeeds).returning()
     console.log(`✅ ${insertedMembers.length}명 워크스페이스 멤버 생성 완료\n`)
 
@@ -302,287 +337,572 @@ async function seed() {
       .returning()
     console.log(`✅ ${insertedEmailAccounts.length}개 이메일 계정 생성 완료\n`)
 
-    // 6. 리드 데이터 생성 (해외 바이어)
+    // 6. 리드 데이터 생성 (워크스페이스별 10개씩)
     console.log('🎯 리드 데이터 생성 중...')
-    const leadSeeds = [
-      {
-        workspaceId: insertedWorkspaces[0]!.id,
-        companyName: 'Sephora Asia Pacific',
-        foundCompanyName: 'Sephora Asia Pacific Ltd.',
-        websiteUrl: 'https://sephora.sg',
-        finalUrl: 'https://sephora.sg',
-        httpStatus: 200,
-        nameUrlMatch: true,
-        businessType: '뷰티 리테일',
-        isBusinessTypeMatched: true,
-        description: '동남아시아 최대 뷰티 리테일 체인',
-        address: '8 Marina View, Marina Bay Financial Centre',
-        country: '싱가포르',
-        city: 'Singapore',
-        state: 'Singapore',
-        foundedYear: 2010,
-        employeeCount: '1000-5000',
-        leadSource: 'website_crawl',
-        leadStatus: 'new' as const,
-        leadScore: 95,
-        createdBy: insertedUsers[0]!.id,
-        collectedAt: new Date(),
-      },
-      {
-        workspaceId: insertedWorkspaces[0]!.id,
-        companyName: 'Beauty Bay',
-        foundCompanyName: 'Beauty Bay Ltd.',
-        websiteUrl: 'https://beautybay.com',
-        finalUrl: 'https://beautybay.com',
-        httpStatus: 200,
-        nameUrlMatch: true,
-        businessType: '온라인 뷰티 리테일',
-        isBusinessTypeMatched: true,
-        description: '영국 기반 글로벌 온라인 뷰티 플랫폼',
-        address: 'Manchester Science Park, Manchester',
-        country: '영국',
-        city: 'Manchester',
-        state: 'England',
-        foundedYear: 1999,
-        employeeCount: '200-500',
-        leadSource: 'referral',
-        leadStatus: 'contacted' as const,
-        leadScore: 85,
-        createdBy: insertedUsers[1]!.id,
-        collectedAt: new Date(),
-      },
-      {
-        workspaceId: insertedWorkspaces[1]!.id,
-        companyName: 'Watsons Thailand',
-        foundCompanyName: 'Watsons Personal Care Stores (Thailand) Ltd.',
-        websiteUrl: 'https://watsons.co.th',
-        finalUrl: 'https://watsons.co.th',
-        httpStatus: 200,
-        nameUrlMatch: true,
-        businessType: '드럭스토어 체인',
-        isBusinessTypeMatched: true,
-        description: '태국 최대 헬스&뷰티 리테일 체인',
-        address: 'Central World, Bangkok',
-        country: '태국',
-        city: 'Bangkok',
-        state: 'Bangkok',
-        foundedYear: 1996,
-        employeeCount: '5000-10000',
-        leadSource: 'linkedin',
-        leadStatus: 'qualified' as const,
-        leadScore: 90,
-        createdBy: insertedUsers[2]!.id,
-        collectedAt: new Date(),
-      },
-      {
-        workspaceId: insertedWorkspaces[2]!.id,
-        companyName: 'Douglas GmbH',
-        foundCompanyName: 'Douglas Holding AG',
-        websiteUrl: 'https://douglas.de',
-        finalUrl: 'https://douglas.de',
-        httpStatus: 200,
-        nameUrlMatch: true,
-        businessType: '퍼퓸&코스메틱 리테일',
-        isBusinessTypeMatched: true,
-        description: '유럽 최대 향수 및 화장품 유통업체',
-        address: 'Kabeler Straße 4, Düsseldorf',
-        country: '독일',
-        city: 'Düsseldorf',
-        state: 'North Rhine-Westphalia',
-        foundedYear: 1910,
-        employeeCount: '10000+',
-        leadSource: 'event',
-        leadStatus: 'new' as const,
-        leadScore: 88,
-        createdBy: insertedUsers[1]!.id,
-        collectedAt: new Date(),
-      },
-      {
-        workspaceId: insertedWorkspaces[3]!.id,
-        companyName: 'Noon UAE',
-        foundCompanyName: 'Noon E-Commerce',
-        websiteUrl: 'https://noon.com',
-        finalUrl: 'https://noon.com',
-        httpStatus: 200,
-        nameUrlMatch: true,
-        businessType: '이커머스 플랫폼',
-        isBusinessTypeMatched: true,
-        description: '중동 지역 대표 이커머스 플랫폼',
-        address: 'Emaar Square, Downtown Dubai',
-        country: '아랍에미리트',
-        city: 'Dubai',
-        state: 'Dubai',
-        foundedYear: 2016,
-        employeeCount: '1000-5000',
-        leadSource: 'partner',
-        leadStatus: 'contacted' as const,
-        leadScore: 82,
-        createdBy: insertedUsers[2]!.id,
-        collectedAt: new Date(),
-      },
-    ]
-    const insertedLeads = await db.insert(leads).values(leadSeeds).returning()
-    console.log(`✅ ${insertedLeads.length}개 리드 생성 완료\n`)
+    const leadSeeds = []
 
-    // 7. 리드 연락처 데이터 생성
-    console.log('📞 리드 연락처 데이터 생성 중...')
-    const contactSeeds = [
+    // 워크스페이스별로 10개씩 리드 데이터 생성
+    const cosmetics_companies = [
       {
-        leadId: insertedLeads[0]!.id,
-        contactType: 'email' as const,
-        contactValue: 'contact@techstartup.co.kr',
-        label: 'main',
-        isPrimary: true,
-        isVerified: true,
+        name: 'Sephora Asia Pacific',
+        country: '싱가포르',
+        type: '뷰티 리테일',
+        employees: '1000-5000',
+        score: 95,
       },
       {
-        leadId: insertedLeads[0]!.id,
-        contactType: 'phone' as const,
-        contactValue: '02-1234-5678',
-        label: 'office',
-        isPrimary: false,
-        isVerified: true,
+        name: 'Beauty Bay',
+        country: '영국',
+        type: '온라인 뷰티 리테일',
+        employees: '200-500',
+        score: 85,
       },
       {
-        leadId: insertedLeads[1]!.id,
-        contactType: 'email' as const,
-        contactValue: 'info@globalcommerce.com',
-        label: 'main',
-        isPrimary: true,
-        isVerified: true,
+        name: 'Ulta Beauty',
+        country: '미국',
+        type: '뷰티 리테일 체인',
+        employees: '10000+',
+        score: 92,
       },
       {
-        leadId: insertedLeads[1]!.id,
-        contactType: 'phone' as const,
-        contactValue: '02-2345-6789',
-        label: 'sales',
-        isPrimary: false,
-        isVerified: false,
+        name: 'Boots Thailand',
+        country: '태국',
+        type: '드럭스토어',
+        employees: '500-1000',
+        score: 78,
       },
       {
-        leadId: insertedLeads[2]!.id,
-        contactType: 'email' as const,
-        contactValue: 'hello@smartfactory.co.kr',
-        label: 'main',
-        isPrimary: true,
-        isVerified: true,
+        name: 'Guardian Malaysia',
+        country: '말레이시아',
+        type: '헬스&뷰티',
+        employees: '1000-5000',
+        score: 82,
       },
       {
-        leadId: insertedLeads[3]!.id,
-        contactType: 'email' as const,
-        contactValue: 'contact@healthinno.com',
-        label: 'main',
-        isPrimary: true,
-        isVerified: false,
+        name: 'Olive Young',
+        country: '한국',
+        type: '뷰티 전문점',
+        employees: '5000-10000',
+        score: 88,
       },
       {
-        leadId: insertedLeads[4]!.id,
-        contactType: 'email' as const,
-        contactValue: 'business@fintechsolutions.io',
-        label: 'main',
-        isPrimary: true,
-        isVerified: true,
+        name: 'AS Watson Group',
+        country: '홍콩',
+        type: '리테일 그룹',
+        employees: '10000+',
+        score: 93,
+      },
+      { name: 'Nykaa', country: '인도', type: '온라인 뷰티', employees: '1000-5000', score: 79 },
+      {
+        name: 'Mecca Brands',
+        country: '호주',
+        type: '프리미엄 뷰티',
+        employees: '500-1000',
+        score: 86,
+      },
+      {
+        name: '루카스에듀테인먼트',
+        country: '한국',
+        type: '교육 콘텐츠',
+        employees: '50-100',
+        score: 88,
+        contact: { name: '장진민', phone: '01086470485', email: 'lukas@tam9.me' },
       },
     ]
+
+    const kbeauty_companies = [
+      {
+        name: 'Watsons Thailand',
+        country: '태국',
+        type: '드럭스토어 체인',
+        employees: '5000-10000',
+        score: 90,
+      },
+      {
+        name: 'Sasa Hong Kong',
+        country: '홍콩',
+        type: 'K뷰티 리테일',
+        employees: '1000-5000',
+        score: 87,
+      },
+      {
+        name: 'Bonjour HK',
+        country: '홍콩',
+        type: '코스메틱 체인',
+        employees: '500-1000',
+        score: 76,
+      },
+      {
+        name: "Tomod's Japan",
+        country: '일본',
+        type: '드럭스토어',
+        employees: '1000-5000',
+        score: 81,
+      },
+      {
+        name: 'Matsumoto Kiyoshi',
+        country: '일본',
+        type: '드럭스토어 체인',
+        employees: '10000+',
+        score: 91,
+      },
+      {
+        name: 'Venus Beauty Supply',
+        country: '미국',
+        type: 'K뷰티 유통',
+        employees: '100-200',
+        score: 73,
+      },
+      {
+        name: 'Althea Korea',
+        country: '싱가포르',
+        type: '온라인 K뷰티',
+        employees: '50-100',
+        score: 77,
+      },
+      {
+        name: 'YesStyle',
+        country: '홍콩',
+        type: '온라인 패션&뷰티',
+        employees: '200-500',
+        score: 80,
+      },
+      {
+        name: 'Glow Recipe',
+        country: '미국',
+        type: 'K뷰티 브랜드',
+        employees: '50-100',
+        score: 85,
+      },
+      {
+        name: '예지상사',
+        country: '한국',
+        type: '무역 유통',
+        employees: '20-50',
+        score: 82,
+        contact: { name: '지영진', phone: '01075570663', email: 'yamy0612@naver.com' },
+      },
+    ]
+
+    const odm_partners = [
+      {
+        name: 'Douglas GmbH',
+        country: '독일',
+        type: '퍼퓸&코스메틱',
+        employees: '10000+',
+        score: 88,
+      },
+      {
+        name: 'Rossmann',
+        country: '독일',
+        type: '드럭스토어 체인',
+        employees: '10000+',
+        score: 89,
+      },
+      { name: 'DM Drogerie', country: '독일', type: '드럭스토어', employees: '10000+', score: 87 },
+      {
+        name: 'Marionnaud',
+        country: '프랑스',
+        type: '향수&화장품',
+        employees: '5000-10000',
+        score: 83,
+      },
+      { name: 'Nocibe', country: '프랑스', type: '뷰티 리테일', employees: '1000-5000', score: 78 },
+      {
+        name: 'Primor',
+        country: '스페인',
+        type: '코스메틱 체인',
+        employees: '500-1000',
+        score: 75,
+      },
+      {
+        name: 'Equivalenza',
+        country: '스페인',
+        type: '향수 전문점',
+        employees: '1000-5000',
+        score: 72,
+      },
+      {
+        name: 'ICI Paris XL',
+        country: '네덜란드',
+        type: '뷰티 체인',
+        employees: '1000-5000',
+        score: 81,
+      },
+      { name: 'Kicks', country: '스웨덴', type: '뷰티 체인', employees: '500-1000', score: 76 },
+      {
+        name: '익투스',
+        country: '한국',
+        type: 'IT 서비스',
+        employees: '10-20',
+        score: 79,
+        contact: { name: '임수빈', phone: '01090652144', email: 'ictuskorea@gmail.com' },
+      },
+    ]
+
+    const moisture_buyers = [
+      {
+        name: 'Noon UAE',
+        country: '아랍에미리트',
+        type: '이커머스',
+        employees: '1000-5000',
+        score: 82,
+      },
+      {
+        name: 'Namshi',
+        country: '아랍에미리트',
+        type: '온라인 패션&뷰티',
+        employees: '500-1000',
+        score: 79,
+      },
+      {
+        name: 'Ounass',
+        country: '아랍에미리트',
+        type: '럭셔리 이커머스',
+        employees: '200-500',
+        score: 85,
+      },
+      {
+        name: 'Centrepoint',
+        country: '쿠웨이트',
+        type: '백화점',
+        employees: '5000-10000',
+        score: 77,
+      },
+      {
+        name: 'Paris Gallery',
+        country: '아랍에미리트',
+        type: '럭셔리 리테일',
+        employees: '1000-5000',
+        score: 83,
+      },
+      {
+        name: 'Faces',
+        country: '사우디아라비아',
+        type: '뷰티 체인',
+        employees: '1000-5000',
+        score: 80,
+      },
+      {
+        name: 'Wojooh',
+        country: '쿠웨이트',
+        type: '뷰티 리테일',
+        employees: '500-1000',
+        score: 76,
+      },
+      {
+        name: 'Lazada Beauty',
+        country: '싱가포르',
+        type: '이커머스',
+        employees: '1000-5000',
+        score: 81,
+      },
+      {
+        name: 'Shopee Beauty',
+        country: '싱가포르',
+        type: '이커머스',
+        employees: '5000-10000',
+        score: 84,
+      },
+      {
+        name: '리오닉스',
+        country: '한국',
+        type: '화학 제조',
+        employees: '20-50',
+        score: 75,
+        contact: { name: '이승규', phone: '01033395161', email: 'rionix@kakao.com' },
+      },
+    ]
+
+    const fragrance_partners = [
+      {
+        name: 'Harrods',
+        country: '영국',
+        type: '럭셔리 백화점',
+        employees: '5000-10000',
+        score: 94,
+      },
+      {
+        name: 'Selfridges',
+        country: '영국',
+        type: '프리미엄 백화점',
+        employees: '1000-5000',
+        score: 91,
+      },
+      {
+        name: 'Bergdorf Goodman',
+        country: '미국',
+        type: '럭셔리 백화점',
+        employees: '500-1000',
+        score: 93,
+      },
+      {
+        name: 'Neiman Marcus',
+        country: '미국',
+        type: '프리미엄 백화점',
+        employees: '5000-10000',
+        score: 89,
+      },
+      {
+        name: 'Saks Fifth Avenue',
+        country: '미국',
+        type: '럭셔리 백화점',
+        employees: '1000-5000',
+        score: 90,
+      },
+      {
+        name: 'Galeries Lafayette',
+        country: '프랑스',
+        type: '백화점',
+        employees: '10000+',
+        score: 88,
+      },
+      {
+        name: 'Le Bon Marché',
+        country: '프랑스',
+        type: '럭셔리 백화점',
+        employees: '1000-5000',
+        score: 92,
+      },
+      {
+        name: 'KaDeWe',
+        country: '독일',
+        type: '프리미엄 백화점',
+        employees: '1000-5000',
+        score: 86,
+      },
+      {
+        name: 'La Rinascente',
+        country: '이탈리아',
+        type: '백화점',
+        employees: '1000-5000',
+        score: 84,
+      },
+      {
+        name: '브이시드니 VM Sydney',
+        country: '호주',
+        type: '뷰티 컨설팅',
+        employees: '10-20',
+        score: 80,
+        contact: { name: '윤유리', phone: '', email: 'vmsydney@example.com' },
+      },
+    ]
+
+    // 각 워크스페이스별로 리드 생성
+    const companyLists = [
+      cosmetics_companies,
+      kbeauty_companies,
+      odm_partners,
+      moisture_buyers,
+      fragrance_partners,
+    ]
+
+    companyLists.forEach((companies, wsIndex) => {
+      companies.forEach((company, _index) => {
+        // 특정 연락처가 있는 기업들은 converted 상태로 설정
+        const hasContact = 'contact' in company
+        const leadStatus = hasContact
+          ? ('converted' as const)
+          : (['new', 'contacted', 'qualified', 'converted', 'lost'][
+              Math.floor(Math.random() * 5)
+            ] as const)
+        const leadSource = hasContact
+          ? 'referral'
+          : ['website_crawl', 'linkedin', 'referral', 'event', 'partner'][
+              Math.floor(Math.random() * 5)
+            ]
+
+        leadSeeds.push({
+          workspaceId: insertedWorkspaces[wsIndex]!.id,
+          companyName: company.name,
+          foundCompanyName: `${company.name} Ltd.`,
+          websiteUrl: `https://${company.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+          finalUrl: `https://${company.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+          httpStatus: 200,
+          nameUrlMatch: true,
+          businessType: company.type,
+          isBusinessTypeMatched: true,
+          description: `${company.country}의 주요 ${company.type} 기업`,
+          address: `Business District, ${company.country}`,
+          country: company.country,
+          city: company.country,
+          state: company.country,
+          foundedYear: 1990 + Math.floor(Math.random() * 30),
+          employeeCount: company.employees,
+          leadSource: leadSource,
+          leadStatus: leadStatus,
+          leadScore: company.score,
+          createdBy: insertedUsers[Math.floor(Math.random() * insertedUsers.length)]!.id,
+          collectedAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000), // 최근 30일 내 랜덤
+          // 특정 연락처 정보가 있으면 추가
+          ...(hasContact && company.contact ? { notes: `담당자: ${company.contact.name}` } : {}),
+        })
+      })
+    })
+
+    const insertedLeads = await db.insert(leads).values(leadSeeds).returning()
+    console.log(`✅ ${insertedLeads.length}개 리드 생성 완료 (워크스페이스별 10개)\n`)
+
+    // 7. 리드 연락처 데이터 생성 (각 리드당 1-2개)
+    console.log('📞 리드 연락처 데이터 생성 중...')
+    const contactSeeds = []
+
+    // 모든 리드에 대해 연락처 생성
+    insertedLeads.forEach((lead, index) => {
+      const domain = lead.companyName.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+      // leadSeeds에서 해당 lead의 원본 회사 정보 찾기
+      const _originalCompany = leadSeeds[index]
+      const companyInfo = companyLists.flat().find((c) => c.name === lead.companyName)
+      const hasSpecificContact = companyInfo && 'contact' in companyInfo
+
+      if (hasSpecificContact && companyInfo.contact) {
+        // 특정 연락처 정보가 있는 경우
+        if (companyInfo.contact.email) {
+          contactSeeds.push({
+            leadId: lead.id,
+            contactType: 'email' as const,
+            contactValue: companyInfo.contact.email,
+            label: 'main',
+            isPrimary: true,
+            isVerified: true, // 실제 연락처는 검증됨으로 표시
+          })
+        }
+        if (companyInfo.contact.phone) {
+          contactSeeds.push({
+            leadId: lead.id,
+            contactType: 'phone' as const,
+            contactValue: companyInfo.contact.phone,
+            label: 'mobile',
+            isPrimary: false,
+            isVerified: true,
+          })
+        }
+      } else {
+        // 일반 더미 데이터 생성
+        contactSeeds.push({
+          leadId: lead.id,
+          contactType: 'email' as const,
+          contactValue: `contact@${domain}.com`,
+          label: 'main',
+          isPrimary: true,
+          isVerified: Math.random() > 0.3, // 70% 확률로 검증됨
+        })
+
+        // 50% 확률로 전화번호도 추가
+        if (Math.random() > 0.5) {
+          const phonePrefix = ['+1', '+44', '+65', '+971', '+49', '+33', '+82', '+81'][
+            Math.floor(Math.random() * 8)
+          ]
+          contactSeeds.push({
+            leadId: lead.id,
+            contactType: 'phone' as const,
+            contactValue: `${phonePrefix} ${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`,
+            label: ['office', 'sales', 'mobile'][Math.floor(Math.random() * 3)],
+            isPrimary: false,
+            isVerified: Math.random() > 0.5,
+          })
+        }
+      }
+    })
+
     const insertedContacts = await db.insert(leadContacts).values(contactSeeds).returning()
     console.log(`✅ ${insertedContacts.length}개 리드 연락처 생성 완료\n`)
 
-    // 8. 리드 소셜미디어 데이터 생성
+    // 8. 리드 소셜미디어 데이터 생성 (각 리드당 1-3개)
     console.log('📱 리드 소셜미디어 데이터 생성 중...')
-    const socialMediaSeeds = [
-      {
-        leadId: insertedLeads[0]!.id,
-        platform: 'linkedin' as const,
-        url: 'https://linkedin.com/company/techstartup',
-        username: 'techstartup',
-        isVerified: true,
-      },
-      {
-        leadId: insertedLeads[0]!.id,
-        platform: 'twitter' as const,
-        url: 'https://twitter.com/techstartup',
-        username: '@techstartup',
-        isVerified: false,
-      },
-      {
-        leadId: insertedLeads[1]!.id,
-        platform: 'facebook' as const,
-        url: 'https://facebook.com/globalcommerce',
-        username: 'globalcommerce',
-        followerCount: '10K',
-        isVerified: true,
-      },
-      {
-        leadId: insertedLeads[1]!.id,
-        platform: 'instagram' as const,
-        url: 'https://instagram.com/globalcommerce',
-        username: '@globalcommerce',
-        followerCount: '15K',
-        isVerified: true,
-      },
-      {
-        leadId: insertedLeads[2]!.id,
-        platform: 'linkedin' as const,
-        url: 'https://linkedin.com/company/smartfactory',
-        username: 'smartfactory',
-        isVerified: true,
-      },
-      {
-        leadId: insertedLeads[3]!.id,
-        platform: 'instagram' as const,
-        url: 'https://instagram.com/healthinno',
-        username: '@healthinno',
-        followerCount: '5K',
-        isVerified: false,
-      },
-      {
-        leadId: insertedLeads[4]!.id,
-        platform: 'linkedin' as const,
-        url: 'https://linkedin.com/company/fintechsolutions',
-        username: 'fintechsolutions',
-        isVerified: true,
-      },
-    ]
+    const socialMediaSeeds = []
+    const platforms = ['linkedin', 'facebook', 'instagram', 'twitter'] as const
+    const followerCounts = ['1K', '5K', '10K', '25K', '50K', '100K', '500K', '1M']
+
+    insertedLeads.forEach((lead) => {
+      const username = lead.companyName.toLowerCase().replace(/[^a-z0-9]/g, '')
+      const numPlatforms = Math.floor(Math.random() * 3) + 1 // 1-3개 플랫폼
+
+      // 랜덤으로 플랫폼 선택
+      const selectedPlatforms = [...platforms]
+        .sort(() => 0.5 - Math.random())
+        .slice(0, numPlatforms)
+
+      selectedPlatforms.forEach((platform) => {
+        socialMediaSeeds.push({
+          leadId: lead.id,
+          platform: platform,
+          url: `https://${platform === 'linkedin' ? 'linkedin.com/company' : platform}.com/${username}`,
+          username: platform === 'twitter' || platform === 'instagram' ? `@${username}` : username,
+          followerCount:
+            Math.random() > 0.5
+              ? followerCounts[Math.floor(Math.random() * followerCounts.length)]
+              : undefined,
+          isVerified: Math.random() > 0.4, // 60% 확률로 검증됨
+        })
+      })
+    })
+
     const insertedSocialMedia = await db
       .insert(leadSocialMedia)
       .values(socialMediaSeeds)
       .returning()
     console.log(`✅ ${insertedSocialMedia.length}개 소셜미디어 생성 완료\n`)
 
-    // 9. 리드 제품 데이터 생성
+    // 9. 리드 제품 데이터 생성 (각 리드당 1-2개)
     console.log('📦 리드 제품 데이터 생성 중...')
-    const productSeeds = [
-      {
-        leadId: insertedLeads[0]!.id,
-        productName: 'CRM 솔루션',
-        description: '영업 및 고객 관리 통합 솔루션',
-      },
-      {
-        leadId: insertedLeads[0]!.id,
-        productName: '마케팅 자동화 도구',
-        description: '이메일 및 소셜미디어 마케팅 자동화',
-      },
-      {
-        leadId: insertedLeads[1]!.id,
-        productName: '온라인 쇼핑몰 플랫폼',
-        description: 'B2C 이커머스 플랫폼',
-      },
-      {
-        leadId: insertedLeads[2]!.id,
-        productName: 'AI 품질검사 시스템',
-        description: '딥러닝 기반 제품 품질 검사',
-      },
-      {
-        leadId: insertedLeads[3]!.id,
-        productName: '원격 진료 플랫폼',
-        description: '화상 진료 및 처방전 발급',
-      },
-      {
-        leadId: insertedLeads[4]!.id,
-        productName: '디지털 자산 거래소',
-        description: '암호화폐 거래 플랫폼',
-      },
-    ]
+    const productSeeds = []
+
+    const productsByType = {
+      '뷰티 리테일': ['스킨케어 라인', '메이크업 컬렉션', '향수 컬렉션', '헤어케어 제품'],
+      '온라인 뷰티 리테일': ['K-뷰티 박스', '프리미엄 스킨케어', '비건 화장품', '맞춤형 뷰티'],
+      '뷰티 리테일 체인': ['브랜드 화장품', '자체 PB상품', '프리미엄 스킨케어', '선케어 제품'],
+      드럭스토어: ['기초 화장품', '색조 화장품', '바디케어', '헬스케어 제품'],
+      '헬스&뷰티': ['유기농 화장품', '기능성 화장품', '더마 코스메틱', '뷰티 디바이스'],
+      '뷰티 전문점': ['트렌드 메이크업', '시트 마스크', '클렌징 제품', '에센스/세럼'],
+      '리테일 그룹': ['멀티브랜드 화장품', 'PB 뷰티 라인', '수입 화장품', '로컬 브랜드'],
+      '온라인 뷰티': ['인플루언서 콜라보', '구독 박스', '샘플 키트', '리미티드 에디션'],
+      '프리미엄 뷰티': ['럭셔리 스킨케어', '프리미엄 향수', '안티에이징', '스파 제품'],
+      '럭셔리 뷰티': ['하이엔드 브랜드', '아티스트 콜라보', '한정판 컬렉션', '프레스티지 라인'],
+      '드럭스토어 체인': ['대용량 제품', '가성비 화장품', '민감성 피부용', '자연주의 화장품'],
+      'K뷰티 리테일': ['달팽이 크림', '시카 제품', 'BB/CC 크림', '쿠션 팩트'],
+      '코스메틱 체인': ['트렌드 컬러', '시즌 한정품', '기프트 세트', '트래블 키트'],
+      'K뷰티 유통': ['마스크팩', '톤업 크림', '선스틱', '앰플/부스터'],
+      '온라인 K뷰티': ['10단계 루틴 세트', '글로우 메이크업', '디톡스 제품', '한방 화장품'],
+      'K뷰티 브랜드': ['발효 화장품', '미백 기능성', '주름 개선', '더블 기능성'],
+      'K뷰티 큐레이션': ['베스트셀러 세트', '스타터 키트', '피부 타입별 세트', '고민별 솔루션'],
+      '퍼퓸&코스메틱': ['니치 향수', '아로마테라피', '바디 미스트', '홈 프래그런스'],
+      '향수&화장품': ['EDP/EDT', '솔리드 퍼퓸', '롤온 향수', '헤어 퍼퓸'],
+      '향수 전문점': ['계절별 향수', '맞춤 조향', '레이어링 세트', '미니어처 컬렉션'],
+      '뷰티 체인': ['올리브영 PB', '왓슨스 PB', '부츠 PB', '더글라스 PB'],
+      이커머스: ['베스트셀러', '신제품', '번들 상품', '플래시 세일'],
+      '온라인 패션&뷰티': ['인플루언서 픽', '리뷰 베스트', '재구매율 1위', '할인 특가'],
+      '럭셔리 이커머스': ['프레스티지', '리미티드', '익스클루시브', 'VIP 전용'],
+      백화점: ['1층 브랜드', '팝업 스토어', '신규 런칭', '백화점 단독'],
+      '럭셔리 리테일': ['하이엔드', '부티크 전용', '아티잔 제품', '수공예품'],
+      '럭셔리 백화점': ['컨시어지 추천', '시그니처 라인', '헤리티지 컬렉션', '캡슐 컬렉션'],
+      '프리미엄 백화점': ['디자이너 콜라보', '시즌 오프', '멤버십 특전', '기프트 위드 퍼처스'],
+      '백화점 체인': ['전국 매장', '온라인몰', '면세점', '아울렛'],
+    }
+
+    insertedLeads.forEach((lead) => {
+      const productOptions = productsByType[lead.businessType] || [
+        '화장품',
+        '스킨케어',
+        '메이크업',
+        '향수',
+      ]
+      const numProducts = Math.floor(Math.random() * 2) + 1 // 1-2개 제품
+
+      const selectedProducts = [...productOptions]
+        .sort(() => 0.5 - Math.random())
+        .slice(0, numProducts)
+
+      selectedProducts.forEach((product) => {
+        productSeeds.push({
+          leadId: lead.id,
+          productName: product,
+          description: `${lead.companyName}의 주력 ${product}`,
+        })
+      })
+    })
+
     const insertedProducts = await db.insert(leadProducts).values(productSeeds).returning()
     console.log(`✅ ${insertedProducts.length}개 제품 생성 완료\n`)
 
@@ -674,38 +994,87 @@ async function seed() {
     const insertedGroups = await db.insert(customerGroups).values(groupSeeds).returning()
     console.log(`✅ ${insertedGroups.length}개 고객 그룹 생성 완료\n`)
 
-    // 14. 고객 그룹 멤버 데이터 생성
+    // 14. 고객 그룹 멤버 데이터 생성 (각 그룹당 10개 이상)
     console.log('👤 고객 그룹 멤버 데이터 생성 중...')
-    const groupMemberSeeds = [
-      {
-        groupId: insertedGroups[0]!.id,
-        leadId: insertedLeads[1]!.id,
-        addedBy: insertedUsers[0]!.id,
-      },
-      {
-        groupId: insertedGroups[0]!.id,
-        leadId: insertedLeads[2]!.id,
-        addedBy: insertedUsers[0]!.id,
-      },
-      {
-        groupId: insertedGroups[1]!.id,
-        leadId: insertedLeads[0]!.id,
-        addedBy: insertedUsers[0]!.id,
-      },
-      {
-        groupId: insertedGroups[1]!.id,
-        leadId: insertedLeads[4]!.id,
-        addedBy: insertedUsers[0]!.id,
-      },
-      {
-        groupId: insertedGroups[2]!.id,
-        leadId: insertedLeads[3]!.id,
-        addedBy: insertedUsers[1]!.id,
-      },
-    ]
+    const groupMemberSeeds = []
+
+    // 각 고객 그룹에 대해 멤버 추가
+    insertedGroups.forEach((group, _groupIndex) => {
+      const workspaceLeads = insertedLeads.filter((lead) => lead.workspaceId === group.workspaceId)
+
+      if (group.name === 'VIP 고객') {
+        // 높은 점수를 가진 리드들 추가
+        const highScoreLeads = workspaceLeads.filter((lead) => lead.leadScore >= 80)
+        highScoreLeads.slice(0, 12).forEach((lead) => {
+          groupMemberSeeds.push({
+            groupId: group.id,
+            leadId: lead.id,
+            addedBy: insertedUsers[Math.floor(Math.random() * insertedUsers.length)]!.id,
+          })
+        })
+      } else if (group.name === 'IT 업계') {
+        // IT 관련 비즈니스 타입 리드들 추가
+        const itLeads = workspaceLeads.filter(
+          (lead) =>
+            lead.businessType.includes('IT') ||
+            lead.businessType.includes('테크') ||
+            lead.businessType.includes('온라인'),
+        )
+        itLeads.slice(0, 10).forEach((lead) => {
+          groupMemberSeeds.push({
+            groupId: group.id,
+            leadId: lead.id,
+            addedBy: insertedUsers[Math.floor(Math.random() * insertedUsers.length)]!.id,
+          })
+        })
+      } else if (group.name === '미응답 고객') {
+        // 'new' 또는 'contacted' 상태의 리드들 추가
+        const unresponsiveLeads = workspaceLeads.filter(
+          (lead) => lead.leadStatus === 'new' || lead.leadStatus === 'contacted',
+        )
+        unresponsiveLeads.slice(0, 11).forEach((lead) => {
+          groupMemberSeeds.push({
+            groupId: group.id,
+            leadId: lead.id,
+            addedBy: insertedUsers[Math.floor(Math.random() * insertedUsers.length)]!.id,
+          })
+        })
+      } else if (group.name === '파트너 후보') {
+        // 중간 규모 직원수를 가진 리드들 추가
+        const partnerLeads = workspaceLeads.filter(
+          (lead) =>
+            lead.employeeCount.includes('100') ||
+            lead.employeeCount.includes('500') ||
+            lead.employeeCount.includes('1000'),
+        )
+        partnerLeads.slice(0, 10).forEach((lead) => {
+          groupMemberSeeds.push({
+            groupId: group.id,
+            leadId: lead.id,
+            addedBy: insertedUsers[Math.floor(Math.random() * insertedUsers.length)]!.id,
+          })
+        })
+      } else if (group.name === '해외 진출 타겟') {
+        // 해외 국가의 리드들 추가
+        const globalLeads = workspaceLeads.filter((lead) => lead.country !== '한국')
+        globalLeads.slice(0, 13).forEach((lead) => {
+          groupMemberSeeds.push({
+            groupId: group.id,
+            leadId: lead.id,
+            addedBy: insertedUsers[Math.floor(Math.random() * insertedUsers.length)]!.id,
+          })
+        })
+      }
+    })
+
+    // 중복 제거
+    const uniqueGroupMembers = Array.from(
+      new Map(groupMemberSeeds.map((item) => [`${item.groupId}-${item.leadId}`, item])).values(),
+    )
+
     const insertedGroupMembers = await db
       .insert(customerGroupMembers)
-      .values(groupMemberSeeds)
+      .values(uniqueGroupMembers)
       .returning()
     console.log(`✅ ${insertedGroupMembers.length}개 그룹 멤버 생성 완료\n`)
 

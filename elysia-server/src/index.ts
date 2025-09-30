@@ -21,9 +21,13 @@ import { adminSequenceRoutes, sequenceRoutes } from './routes/sequences.routes'
 import { adminUserRoutes, userRoutes } from './routes/users.routes'
 import { webhookRoutes } from './routes/webhook.routes'
 import { adminWorkspaceRoutes, workspaceRoutes } from './routes/workspaces.routes'
+import { startEmailSequenceWorker } from './workers/email-sequence-worker'
 
 // Initialize database
 migrateDatabase().catch(console.error)
+
+// Start email sequence worker
+startEmailSequenceWorker()
 
 const app = new Elysia()
   .use(simpleLogger) // Apply logger first

@@ -140,6 +140,25 @@ export interface BulkUnenrollRequest {
   enrollmentIds: string[]
 }
 
+export interface BulkEnrollWithSchedulingRequest {
+  leadIds: string[]
+  userEmailAccountId: string
+  enrolledBy?: string
+}
+
+export interface BulkEnrollWithSchedulingResponse {
+  enrolledCount: number
+  totalSteps: number
+  scheduledExecutions: number
+}
+
+// Extended enrollment with lead and email info
+export interface EnrollmentWithDetails extends SequenceEnrollment {
+  leadCompanyName?: string | null
+  leadEmail?: string | null
+  emailAccountAddress?: string | null
+}
+
 // Type aliases for form inputs
 export type SequenceStepCreateInput = CreateSequenceStepRequest
 export type SequenceStepUpdateInput = CreateSequenceStepRequest

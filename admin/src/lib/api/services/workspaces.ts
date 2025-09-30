@@ -75,6 +75,11 @@ export const workspacesApi = {
     return apiFetch<Workspace[]>(`/api/v1/workspaces/owner/${ownerId}`)
   },
 
+  // Get user's workspaces (owned or member)
+  getUserWorkspaces: async (userId: string): Promise<Workspace[]> => {
+    return apiFetch<Workspace[]>(`/api/v1/workspaces/user/${userId}`)
+  },
+
   // Get workspace members
   getMembers: async (workspaceId: string): Promise<WorkspaceMember[]> => {
     return apiFetch<WorkspaceMember[]>(`/api/v1/workspaces/${workspaceId}/members`)

@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Textarea } from "@/components/ui/textarea"
 import type { User } from "@/lib/api/types/user"
 import type { Workspace } from "@/lib/api/types/workspace"
+import { WorkspaceMembersSection } from "./WorkspaceMembersSection"
 
 interface WorkspaceFormProps {
   workspace?: Workspace
@@ -57,6 +58,7 @@ export function WorkspaceForm({
   }
 
   return (
+    <div>
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor={nameId}>
@@ -165,5 +167,12 @@ export function WorkspaceForm({
         </Button>
       </div>
     </form>
+
+    {workspace?.id && (
+      <div className="mt-6 pt-6 border-t">
+        <WorkspaceMembersSection workspaceId={workspace.id} users={users} isEdit={isEdit} />
+      </div>
+    )}
+  </div>
   )
 }

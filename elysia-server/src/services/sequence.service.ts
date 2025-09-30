@@ -1,8 +1,14 @@
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
+import { and, desc, eq, ilike, lte, or, sql } from 'drizzle-orm'
 import { db } from '../db/index'
 import { userEmailAccounts } from '../db/schema/email-accounts'
+import { leadContacts } from '../db/schema/lead-details'
 import { leads } from '../db/schema/leads'
-import { sequenceEnrollments, sequenceSteps, sequences } from '../db/schema/sequences'
+import {
+  sequenceEnrollments,
+  sequenceStepExecutions,
+  sequenceSteps,
+  sequences,
+} from '../db/schema/sequences'
 import { users } from '../db/schema/users'
 import { workspaces } from '../db/schema/workspaces'
 
@@ -529,4 +535,245 @@ export async function bulkUnenroll(enrollmentIds: string[]) {
     .returning({ id: sequenceEnrollments.id })
 
   return result.length
+}
+
+// ====================================
+// ADVANCED ENROLLMENT OPERATIONS
+// ====================================
+
+// BulkEnrollWithScheduling - Enroll leads and create step executions with scheduling
+export async function bulkEnrollWithScheduling(data: {
+  sequenceId: string
+  leadIds: string[]
+  userEmailAccountId: string
+  enrolledBy?: string
+}) {
+  // Get sequence steps to create schedules
+  const steps = await getSequenceSteps(data.sequenceId)
+
+  if (steps.length === 0) {
+    throw new Error('시퀀스에 스텝이 없습니다.')
+  }
+
+  // Filter leads with valid email contacts
+  const leadsWithEmails = await db
+    .select({
+      leadId: leads.id,
+      email: leadContacts.contactValue,
+    })
+    .from(leads)
+    .innerJoin(leadContacts, eq(leads.id, leadContacts.leadId))
+    .where(
+      and(
+        or(...data.leadIds.map((id) => eq(leads.id, id)))!,
+        eq(leadContacts.contactType, 'email'),
+        eq(leadContacts.isPrimary, true),
+      ),
+    )
+
+  if (leadsWithEmails.length === 0) {
+    throw new Error('이메일이 있는 리드가 없습니다.')
+  }
+
+  const validLeadIds = leadsWithEmails.map((l) => l.leadId)
+
+  // Create enrollments
+  const enrollmentValues = validLeadIds.map((leadId) => ({
+    sequenceId: data.sequenceId,
+    leadId,
+    userEmailAccountId: data.userEmailAccountId,
+    enrolledBy: data.enrolledBy || null,
+    currentStepOrder: 0,
+    status: 'active' as const,
+  }))
+
+  const enrollments = await db.insert(sequenceEnrollments).values(enrollmentValues).returning({
+    id: sequenceEnrollments.id,
+    leadId: sequenceEnrollments.leadId,
+    enrolledAt: sequenceEnrollments.enrolledAt,
+  })
+
+  // Create step executions for each enrollment
+  const now = new Date()
+  const stepExecutionValues = []
+
+  for (const enrollment of enrollments) {
+    for (const step of steps) {
+      const scheduledAt = new Date(now.getTime() + step.delayDays * 24 * 60 * 60 * 1000)
+
+      stepExecutionValues.push({
+        enrollmentId: enrollment.id,
+        stepId: step.id,
+        stepOrder: step.stepOrder,
+        status: 'pending' as const,
+        scheduledAt,
+      })
+    }
+  }
+
+  if (stepExecutionValues.length > 0) {
+    await db.insert(sequenceStepExecutions).values(stepExecutionValues)
+  }
+
+  // Update nextStepScheduledAt for enrollments
+  for (const enrollment of enrollments) {
+    const firstStep = steps[0]
+    const nextScheduledAt = new Date(
+      new Date(enrollment.enrolledAt).getTime() + firstStep.delayDays * 24 * 60 * 60 * 1000,
+    )
+
+    await db
+      .update(sequenceEnrollments)
+      .set({ nextStepScheduledAt: nextScheduledAt })
+      .where(eq(sequenceEnrollments.id, enrollment.id))
+  }
+
+  return {
+    enrolledCount: enrollments.length,
+    totalSteps: steps.length,
+    scheduledExecutions: stepExecutionValues.length,
+  }
+}
+
+// GetLeadsWithEmails - Get leads from a list that have email contacts
+export async function getLeadsWithEmails(leadIds: string[]) {
+  const result = await db
+    .select({
+      leadId: leads.id,
+      companyName: leads.companyName,
+      email: leadContacts.contactValue,
+      isPrimary: leadContacts.isPrimary,
+    })
+    .from(leads)
+    .innerJoin(leadContacts, eq(leads.id, leadContacts.leadId))
+    .where(
+      and(or(...leadIds.map((id) => eq(leads.id, id)))!, eq(leadContacts.contactType, 'email')),
+    )
+    .orderBy(leads.companyName, desc(leadContacts.isPrimary))
+
+  return result
+}
+
+// GetPendingStepExecutions - Get step executions that need to be sent
+export async function getPendingStepExecutions(limit: number = 100) {
+  const now = new Date()
+
+  const result = await db
+    .select({
+      executionId: sequenceStepExecutions.id,
+      enrollmentId: sequenceStepExecutions.enrollmentId,
+      stepId: sequenceStepExecutions.stepId,
+      stepOrder: sequenceStepExecutions.stepOrder,
+      scheduledAt: sequenceStepExecutions.scheduledAt,
+      emailSubject: sequenceSteps.emailSubject,
+      emailBodyText: sequenceSteps.emailBodyText,
+      emailBodyHtml: sequenceSteps.emailBodyHtml,
+      leadId: sequenceEnrollments.leadId,
+      leadCompanyName: leads.companyName,
+      emailAccountId: sequenceEnrollments.userEmailAccountId,
+      sequenceId: sequenceEnrollments.sequenceId,
+      sequenceName: sequences.name,
+    })
+    .from(sequenceStepExecutions)
+    .innerJoin(sequenceSteps, eq(sequenceStepExecutions.stepId, sequenceSteps.id))
+    .innerJoin(sequenceEnrollments, eq(sequenceStepExecutions.enrollmentId, sequenceEnrollments.id))
+    .innerJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
+    .innerJoin(sequences, eq(sequenceEnrollments.sequenceId, sequences.id))
+    .where(
+      and(
+        eq(sequenceStepExecutions.status, 'pending'),
+        lte(sequenceStepExecutions.scheduledAt, now),
+        eq(sequenceEnrollments.status, 'active'),
+        eq(sequences.status, 'active'),
+      ),
+    )
+    .orderBy(sequenceStepExecutions.scheduledAt)
+    .limit(limit)
+
+  return result
+}
+
+// UpdateStepExecutionStatus - Update step execution status after sending
+export async function updateStepExecutionStatus(
+  executionId: string,
+  status: 'sent' | 'failed' | 'skipped',
+  errorMessage?: string,
+  emailId?: string,
+) {
+  const [updated] = await db
+    .update(sequenceStepExecutions)
+    .set({
+      status,
+      executedAt: new Date(),
+      errorMessage: errorMessage || null,
+      emailId: emailId || null,
+    })
+    .where(eq(sequenceStepExecutions.id, executionId))
+    .returning({
+      id: sequenceStepExecutions.id,
+      enrollmentId: sequenceStepExecutions.enrollmentId,
+      stepOrder: sequenceStepExecutions.stepOrder,
+    })
+
+  return updated
+}
+
+// UpdateEnrollmentProgress - Update enrollment progress after step execution
+export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: number) {
+  // Get total steps for this enrollment
+  const enrollment = await db
+    .select({
+      sequenceId: sequenceEnrollments.sequenceId,
+      currentStepOrder: sequenceEnrollments.currentStepOrder,
+    })
+    .from(sequenceEnrollments)
+    .where(eq(sequenceEnrollments.id, enrollmentId))
+    .limit(1)
+
+  if (!enrollment[0]) return null
+
+  const steps = await getSequenceSteps(enrollment[0].sequenceId)
+  const isLastStep = stepOrder >= steps.length
+
+  const updateData: any = {
+    currentStepOrder: stepOrder,
+    lastEmailSentAt: new Date(),
+  }
+
+  // If first email
+  const enr = await db
+    .select({ firstEmailSentAt: sequenceEnrollments.firstEmailSentAt })
+    .from(sequenceEnrollments)
+    .where(eq(sequenceEnrollments.id, enrollmentId))
+    .limit(1)
+
+  if (!enr[0]?.firstEmailSentAt) {
+    updateData.firstEmailSentAt = new Date()
+  }
+
+  // If last step, mark as completed
+  if (isLastStep) {
+    updateData.status = 'completed'
+    updateData.completedAt = new Date()
+    updateData.nextStepScheduledAt = null
+  } else {
+    // Schedule next step
+    const nextStep = steps.find((s) => s.stepOrder === stepOrder + 1)
+    if (nextStep) {
+      const nextScheduledAt = new Date(Date.now() + nextStep.delayDays * 24 * 60 * 60 * 1000)
+      updateData.nextStepScheduledAt = nextScheduledAt
+    }
+  }
+
+  const [updated] = await db
+    .update(sequenceEnrollments)
+    .set(updateData)
+    .where(eq(sequenceEnrollments.id, enrollmentId))
+    .returning({
+      id: sequenceEnrollments.id,
+      status: sequenceEnrollments.status,
+      currentStepOrder: sequenceEnrollments.currentStepOrder,
+    })
+
+  return updated
 }

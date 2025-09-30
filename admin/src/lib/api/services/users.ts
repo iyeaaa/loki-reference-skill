@@ -12,6 +12,11 @@ interface CreateUserData {
 }
 
 export const usersApi = {
+  // Get all active users without pagination
+  getAll: () => {
+    return apiFetch<User[]>("/api/v1/users/all")
+  },
+
   list: (params?: UsersParams) => {
     const searchParams = new URLSearchParams()
 

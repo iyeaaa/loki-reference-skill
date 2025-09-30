@@ -10,6 +10,7 @@ export const workspaceKeys = {
   list: (params?: WorkspacesParams) => [...workspaceKeys.lists(), params] as const,
   detail: (id: string) => [...workspaceKeys.all, "detail", id] as const,
   byOwner: (ownerId: string) => [...workspaceKeys.all, "owner", ownerId] as const,
+  byUser: (userId: string) => [...workspaceKeys.all, "user", userId] as const,
   members: (workspaceId: string) => [...workspaceKeys.all, "members", workspaceId] as const,
 }
 
@@ -37,6 +38,16 @@ export function useWorkspacesByOwner(ownerId: string, enabled = true) {
   return useQuery({
     queryKey: workspaceKeys.byOwner(ownerId),
     queryFn: () => workspacesApi.getByOwner(ownerId),
+    enabled,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
+}
+
+export function useUserWorkspaces(userId: string, enabled = true) {
+  return useQuery({
+    queryKey: workspaceKeys.byUser(userId),
+    queryFn: () => workspacesApi.getUserWorkspaces(userId),
     enabled,
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,

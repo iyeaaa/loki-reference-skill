@@ -12,22 +12,17 @@ import {
   useDeleteSequence,
   useUpdateSequence,
 } from "@/lib/api/hooks/sequences"
-import { workspacesApi } from "@/lib/api/services/workspaces"
 import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence"
-import type { Workspace } from "@/lib/api/types/workspace"
 import { BulkActionModal } from "./BulkActionModal"
+import { SequenceDetailTabs } from "./SequenceDetailTabs"
 import { SequenceFilters } from "./SequenceFilters"
 import { SequenceForm } from "./SequenceForm"
-import { SequenceStepsList } from "./SequenceStepsList"
 import { SequencesTableWithPagination } from "./SequencesTableWithPagination"
 
 export default function SequencesPage() {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
-
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
-  const [selectedWorkspaces, setSelectedWorkspaces] = useState<string[]>([])
 
   const [isCreating, setIsCreating] = useState(false)
   const [editingSequence, setEditingSequence] = useState<Sequence | null>(null)
@@ -40,20 +35,6 @@ export default function SequencesPage() {
   const _deleteSequence = useDeleteSequence()
   const bulkUpdateStatus = useBulkUpdateSequenceStatus()
   const bulkDeleteSequences = useBulkDeleteSequences()
-
-  const loadWorkspaces = useCallback(async () => {
-    try {
-      const response = await workspacesApi.list({ limit: 1000 })
-      setWorkspaces(response.workspaces || [])
-    } catch (error) {
-      console.error("Failed to load workspaces:", error)
-    }
-  }, [])
-
-  // Load initial data
-  useEffect(() => {
-    loadWorkspaces()
-  }, [loadWorkspaces])
 
   // Debounce search input
   useEffect(() => {
@@ -151,7 +132,6 @@ export default function SequencesPage() {
 
   const clearFilters = () => {
     setSelectedStatuses([])
-    setSelectedWorkspaces([])
     setSearchInput("")
     setSearchQuery("")
   }
@@ -171,10 +151,7 @@ export default function SequencesPage() {
       {/* Filters */}
       <SequenceFilters
         selectedStatuses={selectedStatuses}
-        selectedWorkspaces={selectedWorkspaces}
-        workspaces={workspaces}
         onStatusChange={setSelectedStatuses}
-        onWorkspaceChange={setSelectedWorkspaces}
         onClearFilters={clearFilters}
       />
 
@@ -241,7 +218,6 @@ export default function SequencesPage() {
           <SequencesTableWithPagination
             searchQuery={searchQuery}
             selectedStatuses={selectedStatuses}
-            selectedWorkspaces={selectedWorkspaces}
             selectedSequences={selectedSequences}
             onToggleSequence={toggleSequenceSelection}
             onToggleAll={toggleAllSequences}
@@ -259,7 +235,6 @@ export default function SequencesPage() {
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
             <SequenceForm
               isEdit={false}
-              workspaces={workspaces}
               onSave={handleCreateSequence}
               onCancel={() => setIsCreating(false)}
             />
@@ -269,9 +244,9 @@ export default function SequencesPage() {
 
       {/* Edit Sequence Dialog */}
       <Dialog open={!!editingSequence} onOpenChange={() => setEditingSequence(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogContent className="max-w-5xl max-h-[90vh]">
           <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">시퀀스 정보 수정</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">시퀀스 관리</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
             {editingSequence && (
@@ -279,12 +254,11 @@ export default function SequencesPage() {
                 <SequenceForm
                   sequence={editingSequence}
                   isEdit={true}
-                  workspaces={workspaces}
                   onSave={handleUpdateSequence}
                   onCancel={() => setEditingSequence(null)}
                 />
                 <div className="border-t pt-6">
-                  <SequenceStepsList sequenceId={editingSequence.id} isEdit={true} />
+                  <SequenceDetailTabs sequenceId={editingSequence.id} />
                 </div>
               </div>
             )}

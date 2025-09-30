@@ -72,12 +72,14 @@ interface AppSidebarProps {
   workspaces?: WorkspaceOption[]
   selectedWorkspace?: string
   onWorkspaceChange?: (value: string) => void
+  hideWorkspaceSelector?: boolean
 }
 
 export function AppSidebar({
   workspaces = [],
   selectedWorkspace = "",
   onWorkspaceChange,
+  hideWorkspaceSelector = false,
 }: AppSidebarProps) {
   const location = useLocation()
   const pathname = location.pathname
@@ -116,7 +118,7 @@ export function AppSidebar({
         </SidebarMenu>
 
         {/* 워크스페이스 선택 */}
-        {workspaceOptions.length > 1 && (
+        {!hideWorkspaceSelector && workspaceOptions.length > 0 && (
           <div className="group-data-[collapsible=icon]:hidden">
             <div className="flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70">
               워크스페이스 선택
@@ -136,8 +138,8 @@ export function AppSidebar({
         {/* 워크스페이스 고객 관리 */}
         <SidebarGroup>
           <SidebarGroupLabel>
-            <span className="font-semibold">{workspaceLabel}</span>
-            <span className="ml-1">고객 관리</span>
+            {!hideWorkspaceSelector && <span className="font-semibold">{workspaceLabel}</span>}
+            <span className={hideWorkspaceSelector ? "" : "ml-1"}>고객 관리</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>

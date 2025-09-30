@@ -178,6 +178,20 @@ export const sequencesApi = {
     )
   },
 
+  bulkEnrollWithScheduling: (
+    sequenceId: string,
+    data: { leadIds: string[]; userEmailAccountId: string; enrolledBy?: string }
+  ) => {
+    return apiFetch<{
+      enrolledCount: number
+      totalSteps: number
+      scheduledExecutions: number
+    }>(`/api/v1/admin/sequences/${sequenceId}/enrollments/bulk-with-scheduling`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  },
+
   getByWorkspace: (workspaceId: string) => {
     return apiFetch<Sequence[]>(`/api/v1/sequences/workspace/${workspaceId}`)
   },

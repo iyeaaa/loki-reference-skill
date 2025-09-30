@@ -249,6 +249,20 @@ export const customerGroupRoutes = new Elysia({ prefix: '/api/v1/customer-groups
     },
   )
 
+  // Get group members with emails for sequence enrollment
+  .get(
+    '/:id/members-with-emails',
+    async ({ params: { id } }) => {
+      const members = await customerGroupService.getGroupMembersWithEmails(id)
+      return members
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: 'uuid' }),
+      }),
+    },
+  )
+
 // Admin bulk update routes
 export const adminCustomerGroupRoutes = new Elysia({ prefix: '/api/v1/admin/customer-groups' })
   // Bulk delete groups

@@ -289,11 +289,11 @@ export const workspaceRoutes = new Elysia({ prefix: '/api/v1/workspaces' })
     },
   )
 
-  // Get user's workspaces
+  // Get user's workspaces (owned or member)
   .get(
     '/user/:userId',
     async ({ params: { userId } }) => {
-      const workspaces = await workspaceService.getUserWorkspaces(userId)
+      const workspaces = await workspaceService.getAllUserRelatedWorkspaces(userId)
       return workspaces
     },
     {

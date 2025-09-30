@@ -22,6 +22,12 @@ const updateUserSchema = t.Object({
 })
 
 export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
+  // Get all users (active only, no pagination)
+  .get('/all', async () => {
+    const users = await userService.getAllUsers()
+    return users
+  })
+
   // Search users with filters (must be before /:id route)
   .get(
     '/search',

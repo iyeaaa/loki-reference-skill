@@ -405,6 +405,35 @@ export const adminSequenceRoutes = new Elysia({ prefix: '/api/v1/admin/sequences
     },
   )
 
+  // Bulk enroll with scheduling (new method with step execution scheduling)
+  .post(
+    '/:id/enrollments/bulk-with-scheduling',
+    async ({ params: { id }, body, set }) => {
+      try {
+        const result = await sequenceService.bulkEnrollWithScheduling({
+          sequenceId: id,
+          leadIds: body.leadIds,
+          userEmailAccountId: body.userEmailAccountId,
+          enrolledBy: body.enrolledBy,
+        })
+        return result
+      } catch (error: any) {
+        set.status = 400
+        return { error: error.message }
+      }
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: 'uuid' }),
+      }),
+      body: t.Object({
+        leadIds: t.Array(t.String({ format: 'uuid' })),
+        userEmailAccountId: t.String({ format: 'uuid' }),
+        enrolledBy: t.Optional(t.String({ format: 'uuid' })),
+      }),
+    },
+  )
+
   // Bulk unenroll
   .put(
     '/enrollments/bulk/unenroll',
@@ -415,6 +444,37 @@ export const adminSequenceRoutes = new Elysia({ prefix: '/api/v1/admin/sequences
     {
       body: t.Object({
         enrollmentIds: t.Array(t.String({ format: 'uuid' })),
+      }),
+    },
+  )
+
+  // Get pending step executions for email worker
+  .get('/step-executions/pending', async ({ query }) => {
+    const limit = parseInt(query.limit || '100', 10)
+    const executions = await sequenceService.getPendingStepExecutions(limit)
+    return { data: executions, count: executions.length }
+  })
+
+  // Update step execution status
+  .patch(
+    '/step-executions/:executionId/status',
+    async ({ params: { executionId }, body }) => {
+      const updated = await sequenceService.updateStepExecutionStatus(
+        executionId,
+        body.status,
+        body.errorMessage,
+        body.emailId,
+      )
+      return updated
+    },
+    {
+      params: t.Object({
+        executionId: t.String({ format: 'uuid' }),
+      }),
+      body: t.Object({
+        status: t.Union([t.Literal('sent'), t.Literal('failed'), t.Literal('skipped')]),
+        errorMessage: t.Optional(t.String()),
+        emailId: t.Optional(t.String({ format: 'uuid' })),
       }),
     },
   )

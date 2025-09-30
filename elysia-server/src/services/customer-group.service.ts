@@ -420,3 +420,24 @@ export async function bulkRemoveMembers(groupId: string, leadIds: string[]) {
 
   return result.length
 }
+
+// ====================================
+// SEQUENCE ENROLLMENT OPERATIONS
+// ====================================
+
+// GetGroupMembersWithEmails :many - Get group members with their email contacts
+export async function getGroupMembersWithEmails(groupId: string) {
+  const result = await db
+    .select({
+      leadId: leads.id,
+      companyName: leads.companyName,
+      websiteUrl: leads.websiteUrl,
+      leadStatus: leads.leadStatus,
+    })
+    .from(customerGroupMembers)
+    .innerJoin(leads, eq(customerGroupMembers.leadId, leads.id))
+    .where(eq(customerGroupMembers.groupId, groupId))
+    .orderBy(leads.companyName)
+
+  return result
+}

@@ -29,8 +29,8 @@ export function CustomerGroupsTableWithPagination({
 }: CustomerGroupsTableWithPaginationProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
-  const [currentWorkspace, setCurrentWorkspace] = useState(() =>
-    localStorage.getItem("selectedWorkspace") || "all"
+  const [currentWorkspace, setCurrentWorkspace] = useState(
+    () => localStorage.getItem("selectedWorkspace") || "all"
   )
   const limit = 10
 

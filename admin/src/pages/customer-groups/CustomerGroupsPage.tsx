@@ -11,9 +11,7 @@ import {
   useDeleteCustomerGroup,
   useUpdateCustomerGroup,
 } from "@/lib/api/hooks/customer-groups"
-import { workspacesApi } from "@/lib/api/services/workspaces"
 import type { CustomerGroup } from "@/lib/api/types/customer-group"
-import type { Workspace } from "@/lib/api/types/workspace"
 import { AddMembersDialog } from "./AddMembersDialog"
 import { BulkActionModal } from "./BulkActionModal"
 import { CustomerGroupFilters } from "./CustomerGroupFilters"
@@ -21,11 +19,8 @@ import { CustomerGroupForm } from "./CustomerGroupForm"
 import { CustomerGroupsTableWithPagination } from "./CustomerGroupsTableWithPagination"
 
 export default function CustomerGroupsPage() {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
-
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedWorkspaces, setSelectedWorkspaces] = useState<string[]>([])
 
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingCustomerGroup, setEditingCustomerGroup] = useState<CustomerGroup | null>(null)
@@ -38,20 +33,6 @@ export default function CustomerGroupsPage() {
   const createCustomerGroup = useCreateCustomerGroup()
   const updateCustomerGroup = useUpdateCustomerGroup()
   const deleteCustomerGroup = useDeleteCustomerGroup()
-
-  const loadWorkspaces = useCallback(async () => {
-    try {
-      const response = await workspacesApi.list({ limit: 100 })
-      setWorkspaces(response.workspaces || [])
-    } catch (error) {
-      console.error("Failed to load workspaces:", error)
-    }
-  }, [])
-
-  // Load initial data
-  useEffect(() => {
-    loadWorkspaces()
-  }, [loadWorkspaces])
 
   // Debounce search input
   useEffect(() => {
@@ -128,7 +109,6 @@ export default function CustomerGroupsPage() {
   }
 
   const clearFilters = () => {
-    setSelectedWorkspaces([])
     setSearchInput("")
     setSearchQuery("")
   }
@@ -154,13 +134,8 @@ export default function CustomerGroupsPage() {
 
   return (
     <div className="space-y-6 h-full overflow-y-auto">
-      {/* Filters */}
-      <CustomerGroupFilters
-        selectedWorkspaces={selectedWorkspaces}
-        workspaces={workspaces}
-        onWorkspaceChange={setSelectedWorkspaces}
-        onClearFilters={clearFilters}
-      />
+      {/* Filters - 워크스페이스 필터 제거됨 */}
+      <CustomerGroupFilters onClearFilters={clearFilters} />
 
       {/* Customer Groups Table */}
       <Card>
@@ -246,7 +221,6 @@ export default function CustomerGroupsPage() {
           {/* Customer Groups Table with Pagination */}
           <CustomerGroupsTableWithPagination
             searchQuery={searchQuery}
-            selectedWorkspaces={selectedWorkspaces}
             selectedCustomerGroups={selectedCustomerGroups}
             onToggleCustomerGroup={toggleCustomerGroupSelection}
             onToggleAll={toggleAllCustomerGroups}
@@ -265,7 +239,6 @@ export default function CustomerGroupsPage() {
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
             <CustomerGroupForm
               isEdit={false}
-              workspaces={workspaces}
               onSave={handleCreateCustomerGroup}
               onCancel={() => setShowCreateDialog(false)}
             />
@@ -284,7 +257,6 @@ export default function CustomerGroupsPage() {
               <CustomerGroupForm
                 customerGroup={editingCustomerGroup}
                 isEdit={true}
-                workspaces={workspaces}
                 onSave={handleUpdateCustomerGroup}
                 onCancel={() => setEditingCustomerGroup(null)}
               />

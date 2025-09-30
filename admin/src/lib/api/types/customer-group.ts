@@ -35,8 +35,8 @@ export interface CreateCustomerGroupRequest {
 
 export interface UpdateCustomerGroupRequest {
   name: string
-  description?: string
-  criteria?: Record<string, unknown>
+  description?: string | null
+  criteria?: Record<string, unknown> | null
   isDynamic: boolean
 }
 

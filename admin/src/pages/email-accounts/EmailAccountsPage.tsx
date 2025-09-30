@@ -62,10 +62,21 @@ export default function EmailAccountsPage() {
 
   const handleUpdateAccount = async (accountData: unknown) => {
     if (!editingAccount) return
+    const data = accountData as Partial<UserEmailAccount>
     updateAccount.mutate(
       {
         accountId: editingAccount.id,
-        data: accountData as Partial<UserEmailAccount>,
+        data: {
+          emailAddress: data.emailAddress || editingAccount.emailAddress,
+          displayName: data.displayName,
+          apiKey: data.apiKey || editingAccount.apiKey,
+          sendgridVerifiedSenderId: data.sendgridVerifiedSenderId,
+          isVerified: data.isVerified ?? editingAccount.isVerified,
+          isDefault: data.isDefault ?? editingAccount.isDefault,
+          dailyLimit: data.dailyLimit,
+          monthlyLimit: data.monthlyLimit,
+          status: data.status || editingAccount.status,
+        },
       },
       {
         onSuccess: () => {

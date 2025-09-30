@@ -40,13 +40,13 @@ export interface WorkspacesResponse {
 
 export interface CreateWorkspaceData {
   name: string
-  description?: string
+  description?: string | null
   ownerId: string
   isActive?: boolean
 }
 
 export interface UpdateWorkspaceData {
   name: string
-  description?: string
+  description?: string | null
   isActive: boolean
 }

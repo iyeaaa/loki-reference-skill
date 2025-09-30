@@ -44,13 +44,13 @@ export interface CreateEmailAccountRequest {
 
 export interface UpdateEmailAccountRequest {
   emailAddress: string
-  displayName?: string
+  displayName?: string | null
   apiKey: string
-  sendgridVerifiedSenderId?: string
+  sendgridVerifiedSenderId?: string | null
   isVerified: boolean
   isDefault: boolean
-  dailyLimit?: number
-  monthlyLimit?: number
+  dailyLimit?: number | null
+  monthlyLimit?: number | null
   status: EmailAccountStatus
 }
 

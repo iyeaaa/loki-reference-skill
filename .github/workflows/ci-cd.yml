@@ -49,6 +49,9 @@ jobs:
     - name: Build and deploy with Docker Compose
       run: |
         ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
+          set -e  # 오류 발생 시 즉시 종료
+          set -o pipefail  # 파이프라인에서 오류 전파
+
           cd ~/send-grid-test
 
           # 이전 컨테이너 백업 (롤백용)

@@ -294,7 +294,7 @@ export function useBulkUnenroll() {
   return useMutation({
     mutationFn: (enrollmentIds: string[]) => sequencesApi.bulkUnenroll(enrollmentIds),
     onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: sequenceKeys.enrollments })
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.all })
       toast.success(`${response.unenrolledCount || 0}명이 시퀀스에서 해제되었습니다`)
     },
     onError: (error: Error) => {

@@ -57,54 +57,54 @@ export interface Lead {
 
 export interface CreateLeadRequest {
   workspaceId: string
-  companyName?: string
-  foundCompanyName?: string
-  websiteUrl?: string
-  finalUrl?: string
-  httpStatus?: number
-  nameUrlMatch?: boolean
-  businessType?: string
-  isBusinessTypeMatched?: boolean
-  description?: string
-  address?: string
-  country?: string
-  city?: string
-  state?: string
-  foundedYear?: number
-  employeeCount?: string
-  leadSource?: string
+  companyName?: string | null
+  foundCompanyName?: string | null
+  websiteUrl?: string | null
+  finalUrl?: string | null
+  httpStatus?: number | null
+  nameUrlMatch?: boolean | null
+  businessType?: string | null
+  isBusinessTypeMatched?: boolean | null
+  description?: string | null
+  address?: string | null
+  country?: string | null
+  city?: string | null
+  state?: string | null
+  foundedYear?: number | null
+  employeeCount?: string | null
+  leadSource?: string | null
   leadStatus?: LeadStatus
-  leadScore?: number
-  notes?: string
-  crawlTimeSeconds?: string
-  gptTimeSeconds?: string
-  collectedAt?: string
-  errorMessage?: string
-  createdBy?: string
+  leadScore?: number | null
+  notes?: string | null
+  crawlTimeSeconds?: string | null
+  gptTimeSeconds?: string | null
+  collectedAt?: string | null
+  errorMessage?: string | null
+  createdBy?: string | null
   contacts?: Partial<LeadContact>[]
   socialMedia?: Partial<LeadSocialMedia>[]
 }
 
 export interface UpdateLeadRequest {
-  companyName?: string
-  foundCompanyName?: string
-  websiteUrl?: string
-  finalUrl?: string
-  httpStatus?: number
-  nameUrlMatch?: boolean
-  businessType?: string
-  isBusinessTypeMatched?: boolean
-  description?: string
-  address?: string
-  country?: string
-  city?: string
-  state?: string
-  foundedYear?: number
-  employeeCount?: string
-  leadSource?: string
+  companyName?: string | null
+  foundCompanyName?: string | null
+  websiteUrl?: string | null
+  finalUrl?: string | null
+  httpStatus?: number | null
+  nameUrlMatch?: boolean | null
+  businessType?: string | null
+  isBusinessTypeMatched?: boolean | null
+  description?: string | null
+  address?: string | null
+  country?: string | null
+  city?: string | null
+  state?: string | null
+  foundedYear?: number | null
+  employeeCount?: string | null
+  leadSource?: string | null
   leadStatus?: LeadStatus
-  leadScore?: number
-  notes?: string
+  leadScore?: number | null
+  notes?: string | null
   contacts?: Partial<LeadContact>[]
   socialMedia?: Partial<LeadSocialMedia>[]
 }

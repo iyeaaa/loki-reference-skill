@@ -31,12 +31,12 @@ export interface CreateEmailTemplateRequest {
 
 export interface UpdateEmailTemplateRequest {
   name: string
-  description?: string
+  description?: string | null
   subject: string
-  bodyText?: string
-  bodyHtml?: string
-  variables?: Record<string, unknown>
-  category?: string
+  bodyText?: string | null
+  bodyHtml?: string | null
+  variables?: Record<string, unknown> | null
+  category?: string | null
   isShared: boolean
 }
 

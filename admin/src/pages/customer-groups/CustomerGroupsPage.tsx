@@ -53,10 +53,16 @@ export default function CustomerGroupsPage() {
 
   const handleUpdateCustomerGroup = async (customerGroupData: unknown) => {
     if (!editingCustomerGroup) return
+    const data = customerGroupData as Partial<CustomerGroup>
     updateCustomerGroup.mutate(
       {
         groupId: editingCustomerGroup.id,
-        data: customerGroupData as Partial<CustomerGroup>,
+        data: {
+          name: data.name || editingCustomerGroup.name,
+          description: data.description,
+          criteria: data.criteria,
+          isDynamic: data.isDynamic ?? editingCustomerGroup.isDynamic,
+        },
       },
       {
         onSuccess: () => {
@@ -93,14 +99,14 @@ export default function CustomerGroupsPage() {
     }
   }
 
-  const _openBulkActionModal = (type: "delete") => {
-    if (selectedCustomerGroups.length === 0) {
-      toast.error("선택된 고객 그룹이 없습니다.")
-      return
-    }
-    setBulkActionType(type)
-    setShowBulkActionModal(true)
-  }
+  // const _openBulkActionModal = (type: "delete") => {
+  //   if (selectedCustomerGroups.length === 0) {
+  //     toast.error("선택된 고객 그룹이 없습니다.")
+  //     return
+  //   }
+  //   setBulkActionType(type)
+  //   setShowBulkActionModal(true)
+  // }
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -108,10 +114,10 @@ export default function CustomerGroupsPage() {
     }
   }
 
-  const clearFilters = () => {
-    setSearchInput("")
-    setSearchQuery("")
-  }
+  // const _clearFilters = () => {
+  //   setSearchInput("")
+  //   setSearchQuery("")
+  // }
 
   const toggleCustomerGroupSelection = useCallback((customerGroupId: string) => {
     setSelectedCustomerGroups((prev) =>
@@ -135,7 +141,7 @@ export default function CustomerGroupsPage() {
   return (
     <div className="space-y-6 h-full overflow-y-auto">
       {/* Filters - 워크스페이스 필터 제거됨 */}
-      <CustomerGroupFilters onClearFilters={clearFilters} />
+      <CustomerGroupFilters />
 
       {/* Customer Groups Table */}
       <Card>

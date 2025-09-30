@@ -19,8 +19,8 @@ import type {
   SocialMediaPlatform,
 } from "@/lib/api/types/lead-detail"
 
-interface LeadFormData extends Partial<Lead> {
-  leadScore?: number | string
+interface LeadFormData extends Omit<Partial<Lead>, "leadScore" | "contacts" | "socialMedia"> {
+  leadScore?: number
   contacts?: LeadContact[]
   socialMedia?: LeadSocialMedia[]
   workspaceId?: string
@@ -78,8 +78,10 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
     const submitData: LeadFormData = {
       ...formData,
       leadScore: formData.leadScore ? parseInt(formData.leadScore, 10) : undefined,
-      contacts: contacts.filter((c) => c.contactValue && c.contactValue.trim() !== ""),
-      socialMedia: socialMedia.filter((s) => s.url && s.url.trim() !== ""),
+      contacts: contacts.filter(
+        (c) => c.contactValue && c.contactValue.trim() !== ""
+      ) as LeadContact[],
+      socialMedia: socialMedia.filter((s) => s.url && s.url.trim() !== "") as LeadSocialMedia[],
     }
 
     // Add workspaceId for create mode

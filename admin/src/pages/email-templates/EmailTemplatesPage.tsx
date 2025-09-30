@@ -10,7 +10,6 @@ import {
   useBulkDeleteEmailTemplates,
   useBulkUpdateEmailTemplateCategory,
   useBulkUpdateEmailTemplateShared,
-  useDeleteEmailTemplate,
   useUpdateEmailTemplate,
 } from "@/lib/api/hooks/email-templates"
 import { workspacesApi } from "@/lib/api/services/workspaces"
@@ -36,7 +35,7 @@ export default function EmailTemplatesPage() {
   const [bulkActionType, setBulkActionType] = useState<"category" | "shared" | null>(null)
 
   const updateTemplate = useUpdateEmailTemplate()
-  const _deleteTemplate = useDeleteEmailTemplate()
+  // const _deleteTemplate = useDeleteEmailTemplate()
   const bulkUpdateCategory = useBulkUpdateEmailTemplateCategory()
   const bulkUpdateShared = useBulkUpdateEmailTemplateShared()
   const bulkDelete = useBulkDeleteEmailTemplates()
@@ -66,10 +65,20 @@ export default function EmailTemplatesPage() {
 
   const handleUpdateTemplate = async (templateData: unknown) => {
     if (!editingTemplate) return
+    const data = templateData as Partial<EmailTemplate>
     updateTemplate.mutate(
       {
         templateId: editingTemplate.id,
-        data: templateData as Partial<EmailTemplate>,
+        data: {
+          name: data.name || editingTemplate.name,
+          description: data.description,
+          subject: data.subject || editingTemplate.subject,
+          bodyText: data.bodyText,
+          bodyHtml: data.bodyHtml,
+          variables: data.variables,
+          category: data.category,
+          isShared: data.isShared ?? editingTemplate.isShared,
+        },
       },
       {
         onSuccess: () => {

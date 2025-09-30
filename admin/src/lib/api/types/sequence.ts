@@ -59,6 +59,9 @@ export interface SequenceEnrollment {
   completedAt?: string | null
   stoppedAt?: string | null
   nextStepScheduledAt?: string | null
+  // Extended fields from backend joins
+  leadCompanyName?: string | null
+  emailAccountAddress?: string | null
 }
 
 export interface SequenceStepExecution {

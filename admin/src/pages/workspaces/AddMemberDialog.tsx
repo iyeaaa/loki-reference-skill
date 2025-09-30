@@ -205,7 +205,12 @@ export function AddMemberDialog({
             <Label htmlFor={roleSelectId}>
               역할 <span className="text-red-500">*</span>
             </Label>
-            <Select value={selectedRole} onValueChange={setSelectedRole}>
+            <Select
+              value={selectedRole}
+              onValueChange={(value) =>
+                setSelectedRole(value as "owner" | "admin" | "member" | "viewer")
+              }
+            >
               <SelectTrigger id={roleSelectId}>
                 <SelectValue />
               </SelectTrigger>

@@ -10,7 +10,6 @@ import {
   useBulkUpdateLeadBusinessType,
   useBulkUpdateLeadStatus,
   useCreateLead,
-  useDeleteLead,
   useUpdateLead,
 } from "@/lib/api/hooks/leads"
 import { workspacesApi } from "@/lib/api/services/workspaces"
@@ -38,7 +37,7 @@ export default function LeadsPage() {
 
   const createLead = useCreateLead()
   const updateLead = useUpdateLead()
-  const _deleteLead = useDeleteLead()
+  // const _deleteLead = useDeleteLead()
   const bulkUpdateStatus = useBulkUpdateLeadStatus()
   const bulkUpdateBusinessType = useBulkUpdateLeadBusinessType()
   const bulkDeleteLeads = useBulkDeleteLeads()

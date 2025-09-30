@@ -16,6 +16,7 @@ import { BulkActionModal } from "./BulkActionModal"
 import { SequenceFilters } from "./SequenceFilters"
 import { SequenceForm } from "./SequenceForm"
 import { SequencesTableWithPagination } from "./SequencesTableWithPagination"
+import { SequenceDetailTabs } from "./SequenceDetailTabs"
 
 export default function SequencesPage() {
   const [searchInput, setSearchInput] = useState("")
@@ -241,18 +242,23 @@ export default function SequencesPage() {
 
       {/* Edit Sequence Dialog */}
       <Dialog open={!!editingSequence} onOpenChange={() => setEditingSequence(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-5xl max-h-[90vh]">
           <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">시퀀스 기본 정보 편집</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">시퀀스 관리</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
+          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
             {editingSequence && (
-              <SequenceForm
-                sequence={editingSequence}
-                isEdit={true}
-                onSave={handleUpdateSequence}
-                onCancel={() => setEditingSequence(null)}
-              />
+              <div className="space-y-6">
+                <SequenceForm
+                  sequence={editingSequence}
+                  isEdit={true}
+                  onSave={handleUpdateSequence}
+                  onCancel={() => setEditingSequence(null)}
+                />
+                <div className="border-t pt-6">
+                  <SequenceDetailTabs sequenceId={editingSequence.id} />
+                </div>
+              </div>
             )}
           </div>
         </DialogContent>

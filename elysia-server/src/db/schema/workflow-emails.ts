@@ -1,14 +1,5 @@
 import { relations } from 'drizzle-orm'
-import {
-  index,
-  jsonb,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-  varchar,
-} from 'drizzle-orm/pg-core'
+import { index, jsonb, pgEnum, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
 import { leads } from './leads'
 import { sequences } from './sequences'
 
@@ -21,11 +12,7 @@ export const emailStatusEnum = pgEnum('workflow_email_status_enum', [
   'failed',
 ])
 
-export const generationModeEnum = pgEnum('generation_mode_enum', [
-  'ai',
-  'manual',
-  'template',
-])
+export const generationModeEnum = pgEnum('generation_mode_enum', ['ai', 'manual', 'template'])
 
 // workflow_generated_emails table
 export const workflowGeneratedEmails = pgTable(
@@ -69,10 +56,7 @@ export const workflowGeneratedEmails = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
-    sequenceNodeIdx: index('workflow_emails_sequence_node_idx').on(
-      table.sequenceId,
-      table.nodeId,
-    ),
+    sequenceNodeIdx: index('workflow_emails_sequence_node_idx').on(table.sequenceId, table.nodeId),
     statusIdx: index('workflow_emails_status_idx').on(table.status),
     leadIdx: index('workflow_emails_lead_idx').on(table.leadId),
     // 유니크 제약: 같은 시퀀스, 같은 노드, 같은 lead에는 하나의 이메일만

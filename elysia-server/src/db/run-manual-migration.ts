@@ -1,7 +1,7 @@
-import { readFileSync } from 'fs'
-import { join } from 'path'
-import { Pool } from 'pg'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import dotenv from 'dotenv'
+import { Pool } from 'pg'
 
 dotenv.config()
 

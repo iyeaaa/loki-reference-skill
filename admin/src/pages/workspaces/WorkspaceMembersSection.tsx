@@ -24,20 +24,14 @@ import {
   useUpdateMemberStatus,
   useWorkspaceMembers,
 } from "@/lib/api/hooks/workspaces"
-import type { User } from "@/lib/api/types/user"
 import { AddMemberDialog } from "./AddMemberDialog"
 
 interface WorkspaceMembersSectionProps {
   workspaceId: string
-  users: User[]
   isEdit: boolean
 }
 
-export function WorkspaceMembersSection({
-  workspaceId,
-  users,
-  isEdit,
-}: WorkspaceMembersSectionProps) {
+export function WorkspaceMembersSection({ workspaceId, isEdit }: WorkspaceMembersSectionProps) {
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false)
 
   const { data: members = [], isLoading } = useWorkspaceMembers(workspaceId, isEdit)
@@ -231,7 +225,6 @@ export function WorkspaceMembersSection({
 
       <AddMemberDialog
         workspaceId={workspaceId}
-        users={users}
         existingMemberUserIds={members.map((m) => m.userId)}
         isOpen={showAddMemberDialog}
         onClose={() => setShowAddMemberDialog(false)}

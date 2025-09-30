@@ -1,56 +1,48 @@
-import { useId, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useId, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence";
-import {
-  useSuspenseWorkspaces,
-} from "@/lib/api/hooks/workspaces";
-import { useCustomerGroupsByWorkspace } from "@/lib/api/hooks/customer-groups";
+} from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { useCustomerGroupsByWorkspace } from "@/lib/api/hooks/customer-groups"
+import { useSuspenseWorkspaces } from "@/lib/api/hooks/workspaces"
+import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence"
 
 interface SequenceFormProps {
-  sequence?: Sequence;
-  isEdit?: boolean;
-  onSave: (sequenceData: unknown) => Promise<void> | void;
-  onCancel: () => void;
+  sequence?: Sequence
+  isEdit?: boolean
+  onSave: (sequenceData: unknown) => Promise<void> | void
+  onCancel: () => void
 }
 
-export function SequenceForm({
-  sequence,
-  isEdit = false,
-  onSave,
-  onCancel,
-}: SequenceFormProps) {
+export function SequenceForm({ sequence, isEdit = false, onSave, onCancel }: SequenceFormProps) {
   const {
     data: { workspaces },
-  } = useSuspenseWorkspaces({ limit: 100 });
+  } = useSuspenseWorkspaces({ limit: 100 })
   const [formData, setFormData] = useState({
     name: sequence?.name || "",
     description: sequence?.description || "",
     workspaceId: sequence?.workspaceId || "",
     status: (sequence?.status || "draft") as SequenceStatus,
     customerGroupId: sequence?.customerGroupId || "",
-  });
+  })
   const { data: customerGroups } = useCustomerGroupsByWorkspace(
     formData.workspaceId,
     Boolean(formData.workspaceId)
-  );
-  const nameId = useId();
-  const descriptionId = useId();
-
+  )
+  const nameId = useId()
+  const descriptionId = useId()
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
-  };
+    e.preventDefault()
+    onSave(formData)
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -70,9 +62,7 @@ export function SequenceForm({
         <Textarea
           id={descriptionId}
           value={formData.description}
-          onChange={(e) =>
-            setFormData({ ...formData, description: e.target.value })
-          }
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           placeholder="시퀀스에 대한 설명을 입력하세요..."
           rows={4}
         />
@@ -82,9 +72,7 @@ export function SequenceForm({
         <Label htmlFor="customerGroup">워크스페이스</Label>
         <Select
           value={formData.workspaceId}
-          onValueChange={(value) =>
-            setFormData({ ...formData, workspaceId: value })
-          }
+          onValueChange={(value) => setFormData({ ...formData, workspaceId: value })}
         >
           <SelectTrigger>
             <SelectValue placeholder="워크스페이스 선택" />
@@ -112,17 +100,13 @@ export function SequenceForm({
         <Label htmlFor="customerGroup">고객그룹</Label>
         <Select
           value={formData.customerGroupId}
-          onValueChange={(value) =>
-            setFormData({ ...formData, customerGroupId: value })
-          }
+          onValueChange={(value) => setFormData({ ...formData, customerGroupId: value })}
           disabled={!formData.workspaceId}
         >
           <SelectTrigger>
             <SelectValue
               placeholder={
-                formData.workspaceId
-                  ? "고객그룹 선택"
-                  : "먼저 워크스페이스를 선택하세요"
+                formData.workspaceId ? "고객그룹 선택" : "먼저 워크스페이스를 선택하세요"
               }
             />
           </SelectTrigger>
@@ -177,5 +161,5 @@ export function SequenceForm({
         </Button>
       </div>
     </form>
-  );
+  )
 }

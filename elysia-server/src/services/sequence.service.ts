@@ -97,7 +97,7 @@ export async function updateSequence(
   const updateData: Record<string, unknown> = {
     updatedAt: new Date(),
   }
-  
+
   if (data.name !== undefined) updateData.name = data.name
   if (data.description !== undefined) updateData.description = data.description
   if (data.status !== undefined) updateData.status = data.status
@@ -648,7 +648,7 @@ export async function bulkEnrollWithScheduling(data: {
   for (const enrollment of enrollments) {
     const firstStep = steps[0]
     if (!firstStep) continue
-    
+
     const nextScheduledAt = new Date(
       new Date(enrollment.enrolledAt).getTime() + firstStep.delayDays * 24 * 60 * 60 * 1000,
     )

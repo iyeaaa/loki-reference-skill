@@ -29,7 +29,7 @@ interface WorkspaceFormProps {
 export function WorkspaceForm({
   workspace,
   isEdit = false,
-  users = [],
+  users,
   onSave,
   onCancel,
 }: WorkspaceFormProps) {
@@ -58,103 +58,111 @@ export function WorkspaceForm({
   }
 
   return (
-    <div>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor={nameId}>
-            워크스페이스명 <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id={nameId}
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-            placeholder="워크스페이스 이름을 입력하세요"
-          />
+    <div className="flex flex-col h-full">
+      <form onSubmit={handleSubmit} className="flex-1 space-y-6">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor={nameId}>
+              워크스페이스명 <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id={nameId}
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              placeholder="워크스페이스 이름을 입력하세요"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={descriptionId}>설명</Label>
+            <Textarea
+              id={descriptionId}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="워크스페이스에 대한 설명을 입력하세요 (선택사항)"
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="owner">
+              소유자 <span className="text-red-500">*</span>
+            </Label>
+            <Popover open={ownerOpen} onOpenChange={setOwnerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={ownerOpen}
+                  className="w-full justify-between font-normal"
+                  type="button"
+                >
+                  {formData.ownerId
+                    ? users.find((user) => user.id === formData.ownerId)?.username ||
+                      users.find((user) => user.id === formData.ownerId)?.email
+                    : "소유자 선택"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command className="max-h-[300px]">
+                  <CommandInput
+                    placeholder="사용자 검색..."
+                    value={ownerSearch}
+                    onValueChange={setOwnerSearch}
+                  />
+                  <CommandList>
+                    <CommandEmpty>사용자를 찾을 수 없습니다.</CommandEmpty>
+                    <CommandGroup>
+                      {filteredUsers.map((user) => (
+                        <CommandItem
+                          key={user.id}
+                          value={user.id}
+                          onSelect={(currentValue) => {
+                            setFormData({
+                              ...formData,
+                              ownerId: currentValue === formData.ownerId ? "" : currentValue,
+                            })
+                            setOwnerOpen(false)
+                            setOwnerSearch("")
+                          }}
+                        >
+                          <Check
+                            className={`mr-2 h-4 w-4 ${
+                              formData.ownerId === user.id ? "opacity-100" : "opacity-0"
+                            }`}
+                          />
+                          <div className="flex flex-col">
+                            <span>{user.username}</span>
+                            <span className="text-xs text-gray-500">{user.email}</span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id={isActiveId}
+              checked={formData.isActive}
+              onCheckedChange={(checked) => setFormData({ ...formData, isActive: !!checked })}
+            />
+            <Label htmlFor={isActiveId}>활성 상태</Label>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor={descriptionId}>설명</Label>
-          <Textarea
-            id={descriptionId}
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="워크스페이스에 대한 설명을 입력하세요 (선택사항)"
-            rows={4}
-          />
-        </div>
+        {workspace?.id && (
+          <div className="pt-6 border-t">
+            <WorkspaceMembersSection workspaceId={workspace.id} isEdit={isEdit} />
+          </div>
+        )}
 
-        <div className="space-y-2">
-          <Label htmlFor="owner">
-            소유자 <span className="text-red-500">*</span>
-          </Label>
-          <Popover open={ownerOpen} onOpenChange={setOwnerOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={ownerOpen}
-                className="w-full justify-between font-normal"
-                type="button"
-              >
-                {formData.ownerId
-                  ? users.find((user) => user.id === formData.ownerId)?.username ||
-                    users.find((user) => user.id === formData.ownerId)?.email
-                  : "소유자 선택"}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-full p-0">
-              <Command>
-                <CommandInput
-                  placeholder="사용자 검색..."
-                  value={ownerSearch}
-                  onValueChange={setOwnerSearch}
-                />
-                <CommandList>
-                  <CommandEmpty>사용자를 찾을 수 없습니다.</CommandEmpty>
-                  <CommandGroup>
-                    {filteredUsers.map((user) => (
-                      <CommandItem
-                        key={user.id}
-                        value={user.id}
-                        onSelect={(currentValue) => {
-                          setFormData({
-                            ...formData,
-                            ownerId: currentValue === formData.ownerId ? "" : currentValue,
-                          })
-                          setOwnerOpen(false)
-                          setOwnerSearch("")
-                        }}
-                      >
-                        <Check
-                          className={`mr-2 h-4 w-4 ${
-                            formData.ownerId === user.id ? "opacity-100" : "opacity-0"
-                          }`}
-                        />
-                        <div className="flex flex-col">
-                          <span>{user.username}</span>
-                          <span className="text-xs text-gray-500">{user.email}</span>
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id={isActiveId}
-            checked={formData.isActive}
-            onCheckedChange={(checked) => setFormData({ ...formData, isActive: !!checked })}
-          />
-          <Label htmlFor={isActiveId}>활성 상태</Label>
-        </div>
-
-        <div className="flex justify-end gap-3 pt-4 border-t">
+        <div className="flex justify-end gap-3 pt-6 border-t sticky bottom-0 bg-white">
           <Button type="button" variant="outline" onClick={onCancel}>
             취소
           </Button>
@@ -167,12 +175,6 @@ export function WorkspaceForm({
           </Button>
         </div>
       </form>
-
-      {workspace?.id && (
-        <div className="mt-6 pt-6 border-t">
-          <WorkspaceMembersSection workspaceId={workspace.id} users={users} isEdit={isEdit} />
-        </div>
-      )}
     </div>
   )
 }

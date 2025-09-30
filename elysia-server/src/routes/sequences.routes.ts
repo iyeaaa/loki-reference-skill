@@ -18,12 +18,7 @@ const updateSequenceSchema = t.Object({
   name: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
   description: t.Optional(t.String()),
   status: t.Optional(
-    t.Union([
-      t.Literal('draft'),
-      t.Literal('active'),
-      t.Literal('paused'),
-      t.Literal('archived'),
-    ]),
+    t.Union([t.Literal('draft'), t.Literal('active'), t.Literal('paused'), t.Literal('archived')]),
   ),
   workflowData: t.Optional(t.String()),
   customerGroupId: t.Optional(t.String({ format: 'uuid' })),

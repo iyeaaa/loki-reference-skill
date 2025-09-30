@@ -27,16 +27,16 @@ class AIEmailService {
    * AI를 사용하여 시퀀스 이메일 초안 생성
    */
   async generateSequenceEmail(context: {
-    companyName: string;
-    contactName?: string;
-    industry?: string;
-    website?: string;
-    prompt?: string;
+    companyName: string
+    contactName?: string
+    industry?: string
+    website?: string
+    prompt?: string
   }): Promise<{
-    success: boolean;
-    subject?: string;
-    bodyText?: string;
-    error?: string;
+    success: boolean
+    subject?: string
+    bodyText?: string
+    error?: string
   }> {
     try {
       const systemPrompt = `당신은 전문적인 비즈니스 이메일 작성 전문가입니다.
@@ -70,7 +70,8 @@ SUBJECT: [이메일 제목]
 BODY:
 [이메일 본문]`
 
-      const userPrompt = context.prompt || '위 고객 정보를 바탕으로 맞춤형 영업 이메일을 작성해주세요.'
+      const userPrompt =
+        context.prompt || '위 고객 정보를 바탕으로 맞춤형 영업 이메일을 작성해주세요.'
 
       const { text } = await generateText({
         model: this.openai('gpt-4-turbo-preview'),

@@ -1,14 +1,9 @@
-import { CheckCircle, Edit, Loader2, Mail, RefreshCw, XCircle } from "lucide-react";
-import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
+import { CheckCircle, Edit, Loader2, Mail, RefreshCw, XCircle } from "lucide-react"
+import { useId, useState } from "react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Progress } from "@/components/ui/progress"
 import {
   Table,
   TableBody,
@@ -16,27 +11,27 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/ui/table"
+import { useSequence } from "@/lib/api/hooks/sequences"
 import {
   useGenerateAllEmails,
   useGeneratedEmails,
   useRegenerateEmail,
   useUpdateGeneratedEmail,
-} from "@/lib/api/hooks/workflow-emails";
-import type { WorkflowGeneratedEmail } from "@/lib/api/types/workflow-email";
-import { useSequence } from "@/lib/api/hooks/sequences";
+} from "@/lib/api/hooks/workflow-emails"
+import type { WorkflowGeneratedEmail } from "@/lib/api/types/workflow-email"
 
-type EmailData = WorkflowGeneratedEmail;
+type EmailData = WorkflowGeneratedEmail
 
 interface EmailManagementModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  sequenceId: string;
-  nodeId: string;
-  generationMode: 'ai' | 'manual';
-  aiPrompt?: string;
-  templateSubject?: string;
-  templateBody?: string;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  sequenceId: string
+  nodeId: string
+  generationMode: "ai" | "manual"
+  aiPrompt?: string
+  templateSubject?: string
+  templateBody?: string
 }
 
 export function EmailManagementModal({
@@ -49,16 +44,16 @@ export function EmailManagementModal({
   templateSubject,
   templateBody,
 }: EmailManagementModalProps) {
-  const [selectedEmail, setSelectedEmail] = useState<EmailData | null>(null);
+  const [selectedEmail, setSelectedEmail] = useState<EmailData | null>(null)
 
   // API Hooks
-  const { data: sequence } = useSequence(sequenceId);
-  const { data: emails = [], isLoading } = useGeneratedEmails(sequenceId, nodeId, open);
-  const generateAllMutation = useGenerateAllEmails();
-  const regenerateMutation = useRegenerateEmail();
+  const { data: sequence } = useSequence(sequenceId)
+  const { data: emails = [], isLoading } = useGeneratedEmails(sequenceId, nodeId, open)
+  const generateAllMutation = useGenerateAllEmails()
+  const regenerateMutation = useRegenerateEmail()
 
-  const isGenerating = generateAllMutation.isPending;
-  const generationProgress = isGenerating ? 50 : 0; // TODO: 실제 진행률 계산
+  const isGenerating = generateAllMutation.isPending
+  const generationProgress = isGenerating ? 50 : 0 // TODO: 실제 진행률 계산
 
   const handleGenerateAll = async () => {
     try {
@@ -67,16 +62,16 @@ export function EmailManagementModal({
         nodeId,
         data: {
           mode: generationMode,
-          aiPrompt: generationMode === 'ai' ? aiPrompt : undefined,
-          aiModel: generationMode === 'ai' ? 'gpt-3.5-turbo' : undefined,
-          templateSubject: generationMode === 'manual' ? templateSubject : undefined,
-          templateBody: generationMode === 'manual' ? templateBody : undefined,
+          aiPrompt: generationMode === "ai" ? aiPrompt : undefined,
+          aiModel: generationMode === "ai" ? "gpt-3.5-turbo" : undefined,
+          templateSubject: generationMode === "manual" ? templateSubject : undefined,
+          templateBody: generationMode === "manual" ? templateBody : undefined,
         },
-      });
+      })
     } catch (error) {
-      console.error('Failed to generate emails:', error);
+      console.error("Failed to generate emails:", error)
     }
-  };
+  }
 
   const handleRegenerate = async (email: EmailData) => {
     try {
@@ -84,60 +79,56 @@ export function EmailManagementModal({
         sequenceId,
         nodeId,
         emailId: email.id,
-      });
+      })
     } catch (error) {
-      console.error('Failed to regenerate email:', error);
+      console.error("Failed to regenerate email:", error)
     }
-  };
+  }
 
   const handleEdit = (email: EmailData) => {
-    setSelectedEmail(email);
-  };
+    setSelectedEmail(email)
+  }
 
-  const totalEmails = emails.length;
-  const generatedEmails = emails.filter(e => 
-    e.status === 'generated' || e.status === 'edited'
-  ).length;
-  const failedEmails = emails.filter(e => e.status === 'failed').length;
+  const totalEmails = emails.length
+  const generatedEmails = emails.filter(
+    (e) => e.status === "generated" || e.status === "edited"
+  ).length
+  const failedEmails = emails.filter((e) => e.status === "failed").length
 
-  const getStatusBadge = (status: EmailData['status']) => {
+  const getStatusBadge = (status: EmailData["status"]) => {
     switch (status) {
-      case 'generated':
+      case "generated":
         return (
           <Badge variant="default" className="gap-1">
             <CheckCircle className="h-3 w-3" />
             생성됨
           </Badge>
-        );
-      case 'generating':
+        )
+      case "generating":
         return (
           <Badge variant="secondary" className="gap-1">
             <Loader2 className="h-3 w-3 animate-spin" />
             생성 중
           </Badge>
-        );
-      case 'edited':
+        )
+      case "edited":
         return (
           <Badge variant="outline" className="gap-1">
             <Edit className="h-3 w-3" />
             수정됨
           </Badge>
-        );
-      case 'failed':
+        )
+      case "failed":
         return (
           <Badge variant="destructive" className="gap-1">
             <XCircle className="h-3 w-3" />
             실패
           </Badge>
-        );
+        )
       default:
-        return (
-          <Badge variant="secondary">
-            대기
-          </Badge>
-        );
+        return <Badge variant="secondary">대기</Badge>
     }
-  };
+  }
 
   return (
     <>
@@ -147,7 +138,7 @@ export function EmailManagementModal({
             <DialogTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
               이메일 생성 관리
-              {generationMode === 'ai' ? (
+              {generationMode === "ai" ? (
                 <Badge variant="secondary">🤖 AI 자동 생성</Badge>
               ) : (
                 <Badge variant="secondary">✍️ 수동 작성</Badge>
@@ -162,7 +153,7 @@ export function EmailManagementModal({
                 <div>
                   <div className="text-sm font-medium text-gray-700">대상 고객그룹</div>
                   <div className="text-sm text-gray-900 font-medium">
-                    {sequence?.customerGroupName || '고객그룹 미지정'}
+                    {sequence?.customerGroupName || "고객그룹 미지정"}
                   </div>
                   {!sequence?.customerGroupName && (
                     <div className="text-xs text-red-600 mt-1">
@@ -173,16 +164,16 @@ export function EmailManagementModal({
                 <div>
                   <div className="text-sm font-medium text-gray-700">작성 방식</div>
                   <div className="text-sm text-gray-600">
-                    {generationMode === 'ai' ? 'AI 자동 생성' : '수동 작성/템플릿'}
+                    {generationMode === "ai" ? "AI 자동 생성" : "수동 작성/템플릿"}
                   </div>
                 </div>
-                {generationMode === 'ai' && aiPrompt && (
+                {generationMode === "ai" && aiPrompt && (
                   <div className="col-span-2">
                     <div className="text-sm font-medium text-gray-700">AI 프롬프트</div>
                     <div className="text-sm text-gray-600 truncate">{aiPrompt}</div>
                   </div>
                 )}
-                {generationMode === 'manual' && templateSubject && (
+                {generationMode === "manual" && templateSubject && (
                   <div className="col-span-2">
                     <div className="text-sm font-medium text-gray-700">제목 템플릿</div>
                     <div className="text-sm text-gray-600 truncate">{templateSubject}</div>
@@ -224,12 +215,11 @@ export function EmailManagementModal({
                 ) : (
                   <>
                     <Mail className="h-4 w-4 mr-2" />
-                    {!sequence?.customerGroupId 
-                      ? '고객그룹 미지정' 
-                      : totalEmails > 0 
-                        ? '전체 재생성' 
-                        : '모든 연락처에 대해 생성'
-                    }
+                    {!sequence?.customerGroupId
+                      ? "고객그룹 미지정"
+                      : totalEmails > 0
+                        ? "전체 재생성"
+                        : "모든 연락처에 대해 생성"}
                   </>
                 )}
               </Button>
@@ -263,36 +253,24 @@ export function EmailManagementModal({
                     <TableBody>
                       {emails.map((email) => (
                         <TableRow key={email.id}>
-                          <TableCell className="font-medium">
-                            {email.companyName}
-                          </TableCell>
+                          <TableCell className="font-medium">{email.companyName}</TableCell>
                           <TableCell>
                             <div className="text-sm">
-                              <div>{email.contactName || '-'}</div>
-                              <div className="text-gray-500 text-xs">
-                                {email.contactEmail}
-                              </div>
+                              <div>{email.contactName || "-"}</div>
+                              <div className="text-gray-500 text-xs">{email.contactEmail}</div>
                             </div>
                           </TableCell>
+                          <TableCell>{getStatusBadge(email.status)}</TableCell>
                           <TableCell>
-                            {getStatusBadge(email.status)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="max-w-[300px] truncate text-sm">
-                              {email.subject}
-                            </div>
+                            <div className="max-w-[300px] truncate text-sm">{email.subject}</div>
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex gap-2 justify-end">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleEdit(email)}
-                              >
+                              <Button size="sm" variant="outline" onClick={() => handleEdit(email)}>
                                 <Edit className="h-3 w-3 mr-1" />
                                 보기/수정
                               </Button>
-                              {generationMode === 'ai' && (
+                              {generationMode === "ai" && (
                                 <Button
                                   size="sm"
                                   variant="ghost"
@@ -352,18 +330,18 @@ export function EmailManagementModal({
         />
       )}
     </>
-  );
+  )
 }
 
 // 개별 이메일 편집 다이얼로그
 interface EmailEditDialogProps {
-  sequenceId: string;
-  nodeId: string;
-  email: EmailData;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onClose: () => void;
-  generationMode: 'ai' | 'manual';
+  sequenceId: string
+  nodeId: string
+  email: EmailData
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onClose: () => void
+  generationMode: "ai" | "manual"
 }
 
 function EmailEditDialog({
@@ -375,11 +353,13 @@ function EmailEditDialog({
   onClose,
   generationMode,
 }: EmailEditDialogProps) {
-  const [subject, setSubject] = useState(email.subject);
-  const [bodyText, setBodyText] = useState(email.bodyText || '');
+  const [subject, setSubject] = useState(email.subject)
+  const [bodyText, setBodyText] = useState(email.bodyText || "")
+  const subjectId = useId()
+  const bodyId = useId()
 
-  const updateEmailMutation = useUpdateGeneratedEmail();
-  const regenerateMutation = useRegenerateEmail();
+  const updateEmailMutation = useUpdateGeneratedEmail()
+  const regenerateMutation = useRegenerateEmail()
 
   const handleSave = async () => {
     try {
@@ -391,12 +371,12 @@ function EmailEditDialog({
           subject,
           bodyText,
         },
-      });
-      onClose();
+      })
+      onClose()
     } catch (error) {
-      console.error('Failed to save email:', error);
+      console.error("Failed to save email:", error)
     }
-  };
+  }
 
   const handleRegenerate = async () => {
     try {
@@ -404,12 +384,12 @@ function EmailEditDialog({
         sequenceId,
         nodeId,
         emailId: email.id,
-      });
-      onClose();
+      })
+      onClose()
     } catch (error) {
-      console.error('Failed to regenerate:', error);
+      console.error("Failed to regenerate:", error)
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -429,7 +409,7 @@ function EmailEditDialog({
               <div>
                 <div className="text-sm font-medium text-gray-700">담당자</div>
                 <div className="text-sm text-gray-900">
-                  {email.contactName || '-'} ({email.contactEmail})
+                  {email.contactName || "-"} ({email.contactEmail})
                 </div>
               </div>
               {email.industry && (
@@ -441,7 +421,7 @@ function EmailEditDialog({
               <div>
                 <div className="text-sm font-medium text-gray-700">생성 방식</div>
                 <div className="text-sm text-gray-900">
-                  {generationMode === 'ai' ? '🤖 AI 생성' : '✍️ 수동 작성'}
+                  {generationMode === "ai" ? "🤖 AI 생성" : "✍️ 수동 작성"}
                 </div>
               </div>
             </div>
@@ -450,9 +430,11 @@ function EmailEditDialog({
           {/* 이메일 내용 편집 */}
           <div className="space-y-4">
             <div>
-              <label htmlFor="email-subject" className="text-sm font-medium">제목</label>
+              <label htmlFor={subjectId} className="text-sm font-medium">
+                제목
+              </label>
               <input
-                id="email-subject"
+                id={subjectId}
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
@@ -460,9 +442,11 @@ function EmailEditDialog({
               />
             </div>
             <div>
-              <label htmlFor="email-body" className="text-sm font-medium">본문</label>
+              <label htmlFor={bodyId} className="text-sm font-medium">
+                본문
+              </label>
               <textarea
-                id="email-body"
+                id={bodyId}
                 value={bodyText}
                 onChange={(e) => setBodyText(e.target.value)}
                 rows={12}
@@ -475,9 +459,9 @@ function EmailEditDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               취소
             </Button>
-            {generationMode === 'ai' && (
-              <Button 
-                variant="secondary" 
+            {generationMode === "ai" && (
+              <Button
+                variant="secondary"
                 onClick={handleRegenerate}
                 disabled={regenerateMutation.isPending}
               >
@@ -501,12 +485,12 @@ function EmailEditDialog({
                   저장 중...
                 </>
               ) : (
-                '저장'
+                "저장"
               )}
             </Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

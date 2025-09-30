@@ -240,11 +240,11 @@ export default function WorkspacesPage() {
 
       {/* Create Workspace Dialog */}
       <Dialog open={_showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="text-xl font-semibold">워크스페이스 생성</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="overflow-y-auto flex-1 -mx-6 px-6">
             <WorkspaceForm
               isEdit={false}
               users={users}
@@ -257,11 +257,11 @@ export default function WorkspacesPage() {
 
       {/* Edit Workspace Dialog */}
       <Dialog open={!!editingWorkspace} onOpenChange={() => setEditingWorkspace(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="text-xl font-semibold">워크스페이스 정보 수정</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+          <div className="overflow-y-auto flex-1 -mx-6 px-6">
             {editingWorkspace && (
               <WorkspaceForm
                 workspace={editingWorkspace}

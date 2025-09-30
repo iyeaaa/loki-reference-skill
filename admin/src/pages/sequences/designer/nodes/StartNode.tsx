@@ -1,27 +1,27 @@
-import { Plus } from "lucide-react";
-import { type FC, useState } from "react";
-import { Handle, Position } from "@xyflow/react";
-import { Button } from "@/components/ui/button";
+import { Handle, Position } from "@xyflow/react"
+import { Plus } from "lucide-react"
+import { type FC, useState } from "react"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu"
 
 interface StartNodeProps {
   data: {
-    onAddNode?: (type: string) => void;
-  };
+    onAddNode?: (type: string) => void
+  }
 }
 
 export const StartNode: FC<StartNodeProps> = ({ data }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false)
 
   const handleAddNode = (type: string) => {
-    data.onAddNode?.(type);
-    setIsOpen(false);
-  };
+    data.onAddNode?.(type)
+    setIsOpen(false)
+  }
 
   return (
     <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-lg border-2 border-green-700 min-w-[200px]">
@@ -38,11 +38,7 @@ export const StartNode: FC<StartNodeProps> = ({ data }) => {
       <div className="border-t border-green-700 p-3 bg-green-600/30">
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full text-white hover:bg-green-700/50"
-            >
+            <Button variant="ghost" size="sm" className="w-full text-white hover:bg-green-700/50">
               <Plus className="h-4 w-4 mr-2" />
               노드 추가
             </Button>
@@ -61,5 +57,5 @@ export const StartNode: FC<StartNodeProps> = ({ data }) => {
         className="w-3 h-3 bg-green-600 border-2 border-white"
       />
     </div>
-  );
-};
+  )
+}

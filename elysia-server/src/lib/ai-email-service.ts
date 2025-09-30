@@ -24,6 +24,90 @@ class AIEmailService {
   }
 
   /**
+   * AI를 사용하여 시퀀스 이메일 초안 생성
+   */
+  async generateSequenceEmail(context: {
+    companyName: string;
+    contactName?: string;
+    industry?: string;
+    website?: string;
+    prompt?: string;
+  }): Promise<{
+    success: boolean;
+    subject?: string;
+    bodyText?: string;
+    error?: string;
+  }> {
+    try {
+      const systemPrompt = `당신은 전문적인 비즈니스 이메일 작성 전문가입니다.
+고객 정보를 바탕으로 맞춤형 영업/제안 이메일을 작성해주세요.
+
+[고객 정보]
+- 회사명: ${context.companyName}
+- 담당자: ${context.contactName || '담당자'}
+${context.industry ? `- 업종: ${context.industry}` : ''}
+${context.website ? `- 웹사이트: ${context.website}` : ''}
+
+[작성 원칙]
+1. 친근하면서도 전문적인 톤
+2. 회사와 업종의 특성을 고려한 개인화된 내용
+3. 명확한 가치 제안
+4. 구체적인 행동 촉구 (CTA)
+5. 간결하고 읽기 쉬운 구조
+
+[이메일 구조]
+제목: [한 줄로 명확한 제목]
+
+본문:
+[친근한 인사]
+[회사/업종 맞춤 제안]
+[구체적인 혜택]
+[명확한 CTA]
+[전문적인 마무리]
+
+응답 형식은 반드시 다음과 같이 해주세요:
+SUBJECT: [이메일 제목]
+BODY:
+[이메일 본문]`
+
+      const userPrompt = context.prompt || '위 고객 정보를 바탕으로 맞춤형 영업 이메일을 작성해주세요.'
+
+      const { text } = await generateText({
+        model: this.openai('gpt-4-turbo-preview'),
+        system: systemPrompt,
+        prompt: userPrompt,
+        temperature: 0.7,
+      })
+
+      if (!text || text.trim().length === 0) {
+        throw new Error('AI 응답 생성 실패')
+      }
+
+      // Parse response
+      const subjectMatch = text.match(/SUBJECT:\s*(.+)(?:\n|$)/)
+      const bodyMatch = text.match(/BODY:\s*([\s\S]+)$/)
+
+      if (!subjectMatch || !bodyMatch) {
+        throw new Error('AI 응답 형식 오류')
+      }
+
+      return {
+        success: true,
+        subject: subjectMatch[1].trim(),
+        bodyText: bodyMatch[1].trim(),
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류 발생'
+      console.error('❌ AI 이메일 초안 생성 실패:', errorMessage)
+
+      return {
+        success: false,
+        error: errorMessage,
+      }
+    }
+  }
+
+  /**
    * AI를 사용하여 고객 이메일에 대한 응답 생성 (sendgrid inbound parse)
    */
   async generateEmailReply(context: EmailContext): Promise<AIEmailResponse> {

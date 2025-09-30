@@ -11,7 +11,7 @@ import {
   useDeleteCustomerGroup,
   useUpdateCustomerGroup,
 } from "@/lib/api/hooks/customer-groups"
-import type { CustomerGroup } from "@/lib/api/types/customer-group"
+import type { CreateCustomerGroupRequest, CustomerGroup } from "@/lib/api/types/customer-group"
 import { AddMembersDialog } from "./AddMembersDialog"
 import { BulkActionModal } from "./BulkActionModal"
 import { CustomerGroupFilters } from "./CustomerGroupFilters"
@@ -44,7 +44,7 @@ export default function CustomerGroupsPage() {
   }, [searchInput])
 
   const handleCreateCustomerGroup = async (customerGroupData: unknown) => {
-    createCustomerGroup.mutate(customerGroupData as CustomerGroup, {
+    createCustomerGroup.mutate(customerGroupData as CreateCustomerGroupRequest, {
       onSuccess: () => {
         setShowCreateDialog(false)
       },
@@ -239,6 +239,7 @@ export default function CustomerGroupsPage() {
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
             <CustomerGroupForm
               isEdit={false}
+              workspaces={[]}
               onSave={handleCreateCustomerGroup}
               onCancel={() => setShowCreateDialog(false)}
             />
@@ -257,6 +258,7 @@ export default function CustomerGroupsPage() {
               <CustomerGroupForm
                 customerGroup={editingCustomerGroup}
                 isEdit={true}
+                workspaces={[]}
                 onSave={handleUpdateCustomerGroup}
                 onCancel={() => setEditingCustomerGroup(null)}
               />

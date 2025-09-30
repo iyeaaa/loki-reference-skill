@@ -15,6 +15,7 @@ export type StepExecutionStatus = "pending" | "scheduled" | "sent" | "failed" | 
 export interface Sequence {
   id: string
   workspaceId: string
+  customerGroupId?: string | null
   name: string
   description?: string | null
   status: SequenceStatus
@@ -24,6 +25,7 @@ export interface Sequence {
   updatedAt: string
   // Extended fields from backend joins
   workspaceName?: string
+  customerGroupName?: string
   createdByUsername?: string
   createdByEmail?: string
   stepsCount?: number

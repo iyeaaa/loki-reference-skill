@@ -24,6 +24,7 @@ import {
   useUpdateGeneratedEmail,
 } from "@/lib/api/hooks/workflow-emails";
 import type { WorkflowGeneratedEmail } from "@/lib/api/types/workflow-email";
+import { useSequence } from "@/lib/api/hooks/sequences";
 
 type EmailData = WorkflowGeneratedEmail;
 
@@ -51,6 +52,7 @@ export function EmailManagementModal({
   const [selectedEmail, setSelectedEmail] = useState<EmailData | null>(null);
 
   // API Hooks
+  const { data: sequence } = useSequence(sequenceId);
   const { data: emails = [], isLoading } = useGeneratedEmails(sequenceId, nodeId, open);
   const generateAllMutation = useGenerateAllEmails();
   const regenerateMutation = useRegenerateEmail();
@@ -158,19 +160,30 @@ export function EmailManagementModal({
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <div className="text-sm font-medium text-gray-700">대상 고객그룹</div>
+                  <div className="text-sm text-gray-900 font-medium">
+                    {sequence?.customerGroupName || '고객그룹 미지정'}
+                  </div>
+                  {!sequence?.customerGroupName && (
+                    <div className="text-xs text-red-600 mt-1">
+                      ⚠️ 시퀀스에 고객그룹을 먼저 지정해주세요
+                    </div>
+                  )}
+                </div>
+                <div>
                   <div className="text-sm font-medium text-gray-700">작성 방식</div>
                   <div className="text-sm text-gray-600">
                     {generationMode === 'ai' ? 'AI 자동 생성' : '수동 작성/템플릿'}
                   </div>
                 </div>
                 {generationMode === 'ai' && aiPrompt && (
-                  <div>
+                  <div className="col-span-2">
                     <div className="text-sm font-medium text-gray-700">AI 프롬프트</div>
                     <div className="text-sm text-gray-600 truncate">{aiPrompt}</div>
                   </div>
                 )}
                 {generationMode === 'manual' && templateSubject && (
-                  <div>
+                  <div className="col-span-2">
                     <div className="text-sm font-medium text-gray-700">제목 템플릿</div>
                     <div className="text-sm text-gray-600 truncate">{templateSubject}</div>
                   </div>
@@ -200,7 +213,7 @@ export function EmailManagementModal({
             <div className="flex gap-2">
               <Button
                 onClick={handleGenerateAll}
-                disabled={isGenerating}
+                disabled={isGenerating || !sequence?.customerGroupId}
                 className="flex-1"
               >
                 {isGenerating ? (
@@ -211,7 +224,12 @@ export function EmailManagementModal({
                 ) : (
                   <>
                     <Mail className="h-4 w-4 mr-2" />
-                    {totalEmails > 0 ? '전체 재생성' : '모든 연락처에 대해 생성'}
+                    {!sequence?.customerGroupId 
+                      ? '고객그룹 미지정' 
+                      : totalEmails > 0 
+                        ? '전체 재생성' 
+                        : '모든 연락처에 대해 생성'
+                    }
                   </>
                 )}
               </Button>

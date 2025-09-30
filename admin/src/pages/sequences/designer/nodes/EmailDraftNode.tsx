@@ -30,7 +30,7 @@ interface EmailDraftNodeData {
   totalCount?: number;
   onAddNode?: (type: string) => void;
   onDelete?: () => void;
-  onUpdate?: (data: { subject: string; bodyText: string }) => void;
+  onUpdate?: (data: Partial<EmailDraftNodeData>) => void;
   onManageEmails?: () => void;
 }
 
@@ -65,14 +65,14 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
         generationMode: 'ai',
         aiPrompt,
         useAI: true,
-      } as unknown as { subject: string; bodyText: string });
+      });
     } else {
       data.onUpdate?.({ 
         subject, 
         bodyText,
         generationMode: 'manual',
         useAI: false,
-      } as unknown as { subject: string; bodyText: string });
+      });
     }
     setIsEditOpen(false);
   };

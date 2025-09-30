@@ -10,6 +10,10 @@ export interface CustomerGroup {
   createdBy?: string | null;
   createdAt: string;
   updatedAt: string;
+  // Extended fields from backend joins
+  workspaceName?: string;
+  createdByUsername?: string;
+  createdByEmail?: string;
 }
 
 export interface CustomerGroupMember {

@@ -52,6 +52,10 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
     async ({ params, body }) => {
       const { id: sequenceId, nodeId } = params
 
+      console.log('[Generate Emails] Request body:', JSON.stringify(body, null, 2))
+      console.log('[Generate Emails] Mode:', body.mode)
+      console.log('[Generate Emails] AI Prompt:', body.aiPrompt)
+
       // Get all leads in sequence
       const leads = await workflowEmailService.getSequenceLeads(sequenceId)
 
@@ -93,9 +97,12 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
           } else {
             // AI mode - 실제 AI 생성
             try {
+              console.log(`[AI Generation] Starting for lead: ${lead.companyName}`)
+              console.log(`[AI Generation] Prompt: ${body.aiPrompt || '(empty)'}`)
+              
               const aiService = getAIWorkflowEmailService()
               const generatedEmail = await aiService.generateEmail({
-                prompt: body.aiPrompt || '',
+                prompt: body.aiPrompt || '위 고객 정보를 바탕으로 맞춤형 영업 이메일을 작성해주세요.',
                 lead: {
                   companyName: lead.companyName || '',
                   contactName: lead.contactName,
@@ -107,6 +114,9 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
                 model: body.aiModel,
               })
 
+              console.log(`[AI Generation] Success for ${lead.companyName}`)
+              console.log(`[AI Generation] Subject: ${generatedEmail.subject}`)
+              
               subject = generatedEmail.subject
               bodyText = generatedEmail.bodyText
               bodyHtml = generatedEmail.bodyHtml || ''

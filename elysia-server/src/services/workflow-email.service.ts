@@ -1,7 +1,10 @@
 import { and, desc, eq } from 'drizzle-orm'
 import { db } from '../db/index'
+import { getAIEmailService } from '../lib/ai-email-service'
+import { customerGroupMembers } from '../db/schema/customer-groups'
+import { leadContacts } from '../db/schema/lead-details'
 import { leads } from '../db/schema/leads'
-import { sequenceEnrollments } from '../db/schema/sequences'
+import { sequences, sequenceEnrollments } from '../db/schema/sequences'
 import { workflowGeneratedEmails } from '../db/schema/workflow-emails'
 
 // ====================================
@@ -11,9 +14,37 @@ import { workflowGeneratedEmails } from '../db/schema/workflow-emails'
 // Get generated emails for a node
 export async function getGeneratedEmailsByNode(sequenceId: string, nodeId: string) {
   const result = await db
-    .select()
+    .select({
+      id: workflowGeneratedEmails.id,
+      sequenceId: workflowGeneratedEmails.sequenceId,
+      nodeId: workflowGeneratedEmails.nodeId,
+      leadId: workflowGeneratedEmails.leadId,
+      subject: workflowGeneratedEmails.subject,
+      bodyText: workflowGeneratedEmails.bodyText,
+      bodyHtml: workflowGeneratedEmails.bodyHtml,
+      status: workflowGeneratedEmails.status,
+      generationMode: workflowGeneratedEmails.generationMode,
+      aiPrompt: workflowGeneratedEmails.aiPrompt,
+      aiModel: workflowGeneratedEmails.aiModel,
+      generationError: workflowGeneratedEmails.generationError,
+      generatedAt: workflowGeneratedEmails.generatedAt,
+      editedAt: workflowGeneratedEmails.editedAt,
+      createdAt: workflowGeneratedEmails.createdAt,
+      updatedAt: workflowGeneratedEmails.updatedAt,
+      companyName: leads.companyName,
+      businessType: leads.businessType,
+      contactEmail: leadContacts.contactValue,
+    })
     .from(workflowGeneratedEmails)
     .innerJoin(leads, eq(workflowGeneratedEmails.leadId, leads.id))
+    .leftJoin(
+      leadContacts,
+      and(
+        eq(leadContacts.leadId, leads.id),
+        eq(leadContacts.contactType, 'email'),
+        eq(leadContacts.isPrimary, true)
+      )
+    )
     .where(
       and(
         eq(workflowGeneratedEmails.sequenceId, sequenceId),
@@ -24,36 +55,46 @@ export async function getGeneratedEmailsByNode(sequenceId: string, nodeId: strin
 
   // Map to flat structure
   return result.map((row) => ({
-    id: row.workflow_generated_emails.id,
-    sequenceId: row.workflow_generated_emails.sequenceId,
-    nodeId: row.workflow_generated_emails.nodeId,
-    leadId: row.workflow_generated_emails.leadId,
-    subject: row.workflow_generated_emails.subject,
-    bodyText: row.workflow_generated_emails.bodyText,
-    bodyHtml: row.workflow_generated_emails.bodyHtml,
-    status: row.workflow_generated_emails.status,
-    generationMode: row.workflow_generated_emails.generationMode,
-    aiPrompt: row.workflow_generated_emails.aiPrompt,
-    aiModel: row.workflow_generated_emails.aiModel,
-    generationError: row.workflow_generated_emails.generationError,
-    generatedAt: row.workflow_generated_emails.generatedAt,
-    editedAt: row.workflow_generated_emails.editedAt,
-    createdAt: row.workflow_generated_emails.createdAt,
-    updatedAt: row.workflow_generated_emails.updatedAt,
-    // Lead information
-    companyName: row.leads.companyName,
-    contactName: row.leads.contactName,
-    contactEmail: row.leads.contactEmail,
-    industry: row.leads.industry,
+    ...row,
+    contactName: row.companyName || '담당자',
+    industry: row.businessType || '',
   }))
 }
 
 // Get single generated email
 export async function getGeneratedEmail(emailId: string) {
   const result = await db
-    .select()
+    .select({
+      id: workflowGeneratedEmails.id,
+      sequenceId: workflowGeneratedEmails.sequenceId,
+      nodeId: workflowGeneratedEmails.nodeId,
+      leadId: workflowGeneratedEmails.leadId,
+      subject: workflowGeneratedEmails.subject,
+      bodyText: workflowGeneratedEmails.bodyText,
+      bodyHtml: workflowGeneratedEmails.bodyHtml,
+      status: workflowGeneratedEmails.status,
+      generationMode: workflowGeneratedEmails.generationMode,
+      aiPrompt: workflowGeneratedEmails.aiPrompt,
+      aiModel: workflowGeneratedEmails.aiModel,
+      generationError: workflowGeneratedEmails.generationError,
+      generatedAt: workflowGeneratedEmails.generatedAt,
+      editedAt: workflowGeneratedEmails.editedAt,
+      createdAt: workflowGeneratedEmails.createdAt,
+      updatedAt: workflowGeneratedEmails.updatedAt,
+      companyName: leads.companyName,
+      businessType: leads.businessType,
+      contactEmail: leadContacts.contactValue,
+    })
     .from(workflowGeneratedEmails)
     .innerJoin(leads, eq(workflowGeneratedEmails.leadId, leads.id))
+    .leftJoin(
+      leadContacts,
+      and(
+        eq(leadContacts.leadId, leads.id),
+        eq(leadContacts.contactType, 'email'),
+        eq(leadContacts.isPrimary, true)
+      )
+    )
     .where(eq(workflowGeneratedEmails.id, emailId))
     .limit(1)
 
@@ -62,27 +103,9 @@ export async function getGeneratedEmail(emailId: string) {
   const row = result[0]
   if (!row) return null
   return {
-    id: row.workflow_generated_emails.id,
-    sequenceId: row.workflow_generated_emails.sequenceId,
-    nodeId: row.workflow_generated_emails.nodeId,
-    leadId: row.workflow_generated_emails.leadId,
-    subject: row.workflow_generated_emails.subject,
-    bodyText: row.workflow_generated_emails.bodyText,
-    bodyHtml: row.workflow_generated_emails.bodyHtml,
-    status: row.workflow_generated_emails.status,
-    generationMode: row.workflow_generated_emails.generationMode,
-    aiPrompt: row.workflow_generated_emails.aiPrompt,
-    aiModel: row.workflow_generated_emails.aiModel,
-    generationError: row.workflow_generated_emails.generationError,
-    generatedAt: row.workflow_generated_emails.generatedAt,
-    editedAt: row.workflow_generated_emails.editedAt,
-    createdAt: row.workflow_generated_emails.createdAt,
-    updatedAt: row.workflow_generated_emails.updatedAt,
-    // Lead information
-    companyName: row.leads.companyName,
-    contactName: row.leads.contactName,
-    contactEmail: row.leads.contactEmail,
-    industry: row.leads.industry,
+    ...row,
+    contactName: row.companyName || '담당자',
+    industry: row.businessType || '',
   }
 }
 
@@ -96,11 +119,53 @@ export async function upsertGeneratedEmail(data: {
   bodyHtml?: string
   status?: 'pending' | 'generating' | 'generated' | 'edited' | 'failed'
   generationMode?: 'ai' | 'manual' | 'template'
+  mode?: 'ai' | 'manual' | 'template'  // From frontend
   aiPrompt?: string
   aiModel?: string
   generationError?: string
   contextSnapshot?: Record<string, unknown>
 }) {
+  // If AI mode and no content yet, generate content
+  if ((data.generationMode === 'ai' || data.mode === 'ai') && (!data.subject || !data.bodyText)) {
+    try {
+      // Get lead info for AI context
+      const [lead] = await db
+        .select({
+          companyName: leads.companyName,
+          businessType: leads.businessType,
+          websiteUrl: leads.websiteUrl,
+        })
+        .from(leads)
+        .where(eq(leads.id, data.leadId))
+        .limit(1)
+
+      if (!lead) {
+        throw new Error('리드 정보를 찾을 수 없습니다')
+      }
+
+      // Generate email content using AI
+      const aiService = getAIEmailService()
+      const result = await aiService.generateSequenceEmail({
+        companyName: lead.companyName || '',
+        industry: lead.businessType || undefined,
+        website: lead.websiteUrl || undefined,
+        prompt: data.aiPrompt,
+      })
+
+      if (!result.success) {
+        throw new Error(result.error || 'AI 이메일 생성 실패')
+      }
+
+      // Update data with AI generated content
+      data.subject = result.subject!
+      data.bodyText = result.bodyText
+      data.status = 'generated'
+    } catch (error) {
+      data.status = 'failed'
+      data.generationError = error instanceof Error ? error.message : '알 수 없는 오류'
+    }
+  }
+
   // Check if email already exists
   const existing = await db
     .select({ id: workflowGeneratedEmails.id })
@@ -131,7 +196,7 @@ export async function upsertGeneratedEmail(data: {
         generatedAt: data.status === 'generated' ? new Date() : undefined,
         updatedAt: new Date(),
       })
-      .where(eq(workflowGeneratedEmails.id, existing[0].id))
+      .where(eq(workflowGeneratedEmails.id, existing[0]!.id))
       .returning()
 
     return updated
@@ -148,7 +213,7 @@ export async function upsertGeneratedEmail(data: {
       bodyText: data.bodyText || null,
       bodyHtml: data.bodyHtml || null,
       status: data.status || 'pending',
-      generationMode: data.generationMode || 'manual',
+      generationMode: data.mode || data.generationMode || 'manual',
       aiPrompt: data.aiPrompt || null,
       aiModel: data.aiModel || null,
       generationError: data.generationError || null,
@@ -202,21 +267,48 @@ export async function deleteGeneratedEmailsByNode(sequenceId: string, nodeId: st
 
 // Get leads for sequence (for email generation)
 export async function getSequenceLeads(sequenceId: string) {
-  const result = await db
-    .select()
-    .from(sequenceEnrollments)
-    .innerJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
-    .where(eq(sequenceEnrollments.sequenceId, sequenceId))
+  // Get sequence's customer group
+  const [sequence] = await db
+    .select({ customerGroupId: sequences.customerGroupId })
+    .from(sequences)
+    .where(eq(sequences.id, sequenceId))
+    .limit(1)
 
-  // Map to flat structure
+  if (!sequence?.customerGroupId) {
+    // No customer group assigned, return empty array
+    return []
+  }
+
+  // Get leads from customer group members with primary email contact
+  const result = await db
+    .select({
+      id: leads.id,
+      companyName: leads.companyName,
+      businessType: leads.businessType,
+      websiteUrl: leads.websiteUrl,
+      contactEmail: leadContacts.contactValue,
+    })
+    .from(customerGroupMembers)
+    .innerJoin(leads, eq(customerGroupMembers.leadId, leads.id))
+    .leftJoin(
+      leadContacts,
+      and(
+        eq(leadContacts.leadId, leads.id),
+        eq(leadContacts.contactType, 'email'),
+        eq(leadContacts.isPrimary, true)
+      )
+    )
+    .where(eq(customerGroupMembers.groupId, sequence.customerGroupId))
+
+  // Map to flat structure with proper field mapping
   return result.map((row) => ({
-    id: row.leads.id,
-    companyName: row.leads.companyName,
-    contactName: row.leads.contactName,
-    contactEmail: row.leads.contactEmail,
-    industry: row.leads.industry,
-    website: row.leads.website,
-    size: row.leads.size,
+    id: row.id,
+    companyName: row.companyName || '',
+    contactName: row.companyName || '담당자',
+    contactEmail: row.contactEmail || '',
+    industry: row.businessType || '',
+    website: row.websiteUrl || '',
+    size: undefined,
   }))
 }
 

@@ -1,13 +1,7 @@
-import { Check, ChevronsUpDown } from "lucide-react";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -19,10 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence";
 import {
   useSuspenseWorkspaces,
-  useWorkspaces,
 } from "@/lib/api/hooks/workspaces";
 import { useCustomerGroupsByWorkspace } from "@/lib/api/hooks/customer-groups";
-import { ScrollArea } from "@radix-ui/react-scroll-area";
 
 interface SequenceFormProps {
   sequence?: Sequence;
@@ -45,7 +37,7 @@ export function SequenceForm({
     description: sequence?.description || "",
     workspaceId: sequence?.workspaceId || "",
     status: (sequence?.status || "draft") as SequenceStatus,
-    customerGroupId: "",
+    customerGroupId: sequence?.customerGroupId || "",
   });
   const { data: customerGroups } = useCustomerGroupsByWorkspace(
     formData.workspaceId,
@@ -54,16 +46,6 @@ export function SequenceForm({
   const nameId = useId();
   const descriptionId = useId();
 
-  const [workspaceOpen, setWorkspaceOpen] = useState(false);
-  const [workspaceSearch, setWorkspaceSearch] = useState("");
-
-  console.log("customerGroups", customerGroups);
-
-  const filteredWorkspaces = workspaces.filter(
-    (workspace) =>
-      workspace.name.toLowerCase().includes(workspaceSearch.toLowerCase()) ||
-      workspace.id.toLowerCase().includes(workspaceSearch.toLowerCase())
-  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -225,7 +225,7 @@ export function CustomerGroupsTableWithPagination({
                   </td>
                   <td
                     className="p-2 text-sm text-gray-900 dark:text-gray-100"
-                    title={group.workspaceId || "-"}
+                    title={group.workspaceName || group.workspaceId || "-"}
                     style={{
                       maxWidth: "200px",
                       overflow: "hidden",
@@ -233,7 +233,7 @@ export function CustomerGroupsTableWithPagination({
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {group.workspaceId || "-"}
+                    {group.workspaceName || group.workspaceId || "-"}
                   </td>
                   <td className="p-2 whitespace-nowrap text-sm">
                     <Badge variant="outline">{group.isDynamic ? "동적" : "정적"}</Badge>

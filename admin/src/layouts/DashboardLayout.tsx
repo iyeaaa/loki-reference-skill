@@ -1,5 +1,5 @@
 import { User } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 import { AppSidebar } from "@/components/AppSidebar"
 import { ProfileCard } from "@/components/ProfileCard"
@@ -45,11 +45,11 @@ function DashboardContent() {
   // 워크스페이스 선택기를 숨길 페이지 목록
   const hideWorkspaceSelector = ["/customer-groups", "/sequences"].includes(pathname)
 
-  // "전체" 옵션을 포함한 워크스페이스 목록 생성
-  const workspaceOptions: WorkspaceOption[] = [
-    { value: "all", label: "전체", sublabel: "모든 워크스페이스 보기" },
-    ...workspaces,
-  ]
+  // "전체" 옵션을 포함한 워크스페이스 목록 생성 (useMemo로 메모이제이션)
+  const workspaceOptions: WorkspaceOption[] = useMemo(
+    () => [{ value: "all", label: "전체", sublabel: "모든 워크스페이스 보기" }, ...workspaces],
+    [workspaces]
+  )
 
   // 디버깅: 워크스페이스 정보 확인
   useEffect(() => {

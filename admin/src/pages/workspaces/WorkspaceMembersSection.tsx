@@ -118,9 +118,7 @@ export function WorkspaceMembersSection({
   if (!isEdit) {
     return (
       <Card className="p-4 bg-gray-50">
-        <p className="text-sm text-gray-600">
-          워크스페이스 생성 후 멤버를 추가할 수 있습니다.
-        </p>
+        <p className="text-sm text-gray-600">워크스페이스 생성 후 멤버를 추가할 수 있습니다.</p>
       </Card>
     )
   }
@@ -210,13 +208,9 @@ export function WorkspaceMembersSection({
                       </SelectContent>
                     </Select>
                   </TableCell>
+                  <TableCell>{new Date(member.invitedAt).toLocaleDateString("ko-KR")}</TableCell>
                   <TableCell>
-                    {new Date(member.invitedAt).toLocaleDateString("ko-KR")}
-                  </TableCell>
-                  <TableCell>
-                    {member.joinedAt
-                      ? new Date(member.joinedAt).toLocaleDateString("ko-KR")
-                      : "-"}
+                    {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString("ko-KR") : "-"}
                   </TableCell>
                   <TableCell>
                     <Button

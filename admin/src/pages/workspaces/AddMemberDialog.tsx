@@ -153,9 +153,7 @@ export function AddMemberDialog({
                             key={user.id}
                             value={user.id}
                             onSelect={(currentValue) => {
-                              setSelectedUserId(
-                                currentValue === selectedUserId ? "" : currentValue
-                              )
+                              setSelectedUserId(currentValue === selectedUserId ? "" : currentValue)
                               setUserOpen(false)
                               setUserSearch("")
                             }}
@@ -183,7 +181,7 @@ export function AddMemberDialog({
             <Label htmlFor={roleSelectId}>
               역할 <span className="text-red-500">*</span>
             </Label>
-            <Select value={selectedRole} onValueChange={(value: any) => setSelectedRole(value)}>
+            <Select value={selectedRole} onValueChange={setSelectedRole}>
               <SelectTrigger id={roleSelectId}>
                 <SelectValue />
               </SelectTrigger>

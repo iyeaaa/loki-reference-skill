@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react"
 import { Calendar, CheckCircle2, Clock, Mail, Pause, StopCircle, XCircle } from "lucide-react"
 import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
@@ -53,7 +54,11 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
   const getStatusBadge = (status: EnrollmentStatus) => {
     const statusConfig: Record<
       EnrollmentStatus,
-      { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: any }
+      {
+        label: string
+        variant: "default" | "secondary" | "destructive" | "outline"
+        icon: LucideIcon
+      }
     > = {
       active: { label: "진행 중", variant: "default", icon: Clock },
       paused: { label: "일시정지", variant: "secondary", icon: Pause },
@@ -95,16 +100,12 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>등록 현황</span>
-          <Badge variant="secondary">
-            총 {enrollmentsData?.total || 0}명 등록
-          </Badge>
+          <Badge variant="secondary">총 {enrollmentsData?.total || 0}명 등록</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>
         {enrollments.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            등록된 리드가 없습니다
-          </div>
+          <div className="text-center py-8 text-muted-foreground">등록된 리드가 없습니다</div>
         ) : (
           <>
             <div className="rounded-md border">
@@ -122,10 +123,7 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                 </TableHeader>
                 <TableBody>
                   {enrollments.map((enrollment) => {
-                    const progress = getProgressPercentage(
-                      enrollment.currentStepOrder,
-                      totalSteps
-                    )
+                    const progress = getProgressPercentage(enrollment.currentStepOrder, totalSteps)
 
                     return (
                       <TableRow key={enrollment.id}>

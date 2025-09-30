@@ -13,10 +13,11 @@ export const userKeys = {
 }
 
 // 2. Queries
-export function useUsers(params?: UsersParams) {
+export function useUsers(params?: UsersParams, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: userKeys.list(params),
     queryFn: () => usersApi.list(params),
+    enabled: options?.enabled,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
   })

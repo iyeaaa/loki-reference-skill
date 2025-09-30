@@ -1,58 +1,54 @@
-import { CheckCircle, Clock, Mail, Plus, Timer, Trash2 } from "lucide-react";
-import { type FC, useState } from "react";
-import { Handle, Position } from "@xyflow/react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Handle, Position } from "@xyflow/react"
+import { CheckCircle, Clock, Mail, Plus, Timer, Trash2 } from "lucide-react"
+import { type FC, useId, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface TimerNodeData {
-  delayDays?: number;
-  nodeId?: string;
-  sequenceId?: string;
+  delayDays?: number
+  nodeId?: string
+  sequenceId?: string
   // 통계 데이터 (백엔드에서 실시간으로 업데이트)
   stats?: {
-    sentCount?: number;
-    repliedCount?: number;
-    waitingCount?: number;
-  };
-  onAddNode?: (type: string) => void;
-  onDelete?: () => void;
-  onUpdate?: (data: { delayDays: number }) => void;
+    sentCount?: number
+    repliedCount?: number
+    waitingCount?: number
+  }
+  onAddNode?: (type: string) => void
+  onDelete?: () => void
+  onUpdate?: (data: { delayDays: number }) => void
 }
 
 interface TimerNodeProps {
-  data: TimerNodeData;
+  data: TimerNodeData
 }
 
 export const TimerNode: FC<TimerNodeProps> = ({ data }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [delayDays, setDelayDays] = useState(data.delayDays?.toString() || "1");
+  const [isOpen, setIsOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [delayDays, setDelayDays] = useState(data.delayDays?.toString() || "1")
+  const delayDaysId = useId()
 
   const handleAddNode = (type: string) => {
-    data.onAddNode?.(type);
-    setIsOpen(false);
-  };
+    data.onAddNode?.(type)
+    setIsOpen(false)
+  }
 
   const handleSave = () => {
-    const days = parseInt(delayDays, 10);
+    const days = parseInt(delayDays, 10)
     if (!Number.isNaN(days) && days > 0) {
-      data.onUpdate?.({ delayDays: days });
-      setIsEditOpen(false);
+      data.onUpdate?.({ delayDays: days })
+      setIsEditOpen(false)
     }
-  };
+  }
 
   return (
     <>
@@ -90,16 +86,12 @@ export const TimerNode: FC<TimerNodeProps> = ({ data }) => {
               </div>
             </div>
 
-            <div className="text-xs text-gray-600 mb-2">
-              답장이 없으면 다음 노드 실행
-            </div>
+            <div className="text-xs text-gray-600 mb-2">답장이 없으면 다음 노드 실행</div>
 
             {/* 통계 표시 */}
             {data.stats && (
               <div className="space-y-1 pt-2 border-t border-orange-200">
-                <div className="text-xs font-semibold text-gray-700 mb-2">
-                  📊 실시간 통계
-                </div>
+                <div className="text-xs font-semibold text-gray-700 mb-2">📊 실시간 통계</div>
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1 text-blue-600">
                     <Mail className="h-3 w-3" />
@@ -165,9 +157,9 @@ export const TimerNode: FC<TimerNodeProps> = ({ data }) => {
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div>
-              <Label htmlFor="delayDays">대기 시간 (일)</Label>
+              <Label htmlFor={delayDaysId}>대기 시간 (일)</Label>
               <Input
-                id="delayDays"
+                id={delayDaysId}
                 type="number"
                 min="1"
                 value={delayDays}
@@ -188,5 +180,5 @@ export const TimerNode: FC<TimerNodeProps> = ({ data }) => {
         </DialogContent>
       </Dialog>
     </>
-  );
-};
+  )
+}

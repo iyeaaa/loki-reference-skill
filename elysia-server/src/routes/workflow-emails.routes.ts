@@ -68,7 +68,7 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
       }
 
       let generated = 0
-      let failed = 0
+      let _failed = 0
       const errors: Array<{ leadId: string; error: string }> = []
 
       for (const lead of leads) {
@@ -76,7 +76,8 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
           let subject = ''
           let bodyText = ''
           let bodyHtml = ''
-          let emailStatus: 'pending' | 'generating' | 'generated' | 'edited' | 'failed' = 'generated'
+          let emailStatus: 'pending' | 'generating' | 'generated' | 'edited' | 'failed' =
+            'generated'
           let generationError: string | undefined
 
           if (body.mode === 'manual') {
@@ -99,10 +100,11 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
             try {
               console.log(`[AI Generation] Starting for lead: ${lead.companyName}`)
               console.log(`[AI Generation] Prompt: ${body.aiPrompt || '(empty)'}`)
-              
+
               const aiService = getAIWorkflowEmailService()
               const generatedEmail = await aiService.generateEmail({
-                prompt: body.aiPrompt || '위 고객 정보를 바탕으로 맞춤형 영업 이메일을 작성해주세요.',
+                prompt:
+                  body.aiPrompt || '위 고객 정보를 바탕으로 맞춤형 영업 이메일을 작성해주세요.',
                 lead: {
                   companyName: lead.companyName || '',
                   contactName: lead.contactName,
@@ -116,7 +118,7 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
 
               console.log(`[AI Generation] Success for ${lead.companyName}`)
               console.log(`[AI Generation] Subject: ${generatedEmail.subject}`)
-              
+
               subject = generatedEmail.subject
               bodyText = generatedEmail.bodyText
               bodyHtml = generatedEmail.bodyHtml || ''
@@ -156,7 +158,7 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
             leadId: lead.id,
             error: error instanceof Error ? error.message : 'Unknown error',
           })
-          failed++
+          _failed++
         }
       }
 

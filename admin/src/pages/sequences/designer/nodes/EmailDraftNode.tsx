@@ -1,81 +1,82 @@
-import { Mail, Plus, Trash2 } from "lucide-react";
-import { type FC, useState } from "react";
-import { Handle, Position } from "@xyflow/react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Handle, Position } from "@xyflow/react"
+import { Mail, Plus, Trash2 } from "lucide-react"
+import { type FC, useId, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Textarea } from "@/components/ui/textarea"
 
 interface EmailDraftNodeData {
-  subject?: string;
-  bodyText?: string;
+  subject?: string
+  bodyText?: string
   // AI 생성 관련
-  useAI?: boolean;
-  aiPrompt?: string;
-  generationMode?: 'ai' | 'manual' | 'template';
-  generatedCount?: number;
-  totalCount?: number;
-  onAddNode?: (type: string) => void;
-  onDelete?: () => void;
-  onUpdate?: (data: Partial<EmailDraftNodeData>) => void;
-  onManageEmails?: () => void;
+  useAI?: boolean
+  aiPrompt?: string
+  generationMode?: "ai" | "manual" | "template"
+  generatedCount?: number
+  totalCount?: number
+  onAddNode?: (type: string) => void
+  onDelete?: () => void
+  onUpdate?: (data: Partial<EmailDraftNodeData>) => void
+  onManageEmails?: () => void
 }
 
 interface EmailDraftNodeProps {
-  data: EmailDraftNodeData;
+  data: EmailDraftNodeData
 }
 
 export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  
-  const getInitialMode = (): 'ai' | 'manual' => {
-    if (data.generationMode === 'ai') return 'ai';
-    return 'manual';
-  };
-  
-  const [generationMode, setGenerationMode] = useState<'ai' | 'manual'>(getInitialMode());
-  const [subject, setSubject] = useState(data.subject || "");
-  const [bodyText, setBodyText] = useState(data.bodyText || "");
-  const [aiPrompt, setAiPrompt] = useState(data.aiPrompt || "");
+  const [isOpen, setIsOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+
+  const getInitialMode = (): "ai" | "manual" => {
+    if (data.generationMode === "ai") return "ai"
+    return "manual"
+  }
+
+  const [generationMode, setGenerationMode] = useState<"ai" | "manual">(getInitialMode())
+  const [subject, setSubject] = useState(data.subject || "")
+  const [bodyText, setBodyText] = useState(data.bodyText || "")
+  const [aiPrompt, setAiPrompt] = useState(data.aiPrompt || "")
+
+  const modeAiId = useId()
+  const modeManualId = useId()
+  const aiPromptId = useId()
+  const subjectId = useId()
+  const bodyId = useId()
 
   const handleAddNode = (type: string) => {
-    data.onAddNode?.(type);
-    setIsOpen(false);
-  };
+    data.onAddNode?.(type)
+    setIsOpen(false)
+  }
 
   const handleSave = () => {
-    if (generationMode === 'ai') {
-      data.onUpdate?.({ 
-        subject: aiPrompt, 
-        bodyText: '',
-        generationMode: 'ai',
+    if (generationMode === "ai") {
+      data.onUpdate?.({
+        subject: aiPrompt,
+        bodyText: "",
+        generationMode: "ai",
         aiPrompt,
         useAI: true,
-      });
+      })
     } else {
-      data.onUpdate?.({ 
-        subject, 
+      data.onUpdate?.({
+        subject,
         bodyText,
-        generationMode: 'manual',
+        generationMode: "manual",
         useAI: false,
-      });
+      })
     }
-    setIsEditOpen(false);
-  };
+    setIsEditOpen(false)
+  }
 
   return (
     <>
@@ -106,15 +107,13 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
 
           <div className="space-y-2">
             <div className="bg-blue-50 border border-blue-200 rounded p-2 mb-2">
-              <p className="text-xs text-blue-700">
-                📧 등록된 모든 연락처에게 개별 발송
-              </p>
+              <p className="text-xs text-blue-700">📧 등록된 모든 연락처에게 개별 발송</p>
             </div>
 
             {/* 생성 모드 표시 */}
             {data.generationMode && (
               <div className="flex items-center gap-2 mb-2">
-                {data.generationMode === 'ai' ? (
+                {data.generationMode === "ai" ? (
                   <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
                     🤖 AI 생성
                   </span>
@@ -134,10 +133,10 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
             {data.subject ? (
               <div className="text-sm">
                 <div className="text-gray-500 text-xs">
-                  {data.generationMode === 'ai' ? 'AI 프롬프트' : '제목 템플릿'}
+                  {data.generationMode === "ai" ? "AI 프롬프트" : "제목 템플릿"}
                 </div>
                 <div className="font-medium truncate">
-                  {data.generationMode === 'ai' ? data.aiPrompt : data.subject}
+                  {data.generationMode === "ai" ? data.aiPrompt : data.subject}
                 </div>
               </div>
             ) : (
@@ -195,12 +194,10 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="bg-blue-50 border border-blue-200 rounded p-3">
-              <p className="text-sm text-blue-800 font-medium mb-1">
-                📧 일괄 발송 이메일
-              </p>
+              <p className="text-sm text-blue-800 font-medium mb-1">📧 일괄 발송 이메일</p>
               <p className="text-xs text-blue-600">
-                시퀀스에 등록된 모든 연락처에게 개별적으로 발송됩니다.
-                각 연락처마다 하나의 이메일이 생성됩니다.
+                시퀀스에 등록된 모든 연락처에게 개별적으로 발송됩니다. 각 연락처마다 하나의 이메일이
+                생성됩니다.
               </p>
             </div>
 
@@ -209,30 +206,30 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
               <Label>이메일 작성 방식</Label>
               <RadioGroup
                 value={generationMode}
-                onValueChange={(value) => setGenerationMode(value as 'ai' | 'manual')}
+                onValueChange={(value) => setGenerationMode(value as "ai" | "manual")}
                 className="mt-2"
               >
                 <div className="flex items-start space-x-2 border rounded p-3 hover:bg-gray-50">
-                  <RadioGroupItem value="ai" id="mode-ai" />
+                  <RadioGroupItem value="ai" id={modeAiId} />
                   <div className="flex-1">
-                    <Label htmlFor="mode-ai" className="font-semibold cursor-pointer">
+                    <Label htmlFor={modeAiId} className="font-semibold cursor-pointer">
                       🤖 AI 자동 생성
                     </Label>
                     <p className="text-xs text-gray-600 mt-1">
-                      프롬프트를 입력하면 AI가 각 고객사에 맞춤형 이메일을 자동 생성합니다.
-                      생성 후 개별 수정 가능합니다.
+                      프롬프트를 입력하면 AI가 각 고객사에 맞춤형 이메일을 자동 생성합니다. 생성 후
+                      개별 수정 가능합니다.
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-2 border rounded p-3 hover:bg-gray-50">
-                  <RadioGroupItem value="manual" id="mode-manual" />
+                  <RadioGroupItem value="manual" id={modeManualId} />
                   <div className="flex-1">
-                    <Label htmlFor="mode-manual" className="font-semibold cursor-pointer">
+                    <Label htmlFor={modeManualId} className="font-semibold cursor-pointer">
                       ✍️ 수동 작성 또는 템플릿
                     </Label>
                     <p className="text-xs text-gray-600 mt-1">
-                      템플릿을 작성하거나 각 고객사에 대해 직접 이메일을 작성합니다.
-                      변수를 사용하여 자동 치환됩니다.
+                      템플릿을 작성하거나 각 고객사에 대해 직접 이메일을 작성합니다. 변수를 사용하여
+                      자동 치환됩니다.
                     </p>
                   </div>
                 </div>
@@ -240,11 +237,11 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
             </div>
 
             {/* AI 모드 입력 */}
-            {generationMode === 'ai' && (
+            {generationMode === "ai" && (
               <div>
-                <Label htmlFor="aiPrompt">AI 프롬프트</Label>
+                <Label htmlFor={aiPromptId}>AI 프롬프트</Label>
                 <Textarea
-                  id="aiPrompt"
+                  id={aiPromptId}
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
                   placeholder="예: {{회사명}}에게 우리 서비스를 소개하는 친근하고 전문적인 이메일을 작성해주세요. {{업종}} 업계의 특성을 고려해주세요."
@@ -257,21 +254,21 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
             )}
 
             {/* 수동 모드 입력 */}
-            {generationMode === 'manual' && (
+            {generationMode === "manual" && (
               <>
                 <div>
-                  <Label htmlFor="subject">제목 템플릿</Label>
+                  <Label htmlFor={subjectId}>제목 템플릿</Label>
                   <Input
-                    id="subject"
+                    id={subjectId}
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="예: 안녕하세요, {{회사명}}님"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="body">본문 템플릿</Label>
+                  <Label htmlFor={bodyId}>본문 템플릿</Label>
                   <Textarea
-                    id="body"
+                    id={bodyId}
                     value={bodyText}
                     onChange={(e) => setBodyText(e.target.value)}
                     placeholder="이메일 본문을 입력하세요&#10;&#10;변수 사용 가능: {{이름}}, {{회사명}}, {{이메일}} 등"
@@ -291,5 +288,5 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
         </DialogContent>
       </Dialog>
     </>
-  );
-};
+  )
+}

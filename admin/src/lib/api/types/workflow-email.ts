@@ -1,7 +1,7 @@
 // Workflow Generated Email Types
 
-export type WorkflowEmailStatus = 'pending' | 'generating' | 'generated' | 'edited' | 'failed'
-export type GenerationMode = 'ai' | 'manual' | 'template'
+export type WorkflowEmailStatus = "pending" | "generating" | "generated" | "edited" | "failed"
+export type GenerationMode = "ai" | "manual" | "template"
 
 export interface WorkflowGeneratedEmail {
   id: string
@@ -29,7 +29,7 @@ export interface WorkflowGeneratedEmail {
 }
 
 export interface GenerateAllEmailsRequest {
-  mode: 'ai' | 'manual'
+  mode: "ai" | "manual"
   aiPrompt?: string
   aiModel?: string
   templateSubject?: string

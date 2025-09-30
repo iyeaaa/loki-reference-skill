@@ -1,10 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import toast from "react-hot-toast"
 import { workflowEmailsApi } from "../services/workflow-emails"
-import type {
-  GenerateAllEmailsRequest,
-  UpdateGeneratedEmailRequest,
-} from "../types/workflow-email"
+import type { GenerateAllEmailsRequest, UpdateGeneratedEmailRequest } from "../types/workflow-email"
 
 // Query Keys
 export const workflowEmailKeys = {
@@ -91,7 +88,11 @@ export function useUpdateGeneratedEmail() {
         queryKey: workflowEmailKeys.node(variables.sequenceId, variables.nodeId),
       })
       queryClient.invalidateQueries({
-        queryKey: workflowEmailKeys.detail(variables.sequenceId, variables.nodeId, variables.emailId),
+        queryKey: workflowEmailKeys.detail(
+          variables.sequenceId,
+          variables.nodeId,
+          variables.emailId
+        ),
       })
       toast.success("이메일이 업데이트되었습니다")
     },

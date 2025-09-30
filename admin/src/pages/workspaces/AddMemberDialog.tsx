@@ -1,5 +1,5 @@
-import { Check, ChevronsUpDown } from "lucide-react"
-import { useId, useState } from "react"
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react"
+import { useEffect, useId, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -19,12 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useUsers } from "@/lib/api/hooks/users"
 import { useAddWorkspaceMember } from "@/lib/api/hooks/workspaces"
 import type { User } from "@/lib/api/types/user"
 
 interface AddMemberDialogProps {
   workspaceId: string
-  users: User[]
   existingMemberUserIds: string[]
   isOpen: boolean
   onClose: () => void
@@ -32,7 +32,6 @@ interface AddMemberDialogProps {
 
 export function AddMemberDialog({
   workspaceId,
-  users,
   existingMemberUserIds,
   isOpen,
   onClose,
@@ -41,22 +40,40 @@ export function AddMemberDialog({
   const roleSelectId = useId()
 
   const [selectedUserId, setSelectedUserId] = useState("")
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [selectedRole, setSelectedRole] = useState<"owner" | "admin" | "member" | "viewer">(
     "member"
   )
   const [userOpen, setUserOpen] = useState(false)
   const [userSearch, setUserSearch] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(userSearch)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [userSearch])
+
+  // Fetch users from backend with search - only if search is not empty
+  const { data: usersData, isLoading } = useUsers(
+    {
+      search: debouncedSearch,
+      limit: 50,
+      page: 1,
+    },
+    { enabled: debouncedSearch.length > 0 }
+  )
 
   const addMember = useAddWorkspaceMember()
 
   // Filter out users who are already members
-  const availableUsers = users.filter((user) => !existingMemberUserIds.includes(user.id))
-
-  const filteredUsers = availableUsers.filter(
-    (user) =>
-      user.username.toLowerCase().includes(userSearch.toLowerCase()) ||
-      user.email.toLowerCase().includes(userSearch.toLowerCase())
-  )
+  const availableUsers =
+    debouncedSearch.length > 0
+      ? usersData?.users?.filter((user) => !existingMemberUserIds.includes(user.id)) || []
+      : []
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,8 +91,10 @@ export function AddMemberDialog({
       {
         onSuccess: () => {
           setSelectedUserId("")
+          setSelectedUser(null)
           setSelectedRole("member")
           setUserSearch("")
+          setDebouncedSearch("")
           onClose()
         },
       }
@@ -84,9 +103,18 @@ export function AddMemberDialog({
 
   const handleClose = () => {
     setSelectedUserId("")
+    setSelectedUser(null)
     setSelectedRole("member")
     setUserSearch("")
+    setDebouncedSearch("")
     onClose()
+  }
+
+  const handleSelectUser = (user: User) => {
+    setSelectedUserId(user.id)
+    setSelectedUser(user)
+    setUserOpen(false)
+    setUserSearch("")
   }
 
   const getRoleLabel = (role: string) => {
@@ -125,38 +153,34 @@ export function AddMemberDialog({
                   className="w-full justify-between font-normal"
                   type="button"
                 >
-                  {selectedUserId
-                    ? availableUsers.find((user) => user.id === selectedUserId)?.username ||
-                      availableUsers.find((user) => user.id === selectedUserId)?.email
-                    : "사용자 선택"}
+                  {selectedUser ? selectedUser.username : "사용자 선택"}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-full p-0">
-                <Command>
+                <Command className="max-h-[400px]">
                   <CommandInput
                     placeholder="사용자 검색..."
                     value={userSearch}
                     onValueChange={setUserSearch}
                   />
                   <CommandList>
-                    {filteredUsers.length === 0 ? (
-                      <CommandEmpty>
-                        {availableUsers.length === 0
-                          ? "추가 가능한 사용자가 없습니다."
-                          : "사용자를 찾을 수 없습니다."}
-                      </CommandEmpty>
+                    {!debouncedSearch ? (
+                      <CommandEmpty>이름 또는 이메일로 검색해주세요.</CommandEmpty>
+                    ) : isLoading ? (
+                      <div className="flex items-center justify-center py-6">
+                        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                        <span className="ml-2 text-sm text-gray-500">검색 중...</span>
+                      </div>
+                    ) : availableUsers.length === 0 ? (
+                      <CommandEmpty>사용자를 찾을 수 없습니다.</CommandEmpty>
                     ) : (
                       <CommandGroup>
-                        {filteredUsers.map((user) => (
+                        {availableUsers.map((user) => (
                           <CommandItem
                             key={user.id}
-                            value={user.id}
-                            onSelect={(currentValue) => {
-                              setSelectedUserId(currentValue === selectedUserId ? "" : currentValue)
-                              setUserOpen(false)
-                              setUserSearch("")
-                            }}
+                            value={`${user.username} ${user.email}`}
+                            onSelect={() => handleSelectUser(user)}
                           >
                             <Check
                               className={`mr-2 h-4 w-4 ${

@@ -1,11 +1,11 @@
 import { and, desc, eq } from 'drizzle-orm'
 import { db } from '../db/index'
-import { getAIEmailService } from '../lib/ai-email-service'
 import { customerGroupMembers } from '../db/schema/customer-groups'
 import { leadContacts } from '../db/schema/lead-details'
 import { leads } from '../db/schema/leads'
-import { sequences, sequenceEnrollments } from '../db/schema/sequences'
+import { sequences } from '../db/schema/sequences'
 import { workflowGeneratedEmails } from '../db/schema/workflow-emails'
+import { getAIEmailService } from '../lib/ai-email-service'
 
 // ====================================
 // WORKFLOW GENERATED EMAILS CRUD
@@ -42,8 +42,8 @@ export async function getGeneratedEmailsByNode(sequenceId: string, nodeId: strin
       and(
         eq(leadContacts.leadId, leads.id),
         eq(leadContacts.contactType, 'email'),
-        eq(leadContacts.isPrimary, true)
-      )
+        eq(leadContacts.isPrimary, true),
+      ),
     )
     .where(
       and(
@@ -92,8 +92,8 @@ export async function getGeneratedEmail(emailId: string) {
       and(
         eq(leadContacts.leadId, leads.id),
         eq(leadContacts.contactType, 'email'),
-        eq(leadContacts.isPrimary, true)
-      )
+        eq(leadContacts.isPrimary, true),
+      ),
     )
     .where(eq(workflowGeneratedEmails.id, emailId))
     .limit(1)
@@ -119,7 +119,7 @@ export async function upsertGeneratedEmail(data: {
   bodyHtml?: string
   status?: 'pending' | 'generating' | 'generated' | 'edited' | 'failed'
   generationMode?: 'ai' | 'manual' | 'template'
-  mode?: 'ai' | 'manual' | 'template'  // From frontend
+  mode?: 'ai' | 'manual' | 'template' // From frontend
   aiPrompt?: string
   aiModel?: string
   generationError?: string
@@ -295,8 +295,8 @@ export async function getSequenceLeads(sequenceId: string) {
       and(
         eq(leadContacts.leadId, leads.id),
         eq(leadContacts.contactType, 'email'),
-        eq(leadContacts.isPrimary, true)
-      )
+        eq(leadContacts.isPrimary, true),
+      ),
     )
     .where(eq(customerGroupMembers.groupId, sequence.customerGroupId))
 

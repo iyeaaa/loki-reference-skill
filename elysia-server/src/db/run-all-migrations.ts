@@ -1,7 +1,7 @@
-import { readFileSync } from 'fs'
-import { join } from 'path'
-import { Pool } from 'pg'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import dotenv from 'dotenv'
+import { Pool } from 'pg'
 
 dotenv.config()
 
@@ -31,7 +31,7 @@ async function runAllMigrations() {
     console.log('  ├─ Creating workflow_generated_emails table...')
     const workflowEmailsSql = readFileSync(
       join(__dirname, 'manual-migrations', '001_create_workflow_emails.sql'),
-      'utf-8'
+      'utf-8',
     )
     await client.query(workflowEmailsSql)
     console.log('  └─ ✅ workflow_generated_emails table created')

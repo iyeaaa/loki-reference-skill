@@ -8,8 +8,8 @@ import {
   Settings,
   UserCheck,
   Users,
-} from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+} from "lucide-react"
+import { Link, useLocation } from "react-router-dom"
 import {
   Sidebar,
   SidebarContent,
@@ -22,9 +22,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
-} from "@/components/ui/sidebar";
-import type { WorkspaceOption } from "@/components/ui/workspace-selector";
-import { WorkspaceSelector } from "@/components/ui/workspace-selector";
+} from "@/components/ui/sidebar"
+import type { WorkspaceOption } from "@/components/ui/workspace-selector"
+import { WorkspaceSelector } from "@/components/ui/workspace-selector"
 
 // 워크스페이스 고객 관리
 const customerMenuItems = [
@@ -53,7 +53,7 @@ const customerMenuItems = [
     url: "/replied-emails",
     icon: Mail,
   },
-];
+]
 
 // 시스템 관리
 const adminMenuItems = [
@@ -72,13 +72,13 @@ const adminMenuItems = [
     url: "/email-send-test",
     icon: SendHorizontal,
   },
-];
+]
 
 interface AppSidebarProps {
-  workspaces?: WorkspaceOption[];
-  selectedWorkspace?: string;
-  onWorkspaceChange?: (value: string) => void;
-  hideWorkspaceSelector?: boolean;
+  workspaces?: WorkspaceOption[]
+  selectedWorkspace?: string
+  onWorkspaceChange?: (value: string) => void
+  hideWorkspaceSelector?: boolean
 }
 
 export function AppSidebar({
@@ -87,20 +87,18 @@ export function AppSidebar({
   onWorkspaceChange,
   hideWorkspaceSelector = false,
 }: AppSidebarProps) {
-  const location = useLocation();
-  const pathname = location.pathname;
+  const location = useLocation()
+  const pathname = location.pathname
 
   // "전체" 옵션을 포함한 워크스페이스 목록 생성
   const workspaceOptions: WorkspaceOption[] = [
     { value: "all", label: "전체", sublabel: "모든 워크스페이스 보기" },
     ...workspaces,
-  ];
+  ]
 
   // 선택된 워크스페이스의 이름 가져오기
-  const selectedWorkspaceData = workspaceOptions.find(
-    (w) => w.value === selectedWorkspace
-  );
-  const workspaceLabel = selectedWorkspaceData?.label || "워크스페이스";
+  const selectedWorkspaceData = workspaceOptions.find((w) => w.value === selectedWorkspace)
+  const workspaceLabel = selectedWorkspaceData?.label || "워크스페이스"
 
   return (
     <Sidebar collapsible="icon">
@@ -118,9 +116,7 @@ export function AppSidebar({
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Send Grinda</span>
-                  <span className="truncate text-xs">
-                    AI 이메일 자동화 시스템
-                  </span>
+                  <span className="truncate text-xs">AI 이메일 자동화 시스템</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -148,46 +144,30 @@ export function AppSidebar({
         {/* 워크스페이스 고객 관리 */}
         <SidebarGroup>
           <SidebarGroupLabel>
-            {!hideWorkspaceSelector && (
-              <span className="font-semibold">{workspaceLabel}</span>
-            )}
-            <span className={hideWorkspaceSelector ? "" : "ml-1"}>
-              고객 관리
-            </span>
+            {!hideWorkspaceSelector && <span className="font-semibold">{workspaceLabel}</span>}
+            <span className={hideWorkspaceSelector ? "" : "ml-1"}>고객 관리</span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {customerMenuItems.map((item) => {
-                const isActive = pathname === item.url;
+                const isActive = pathname === item.url
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild
                       tooltip={item.title}
                       isActive={isActive}
-                      className={
-                        isActive
-                          ? "bg-violet-500/10 border-r-2 border-violet-500"
-                          : ""
-                      }
+                      className={isActive ? "bg-violet-500/10 border-r-2 border-violet-500" : ""}
                     >
                       <Link to={item.url || "#"}>
-                        {item.icon && (
-                          <item.icon
-                            className={isActive ? "text-violet-500" : ""}
-                          />
-                        )}
-                        <span
-                          className={
-                            isActive ? "text-violet-500 font-medium" : ""
-                          }
-                        >
+                        {item.icon && <item.icon className={isActive ? "text-violet-500" : ""} />}
+                        <span className={isActive ? "text-violet-500 font-medium" : ""}>
                           {item.title}
                         </span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                );
+                )
               })}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -201,36 +181,24 @@ export function AppSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               {adminMenuItems.map((item) => {
-                const isActive = pathname === item.url;
+                const isActive = pathname === item.url
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild
                       tooltip={item.title}
                       isActive={isActive}
-                      className={
-                        isActive
-                          ? "bg-violet-500/10 border-r-2 border-violet-500"
-                          : ""
-                      }
+                      className={isActive ? "bg-violet-500/10 border-r-2 border-violet-500" : ""}
                     >
                       <Link to={item.url || "#"}>
-                        {item.icon && (
-                          <item.icon
-                            className={isActive ? "text-violet-500" : ""}
-                          />
-                        )}
-                        <span
-                          className={
-                            isActive ? "text-violet-500 font-medium" : ""
-                          }
-                        >
+                        {item.icon && <item.icon className={isActive ? "text-violet-500" : ""} />}
+                        <span className={isActive ? "text-violet-500 font-medium" : ""}>
                           {item.title}
                         </span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                );
+                )
               })}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -239,11 +207,7 @@ export function AppSidebar({
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              tooltip="설정"
-              isActive={pathname === "/settings"}
-            >
+            <SidebarMenuButton asChild tooltip="설정" isActive={pathname === "/settings"}>
               <Link to="/settings">
                 <Settings />
                 <span>설정</span>
@@ -253,5 +217,5 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
-  );
+  )
 }

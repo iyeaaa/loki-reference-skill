@@ -1,24 +1,24 @@
-import { ChevronLeft, ChevronRight, Edit } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { useLeads } from "@/lib/api/hooks/leads";
-import type { Lead, LeadStatus, LeadsParams } from "@/lib/api/types/lead";
-import { formatRelativeTime } from "@/lib/date-utils";
+import { ChevronLeft, ChevronRight, Edit } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { useLeads } from "@/lib/api/hooks/leads"
+import type { Lead, LeadStatus, LeadsParams } from "@/lib/api/types/lead"
+import { formatRelativeTime } from "@/lib/date-utils"
 
 interface LeadsTableWithPaginationProps {
-  searchQuery: string;
-  selectedStatuses: string[];
-  selectedBusinessTypes: string[];
-  selectedCountries: string[];
-  selectedCities: string[];
-  selectedCustomerGroup: string;
-  selectedLeads: string[];
-  onToggleLead: (leadId: string) => void;
-  onToggleAll: (leadIds: string[]) => void;
-  onEditLead: (lead: Lead) => void;
+  searchQuery: string
+  selectedStatuses: string[]
+  selectedBusinessTypes: string[]
+  selectedCountries: string[]
+  selectedCities: string[]
+  selectedCustomerGroup: string
+  selectedLeads: string[]
+  onToggleLead: (leadId: string) => void
+  onToggleAll: (leadIds: string[]) => void
+  onEditLead: (lead: Lead) => void
 }
 
 export function LeadsTableWithPagination({
@@ -33,29 +33,28 @@ export function LeadsTableWithPagination({
   onToggleAll,
   onEditLead,
 }: LeadsTableWithPaginationProps) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageInputValue, setPageInputValue] = useState("1");
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageInputValue, setPageInputValue] = useState("1")
   const [currentWorkspace, setCurrentWorkspace] = useState(
     () => localStorage.getItem("selectedWorkspace") || "all"
-  );
+  )
 
-  const limit = 10;
+  const limit = 10
 
   // localStorage 변경 감지
   useEffect(() => {
     const interval = setInterval(() => {
-      const workspace = localStorage.getItem("selectedWorkspace") || "all";
+      const workspace = localStorage.getItem("selectedWorkspace") || "all"
       if (workspace !== currentWorkspace) {
-        setCurrentWorkspace(workspace);
-        setCurrentPage(1); // 워크스페이스 변경 시 첫 페이지로
+        setCurrentWorkspace(workspace)
+        setCurrentPage(1) // 워크스페이스 변경 시 첫 페이지로
       }
-    }, 100);
+    }, 100)
 
-    return () => clearInterval(interval);
-  }, [currentWorkspace]);
+    return () => clearInterval(interval)
+  }, [currentWorkspace])
 
-  const workspaceFilter =
-    currentWorkspace === "all" ? undefined : [currentWorkspace];
+  const workspaceFilter = currentWorkspace === "all" ? undefined : [currentWorkspace]
 
   // Build params for API call
   const params: LeadsParams = {
@@ -65,20 +64,20 @@ export function LeadsTableWithPagination({
       selectedStatuses.length === 1
         ? (selectedStatuses[0] as LeadStatus)
         : selectedStatuses.length > 0
-        ? "all"
-        : undefined,
+          ? "all"
+          : undefined,
     search: searchQuery || undefined,
     workspaceIds: workspaceFilter,
     customerGroupId: selectedCustomerGroup || undefined,
-  };
+  }
 
   // Use React Query hook for fetching leads
-  const { data: leadsData, isFetching } = useLeads(params);
-  const leads = leadsData?.leads || [];
-  const totalPages = leadsData?.totalPages || 1;
-  const total = leadsData?.total || 0;
+  const { data: leadsData, isFetching } = useLeads(params)
+  const leads = leadsData?.leads || []
+  const totalPages = leadsData?.totalPages || 1
+  const total = leadsData?.total || 0
 
-  console.log("leads", leads);
+  console.log("leads", leads)
 
   const getStatusText = (status: LeadStatus) => {
     const statusMap: Record<LeadStatus, string> = {
@@ -89,74 +88,74 @@ export function LeadsTableWithPagination({
       converted: "전환됨",
       lost: "실패",
       unsubscribed: "구독취소",
-    };
-    return statusMap[status] || status;
-  };
+    }
+    return statusMap[status] || status
+  }
 
   const getStatusBadgeVariant = (status: LeadStatus) => {
     switch (status) {
       case "new":
-        return "default";
+        return "default"
       case "contacted":
-        return "secondary";
+        return "secondary"
       case "qualified":
-        return "outline";
+        return "outline"
       case "converted":
-        return "default";
+        return "default"
       default:
-        return "outline";
+        return "outline"
     }
-  };
+  }
 
   const handleToggleAll = useCallback(() => {
-    onToggleAll(leads.map((l) => l.id));
-  }, [leads, onToggleAll]);
+    onToggleAll(leads.map((l) => l.id))
+  }, [leads, onToggleAll])
 
   // Pagination handlers
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    setPageInputValue(page.toString());
-  };
+    setCurrentPage(page)
+    setPageInputValue(page.toString())
+  }
 
   const handlePageInputChange = (value: string) => {
-    setPageInputValue(value);
-  };
+    setPageInputValue(value)
+  }
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const page = parseInt(pageInputValue, 10);
+      const page = parseInt(pageInputValue, 10)
       if (page >= 1 && page <= totalPages) {
-        setCurrentPage(page);
+        setCurrentPage(page)
       } else {
-        setPageInputValue(currentPage.toString());
+        setPageInputValue(currentPage.toString())
       }
     }
-  };
+  }
 
   const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10);
+    const page = parseInt(pageInputValue, 10)
     if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
+      setCurrentPage(page)
     } else {
-      setPageInputValue(currentPage.toString());
+      setPageInputValue(currentPage.toString())
     }
-  };
+  }
 
   const getPageNumbers = () => {
-    const maxVisiblePages = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    const maxVisiblePages = 5
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2))
+    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1)
 
     if (endPage - startPage + 1 < maxVisiblePages) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+      startPage = Math.max(1, endPage - maxVisiblePages + 1)
     }
 
-    const pages = [];
+    const pages = []
     for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
+      pages.push(i)
     }
-    return pages;
-  };
+    return pages
+  }
 
   return (
     <>
@@ -177,9 +176,7 @@ export function LeadsTableWithPagination({
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   <Checkbox
-                    checked={
-                      leads.length > 0 && selectedLeads.length === leads.length
-                    }
+                    checked={leads.length > 0 && selectedLeads.length === leads.length}
                     onCheckedChange={handleToggleAll}
                   />
                 </th>
@@ -324,10 +321,7 @@ export function LeadsTableWithPagination({
                     {lead.businessType || "-"}
                   </td>
                   <td className="p-2 whitespace-nowrap text-sm">
-                    <Badge
-                      variant={getStatusBadgeVariant(lead.leadStatus)}
-                      className="text-xs"
-                    >
+                    <Badge variant={getStatusBadgeVariant(lead.leadStatus)} className="text-xs">
                       {getStatusText(lead.leadStatus)}
                     </Badge>
                   </td>
@@ -457,8 +451,7 @@ export function LeadsTableWithPagination({
           <div className="text-sm text-muted-foreground">
             {total > 0 ? (
               <>
-                {(currentPage - 1) * limit + 1}-
-                {Math.min(currentPage * limit, total)} /{" "}
+                {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
                 {total.toLocaleString()}개 표시
               </>
             ) : (
@@ -508,9 +501,7 @@ export function LeadsTableWithPagination({
 
           {/* Next Page */}
           <Button
-            onClick={() =>
-              handlePageChange(Math.min(totalPages, currentPage + 1))
-            }
+            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage >= totalPages || isFetching}
             variant="outline"
             size="sm"
@@ -546,11 +537,9 @@ export function LeadsTableWithPagination({
             className="w-20 h-8 text-sm text-center"
             disabled={isFetching}
           />
-          <span className="text-sm text-muted-foreground">
-            / {totalPages || 1}
-          </span>
+          <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
         </div>
       </div>
     </>
-  );
+  )
 }

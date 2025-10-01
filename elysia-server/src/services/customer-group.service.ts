@@ -1,13 +1,10 @@
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
-import { db } from "../db/index";
-import {
-  customerGroupMembers,
-  customerGroups,
-} from "../db/schema/customer-groups";
-import { leadContacts } from "../db/schema/lead-details";
-import { leads } from "../db/schema/leads";
-import { users } from "../db/schema/users";
-import { workspaces } from "../db/schema/workspaces";
+import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
+import { db } from '../db/index'
+import { customerGroupMembers, customerGroups } from '../db/schema/customer-groups'
+import { leadContacts } from '../db/schema/lead-details'
+import { leads } from '../db/schema/leads'
+import { users } from '../db/schema/users'
+import { workspaces } from '../db/schema/workspaces'
 
 // ====================================
 // CUSTOMER GROUP CRUD OPERATIONS
@@ -34,36 +31,36 @@ export async function getCustomerGroup(id: string) {
     .leftJoin(workspaces, eq(customerGroups.workspaceId, workspaces.id))
     .leftJoin(users, eq(customerGroups.createdBy, users.id))
     .where(eq(customerGroups.id, id))
-    .limit(1);
+    .limit(1)
 
-  return result[0];
+  return result[0]
 }
 
 // CreateCustomerGroup :one
 export async function createCustomerGroup(data: {
-  workspaceId: string;
-  name: string;
-  description?: string;
-  criteria?: any;
-  isDynamic?: boolean;
-  createdBy?: string;
+  workspaceId: string
+  name: string
+  description?: string
+  criteria?: any
+  isDynamic?: boolean
+  createdBy?: string
   csvData?: Array<{
-    companyName: string;
-    foundCompanyName?: string;
-    businessType?: string;
-    websiteUrl?: string;
-    description?: string;
-    employeeCount?: string;
-    foundedYear?: number;
-    country?: string;
-    city?: string;
-    state?: string;
-    address?: string;
-    leadSource?: string;
-    leadStatus?: string;
-    leadScore?: number;
-    notes?: string;
-  }>;
+    companyName: string
+    foundCompanyName?: string
+    businessType?: string
+    websiteUrl?: string
+    description?: string
+    employeeCount?: string
+    foundedYear?: number
+    country?: string
+    city?: string
+    state?: string
+    address?: string
+    leadSource?: string
+    leadStatus?: string
+    leadScore?: number
+    notes?: string
+  }>
 }) {
   const [newGroup] = await db
     .insert(customerGroups)
@@ -85,51 +82,51 @@ export async function createCustomerGroup(data: {
       createdBy: customerGroups.createdBy,
       createdAt: customerGroups.createdAt,
       updatedAt: customerGroups.updatedAt,
-    });
+    })
 
   // CSV 데이터가 있으면 리드들을 생성하고 그룹에 추가
   if (data.csvData && data.csvData.length > 0 && newGroup) {
-    await createLeadsFromCSV(newGroup.id, data.csvData, data.createdBy);
+    await createLeadsFromCSV(newGroup.id, data.csvData, data.createdBy)
   }
 
-  return newGroup;
+  return newGroup
 }
 
 // CreateLeadsFromCSV :exec - Create leads from CSV data and add to group
 async function createLeadsFromCSV(
   groupId: string,
   csvData: Array<{
-    companyName: string;
-    foundCompanyName?: string;
-    businessType?: string;
-    websiteUrl?: string;
-    description?: string;
-    employeeCount?: string;
-    foundedYear?: number;
-    country?: string;
-    city?: string;
-    state?: string;
-    address?: string;
-    leadSource?: string;
-    leadStatus?: string;
-    leadScore?: number;
-    notes?: string;
+    companyName: string
+    foundCompanyName?: string
+    businessType?: string
+    websiteUrl?: string
+    description?: string
+    employeeCount?: string
+    foundedYear?: number
+    country?: string
+    city?: string
+    state?: string
+    address?: string
+    leadSource?: string
+    leadStatus?: string
+    leadScore?: number
+    notes?: string
     // 연락처 정보 추가
-    primaryEmail?: string;
-    primaryPhone?: string;
-    secondaryEmail?: string;
-    secondaryPhone?: string;
+    primaryEmail?: string
+    primaryPhone?: string
+    secondaryEmail?: string
+    secondaryPhone?: string
   }>,
-  createdBy?: string
+  createdBy?: string,
 ) {
-  const createdLeads = [];
+  const createdLeads = []
 
   for (const leadData of csvData) {
     // 리드 생성
     const [newLead] = await db
       .insert(leads)
       .values({
-        workspaceId: (await getCustomerGroup(groupId))?.workspaceId || "",
+        workspaceId: (await getCustomerGroup(groupId))?.workspaceId || '',
         companyName: leadData.companyName,
         foundCompanyName: leadData.foundCompanyName || null,
         businessType: leadData.businessType || null,
@@ -141,71 +138,71 @@ async function createLeadsFromCSV(
         city: leadData.city || null,
         state: leadData.state || null,
         address: leadData.address || null,
-        leadSource: leadData.leadSource || "CSV Import",
-        leadStatus: (leadData.leadStatus as any) || "new",
+        leadSource: leadData.leadSource || 'CSV Import',
+        leadStatus: (leadData.leadStatus as any) || 'new',
         leadScore: leadData.leadScore || null,
         notes: leadData.notes || null,
         createdBy: createdBy || null,
       })
-      .returning({ id: leads.id });
+      .returning({ id: leads.id })
 
     if (newLead) {
-      createdLeads.push(newLead.id);
+      createdLeads.push(newLead.id)
 
       // 연락처 정보 추가
-      const contactsToInsert = [];
+      const contactsToInsert = []
 
       // Primary Email
       if (leadData.primaryEmail) {
         contactsToInsert.push({
           leadId: newLead.id,
-          contactType: "email" as const,
+          contactType: 'email' as const,
           contactValue: leadData.primaryEmail,
-          label: "primary",
+          label: 'primary',
           isPrimary: true,
           isVerified: false,
-        });
+        })
       }
 
       // Primary Phone
       if (leadData.primaryPhone) {
         contactsToInsert.push({
           leadId: newLead.id,
-          contactType: "phone" as const,
+          contactType: 'phone' as const,
           contactValue: leadData.primaryPhone,
-          label: "primary",
+          label: 'primary',
           isPrimary: true,
           isVerified: false,
-        });
+        })
       }
 
       // Secondary Email
       if (leadData.secondaryEmail) {
         contactsToInsert.push({
           leadId: newLead.id,
-          contactType: "email" as const,
+          contactType: 'email' as const,
           contactValue: leadData.secondaryEmail,
-          label: "secondary",
+          label: 'secondary',
           isPrimary: false,
           isVerified: false,
-        });
+        })
       }
 
       // Secondary Phone
       if (leadData.secondaryPhone) {
         contactsToInsert.push({
           leadId: newLead.id,
-          contactType: "phone" as const,
+          contactType: 'phone' as const,
           contactValue: leadData.secondaryPhone,
-          label: "secondary",
+          label: 'secondary',
           isPrimary: false,
           isVerified: false,
-        });
+        })
       }
 
       // 연락처 정보 삽입
       if (contactsToInsert.length > 0) {
-        await db.insert(leadContacts).values(contactsToInsert);
+        await db.insert(leadContacts).values(contactsToInsert)
       }
     }
   }
@@ -216,21 +213,21 @@ async function createLeadsFromCSV(
       groupId,
       leadIds: createdLeads,
       addedBy: createdBy,
-    });
+    })
   }
 
-  return createdLeads.length;
+  return createdLeads.length
 }
 
 // UpdateCustomerGroup :one
 export async function updateCustomerGroup(
   id: string,
   data: {
-    name: string;
-    description?: string;
-    criteria?: any;
-    isDynamic: boolean;
-  }
+    name: string
+    description?: string
+    criteria?: any
+    isDynamic: boolean
+  },
 ) {
   const [updatedGroup] = await db
     .update(customerGroups)
@@ -252,14 +249,14 @@ export async function updateCustomerGroup(
       createdBy: customerGroups.createdBy,
       createdAt: customerGroups.createdAt,
       updatedAt: customerGroups.updatedAt,
-    });
+    })
 
-  return updatedGroup;
+  return updatedGroup
 }
 
 // DeleteCustomerGroup :exec
 export async function deleteCustomerGroup(id: string) {
-  await db.delete(customerGroups).where(eq(customerGroups.id, id));
+  await db.delete(customerGroups).where(eq(customerGroups.id, id))
 }
 
 // ====================================
@@ -288,9 +285,9 @@ export async function listCustomerGroups(limit: number, offset: number) {
     .leftJoin(users, eq(customerGroups.createdBy, users.id))
     .orderBy(desc(customerGroups.createdAt))
     .limit(limit)
-    .offset(offset);
+    .offset(offset)
 
-  return result;
+  return result
 }
 
 // ListCustomerGroupsWithFilters :many
@@ -298,42 +295,36 @@ export async function listCustomerGroupsWithFilters(
   limit: number,
   offset: number,
   filters?: {
-    isDynamic?: boolean;
-    search?: string;
-    workspaceIds?: string[];
-    createdByIds?: string[];
-  }
+    isDynamic?: boolean
+    search?: string
+    workspaceIds?: string[]
+    createdByIds?: string[]
+  },
 ) {
-  const conditions = [];
+  const conditions = []
 
   if (filters?.isDynamic !== undefined) {
-    conditions.push(eq(customerGroups.isDynamic, filters.isDynamic));
+    conditions.push(eq(customerGroups.isDynamic, filters.isDynamic))
   }
 
   if (filters?.search) {
     conditions.push(
       or(
         ilike(customerGroups.name, `%${filters.search}%`),
-        ilike(customerGroups.description, `%${filters.search}%`)
-      )!
-    );
+        ilike(customerGroups.description, `%${filters.search}%`),
+      )!,
+    )
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
-    conditions.push(
-      or(
-        ...filters.workspaceIds.map((id) => eq(customerGroups.workspaceId, id))
-      )!
-    );
+    conditions.push(or(...filters.workspaceIds.map((id) => eq(customerGroups.workspaceId, id)))!)
   }
 
   if (filters?.createdByIds && filters.createdByIds.length > 0) {
-    conditions.push(
-      or(...filters.createdByIds.map((id) => eq(customerGroups.createdBy, id)))!
-    );
+    conditions.push(or(...filters.createdByIds.map((id) => eq(customerGroups.createdBy, id)))!)
   }
 
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
   const result = await db
     .select({
@@ -356,9 +347,9 @@ export async function listCustomerGroupsWithFilters(
     .where(whereClause)
     .orderBy(desc(customerGroups.createdAt))
     .limit(limit)
-    .offset(offset);
+    .offset(offset)
 
-  return result;
+  return result
 }
 
 // GetGroupsByWorkspace :many
@@ -385,9 +376,9 @@ export async function getGroupsByWorkspace(workspaceId: string) {
     .from(customerGroups)
     .leftJoin(users, eq(customerGroups.createdBy, users.id))
     .where(eq(customerGroups.workspaceId, workspaceId))
-    .orderBy(desc(customerGroups.createdAt));
+    .orderBy(desc(customerGroups.createdAt))
 
-  return result;
+  return result
 }
 
 // ====================================
@@ -396,57 +387,49 @@ export async function getGroupsByWorkspace(workspaceId: string) {
 
 // CountCustomerGroups :one
 export async function countCustomerGroups() {
-  const result = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(customerGroups);
+  const result = await db.select({ count: sql<number>`count(*)::int` }).from(customerGroups)
 
-  return result[0]?.count ?? 0;
+  return result[0]?.count ?? 0
 }
 
 // CountCustomerGroupsWithFilters :one
 export async function countCustomerGroupsWithFilters(filters?: {
-  isDynamic?: boolean;
-  search?: string;
-  workspaceIds?: string[];
-  createdByIds?: string[];
+  isDynamic?: boolean
+  search?: string
+  workspaceIds?: string[]
+  createdByIds?: string[]
 }) {
-  const conditions = [];
+  const conditions = []
 
   if (filters?.isDynamic !== undefined) {
-    conditions.push(eq(customerGroups.isDynamic, filters.isDynamic));
+    conditions.push(eq(customerGroups.isDynamic, filters.isDynamic))
   }
 
   if (filters?.search) {
     conditions.push(
       or(
         ilike(customerGroups.name, `%${filters.search}%`),
-        ilike(customerGroups.description, `%${filters.search}%`)
-      )!
-    );
+        ilike(customerGroups.description, `%${filters.search}%`),
+      )!,
+    )
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
-    conditions.push(
-      or(
-        ...filters.workspaceIds.map((id) => eq(customerGroups.workspaceId, id))
-      )!
-    );
+    conditions.push(or(...filters.workspaceIds.map((id) => eq(customerGroups.workspaceId, id)))!)
   }
 
   if (filters?.createdByIds && filters.createdByIds.length > 0) {
-    conditions.push(
-      or(...filters.createdByIds.map((id) => eq(customerGroups.createdBy, id)))!
-    );
+    conditions.push(or(...filters.createdByIds.map((id) => eq(customerGroups.createdBy, id)))!)
   }
 
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
   const result = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(customerGroups)
-    .where(whereClause);
+    .where(whereClause)
 
-  return result[0]?.count ?? 0;
+  return result[0]?.count ?? 0
 }
 
 // ====================================
@@ -458,9 +441,9 @@ export async function bulkDeleteCustomerGroups(groupIds: string[]) {
   const result = await db
     .delete(customerGroups)
     .where(or(...groupIds.map((id) => eq(customerGroups.id, id)))!)
-    .returning({ id: customerGroups.id });
+    .returning({ id: customerGroups.id })
 
-  return result.length;
+  return result.length
 }
 
 // ====================================
@@ -468,11 +451,7 @@ export async function bulkDeleteCustomerGroups(groupIds: string[]) {
 // ====================================
 
 // AddGroupMember :one
-export async function addGroupMember(data: {
-  groupId: string;
-  leadId: string;
-  addedBy?: string;
-}) {
+export async function addGroupMember(data: { groupId: string; leadId: string; addedBy?: string }) {
   const [newMember] = await db
     .insert(customerGroupMembers)
     .values({
@@ -486,29 +465,20 @@ export async function addGroupMember(data: {
       leadId: customerGroupMembers.leadId,
       addedBy: customerGroupMembers.addedBy,
       addedAt: customerGroupMembers.addedAt,
-    });
+    })
 
-  return newMember;
+  return newMember
 }
 
 // RemoveGroupMember :exec
 export async function removeGroupMember(groupId: string, leadId: string) {
   await db
     .delete(customerGroupMembers)
-    .where(
-      and(
-        eq(customerGroupMembers.groupId, groupId),
-        eq(customerGroupMembers.leadId, leadId)
-      )
-    );
+    .where(and(eq(customerGroupMembers.groupId, groupId), eq(customerGroupMembers.leadId, leadId)))
 }
 
 // GetGroupMembers :many
-export async function getGroupMembers(
-  groupId: string,
-  limit: number,
-  offset: number
-) {
+export async function getGroupMembers(groupId: string, limit: number, offset: number) {
   const result = await db
     .select({
       id: customerGroupMembers.id,
@@ -528,9 +498,9 @@ export async function getGroupMembers(
     .where(eq(customerGroupMembers.groupId, groupId))
     .orderBy(desc(customerGroupMembers.addedAt))
     .limit(limit)
-    .offset(offset);
+    .offset(offset)
 
-  return result;
+  return result
 }
 
 // CountGroupMembers :one
@@ -538,9 +508,9 @@ export async function countGroupMembers(groupId: string) {
   const result = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(customerGroupMembers)
-    .where(eq(customerGroupMembers.groupId, groupId));
+    .where(eq(customerGroupMembers.groupId, groupId))
 
-  return result[0]?.count ?? 0;
+  return result[0]?.count ?? 0
 }
 
 // GetLeadGroups :many
@@ -559,15 +529,12 @@ export async function getLeadGroups(leadId: string) {
       workspaceName: workspaces.name,
     })
     .from(customerGroupMembers)
-    .leftJoin(
-      customerGroups,
-      eq(customerGroupMembers.groupId, customerGroups.id)
-    )
+    .leftJoin(customerGroups, eq(customerGroupMembers.groupId, customerGroups.id))
     .leftJoin(workspaces, eq(customerGroups.workspaceId, workspaces.id))
     .where(eq(customerGroupMembers.leadId, leadId))
-    .orderBy(desc(customerGroupMembers.addedAt));
+    .orderBy(desc(customerGroupMembers.addedAt))
 
-  return result;
+  return result
 }
 
 // ====================================
@@ -576,36 +543,36 @@ export async function getLeadGroups(leadId: string) {
 
 // BulkAddMembers :exec
 export async function bulkAddMembers(data: {
-  groupId: string;
-  leadIds: string[];
-  addedBy?: string;
+  groupId: string
+  leadIds: string[]
+  addedBy?: string
 }) {
   // 이미 존재하는 멤버 조회 (중복 방지)
   const existing = await db
     .select({ leadId: customerGroupMembers.leadId })
     .from(customerGroupMembers)
-    .where(eq(customerGroupMembers.groupId, data.groupId));
+    .where(eq(customerGroupMembers.groupId, data.groupId))
 
-  const existingIds = new Set(existing.map((e) => e.leadId));
-  const newLeadIds = data.leadIds.filter((id) => !existingIds.has(id));
+  const existingIds = new Set(existing.map((e) => e.leadId))
+  const newLeadIds = data.leadIds.filter((id) => !existingIds.has(id))
 
   // 이미 모두 추가된 경우
   if (newLeadIds.length === 0) {
-    return 0;
+    return 0
   }
 
   const values = newLeadIds.map((leadId) => ({
     groupId: data.groupId,
     leadId,
     addedBy: data.addedBy || null,
-  }));
+  }))
 
   const result = await db
     .insert(customerGroupMembers)
     .values(values)
-    .returning({ id: customerGroupMembers.id });
+    .returning({ id: customerGroupMembers.id })
 
-  return result.length;
+  return result.length
 }
 
 // BulkRemoveMembers :exec
@@ -615,12 +582,12 @@ export async function bulkRemoveMembers(groupId: string, leadIds: string[]) {
     .where(
       and(
         eq(customerGroupMembers.groupId, groupId),
-        or(...leadIds.map((leadId) => eq(customerGroupMembers.leadId, leadId)))!
-      )
+        or(...leadIds.map((leadId) => eq(customerGroupMembers.leadId, leadId)))!,
+      ),
     )
-    .returning({ id: customerGroupMembers.id });
+    .returning({ id: customerGroupMembers.id })
 
-  return result.length;
+  return result.length
 }
 
 // ====================================
@@ -642,12 +609,12 @@ export async function getGroupMembersWithEmails(groupId: string) {
          AND ${leadContacts.isPrimary} = true 
          LIMIT 1),
         LOWER(REPLACE(${leads.companyName}, ' ', '.')) || '@example.com'
-      )`.as("primaryEmail"),
+      )`.as('primaryEmail'),
     })
     .from(customerGroupMembers)
     .innerJoin(leads, eq(customerGroupMembers.leadId, leads.id))
     .where(eq(customerGroupMembers.groupId, groupId))
-    .orderBy(leads.companyName);
+    .orderBy(leads.companyName)
 
-  return result;
+  return result
 }

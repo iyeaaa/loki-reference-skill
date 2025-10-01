@@ -1,6 +1,16 @@
-import { Calendar, Mail, Send, TestTube, Trash2, Users } from "lucide-react";
+import {
+  Building2,
+  Calendar,
+  Mail,
+  Send,
+  TestTube,
+  Trash2,
+  UserCheck,
+  Users,
+} from "lucide-react";
 import { useId, useState } from "react";
 import toast from "react-hot-toast";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,9 +21,18 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useCustomerGroupsByWorkspace } from "@/lib/api/hooks/customer-groups";
 import { useSendEmail } from "@/lib/api/hooks/emails";
+import { useSuspenseWorkspaces } from "@/lib/api/hooks/workspaces";
 import type { SendEmailRequest } from "@/lib/api/types/email";
 
 export default function EmailSendTestPage() {
@@ -74,7 +93,9 @@ export default function EmailSendTestPage() {
   const [groupSubject, setGroupSubject] = useState("");
   const [groupBodyText, setGroupBodyText] = useState("");
   const [groupBodyHtml, setGroupBodyHtml] = useState("");
-  const [groupMembers, setGroupMembers] = useState<any[]>([]);
+  const [groupMembers, setGroupMembers] = useState<
+    Array<{ id: string; name: string; email: string }>
+  >([]);
   const [isLoadingGroupMembers, setIsLoadingGroupMembers] = useState(false);
 
   // API hooks
@@ -108,7 +129,11 @@ export default function EmailSendTestPage() {
       const responseText = await response.text();
       console.log("Raw response text:", responseText);
 
-      let result;
+      let result: {
+        success?: boolean;
+        data?: Array<{ id: string; name: string; email: string }>;
+        message?: string;
+      };
       try {
         result = JSON.parse(responseText);
         console.log("Parsed API Response:", result);
@@ -129,9 +154,13 @@ export default function EmailSendTestPage() {
           result.message || "고객 그룹 멤버를 가져오는데 실패했습니다"
         );
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Failed to fetch group members:", error);
-      toast.error(`고객 그룹 멤버를 가져오는데 실패했습니다: ${error.message}`);
+      toast.error(
+        `고객 그룹 멤버를 가져오는데 실패했습니다: ${
+          error instanceof Error ? error.message : "알 수 없는 오류"
+        }`
+      );
       setGroupMembers([]);
     } finally {
       setIsLoadingGroupMembers(false);
@@ -464,9 +493,7 @@ export default function EmailSendTestPage() {
     }
 
     // 이메일 주소가 있는 멤버만 필터링
-    const membersWithEmail = groupMembers.filter(
-      (member) => member.primaryEmail
-    );
+    const membersWithEmail = groupMembers.filter((member) => member.email);
     if (membersWithEmail.length === 0) {
       toast.error(
         "선택한 고객 그룹에 유효한 이메일 주소가 있는 멤버가 없습니다"
@@ -479,7 +506,7 @@ export default function EmailSendTestPage() {
 
     for (const member of membersWithEmail) {
       const emailData: SendEmailRequest = {
-        toEmail: member.primaryEmail,
+        toEmail: member.email,
         subject: groupSubject,
         bodyText: groupBodyText || undefined,
         bodyHtml: groupBodyHtml || undefined,
@@ -491,7 +518,7 @@ export default function EmailSendTestPage() {
         successCount++;
       } catch (error) {
         failCount++;
-        console.error(`Failed to send email to ${member.primaryEmail}:`, error);
+        console.error(`Failed to send email to ${member.email}:`, error);
       }
     }
 
@@ -1018,8 +1045,7 @@ export default function EmailSendTestPage() {
                           </Badge>
                           <Badge variant="outline">
                             이메일 주소 보유:{" "}
-                            {groupMembers.filter((m) => m.primaryEmail).length}
-                            명
+                            {groupMembers.filter((m) => m.email).length}명
                           </Badge>
                         </div>
                         <div className="text-xs text-muted-foreground">

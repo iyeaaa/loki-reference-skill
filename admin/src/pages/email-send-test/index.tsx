@@ -1,38 +1,14 @@
-import {
-  Calendar,
-  Mail,
-  Send,
-  Trash2,
-  Users,
-  Building2,
-  UserCheck,
-} from "lucide-react";
-import { useId, useState } from "react";
-import toast from "react-hot-toast";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { useSendEmail } from "@/lib/api/hooks/emails";
-import { useSuspenseWorkspaces } from "@/lib/api/hooks/workspaces";
-import { useCustomerGroupsByWorkspace } from "@/lib/api/hooks/customer-groups";
-import type { SendEmailRequest } from "@/lib/api/types/email";
+import { Calendar, Mail, Send, TestTube, Trash2, Users } from "lucide-react"
+import { useId, useState } from "react"
+import toast from "react-hot-toast"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
+import { useSendEmail } from "@/lib/api/hooks/emails"
+import type { SendEmailRequest } from "@/lib/api/types/email"
 
 export default function EmailSendTestPage() {
   // Generate unique IDs for form elements
@@ -300,15 +276,47 @@ export default function EmailSendTestPage() {
       return
     }
 
-    let successCount = 0;
-    let failCount = 0;
+    // 한국 시간으로 표시 (KST = UTC+9)
+    const kstOffset = 9 * 60 * 60 * 1000
+    const scheduledKST = new Date(scheduledDate.getTime() + kstOffset)
+    const scheduledKSTString = scheduledKST.toISOString().slice(0, 19).replace("T", " ")
+
+    let successCount = 0
+    let failCount = 0
+
 
     for (const recipient of recipients) {
+      // 예약 시간 정보를 본문에 추가
+      const bodyTextWithSchedule = `${scheduleBodyText || ""}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📅 스케줄 정보
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏰ 예약 시간 (KST): ${scheduledKSTString}
+📧 수신자: ${recipient}
+
+※ 실제 발송 시간은 예약 시간 이후 30초 이내입니다.
+   (Worker 주기: 30초)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+
+      const bodyHtmlWithSchedule = scheduleBodyHtml
+        ? `${scheduleBodyHtml}
+<hr style="margin: 20px 0; border: none; border-top: 2px solid #e5e7eb;">
+<div style="background: #f9fafb; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 13px;">
+  <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px;">📅 스케줄 정보</h3>
+  <p style="margin: 5px 0;"><strong>⏰ 예약 시간 (KST):</strong> ${scheduledKSTString}</p>
+  <p style="margin: 5px 0;"><strong>📧 수신자:</strong> ${recipient}</p>
+  <p style="margin: 10px 0 0 0; font-size: 12px; color: #6b7280;">
+    ※ 실제 발송 시간은 예약 시간 이후 30초 이내입니다. (Worker 주기: 30초)
+  </p>
+</div>`
+        : undefined
+
       const emailData: SendEmailRequest = {
         toEmail: recipient,
         subject: scheduleSubject,
-        bodyText: scheduleBodyText || undefined,
-        bodyHtml: scheduleBodyHtml || undefined,
+        bodyText: bodyTextWithSchedule,
+        bodyHtml: bodyHtmlWithSchedule,
         fromName: fromName || undefined,
         scheduledAt: scheduledDate.toISOString(),
       };
@@ -335,6 +343,86 @@ export default function EmailSendTestPage() {
       setScheduleDateTime("");
     }
   };
+
+  // 30초 후 테스트 발송 (3명)
+  const handleQuickTest = async () => {
+    const testRecipients = ["wks0968@gmail.com", "admin@grinda.ai", "grindaai1@gmail.com"]
+
+    // 30초 후 시간 계산
+    const scheduledDate = new Date(Date.now() + 30 * 1000)
+    const kstOffset = 9 * 60 * 60 * 1000
+    const scheduledKST = new Date(scheduledDate.getTime() + kstOffset)
+    const scheduledKSTString = scheduledKST.toISOString().slice(0, 19).replace("T", " ")
+
+    let successCount = 0
+    let failCount = 0
+
+    toast.loading("30초 후 발송 테스트 예약 중...", { id: "quick-test" })
+
+    for (const recipient of testRecipients) {
+      const bodyText = `스케줄 이메일 발송 시스템 테스트
+
+안녕하세요,
+
+이 이메일은 스케줄 발송 시스템의 자동 테스트 이메일입니다.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📅 스케줄 정보
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏰ 예약 시간 (KST): ${scheduledKSTString}
+📧 수신자: ${recipient}
+
+※ 실제 발송 시간은 예약 시간 이후 30초 이내입니다.
+   (Worker 주기: 30초)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+감사합니다.
+`
+
+      const bodyHtml = `
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+  <h2 style="color: #1f2937;">스케줄 이메일 발송 시스템 테스트</h2>
+  <p>안녕하세요,</p>
+  <p>이 이메일은 스케줄 발송 시스템의 자동 테스트 이메일입니다.</p>
+
+  <hr style="margin: 20px 0; border: none; border-top: 2px solid #e5e7eb;">
+
+  <div style="background: #f9fafb; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 13px;">
+    <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px;">📅 스케줄 정보</h3>
+    <p style="margin: 5px 0;"><strong>⏰ 예약 시간 (KST):</strong> ${scheduledKSTString}</p>
+    <p style="margin: 5px 0;"><strong>📧 수신자:</strong> ${recipient}</p>
+    <p style="margin: 10px 0 0 0; font-size: 12px; color: #6b7280;">
+      ※ 실제 발송 시간은 예약 시간 이후 30초 이내입니다. (Worker 주기: 30초)
+    </p>
+  </div>
+
+  <p style="margin-top: 20px;">감사합니다.</p>
+</div>
+`
+
+      const emailData: SendEmailRequest = {
+        toEmail: recipient,
+        subject: `스케줄 테스트 (${scheduledKSTString} KST 발송 예정)`,
+        bodyText,
+        bodyHtml,
+        fromName: fromName || undefined,
+        scheduledAt: scheduledDate.toISOString(),
+      }
+
+      try {
+        await sendEmailMutation.mutateAsync(emailData)
+        successCount++
+      } catch (error) {
+        failCount++
+        console.error(`Failed to schedule test email to ${recipient}:`, error)
+      }
+    }
+
+    toast.success(`30초 후 테스트 발송 예약 완료!\n성공: ${successCount}건, 실패: ${failCount}건`, {
+      id: "quick-test",
+      duration: 5000,
+    })
+  }
 
   const clearScheduleForm = () => {
     setScheduleRecipients("");
@@ -412,17 +500,6 @@ export default function EmailSendTestPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            메일 발송 테스트
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            SendGrid를 통해 단일 또는 대량 이메일을 발송할 수 있습니다
-          </p>
-        </div>
-      </div>
-
       {/* 발송 설정 - 고정된 발신자 정보 표시 */}
       <Card>
         <CardHeader>
@@ -810,6 +887,35 @@ export default function EmailSendTestPage() {
                   <Trash2 className="mr-2 h-4 w-4" />
                   초기화
                 </Button>
+              </div>
+
+              {/* Quick Test Button */}
+              <div className="mt-6 pt-6 border-t">
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground">🧪 빠른 테스트</h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      3명의 테스트 수신자에게 30초 후 발송 예약을 빠르게 테스트할 수 있습니다
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleQuickTest}
+                    disabled={sendEmailMutation.isPending}
+                    variant="secondary"
+                    className="w-full"
+                  >
+                    <TestTube className="mr-2 h-4 w-4" />
+                    30초 후 테스트 발송 (3명)
+                  </Button>
+                  <div className="bg-muted/50 rounded-md p-3 text-xs space-y-1">
+                    <p className="font-medium">테스트 수신자:</p>
+                    <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                      <li>wks0968@gmail.com</li>
+                      <li>admin@grinda.ai</li>
+                      <li>grindaai1@gmail.com</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -90,20 +90,43 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
           subject: body.subject,
         })
 
-        // If scheduled, return scheduled response (but don't actually schedule)
+        // If scheduled, save to database
         if (body.scheduledAt) {
-          console.log('⏰ Scheduled email (not implemented in test mode)')
-          return {
-            success: true,
-            email: {
-              id: `test-${Date.now()}`,
-              fromEmail: fixedFromEmail,
-              toEmail: body.toEmail,
-              subject: body.subject,
-              status: 'scheduled',
-              scheduledAt: body.scheduledAt,
-            },
-            message: '이메일이 예약되었습니다 (테스트 모드).',
+          console.log('⏰ Scheduling email for:', body.scheduledAt)
+
+          try {
+            // Insert into database with 'scheduled' status
+            const [newEmail] = await db
+              .insert(emails)
+              .values({
+                workspaceId: '92df2e10-d214-4cc0-bebe-4685805c77a6', // 퓨어글로우 코스메틱
+                userEmailAccountId: 'dac512b0-3369-44af-99a6-337a4f2f4bcc', // sales@greenda.ai
+                direction: 'outbound',
+                fromEmail: fixedFromEmail,
+                toEmail: body.toEmail,
+                subject: body.subject,
+                bodyText: body.bodyText || null,
+                bodyHtml: body.bodyHtml || null,
+                ccEmails: body.ccEmails || null,
+                bccEmails: body.bccEmails || null,
+                status: 'scheduled',
+                scheduledAt: new Date(body.scheduledAt),
+                leadId: body.leadId || null,
+                sequenceId: body.sequenceId || null,
+                stepId: body.stepId || null,
+              })
+              .returning()
+
+            console.log('✅ Email scheduled successfully:', newEmail.id)
+
+            return {
+              success: true,
+              email: newEmail,
+              message: '이메일이 예약되었습니다.',
+            }
+          } catch (error: any) {
+            console.error('❌ Failed to schedule email:', error)
+            throw new Error('이메일 예약 중 오류가 발생했습니다.')
           }
         }
 

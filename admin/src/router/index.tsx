@@ -6,6 +6,7 @@ import RootLayout from "../layouts/RootLayout"
 import CampaignsPage from "../pages/campaigns"
 import CustomerGroupsPage from "../pages/customer-groups"
 import DashboardPage from "../pages/dashboard/DashboardPage"
+import EmailSendTestPage from "../pages/email-send-test"
 import EmailTemplatesPage from "../pages/email-templates"
 import LoginPage from "../pages/LoginPage"
 import LeadsPage from "../pages/leads"
@@ -84,6 +85,10 @@ export const router = createBrowserRouter([
           {
             path: "users",
             element: <UsersPage />,
+          },
+          {
+            path: "email-send-test",
+            element: <EmailSendTestPage />,
           },
           {
             path: "settings",

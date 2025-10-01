@@ -13,10 +13,10 @@ import {
 } from "@/lib/api/hooks/sequences"
 import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence"
 import { BulkActionModal } from "./BulkActionModal"
+import { SequenceDetailTabs } from "./SequenceDetailTabs"
 import { SequenceFilters } from "./SequenceFilters"
 import { SequenceForm } from "./SequenceForm"
 import { SequencesTableWithPagination } from "./SequencesTableWithPagination"
-import { SequenceDetailTabs } from "./SequenceDetailTabs"
 
 export default function SequencesPage() {
   const [searchInput, setSearchInput] = useState("")

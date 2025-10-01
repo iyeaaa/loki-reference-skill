@@ -1,13 +1,14 @@
-import { Users, Mail, AlertCircle } from "lucide-react"
-import { useState, useEffect } from "react"
+import { AlertCircle, Mail, Users } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import {
@@ -17,11 +18,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { useBulkEnrollWithScheduling } from "@/lib/api/hooks/sequences"
 import { useCustomerGroupMembers } from "@/lib/api/hooks/customer-groups"
 import { useEmailAccountsByWorkspace } from "@/lib/api/hooks/email-accounts"
+import { useBulkEnrollWithScheduling } from "@/lib/api/hooks/sequences"
+import type { CustomerGroupMember } from "@/lib/api/types/customer-group"
 import type { Sequence } from "@/lib/api/types/sequence"
+
+// Extended type to include joined lead data
+interface CustomerGroupMemberWithLead extends CustomerGroupMember {
+  leadCompanyName?: string
+  leadBusinessType?: string
+}
+
+interface Lead {
+  id: string
+  companyName?: string
+  businessType?: string
+}
 
 interface EnrollLeadsDialogProps {
   open: boolean
@@ -46,13 +59,13 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
     Boolean(sequence.customerGroupId)
   )
 
-  const members = membersData?.members || []
-  const leads = members.map((member: any) => ({
+  const members = (membersData?.members || []) as CustomerGroupMemberWithLead[]
+  const leads: Lead[] = members.map((member) => ({
     id: member.leadId,
     companyName: member.leadCompanyName,
     businessType: member.leadBusinessType,
   }))
-  const activeEmailAccounts = emailAccounts.filter((acc: any) => acc.status === "active")
+  const activeEmailAccounts = emailAccounts.filter((acc) => acc.status === "active")
 
   // 첫 번째 활성 이메일 계정 자동 선택
   useEffect(() => {
@@ -78,7 +91,7 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
       {
         sequenceId: sequence.id,
         data: {
-          leadIds: leads.map((lead: any) => lead.id),
+          leadIds: leads.map((lead) => lead.id),
           userEmailAccountId: selectedEmailAccount,
         },
       },
@@ -164,7 +177,7 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
                 </p>
               ) : (
                 <div className="max-h-40 overflow-y-auto space-y-2">
-                  {leads.slice(0, 10).map((lead: any) => (
+                  {leads.slice(0, 10).map((lead) => (
                     <div
                       key={lead.id}
                       className="text-sm flex items-center justify-between py-1 border-b last:border-0"
@@ -206,11 +219,11 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
                   <SelectValue placeholder="이메일 계정 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  {activeEmailAccounts.map((account: any) => (
+                  {activeEmailAccounts.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4" />
-                        {account.email}
+                        {account.emailAddress}
                       </div>
                     </SelectItem>
                   ))}

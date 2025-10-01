@@ -1,5 +1,6 @@
 import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
 import { Elysia, t } from 'elysia'
+import { config } from '../config'
 import { db } from '../db/index'
 import { userEmailAccounts } from '../db/schema/email-accounts'
 import { emailEvents, emails } from '../db/schema/emails'
@@ -45,14 +46,13 @@ const emailSchema = t.Object({
 
 // Send Email Schema
 const sendEmailSchema = t.Object({
-  workspaceId: t.String({ format: 'uuid' }),
-  userEmailAccountId: t.String({ format: 'uuid' }),
   toEmail: t.String({ format: 'email', maxLength: 255 }),
   subject: t.String({ minLength: 1, maxLength: 500 }),
   bodyText: t.Optional(t.String()),
   bodyHtml: t.Optional(t.String()),
   ccEmails: t.Optional(t.Array(t.String({ format: 'email' }))),
   bccEmails: t.Optional(t.Array(t.String({ format: 'email' }))),
+  fromName: t.Optional(t.String({ maxLength: 255 })),
   leadId: t.Optional(t.String({ format: 'uuid' })),
   sequenceId: t.Optional(t.String({ format: 'uuid' })),
   stepId: t.Optional(t.String({ format: 'uuid' })),
@@ -60,87 +60,57 @@ const sendEmailSchema = t.Object({
   inReplyTo: t.Optional(t.String()),
   references: t.Optional(t.Array(t.String())),
   scheduledAt: t.Optional(t.String()), // ISO 8601 datetime for scheduled sending
+  // Optional fields for backward compatibility
+  workspaceId: t.Optional(t.String({ format: 'uuid' })),
+  userEmailAccountId: t.Optional(t.String({ format: 'uuid' })),
 })
 
 export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
-  // Send email via SendGrid
+  // Send email via SendGrid (Simple test mode - no DB)
   .post(
     '/send',
     async ({ body, set }) => {
       try {
-        // Get email account details
-        const [emailAccount] = await db
-          .select({
-            id: userEmailAccounts.id,
-            emailAddress: userEmailAccounts.emailAddress,
-            displayName: userEmailAccounts.displayName,
-            apiKey: userEmailAccounts.apiKey,
-            status: userEmailAccounts.status,
-            workspaceId: userEmailAccounts.workspaceId,
-          })
-          .from(userEmailAccounts)
-          .where(eq(userEmailAccounts.id, body.userEmailAccountId))
-          .limit(1)
+        // Use fixed sender configuration from config
+        const fixedFromEmail = config.sendgrid.fromEmail
+        const fixedFromName = body.fromName || config.sendgrid.fromName
+        const fixedApiKey = config.sendgrid.apiKey
 
-        if (!emailAccount) {
-          set.status = 404
-          return errorResponse('이메일 계정을 찾을 수 없습니다.', ResponseCode.NOT_FOUND)
+        if (!fixedApiKey) {
+          set.status = 500
+          return errorResponse(
+            'SendGrid API Key가 설정되지 않았습니다.',
+            ResponseCode.INTERNAL_SERVER_ERROR,
+          )
         }
 
-        if (emailAccount.status !== 'active') {
-          set.status = 400
-          return errorResponse('이메일 계정이 활성화되어 있지 않습니다.', ResponseCode.BAD_REQUEST)
-        }
+        console.log('📧 Sending email:', {
+          from: `${fixedFromName} <${fixedFromEmail}>`,
+          to: body.toEmail,
+          subject: body.subject,
+        })
 
-        if (emailAccount.workspaceId !== body.workspaceId) {
-          set.status = 403
-          return errorResponse('워크스페이스 권한이 없습니다.', ResponseCode.FORBIDDEN)
-        }
-
-        // Create email record in DB with 'queued' status
-        const [newEmail] = await db
-          .insert(emails)
-          .values({
-            workspaceId: body.workspaceId,
-            userEmailAccountId: body.userEmailAccountId,
-            leadId: body.leadId || null,
-            sequenceId: body.sequenceId || null,
-            stepId: body.stepId || null,
-            direction: 'outbound',
-            fromEmail: emailAccount.emailAddress,
-            toEmail: body.toEmail,
-            ccEmails: body.ccEmails || null,
-            bccEmails: body.bccEmails || null,
-            subject: body.subject,
-            bodyText: body.bodyText || null,
-            bodyHtml: body.bodyHtml || null,
-            status: body.scheduledAt ? 'scheduled' : 'queued',
-            scheduledAt: body.scheduledAt ? new Date(body.scheduledAt) : null,
-            inReplyTo: body.inReplyTo || null,
-          })
-          .returning({
-            id: emails.id,
-            workspaceId: emails.workspaceId,
-            fromEmail: emails.fromEmail,
-            toEmail: emails.toEmail,
-            subject: emails.subject,
-            status: emails.status,
-            createdAt: emails.createdAt,
-          })
-
-        // If scheduled, don't send now
+        // If scheduled, return scheduled response (but don't actually schedule)
         if (body.scheduledAt) {
+          console.log('⏰ Scheduled email (not implemented in test mode)')
           return {
             success: true,
-            email: newEmail,
-            message: '이메일이 예약되었습니다.',
+            email: {
+              id: `test-${Date.now()}`,
+              fromEmail: fixedFromEmail,
+              toEmail: body.toEmail,
+              subject: body.subject,
+              status: 'scheduled',
+              scheduledAt: body.scheduledAt,
+            },
+            message: '이메일이 예약되었습니다 (테스트 모드).',
           }
         }
 
-        // Send email via SendGrid
+        // Send email via SendGrid directly
         const sendResult = await emailService.sendEmail({
-          fromEmail: emailAccount.emailAddress,
-          fromName: emailAccount.displayName || emailAccount.emailAddress,
+          fromEmail: fixedFromEmail,
+          fromName: fixedFromName,
           toEmail: body.toEmail,
           subject: body.subject,
           bodyText: body.bodyText,
@@ -150,52 +120,27 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
           replyTo: body.replyTo,
           inReplyTo: body.inReplyTo,
           references: body.references,
-          apiKey: emailAccount.apiKey,
+          apiKey: fixedApiKey,
         })
 
-        // Update email record with send result
+        // Return result without DB operations
         if (sendResult.success) {
-          await db
-            .update(emails)
-            .set({
-              status: 'sent',
-              sentAt: new Date(),
-              sendgridMessageId: sendResult.messageId || null,
-              updatedAt: new Date(),
-            })
-            .where(eq(emails.id, newEmail.id))
-
-          // Update sent count for email account
-          await db
-            .update(userEmailAccounts)
-            .set({
-              dailySentCount: sql`${userEmailAccounts.dailySentCount} + 1`,
-              monthlySentCount: sql`${userEmailAccounts.monthlySentCount} + 1`,
-              updatedAt: new Date(),
-            })
-            .where(eq(userEmailAccounts.id, body.userEmailAccountId))
-
+          console.log('✅ Email sent successfully:', sendResult.messageId)
           return {
             success: true,
             email: {
-              ...newEmail,
+              id: `test-${Date.now()}`,
+              fromEmail: fixedFromEmail,
+              toEmail: body.toEmail,
+              subject: body.subject,
               status: 'sent',
-              sentAt: new Date(),
+              sentAt: new Date().toISOString(),
               sendgridMessageId: sendResult.messageId,
             },
             message: '이메일이 발송되었습니다.',
           }
         } else {
-          // Update email record with failure
-          await db
-            .update(emails)
-            .set({
-              status: 'failed',
-              errorMessage: sendResult.error || '발송 실패',
-              updatedAt: new Date(),
-            })
-            .where(eq(emails.id, newEmail.id))
-
+          console.error('❌ Email send failed:', sendResult.error)
           set.status = 500
           return errorResponse(
             sendResult.error || '이메일 발송에 실패했습니다.',
@@ -203,7 +148,7 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
           )
         }
       } catch (error: any) {
-        console.error('이메일 발송 중 오류:', error)
+        console.error('❌ 이메일 발송 중 오류:', error)
         set.status = 500
         return errorResponse(
           '이메일 발송 중 오류가 발생했습니다.',

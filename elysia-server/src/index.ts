@@ -25,6 +25,7 @@ import { workflowExecutionRoutes } from './routes/workflow-execution.routes'
 import { adminWorkspaceRoutes, workspaceRoutes } from './routes/workspaces.routes'
 import { startEmailSequenceWorker } from './workers/email-sequence-worker'
 import { startScheduledEmailWorker } from './workers/scheduled-email-worker'
+import { startWorkflowExecutionWorker } from './workers/workflow-execution-worker'
 
 // Initialize database
 migrateDatabase().catch(console.error)

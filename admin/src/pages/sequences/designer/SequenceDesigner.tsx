@@ -164,16 +164,6 @@ export default function SequenceDesigner() {
           onDelete: node.type !== "start" ? () => deleteNode(node.id) : undefined,
           onUpdate: (data: unknown) => updateNodeData(node.id, data),
           onManageEmails: node.type === "emailDraft" ? () => handleManageEmails(node) : undefined,
-          // TODO: 백엔드 API 준비 후 실시간 통계 로드
-          // 임시 목업 데이터 (개발 중)
-          stats:
-            node.type === "timer"
-              ? {
-                  sentCount: 150,
-                  repliedCount: 45,
-                  waitingCount: 85,
-                }
-              : undefined,
         },
       })),
     [nodes, id, addNode, deleteNode, updateNodeData, handleManageEmails]
@@ -185,10 +175,23 @@ export default function SequenceDesigner() {
     const workflowData: WorkflowData = {
       nodes: nodes.map((node) => ({
         ...node,
+        // 모든 data 필드 보존
         data: {
+          ...node.data,
+          // 필요한 필드만 명시적으로 저장 (callbacks 등 제거)
           subject: node.data.subject,
           bodyText: node.data.bodyText,
           delayDays: node.data.delayDays,
+          generationMode: node.data.generationMode,
+          aiPrompt: node.data.aiPrompt,
+          useAI: node.data.useAI,
+          // callbacks 제거
+          onAddNode: undefined,
+          onDelete: undefined,
+          onUpdate: undefined,
+          onManageEmails: undefined,
+          nodeId: undefined,
+          sequenceId: undefined,
         },
       })),
       edges,
@@ -208,6 +211,17 @@ export default function SequenceDesigner() {
       toast.error("워크플로우 저장에 실패했습니다")
     }
   }, [id, nodes, edges, updateSequence])
+
+  // 자동저장 (변경 후 3초 후 자동 저장)
+  useEffect(() => {
+    if (!hasChanges || !id) return
+
+    const timer = setTimeout(() => {
+      handleSave()
+    }, 3000) // 3초 debounce
+
+    return () => clearTimeout(timer)
+  }, [hasChanges, id, handleSave])
 
   if (isLoading) {
     return (
@@ -281,6 +295,12 @@ export default function SequenceDesigner() {
             <div className="w-3 h-3 bg-orange-500 rounded-full" />
             <span>타이머</span>
           </div>
+          {hasChanges && (
+            <div className="flex items-center gap-2 ml-auto">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+              <span className="text-xs text-blue-600">3초 후 자동 저장...</span>
+            </div>
+          )}
         </div>
       </Card>
 

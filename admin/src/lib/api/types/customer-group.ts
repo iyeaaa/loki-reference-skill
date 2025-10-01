@@ -14,6 +14,7 @@ export interface CustomerGroup {
   workspaceName?: string
   createdByUsername?: string
   createdByEmail?: string
+  leadCount?: number
 }
 
 export interface CustomerGroupMember {

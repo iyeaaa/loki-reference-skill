@@ -21,14 +21,17 @@ import { adminSequenceRoutes, sequenceRoutes } from './routes/sequences.routes'
 import { adminUserRoutes, userRoutes } from './routes/users.routes'
 import { webhookRoutes } from './routes/webhook.routes'
 import { workflowEmailRoutes } from './routes/workflow-emails.routes'
+import { workflowExecutionRoutes } from './routes/workflow-execution.routes'
 import { adminWorkspaceRoutes, workspaceRoutes } from './routes/workspaces.routes'
 import { startEmailSequenceWorker } from './workers/email-sequence-worker'
+import { startWorkflowExecutionWorker } from './workers/workflow-execution-worker'
 
 // Initialize database
 migrateDatabase().catch(console.error)
 
-// Start email sequence worker
-startEmailSequenceWorker()
+// Start workers
+startEmailSequenceWorker() // 구 기능 (sequence_steps)
+startWorkflowExecutionWorker() // 신 기능 (workflow 기반)
 
 const app = new Elysia()
   .use(simpleLogger) // Apply logger first
@@ -76,6 +79,7 @@ const app = new Elysia()
   .use(sequenceRoutes)
   .use(adminSequenceRoutes)
   .use(workflowEmailRoutes)
+  .use(workflowExecutionRoutes)
   .use(activityLogRoutes)
 
   .listen(config.port)

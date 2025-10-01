@@ -49,9 +49,11 @@ export const sequences = pgTable(
     workspaceId: uuid('workspace_id')
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
-    customerGroupId: uuid('customer_group_id').references(() => customerGroups.id, {
-      onDelete: 'set null',
-    }),
+    customerGroupId: uuid('customer_group_id')
+      .references(() => customerGroups.id, {
+        onDelete: 'set null',
+      })
+      .notNull(), // 워크플로우 실행을 위해 필수
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
     workflowData: text('workflow_data'), // JSON data for React Flow workflow

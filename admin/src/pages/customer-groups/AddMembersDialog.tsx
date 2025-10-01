@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { customerGroupsApi } from "@/lib/api/services/customer-groups"
+import { useBulkAddGroupMembers, useCustomerGroupMembers } from "@/lib/api/hooks/customer-groups"
 import { leadsApi } from "@/lib/api/services/leads"
 import type { CustomerGroup } from "@/lib/api/types/customer-group"
 import type { Lead } from "@/lib/api/types/lead"
@@ -37,9 +37,18 @@ export function AddMembersDialog({
   const [loading, setLoading] = useState(false)
   const [searchInput, setSearchInput] = useState("")
   const [selectedLeads, setSelectedLeads] = useState<string[]>([])
-  const [adding, setAdding] = useState(false)
 
   const limit = 10
+  const bulkAddMembers = useBulkAddGroupMembers()
+
+  // 현재 그룹 멤버 조회 (이미 추가된 리드 제외용)
+  const { data: membersData } = useCustomerGroupMembers(
+    customerGroup?.id || "",
+    1,
+    1000, // 충분히 큰 수로 모든 멤버 조회
+    !!customerGroup?.id && isOpen
+  )
+  const existingMemberLeadIds = new Set(membersData?.members.map((m) => m.leadId) || [])
 
   const loadLeads = useCallback(async () => {
     if (!customerGroup?.workspaceId) return
@@ -91,26 +100,29 @@ export function AddMembersDialog({
   const handleAddMembers = async () => {
     if (!customerGroup || selectedLeads.length === 0) return
 
-    setAdding(true)
     try {
-      await customerGroupsApi.bulkAddMembers({
+      await bulkAddMembers.mutateAsync({
         groupId: customerGroup.id,
         leadIds: selectedLeads,
       })
 
-      toast.success(`${selectedLeads.length}명의 고객이 그룹에 추가되었습니다.`)
       setSelectedLeads([])
       onSuccess?.()
       onClose()
     } catch (error) {
       console.error("Failed to add members:", error)
-      toast.error("고객 추가에 실패했습니다.")
-    } finally {
-      setAdding(false)
+      // 에러는 useBulkAddGroupMembers 훅에서 처리됨
     }
   }
 
+  // 이미 그룹에 속한 리드 제외 & 검색 필터
   const filteredLeads = leads.filter((lead) => {
+    // 이미 그룹 멤버인 경우 제외
+    if (existingMemberLeadIds.has(lead.id)) {
+      return false
+    }
+
+    // 검색 필터
     if (!searchInput) return true
     const searchLower = searchInput.toLowerCase()
     return (
@@ -135,8 +147,14 @@ export function AddMembersDialog({
         </DialogHeader>
 
         <div className="overflow-y-auto max-h-[calc(90vh-12rem)]">
-          {/* Search */}
-          <div className="mb-4">
+          {/* Info & Search */}
+          <div className="mb-4 space-y-3">
+            {existingMemberLeadIds.size > 0 && (
+              <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                💡 현재 그룹에 {existingMemberLeadIds.size}명의 고객이 이미 있습니다. 이미 추가된
+                고객은 목록에서 제외됩니다.
+              </div>
+            )}
             <div className="relative w-full md:w-[400px]">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -293,11 +311,14 @@ export function AddMembersDialog({
 
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button variant="outline" onClick={onClose} disabled={adding}>
+          <Button variant="outline" onClick={onClose} disabled={bulkAddMembers.isPending}>
             취소
           </Button>
-          <Button onClick={handleAddMembers} disabled={selectedLeads.length === 0 || adding}>
-            {adding ? "추가 중..." : `${selectedLeads.length}명 추가`}
+          <Button
+            onClick={handleAddMembers}
+            disabled={selectedLeads.length === 0 || bulkAddMembers.isPending}
+          >
+            {bulkAddMembers.isPending ? "추가 중..." : `${selectedLeads.length}명 추가`}
           </Button>
         </div>
       </DialogContent>

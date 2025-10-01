@@ -314,6 +314,11 @@ export async function getGroupsByWorkspace(workspaceId: string) {
       updatedAt: customerGroups.updatedAt,
       createdByUsername: users.username,
       createdByEmail: users.email,
+      leadCount: sql<number>`(
+        SELECT COUNT(*)::int 
+        FROM customer_group_members 
+        WHERE group_id = ${customerGroups.id}
+      )`,
     })
     .from(customerGroups)
     .leftJoin(users, eq(customerGroups.createdBy, users.id))
@@ -513,7 +518,21 @@ export async function bulkAddMembers(data: {
   leadIds: string[];
   addedBy?: string;
 }) {
-  const values = data.leadIds.map((leadId) => ({
+  // 이미 존재하는 멤버 조회 (중복 방지)
+  const existing = await db
+    .select({ leadId: customerGroupMembers.leadId })
+    .from(customerGroupMembers)
+    .where(eq(customerGroupMembers.groupId, data.groupId));
+
+  const existingIds = new Set(existing.map((e) => e.leadId));
+  const newLeadIds = data.leadIds.filter((id) => !existingIds.has(id));
+
+  // 이미 모두 추가된 경우
+  if (newLeadIds.length === 0) {
+    return 0;
+  }
+
+  const values = newLeadIds.map((leadId) => ({
     groupId: data.groupId,
     leadId,
     addedBy: data.addedBy || null,

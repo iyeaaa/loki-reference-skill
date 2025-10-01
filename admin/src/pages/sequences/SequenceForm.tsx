@@ -1,4 +1,5 @@
 import { useId, useState } from "react"
+import toast from "react-hot-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -41,6 +42,13 @@ export function SequenceForm({ sequence, isEdit = false, onSave, onCancel }: Seq
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    // 고객그룹 필수 검증
+    if (!formData.customerGroupId) {
+      toast.error("워크플로우 실행을 위해 고객그룹을 선택해주세요")
+      return
+    }
+
     onSave(formData)
   }
 
@@ -97,16 +105,20 @@ export function SequenceForm({ sequence, isEdit = false, onSave, onCancel }: Seq
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="customerGroup">고객그룹</Label>
+        <Label htmlFor="customerGroup" className="flex items-center gap-2">
+          고객그룹
+          <span className="text-red-500">*</span>
+        </Label>
         <Select
           value={formData.customerGroupId}
           onValueChange={(value) => setFormData({ ...formData, customerGroupId: value })}
           disabled={!formData.workspaceId}
+          required
         >
           <SelectTrigger>
             <SelectValue
               placeholder={
-                formData.workspaceId ? "고객그룹 선택" : "먼저 워크스페이스를 선택하세요"
+                formData.workspaceId ? "고객그룹 선택 (필수)" : "먼저 워크스페이스를 선택하세요"
               }
             />
           </SelectTrigger>
@@ -121,12 +133,15 @@ export function SequenceForm({ sequence, isEdit = false, onSave, onCancel }: Seq
             <SelectContent>
               {customerGroups.map((group) => (
                 <SelectItem key={group.id} value={group.id}>
-                  {group.name}
+                  {group.name} ({group.leadCount || 0}개 리드)
                 </SelectItem>
               ))}
             </SelectContent>
           )}
         </Select>
+        <p className="text-xs text-gray-500">
+          💡 워크플로우 실행을 위해 고객그룹을 반드시 선택해야 합니다
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -145,11 +160,16 @@ export function SequenceForm({ sequence, isEdit = false, onSave, onCancel }: Seq
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="draft">초안</SelectItem>
-            <SelectItem value="active">활성</SelectItem>
+            {isEdit && <SelectItem value="active">활성</SelectItem>}
             <SelectItem value="paused">일시정지</SelectItem>
-            <SelectItem value="archived">보관됨</SelectItem>
+            {isEdit && <SelectItem value="archived">보관됨</SelectItem>}
           </SelectContent>
         </Select>
+        {!isEdit && (
+          <p className="text-xs text-gray-500">
+            💡 시퀀스 생성 후 워크플로우를 설정하고 활성화할 수 있습니다
+          </p>
+        )}
       </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t">

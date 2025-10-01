@@ -1,6 +1,6 @@
 import { Handle, Position } from "@xyflow/react"
 import { CheckCircle, Clock, Mail, Plus, Timer, Trash2 } from "lucide-react"
-import { type FC, useId, useState } from "react"
+import { type FC, useEffect, useId, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useNodeStatistics } from "@/lib/api/hooks/workflow-execution"
 
 interface TimerNodeData {
   delayDays?: number
@@ -36,6 +37,18 @@ export const TimerNode: FC<TimerNodeProps> = ({ data }) => {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [delayDays, setDelayDays] = useState(data.delayDays?.toString() || "1")
   const delayDaysId = useId()
+
+  // 실시간 통계 로드 (30초마다 자동 갱신)
+  const { data: stats } = useNodeStatistics(
+    data.sequenceId || "",
+    data.nodeId || "",
+    !!(data.sequenceId && data.nodeId)
+  )
+
+  // data가 변경되면 로컬 state 업데이트
+  useEffect(() => {
+    setDelayDays(data.delayDays?.toString() || "1")
+  }, [data.delayDays])
 
   const handleAddNode = (type: string) => {
     data.onAddNode?.(type)
@@ -89,7 +102,7 @@ export const TimerNode: FC<TimerNodeProps> = ({ data }) => {
             <div className="text-xs text-gray-600 mb-2">답장이 없으면 다음 노드 실행</div>
 
             {/* 통계 표시 */}
-            {data.stats && (
+            {stats && (
               <div className="space-y-1 pt-2 border-t border-orange-200">
                 <div className="text-xs font-semibold text-gray-700 mb-2">📊 실시간 통계</div>
                 <div className="flex items-center justify-between text-xs">
@@ -97,21 +110,21 @@ export const TimerNode: FC<TimerNodeProps> = ({ data }) => {
                     <Mail className="h-3 w-3" />
                     <span>발송</span>
                   </div>
-                  <span className="font-semibold">{data.stats.sentCount || 0}</span>
+                  <span className="font-semibold">{stats.sentCount || 0}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1 text-green-600">
                     <CheckCircle className="h-3 w-3" />
                     <span>답장</span>
                   </div>
-                  <span className="font-semibold">{data.stats.repliedCount || 0}</span>
+                  <span className="font-semibold">{stats.repliedCount || 0}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1 text-orange-600">
                     <Timer className="h-3 w-3" />
                     <span>대기</span>
                   </div>
-                  <span className="font-semibold">{data.stats.waitingCount || 0}</span>
+                  <span className="font-semibold">{stats.waitingCount || 0}</span>
                 </div>
               </div>
             )}

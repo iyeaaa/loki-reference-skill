@@ -1,6 +1,6 @@
 import { Handle, Position } from "@xyflow/react"
 import { Mail, Plus, Trash2 } from "lucide-react"
-import { type FC, useId, useState } from "react"
+import { type FC, useEffect, useId, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
@@ -47,6 +47,15 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
   const [bodyText, setBodyText] = useState(data.bodyText || "")
   const [aiPrompt, setAiPrompt] = useState(data.aiPrompt || "")
 
+  // data가 변경되면 로컬 state 업데이트
+  useEffect(() => {
+    const mode = data.generationMode === "ai" ? "ai" : "manual"
+    setGenerationMode(mode)
+    setSubject(data.subject || "")
+    setBodyText(data.bodyText || "")
+    setAiPrompt(data.aiPrompt || "")
+  }, [data.subject, data.bodyText, data.aiPrompt, data.generationMode])
+
   const modeAiId = useId()
   const modeManualId = useId()
   const aiPromptId = useId()
@@ -61,7 +70,7 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
   const handleSave = () => {
     if (generationMode === "ai") {
       data.onUpdate?.({
-        subject: aiPrompt,
+        subject: aiPrompt, // AI 모드에서는 subject에도 프롬프트 저장
         bodyText: "",
         generationMode: "ai",
         aiPrompt,
@@ -72,6 +81,7 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
         subject,
         bodyText,
         generationMode: "manual",
+        aiPrompt: "", // manual 모드에서는 aiPrompt 초기화
         useAI: false,
       })
     }

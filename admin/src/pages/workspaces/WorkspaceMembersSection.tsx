@@ -1,5 +1,4 @@
 import { Trash2, UserPlus } from "lucide-react"
-import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -24,16 +23,18 @@ import {
   useUpdateMemberStatus,
   useWorkspaceMembers,
 } from "@/lib/api/hooks/workspaces"
-import { AddMemberDialog } from "./AddMemberDialog"
 
 interface WorkspaceMembersSectionProps {
   workspaceId: string
   isEdit: boolean
+  onAddMemberClick: () => void
 }
 
-export function WorkspaceMembersSection({ workspaceId, isEdit }: WorkspaceMembersSectionProps) {
-  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false)
-
+export function WorkspaceMembersSection({
+  workspaceId,
+  isEdit,
+  onAddMemberClick,
+}: WorkspaceMembersSectionProps) {
   const { data: members = [], isLoading } = useWorkspaceMembers(workspaceId, isEdit)
   const updateMemberRole = useUpdateMemberRole()
   const updateMemberStatus = useUpdateMemberStatus()
@@ -121,7 +122,7 @@ export function WorkspaceMembersSection({ workspaceId, isEdit }: WorkspaceMember
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">워크스페이스 멤버</h3>
-        <Button size="sm" onClick={() => setShowAddMemberDialog(true)}>
+        <Button type="button" size="sm" onClick={onAddMemberClick}>
           <UserPlus className="h-4 w-4 mr-1" />
           멤버 추가
         </Button>
@@ -208,6 +209,7 @@ export function WorkspaceMembersSection({ workspaceId, isEdit }: WorkspaceMember
                   </TableCell>
                   <TableCell>
                     <Button
+                      type="button"
                       size="sm"
                       variant="ghost"
                       onClick={() => handleRemoveMember(member.id, member.username || "")}
@@ -222,13 +224,6 @@ export function WorkspaceMembersSection({ workspaceId, isEdit }: WorkspaceMember
           </Table>
         </Card>
       )}
-
-      <AddMemberDialog
-        workspaceId={workspaceId}
-        existingMemberUserIds={members.map((m) => m.userId)}
-        isOpen={showAddMemberDialog}
-        onClose={() => setShowAddMemberDialog(false)}
-      />
     </div>
   )
 }

@@ -24,7 +24,7 @@ import { workflowEmailRoutes } from './routes/workflow-emails.routes'
 import { workflowExecutionRoutes } from './routes/workflow-execution.routes'
 import { adminWorkspaceRoutes, workspaceRoutes } from './routes/workspaces.routes'
 import { startEmailSequenceWorker } from './workers/email-sequence-worker'
-import { startWorkflowExecutionWorker } from './workers/workflow-execution-worker'
+import { startScheduledEmailWorker } from './workers/scheduled-email-worker'
 
 // Initialize database
 migrateDatabase().catch(console.error)
@@ -32,6 +32,9 @@ migrateDatabase().catch(console.error)
 // Start workers
 startEmailSequenceWorker() // 구 기능 (sequence_steps)
 startWorkflowExecutionWorker() // 신 기능 (workflow 기반)
+
+// Start scheduled email worker
+startScheduledEmailWorker()
 
 const app = new Elysia()
   .use(simpleLogger) // Apply logger first

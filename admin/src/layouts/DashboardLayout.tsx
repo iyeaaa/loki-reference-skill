@@ -171,6 +171,8 @@ const getPageName = (pathname: string) => {
       return "워크스페이스 관리"
     case "/users":
       return "유저 관리"
+    case "/email-send-test":
+      return "메일 발송 테스트"
     case "/settings":
       return "설정"
     default:

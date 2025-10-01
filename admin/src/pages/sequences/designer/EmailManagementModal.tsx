@@ -16,6 +16,7 @@ import { useSequence } from "@/lib/api/hooks/sequences"
 import {
   useGenerateAllEmails,
   useGeneratedEmails,
+  useGenerationProgress,
   useRegenerateEmail,
   useUpdateGeneratedEmail,
 } from "@/lib/api/hooks/workflow-emails"
@@ -49,11 +50,12 @@ export function EmailManagementModal({
   // API Hooks
   const { data: sequence } = useSequence(sequenceId)
   const { data: emails = [], isLoading } = useGeneratedEmails(sequenceId, nodeId, open)
+  const { data: progress } = useGenerationProgress(sequenceId, nodeId, open)
   const generateAllMutation = useGenerateAllEmails()
   const regenerateMutation = useRegenerateEmail()
 
-  const isGenerating = generateAllMutation.isPending
-  const generationProgress = isGenerating ? 50 : 0 // TODO: 실제 진행률 계산
+  const isGenerating = progress?.status === "generating" || generateAllMutation.isPending
+  const generationProgress = progress?.percentage || 0
 
   const handleGenerateAll = async () => {
     try {
@@ -206,6 +208,7 @@ export function EmailManagementModal({
                 onClick={handleGenerateAll}
                 disabled={isGenerating || !sequence?.customerGroupId}
                 className="flex-1"
+                title={!sequence?.customerGroupId ? "시퀀스에 고객그룹을 먼저 설정해주세요" : ""}
               >
                 {isGenerating ? (
                   <>
@@ -216,7 +219,7 @@ export function EmailManagementModal({
                   <>
                     <Mail className="h-4 w-4 mr-2" />
                     {!sequence?.customerGroupId
-                      ? "고객그룹 미지정"
+                      ? "⚠️ 고객그룹 미지정"
                       : totalEmails > 0
                         ? "전체 재생성"
                         : "모든 연락처에 대해 생성"}
@@ -226,13 +229,18 @@ export function EmailManagementModal({
             </div>
 
             {/* 진행 상황 */}
-            {isGenerating && (
+            {isGenerating && progress && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span>생성 진행 중...</span>
+                  <span>
+                    생성 진행 중... ({progress.generated + progress.failed}/{progress.total})
+                  </span>
                   <span>{generationProgress}%</span>
                 </div>
                 <Progress value={generationProgress} />
+                {progress.failed > 0 && (
+                  <div className="text-xs text-red-600">{progress.failed}개 실패</div>
+                )}
               </div>
             )}
 

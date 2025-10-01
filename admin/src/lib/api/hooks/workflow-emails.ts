@@ -10,6 +10,8 @@ export const workflowEmailKeys = {
     [...workflowEmailKeys.all, "node", sequenceId, nodeId] as const,
   detail: (sequenceId: string, nodeId: string, emailId: string) =>
     [...workflowEmailKeys.all, "detail", sequenceId, nodeId, emailId] as const,
+  progress: (sequenceId: string, nodeId: string) =>
+    [...workflowEmailKeys.all, "progress", sequenceId, nodeId] as const,
 }
 
 // Queries
@@ -149,5 +151,33 @@ export function useRegenerateEmail() {
     onError: (error: Error) => {
       toast.error(error.message || "이메일 재생성에 실패했습니다")
     },
+  })
+}
+
+// Get generation progress
+export function useGenerationProgress(sequenceId: string, nodeId: string, enabled = true) {
+  const queryClient = useQueryClient()
+
+  return useQuery({
+    queryKey: workflowEmailKeys.progress(sequenceId, nodeId),
+    queryFn: () => workflowEmailsApi.getProgress(sequenceId, nodeId),
+    enabled: enabled && !!sequenceId && !!nodeId,
+    refetchInterval: (query) => {
+      const data = query.state.data
+      // 생성 중이면 2초마다 갱신
+      if (data?.status === "generating") {
+        return 2000
+      }
+      // 완료되면 갱신 중지
+      if (data?.status === "completed") {
+        // 이메일 목록 갱신
+        queryClient.invalidateQueries({
+          queryKey: workflowEmailKeys.node(sequenceId, nodeId),
+        })
+        return false
+      }
+      return false
+    },
+    staleTime: 1000,
   })
 }

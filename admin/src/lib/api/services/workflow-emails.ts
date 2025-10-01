@@ -6,6 +6,19 @@ import type {
   WorkflowGeneratedEmail,
 } from "../types/workflow-email"
 
+export interface GenerationProgress {
+  sequenceId: string
+  nodeId: string
+  total: number
+  generated: number
+  failed: number
+  percentage: number
+  status: 'idle' | 'generating' | 'completed' | 'failed'
+  startedAt?: string
+  completedAt?: string
+  errors?: Array<{ leadId: string; error: string }>
+}
+
 export const workflowEmailsApi = {
   // Get all generated emails for a node
   getByNode: async (sequenceId: string, nodeId: string): Promise<WorkflowGeneratedEmail[]> => {
@@ -72,5 +85,10 @@ export const workflowEmailsApi = {
     return apiFetch(`/api/v1/sequences/${sequenceId}/nodes/${nodeId}/generated-emails`, {
       method: "DELETE",
     })
+  },
+
+  // Get generation progress
+  getProgress: async (sequenceId: string, nodeId: string): Promise<GenerationProgress> => {
+    return apiFetch(`/api/v1/sequences/${sequenceId}/nodes/${nodeId}/generation-progress`)
   },
 }

@@ -1,6 +1,7 @@
 import { Elysia, t } from 'elysia'
 import { getAIWorkflowEmailService } from '../services/ai-workflow-email.service'
 import * as workflowEmailService from '../services/workflow-email.service'
+import * as progressService from '../services/generation-progress.service'
 import { errorResponse, ResponseCode } from '../types/response.types'
 
 // Schema for creating generated email (reserved for future use)
@@ -66,6 +67,9 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
           total: 0,
         }
       }
+
+      // 진행률 초기화
+      progressService.initProgress(sequenceId, nodeId, leads.length)
 
       let generated = 0
       let _failed = 0
@@ -153,14 +157,21 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
           })
 
           generated++
+          progressService.updateProgress(sequenceId, nodeId, { generated: 1 })
         } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error'
           errors.push({
             leadId: lead.id,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: errorMsg,
           })
           _failed++
+          progressService.updateProgress(sequenceId, nodeId, { failed: 1 })
+          progressService.addError(sequenceId, nodeId, lead.id, errorMsg)
         }
       }
+
+      // 진행률 완료 처리
+      progressService.completeProgress(sequenceId, nodeId, errors.length > 0 ? 'completed' : 'completed')
 
       return {
         message: '이메일 생성이 완료되었습니다',
@@ -268,4 +279,28 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
 
     await workflowEmailService.deleteGeneratedEmailsByNode(sequenceId, nodeId)
     return { message: '모든 이메일이 삭제되었습니다' }
+  })
+
+  // Get generation progress
+  .get('/:id/nodes/:nodeId/generation-progress', async ({ params }) => {
+    const { id: sequenceId, nodeId } = params
+
+    const progress = progressService.getProgress(sequenceId, nodeId)
+
+    if (!progress) {
+      return {
+        sequenceId,
+        nodeId,
+        total: 0,
+        generated: 0,
+        failed: 0,
+        percentage: 0,
+        status: 'idle',
+      }
+    }
+
+    return {
+      ...progress,
+      percentage: progressService.getProgressPercentage(progress),
+    }
   })

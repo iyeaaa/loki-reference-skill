@@ -64,7 +64,23 @@ export default function SequenceDesigner() {
     if (sequence?.workflowData) {
       try {
         const workflowData: WorkflowData = JSON.parse(sequence.workflowData)
-        setNodes(workflowData.nodes || initialNodes)
+
+        // 노드 로드 시 타입별 기본값 보장
+        const nodesWithDefaults = (workflowData.nodes || initialNodes).map((node) => {
+          const data = { ...node.data }
+
+          // 타이머 노드: delayDays 기본값 1
+          if (node.type === "timer" && data.delayDays === undefined) {
+            data.delayDays = 1
+          }
+
+          return {
+            ...node,
+            data,
+          }
+        })
+
+        setNodes(nodesWithDefaults)
         setEdges(workflowData.edges || [])
       } catch (error) {
         console.error("Failed to parse workflow data:", error)
@@ -98,6 +114,15 @@ export default function SequenceDesigner() {
       if (!parentNode) return
 
       const newNodeId = `${nodeType}-${Date.now()}`
+
+      // 노드 타입별 기본 데이터 설정
+      const defaultData: Record<string, unknown> = {}
+      if (nodeType === "timer") {
+        defaultData.delayDays = 1 // 타이머 기본값 1일
+      } else if (nodeType === "emailDraft") {
+        defaultData.generationMode = "manual" // 이메일 기본 모드
+      }
+
       const newNode: Node = {
         id: newNodeId,
         type: nodeType,
@@ -105,7 +130,7 @@ export default function SequenceDesigner() {
           x: parentNode.position.x,
           y: parentNode.position.y + 200,
         },
-        data: {},
+        data: defaultData,
       }
 
       const newEdge: Edge = {
@@ -129,16 +154,19 @@ export default function SequenceDesigner() {
   }, [])
 
   const updateNodeData = useCallback((nodeId: string, data: unknown) => {
+    console.log(`[Update Node Data] Node ${nodeId}:`, data)
     setNodes((nds) =>
       nds.map((n) => {
         if (n.id === nodeId) {
-          return {
+          const updatedNode = {
             ...n,
             data: {
               ...(typeof n.data === "object" && n.data !== null ? n.data : {}),
               ...(typeof data === "object" && data !== null ? data : {}),
             },
           }
+          console.log(`[Update Node Data] Updated node:`, updatedNode)
+          return updatedNode
         }
         return n
       })
@@ -164,16 +192,6 @@ export default function SequenceDesigner() {
           onDelete: node.type !== "start" ? () => deleteNode(node.id) : undefined,
           onUpdate: (data: unknown) => updateNodeData(node.id, data),
           onManageEmails: node.type === "emailDraft" ? () => handleManageEmails(node) : undefined,
-          // TODO: 백엔드 API 준비 후 실시간 통계 로드
-          // 임시 목업 데이터 (개발 중)
-          stats:
-            node.type === "timer"
-              ? {
-                  sentCount: 150,
-                  repliedCount: 45,
-                  waitingCount: 85,
-                }
-              : undefined,
         },
       })),
     [nodes, id, addNode, deleteNode, updateNodeData, handleManageEmails]
@@ -182,17 +200,44 @@ export default function SequenceDesigner() {
   const handleSave = useCallback(async () => {
     if (!id) return
 
+    // 디버깅: 현재 nodes state 확인
+    console.log("[Workflow Save] Current nodes state:", nodes)
+
     const workflowData: WorkflowData = {
-      nodes: nodes.map((node) => ({
-        ...node,
-        data: {
-          subject: node.data.subject,
-          bodyText: node.data.bodyText,
-          delayDays: node.data.delayDays,
-        },
-      })),
+      nodes: nodes.map((node) => {
+        console.log(`[Workflow Save] Processing node ${node.id}:`, node.data)
+
+        // 필요한 데이터만 선택적으로 저장
+        const cleanData: Record<string, unknown> = {}
+
+        if (node.data.subject !== undefined) cleanData.subject = node.data.subject
+        if (node.data.bodyText !== undefined) cleanData.bodyText = node.data.bodyText
+        if (node.data.generationMode !== undefined)
+          cleanData.generationMode = node.data.generationMode
+        if (node.data.aiPrompt !== undefined) cleanData.aiPrompt = node.data.aiPrompt
+        if (node.data.useAI !== undefined) cleanData.useAI = node.data.useAI
+
+        // 타이머 노드: delayDays 기본값 보장
+        if (node.type === "timer") {
+          cleanData.delayDays = node.data.delayDays !== undefined ? node.data.delayDays : 1
+        } else if (node.data.delayDays !== undefined) {
+          cleanData.delayDays = node.data.delayDays
+        }
+
+        console.log(`[Workflow Save] Clean data for ${node.id}:`, cleanData)
+
+        return {
+          id: node.id,
+          type: node.type,
+          position: node.position,
+          data: cleanData,
+        }
+      }),
       edges,
     }
+
+    // 디버깅: 저장되는 데이터 확인
+    console.log("[Workflow Save] Final workflow data:", JSON.stringify(workflowData, null, 2))
 
     try {
       await updateSequence.mutateAsync({
@@ -208,6 +253,17 @@ export default function SequenceDesigner() {
       toast.error("워크플로우 저장에 실패했습니다")
     }
   }, [id, nodes, edges, updateSequence])
+
+  // 자동저장 (변경 후 3초 후 자동 저장)
+  useEffect(() => {
+    if (!hasChanges || !id) return
+
+    const timer = setTimeout(() => {
+      handleSave()
+    }, 3000) // 3초 debounce
+
+    return () => clearTimeout(timer)
+  }, [hasChanges, id, handleSave])
 
   if (isLoading) {
     return (
@@ -281,6 +337,12 @@ export default function SequenceDesigner() {
             <div className="w-3 h-3 bg-orange-500 rounded-full" />
             <span>타이머</span>
           </div>
+          {hasChanges && (
+            <div className="flex items-center gap-2 ml-auto">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+              <span className="text-xs text-blue-600">3초 후 자동 저장...</span>
+            </div>
+          )}
         </div>
       </Card>
 

@@ -22,6 +22,9 @@ import { LeadsTableWithPagination } from "./LeadsTableWithPagination"
 
 export default function LeadsPage() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>(() => {
+    return localStorage.getItem("selectedWorkspace") || "all"
+  })
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
@@ -54,6 +57,30 @@ export default function LeadsPage() {
   useEffect(() => {
     loadWorkspaces()
   }, [loadWorkspaces])
+
+  // localStorage의 selectedWorkspace 변경 감지
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const newWorkspaceId = localStorage.getItem("selectedWorkspace") || "all"
+      setSelectedWorkspaceId(newWorkspaceId)
+    }
+
+    // storage 이벤트 리스너 추가
+    window.addEventListener("storage", handleStorageChange)
+
+    // 컴포넌트가 포커스를 받을 때마다 확인
+    const intervalId = setInterval(() => {
+      const currentWorkspaceId = localStorage.getItem("selectedWorkspace") || "all"
+      if (currentWorkspaceId !== selectedWorkspaceId) {
+        setSelectedWorkspaceId(currentWorkspaceId)
+      }
+    }, 500)
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
+      clearInterval(intervalId)
+    }
+  }, [selectedWorkspaceId])
 
   // Debounce search input
   useEffect(() => {
@@ -272,7 +299,11 @@ export default function LeadsPage() {
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
             <LeadForm
               isEdit={false}
-              workspaceId={workspaces[0]?.id}
+              workspaceId={
+                selectedWorkspaceId !== "all" 
+                  ? selectedWorkspaceId 
+                  : workspaces[0]?.id
+              }
               onSave={handleCreateLead}
               onCancel={() => setShowCreateDialog(false)}
             />

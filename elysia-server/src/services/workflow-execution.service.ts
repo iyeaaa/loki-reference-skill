@@ -1,4 +1,3 @@
-import sgMail from '@sendgrid/mail'
 import { and, desc, eq, isNull, lte, sql } from 'drizzle-orm'
 import { config } from '../config'
 import { db } from '../db/index'
@@ -9,11 +8,7 @@ import { leads } from '../db/schema/leads'
 import { sequences } from '../db/schema/sequences'
 import { workflowGeneratedEmails } from '../db/schema/workflow-emails'
 import { workflowEnrollments, workflowExecutionLogs } from '../db/schema/workflow-executions'
-
-// Initialize SendGrid
-if (config.sendgrid.apiKey) {
-  sgMail.setApiKey(config.sendgrid.apiKey)
-}
+import { emailService } from './email.service'
 
 // ====================================
 // WORKFLOW DATA TYPES
@@ -239,7 +234,7 @@ async function executeEmailDraftNode(data: {
       and(
         eq(leadContacts.leadId, workflowGeneratedEmails.leadId),
         eq(leadContacts.contactType, 'email'),
-        eq(leadContacts.isPrimary, true),
+        // eq(leadContacts.isPrimary, true),
       ),
     )
     .where(
@@ -273,43 +268,29 @@ async function executeEmailDraftNode(data: {
     return { success: false, error: 'No generated email found' }
   }
 
-  // 이메일 발송 (Email Sequence Worker 방식 적용)
+  // 이메일 발송 (emailService 사용)
   try {
     const toEmail = generatedEmail.contactEmail || ''
     if (!toEmail) {
       throw new Error('No contact email found')
     }
 
-    // Use account-specific API key or default
-    const apiKey = enrollment.userEmailAccount.apiKey || config.sendgrid.apiKey
-    if (!apiKey) {
-      throw new Error('SendGrid API key not configured')
-    }
-
-    // Set API key for this request
-    sgMail.setApiKey(apiKey)
-
-    // Prepare email message
-    const msg: any = {
-      to: toEmail,
-      from: {
-        email: enrollment.userEmailAccount.emailAddress,
-        name: enrollment.userEmailAccount.displayName || enrollment.userEmailAccount.emailAddress,
-      },
+    // emailService를 사용하여 이메일 발송
+    const sendResult = await emailService.sendEmail({
+      fromEmail: enrollment.userEmailAccount.emailAddress,
+      fromName: enrollment.userEmailAccount.displayName || enrollment.userEmailAccount.emailAddress,
+      toEmail,
       subject: generatedEmail.subject,
+      bodyText: generatedEmail.bodyText || undefined,
+      bodyHtml: generatedEmail.bodyHtml || undefined,
+      apiKey: config.sendgrid.apiKey,
+    })
+
+    if (!sendResult.success) {
+      throw new Error(sendResult.error || 'Failed to send email')
     }
 
-    // Set body
-    if (generatedEmail.bodyText) {
-      msg.text = generatedEmail.bodyText
-    }
-    if (generatedEmail.bodyHtml) {
-      msg.html = generatedEmail.bodyHtml
-    }
-
-    // Send email via SendGrid
-    const [response]: any = await sgMail.send(msg)
-    const messageId = response.headers['x-message-id'] as string
+    const messageId = sendResult.messageId
 
     // 발송된 이메일 DB에 저장
     const sentEmailResults = await db

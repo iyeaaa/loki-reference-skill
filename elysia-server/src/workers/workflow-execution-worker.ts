@@ -5,10 +5,10 @@
  * sequence_steps 기반 워커와 별개로 동작
  */
 
-import * as workflowExecutionService from '../services/workflow-execution.service'
+import { and, eq } from 'drizzle-orm'
 import { db } from '../db'
-import { workflowExecutionLogs, workflowEnrollments } from '../db/schema/workflow-executions'
-import { eq, and } from 'drizzle-orm'
+import { workflowEnrollments, workflowExecutionLogs } from '../db/schema/workflow-executions'
+import * as workflowExecutionService from '../services/workflow-execution.service'
 
 async function processWorkflowExecutions() {
   console.log('[Workflow Execution Worker] Starting workflow processing...')
@@ -28,7 +28,7 @@ async function processWorkflowExecutions() {
     for (const execution of pendingExecutions) {
       try {
         console.log(
-          `[Workflow Execution Worker] Processing enrollment ${execution.enrollmentId}, node ${execution.nodeId}`
+          `[Workflow Execution Worker] Processing enrollment ${execution.enrollmentId}, node ${execution.nodeId}`,
         )
 
         // 타이머 노드 완료 처리
@@ -43,8 +43,8 @@ async function processWorkflowExecutions() {
             .where(
               and(
                 eq(workflowExecutionLogs.enrollmentId, execution.enrollmentId),
-                eq(workflowExecutionLogs.nodeId, execution.nodeId)
-              )
+                eq(workflowExecutionLogs.nodeId, execution.nodeId),
+              ),
             )
         }
 
@@ -53,13 +53,11 @@ async function processWorkflowExecutions() {
 
         if (result.success) {
           console.log(
-            `[Workflow Execution Worker] ✓ Workflow executed successfully: ${execution.enrollmentId}`
+            `[Workflow Execution Worker] ✓ Workflow executed successfully: ${execution.enrollmentId}`,
           )
         } else {
           const errorMessage = 'error' in result ? result.error : 'Unknown error'
-          console.error(
-            `[Workflow Execution Worker] ✗ Workflow execution failed: ${errorMessage}`
-          )
+          console.error(`[Workflow Execution Worker] ✗ Workflow execution failed: ${errorMessage}`)
 
           // 실행 로그 상태 업데이트
           await db
@@ -72,14 +70,14 @@ async function processWorkflowExecutions() {
             .where(
               and(
                 eq(workflowExecutionLogs.enrollmentId, execution.enrollmentId),
-                eq(workflowExecutionLogs.nodeId, execution.nodeId)
-              )
+                eq(workflowExecutionLogs.nodeId, execution.nodeId),
+              ),
             )
         }
       } catch (error) {
         console.error(
           `[Workflow Execution Worker] Error processing ${execution.enrollmentId}:`,
-          error
+          error,
         )
       }
     }
@@ -110,7 +108,7 @@ async function checkRepliesAndStopWorkflows() {
       WHERE we.status = 'active'
         AND we.stopped_at IS NULL
         AND e.sent_at >= we.enrolled_at
-      `
+      `,
     )
 
     if (result.rows.length === 0) {
@@ -143,15 +141,17 @@ async function checkRepliesAndStopWorkflows() {
           .where(
             and(
               eq(workflowExecutionLogs.enrollmentId, row.enrollment_id),
-              eq(workflowExecutionLogs.status, 'pending')
-            )
+              eq(workflowExecutionLogs.status, 'pending'),
+            ),
           )
 
-        console.log(`[Workflow Execution Worker] ✓ Stopped enrollment ${row.enrollment_id} due to reply`)
+        console.log(
+          `[Workflow Execution Worker] ✓ Stopped enrollment ${row.enrollment_id} due to reply`,
+        )
       } catch (error) {
         console.error(
           `[Workflow Execution Worker] Error stopping enrollment ${row.enrollment_id}:`,
-          error
+          error,
         )
       }
     }
@@ -182,4 +182,3 @@ export function startWorkflowExecutionWorker() {
 
 // 수동 테스트용 export
 export { processWorkflowExecutions, checkRepliesAndStopWorkflows }
-

@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia'
 import { getAIWorkflowEmailService } from '../services/ai-workflow-email.service'
-import * as workflowEmailService from '../services/workflow-email.service'
 import * as progressService from '../services/generation-progress.service'
+import * as workflowEmailService from '../services/workflow-email.service'
 import { errorResponse, ResponseCode } from '../types/response.types'
 
 // Schema for creating generated email (reserved for future use)
@@ -171,7 +171,11 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
       }
 
       // 진행률 완료 처리
-      progressService.completeProgress(sequenceId, nodeId, errors.length > 0 ? 'completed' : 'completed')
+      progressService.completeProgress(
+        sequenceId,
+        nodeId,
+        errors.length > 0 ? 'completed' : 'completed',
+      )
 
       return {
         message: '이메일 생성이 완료되었습니다',

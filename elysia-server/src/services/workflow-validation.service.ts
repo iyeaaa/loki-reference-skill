@@ -188,10 +188,9 @@ export function parseAndValidateWorkflow(workflowDataJson: string): {
       errors: [
         {
           field: 'json',
-          message: 'JSON 파싱 실패: ' + (error instanceof Error ? error.message : 'Unknown error'),
+          message: `JSON 파싱 실패: ${error instanceof Error ? error.message : 'Unknown error'}`,
         },
       ],
     }
   }
 }
-

@@ -2,13 +2,14 @@ import sgMail from '@sendgrid/mail'
 import { and, desc, eq, isNull, lte, sql } from 'drizzle-orm'
 import { config } from '../config'
 import { db } from '../db/index'
-import { leads } from '../db/schema/leads'
-import { leadContacts } from '../db/schema/lead-details'
-import { sequences } from '../db/schema/sequences'
-import { workflowEnrollments, workflowExecutionLogs } from '../db/schema/workflow-executions'
-import { workflowGeneratedEmails } from '../db/schema/workflow-emails'
 import { customerGroupMembers } from '../db/schema/customer-groups'
 import { emails } from '../db/schema/emails'
+import { leadContacts } from '../db/schema/lead-details'
+import { leads } from '../db/schema/leads'
+import { sequences } from '../db/schema/sequences'
+import { workflowGeneratedEmails } from '../db/schema/workflow-emails'
+import { workflowEnrollments, workflowExecutionLogs } from '../db/schema/workflow-executions'
+import { emailService } from './email.service'
 
 // Initialize SendGrid
 if (config.sendgrid.apiKey) {
@@ -115,7 +116,7 @@ export async function bulkEnrollInWorkflow(data: {
   for (const { leadId } of groupLeads) {
     try {
       if (!leadId) continue
-      
+
       const enrollment = await enrollInWorkflow({
         sequenceId: data.sequenceId,
         leadId,
@@ -240,15 +241,15 @@ async function executeEmailDraftNode(data: {
       and(
         eq(leadContacts.leadId, workflowGeneratedEmails.leadId),
         eq(leadContacts.contactType, 'email'),
-        eq(leadContacts.isPrimary, true)
-      )
+        eq(leadContacts.isPrimary, true),
+      ),
     )
     .where(
       and(
         eq(workflowGeneratedEmails.sequenceId, enrollment.sequenceId),
         eq(workflowGeneratedEmails.nodeId, node.id),
-        eq(workflowGeneratedEmails.leadId, enrollment.leadId)
-      )
+        eq(workflowGeneratedEmails.leadId, enrollment.leadId),
+      ),
     )
     .limit(1)
 
@@ -256,7 +257,7 @@ async function executeEmailDraftNode(data: {
 
   if (!generatedEmail || generatedEmail.status === 'failed') {
     console.error(`[Workflow] No generated email found for node ${node.id}`)
-    
+
     // 실행 로그에 실패 기록
     await db.insert(workflowExecutionLogs).values({
       enrollmentId: enrollment.id,
@@ -411,7 +412,7 @@ async function executeTimerNode(data: {
 
   if (!nextNode) {
     console.log(`[Workflow] No next node after timer ${node.id}, completing enrollment`)
-    
+
     await db
       .update(workflowEnrollments)
       .set({
@@ -466,7 +467,14 @@ async function executeTimerNode(data: {
 /**
  * 워크플로우 실행 (단일 enrollment)
  */
-export async function executeWorkflow(enrollmentId: string): Promise<{ success: boolean; error?: string; emailId?: string; scheduledFor?: Date; nextNodeId?: string; completed?: boolean }> {
+export async function executeWorkflow(enrollmentId: string): Promise<{
+  success: boolean
+  error?: string
+  emailId?: string
+  scheduledFor?: Date
+  nextNodeId?: string
+  completed?: boolean
+}> {
   // enrollment 조회 (관련 데이터 join)
   const enrollmentResults = await db
     .select({
@@ -518,7 +526,7 @@ export async function executeWorkflow(enrollmentId: string): Promise<{ success: 
         .update(workflowEnrollments)
         .set({ currentNodeId: nextNode.id })
         .where(eq(workflowEnrollments.id, enrollmentId))
-      
+
       return executeWorkflow(enrollmentId) // 재귀 호출
     }
   }
@@ -614,8 +622,8 @@ export async function getPendingWorkflowExecutions(limit = 50) {
         lte(workflowExecutionLogs.scheduledFor, now),
         isNull(workflowExecutionLogs.repliedDuringWait),
         eq(sequences.status, 'active'), // 활성 시퀀스만
-        eq(workflowEnrollments.status, 'active') // 활성 enrollment만
-      )
+        eq(workflowEnrollments.status, 'active'), // 활성 enrollment만
+      ),
     )
     .limit(limit)
 }
@@ -637,8 +645,8 @@ export async function getNodeStatistics(sequenceId: string, nodeId: string) {
         eq(workflowExecutionLogs.sequenceId, sequenceId),
         eq(workflowExecutionLogs.nodeId, nodeId),
         eq(workflowExecutionLogs.nodeType, 'emailDraft'),
-        eq(workflowExecutionLogs.status, 'completed')
-      )
+        eq(workflowExecutionLogs.status, 'completed'),
+      ),
     )
 
   // 답장 수 (stopped with reply reason)
@@ -649,8 +657,8 @@ export async function getNodeStatistics(sequenceId: string, nodeId: string) {
       and(
         eq(workflowEnrollments.sequenceId, sequenceId),
         eq(workflowEnrollments.status, 'stopped'),
-        sql`${workflowEnrollments.stoppedReason} LIKE '%reply%'`
-      )
+        sql`${workflowEnrollments.stoppedReason} LIKE '%reply%'`,
+      ),
     )
 
   // 대기 중 (pending timer logs for this node)
@@ -662,8 +670,8 @@ export async function getNodeStatistics(sequenceId: string, nodeId: string) {
         eq(workflowExecutionLogs.sequenceId, sequenceId),
         eq(workflowExecutionLogs.nodeId, nodeId),
         eq(workflowExecutionLogs.nodeType, 'timer'),
-        eq(workflowExecutionLogs.status, 'pending')
-      )
+        eq(workflowExecutionLogs.status, 'pending'),
+      ),
     )
 
   return {
@@ -673,4 +681,3 @@ export async function getNodeStatistics(sequenceId: string, nodeId: string) {
     waitingCount: waitingResult?.count || 0,
   }
 }
-

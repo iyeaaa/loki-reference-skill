@@ -13,7 +13,7 @@ export interface GenerationProgress {
   generated: number
   failed: number
   percentage: number
-  status: 'idle' | 'generating' | 'completed' | 'failed'
+  status: "idle" | "generating" | "completed" | "failed"
   startedAt?: string
   completedAt?: string
   errors?: Array<{ leadId: string; error: string }>

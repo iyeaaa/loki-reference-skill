@@ -1,5 +1,5 @@
-import { Elysia, t } from 'elysia'
 import { eq } from 'drizzle-orm'
+import { Elysia, t } from 'elysia'
 import { db } from '../db'
 import { userEmailAccounts } from '../db/schema/email-accounts'
 import * as sequenceService from '../services/sequence.service'
@@ -124,23 +124,23 @@ export const sequenceRoutes = new Elysia({ prefix: '/api/v1/sequences' })
         set.status = 400
         return errorResponse(
           '워크플로우 실행을 위해 고객그룹을 선택해주세요',
-          ResponseCode.BAD_REQUEST
+          ResponseCode.BAD_REQUEST,
         )
       }
-      
+
       // 생성 시 상태 검증 (draft 또는 paused만 허용)
       if (body.status && body.status !== 'draft' && body.status !== 'paused') {
         set.status = 400
         return errorResponse(
           '시퀀스 생성 시 초안(draft) 또는 일시정지(paused) 상태만 가능합니다',
-          ResponseCode.BAD_REQUEST
+          ResponseCode.BAD_REQUEST,
         )
       }
-      
+
       // 상태가 없으면 기본값 draft 설정
       const sequence = await sequenceService.createSequence({
         ...body,
-        status: body.status || 'draft'
+        status: body.status || 'draft',
       })
       return sequence
     },
@@ -165,28 +165,30 @@ export const sequenceRoutes = new Elysia({ prefix: '/api/v1/sequences' })
         // 워크플로우 데이터 검증
         const workflowDataToValidate = body.workflowData || currentSequence.workflowData
         if (workflowDataToValidate) {
-          const { parseAndValidateWorkflow } = await import('../services/workflow-validation.service')
+          const { parseAndValidateWorkflow } = await import(
+            '../services/workflow-validation.service'
+          )
           const validation = parseAndValidateWorkflow(workflowDataToValidate)
-          
+
           if (!validation.valid) {
             set.status = 400
             return errorResponse(
-              `워크플로우 검증 실패: ${validation.errors.map(e => e.message).join(', ')}`,
-              ResponseCode.BAD_REQUEST
+              `워크플로우 검증 실패: ${validation.errors.map((e) => e.message).join(', ')}`,
+              ResponseCode.BAD_REQUEST,
             )
           }
         } else {
           set.status = 400
           return errorResponse(
             '워크플로우가 설정되지 않았습니다. 먼저 워크플로우를 디자인해주세요.',
-            ResponseCode.BAD_REQUEST
+            ResponseCode.BAD_REQUEST,
           )
         }
 
         // 활성화 시 고객그룹의 모든 리드를 워크플로우에 자동 등록
         if (currentSequence.customerGroupId && currentSequence.status !== 'active') {
           const { bulkEnrollInWorkflow } = await import('../services/workflow-execution.service')
-          
+
           // 워크스페이스의 첫 번째 이메일 계정 조회 (기본값)
           const [defaultEmailAccount] = await db
             .select({ id: userEmailAccounts.id })
@@ -198,7 +200,7 @@ export const sequenceRoutes = new Elysia({ prefix: '/api/v1/sequences' })
             set.status = 400
             return errorResponse(
               '이메일 계정이 없습니다. 먼저 이메일 계정을 추가해주세요.',
-              ResponseCode.BAD_REQUEST
+              ResponseCode.BAD_REQUEST,
             )
           }
 
@@ -209,8 +211,10 @@ export const sequenceRoutes = new Elysia({ prefix: '/api/v1/sequences' })
               userEmailAccountId: defaultEmailAccount.id,
             })
 
-            console.log(`[Sequence Activation] Enrolled ${enrollResult.enrolledCount} leads to workflow`)
-            
+            console.log(
+              `[Sequence Activation] Enrolled ${enrollResult.enrolledCount} leads to workflow`,
+            )
+
             // 등록 후 즉시 워크플로우 실행 (시작 노드 다음부터)
             for (const enrollment of enrollResult.enrollments) {
               const { executeWorkflow } = await import('../services/workflow-execution.service')
@@ -221,12 +225,12 @@ export const sequenceRoutes = new Elysia({ prefix: '/api/v1/sequences' })
             set.status = 400
             return errorResponse(
               `리드 등록 실패: ${error instanceof Error ? error.message : 'Unknown error'}`,
-              ResponseCode.BAD_REQUEST
+              ResponseCode.BAD_REQUEST,
             )
           }
         }
       }
-      
+
       const sequence = await sequenceService.updateSequence(id, body)
       if (!sequence) {
         set.status = 404

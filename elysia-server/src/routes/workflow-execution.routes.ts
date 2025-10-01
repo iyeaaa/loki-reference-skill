@@ -17,7 +17,7 @@ export const workflowExecutionRoutes = new Elysia({ prefix: '/api/v1/sequences' 
         id: t.String({ format: 'uuid' }),
         nodeId: t.String(),
       }),
-    }
+    },
   )
 
   // Get workflow enrollments
@@ -31,7 +31,7 @@ export const workflowExecutionRoutes = new Elysia({ prefix: '/api/v1/sequences' 
       const enrollments = await workflowExecutionService.getWorkflowEnrollments(
         sequenceId,
         limit,
-        offset
+        offset,
       )
       return enrollments
     },
@@ -43,7 +43,7 @@ export const workflowExecutionRoutes = new Elysia({ prefix: '/api/v1/sequences' 
         limit: t.Optional(t.String()),
         offset: t.Optional(t.String()),
       }),
-    }
+    },
   )
 
   // Enroll single lead in workflow
@@ -68,7 +68,7 @@ export const workflowExecutionRoutes = new Elysia({ prefix: '/api/v1/sequences' 
         userEmailAccountId: t.String({ format: 'uuid' }),
         enrolledBy: t.Optional(t.String({ format: 'uuid' })),
       }),
-    }
+    },
   )
 
   // Bulk enroll from customer group
@@ -97,7 +97,7 @@ export const workflowExecutionRoutes = new Elysia({ prefix: '/api/v1/sequences' 
         userEmailAccountId: t.String({ format: 'uuid' }),
         enrolledBy: t.Optional(t.String({ format: 'uuid' })),
       }),
-    }
+    },
   )
 
   // Execute workflow manually (for testing)
@@ -123,6 +123,5 @@ export const workflowExecutionRoutes = new Elysia({ prefix: '/api/v1/sequences' 
         id: t.String({ format: 'uuid' }),
         enrollmentId: t.String({ format: 'uuid' }),
       }),
-    }
+    },
   )
-

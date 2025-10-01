@@ -1,8 +1,8 @@
 import { relations } from 'drizzle-orm'
 import { integer, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
+import { userEmailAccounts } from './email-accounts'
 import { leads } from './leads'
 import { sequences } from './sequences'
-import { userEmailAccounts } from './email-accounts'
 
 /**
  * Workflow Enrollments
@@ -22,9 +22,7 @@ export const workflowEnrollments = pgTable('workflow_enrollments', {
     .references(() => userEmailAccounts.id),
 
   // 상태
-  status: varchar('status', { length: 50 })
-    .notNull()
-    .default('active'), // active, paused, completed, stopped, bounced, unsubscribed
+  status: varchar('status', { length: 50 }).notNull().default('active'), // active, paused, completed, stopped, bounced, unsubscribed
 
   // 현재 실행 중인 노드
   currentNodeId: varchar('current_node_id', { length: 100 }),
@@ -65,9 +63,7 @@ export const workflowExecutionLogs = pgTable('workflow_execution_logs', {
   nodeData: text('node_data'), // 노드 실행 시점의 데이터 스냅샷 (JSON)
 
   // 실행 상태
-  status: varchar('status', { length: 50 })
-    .notNull()
-    .default('pending'), // pending, executing, completed, failed, skipped
+  status: varchar('status', { length: 50 }).notNull().default('pending'), // pending, executing, completed, failed, skipped
 
   // 실행 결과
   result: text('result'), // 실행 결과 데이터 (JSON)
@@ -123,4 +119,3 @@ export const workflowExecutionLogsRelations = relations(workflowExecutionLogs, (
     references: [leads.id],
   }),
 }))
-

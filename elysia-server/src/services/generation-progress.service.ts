@@ -26,7 +26,7 @@ function getProgressKey(sequenceId: string, nodeId: string): string {
 // 진행률 초기화
 export function initProgress(sequenceId: string, nodeId: string, total: number): string {
   const key = getProgressKey(sequenceId, nodeId)
-  
+
   progressStore.set(key, {
     sequenceId,
     nodeId,
@@ -36,7 +36,7 @@ export function initProgress(sequenceId: string, nodeId: string, total: number):
     status: 'generating',
     startedAt: new Date(),
   })
-  
+
   return key
 }
 
@@ -44,20 +44,20 @@ export function initProgress(sequenceId: string, nodeId: string, total: number):
 export function updateProgress(
   sequenceId: string,
   nodeId: string,
-  increment: { generated?: number; failed?: number }
+  increment: { generated?: number; failed?: number },
 ) {
   const key = getProgressKey(sequenceId, nodeId)
   const progress = progressStore.get(key)
-  
+
   if (!progress) return
-  
+
   if (increment.generated) {
     progress.generated += increment.generated
   }
   if (increment.failed) {
     progress.failed += increment.failed
   }
-  
+
   progressStore.set(key, progress)
 }
 
@@ -65,32 +65,39 @@ export function updateProgress(
 export function addError(sequenceId: string, nodeId: string, leadId: string, error: string) {
   const key = getProgressKey(sequenceId, nodeId)
   const progress = progressStore.get(key)
-  
+
   if (!progress) return
-  
+
   if (!progress.errors) {
     progress.errors = []
   }
-  
+
   progress.errors.push({ leadId, error })
   progressStore.set(key, progress)
 }
 
 // 진행률 완료 처리
-export function completeProgress(sequenceId: string, nodeId: string, status: 'completed' | 'failed') {
+export function completeProgress(
+  sequenceId: string,
+  nodeId: string,
+  status: 'completed' | 'failed',
+) {
   const key = getProgressKey(sequenceId, nodeId)
   const progress = progressStore.get(key)
-  
+
   if (!progress) return
-  
+
   progress.status = status
   progress.completedAt = new Date()
   progressStore.set(key, progress)
-  
+
   // 5분 후 자동 삭제
-  setTimeout(() => {
-    progressStore.delete(key)
-  }, 5 * 60 * 1000)
+  setTimeout(
+    () => {
+      progressStore.delete(key)
+    },
+    5 * 60 * 1000,
+  )
 }
 
 // 진행률 조회
@@ -110,4 +117,3 @@ export function getProgressPercentage(progress: GenerationProgress): number {
   if (progress.total === 0) return 0
   return Math.round(((progress.generated + progress.failed) / progress.total) * 100)
 }
-

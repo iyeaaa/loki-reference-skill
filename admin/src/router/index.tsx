@@ -1,21 +1,26 @@
+import { lazy } from "react"
 import { createBrowserRouter } from "react-router-dom"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { AuthProvider } from "@/lib/auth-provider"
+
+// Layouts - 즉시 로드 (모든 페이지에서 필요)
 import DashboardLayout from "../layouts/DashboardLayout"
 import RootLayout from "../layouts/RootLayout"
-import CampaignsPage from "../pages/campaigns"
-import CustomerGroupsPage from "../pages/customer-groups"
-import DashboardPage from "../pages/dashboard/DashboardPage"
-import EmailSendTestPage from "../pages/email-send-test"
-import EmailTemplatesPage from "../pages/email-templates"
-import LoginPage from "../pages/LoginPage"
-import LeadsPage from "../pages/leads"
-import RepliedEmailsPage from "../pages/replied-emails"
-import SequencesPage from "../pages/sequences"
-import SequenceDesigner from "../pages/sequences/designer/SequenceDesigner"
-import SettingsPage from "../pages/settings"
-import UsersPage from "../pages/users/UsersPage"
-import WorkspacesPage from "../pages/workspaces"
+
+// Pages - Lazy Loading
+const LoginPage = lazy(() => import("../pages/LoginPage"))
+const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"))
+const CampaignsPage = lazy(() => import("../pages/campaigns"))
+const CustomerGroupsPage = lazy(() => import("../pages/customer-groups"))
+const EmailSendTestPage = lazy(() => import("../pages/email-send-test"))
+const EmailTemplatesPage = lazy(() => import("../pages/email-templates"))
+const LeadsPage = lazy(() => import("../pages/leads"))
+const RepliedEmailsPage = lazy(() => import("../pages/replied-emails"))
+const SequencesPage = lazy(() => import("../pages/sequences"))
+const SequenceDesigner = lazy(() => import("../pages/sequences/designer/SequenceDesigner"))
+const SettingsPage = lazy(() => import("../pages/settings"))
+const UsersPage = lazy(() => import("../pages/users/UsersPage"))
+const WorkspacesPage = lazy(() => import("../pages/workspaces"))
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>

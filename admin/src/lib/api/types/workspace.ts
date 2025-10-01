@@ -48,5 +48,6 @@ export interface CreateWorkspaceData {
 export interface UpdateWorkspaceData {
   name: string
   description?: string | null
+  ownerId?: string
   isActive: boolean
 }

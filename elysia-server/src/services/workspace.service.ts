@@ -63,17 +63,31 @@ export async function updateWorkspace(
   data: {
     name: string
     description?: string
+    ownerId?: string
     isActive: boolean
   },
 ) {
+  const updateData: {
+    name: string
+    description?: string
+    ownerId?: string
+    isActive: boolean
+    updatedAt: Date
+  } = {
+    name: data.name,
+    description: data.description,
+    isActive: data.isActive,
+    updatedAt: new Date(),
+  }
+
+  // Only update ownerId if provided
+  if (data.ownerId) {
+    updateData.ownerId = data.ownerId
+  }
+
   const [updatedWorkspace] = await db
     .update(workspaces)
-    .set({
-      name: data.name,
-      description: data.description,
-      isActive: data.isActive,
-      updatedAt: new Date(),
-    })
+    .set(updateData)
     .where(eq(workspaces.id, id))
     .returning({
       id: workspaces.id,

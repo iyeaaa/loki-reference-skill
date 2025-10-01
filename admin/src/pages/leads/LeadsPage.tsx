@@ -299,11 +299,7 @@ export default function LeadsPage() {
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
             <LeadForm
               isEdit={false}
-              workspaceId={
-                selectedWorkspaceId !== "all" 
-                  ? selectedWorkspaceId 
-                  : workspaces[0]?.id
-              }
+              workspaceId={selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id}
               onSave={handleCreateLead}
               onCancel={() => setShowCreateDialog(false)}
             />

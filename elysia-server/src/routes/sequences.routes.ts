@@ -188,7 +188,7 @@ export const sequenceRoutes = new Elysia({ prefix: '/api/v1/sequences' })
         // 활성화 시 고객그룹의 모든 리드를 워크플로우에 자동 등록
         if (currentSequence.customerGroupId && currentSequence.status !== 'active') {
           const customerGroupId = currentSequence.customerGroupId
-          
+
           // 워크스페이스의 첫 번째 이메일 계정 조회 (기본값)
           const [defaultEmailAccount] = await db
             .select({ id: userEmailAccounts.id })
@@ -203,13 +203,14 @@ export const sequenceRoutes = new Elysia({ prefix: '/api/v1/sequences' })
               ResponseCode.BAD_REQUEST,
             )
           }
-
           // 백그라운드에서 비동기로 리드 등록 및 워크플로우 실행
           // await 없이 실행하여 응답을 즉시 반환
-          (async () => {
+          ;(async () => {
             try {
-              const { bulkEnrollInWorkflow, executeWorkflow } = await import('../services/workflow-execution.service')
-              
+              const { bulkEnrollInWorkflow, executeWorkflow } = await import(
+                '../services/workflow-execution.service'
+              )
+
               const enrollResult = await bulkEnrollInWorkflow({
                 sequenceId: id,
                 customerGroupId,
@@ -224,7 +225,7 @@ export const sequenceRoutes = new Elysia({ prefix: '/api/v1/sequences' })
               for (const enrollment of enrollResult.enrollments) {
                 await executeWorkflow(enrollment.id)
               }
-              
+
               console.log(
                 `[Sequence Activation] Successfully executed workflows for ${enrollResult.enrollments.length} enrollments`,
               )
@@ -233,10 +234,8 @@ export const sequenceRoutes = new Elysia({ prefix: '/api/v1/sequences' })
               // 백그라운드 프로세스이므로 에러를 로깅만 하고 계속 진행
             }
           })()
-          
-          console.log(
-            `[Sequence Activation] Started background enrollment for sequence ${id}`,
-          )
+
+          console.log(`[Sequence Activation] Started background enrollment for sequence ${id}`)
         }
       }
 

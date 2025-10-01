@@ -10,10 +10,11 @@ import {
   type EdgeChange,
   type Node,
   type NodeChange,
+  Panel,
   ReactFlow,
 } from "@xyflow/react"
-import { ArrowLeft, Save } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { ArrowLeft, MessageSquare, Save } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useNavigate, useParams } from "react-router-dom"
 import "@xyflow/react/dist/style.css"
@@ -21,6 +22,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { useSequence, useUpdateSequence } from "@/lib/api/hooks/sequences"
 import { EmailManagementModal } from "./EmailManagementModal"
+import { CommentNode } from "./nodes/CommentNode"
 import { EmailDraftNode } from "./nodes/EmailDraftNode"
 import { StartNode } from "./nodes/StartNode"
 import { TimerNode } from "./nodes/TimerNode"
@@ -34,6 +36,7 @@ const nodeTypes = {
   start: StartNode,
   emailDraft: EmailDraftNode,
   timer: TimerNode,
+  comment: CommentNode,
 }
 
 const initialNodes: Node[] = [
@@ -59,6 +62,15 @@ export default function SequenceDesigner() {
   const [emailManagementOpen, setEmailManagementOpen] = useState(false)
   const [selectedNodeForEmail, setSelectedNodeForEmail] = useState<Node | null>(null)
 
+  // 최신 nodes와 edges를 참조하기 위한 ref
+  const nodesRef = useRef(nodes)
+  const edgesRef = useRef(edges)
+
+  useEffect(() => {
+    nodesRef.current = nodes
+    edgesRef.current = edges
+  }, [nodes, edges])
+
   // Load workflow data from sequence
   useEffect(() => {
     if (sequence?.workflowData) {
@@ -82,6 +94,7 @@ export default function SequenceDesigner() {
 
         setNodes(nodesWithDefaults)
         setEdges(workflowData.edges || [])
+        setHasChanges(false) // 로드 후 변경사항 초기화
       } catch (error) {
         console.error("Failed to parse workflow data:", error)
         toast.error("워크플로우 데이터를 불러오는데 실패했습니다")
@@ -90,8 +103,9 @@ export default function SequenceDesigner() {
       // Initialize with start node if no workflow data
       setNodes(initialNodes)
       setEdges([])
+      setHasChanges(false)
     }
-  }, [sequence])
+  }, [sequence?.workflowData]) // sequence 전체가 아닌 workflowData만 의존
 
   const onNodesChange = useCallback((changes: NodeChange<Node>[]) => {
     setNodes((nds) => applyNodeChanges(changes, nds))
@@ -121,6 +135,8 @@ export default function SequenceDesigner() {
         defaultData.delayDays = 1 // 타이머 기본값 1일
       } else if (nodeType === "emailDraft") {
         defaultData.generationMode = "manual" // 이메일 기본 모드
+      } else if (nodeType === "comment") {
+        defaultData.comment = "" // 주석 기본값
       }
 
       const newNode: Node = {
@@ -150,6 +166,25 @@ export default function SequenceDesigner() {
   const deleteNode = useCallback((nodeId: string) => {
     setNodes((nds) => nds.filter((n) => n.id !== nodeId))
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId))
+    setHasChanges(true)
+  }, [])
+
+  // 화면 중앙에 주석 노드 추가
+  const addCommentNode = useCallback(() => {
+    const newNodeId = `comment-${Date.now()}`
+
+    // 현재 뷰포트의 중앙 위치 계산
+    const centerX = window.innerWidth / 2 - 150 // 노드 너비의 절반
+    const centerY = window.innerHeight / 2 - 100 // 노드 높이의 절반
+
+    const newNode: Node = {
+      id: newNodeId,
+      type: "comment",
+      position: { x: centerX, y: centerY },
+      data: { comment: "" },
+    }
+
+    setNodes((nds) => [...nds, newNode])
     setHasChanges(true)
   }, [])
 
@@ -197,7 +232,7 @@ export default function SequenceDesigner() {
     [nodes, id, addNode, deleteNode, updateNodeData, handleManageEmails]
   )
 
-  const handleSave = useCallback(async () => {
+  const handleSave = async () => {
     if (!id) return
 
     // 디버깅: 현재 nodes state 확인
@@ -216,6 +251,7 @@ export default function SequenceDesigner() {
           cleanData.generationMode = node.data.generationMode
         if (node.data.aiPrompt !== undefined) cleanData.aiPrompt = node.data.aiPrompt
         if (node.data.useAI !== undefined) cleanData.useAI = node.data.useAI
+        if (node.data.comment !== undefined) cleanData.comment = node.data.comment
 
         // 타이머 노드: delayDays 기본값 보장
         if (node.type === "timer") {
@@ -240,30 +276,87 @@ export default function SequenceDesigner() {
     console.log("[Workflow Save] Final workflow data:", JSON.stringify(workflowData, null, 2))
 
     try {
-      await updateSequence.mutateAsync({
-        sequenceId: id,
-        data: {
-          workflowData: JSON.stringify(workflowData),
+      await updateSequence.mutateAsync(
+        {
+          sequenceId: id,
+          data: {
+            workflowData: JSON.stringify(workflowData),
+          },
         },
-      })
-      setHasChanges(false)
-      toast.success("워크플로우가 저장되었습니다")
+        {
+          onSuccess: () => {
+            setHasChanges(false)
+            toast.success("워크플로우가 저장되었습니다")
+          },
+        }
+      )
     } catch (error) {
       console.error("Failed to save workflow:", error)
       toast.error("워크플로우 저장에 실패했습니다")
     }
-  }, [id, nodes, edges, updateSequence])
+  }
 
   // 자동저장 (변경 후 3초 후 자동 저장)
   useEffect(() => {
     if (!hasChanges || !id) return
 
-    const timer = setTimeout(() => {
-      handleSave()
-    }, 3000) // 3초 debounce
+    const timer = setTimeout(async () => {
+      // ref를 사용하여 최신 데이터 참조
+      const currentNodes = nodesRef.current
+      const currentEdges = edgesRef.current
+
+      console.log("[Workflow Save] Auto-saving...")
+
+      const workflowData: WorkflowData = {
+        nodes: currentNodes.map((node) => {
+          const cleanData: Record<string, unknown> = {}
+
+          if (node.data.subject !== undefined) cleanData.subject = node.data.subject
+          if (node.data.bodyText !== undefined) cleanData.bodyText = node.data.bodyText
+          if (node.data.generationMode !== undefined)
+            cleanData.generationMode = node.data.generationMode
+          if (node.data.aiPrompt !== undefined) cleanData.aiPrompt = node.data.aiPrompt
+          if (node.data.useAI !== undefined) cleanData.useAI = node.data.useAI
+          if (node.data.comment !== undefined) cleanData.comment = node.data.comment
+
+          if (node.type === "timer") {
+            cleanData.delayDays = node.data.delayDays !== undefined ? node.data.delayDays : 1
+          } else if (node.data.delayDays !== undefined) {
+            cleanData.delayDays = node.data.delayDays
+          }
+
+          return {
+            id: node.id,
+            type: node.type,
+            position: node.position,
+            data: cleanData,
+          }
+        }),
+        edges: currentEdges,
+      }
+
+      try {
+        await updateSequence.mutateAsync(
+          {
+            sequenceId: id,
+            data: {
+              workflowData: JSON.stringify(workflowData),
+            },
+          },
+          {
+            onSuccess: () => {
+              setHasChanges(false)
+              console.log("[Workflow Save] Auto-save completed")
+            },
+          }
+        )
+      } catch (error) {
+        console.error("Auto-save failed:", error)
+      }
+    }, 3000)
 
     return () => clearTimeout(timer)
-  }, [hasChanges, id, handleSave])
+  }, [hasChanges, id, updateSequence])
 
   if (isLoading) {
     return (
@@ -282,7 +375,7 @@ export default function SequenceDesigner() {
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-[90vh] flex flex-col">
       {/* Header */}
       <Card className="rounded-none border-x-0 border-t-0 p-4">
         <div className="flex items-center justify-between">
@@ -319,6 +412,24 @@ export default function SequenceDesigner() {
         >
           <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
           <Controls />
+
+          {/* Figma 스타일 툴바 - 중앙 하단 */}
+          <Panel position="bottom-center">
+            <div className="bg-white shadow-lg rounded-lg border border-gray-200 px-4 py-2 mb-4">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={addCommentNode}
+                  className="flex items-center gap-2 hover:bg-yellow-50"
+                  title="주석 노드 추가"
+                >
+                  <MessageSquare className="h-4 w-4 text-yellow-600" />
+                  <span className="text-sm">주석</span>
+                </Button>
+              </div>
+            </div>
+          </Panel>
         </ReactFlow>
       </div>
 
@@ -336,6 +447,10 @@ export default function SequenceDesigner() {
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-orange-500 rounded-full" />
             <span>타이머</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-yellow-400 rounded-full" />
+            <span>주석</span>
           </div>
           {hasChanges && (
             <div className="flex items-center gap-2 ml-auto">

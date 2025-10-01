@@ -1,4 +1,6 @@
+import sgMail from '@sendgrid/mail'
 import { and, desc, eq, isNull, lte, sql } from 'drizzle-orm'
+import { config } from '../config'
 import { db } from '../db/index'
 import { leads } from '../db/schema/leads'
 import { leadContacts } from '../db/schema/lead-details'
@@ -7,7 +9,11 @@ import { workflowEnrollments, workflowExecutionLogs } from '../db/schema/workflo
 import { workflowGeneratedEmails } from '../db/schema/workflow-emails'
 import { customerGroupMembers } from '../db/schema/customer-groups'
 import { emails } from '../db/schema/emails'
-import { emailService } from './email.service'
+
+// Initialize SendGrid
+if (config.sendgrid.apiKey) {
+  sgMail.setApiKey(config.sendgrid.apiKey)
+}
 
 // ====================================
 // WORKFLOW DATA TYPES
@@ -15,7 +21,7 @@ import { emailService } from './email.service'
 
 interface WorkflowNode {
   id: string
-  type: 'start' | 'emailDraft' | 'timer'
+  type: 'start' | 'emailDraft' | 'timer' | 'comment'
   position: { x: number; y: number }
   data: {
     subject?: string
@@ -23,6 +29,7 @@ interface WorkflowNode {
     delayDays?: number
     generationMode?: 'ai' | 'manual'
     aiPrompt?: string
+    comment?: string
     // biome-ignore lint/suspicious/noExplicitAny: workflow node data can have dynamic fields
     [key: string]: any
   }
@@ -267,26 +274,45 @@ async function executeEmailDraftNode(data: {
     return { success: false, error: 'No generated email found' }
   }
 
-  // 이메일 발송
+  // 이메일 발송 (Email Sequence Worker 방식 적용)
   try {
     const toEmail = generatedEmail.contactEmail || ''
     if (!toEmail) {
       throw new Error('No contact email found')
     }
 
-    const sendResult = await emailService.sendEmail({
-      fromEmail: enrollment.userEmailAccount.emailAddress,
-      fromName: enrollment.userEmailAccount.displayName || enrollment.userEmailAccount.emailAddress,
-      toEmail,
-      subject: generatedEmail.subject,
-      bodyText: generatedEmail.bodyText || undefined,
-      bodyHtml: generatedEmail.bodyHtml || undefined,
-      apiKey: enrollment.userEmailAccount.apiKey,
-    })
-
-    if (!sendResult.success) {
-      throw new Error(sendResult.error || 'Failed to send email')
+    // Use account-specific API key or default
+    const apiKey = enrollment.userEmailAccount.apiKey || config.sendgrid.apiKey
+    if (!apiKey) {
+      throw new Error('SendGrid API key not configured')
     }
+
+    // Set API key for this request
+    sgMail.setApiKey(apiKey)
+
+    // Prepare email message
+    // biome-ignore lint/suspicious/noExplicitAny: SendGrid message type
+    const msg: any = {
+      to: toEmail,
+      from: {
+        email: enrollment.userEmailAccount.emailAddress,
+        name: enrollment.userEmailAccount.displayName || enrollment.userEmailAccount.emailAddress,
+      },
+      subject: generatedEmail.subject,
+    }
+
+    // Set body
+    if (generatedEmail.bodyText) {
+      msg.text = generatedEmail.bodyText
+    }
+    if (generatedEmail.bodyHtml) {
+      msg.html = generatedEmail.bodyHtml
+    }
+
+    // Send email via SendGrid
+    // biome-ignore lint/suspicious/noExplicitAny: SendGrid response type
+    const [response]: any = await sgMail.send(msg)
+    const messageId = response.headers['x-message-id'] as string
 
     // 발송된 이메일 DB에 저장
     const sentEmailResults = await db
@@ -304,7 +330,7 @@ async function executeEmailDraftNode(data: {
         bodyHtml: generatedEmail.bodyHtml,
         status: 'sent',
         sentAt: new Date(),
-        sendgridMessageId: sendResult.messageId,
+        sendgridMessageId: messageId,
       })
       .returning()
 
@@ -338,11 +364,12 @@ async function executeEmailDraftNode(data: {
       })
       .where(eq(workflowEnrollments.id, enrollment.id))
 
-    console.log(`[Workflow] ✓ Email sent successfully: ${sentEmail.id}`)
+    console.log(`[Workflow] ✓ Email sent successfully: ${sentEmail.id}, MessageID: ${messageId}`)
 
     return { success: true, emailId: sentEmail.id }
-  } catch (error) {
-    console.error(`[Workflow] ✗ Failed to send email:`, error)
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error(`[Workflow] ✗ Failed to send email:`, errorMessage)
 
     // 실행 로그에 실패 기록
     await db.insert(workflowExecutionLogs).values({

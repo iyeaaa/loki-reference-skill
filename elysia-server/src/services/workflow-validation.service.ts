@@ -4,7 +4,7 @@
 
 interface WorkflowNode {
   id: string
-  type: 'start' | 'emailDraft' | 'timer'
+  type: 'start' | 'emailDraft' | 'timer' | 'comment'
   position: { x: number; y: number }
   data: {
     subject?: string
@@ -12,6 +12,7 @@ interface WorkflowNode {
     delayDays?: number
     generationMode?: 'ai' | 'manual'
     aiPrompt?: string
+    comment?: string
     // biome-ignore lint/suspicious/noExplicitAny: workflow node data can have dynamic fields
     [key: string]: any
   }
@@ -52,6 +53,11 @@ export function validateWorkflow(workflowData: WorkflowData): {
 
   // 2. 각 노드 타입별 검증
   workflowData.nodes.forEach((node) => {
+    // 주석 노드는 검증 스킵
+    if (node.type === 'comment') {
+      return
+    }
+    
     if (node.type === 'emailDraft') {
       const mode = node.data.generationMode
 
@@ -104,8 +110,8 @@ export function validateWorkflow(workflowData: WorkflowData): {
   })
 
   workflowData.nodes.forEach((node) => {
-    // 시작 노드는 제외
-    if (node.type !== 'start' && !connectedNodes.has(node.id)) {
+    // 시작 노드와 주석 노드는 제외
+    if (node.type !== 'start' && node.type !== 'comment' && !connectedNodes.has(node.id)) {
       errors.push({
         field: 'connection',
         message: '연결되지 않은 노드가 있습니다',

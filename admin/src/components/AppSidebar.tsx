@@ -3,6 +3,7 @@ import {
   Building2,
   GitBranch,
   Mail,
+  SendHorizontal,
   Settings,
   UserCheck,
   Users,
@@ -65,6 +66,11 @@ const adminMenuItems = [
     title: "유저 관리",
     url: "/users",
     icon: Users,
+  },
+  {
+    title: "메일 발송 테스트",
+    url: "/email-send-test",
+    icon: SendHorizontal,
   },
 ]
 

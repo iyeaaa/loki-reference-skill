@@ -128,14 +128,13 @@ export interface EmailEvent {
 }
 
 export interface SendEmailRequest {
-  workspaceId: string
-  userEmailAccountId: string
   toEmail: string
   subject: string
   bodyText?: string
   bodyHtml?: string
   ccEmails?: string[]
   bccEmails?: string[]
+  fromName?: string // Custom sender name (optional, defaults to config's fromName)
   leadId?: string
   sequenceId?: string
   stepId?: string
@@ -143,6 +142,9 @@ export interface SendEmailRequest {
   inReplyTo?: string
   references?: string[]
   scheduledAt?: string // ISO 8601 datetime for scheduled sending
+  // Optional for backward compatibility
+  workspaceId?: string
+  userEmailAccountId?: string
 }
 
 export interface CreateEmailRequest {

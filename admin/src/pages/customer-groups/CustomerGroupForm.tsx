@@ -1,40 +1,35 @@
-import { Download, FileText, Upload, X } from "lucide-react";
-import { useId, useState, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Download, FileText, Upload, X } from "lucide-react"
+import { useId, useRef, useState } from "react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  parseCSV,
-  validateCSVData,
-  generateCSVTemplate,
-  type LeadCSVData,
-} from "@/lib/csv-utils";
-import { useSuspenseWorkspaces } from "@/lib/api/hooks/workspaces";
-import type { CustomerGroup } from "@/lib/api/types/customer-group";
+} from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { useSuspenseWorkspaces } from "@/lib/api/hooks/workspaces"
+import type { CustomerGroup } from "@/lib/api/types/customer-group"
+import { generateCSVTemplate, type LeadCSVData, parseCSV, validateCSVData } from "@/lib/csv-utils"
 
 interface CustomerGroupFormProps {
-  customerGroup?: CustomerGroup;
-  isEdit?: boolean;
-  onSave: (customerGroupData: unknown) => Promise<void> | void;
-  onCancel: () => void;
+  customerGroup?: CustomerGroup
+  isEdit?: boolean
+  onSave: (customerGroupData: unknown) => Promise<void> | void
+  onCancel: () => void
 }
 
 interface CSVUploadData {
-  leads: LeadCSVData[];
-  fileName: string;
-  fileSize: number;
+  leads: LeadCSVData[]
+  fileName: string
+  fileSize: number
 }
 
 export function CustomerGroupForm({
@@ -45,98 +40,96 @@ export function CustomerGroupForm({
 }: CustomerGroupFormProps) {
   const {
     data: { workspaces },
-  } = useSuspenseWorkspaces({ limit: 100 });
+  } = useSuspenseWorkspaces({ limit: 100 })
 
-  const nameId = useId();
-  const descriptionId = useId();
-  const isDynamicId = useId();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const nameId = useId()
+  const descriptionId = useId()
+  const isDynamicId = useId()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [formData, setFormData] = useState({
     name: customerGroup?.name || "",
     description: customerGroup?.description || "",
     workspaceId: customerGroup?.workspaceId || "",
     isDynamic: customerGroup?.isDynamic ?? false,
-  });
+  })
 
   // CSV 업로드 관련 상태
-  const [csvData, setCsvData] = useState<CSVUploadData | null>(null);
-  const [csvErrors, setCsvErrors] = useState<string[]>([]);
-  const [isProcessingCSV, setIsProcessingCSV] = useState(false);
+  const [csvData, setCsvData] = useState<CSVUploadData | null>(null)
+  const [csvErrors, setCsvErrors] = useState<string[]>([])
+  const [isProcessingCSV, setIsProcessingCSV] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     onSave({
       ...formData,
       csvData: csvData?.leads || undefined,
-    });
-  };
+    })
+  }
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const file = event.target.files?.[0]
+    if (!file) return
 
     if (!file.name.toLowerCase().endsWith(".csv")) {
-      setCsvErrors(["CSV 파일만 업로드 가능합니다."]);
-      return;
+      setCsvErrors(["CSV 파일만 업로드 가능합니다."])
+      return
     }
 
     if (file.size > 5 * 1024 * 1024) {
       // 5MB 제한
-      setCsvErrors(["파일 크기는 5MB를 초과할 수 없습니다."]);
-      return;
+      setCsvErrors(["파일 크기는 5MB를 초과할 수 없습니다."])
+      return
     }
 
-    setIsProcessingCSV(true);
-    setCsvErrors([]);
+    setIsProcessingCSV(true)
+    setCsvErrors([])
 
-    const reader = new FileReader();
+    const reader = new FileReader()
     reader.onload = (e) => {
       try {
-        const csvText = e.target?.result as string;
-        const leads = parseCSV(csvText);
-        console.log("leads", leads);
-        const validation = validateCSVData(leads);
+        const csvText = e.target?.result as string
+        const leads = parseCSV(csvText)
+        console.log("leads", leads)
+        const validation = validateCSVData(leads)
 
         if (validation.valid) {
           setCsvData({
             leads,
             fileName: file.name,
             fileSize: file.size,
-          });
+          })
         } else {
-          setCsvErrors(validation.errors);
+          setCsvErrors(validation.errors)
         }
       } catch (error) {
-        console.error("CSV parsing error:", error);
+        console.error("CSV parsing error:", error)
         const errorMessage =
-          error instanceof Error
-            ? error.message
-            : "CSV 파일을 읽는 중 오류가 발생했습니다.";
-        setCsvErrors([errorMessage]);
+          error instanceof Error ? error.message : "CSV 파일을 읽는 중 오류가 발생했습니다."
+        setCsvErrors([errorMessage])
       } finally {
-        setIsProcessingCSV(false);
+        setIsProcessingCSV(false)
       }
-    };
-    reader.readAsText(file, "UTF-8");
-  };
+    }
+    reader.readAsText(file, "UTF-8")
+  }
 
   const handleRemoveCSV = () => {
-    setCsvData(null);
-    setCsvErrors([]);
+    setCsvData(null)
+    setCsvErrors([])
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = ""
     }
-  };
+  }
 
   const handleDownloadTemplate = () => {
-    const template = generateCSVTemplate();
-    const blob = new Blob([template], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "customer_group_template.csv";
-    link.click();
-  };
+    const template = generateCSVTemplate()
+    const blob = new Blob([template], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    link.href = URL.createObjectURL(blob)
+    link.download = "customer_group_template.csv"
+    link.click()
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -160,9 +153,7 @@ export function CustomerGroupForm({
           <Textarea
             id={descriptionId}
             value={formData.description}
-            onChange={(e) =>
-              setFormData({ ...formData, description: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             placeholder="그룹 설명을 입력하세요 (선택사항)"
             rows={4}
           />
@@ -172,9 +163,7 @@ export function CustomerGroupForm({
           <Label htmlFor="workspace">워크스페이스</Label>
           <Select
             value={formData.workspaceId}
-            onValueChange={(value) =>
-              setFormData({ ...formData, workspaceId: value })
-            }
+            onValueChange={(value) => setFormData({ ...formData, workspaceId: value })}
             disabled={isEdit}
           >
             <SelectTrigger>
@@ -208,9 +197,7 @@ export function CustomerGroupForm({
           <Checkbox
             id={isDynamicId}
             checked={formData.isDynamic}
-            onCheckedChange={(checked) =>
-              setFormData({ ...formData, isDynamic: !!checked })
-            }
+            onCheckedChange={(checked) => setFormData({ ...formData, isDynamic: !!checked })}
           />
           <Label htmlFor={isDynamicId} className="text-sm font-normal">
             동적 그룹 (조건에 따라 자동으로 멤버가 업데이트됨)
@@ -223,12 +210,7 @@ export function CustomerGroupForm({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium">리드 데이터 추가</h3>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleDownloadTemplate}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={handleDownloadTemplate}>
               <Download className="h-4 w-4 mr-2" />
               템플릿 다운로드
             </Button>
@@ -242,8 +224,7 @@ export function CustomerGroupForm({
                   <div className="space-y-2">
                     <h4 className="text-lg font-medium">CSV 파일 업로드</h4>
                     <p className="text-sm text-muted-foreground">
-                      리드 데이터가 포함된 CSV 파일을 업로드하여 그룹에 자동으로
-                      추가하세요
+                      리드 데이터가 포함된 CSV 파일을 업로드하여 그룹에 자동으로 추가하세요
                     </p>
                     <div className="pt-4">
                       <input
@@ -273,12 +254,7 @@ export function CustomerGroupForm({
                     <FileText className="h-4 w-4" />
                     업로드된 파일
                   </CardTitle>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRemoveCSV}
-                  >
+                  <Button type="button" variant="outline" size="sm" onClick={handleRemoveCSV}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
@@ -292,9 +268,7 @@ export function CustomerGroupForm({
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary">
-                      {csvData.leads.length}개 리드
-                    </Badge>
+                    <Badge variant="secondary">{csvData.leads.length}개 리드</Badge>
                     <Badge variant="outline">CSV</Badge>
                   </div>
                   <div className="text-xs text-muted-foreground">
@@ -329,5 +303,5 @@ export function CustomerGroupForm({
         </Button>
       </div>
     </form>
-  );
+  )
 }

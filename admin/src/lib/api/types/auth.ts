@@ -43,3 +43,13 @@ export interface SignupResponse {
     email: string
   }
 }
+
+export interface UpdateProfileRequest {
+  username: string
+  email: string
+  employeeId: string
+}
+
+export interface UpdateProfileResponse {
+  user: AuthUser
+}

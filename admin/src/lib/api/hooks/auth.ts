@@ -28,8 +28,8 @@ export function useCurrentUser() {
   return useQuery({
     queryKey: authKeys.user(),
     queryFn: authApi.getStoredUser,
-    staleTime: Number.POSITIVE_INFINITY,
-    gcTime: Number.POSITIVE_INFINITY,
+    staleTime: 0, // Always consider data stale so it refetches when invalidated
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   })
 }
 
@@ -110,6 +110,33 @@ export function useRefreshToken() {
     },
     onError: () => {
       toast.error("세션이 만료되었습니다. 다시 로그인해주세요.")
+    },
+  })
+}
+
+export function useUpdateProfileMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationKey: ["auth", "updateProfile"],
+    mutationFn: authApi.updateProfile,
+    onSuccess: (response) => {
+      // Get current token
+      const token = localStorage.getItem("authToken")
+      if (token) {
+        // Update localStorage with new user data
+        authApi.storeAuthData(token, response.user)
+      }
+
+      // Update query cache and invalidate to force refetch
+      queryClient.setQueryData(authKeys.user(), response.user)
+      queryClient.invalidateQueries({ queryKey: authKeys.user() })
+      queryClient.invalidateQueries({ queryKey: authKeys.verify() })
+
+      toast.success("프로필이 업데이트되었습니다.")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "프로필 업데이트에 실패했습니다.")
     },
   })
 }

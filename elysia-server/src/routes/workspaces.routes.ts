@@ -12,6 +12,7 @@ const workspaceSchema = t.Object({
 const updateWorkspaceSchema = t.Object({
   name: t.String({ minLength: 1, maxLength: 255 }),
   description: t.Optional(t.String()),
+  ownerId: t.Optional(t.String({ format: 'uuid' })),
   isActive: t.Boolean(),
 })
 

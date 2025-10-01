@@ -120,11 +120,11 @@ export function WorkspaceForm({
                       {filteredUsers.map((user) => (
                         <CommandItem
                           key={user.id}
-                          value={user.id}
-                          onSelect={(currentValue) => {
+                          value={`${user.username} ${user.email}`}
+                          onSelect={() => {
                             setFormData({
                               ...formData,
-                              ownerId: currentValue === formData.ownerId ? "" : currentValue,
+                              ownerId: user.id,
                             })
                             setOwnerOpen(false)
                             setOwnerSearch("")

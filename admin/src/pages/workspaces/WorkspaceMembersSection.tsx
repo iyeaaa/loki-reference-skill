@@ -30,8 +30,11 @@ interface WorkspaceMembersSectionProps {
   onAddMemberClick: () => void
 }
 
-export function WorkspaceMembersSection({ workspaceId, isEdit, onAddMemberClick }: WorkspaceMembersSectionProps) {
-
+export function WorkspaceMembersSection({
+  workspaceId,
+  isEdit,
+  onAddMemberClick,
+}: WorkspaceMembersSectionProps) {
   const { data: members = [], isLoading } = useWorkspaceMembers(workspaceId, isEdit)
   const updateMemberRole = useUpdateMemberRole()
   const updateMemberStatus = useUpdateMemberStatus()

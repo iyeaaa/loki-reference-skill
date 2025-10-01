@@ -42,10 +42,7 @@ export default function WorkspacesPage() {
   const bulkUpdateStatus = useBulkUpdateWorkspaceStatus()
 
   // Fetch members for the editing workspace (only when editing)
-  const { data: members = [] } = useWorkspaceMembers(
-    editingWorkspace?.id || "",
-    !!editingWorkspace
-  )
+  const { data: members = [] } = useWorkspaceMembers(editingWorkspace?.id || "", !!editingWorkspace)
 
   const loadUsers = useCallback(async () => {
     try {

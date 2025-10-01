@@ -329,10 +329,10 @@ export default function EmailSendTestPage() {
       }
     }
 
-    toast.success(
-      `30초 후 테스트 발송 예약 완료!\n성공: ${successCount}건, 실패: ${failCount}건`,
-      { id: "quick-test", duration: 5000 }
-    )
+    toast.success(`30초 후 테스트 발송 예약 완료!\n성공: ${successCount}건, 실패: ${failCount}건`, {
+      id: "quick-test",
+      duration: 5000,
+    })
   }
 
   const clearScheduleForm = () => {

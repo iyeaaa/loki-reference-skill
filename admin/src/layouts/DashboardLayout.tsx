@@ -1,5 +1,5 @@
 import { User } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { Suspense, useEffect, useMemo, useState } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 import { AppSidebar } from "@/components/AppSidebar"
 import { ProfileCard } from "@/components/ProfileCard"
@@ -119,7 +119,15 @@ function DashboardContent() {
         </header>
         <main className="flex-1 overflow-y-auto">
           <div className="p-4">
-            <Outlet />
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center min-h-[400px]">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+                </div>
+              }
+            >
+              <Outlet />
+            </Suspense>
           </div>
         </main>
       </div>

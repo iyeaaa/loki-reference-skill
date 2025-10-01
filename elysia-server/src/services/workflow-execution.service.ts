@@ -9,7 +9,6 @@ import { leads } from '../db/schema/leads'
 import { sequences } from '../db/schema/sequences'
 import { workflowGeneratedEmails } from '../db/schema/workflow-emails'
 import { workflowEnrollments, workflowExecutionLogs } from '../db/schema/workflow-executions'
-import { emailService } from './email.service'
 
 // Initialize SendGrid
 if (config.sendgrid.apiKey) {
@@ -31,7 +30,6 @@ interface WorkflowNode {
     generationMode?: 'ai' | 'manual'
     aiPrompt?: string
     comment?: string
-    // biome-ignore lint/suspicious/noExplicitAny: workflow node data can have dynamic fields
     [key: string]: any
   }
 }
@@ -292,7 +290,6 @@ async function executeEmailDraftNode(data: {
     sgMail.setApiKey(apiKey)
 
     // Prepare email message
-    // biome-ignore lint/suspicious/noExplicitAny: SendGrid message type
     const msg: any = {
       to: toEmail,
       from: {
@@ -311,7 +308,6 @@ async function executeEmailDraftNode(data: {
     }
 
     // Send email via SendGrid
-    // biome-ignore lint/suspicious/noExplicitAny: SendGrid response type
     const [response]: any = await sgMail.send(msg)
     const messageId = response.headers['x-message-id'] as string
 

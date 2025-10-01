@@ -13,7 +13,6 @@ interface WorkflowNode {
     generationMode?: 'ai' | 'manual'
     aiPrompt?: string
     comment?: string
-    // biome-ignore lint/suspicious/noExplicitAny: workflow node data can have dynamic fields
     [key: string]: any
   }
 }
@@ -57,7 +56,7 @@ export function validateWorkflow(workflowData: WorkflowData): {
     if (node.type === 'comment') {
       return
     }
-    
+
     if (node.type === 'emailDraft') {
       const mode = node.data.generationMode
 

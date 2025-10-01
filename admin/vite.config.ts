@@ -10,14 +10,6 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  server: {
-    proxy: {
-      "/api": {
-        target: "http://localhost:3001",
-        changeOrigin: true,
-      },
-    },
-  },
   build: {
     // 파일 해시를 사용하여 캐시 무효화
     rollupOptions: {

@@ -1,50 +1,63 @@
-import { Plus, Trash2 } from "lucide-react"
-import { useId, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Plus, Trash2 } from "lucide-react";
+import { useId, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import type { Lead, LeadStatus } from "@/lib/api/types/lead"
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import type { Lead, LeadStatus } from "@/lib/api/types/lead";
 import type {
   ContactType,
   LeadContact,
   LeadSocialMedia,
   SocialMediaPlatform,
-} from "@/lib/api/types/lead-detail"
+} from "@/lib/api/types/lead-detail";
 
-interface LeadFormData extends Omit<Partial<Lead>, "leadScore" | "contacts" | "socialMedia"> {
-  leadScore?: number
-  contacts?: LeadContact[]
-  socialMedia?: LeadSocialMedia[]
-  workspaceId?: string
+interface LeadFormData
+  extends Omit<Partial<Lead>, "leadScore" | "contacts" | "socialMedia"> {
+  leadScore?: number;
+  contacts?: LeadContact[];
+  socialMedia?: LeadSocialMedia[];
+  workspaceId?: string;
 }
 
 interface LeadFormProps {
-  lead?: Lead
-  isEdit?: boolean
-  workspaceId?: string
-  onSave: (leadData: LeadFormData) => Promise<void> | void
-  onCancel: () => void
+  lead?: Lead;
+  isEdit?: boolean;
+  workspaceId?: string;
+  customerGroups?: Array<{ id: string; name: string }>;
+  selectedGroup?: string;
+  onGroupChange?: (groupId: string) => void;
+  onSave: (leadData: LeadFormData) => Promise<void> | void;
+  onCancel: () => void;
 }
 
-export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }: LeadFormProps) {
-  const companyNameId = useId()
-  const foundCompanyNameId = useId()
-  const websiteUrlId = useId()
-  const businessTypeId = useId()
-  const countryId = useId()
-  const cityId = useId()
-  const addressId = useId()
-  const descriptionId = useId()
-  const notesId = useId()
-  const leadScoreId = useId()
+export function LeadForm({
+  lead,
+  isEdit = false,
+  workspaceId,
+  customerGroups = [],
+  selectedGroup = "",
+  onGroupChange,
+  onSave,
+  onCancel,
+}: LeadFormProps) {
+  const companyNameId = useId();
+  const foundCompanyNameId = useId();
+  const websiteUrlId = useId();
+  const businessTypeId = useId();
+  const countryId = useId();
+  const cityId = useId();
+  const addressId = useId();
+  const descriptionId = useId();
+  const notesId = useId();
+  const leadScoreId = useId();
 
   const [formData, setFormData] = useState({
     companyName: lead?.companyName || "",
@@ -60,71 +73,87 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
     notes: lead?.notes || "",
     leadScore: lead?.leadScore?.toString() || "",
     leadSource: lead?.leadSource || "",
-  })
+  });
 
   const [contacts, setContacts] = useState<Partial<LeadContact>[]>(
     lead?.contacts && lead.contacts.length > 0 ? lead.contacts : []
-  )
+  );
 
   const [socialMedia, setSocialMedia] = useState<Partial<LeadSocialMedia>[]>(
     lead?.socialMedia && lead.socialMedia.length > 0 ? lead.socialMedia : []
-  )
+  );
 
-  const finalUrlId = useId()
-  const leadSourceId = useId()
+  const finalUrlId = useId();
+  const leadSourceId = useId();
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     const submitData: LeadFormData = {
       ...formData,
-      leadScore: formData.leadScore ? parseInt(formData.leadScore, 10) : undefined,
+      leadScore: formData.leadScore
+        ? parseInt(formData.leadScore, 10)
+        : undefined,
       contacts: contacts.filter(
         (c) => c.contactValue && c.contactValue.trim() !== ""
       ) as LeadContact[],
-      socialMedia: socialMedia.filter((s) => s.url && s.url.trim() !== "") as LeadSocialMedia[],
-    }
+      socialMedia: socialMedia.filter(
+        (s) => s.url && s.url.trim() !== ""
+      ) as LeadSocialMedia[],
+    };
 
     // Add workspaceId for create mode
     if (!isEdit && workspaceId) {
-      submitData.workspaceId = workspaceId
+      submitData.workspaceId = workspaceId;
     }
 
-    onSave(submitData)
-  }
+    onSave(submitData);
+  };
 
   const addContact = () => {
     setContacts([
       ...contacts,
-      { contactType: "email" as ContactType, contactValue: "", isPrimary: false },
-    ])
-  }
+      {
+        contactType: "email" as ContactType,
+        contactValue: "",
+        isPrimary: false,
+      },
+    ]);
+  };
 
   const removeContact = (index: number) => {
-    setContacts(contacts.filter((_, i) => i !== index))
-  }
+    setContacts(contacts.filter((_, i) => i !== index));
+  };
 
-  const updateContact = (index: number, field: keyof LeadContact, value: string | boolean) => {
-    const updated = [...contacts]
-    updated[index] = { ...updated[index], [field]: value }
-    setContacts(updated)
-  }
+  const updateContact = (
+    index: number,
+    field: keyof LeadContact,
+    value: string | boolean
+  ) => {
+    const updated = [...contacts];
+    updated[index] = { ...updated[index], [field]: value };
+    setContacts(updated);
+  };
 
   const addSocialMedia = () => {
     setSocialMedia([
       ...socialMedia,
       { platform: "facebook" as SocialMediaPlatform, url: "", username: "" },
-    ])
-  }
+    ]);
+  };
 
   const removeSocialMedia = (index: number) => {
-    setSocialMedia(socialMedia.filter((_, i) => i !== index))
-  }
+    setSocialMedia(socialMedia.filter((_, i) => i !== index));
+  };
 
-  const updateSocialMedia = (index: number, field: keyof LeadSocialMedia, value: string) => {
-    const updated = [...socialMedia]
-    updated[index] = { ...updated[index], [field]: value }
-    setSocialMedia(updated)
-  }
+  const updateSocialMedia = (
+    index: number,
+    field: keyof LeadSocialMedia,
+    value: string
+  ) => {
+    const updated = [...socialMedia];
+    updated[index] = { ...updated[index], [field]: value };
+    setSocialMedia(updated);
+  };
 
   const statusOptions: { value: LeadStatus; label: string }[] = [
     { value: "new", label: "신규" },
@@ -134,7 +163,7 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
     { value: "converted", label: "전환됨" },
     { value: "lost", label: "실패" },
     { value: "unsubscribed", label: "구독취소" },
-  ]
+  ];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -145,7 +174,9 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
           <Input
             id={companyNameId}
             value={formData.companyName}
-            onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, companyName: e.target.value })
+            }
             placeholder="회사명 입력"
           />
         </div>
@@ -156,7 +187,9 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
           <Input
             id={foundCompanyNameId}
             value={formData.foundCompanyName}
-            onChange={(e) => setFormData({ ...formData, foundCompanyName: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, foundCompanyName: e.target.value })
+            }
             placeholder="발견된 회사명"
           />
         </div>
@@ -170,7 +203,9 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
             id={websiteUrlId}
             type="url"
             value={formData.websiteUrl}
-            onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, websiteUrl: e.target.value })
+            }
             placeholder="https://example.com"
           />
         </div>
@@ -182,7 +217,9 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
             id={finalUrlId}
             type="url"
             value={formData.finalUrl}
-            onChange={(e) => setFormData({ ...formData, finalUrl: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, finalUrl: e.target.value })
+            }
             placeholder="https://example.com"
           />
         </div>
@@ -195,7 +232,9 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
           <Input
             id={businessTypeId}
             value={formData.businessType}
-            onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, businessType: e.target.value })
+            }
             placeholder="예: IT, 제조업, 서비스업"
           />
         </div>
@@ -233,7 +272,9 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
           <Input
             id={countryId}
             value={formData.country}
-            onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, country: e.target.value })
+            }
             placeholder="예: 대한민국"
           />
         </div>
@@ -256,7 +297,9 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
         <Input
           id={addressId}
           value={formData.address}
-          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, address: e.target.value })
+          }
           placeholder="상세 주소 입력"
         />
       </div>
@@ -271,7 +314,9 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
             min="0"
             max="100"
             value={formData.leadScore}
-            onChange={(e) => setFormData({ ...formData, leadScore: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, leadScore: e.target.value })
+            }
             placeholder="0-100"
           />
         </div>
@@ -282,11 +327,36 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
           <Input
             id={leadSourceId}
             value={formData.leadSource}
-            onChange={(e) => setFormData({ ...formData, leadSource: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, leadSource: e.target.value })
+            }
             placeholder="예: 웹사이트, 추천, 광고"
           />
         </div>
       </div>
+
+      {/* Customer Group Selection (only for create mode) */}
+      {!isEdit && customerGroups.length > 0 && (
+        <div className="space-y-2">
+          <Label htmlFor="customerGroup">고객 그룹 (선택사항)</Label>
+          <Select
+            value={selectedGroup || undefined}
+            onValueChange={onGroupChange}
+          >
+            <SelectTrigger id="customerGroup">
+              <SelectValue placeholder="그룹을 선택하세요" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">그룹 없음</SelectItem>
+              {customerGroups.map((group) => (
+                <SelectItem key={group.id} value={group.id}>
+                  {group.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Description */}
       <div className="space-y-2">
@@ -294,7 +364,9 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
         <Textarea
           id={descriptionId}
           value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, description: e.target.value })
+          }
           placeholder="회사 설명 입력..."
           rows={3}
         />
@@ -316,13 +388,21 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
       <div className="space-y-3 pt-4 border-t">
         <div className="flex items-center justify-between">
           <Label className="text-base font-semibold">연락처</Label>
-          <Button type="button" size="sm" variant="outline" onClick={addContact}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={addContact}
+          >
             <Plus className="h-4 w-4 mr-1" />
             연락처 추가
           </Button>
         </div>
         {contacts.map((contact, index) => (
-          <div key={index} className="flex gap-2 items-start p-3 border rounded-md bg-gray-50">
+          <div
+            key={index}
+            className="flex gap-2 items-start p-3 border rounded-md bg-gray-50"
+          >
             <div className="flex-1 grid grid-cols-3 gap-2">
               <div className="space-y-1">
                 <Label className="text-xs">타입</Label>
@@ -348,7 +428,9 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
                 <Input
                   className="h-9"
                   value={contact.contactValue || ""}
-                  onChange={(e) => updateContact(index, "contactValue", e.target.value)}
+                  onChange={(e) =>
+                    updateContact(index, "contactValue", e.target.value)
+                  }
                   placeholder="연락처 입력"
                 />
               </div>
@@ -357,7 +439,9 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
                 <Input
                   className="h-9"
                   value={contact.label || ""}
-                  onChange={(e) => updateContact(index, "label", e.target.value)}
+                  onChange={(e) =>
+                    updateContact(index, "label", e.target.value)
+                  }
                   placeholder="예: 주연락처"
                 />
               </div>
@@ -379,20 +463,32 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
       <div className="space-y-3 pt-4 border-t">
         <div className="flex items-center justify-between">
           <Label className="text-base font-semibold">소셜 미디어</Label>
-          <Button type="button" size="sm" variant="outline" onClick={addSocialMedia}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={addSocialMedia}
+          >
             <Plus className="h-4 w-4 mr-1" />
             SNS 추가
           </Button>
         </div>
         {socialMedia.map((social, index) => (
-          <div key={index} className="flex gap-2 items-start p-3 border rounded-md bg-gray-50">
+          <div
+            key={index}
+            className="flex gap-2 items-start p-3 border rounded-md bg-gray-50"
+          >
             <div className="flex-1 grid grid-cols-3 gap-2">
               <div className="space-y-1">
                 <Label className="text-xs">플랫폼</Label>
                 <Select
                   value={social.platform || "facebook"}
                   onValueChange={(value) =>
-                    updateSocialMedia(index, "platform", value as SocialMediaPlatform)
+                    updateSocialMedia(
+                      index,
+                      "platform",
+                      value as SocialMediaPlatform
+                    )
                   }
                 >
                   <SelectTrigger className="h-9">
@@ -411,7 +507,9 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
                 <Input
                   className="h-9"
                   value={social.url || ""}
-                  onChange={(e) => updateSocialMedia(index, "url", e.target.value)}
+                  onChange={(e) =>
+                    updateSocialMedia(index, "url", e.target.value)
+                  }
                   placeholder="https://..."
                 />
               </div>
@@ -420,7 +518,9 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
                 <Input
                   className="h-9"
                   value={social.username || ""}
-                  onChange={(e) => updateSocialMedia(index, "username", e.target.value)}
+                  onChange={(e) =>
+                    updateSocialMedia(index, "username", e.target.value)
+                  }
                   placeholder="@username"
                 />
               </div>
@@ -447,5 +547,5 @@ export function LeadForm({ lead, isEdit = false, workspaceId, onSave, onCancel }
         </Button>
       </div>
     </form>
-  )
+  );
 }

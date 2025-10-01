@@ -1,4 +1,0 @@
-companyName,primaryEmail,primaryPhone,secondaryEmail,secondaryPhone
-"Test Company 1","test1@example.com","+1-555-0001","backup1@example.com","+1-555-0002"
-"Test Company 2","test2@example.com","+1-555-0003","backup2@example.com","+1-555-0004"
-"Test Company 3","test3@example.com","+1-555-0005","","+1-555-0006"

@@ -24,6 +24,7 @@ interface WorkspaceFormProps {
   users: User[]
   onSave: (workspaceData: unknown) => Promise<void> | void
   onCancel: () => void
+  onAddMemberClick?: () => void
 }
 
 export function WorkspaceForm({
@@ -32,6 +33,7 @@ export function WorkspaceForm({
   users,
   onSave,
   onCancel,
+  onAddMemberClick,
 }: WorkspaceFormProps) {
   const nameId = useId()
   const descriptionId = useId()
@@ -158,7 +160,11 @@ export function WorkspaceForm({
 
         {workspace?.id && (
           <div className="pt-6 border-t">
-            <WorkspaceMembersSection workspaceId={workspace.id} isEdit={isEdit} />
+            <WorkspaceMembersSection
+              workspaceId={workspace.id}
+              isEdit={isEdit}
+              onAddMemberClick={onAddMemberClick || (() => {})}
+            />
           </div>
         )}
 

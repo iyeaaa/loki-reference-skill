@@ -10,10 +10,12 @@ import {
   useCreateWorkspace,
   useDeleteWorkspace,
   useUpdateWorkspace,
+  useWorkspaceMembers,
 } from "@/lib/api/hooks/workspaces"
 import { usersApi } from "@/lib/api/services/users"
 import type { User } from "@/lib/api/types/user"
 import type { Workspace } from "@/lib/api/types/workspace"
+import { AddMemberDialog } from "./AddMemberDialog"
 import { BulkActionModal } from "./BulkActionModal"
 import { WorkspaceFilters } from "./WorkspaceFilters"
 import { WorkspaceForm } from "./WorkspaceForm"
@@ -32,11 +34,18 @@ export default function WorkspacesPage() {
   const [selectedWorkspaces, setSelectedWorkspaces] = useState<string[]>([])
   const [showBulkActionModal, setShowBulkActionModal] = useState(false)
   const [bulkActionType, setBulkActionType] = useState<"status" | null>(null)
+  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false)
 
   const createWorkspace = useCreateWorkspace()
   const updateWorkspace = useUpdateWorkspace()
   const deleteWorkspace = useDeleteWorkspace()
   const bulkUpdateStatus = useBulkUpdateWorkspaceStatus()
+
+  // Fetch members for the editing workspace (only when editing)
+  const { data: members = [] } = useWorkspaceMembers(
+    editingWorkspace?.id || "",
+    !!editingWorkspace
+  )
 
   const loadUsers = useCallback(async () => {
     try {
@@ -239,7 +248,7 @@ export default function WorkspacesPage() {
       </Card>
 
       {/* Create Workspace Dialog */}
-      <Dialog open={_showCreateDialog} onOpenChange={setShowCreateDialog}>
+      <Dialog open={_showCreateDialog} onOpenChange={(open) => setShowCreateDialog(open)}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="text-xl font-semibold">워크스페이스 생성</DialogTitle>
@@ -256,7 +265,7 @@ export default function WorkspacesPage() {
       </Dialog>
 
       {/* Edit Workspace Dialog */}
-      <Dialog open={!!editingWorkspace} onOpenChange={() => setEditingWorkspace(null)}>
+      <Dialog open={!!editingWorkspace} onOpenChange={(open) => !open && setEditingWorkspace(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="text-xl font-semibold">워크스페이스 정보 수정</DialogTitle>
@@ -269,6 +278,7 @@ export default function WorkspacesPage() {
                 users={users}
                 onSave={handleUpdateWorkspace}
                 onCancel={() => setEditingWorkspace(null)}
+                onAddMemberClick={() => setShowAddMemberDialog(true)}
               />
             )}
           </div>
@@ -286,6 +296,16 @@ export default function WorkspacesPage() {
         workspaceCount={selectedWorkspaces.length}
         actionType={bulkActionType}
       />
+
+      {/* Add Member Dialog - 최상위 레벨에서 독립적으로 관리 */}
+      {editingWorkspace && (
+        <AddMemberDialog
+          workspaceId={editingWorkspace.id}
+          existingMemberUserIds={members.map((m) => m.userId)}
+          isOpen={showAddMemberDialog}
+          onClose={() => setShowAddMemberDialog(false)}
+        />
+      )}
     </div>
   )
 }

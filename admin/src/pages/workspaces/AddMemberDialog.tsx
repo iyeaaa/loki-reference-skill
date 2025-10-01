@@ -143,7 +143,7 @@ export function AddMemberDialog({
             <Label htmlFor={userSelectId}>
               사용자 <span className="text-red-500">*</span>
             </Label>
-            <Popover open={userOpen} onOpenChange={setUserOpen}>
+            <Popover open={userOpen} onOpenChange={setUserOpen} modal={true}>
               <PopoverTrigger asChild>
                 <Button
                   id={userSelectId}
@@ -157,7 +157,7 @@ export function AddMemberDialog({
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-full p-0">
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                 <Command className="max-h-[400px]">
                   <CommandInput
                     placeholder="사용자 검색..."

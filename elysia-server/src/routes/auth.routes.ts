@@ -218,3 +218,55 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
       is_admin: payload.userRole === 'admin',
     }
   })
+
+  // Update profile endpoint
+  .patch(
+    '/profile',
+    async ({ headers, body, set }) => {
+      const token = headers.authorization?.replace('Bearer ', '')
+      if (!token) {
+        set.status = 401
+        return errorResponse('인증 토큰이 없습니다.', ResponseCode.UNAUTHORIZED)
+      }
+
+      const payload = await authService.verifyToken(token)
+
+      // Only allow updating username, email, and employeeId
+      const updateData = {
+        username: body.username,
+        email: body.email,
+        employeeId: body.employeeId,
+      }
+
+      const user = await userService.updateUser(payload.userId, updateData as any)
+
+      if (!user) {
+        set.status = 404
+        return errorResponse('사용자를 찾을 수 없습니다.', ResponseCode.NOT_FOUND)
+      }
+
+      return {
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          userRole: user.userRole,
+          isActive: user.isActive,
+          departmentId: user.departmentId,
+          employeeId: user.employeeId,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+          lastLoginAt: user.lastLoginAt,
+          departmentName: user.departmentName,
+          departmentCode: user.departmentCode,
+        },
+      }
+    },
+    {
+      body: t.Object({
+        username: t.String({ minLength: 1, maxLength: 50 }),
+        email: t.String({ format: 'email', maxLength: 100 }),
+        employeeId: t.String({ maxLength: 20 }),
+      }),
+    },
+  )

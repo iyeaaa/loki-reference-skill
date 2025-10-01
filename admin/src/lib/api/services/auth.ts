@@ -1,5 +1,13 @@
 import { apiFetch, removeToken, setToken } from "@/lib/api/client"
-import type { AuthResponse, AuthUser, LoginRequest, SignupRequest, SignupResponse } from "../types"
+import type {
+  AuthResponse,
+  AuthUser,
+  LoginRequest,
+  SignupRequest,
+  SignupResponse,
+  UpdateProfileRequest,
+  UpdateProfileResponse,
+} from "../types"
 export const authApi = {
   login: (credentials: LoginRequest) => {
     return apiFetch<AuthResponse>("/api/v1/auth/login", {
@@ -45,5 +53,12 @@ export const authApi = {
     } catch {
       return null
     }
+  },
+
+  updateProfile: (data: UpdateProfileRequest) => {
+    return apiFetch<UpdateProfileResponse>("/api/v1/auth/profile", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    })
   },
 }

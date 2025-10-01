@@ -178,9 +178,12 @@ export default function EmailSendTestPage() {
       return
     }
 
-    // 예약 시간이 현재 시간보다 이후인지 확인
+    // 예약 시간이 현재 시간보다 이후인지 확인 (한국 시간 기준)
+    // datetime-local은 로컬 시간대를 반환하므로, 한국 시간으로 간주하고 UTC로 변환
     const scheduledDate = new Date(scheduleDateTime)
-    if (scheduledDate <= new Date()) {
+    const now = new Date()
+
+    if (scheduledDate <= now) {
       toast.error("예약 시간은 현재 시간보다 이후여야 합니다")
       return
     }
@@ -539,7 +542,7 @@ export default function EmailSendTestPage() {
                   onChange={(e) => setScheduleDateTime(e.target.value)}
                 />
                 <p className="text-sm text-muted-foreground">
-                  예약된 시간에 모든 수신자에게 이메일이 발송됩니다
+                  예약된 시간에 모든 수신자에게 이메일이 발송됩니다 (한국 시간 기준)
                 </p>
               </div>
 

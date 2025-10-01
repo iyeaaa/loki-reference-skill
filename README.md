@@ -183,19 +183,17 @@ docker-compose up -d postgres redis elysia-server admin
 ## 로컬 개발
 
 ### 개발 환경 설정
-**중요**: admin에서 yarn install을 먼저 실행하여 Husky pre-commit hook을 활성화해야 합니다.
 
 ```bash
-# 1. admin 의존성 설치 (Husky hook 자동 설치)
-cd admin
-yarn install
+# 루트에서 한 번에 설치 (권장)
+yarn install  # Husky pre-commit hook 자동 설치
 
-# 2. elysia-server 의존성 설치
-cd ../elysia-server
-bun install
+# 또는 개별 설치
+cd admin && yarn install
+cd ../elysia-server && bun install
 ```
 
-이후 커밋 시 admin과 elysia-server 모두에서 Biome lint가 자동 실행됩니다.
+**Git Hook 자동 적용**: 루트 또는 admin에서 의존성 설치 시 Husky pre-commit hook이 자동으로 활성화됩니다. 이후 모든 커밋 시 admin과 elysia-server 양쪽에서 Biome lint가 자동 실행되어 코드 품질이 강제됩니다.
 
 ### Backend 개발
 ```bash

@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Building2,
+  FileText,
   GitBranch,
   Mail,
   SendHorizontal,
@@ -47,6 +48,11 @@ const customerMenuItems = [
     title: "팔로우업 시퀀스 관리",
     url: "/sequences",
     icon: GitBranch,
+  },
+  {
+    title: "이메일 템플릿 관리",
+    url: "/email-templates",
+    icon: FileText,
   },
   {
     title: "답장 관리",

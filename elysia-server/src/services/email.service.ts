@@ -59,7 +59,12 @@ class EmailService {
     inReplyTo?: string
     references?: string[]
     apiKey?: string // 특정 계정의 API Key 사용
-  }): Promise<{ success: boolean; messageId?: string; sendgridMessageId?: string; error?: string }> {
+  }): Promise<{
+    success: boolean
+    messageId?: string
+    sendgridMessageId?: string
+    error?: string
+  }> {
     try {
       const apiKey = data.apiKey || config.sendgrid.apiKey
       if (!apiKey) {

@@ -1100,8 +1100,7 @@ async function seed() {
         name: '팔로우업 템플릿',
         description: '첫 이메일 후 후속 연락용',
         subject: '{{회사명}}님, 제안서를 공유드립니다',
-        bodyText:
-          '안녕하세요,\n\n지난번 연락 드린 {{담당자명}}입니다. 제안서를 첨부해 드립니다...',
+        bodyText: '안녕하세요,\n\n지난번 연락 드린 {{담당자명}}입니다. 제안서를 첨부해 드립니다...',
         bodyHtml:
           '<p>안녕하세요,</p><p>지난번 연락 드린 {{담당자명}}입니다. 제안서를 첨부해 드립니다...</p>',
         variables: { 회사명: 'string', 담당자명: 'string' },
@@ -1115,8 +1114,7 @@ async function seed() {
         description: '데모 미팅 요청용 이메일',
         subject: '{{회사명}}님과의 미팅을 제안드립니다',
         bodyText: '{{담당자명}}님,\n\n귀사의 비즈니스 성장을 위한 미팅을 제안드립니다...',
-        bodyHtml:
-          '<p>{{담당자명}}님,</p><p>귀사의 비즈니스 성장을 위한 미팅을 제안드립니다...</p>',
+        bodyHtml: '<p>{{담당자명}}님,</p><p>귀사의 비즈니스 성장을 위한 미팅을 제안드립니다...</p>',
         variables: { 회사명: 'string', 담당자명: 'string' },
         category: 'meeting',
         isShared: false,

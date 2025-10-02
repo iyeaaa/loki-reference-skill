@@ -57,19 +57,19 @@ class AIWorkflowEmailService {
       직원수: context.employeeCount || '',
       규모: context.size || '',
       설립연도: context.foundedYear || '',
-      
+
       // 위치 정보
       국가: context.country || '',
       도시: context.city || '',
       주: context.state || '',
       '주/도': context.state || '',
       주소: context.address || '',
-      
+
       // 연락처
       담당자명: context.contactName || '',
       이름: context.contactName || '',
       이메일: context.contactEmail || '',
-      
+
       // 리드 관리
       리드소스: context.leadSource || '',
       리드상태: context.leadStatus || '',

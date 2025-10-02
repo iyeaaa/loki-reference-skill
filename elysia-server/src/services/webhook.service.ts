@@ -1,8 +1,8 @@
 import { and, eq } from 'drizzle-orm'
 import { db } from '../db'
-import { emails as emailsTable, emailReplies } from '../db/schema/emails'
-import { leads } from '../db/schema/leads'
 import { userEmailAccounts } from '../db/schema/email-accounts'
+import { emailReplies, emails as emailsTable } from '../db/schema/emails'
+import { leads } from '../db/schema/leads'
 import type { Email, FileData, FormData } from '../models/email.model'
 import { emails } from '../types/email-storage'
 import { emailService } from './email.service'
@@ -274,10 +274,7 @@ class WebhookService {
         })
         .from(emailsTable)
         .where(
-          and(
-            eq(emailsTable.messageId, headers.inReplyTo),
-            eq(emailsTable.direction, 'outbound'),
-          ),
+          and(eq(emailsTable.messageId, headers.inReplyTo), eq(emailsTable.direction, 'outbound')),
         )
         .limit(1)
 

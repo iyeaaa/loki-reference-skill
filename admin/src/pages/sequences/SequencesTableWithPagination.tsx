@@ -4,12 +4,7 @@ import { useNavigate } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useCustomerGroupMembers } from "@/lib/api/hooks/customer-groups"
 import { useSequences, useUpdateSequence } from "@/lib/api/hooks/sequences"
@@ -479,7 +474,10 @@ export function SequencesTableWithPagination({
       </div>
 
       {/* 고객 정보 모달 */}
-      <Dialog open={!!selectedSequenceForModal} onOpenChange={() => setSelectedSequenceForModal(null)}>
+      <Dialog
+        open={!!selectedSequenceForModal}
+        onOpenChange={() => setSelectedSequenceForModal(null)}
+      >
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>등록된 고객 정보 - {selectedSequenceForModal?.name}</DialogTitle>
@@ -509,7 +507,7 @@ export function SequencesTableWithPagination({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {customerGroupData.members.map((member) => (
+                      {customerGroupData.members.map((member: any) => (
                         <tr key={member.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm text-gray-900">
                             {member.leadCompanyName || "-"}
@@ -530,9 +528,7 @@ export function SequencesTableWithPagination({
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                등록된 고객이 없습니다.
-              </div>
+              <div className="text-center py-8 text-gray-500">등록된 고객이 없습니다.</div>
             )}
           </div>
         </DialogContent>

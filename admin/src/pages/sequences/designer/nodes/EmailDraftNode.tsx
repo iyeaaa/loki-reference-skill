@@ -177,14 +177,14 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
                 <div className="text-gray-500 text-xs mb-1">
                   {data.generationMode === "ai" ? "AI 프롬프트" : "제목 템플릿"}
                 </div>
-                <div 
+                <div
                   className="font-medium overflow-hidden text-ellipsis"
                   style={{
                     display: "-webkit-box",
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: "vertical",
                     lineHeight: "1.4em",
-                    maxHeight: "2.8em"
+                    maxHeight: "2.8em",
                   }}
                   title={data.generationMode === "ai" ? data.aiPrompt : data.subject}
                 >
@@ -300,7 +300,8 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
                   rows={4}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  💡 사용 가능한 변수: {`{{회사명}}, {{담당자명}}, {{업종}}, {{이메일}}, {{웹사이트}}, {{국가}}, {{도시}} 등`}
+                  💡 사용 가능한 변수:{" "}
+                  {`{{회사명}}, {{담당자명}}, {{업종}}, {{이메일}}, {{웹사이트}}, {{국가}}, {{도시}} 등`}
                 </p>
               </div>
             )}

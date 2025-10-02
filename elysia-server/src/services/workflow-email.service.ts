@@ -279,13 +279,23 @@ export async function getSequenceLeads(sequenceId: string) {
     return []
   }
 
-  // Get leads from customer group members with primary email contact
+  // Get leads from customer group members with primary email contact and phone
   const result = await db
     .select({
       id: leads.id,
       companyName: leads.companyName,
       businessType: leads.businessType,
       websiteUrl: leads.websiteUrl,
+      description: leads.description,
+      address: leads.address,
+      country: leads.country,
+      city: leads.city,
+      state: leads.state,
+      foundedYear: leads.foundedYear,
+      employeeCount: leads.employeeCount,
+      leadSource: leads.leadSource,
+      leadStatus: leads.leadStatus,
+      leadScore: leads.leadScore,
       contactEmail: leadContacts.contactValue,
     })
     .from(customerGroupMembers)
@@ -308,6 +318,16 @@ export async function getSequenceLeads(sequenceId: string) {
     contactEmail: row.contactEmail || '',
     industry: row.businessType || '',
     website: row.websiteUrl || '',
+    description: row.description || '',
+    address: row.address || '',
+    country: row.country || '',
+    city: row.city || '',
+    state: row.state || '',
+    foundedYear: row.foundedYear?.toString() || '',
+    employeeCount: row.employeeCount || '',
+    leadSource: row.leadSource || '',
+    leadStatus: row.leadStatus || '',
+    leadScore: row.leadScore?.toString() || '',
     size: undefined,
   }))
 }
@@ -332,13 +352,32 @@ export function replaceTemplateVariables(
     }
   }
 
-  // 한글 변수도 지원
+  // 한글 변수도 지원 (모든 리드 필드)
   const koreanMap: Record<string, string> = {
+    // 회사 정보
     회사명: context.companyName || '',
+    웹사이트: context.website || '',
+    업종: context.industry || '',
+    설명: context.description || '',
+    직원수: context.employeeCount || '',
+    설립연도: context.foundedYear || '',
+    
+    // 위치 정보
+    국가: context.country || '',
+    도시: context.city || '',
+    주: context.state || '',
+    '주/도': context.state || '',
+    주소: context.address || '',
+    
+    // 연락처
     담당자명: context.contactName || '',
     이름: context.contactName || '',
     이메일: context.contactEmail || '',
-    업종: context.industry || '',
+    
+    // 리드 관리
+    리드소스: context.leadSource || '',
+    리드상태: context.leadStatus || '',
+    리드점수: context.leadScore || '',
   }
 
   for (const [key, value] of Object.entries(koreanMap)) {

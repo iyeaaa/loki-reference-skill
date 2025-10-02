@@ -36,6 +36,7 @@ const generateAllEmailsSchema = t.Object({
   aiModel: t.Optional(t.String()),
   templateSubject: t.Optional(t.String()),
   templateBody: t.Optional(t.String()),
+  templateBodyHtml: t.Optional(t.String()),
 })
 
 export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
@@ -85,20 +86,38 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
           let generationError: string | undefined
 
           if (body.mode === 'manual') {
-            // 템플릿 변수 치환
-            subject = workflowEmailService.replaceTemplateVariables(body.templateSubject || '', {
+            // 템플릿 변수 치환 (모든 리드 필드 포함)
+            const leadContext = {
               companyName: lead.companyName || '',
               contactName: lead.contactName || '',
               contactEmail: lead.contactEmail || '',
               industry: lead.industry || '',
-            })
+              website: lead.website || '',
+              description: lead.description || '',
+              address: lead.address || '',
+              country: lead.country || '',
+              city: lead.city || '',
+              state: lead.state || '',
+              foundedYear: lead.foundedYear || '',
+              employeeCount: lead.employeeCount || '',
+              leadSource: lead.leadSource || '',
+              leadStatus: lead.leadStatus || '',
+              leadScore: lead.leadScore || '',
+            }
 
-            bodyText = workflowEmailService.replaceTemplateVariables(body.templateBody || '', {
-              companyName: lead.companyName || '',
-              contactName: lead.contactName || '',
-              contactEmail: lead.contactEmail || '',
-              industry: lead.industry || '',
-            })
+            subject = workflowEmailService.replaceTemplateVariables(
+              body.templateSubject || '',
+              leadContext,
+            )
+
+            bodyText = workflowEmailService.replaceTemplateVariables(
+              body.templateBody || '',
+              leadContext,
+            )
+
+            bodyHtml = body.templateBodyHtml
+              ? workflowEmailService.replaceTemplateVariables(body.templateBodyHtml, leadContext)
+              : ''
           } else {
             // AI mode - 실제 AI 생성
             try {

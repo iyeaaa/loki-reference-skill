@@ -122,36 +122,36 @@ Best regards,
             <div className="space-y-1">
               <p className="font-medium text-gray-700 dark:text-gray-300">회사 정보:</p>
               <ul className="space-y-0.5 ml-2">
-                <li>{"{{company_name}}"} - 회사명</li>
-                <li>{"{{website_url}}"} - 웹사이트 URL</li>
-                <li>{"{{business_type}}"} - 업종</li>
-                <li>{"{{description}}"} - 회사 설명</li>
-                <li>{"{{employee_count}}"} - 직원 수</li>
-                <li>{"{{founded_year}}"} - 설립연도</li>
+                <li>{"{{회사명}}"}</li>
+                <li>{"{{웹사이트}}"}</li>
+                <li>{"{{업종}}"}</li>
+                <li>{"{{설명}}"}</li>
+                <li>{"{{직원수}}"}</li>
+                <li>{"{{설립연도}}"}</li>
               </ul>
             </div>
             <div className="space-y-1">
               <p className="font-medium text-gray-700 dark:text-gray-300">위치 정보:</p>
               <ul className="space-y-0.5 ml-2">
-                <li>{"{{country}}"} - 국가</li>
-                <li>{"{{city}}"} - 도시</li>
-                <li>{"{{state}}"} - 주/도</li>
-                <li>{"{{address}}"} - 주소</li>
+                <li>{"{{국가}}"}</li>
+                <li>{"{{도시}}"}</li>
+                <li>{"{{주/도}}"}</li>
+                <li>{"{{주소}}"}</li>
               </ul>
             </div>
             <div className="space-y-1">
               <p className="font-medium text-gray-700 dark:text-gray-300">연락처:</p>
               <ul className="space-y-0.5 ml-2">
-                <li>{"{{primary_email}}"} - 주 이메일</li>
-                <li>{"{{primary_phone}}"} - 주 전화번호</li>
+                <li>{"{{담당자명}}"}</li>
+                <li>{"{{이메일}}"}</li>
               </ul>
             </div>
             <div className="space-y-1">
               <p className="font-medium text-gray-700 dark:text-gray-300">리드 관리:</p>
               <ul className="space-y-0.5 ml-2">
-                <li>{"{{lead_source}}"} - 리드 소스</li>
-                <li>{"{{lead_status}}"} - 리드 상태</li>
-                <li>{"{{lead_score}}"} - 리드 점수</li>
+                <li>{"{{리드소스}}"}</li>
+                <li>{"{{리드상태}}"}</li>
+                <li>{"{{리드점수}}"}</li>
               </ul>
             </div>
           </div>

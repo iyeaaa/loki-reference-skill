@@ -12,11 +12,21 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useEmailTemplates } from "@/lib/api/hooks/email-templates"
 
 interface EmailDraftNodeData {
   subject?: string
   bodyText?: string
+  bodyHtml?: string
+  workspaceId?: string
   // AI 생성 관련
   useAI?: boolean
   aiPrompt?: string
@@ -45,7 +55,16 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
   const [generationMode, setGenerationMode] = useState<"ai" | "manual">(getInitialMode())
   const [subject, setSubject] = useState(data.subject || "")
   const [bodyText, setBodyText] = useState(data.bodyText || "")
+  const [bodyHtml, setBodyHtml] = useState(data.bodyHtml || "")
   const [aiPrompt, setAiPrompt] = useState(data.aiPrompt || "")
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
+
+  // 현재 워크스페이스의 템플릿 조회
+  const currentWorkspace = localStorage.getItem("selectedWorkspace") || "all"
+  const { data: templatesData } = useEmailTemplates({
+    limit: 100,
+    workspaceIds: currentWorkspace !== "all" ? [currentWorkspace] : undefined,
+  })
 
   // data가 변경되면 로컬 state 업데이트
   useEffect(() => {
@@ -53,14 +72,26 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
     setGenerationMode(mode)
     setSubject(data.subject || "")
     setBodyText(data.bodyText || "")
+    setBodyHtml(data.bodyHtml || "")
     setAiPrompt(data.aiPrompt || "")
-  }, [data.subject, data.bodyText, data.aiPrompt, data.generationMode])
+  }, [data.subject, data.bodyText, data.bodyHtml, data.aiPrompt, data.generationMode])
 
   const modeAiId = useId()
   const modeManualId = useId()
   const aiPromptId = useId()
   const subjectId = useId()
   const bodyId = useId()
+  const bodyHtmlId = useId()
+
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplateId(templateId)
+    const template = templatesData?.emailTemplates.find((t) => t.id === templateId)
+    if (template) {
+      setSubject(template.subject)
+      setBodyText(template.bodyText || "")
+      setBodyHtml(template.bodyHtml || "")
+    }
+  }
 
   const handleAddNode = (type: string) => {
     data.onAddNode?.(type)
@@ -80,6 +111,7 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
       data.onUpdate?.({
         subject,
         bodyText,
+        bodyHtml,
         generationMode: "manual",
         aiPrompt: "", // manual 모드에서는 aiPrompt 초기화
         useAI: false,
@@ -90,7 +122,7 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-lg border-2 border-blue-500 min-w-[250px]">
+      <div className="bg-white rounded-lg shadow-lg border-2 border-blue-500 w-[280px]">
         <Handle
           type="target"
           position={Position.Top}
@@ -142,10 +174,20 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
 
             {data.subject ? (
               <div className="text-sm">
-                <div className="text-gray-500 text-xs">
+                <div className="text-gray-500 text-xs mb-1">
                   {data.generationMode === "ai" ? "AI 프롬프트" : "제목 템플릿"}
                 </div>
-                <div className="font-medium truncate">
+                <div 
+                  className="font-medium overflow-hidden text-ellipsis"
+                  style={{
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    lineHeight: "1.4em",
+                    maxHeight: "2.8em"
+                  }}
+                  title={data.generationMode === "ai" ? data.aiPrompt : data.subject}
+                >
                   {data.generationMode === "ai" ? data.aiPrompt : data.subject}
                 </div>
               </div>
@@ -267,6 +309,24 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
             {generationMode === "manual" && (
               <>
                 <div>
+                  <Label>템플릿에서 불러오기</Label>
+                  <Select value={selectedTemplateId} onValueChange={handleTemplateSelect}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="템플릿 선택 (선택사항)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templatesData?.emailTemplates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 기존 템플릿을 선택하면 내용이 자동으로 입력됩니다
+                  </p>
+                </div>
+                <div>
                   <Label htmlFor={subjectId}>제목 템플릿</Label>
                   <Input
                     id={subjectId}
@@ -276,14 +336,28 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor={bodyId}>본문 템플릿</Label>
+                  <Label htmlFor={bodyId}>본문 템플릿 (텍스트)</Label>
                   <Textarea
                     id={bodyId}
                     value={bodyText}
                     onChange={(e) => setBodyText(e.target.value)}
                     placeholder="이메일 본문을 입력하세요&#10;&#10;변수 사용 가능: {{이름}}, {{회사명}}, {{이메일}} 등"
-                    rows={8}
+                    rows={6}
                   />
+                </div>
+                <div>
+                  <Label htmlFor={bodyHtmlId}>본문 템플릿 (HTML)</Label>
+                  <Textarea
+                    id={bodyHtmlId}
+                    value={bodyHtml}
+                    onChange={(e) => setBodyHtml(e.target.value)}
+                    placeholder="<p>HTML 형식의 이메일 본문을 입력하세요</p>&#10;&#10;변수 사용 가능: {{이름}}, {{회사명}}, {{이메일}} 등"
+                    rows={6}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 HTML을 입력하면 텍스트 본문 대신 HTML 본문이 사용됩니다
+                  </p>
                 </div>
               </>
             )}

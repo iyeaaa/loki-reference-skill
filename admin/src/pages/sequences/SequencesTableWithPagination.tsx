@@ -1,11 +1,18 @@
-import { ChevronLeft, ChevronRight, Edit, Workflow } from "lucide-react"
+import { ChevronLeft, ChevronRight, Edit, Pause, Play, Workflow } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { useSequences } from "@/lib/api/hooks/sequences"
+import { useCustomerGroupMembers } from "@/lib/api/hooks/customer-groups"
+import { useSequences, useUpdateSequence } from "@/lib/api/hooks/sequences"
 import type { Sequence, SequenceStatus, SequencesParams } from "@/lib/api/types/sequence"
 import { formatRelativeTime } from "@/lib/date-utils"
 
@@ -27,11 +34,13 @@ export function SequencesTableWithPagination({
   onEditSequence,
 }: SequencesTableWithPaginationProps) {
   const navigate = useNavigate()
+  const updateSequence = useUpdateSequence()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
   const [currentWorkspace, setCurrentWorkspace] = useState(
     () => localStorage.getItem("selectedWorkspace") || "all"
   )
+  const [selectedSequenceForModal, setSelectedSequenceForModal] = useState<Sequence | null>(null)
   const limit = 10
 
   // localStorage 변경 감지
@@ -149,6 +158,32 @@ export function SequencesTableWithPagination({
     return pages
   }
 
+  const handleToggleStatus = (sequence: Sequence) => {
+    const newStatus: SequenceStatus = sequence.status === "active" ? "paused" : "active"
+    updateSequence.mutate({
+      sequenceId: sequence.id,
+      data: {
+        status: newStatus,
+      },
+    })
+  }
+
+  const handleRowClick = (sequence: Sequence, e: React.MouseEvent) => {
+    // 버튼이나 체크박스 클릭 시에는 모달을 열지 않음
+    if ((e.target as HTMLElement).closest("button, input[type='checkbox']")) {
+      return
+    }
+    setSelectedSequenceForModal(sequence)
+  }
+
+  // 고객 그룹 멤버 조회
+  const { data: customerGroupData } = useCustomerGroupMembers(
+    selectedSequenceForModal?.customerGroupId || "",
+    1,
+    100,
+    !!selectedSequenceForModal?.customerGroupId
+  )
+
   return (
     <>
       {/* Sequences Table */}
@@ -232,7 +267,8 @@ export function SequencesTableWithPagination({
               {sequences.map((sequence) => (
                 <tr
                   key={sequence.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                  onClick={(e) => handleRowClick(sequence, e)}
                 >
                   <td className="sticky left-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
                     <Checkbox
@@ -304,6 +340,20 @@ export function SequencesTableWithPagination({
                   </td>
                   <td className="sticky right-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
                     <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleStatus(sequence)}
+                        className="text-xs h-8 px-3"
+                        title={sequence.status === "active" ? "일시정지" : "활성화"}
+                        disabled={sequence.status !== "active" && sequence.status !== "paused"}
+                      >
+                        {sequence.status === "active" ? (
+                          <Pause className="h-3 w-3" />
+                        ) : (
+                          <Play className="h-3 w-3" />
+                        )}
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -427,6 +477,66 @@ export function SequencesTableWithPagination({
           <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
         </div>
       </div>
+
+      {/* 고객 정보 모달 */}
+      <Dialog open={!!selectedSequenceForModal} onOpenChange={() => setSelectedSequenceForModal(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>등록된 고객 정보 - {selectedSequenceForModal?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            {customerGroupData && customerGroupData.members.length > 0 ? (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  총 {customerGroupData.total}명의 고객이 등록되어 있습니다.
+                </p>
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          회사명
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          웹사이트
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          상태
+                        </th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                          추가일
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {customerGroupData.members.map((member) => (
+                        <tr key={member.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            {member.leadCompanyName || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            {member.leadWebsiteUrl || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <Badge variant="outline">{member.leadStatus || "-"}</Badge>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            {formatRelativeTime(member.addedAt)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                등록된 고객이 없습니다.
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

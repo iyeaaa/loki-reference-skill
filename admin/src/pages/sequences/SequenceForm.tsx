@@ -30,7 +30,7 @@ export function SequenceForm({ sequence, isEdit = false, onSave, onCancel }: Seq
     name: sequence?.name || "",
     description: sequence?.description || "",
     workspaceId: sequence?.workspaceId || "",
-    status: (sequence?.status || "draft") as SequenceStatus,
+    status: (sequence?.status || "paused") as SequenceStatus,
     customerGroupId: sequence?.customerGroupId || "",
   })
   const { data: customerGroups } = useCustomerGroupsByWorkspace(
@@ -144,33 +144,30 @@ export function SequenceForm({ sequence, isEdit = false, onSave, onCancel }: Seq
         </p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="status">상태</Label>
-        <Select
-          value={formData.status}
-          onValueChange={(value) =>
-            setFormData({
-              ...formData,
-              status: value as SequenceStatus,
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="draft">초안</SelectItem>
-            {isEdit && <SelectItem value="active">활성</SelectItem>}
-            <SelectItem value="paused">일시정지</SelectItem>
-            {isEdit && <SelectItem value="archived">보관됨</SelectItem>}
-          </SelectContent>
-        </Select>
-        {!isEdit && (
-          <p className="text-xs text-gray-500">
-            💡 시퀀스 생성 후 워크플로우를 설정하고 활성화할 수 있습니다
-          </p>
-        )}
-      </div>
+      {isEdit && (
+        <div className="space-y-2">
+          <Label htmlFor="status">상태</Label>
+          <Select
+            value={formData.status}
+            onValueChange={(value) =>
+              setFormData({
+                ...formData,
+                status: value as SequenceStatus,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="draft">초안</SelectItem>
+              <SelectItem value="active">활성</SelectItem>
+              <SelectItem value="paused">일시정지</SelectItem>
+              <SelectItem value="archived">보관됨</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="flex justify-end gap-3 pt-4 border-t">
         <Button type="button" variant="outline" onClick={onCancel}>

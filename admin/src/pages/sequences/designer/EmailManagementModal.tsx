@@ -363,8 +363,10 @@ function EmailEditDialog({
 }: EmailEditDialogProps) {
   const [subject, setSubject] = useState(email.subject)
   const [bodyText, setBodyText] = useState(email.bodyText || "")
+  const [bodyHtml, setBodyHtml] = useState(email.bodyHtml || "")
   const subjectId = useId()
   const bodyId = useId()
+  const bodyHtmlId = useId()
 
   const updateEmailMutation = useUpdateGeneratedEmail()
   const regenerateMutation = useRegenerateEmail()
@@ -378,6 +380,7 @@ function EmailEditDialog({
         data: {
           subject,
           bodyText,
+          bodyHtml,
         },
       })
       onClose()
@@ -451,15 +454,30 @@ function EmailEditDialog({
             </div>
             <div>
               <label htmlFor={bodyId} className="text-sm font-medium">
-                본문
+                본문 (텍스트)
               </label>
               <textarea
                 id={bodyId}
                 value={bodyText}
                 onChange={(e) => setBodyText(e.target.value)}
-                rows={12}
+                rows={8}
                 className="w-full mt-1 px-3 py-2 border rounded-md font-mono text-sm"
               />
+            </div>
+            <div>
+              <label htmlFor={bodyHtmlId} className="text-sm font-medium">
+                본문 (HTML)
+              </label>
+              <textarea
+                id={bodyHtmlId}
+                value={bodyHtml}
+                onChange={(e) => setBodyHtml(e.target.value)}
+                rows={8}
+                className="w-full mt-1 px-3 py-2 border rounded-md font-mono text-sm"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                💡 HTML을 입력하면 텍스트 본문 대신 HTML 본문이 사용됩니다
+              </p>
             </div>
           </div>
 

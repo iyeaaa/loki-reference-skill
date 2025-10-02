@@ -59,7 +59,7 @@ class EmailService {
     inReplyTo?: string
     references?: string[]
     apiKey?: string // 특정 계정의 API Key 사용
-  }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  }): Promise<{ success: boolean; messageId?: string; sendgridMessageId?: string; error?: string }> {
     try {
       const apiKey = data.apiKey || config.sendgrid.apiKey
       if (!apiKey) {
@@ -74,6 +74,12 @@ class EmailService {
         sgMail.setApiKey(data.apiKey)
       }
 
+      // RFC 2822 Message-ID 생성 (답장 추적을 위해 필요)
+      const timestamp = Date.now()
+      const randomString = Math.random().toString(36).substring(2, 15)
+      const domain = data.fromEmail.split('@')[1] || 'mail.grinda.ai'
+      const generatedMessageId = `<${timestamp}.${randomString}@${domain}>`
+
       const msg: any = {
         to: data.toEmail,
         from: {
@@ -81,7 +87,11 @@ class EmailService {
           name: data.fromName || data.fromEmail,
         },
         subject: data.subject,
+        headers: {},
       }
+
+      // Message-ID 헤더 추가 (답장 추적용)
+      msg.headers['Message-ID'] = generatedMessageId
 
       // 본문 설정
       if (data.bodyText) {
@@ -100,27 +110,25 @@ class EmailService {
       }
 
       // 답장 관련 헤더 설정
-      if (data.replyTo || data.inReplyTo || data.references) {
-        msg.headers = {}
-        if (data.replyTo) {
-          msg.replyTo = data.replyTo
-        }
-        if (data.inReplyTo) {
-          msg.headers['In-Reply-To'] = data.inReplyTo
-        }
-        if (data.references && data.references.length > 0) {
-          msg.headers.References = data.references.join(' ')
-        }
+      if (data.replyTo) {
+        msg.replyTo = data.replyTo
+      }
+      if (data.inReplyTo) {
+        msg.headers['In-Reply-To'] = data.inReplyTo
+      }
+      if (data.references && data.references.length > 0) {
+        msg.headers.References = data.references.join(' ')
       }
 
       const response = await sgMail.send(msg)
 
-      // SendGrid 응답에서 Message ID 추출
-      const messageId = response[0]?.headers['x-message-id'] || undefined
+      // SendGrid 응답에서 x-message-id 추출
+      const sendgridMessageId = response[0]?.headers['x-message-id'] || undefined
 
       return {
         success: true,
-        messageId,
+        messageId: generatedMessageId, // 우리가 생성한 Message-ID (답장 추적용)
+        sendgridMessageId, // SendGrid의 내부 ID
       }
     } catch (error: any) {
       console.error('이메일 발송 실패:', error)

@@ -277,7 +277,10 @@ async function executeEmailDraftNode(data: {
 
     // emailService를 사용하여 이메일 발송
     const sendResult = await emailService.sendEmail({
-      fromEmail: enrollment.userEmailAccount.emailAddress,
+      // TODO: 현재는 partners.grinda.ai로 고정해놓고
+      // 나중에 각 워크스페이스의 계정으로 보내도록 수정해야 함
+      // fromEmail: enrollment.userEmailAccount.emailAddress,
+      fromEmail: config.sendgrid.fromEmail,
       fromName: enrollment.userEmailAccount.displayName || enrollment.userEmailAccount.emailAddress,
       toEmail,
       subject: generatedEmail.subject,
@@ -291,6 +294,7 @@ async function executeEmailDraftNode(data: {
     }
 
     const messageId = sendResult.messageId
+    const sendgridMessageId = sendResult.sendgridMessageId
 
     // 발송된 이메일 DB에 저장
     const sentEmailResults = await db
@@ -308,7 +312,8 @@ async function executeEmailDraftNode(data: {
         bodyHtml: generatedEmail.bodyHtml,
         status: 'sent',
         sentAt: new Date(),
-        sendgridMessageId: messageId,
+        messageId, // RFC 2822 Message-ID (답장 추적용)
+        sendgridMessageId, // SendGrid 내부 ID
       })
       .returning()
 

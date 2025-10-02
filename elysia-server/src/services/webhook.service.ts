@@ -1,3 +1,8 @@
+import { and, eq } from 'drizzle-orm'
+import { db } from '../db'
+import { emails as emailsTable, emailReplies } from '../db/schema/emails'
+import { leads } from '../db/schema/leads'
+import { userEmailAccounts } from '../db/schema/email-accounts'
 import type { Email, FileData, FormData } from '../models/email.model'
 import { emails } from '../types/email-storage'
 import { emailService } from './email.service'
@@ -16,8 +21,15 @@ class WebhookService {
     // Create email data
     const emailData = this.createEmailData(body, parsedAttachments)
 
-    // Store email
+    // Store email (legacy - in memory)
     emails.push(emailData)
+
+    // Store email in database
+    try {
+      await this.storeInboundEmailInDB(body, headers, parsedAttachments)
+    } catch (error) {
+      console.error('Failed to store inbound email in DB:', error)
+    }
 
     // Send auto-reply if needed
     if (body.from && body.subject) {
@@ -191,6 +203,115 @@ class WebhookService {
     }
   }
 
+  /**
+   * 인바운드 이메일을 DB에 저장하고 답장인 경우 email_replies 테이블에도 저장
+   */
+  private async storeInboundEmailInDB(body: FormData, headers: any, _attachments: any[]) {
+    console.log('\n💾 DB에 인바운드 이메일 저장 중...')
+
+    // 1. 수신 이메일 주소로 이메일 계정 찾기
+    const toEmail = body.to || ''
+    const fromEmail = body.from || ''
+
+    const emailAccount = await db
+      .select({
+        id: userEmailAccounts.id,
+        workspaceId: userEmailAccounts.workspaceId,
+      })
+      .from(userEmailAccounts)
+      .where(eq(userEmailAccounts.emailAddress, toEmail))
+      .limit(1)
+
+    if (emailAccount.length === 0) {
+      console.log(`⚠️  이메일 계정을 찾을 수 없음: ${toEmail}`)
+      return
+    }
+
+    const account = emailAccount[0]
+
+    // 2. 발신자 이메일로 리드 찾기
+    const leadResults = await db
+      .select({ id: leads.id })
+      .from(leads)
+      .where(eq(leads.email, fromEmail))
+      .limit(1)
+
+    const leadId = leadResults.length > 0 ? leadResults[0].id : null
+
+    // 3. 인바운드 이메일을 emails 테이블에 저장
+    const [inboundEmail] = await db
+      .insert(emailsTable)
+      .values({
+        workspaceId: account.workspaceId,
+        userEmailAccountId: account.id,
+        leadId,
+        direction: 'inbound',
+        fromEmail,
+        toEmail,
+        subject: body.subject || '',
+        bodyText: body.text,
+        bodyHtml: body.html,
+        status: 'received',
+        sentAt: new Date(),
+        messageId: headers.messageId,
+        inReplyTo: headers.inReplyTo,
+      })
+      .returning()
+
+    console.log(`✅ 인바운드 이메일 저장 완료: ${inboundEmail.id}`)
+
+    // 4. 답장인지 확인 (In-Reply-To 헤더가 있는 경우)
+    if (headers.inReplyTo) {
+      console.log(`\n🔍 답장 감지: In-Reply-To = ${headers.inReplyTo}`)
+
+      // 원본 이메일 찾기 (messageId로 검색)
+      const originalEmailResults = await db
+        .select({
+          id: emailsTable.id,
+          workspaceId: emailsTable.workspaceId,
+          sequenceId: emailsTable.sequenceId,
+          leadId: emailsTable.leadId,
+        })
+        .from(emailsTable)
+        .where(
+          and(
+            eq(emailsTable.messageId, headers.inReplyTo),
+            eq(emailsTable.direction, 'outbound'),
+          ),
+        )
+        .limit(1)
+
+      if (originalEmailResults.length > 0) {
+        const originalEmail = originalEmailResults[0]
+
+        console.log(`✅ 원본 이메일 찾음: ${originalEmail.id}`)
+
+        // email_replies 테이블에 저장
+        await db.insert(emailReplies).values({
+          workspaceId: originalEmail.workspaceId,
+          originalEmailId: originalEmail.id,
+          replyEmailId: inboundEmail.id,
+          isRead: false,
+        })
+
+        console.log(`✅ email_replies 테이블에 저장 완료`)
+
+        // 원본 이메일의 repliedAt 업데이트
+        await db
+          .update(emailsTable)
+          .set({
+            repliedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(emailsTable.id, originalEmail.id))
+
+        console.log(`✅ 원본 이메일 repliedAt 업데이트 완료`)
+      } else {
+        console.log(`⚠️  원본 이메일을 찾을 수 없음: ${headers.inReplyTo}`)
+      }
+    }
+  }
+
   private async handleAutoReply(body: FormData, headers: any) {
     console.log('\n📤 자동 답장 발송 시도 중...')
 
@@ -204,8 +325,8 @@ class WebhookService {
 
     const autoReplySuccess = await emailService.sendAutoReply(
       body.to || '',
-      body.from!,
-      body.subject!,
+      body.from || '',
+      body.subject || '',
       emailContent,
       headers.messageId,
       updatedReferences,

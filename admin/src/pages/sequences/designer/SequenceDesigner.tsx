@@ -474,6 +474,7 @@ export default function SequenceDesigner() {
           aiPrompt={selectedNodeForEmail.data?.aiPrompt as string | undefined}
           templateSubject={selectedNodeForEmail.data?.subject as string | undefined}
           templateBody={selectedNodeForEmail.data?.bodyText as string | undefined}
+          templateBodyHtml={selectedNodeForEmail.data?.bodyHtml as string | undefined}
         />
       )}
     </div>

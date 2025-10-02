@@ -34,6 +34,7 @@ export interface GenerateAllEmailsRequest {
   aiModel?: string
   templateSubject?: string
   templateBody?: string
+  templateBodyHtml?: string
 }
 
 export interface GenerateAllEmailsResponse {

@@ -300,7 +300,7 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
                   rows={4}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  💡 사용 가능한 변수: {`{{회사명}}, {{담당자명}}, {{업종}}, {{이메일}}`}
+                  💡 사용 가능한 변수: {`{{회사명}}, {{담당자명}}, {{업종}}, {{이메일}}, {{웹사이트}}, {{국가}}, {{도시}} 등`}
                 </p>
               </div>
             )}
@@ -341,7 +341,7 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
                     id={bodyId}
                     value={bodyText}
                     onChange={(e) => setBodyText(e.target.value)}
-                    placeholder="이메일 본문을 입력하세요&#10;&#10;변수 사용 가능: {{이름}}, {{회사명}}, {{이메일}} 등"
+                    placeholder="이메일 본문을 입력하세요&#10;&#10;변수 예시: {{회사명}}, {{담당자명}}, {{업종}}, {{이메일}}, {{웹사이트}}, {{국가}}, {{도시}} 등"
                     rows={6}
                   />
                 </div>
@@ -351,7 +351,7 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
                     id={bodyHtmlId}
                     value={bodyHtml}
                     onChange={(e) => setBodyHtml(e.target.value)}
-                    placeholder="<p>HTML 형식의 이메일 본문을 입력하세요</p>&#10;&#10;변수 사용 가능: {{이름}}, {{회사명}}, {{이메일}} 등"
+                    placeholder="<p>HTML 형식의 이메일 본문을 입력하세요</p>&#10;&#10;변수 예시: {{회사명}}, {{담당자명}}, {{업종}}, {{이메일}}, {{웹사이트}}, {{국가}}, {{도시}} 등"
                     rows={6}
                     className="font-mono text-sm"
                   />

@@ -33,6 +33,7 @@ interface EmailManagementModalProps {
   aiPrompt?: string
   templateSubject?: string
   templateBody?: string
+  templateBodyHtml?: string
 }
 
 export function EmailManagementModal({
@@ -44,6 +45,7 @@ export function EmailManagementModal({
   aiPrompt,
   templateSubject,
   templateBody,
+  templateBodyHtml,
 }: EmailManagementModalProps) {
   const [selectedEmail, setSelectedEmail] = useState<EmailData | null>(null)
 
@@ -68,6 +70,7 @@ export function EmailManagementModal({
           aiModel: generationMode === "ai" ? "gpt-3.5-turbo" : undefined,
           templateSubject: generationMode === "manual" ? templateSubject : undefined,
           templateBody: generationMode === "manual" ? templateBody : undefined,
+          templateBodyHtml: generationMode === "manual" ? templateBodyHtml : undefined,
         },
       })
     } catch (error) {

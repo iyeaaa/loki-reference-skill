@@ -1,17 +1,17 @@
-import { useId, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import type { EmailTemplate } from "@/lib/api/types/email-template";
-import type { Workspace } from "@/lib/api/types/workspace";
-import { Label } from "@radix-ui/react-label";
-import { Input } from "@/components/ui/input";
+import { Label } from "@radix-ui/react-label"
+import { useId, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import type { EmailTemplate } from "@/lib/api/types/email-template"
+import type { Workspace } from "@/lib/api/types/workspace"
 
 interface EmailTemplateFormProps {
-  template?: EmailTemplate;
-  isEdit?: boolean;
-  workspaces: Workspace[];
-  onSave: (templateData: unknown) => Promise<void> | void;
-  onCancel: () => void;
+  template?: EmailTemplate
+  isEdit?: boolean
+  workspaces: Workspace[]
+  onSave: (templateData: unknown) => Promise<void> | void
+  onCancel: () => void
 }
 
 export function EmailTemplateForm({
@@ -21,11 +21,13 @@ export function EmailTemplateForm({
   onSave,
   onCancel,
 }: EmailTemplateFormProps) {
-  const nameId = useId();
-  const subjectId = useId();
-  const bodyTextId = useId();
-  const categoryId = useId();
-  const descriptionId = useId();
+  const nameId = useId()
+  const subjectId = useId()
+  const bodyTextId = useId()
+  const categoryId = useId()
+  const descriptionId = useId()
+
+  console.log(workspaces)
 
   const [formData, setFormData] = useState({
     name: template?.name || "",
@@ -36,12 +38,12 @@ export function EmailTemplateForm({
     category: template?.category || "",
     isShared: true,
     workspaceId: template?.workspaceId || "",
-  });
+  })
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
-  };
+    e.preventDefault()
+    onSave(formData)
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -60,9 +62,7 @@ export function EmailTemplateForm({
         <Input
           id={descriptionId}
           value={formData.description}
-          onChange={(e) =>
-            setFormData({ ...formData, description: e.target.value })
-          }
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           placeholder="템플릿에 대한 간단한 설명을 입력하세요"
         />
       </div>
@@ -71,9 +71,7 @@ export function EmailTemplateForm({
         <Input
           id={subjectId}
           value={formData.subject}
-          onChange={(e) =>
-            setFormData({ ...formData, subject: e.target.value })
-          }
+          onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
           required
           placeholder="예: {{name}}님, 환영합니다!"
         />
@@ -92,9 +90,7 @@ export function EmailTemplateForm({
         <Input
           id={categoryId}
           value={formData.category}
-          onChange={(e) =>
-            setFormData({ ...formData, category: e.target.value })
-          }
+          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
           placeholder="예: welcome, promotion, transaction"
         />
       </div>
@@ -118,5 +114,5 @@ export function EmailTemplateForm({
         </Button>
       </div>
     </form>
-  );
+  )
 }

@@ -1,25 +1,22 @@
-import { ChevronLeft, ChevronRight, Edit } from "lucide-react";
-import { useCallback, useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { useEmailTemplates } from "@/lib/api/hooks/email-templates";
-import type {
-  EmailTemplate,
-  EmailTemplatesParams,
-} from "@/lib/api/types/email-template";
-import { formatRelativeTime } from "@/lib/date-utils";
+import { ChevronLeft, ChevronRight, Edit } from "lucide-react"
+import { useCallback, useState } from "react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { useEmailTemplates } from "@/lib/api/hooks/email-templates"
+import type { EmailTemplate, EmailTemplatesParams } from "@/lib/api/types/email-template"
+import { formatRelativeTime } from "@/lib/date-utils"
 
 interface EmailTemplatesTableWithPaginationProps {
-  searchQuery: string;
-  selectedCategories: string[];
-  selectedSharedStatuses: string[];
-  selectedWorkspaces: string[];
-  selectedTemplates: string[];
-  onToggleTemplate: (templateId: string) => void;
-  onToggleAll: (templateIds: string[]) => void;
-  onEditTemplate: (template: EmailTemplate) => void;
+  searchQuery: string
+  selectedCategories: string[]
+  selectedSharedStatuses: string[]
+  selectedWorkspaces: string[]
+  selectedTemplates: string[]
+  onToggleTemplate: (templateId: string) => void
+  onToggleAll: (templateIds: string[]) => void
+  onEditTemplate: (template: EmailTemplate) => void
 }
 
 export function EmailTemplatesTableWithPagination({
@@ -32,9 +29,9 @@ export function EmailTemplatesTableWithPagination({
   onToggleAll,
   onEditTemplate,
 }: EmailTemplatesTableWithPaginationProps) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageInputValue, setPageInputValue] = useState("1");
-  const limit = 10;
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageInputValue, setPageInputValue] = useState("1")
+  const limit = 10
 
   // Build params for API call
   const params: EmailTemplatesParams = {
@@ -44,87 +41,84 @@ export function EmailTemplatesTableWithPagination({
       selectedCategories.length === 1
         ? selectedCategories[0]
         : selectedCategories.length > 0
-        ? undefined
-        : undefined,
+          ? undefined
+          : undefined,
     isShared:
       selectedSharedStatuses.length === 1
         ? selectedSharedStatuses[0] === "shared"
         : selectedSharedStatuses.length > 0
-        ? "all"
-        : undefined,
+          ? "all"
+          : undefined,
     search: searchQuery || undefined,
-    workspaceIds:
-      selectedWorkspaces.length > 0 ? selectedWorkspaces : undefined,
-  };
+    workspaceIds: selectedWorkspaces.length > 0 ? selectedWorkspaces : undefined,
+  }
 
   // Use React Query hook for fetching templates
-  const { data: templatesData, isFetching } = useEmailTemplates(params);
-  const templates = templatesData?.emailTemplates || [];
-  const totalPages = templatesData?.totalPages || 1;
-  const total = templatesData?.total || 0;
+  const { data: templatesData, isFetching } = useEmailTemplates(params)
+  const templates = templatesData?.emailTemplates || []
+  const totalPages = templatesData?.totalPages || 1
+  const total = templatesData?.total || 0
 
   const getCategoryBadge = (category: string | null | undefined) => {
-    if (!category) return <Badge variant="outline">미분류</Badge>;
-    return <Badge variant="outline">{category}</Badge>;
-  };
+    if (!category) return <Badge variant="outline">미분류</Badge>
+    return <Badge variant="outline">{category}</Badge>
+  }
 
   const getSharedBadge = (isShared: boolean) => {
     return (
-      <Badge variant={isShared ? "default" : "outline"}>
-        {isShared ? "공유됨" : "비공개"}
-      </Badge>
-    );
-  };
+      <Badge variant={isShared ? "default" : "outline"}>{isShared ? "공유됨" : "비공개"}</Badge>
+    )
+  }
 
   const handleToggleAll = useCallback(() => {
-    onToggleAll(templates.map((t) => t.id));
-  }, [templates, onToggleAll]);
+    onToggleAll(templates.map((t) => t.id))
+  }, [templates, onToggleAll])
 
   // Pagination handlers
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    setPageInputValue(page.toString());
-  };
+    setCurrentPage(page)
+    setPageInputValue(page.toString())
+  }
 
   const handlePageInputChange = (value: string) => {
-    setPageInputValue(value);
-  };
+    setPageInputValue(value)
+  }
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const page = parseInt(pageInputValue, 10);
+      const page = parseInt(pageInputValue, 10)
       if (page >= 1 && page <= totalPages) {
-        setCurrentPage(page);
+        setCurrentPage(page)
       } else {
-        setPageInputValue(currentPage.toString());
+        setPageInputValue(currentPage.toString())
       }
     }
-  };
+  }
 
   const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10);
+    const page = parseInt(pageInputValue, 10)
     if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
+      setCurrentPage(page)
     } else {
-      setPageInputValue(currentPage.toString());
+      setPageInputValue(currentPage.toString())
     }
-  };
+  }
 
   const getPageNumbers = () => {
-    const maxVisiblePages = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    const maxVisiblePages = 5
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2))
+    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1)
 
     if (endPage - startPage + 1 < maxVisiblePages) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+      startPage = Math.max(1, endPage - maxVisiblePages + 1)
     }
 
-    const pages = [];
+    const pages = []
     for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
+      pages.push(i)
     }
-    return pages;
-  };
+    return pages
+  }
 
   return (
     <>
@@ -145,10 +139,7 @@ export function EmailTemplatesTableWithPagination({
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   <Checkbox
-                    checked={
-                      templates.length > 0 &&
-                      selectedTemplates.length === templates.length
-                    }
+                    checked={templates.length > 0 && selectedTemplates.length === templates.length}
                     onCheckedChange={handleToggleAll}
                   />
                 </th>
@@ -270,8 +261,7 @@ export function EmailTemplatesTableWithPagination({
           <div className="text-sm text-muted-foreground">
             {total > 0 ? (
               <>
-                {(currentPage - 1) * limit + 1}-
-                {Math.min(currentPage * limit, total)} /{" "}
+                {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
                 {total.toLocaleString()}개 표시
               </>
             ) : (
@@ -321,9 +311,7 @@ export function EmailTemplatesTableWithPagination({
 
           {/* Next Page */}
           <Button
-            onClick={() =>
-              handlePageChange(Math.min(totalPages, currentPage + 1))
-            }
+            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage >= totalPages || isFetching}
             variant="outline"
             size="sm"
@@ -359,11 +347,9 @@ export function EmailTemplatesTableWithPagination({
             className="w-20 h-8 text-sm text-center"
             disabled={isFetching}
           />
-          <span className="text-sm text-muted-foreground">
-            / {totalPages || 1}
-          </span>
+          <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
         </div>
       </div>
     </>
-  );
+  )
 }

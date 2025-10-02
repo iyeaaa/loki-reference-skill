@@ -1,5 +1,5 @@
 import MDEditor from "@uiw/react-md-editor"
-import { useId } from "react"
+// import { useId } from "react"
 
 interface RichTextEditorProps {
   value: string
@@ -18,13 +18,13 @@ export function RichTextEditor({
   className = "",
   readOnly = false,
 }: RichTextEditorProps) {
-  const _id = useId()
+  // const _id = useId()
 
   return (
     <div className={`rich-text-editor-container ${className}`}>
       <MDEditor
         value={value}
-        onChange={(val) => onChange(val || "")}
+        onChange={(val: any) => onChange(val || "")}
         preview="edit"
         hideToolbar={false}
         visibleDragBar={false}

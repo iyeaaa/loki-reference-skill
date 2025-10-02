@@ -1,40 +1,45 @@
-import { useId, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import type { SequenceStep } from "@/lib/api/types/sequence"
+import { useId, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import type { SequenceStep } from "@/lib/api/types/sequence";
 
 interface SequenceStepFormProps {
-  step?: SequenceStep
-  stepOrder: number
+  step?: SequenceStep;
+  stepOrder: number;
   onSave: (stepData: {
-    stepOrder: number
-    delayDays: number
-    emailSubject: string
-    emailBodyText?: string
-    emailBodyHtml?: string
-  }) => void
-  onCancel: () => void
+    stepOrder: number;
+    delayDays: number;
+    emailSubject: string;
+    emailBodyText?: string;
+    emailBodyHtml?: string;
+  }) => void;
+  onCancel: () => void;
 }
 
-export function SequenceStepForm({ step, stepOrder, onSave, onCancel }: SequenceStepFormProps) {
-  const stepOrderId = useId()
-  const subjectId = useId()
-  const delayDaysId = useId()
-  const bodyTextId = useId()
+export function SequenceStepForm({
+  step,
+  stepOrder,
+  onSave,
+  onCancel,
+}: SequenceStepFormProps) {
+  const stepOrderId = useId();
+  const subjectId = useId();
+  const delayDaysId = useId();
+  const bodyTextId = useId();
 
   const [formData, setFormData] = useState({
     stepOrder: step?.stepOrder ?? stepOrder,
     delayDays: step?.delayDays ?? 0,
     emailSubject: step?.emailSubject || "",
     emailBodyText: step?.emailBodyText || "",
-  })
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSave(formData)
-  }
+    e.preventDefault();
+    onSave(formData);
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -49,7 +54,10 @@ export function SequenceStepForm({ step, stepOrder, onSave, onCancel }: Sequence
             min="1"
             value={formData.stepOrder}
             onChange={(e) =>
-              setFormData({ ...formData, stepOrder: parseInt(e.target.value, 10) || 1 })
+              setFormData({
+                ...formData,
+                stepOrder: parseInt(e.target.value, 10) || 1,
+              })
             }
             required
             placeholder="예: 1"
@@ -67,12 +75,17 @@ export function SequenceStepForm({ step, stepOrder, onSave, onCancel }: Sequence
             min="0"
             value={formData.delayDays}
             onChange={(e) =>
-              setFormData({ ...formData, delayDays: parseInt(e.target.value, 10) || 0 })
+              setFormData({
+                ...formData,
+                delayDays: parseInt(e.target.value, 10) || 0,
+              })
             }
             required
             placeholder="예: 3"
           />
-          <p className="text-xs text-muted-foreground">이전 스텝 후 며칠 뒤 발송</p>
+          <p className="text-xs text-muted-foreground">
+            이전 스텝 후 며칠 뒤 발송
+          </p>
         </div>
       </div>
 
@@ -83,7 +96,9 @@ export function SequenceStepForm({ step, stepOrder, onSave, onCancel }: Sequence
         <Input
           id={subjectId}
           value={formData.emailSubject}
-          onChange={(e) => setFormData({ ...formData, emailSubject: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, emailSubject: e.target.value })
+          }
           required
           maxLength={500}
           placeholder="예: K-Beauty Partnership Opportunity with {{company_name}}"
@@ -92,10 +107,11 @@ export function SequenceStepForm({ step, stepOrder, onSave, onCancel }: Sequence
 
       <div className="space-y-2">
         <Label htmlFor={bodyTextId}>이메일 본문</Label>
-        <Textarea
-          id={bodyTextId}
-          value={formData.emailBodyText}
-          onChange={(e) => setFormData({ ...formData, emailBodyText: e.target.value })}
+        <RichTextEditor
+          value={formData.emailBodyText || ""}
+          onChange={(value) =>
+            setFormData({ ...formData, emailBodyText: value })
+          }
           placeholder={`Dear {{company_name}} team,
 
 I hope this email finds you well. I am reaching out from a Korean beauty company specializing in innovative skincare and cosmetics products.
@@ -113,14 +129,15 @@ I would love to schedule a brief call to discuss how we can work together.
 Best regards,
 [Your Name]
 [Your Company]`}
-          rows={12}
-          className="font-mono text-sm"
+          height="300px"
         />
         <div className="text-xs text-muted-foreground space-y-2 mt-2">
           <p className="font-medium">사용 가능한 변수:</p>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
             <div className="space-y-1">
-              <p className="font-medium text-gray-700 dark:text-gray-300">회사 정보:</p>
+              <p className="font-medium text-gray-700 dark:text-gray-300">
+                회사 정보:
+              </p>
               <ul className="space-y-0.5 ml-2">
                 <li>{"{{회사명}}"}</li>
                 <li>{"{{웹사이트}}"}</li>
@@ -131,7 +148,9 @@ Best regards,
               </ul>
             </div>
             <div className="space-y-1">
-              <p className="font-medium text-gray-700 dark:text-gray-300">위치 정보:</p>
+              <p className="font-medium text-gray-700 dark:text-gray-300">
+                위치 정보:
+              </p>
               <ul className="space-y-0.5 ml-2">
                 <li>{"{{국가}}"}</li>
                 <li>{"{{도시}}"}</li>
@@ -140,14 +159,18 @@ Best regards,
               </ul>
             </div>
             <div className="space-y-1">
-              <p className="font-medium text-gray-700 dark:text-gray-300">연락처:</p>
+              <p className="font-medium text-gray-700 dark:text-gray-300">
+                연락처:
+              </p>
               <ul className="space-y-0.5 ml-2">
                 <li>{"{{담당자명}}"}</li>
                 <li>{"{{이메일}}"}</li>
               </ul>
             </div>
             <div className="space-y-1">
-              <p className="font-medium text-gray-700 dark:text-gray-300">리드 관리:</p>
+              <p className="font-medium text-gray-700 dark:text-gray-300">
+                리드 관리:
+              </p>
               <ul className="space-y-0.5 ml-2">
                 <li>{"{{리드소스}}"}</li>
                 <li>{"{{리드상태}}"}</li>
@@ -167,5 +190,5 @@ Best regards,
         </Button>
       </div>
     </form>
-  )
+  );
 }

@@ -1,4 +1,5 @@
 import MDEditor from "@uiw/react-md-editor"
+
 // import { useId } from "react"
 
 interface RichTextEditorProps {
@@ -27,7 +28,7 @@ export function RichTextEditor({
         onChange={(val: any) => onChange(val || "")}
         preview="edit"
         hideToolbar={false}
-        visibleDragBar={false}
+        // visibleDragBar={false}
         data-color-mode="light"
         height={height}
         textareaProps={{

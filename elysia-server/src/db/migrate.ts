@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
 import { Pool } from "pg"
+import logger from "../utils/logger"
 import * as schema from "./schema"
 
 export async function migrateDatabase() {
@@ -16,15 +17,15 @@ export async function migrateDatabase() {
   const db = drizzle(pool, { schema })
 
   try {
-    console.log("🔄 Starting database migration...")
+    logger.info("Starting database migration")
 
     // 1. Run Drizzle auto-generated migrations
-    console.log("  ├─ Running Drizzle migrations from ./drizzle folder...")
+    logger.info("Running Drizzle migrations from ./drizzle folder")
     await migrate(db, { migrationsFolder: "./drizzle" })
-    console.log("  ├─ ✅ Drizzle migrations completed")
+    logger.info("Drizzle migrations completed")
 
     // 2. Run manual migrations (if migrations folder exists)
-    console.log("  ├─ Running manual migrations...")
+    logger.info("Running manual migrations")
     try {
       // Add workflow_data column to sequences
       const workflowDataSql = readFileSync(
@@ -32,7 +33,7 @@ export async function migrateDatabase() {
         "utf-8",
       )
       await db.execute(sql.raw(workflowDataSql))
-      console.log("  ├─ ✅ workflow_data column migration completed")
+      logger.info("workflow_data column migration completed")
 
       // Create workflow_generated_emails table
       const workflowEmailsSql = readFileSync(
@@ -40,16 +41,16 @@ export async function migrateDatabase() {
         "utf-8",
       )
       await db.execute(sql.raw(workflowEmailsSql))
-      console.log("  ├─ ✅ workflow_generated_emails table migration completed")
+      logger.info("workflow_generated_emails table migration completed")
     } catch {
       // If manual migrations fail (e.g., already applied or files not found), continue
-      console.log("  ├─ ⚠️  Manual migrations skipped (already applied or not found)")
+      logger.warn("Manual migrations skipped (already applied or not found)")
     }
 
-    console.log("  └─ ✅ All migrations completed successfully")
+    logger.info("All migrations completed successfully")
 
     // 3. Check if database is empty and run seed if needed
-    console.log("\n🔍 Checking if database needs seed data...")
+    logger.info("Checking if database needs seed data")
     try {
       const departmentCount = await db.select({ count: sql`count(*)` }).from(schema.departments)
       const userCount = await db.select({ count: sql`count(*)` }).from(schema.users)
@@ -58,21 +59,25 @@ export async function migrateDatabase() {
         Number(departmentCount[0]?.count) === 0 && Number(userCount[0]?.count) === 0
 
       if (isDatabaseEmpty) {
-        console.log("  ├─ Database is empty, running seed data...")
+        logger.info("Database is empty, running seed data")
         const { seed } = await import("./seed")
         await seed()
-        console.log("  └─ ✅ Seed data completed successfully")
+        logger.info("Seed data completed successfully")
       } else {
-        console.log(
-          `  └─ ⏭️  Database already has data (${departmentCount[0]?.count} departments, ${userCount[0]?.count} users), skipping seed`,
+        logger.info(
+          {
+            departments: departmentCount[0]?.count,
+            users: userCount[0]?.count,
+          },
+          "Database already has data, skipping seed",
         )
       }
     } catch (seedError) {
-      console.error("  └─ ⚠️  Seed check/execution failed:", seedError)
+      logger.warn({ err: seedError }, "Seed check/execution failed")
       // Don't throw error, just log it - seeding is optional
     }
   } catch (error) {
-    console.error("❌ Database migration failed:", error)
+    logger.error({ err: error }, "Database migration failed")
     throw error
   } finally {
     await pool.end()

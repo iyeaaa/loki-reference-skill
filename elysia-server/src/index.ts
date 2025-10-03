@@ -23,24 +23,32 @@ import { webhookRoutes } from "./routes/webhook.routes"
 import { workflowEmailRoutes } from "./routes/workflow-emails.routes"
 import { workflowExecutionRoutes } from "./routes/workflow-execution.routes"
 import { adminWorkspaceRoutes, workspaceRoutes } from "./routes/workspaces.routes"
+import logger from "./utils/logger"
 import { startEmailSequenceWorker } from "./workers/email-sequence-worker"
 import { startScheduledEmailWorker } from "./workers/scheduled-email-worker"
 import { startWorkflowExecutionWorker } from "./workers/workflow-execution-worker"
 
 // Initialize database
-migrateDatabase().catch(console.error)
+logger.info("Initializing database...")
+migrateDatabase().catch((error) => {
+  logger.error({ err: error }, "Database migration failed")
+})
 
 // Start workers
+logger.info("Starting email sequence worker...")
 startEmailSequenceWorker() // 구 기능 (sequence_steps)
+
+logger.info("Starting workflow execution worker...")
 startWorkflowExecutionWorker() // 신 기능 (workflow 기반)
 
 // Start scheduled email worker
+logger.info("Starting scheduled email worker...")
 startScheduledEmailWorker()
 
 const app = new Elysia()
   .use(simpleLogger) // Apply logger first
   .onError(({ error }) => {
-    console.error("Application Error:", error)
+    logger.error({ err: error }, "Application Error")
     throw error
   })
   .use(errorHandler) // Apply global error handler
@@ -95,4 +103,7 @@ const app = new Elysia()
 
   .listen(config.port)
 
-console.log(`🦊 Elysia is running at http://${app.server?.hostname}:${app.server?.port}`)
+logger.info(
+  { hostname: app.server?.hostname, port: app.server?.port },
+  `Elysia server started at http://${app.server?.hostname}:${app.server?.port}`,
+)

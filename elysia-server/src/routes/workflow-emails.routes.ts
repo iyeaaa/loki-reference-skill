@@ -3,6 +3,7 @@ import { getAIWorkflowEmailService } from "../services/ai-workflow-email.service
 import * as progressService from "../services/generation-progress.service"
 import * as workflowEmailService from "../services/workflow-email.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
+import logger from "../utils/logger"
 
 // Schema for creating generated email (reserved for future use)
 // const generatedEmailSchema = t.Object({
@@ -54,9 +55,7 @@ export const workflowEmailRoutes = new Elysia({ prefix: "/api/v1/sequences" })
     async ({ params, body }) => {
       const { id: sequenceId, nodeId } = params
 
-      console.log("[Generate Emails] Request body:", JSON.stringify(body, null, 2))
-      console.log("[Generate Emails] Mode:", body.mode)
-      console.log("[Generate Emails] AI Prompt:", body.aiPrompt)
+      logger.info({ body, mode: body.mode, aiPrompt: body.aiPrompt }, "Generate emails request")
 
       // Get all leads in sequence
       const leads = await workflowEmailService.getSequenceLeads(sequenceId)
@@ -121,8 +120,13 @@ export const workflowEmailRoutes = new Elysia({ prefix: "/api/v1/sequences" })
           } else {
             // AI mode - 실제 AI 생성
             try {
-              console.log(`[AI Generation] Starting for lead: ${lead.companyName}`)
-              console.log(`[AI Generation] Prompt: ${body.aiPrompt || "(empty)"}`)
+              logger.info(
+                {
+                  companyName: lead.companyName,
+                  prompt: body.aiPrompt || "(empty)",
+                },
+                "Starting AI generation",
+              )
 
               const aiService = getAIWorkflowEmailService()
               const generatedEmail = await aiService.generateEmail({
@@ -139,15 +143,23 @@ export const workflowEmailRoutes = new Elysia({ prefix: "/api/v1/sequences" })
                 model: body.aiModel,
               })
 
-              console.log(`[AI Generation] Success for ${lead.companyName}`)
-              console.log(`[AI Generation] Subject: ${generatedEmail.subject}`)
+              logger.info(
+                {
+                  companyName: lead.companyName,
+                  subject: generatedEmail.subject,
+                },
+                "AI generation successful",
+              )
 
               subject = generatedEmail.subject
               bodyText = generatedEmail.bodyText
               bodyHtml = generatedEmail.bodyHtml || ""
             } catch (aiError) {
               // AI 생성 실패 시 템플릿 폴백
-              console.error(`AI generation failed for ${lead.companyName}, using fallback`)
+              logger.error(
+                { err: aiError, companyName: lead.companyName },
+                "AI generation failed, using fallback",
+              )
               subject = `${lead.companyName}님께`
               bodyText = `안녕하세요,\n\n${lead.companyName} 담당자님께 연락드립니다.\n\n[AI 생성 실패 - 수동 편집 필요]`
               emailStatus = "failed"

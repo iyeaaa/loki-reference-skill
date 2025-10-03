@@ -4,6 +4,7 @@ import { db } from "../db"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import * as sequenceService from "../services/sequence.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
+import logger from "../utils/logger"
 
 const sequenceSchema = t.Object({
   workspaceId: t.String({ format: "uuid" }),
@@ -217,8 +218,9 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
                 userEmailAccountId: defaultEmailAccount.id,
               })
 
-              console.log(
-                `[Sequence Activation] Enrolled ${enrollResult.enrolledCount} leads to workflow`,
+              logger.info(
+                { enrolledCount: enrollResult.enrolledCount },
+                "Enrolled leads to workflow",
               )
 
               // 등록 후 즉시 워크플로우 실행 (시작 노드 다음부터)
@@ -226,16 +228,17 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
                 await executeWorkflow(enrollment.id)
               }
 
-              console.log(
-                `[Sequence Activation] Successfully executed workflows for ${enrollResult.enrollments.length} enrollments`,
+              logger.info(
+                { enrollmentCount: enrollResult.enrollments.length },
+                "Successfully executed workflows",
               )
             } catch (error) {
-              console.error("[Sequence Activation] Background process failed:", error)
+              logger.error({ err: error }, "Background process failed")
               // 백그라운드 프로세스이므로 에러를 로깅만 하고 계속 진행
             }
           })()
 
-          console.log(`[Sequence Activation] Started background enrollment for sequence ${id}`)
+          logger.info({ sequenceId: id }, "Started background enrollment")
         }
       }
 

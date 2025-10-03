@@ -1,6 +1,7 @@
 import sgMail from "@sendgrid/mail"
 import { config } from "../config"
 import type { Attachment } from "../models/email.model"
+import logger from "../utils/logger"
 
 class EmailService {
   constructor() {
@@ -34,7 +35,7 @@ class EmailService {
 
       return parsedAttachments
     } catch (error) {
-      console.error("첨부파일 파싱 중 오류:", error)
+      logger.error({ err: error }, "Failed to parse attachments")
       return []
     }
   }
@@ -141,10 +142,10 @@ class EmailService {
         sendgridMessageId, // SendGrid의 내부 ID
       }
     } catch (error: unknown) {
-      console.error("이메일 발송 실패:", error)
+      logger.error({ err: error }, "Failed to send email")
       return {
         success: false,
-        error: error instanceof Error ? error.message : "이메일 발송 중 오류가 발생했습니다.",
+        error: error instanceof Error ? error.message : "Failed to send email",
       }
     } finally {
       // API Key 원복 (다른 요청에 영향 없도록)
@@ -164,7 +165,7 @@ class EmailService {
   ): Promise<boolean> {
     try {
       if (!config.sendgrid.apiKey) {
-        console.log("SendGrid API Key가 설정되지 않았습니다.")
+        logger.warn("SendGrid API Key not configured")
         return false
       }
 
@@ -188,7 +189,7 @@ class EmailService {
       await sgMail.send(msg)
       return true
     } catch (error) {
-      console.error("자동 답장 발송 실패:", error)
+      logger.error({ err: error }, "Failed to send auto-reply")
       return false
     }
   }

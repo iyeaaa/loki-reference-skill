@@ -5,6 +5,7 @@ import { emailReplies, emails as emailsTable } from "../db/schema/emails"
 import { leadContacts } from "../db/schema/lead-details"
 import type { Email, FileData, FormData } from "../models/email.model"
 import { emails } from "../types/email-storage"
+import logger from "../utils/logger"
 import { emailService } from "./email.service"
 
 class WebhookService {
@@ -28,7 +29,7 @@ class WebhookService {
     try {
       await this.storeInboundEmailInDB(body, headers, parsedAttachments)
     } catch (error) {
-      console.error("Failed to store inbound email in DB:", error)
+      logger.error({ err: error }, "Failed to store inbound email in DB")
     }
 
     // Send auto-reply if needed
@@ -58,7 +59,7 @@ class WebhookService {
     }
 
     emails.push(email)
-    console.log(`이메일 저장됨: ${email.subject} (ID: ${email.id})`)
+    logger.info({ emailId: email.id, subject: email.subject }, "Email stored")
 
     return { status: "OK" }
   }
@@ -82,7 +83,7 @@ class WebhookService {
           references = referencesStr.split(/\s+/).filter((ref: string) => ref.length > 0)
         }
       } catch (e) {
-        console.log("헤더 파싱 실패:", e)
+        logger.warn({ err: e }, "Failed to parse headers")
       }
     }
 
@@ -94,55 +95,48 @@ class WebhookService {
     headers: { messageId: string | undefined; inReplyTo: string | undefined; references: string[] },
     files: FileData[],
   ) {
-    console.log("\n========================================")
-    console.log("         새 이메일 수신 알림")
-    console.log("========================================")
-    console.log("📅 수신 시간:", new Date().toISOString())
+    let envelopeFrom = "none"
+    try {
+      const envelope = JSON.parse(body.envelope || "{}")
+      envelopeFrom = envelope.from || "none"
+    } catch {
+      envelopeFrom = "parse failed"
+    }
 
-    console.log("\n📧 [이메일 기본 정보]")
-    console.log("├─ From:", body.from || "없음")
-    console.log("├─ To:", body.to || "없음")
-    console.log("├─ CC:", body.cc || "없음")
-    console.log("├─ Subject:", body.subject || "없음")
-    console.log("├─ Message-ID:", headers.messageId || "없음")
-    console.log("├─ In-Reply-To:", headers.inReplyTo || "없음")
-    console.log(
-      "└─ References:",
-      headers.references.length > 0 ? headers.references.join(", ") : "없음",
-    )
+    const emailInfo = {
+      receivedAt: new Date().toISOString(),
+      from: body.from || "none",
+      to: body.to || "none",
+      cc: body.cc || "none",
+      subject: body.subject || "none",
+      messageId: headers.messageId || "none",
+      inReplyTo: headers.inReplyTo || "none",
+      references: headers.references.length > 0 ? headers.references.join(", ") : "none",
+      senderIp: body.sender_ip || "none",
+      envelopeFrom,
+      textLength: body.text?.length || 0,
+      htmlLength: body.html?.length || 0,
+      filesCount: files?.length || 0,
+    }
 
-    console.log("\n🌐 [발신자 정보]")
-    console.log("├─ Sender IP:", body.sender_ip || "없음")
-    console.log(
-      "└─ Envelope From:",
-      (() => {
-        try {
-          const envelope = JSON.parse(body.envelope || "{}")
-          return envelope.from || "없음"
-        } catch {
-          return "파싱 실패"
-        }
-      })(),
-    )
+    logger.info(emailInfo, "Inbound email received")
 
-    console.log("\n📄 [이메일 내용]")
     if (body.text) {
       const textPreview = body.text.slice(0, 200)
-      console.log("├─ Text 내용:")
-      console.log(`│  ${textPreview}${body.text.length > 200 ? "..." : ""}`)
-      console.log(`│  (총 ${body.text.length}자)`)
-    }
-    if (body.html) {
-      console.log(`└─ HTML 내용: ${body.html.length}자`)
+      logger.debug({ preview: textPreview, length: body.text.length }, "Email text content preview")
     }
 
     if (files && files.length > 0) {
-      console.log("\n📁 [업로드된 파일 (Multipart)]")
       files.forEach((file: FileData) => {
-        console.log(`├─ 파일명: ${file.originalname}`)
-        console.log(`│  ├─ 필드명: ${file.fieldname}`)
-        console.log(`│  ├─ MIME 타입: ${file.mimetype}`)
-        console.log(`│  └─ 크기: ${file.size} bytes`)
+        logger.debug(
+          {
+            filename: file.originalname,
+            fieldname: file.fieldname,
+            mimetype: file.mimetype,
+            size: file.size,
+          },
+          "Uploaded file",
+        )
       })
     }
 
@@ -151,17 +145,12 @@ class WebhookService {
   }
 
   private logMetadata(body: FormData) {
-    console.log("\n📝 [추가 메타데이터]")
-
     if (body.charsets) {
       try {
         const charsets = JSON.parse(body.charsets)
-        console.log("├─ 문자 인코딩:")
-        Object.entries(charsets).forEach(([key, value]) => {
-          console.log(`│  └─ ${key}: ${value}`)
-        })
-      } catch {
-        console.log("├─ charsets 파싱 실패")
+        logger.debug({ charsets }, "Email charsets metadata")
+      } catch (e) {
+        logger.warn({ err: e }, "Failed to parse charsets")
       }
     }
 
@@ -169,27 +158,28 @@ class WebhookService {
       try {
         const contentIds = JSON.parse(body["content-ids"])
         if (Object.keys(contentIds).length > 0) {
-          console.log("├─ Content-IDs:")
-          Object.entries(contentIds).forEach(([key, value]) => {
-            console.log(`│  └─ ${key}: ${value}`)
-          })
+          logger.debug({ contentIds }, "Email content-ids metadata")
         }
-      } catch {
-        console.log("├─ content-ids 파싱 실패")
+      } catch (e) {
+        logger.warn({ err: e }, "Failed to parse content-ids")
       }
     }
   }
 
   private logAllKeys(body: FormData) {
-    console.log("\n🔍 [전체 수신 데이터 키 목록]")
     const allKeys = Object.keys(body)
-    console.log(`├─ 총 ${allKeys.length}개 필드`)
-    allKeys.forEach((key, index) => {
-      const isLast = index === allKeys.length - 1
+    const keyPreviews: Record<string, string> = {}
+
+    allKeys.forEach((key) => {
       const value = body[key]
-      const preview = value ? (value.length > 50 ? `${value.substring(0, 50)}...` : value) : "빈 값"
-      console.log(`${isLast ? "└─" : "├─"} ${key}: ${preview}`)
+      keyPreviews[key] = value
+        ? value.length > 50
+          ? `${value.substring(0, 50)}...`
+          : value
+        : "empty"
     })
+
+    logger.debug({ fieldsCount: allKeys.length, keys: keyPreviews }, "All received data keys")
   }
 
   private async processAttachments(body: FormData) {
@@ -219,7 +209,7 @@ class WebhookService {
     headers: { messageId: string | undefined; inReplyTo: string | undefined; references: string[] },
     _attachments: unknown[],
   ) {
-    console.log("\n💾 DB에 인바운드 이메일 저장 중...")
+    logger.info("Storing inbound email in DB")
 
     // 1. 수신 이메일 주소로 이메일 계정 찾기
     const toEmail = body.to || ""
@@ -235,13 +225,13 @@ class WebhookService {
       .limit(1)
 
     if (emailAccount.length === 0) {
-      console.log(`⚠️  이메일 계정을 찾을 수 없음: ${toEmail}`)
+      logger.warn({ toEmail }, "Email account not found")
       return
     }
 
     const account = emailAccount[0]
     if (!account) {
-      console.log(`⚠️  이메일 계정을 찾을 수 없음`)
+      logger.warn("Email account not found")
       return
     }
 
@@ -275,15 +265,15 @@ class WebhookService {
 
     const inboundEmail = inboundEmailResults[0]
     if (!inboundEmail) {
-      console.log(`❌ 인바운드 이메일 저장 실패`)
+      logger.error("Failed to save inbound email")
       return
     }
 
-    console.log(`✅ 인바운드 이메일 저장 완료: ${inboundEmail.id}`)
+    logger.info({ emailId: inboundEmail.id }, "Inbound email saved successfully")
 
     // 4. 답장인지 확인 (In-Reply-To 헤더가 있는 경우)
     if (headers.inReplyTo) {
-      console.log(`\n🔍 답장 감지: In-Reply-To = ${headers.inReplyTo}`)
+      logger.info({ inReplyTo: headers.inReplyTo }, "Reply detected")
 
       // 원본 이메일 찾기 (messageId로 검색)
       const originalEmailResults = await db
@@ -301,7 +291,7 @@ class WebhookService {
 
       const originalEmail = originalEmailResults[0]
       if (originalEmail) {
-        console.log(`✅ 원본 이메일 찾음: ${originalEmail.id}`)
+        logger.info({ originalEmailId: originalEmail.id }, "Original email found")
 
         // email_replies 테이블에 저장
         await db.insert(emailReplies).values({
@@ -311,7 +301,7 @@ class WebhookService {
           isRead: false,
         })
 
-        console.log(`✅ email_replies 테이블에 저장 완료`)
+        logger.info("Saved to email_replies table")
 
         // 원본 이메일의 repliedAt 업데이트
         await db
@@ -322,9 +312,9 @@ class WebhookService {
           })
           .where(eq(emailsTable.id, originalEmail.id))
 
-        console.log(`✅ 원본 이메일 repliedAt 업데이트 완료`)
+        logger.info({ originalEmailId: originalEmail.id }, "Original email repliedAt updated")
       } else {
-        console.log(`⚠️  원본 이메일을 찾을 수 없음: ${headers.inReplyTo}`)
+        logger.warn({ inReplyTo: headers.inReplyTo }, "Original email not found")
       }
     }
   }
@@ -335,11 +325,11 @@ class WebhookService {
       | Record<string, string | undefined>
       | { messageId?: string; inReplyTo?: string; references: string[] },
   ) {
-    console.log("\n📤 자동 답장 발송 시도 중...")
+    logger.info("Attempting to send auto-reply")
 
     const emailContent = emailService.extractEmailContent(body.text, body.html, body.email)
 
-    console.log("├─ 이메일 내용 길이:", emailContent.length, "자")
+    logger.debug({ contentLength: emailContent.length }, "Email content length")
 
     const baseReferences: string[] = Array.isArray(headers.references) ? headers.references : []
     const updatedReferences: string[] = headers.messageId
@@ -356,14 +346,12 @@ class WebhookService {
     )
 
     if (autoReplySuccess) {
-      console.log("✅ 자동 답장 발송 완료!")
+      logger.info("Auto-reply sent successfully")
     } else {
-      console.log("❌ 자동 답장 발송 실패!")
+      logger.error("Failed to send auto-reply")
     }
 
-    console.log("\n========================================")
-    console.log("         이메일 처리 완료")
-    console.log("========================================\n")
+    logger.info("Email processing completed")
   }
 }
 

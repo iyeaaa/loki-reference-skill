@@ -11,6 +11,7 @@ import { and, eq, lte } from "drizzle-orm"
 import { config } from "../config"
 import { db } from "../db/index"
 import { emails } from "../db/schema/emails"
+import logger from "../utils/logger"
 
 // Initialize SendGrid
 if (config.sendgrid.apiKey) {
@@ -63,10 +64,7 @@ async function sendScheduledEmail(email: {
       messageId: response.headers["x-message-id"] as string,
     }
   } catch (error: unknown) {
-    console.error(
-      "[Scheduled Email Worker] SendGrid error:",
-      error instanceof Error ? error.message : error,
-    )
+    logger.error({ err: error, emailId: email.id }, "SendGrid error")
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -78,7 +76,7 @@ async function sendScheduledEmail(email: {
  * Process all scheduled emails that are due
  */
 async function processScheduledEmails() {
-  console.log("[Scheduled Email Worker] Starting scheduled email processing...")
+  logger.info("Starting scheduled email processing")
 
   try {
     const now = new Date()
@@ -93,18 +91,18 @@ async function processScheduledEmails() {
       .limit(100) // Process max 100 emails per run
 
     if (scheduledEmails.length === 0) {
-      console.log("[Scheduled Email Worker] No scheduled emails to send")
+      logger.debug("No scheduled emails to send")
       return
     }
 
-    console.log(`[Scheduled Email Worker] Found ${scheduledEmails.length} scheduled emails`)
+    logger.info({ count: scheduledEmails.length }, "Found scheduled emails")
 
     let successCount = 0
     let failureCount = 0
 
     // Process each scheduled email
     for (const email of scheduledEmails) {
-      console.log(`[Scheduled Email Worker] Processing email ${email.id} to ${email.toEmail}`)
+      logger.info({ emailId: email.id, to: email.toEmail }, "Processing email")
 
       // Update status to 'queued' to prevent duplicate processing
       await db
@@ -128,7 +126,7 @@ async function processScheduledEmails() {
           .where(eq(emails.id, email.id))
 
         successCount++
-        console.log(`[Scheduled Email Worker] ✓ Email sent: ${email.id} (${result.messageId})`)
+        logger.info({ emailId: email.id, messageId: result.messageId }, "Email sent successfully")
       } else {
         // Update status to 'failed' and increment retry count
         await db
@@ -143,15 +141,16 @@ async function processScheduledEmails() {
           .where(eq(emails.id, email.id))
 
         failureCount++
-        console.error(`[Scheduled Email Worker] ✗ Email failed: ${email.id} - ${result.error}`)
+        logger.error({ emailId: email.id, error: result.error }, "Email send failed")
       }
     }
 
-    console.log(
-      `[Scheduled Email Worker] Finished: ${successCount} sent, ${failureCount} failed (total: ${scheduledEmails.length})`,
+    logger.info(
+      { successCount, failureCount, total: scheduledEmails.length },
+      "Finished processing scheduled emails",
     )
   } catch (error) {
-    console.error("[Scheduled Email Worker] Error in processScheduledEmails:", error)
+    logger.error({ err: error }, "Error in processScheduledEmails")
   }
 }
 
@@ -160,7 +159,7 @@ async function processScheduledEmails() {
  * Runs every 30 seconds to check for due emails
  */
 export function startScheduledEmailWorker() {
-  console.log("[Scheduled Email Worker] Starting worker...")
+  logger.info("Starting scheduled email worker")
 
   // Run immediately on startup
   processScheduledEmails()
@@ -170,7 +169,7 @@ export function startScheduledEmailWorker() {
 
   // Return function to stop worker
   return () => {
-    console.log("[Scheduled Email Worker] Stopping worker...")
+    logger.info("Stopping scheduled email worker")
     clearInterval(intervalId)
   }
 }

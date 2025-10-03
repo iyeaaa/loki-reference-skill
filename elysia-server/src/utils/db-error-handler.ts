@@ -1,5 +1,6 @@
 import type { ResponseCodeType } from "../types/response.types"
 import { ResponseCode } from "../types/response.types"
+import logger from "./logger"
 
 export interface DatabaseError extends Error {
   code?: string
@@ -127,7 +128,7 @@ export function handleDatabaseError(error: unknown): {
 
   // Default database error
   if (pgError.code?.startsWith("23") || pgError.code?.startsWith("22")) {
-    console.error("Database error:", pgError)
+    logger.error({ err: pgError, code: pgError.code }, "Database error occurred")
     return {
       message: "데이터베이스 오류가 발생했습니다.",
       code: ResponseCode.INTERNAL_ERROR,
@@ -136,7 +137,7 @@ export function handleDatabaseError(error: unknown): {
   }
 
   // Unknown error
-  console.error("Unknown error:", error)
+  logger.error({ err: error }, "Unknown error occurred")
   return {
     message: "서버 오류가 발생했습니다.",
     code: ResponseCode.INTERNAL_ERROR,

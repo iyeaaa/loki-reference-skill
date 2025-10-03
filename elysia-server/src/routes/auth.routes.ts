@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia"
 import * as authService from "../services/auth.service"
 import * as userService from "../services/user.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
+import logger from "../utils/logger"
 
 const loginSchema = t.Object({
   email: t.String({ format: "email" }),
@@ -119,7 +120,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
           },
         }
       } catch (error) {
-        console.error("Signup error:", error)
+        logger.error({ err: error }, "Signup error")
         if (error instanceof Error) {
           // 더 구체적인 에러 메시지 제공
           if (error.message.includes("duplicate key value")) {

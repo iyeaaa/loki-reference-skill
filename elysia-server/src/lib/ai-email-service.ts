@@ -1,5 +1,6 @@
 import { createOpenAI } from "@ai-sdk/openai"
 import { generateText } from "ai"
+import logger from "../utils/logger"
 
 interface EmailContext {
   fromEmail: string
@@ -99,7 +100,7 @@ BODY:
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류 발생"
-      console.error("❌ AI 이메일 초안 생성 실패:", errorMessage)
+      logger.error({ err: error }, "AI email draft generation failed")
 
       return {
         success: false,
@@ -155,8 +156,7 @@ BODY:
         throw new Error("AI 응답 생성 실패")
       }
 
-      console.log("✅ AI 응답 생성 성공")
-      console.log(`내용: ${text}`)
+      logger.info({ content: text }, "AI response generated successfully")
 
       return {
         success: true,
@@ -164,7 +164,7 @@ BODY:
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류 발생"
-      console.error("❌ AI 응답 생성 실패:", errorMessage)
+      logger.error({ err: error }, "AI response generation failed")
 
       // 에러 타입에 따른 처리
       if (

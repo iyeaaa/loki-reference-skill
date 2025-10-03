@@ -8,6 +8,7 @@ import { leads } from "../db/schema/leads"
 import { sequences } from "../db/schema/sequences"
 import { workflowGeneratedEmails } from "../db/schema/workflow-emails"
 import { workflowEnrollments, workflowExecutionLogs } from "../db/schema/workflow-executions"
+import logger from "../utils/logger"
 import { emailService } from "./email.service"
 
 // ====================================
@@ -118,7 +119,7 @@ export async function bulkEnrollInWorkflow(data: {
       })
       enrollments.push(enrollment)
     } catch (error) {
-      console.error(`Failed to enroll lead ${leadId}:`, error)
+      logger.error({ err: error, leadId }, "Failed to enroll lead")
     }
   }
 
@@ -167,7 +168,7 @@ function parseWorkflowData(workflowDataJson: string | null): WorkflowData | null
   try {
     return JSON.parse(workflowDataJson) as WorkflowData
   } catch (error) {
-    console.error("Failed to parse workflow data:", error)
+    logger.error({ err: error }, "Failed to parse workflow data")
     return null
   }
 }
@@ -213,7 +214,7 @@ async function executeEmailDraftNode(data: {
 }): Promise<{ success: boolean; error?: string; emailId?: string }> {
   const { enrollment, node } = data
 
-  console.log(`[Workflow] Executing email draft node: ${node.id}`)
+  logger.info({ nodeId: node.id }, "Executing email draft node")
 
   // 생성된 이메일 찾기
   const generatedEmailResults = await db
@@ -249,7 +250,7 @@ async function executeEmailDraftNode(data: {
   const generatedEmail = generatedEmailResults[0]
 
   if (!generatedEmail || generatedEmail.status === "failed") {
-    console.error(`[Workflow] No generated email found for node ${node.id}`)
+    logger.error({ nodeId: node.id }, "No generated email found for node")
 
     // 실행 로그에 실패 기록
     await db.insert(workflowExecutionLogs).values({
@@ -347,12 +348,11 @@ async function executeEmailDraftNode(data: {
       })
       .where(eq(workflowEnrollments.id, enrollment.id))
 
-    console.log(`[Workflow] ✓ Email sent successfully: ${sentEmail.id}, MessageID: ${messageId}`)
+    logger.info({ emailId: sentEmail.id, messageId }, "Email sent successfully")
 
     return { success: true, emailId: sentEmail.id }
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error"
-    console.error(`[Workflow] ✗ Failed to send email:`, errorMessage)
+    logger.error({ err: error }, "Failed to send email")
 
     // 실행 로그에 실패 기록
     await db.insert(workflowExecutionLogs).values({
@@ -384,7 +384,7 @@ async function executeTimerNode(data: {
   const { enrollment, node } = data
   const delayDays = node.data.delayDays || 1
 
-  console.log(`[Workflow] Scheduling timer node: ${node.id} (${delayDays} days)`)
+  logger.info({ nodeId: node.id, delayDays }, "Scheduling timer node")
 
   const scheduledFor = new Date()
   scheduledFor.setDate(scheduledFor.getDate() + delayDays)
@@ -393,7 +393,7 @@ async function executeTimerNode(data: {
   const nextNode = getNextNode(node.id, data.workflowData)
 
   if (!nextNode) {
-    console.log(`[Workflow] No next node after timer ${node.id}, completing enrollment`)
+    logger.info({ nodeId: node.id }, "No next node after timer, completing enrollment")
 
     await db
       .update(workflowEnrollments)
@@ -441,7 +441,10 @@ async function executeTimerNode(data: {
     })
     .where(eq(workflowEnrollments.id, enrollment.id))
 
-  console.log(`[Workflow] ✓ Timer scheduled for ${scheduledFor.toISOString()}`)
+  logger.info(
+    { scheduledFor: scheduledFor.toISOString(), nextNodeId: nextNode.id },
+    "Timer scheduled",
+  )
 
   return { success: true, scheduledFor, nextNodeId: nextNode.id }
 }

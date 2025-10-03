@@ -9,6 +9,7 @@ import { sequences } from "../db/schema/sequences"
 import { workspaces } from "../db/schema/workspaces"
 import { emailService } from "../services/email.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
+import logger from "../utils/logger"
 
 // Email Schema
 const emailSchema = t.Object({
@@ -84,15 +85,18 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           )
         }
 
-        console.log("📧 Sending email:", {
-          from: `${fixedFromName} <${fixedFromEmail}>`,
-          to: body.toEmail,
-          subject: body.subject,
-        })
+        logger.info(
+          {
+            from: `${fixedFromName} <${fixedFromEmail}>`,
+            to: body.toEmail,
+            subject: body.subject,
+          },
+          "Sending email",
+        )
 
         // If scheduled, save to database
         if (body.scheduledAt) {
-          console.log("⏰ Scheduling email for:", body.scheduledAt)
+          logger.info({ scheduledAt: body.scheduledAt }, "Scheduling email")
 
           try {
             // Insert into database with 'scheduled' status
@@ -122,7 +126,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
               return errorResponse("이메일 저장에 실패했습니다", ResponseCode.INTERNAL_ERROR)
             }
 
-            console.log("✅ Email scheduled successfully:", newEmail.id)
+            logger.info({ emailId: newEmail.id }, "Email scheduled successfully")
 
             return {
               success: true,
@@ -130,7 +134,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
               message: "이메일이 예약되었습니다.",
             }
           } catch (error: unknown) {
-            console.error("❌ Failed to schedule email:", error)
+            logger.error({ err: error }, "Failed to schedule email")
             throw new Error("이메일 예약 중 오류가 발생했습니다.")
           }
         }
@@ -153,7 +157,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
 
         // Return result without DB operations
         if (sendResult.success) {
-          console.log("✅ Email sent successfully:", sendResult.messageId)
+          logger.info({ messageId: sendResult.messageId }, "Email sent successfully")
           return {
             success: true,
             email: {
@@ -168,7 +172,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             message: "이메일이 발송되었습니다.",
           }
         } else {
-          console.error("❌ Email send failed:", sendResult.error)
+          logger.error({ error: sendResult.error }, "Email send failed")
           set.status = 500
           return errorResponse(
             sendResult.error || "이메일 발송에 실패했습니다.",
@@ -176,7 +180,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           )
         }
       } catch (error: unknown) {
-        console.error("❌ 이메일 발송 중 오류:", error)
+        logger.error({ err: error }, "Error sending email")
         set.status = 500
         return errorResponse("이메일 발송 중 오류가 발생했습니다.", ResponseCode.INTERNAL_ERROR)
       }

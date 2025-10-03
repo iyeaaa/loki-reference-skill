@@ -12,6 +12,7 @@ import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { leadContacts } from "../db/schema/lead-details"
 import * as sequenceService from "../services/sequence.service"
+import logger from "../utils/logger"
 
 // Initialize SendGrid
 if (config.sendgrid.apiKey) {
@@ -106,7 +107,10 @@ async function sendSequenceEmail(execution: {
       messageId: response.headers["x-message-id"] as string,
     }
   } catch (error: unknown) {
-    console.error("Error sending sequence email:", error instanceof Error ? error.message : error)
+    logger.error(
+      { err: error, leadId: execution.leadId, executionId: execution.executionId },
+      "Error sending sequence email",
+    )
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -115,23 +119,28 @@ async function sendSequenceEmail(execution: {
 }
 
 async function processSequenceEmails() {
-  console.log("[Email Sequence Worker] Starting email processing...")
+  logger.info("Starting email processing")
 
   try {
     // Get pending step executions
     const pendingExecutions = await sequenceService.getPendingStepExecutions(50)
 
     if (pendingExecutions.length === 0) {
-      console.log("[Email Sequence Worker] No pending emails to send")
+      logger.debug("No pending emails to send")
       return
     }
 
-    console.log(`[Email Sequence Worker] Found ${pendingExecutions.length} pending emails`)
+    logger.info({ count: pendingExecutions.length }, "Found pending emails")
 
     // Process each execution
     for (const execution of pendingExecutions) {
-      console.log(
-        `[Email Sequence Worker] Processing execution ${execution.executionId} for lead ${execution.leadCompanyName || execution.leadId}`,
+      logger.info(
+        {
+          executionId: execution.executionId,
+          leadId: execution.leadId,
+          leadCompanyName: execution.leadCompanyName,
+        },
+        "Processing execution",
       )
 
       // Send email
@@ -149,7 +158,10 @@ async function processSequenceEmails() {
         // Update enrollment progress
         await sequenceService.updateEnrollmentProgress(execution.enrollmentId, execution.stepOrder)
 
-        console.log(`[Email Sequence Worker] ✓ Email sent successfully: ${result.messageId}`)
+        logger.info(
+          { executionId: execution.executionId, messageId: result.messageId },
+          "Email sent successfully",
+        )
       } else {
         // Update execution status to 'failed'
         await sequenceService.updateStepExecutionStatus(
@@ -158,19 +170,22 @@ async function processSequenceEmails() {
           result.error,
         )
 
-        console.error(`[Email Sequence Worker] ✗ Email failed: ${result.error}`)
+        logger.error(
+          { executionId: execution.executionId, error: result.error },
+          "Email send failed",
+        )
       }
     }
 
-    console.log("[Email Sequence Worker] Finished processing emails")
+    logger.info("Finished processing emails")
   } catch (error) {
-    console.error("[Email Sequence Worker] Error in processSequenceEmails:", error)
+    logger.error({ err: error }, "Error in processSequenceEmails")
   }
 }
 
 // Run worker every minute
 export function startEmailSequenceWorker() {
-  console.log("[Email Sequence Worker] Starting worker...")
+  logger.info("Starting email sequence worker")
 
   // Run immediately
   processSequenceEmails()
@@ -180,7 +195,7 @@ export function startEmailSequenceWorker() {
 
   // Return function to stop worker
   return () => {
-    console.log("[Email Sequence Worker] Stopping worker...")
+    logger.info("Stopping email sequence worker")
     clearInterval(intervalId)
   }
 }

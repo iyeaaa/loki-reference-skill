@@ -30,10 +30,10 @@ jobs:
 
     - name: Deploy SendGrinda to EC2 via Rsync
       run: |
-        echo "📦 Creating deployment directory on EC2..."
+        echo "[+] Creating deployment directory on EC2"
         ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "mkdir -p ~/send-grid-test"
 
-        echo "🚀 Syncing SendGrinda files to EC2..."
+        echo "[+] Syncing SendGrinda files to EC2"
         rsync -avz --delete \
           --exclude='.git/' \
           --exclude='node_modules/' \
@@ -52,16 +52,16 @@ jobs:
 
           cd ~/send-grid-test
 
-          echo "💾 Backing up current containers for rollback..."
+          echo "[+] Backing up current containers for rollback"
           docker compose ps -q > /tmp/previous_containers.txt
 
-          echo "🔨 Building SendGrinda Docker images..."
+          echo "[+] Building SendGrinda Docker images"
           docker compose build --pull
 
-          echo "🚢 Deploying SendGrinda containers..."
+          echo "[+] Deploying SendGrinda containers"
           docker compose up -d --no-build --remove-orphans
 
-          echo "🏥 Running health checks (timeout: 60s)..."
+          echo "[+] Running health checks (timeout: 60s)"
           HEALTH_CHECK_TIMEOUT=60
           HEALTH_CHECK_INTERVAL=5
           ELAPSED=0
@@ -71,52 +71,54 @@ jobs:
             ELYSIA_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/health || echo "000")
 
             if [ "$ADMIN_STATUS" = "200" ] && [ "$ELYSIA_STATUS" = "200" ]; then
-              echo "✅ SendGrinda services are healthy and ready!"
+              echo " => Health check passed: All services are healthy"
               break
             fi
 
-            echo "⏳ Health check in progress... (Admin: $ADMIN_STATUS, Elysia: $ELYSIA_STATUS) [$ELAPSED/$HEALTH_CHECK_TIMEOUT s]"
+            echo " => Waiting for services (Admin: $ADMIN_STATUS, Elysia: $ELYSIA_STATUS) [$ELAPSED/$HEALTH_CHECK_TIMEOUT s]"
             sleep $HEALTH_CHECK_INTERVAL
             ELAPSED=$((ELAPSED + HEALTH_CHECK_INTERVAL))
           done
 
           if [ $ELAPSED -ge $HEALTH_CHECK_TIMEOUT ]; then
-            echo "❌ SendGrinda health check failed - Rolling back deployment..."
+            echo "[!] Health check failed - Rolling back deployment"
             docker compose down
             if [ -f /tmp/previous_containers.txt ]; then
-              echo "🔄 Restoring previous containers..."
+              echo "[+] Restoring previous containers"
               docker compose up -d --no-build
             fi
             exit 1
           fi
 
-          echo "🧹 Cleaning up unused Docker images..."
+          echo "[+] Cleaning up unused Docker images"
           docker image prune -f
 
-          echo -e "\n📦 SendGrinda Container Status:"
+          echo ""
+          echo "[+] SendGrinda Container Status:"
           docker compose ps
 
-          echo -e "\n📋 SendGrinda Service Logs (last 10 lines):"
+          echo ""
+          echo "[+] SendGrinda Service Logs (last 10 lines):"
           docker compose logs --tail=10
         EOF
 
     - name: Verify SendGrinda Deployment
       run: |
-        echo "🔍 Verifying SendGrinda deployment from external network..."
+        echo "[+] Verifying SendGrinda deployment from external network"
         sleep 5
 
         ADMIN_CHECK=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.EC2_HOST }}:3000/health || echo "000")
         ELYSIA_CHECK=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.EC2_HOST }}:3001/health || echo "000")
 
         if [ "$ADMIN_CHECK" != "200" ] || [ "$ELYSIA_CHECK" != "200" ]; then
-          echo "❌ SendGrinda deployment verification failed!"
-          echo "   Admin service: $ADMIN_CHECK (expected: 200)"
-          echo "   Elysia service: $ELYSIA_CHECK (expected: 200)"
+          echo "[!] Deployment verification failed"
+          echo " => Admin service: $ADMIN_CHECK (expected: 200)"
+          echo " => Elysia service: $ELYSIA_CHECK (expected: 200)"
           exit 1
         fi
 
-        echo "✅ SendGrinda deployment verified successfully!"
-        echo "   Admin service: $ADMIN_CHECK ✓"
-        echo "   Elysia service: $ELYSIA_CHECK ✓"
+        echo "[+] Deployment verified successfully"
+        echo " => Admin service: $ADMIN_CHECK"
+        echo " => Elysia service: $ELYSIA_CHECK"
         echo ""
-        echo "🎉 SendGrinda is now live on AWS EC2!"
+        echo "[+] SendGrinda is now live on AWS EC2"

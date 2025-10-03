@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm"
+import logger from "../utils/logger"
 import { db } from "./index"
 import {
   customerGroupMembers,
@@ -31,11 +32,11 @@ function isNotFalsy<T>(value: T | false | null | undefined | 0 | ""): value is T
 }
 
 export async function seed() {
-  console.log("🌱 시드 데이터 생성 시작...\n")
+  logger.info("Starting seed data creation")
 
   try {
     // 1. 부서 데이터 생성
-    console.log("📁 부서 데이터 생성 중...")
+    logger.info("Creating department data")
     const departmentSeeds = [
       {
         name: "커뮤니케이션팀",
@@ -72,17 +73,17 @@ export async function seed() {
           insertedDepartments.push(inserted)
         }
       } else {
-        console.log(`  ⏭️  부서 '${dept.name}' 이미 존재, 건너뜀`)
+        logger.info({ department: dept.name }, "Department already exists, skipping")
         const existingDept = existing[0]
         if (existingDept) {
           insertedDepartments.push(existingDept)
         }
       }
     }
-    console.log(`✅ ${insertedDepartments.length}개 부서 처리 완료\n`)
+    logger.info({ count: insertedDepartments.length }, "Departments processed")
 
     // 2. 사용자 데이터 생성
-    console.log("👤 사용자 데이터 생성 중...")
+    logger.info("Creating user data")
     const userSeeds = [
       insertedDepartments[0]?.id && {
         username: "김철수",
@@ -141,17 +142,17 @@ export async function seed() {
           insertedUsers.push(inserted)
         }
       } else {
-        console.log(`  ⏭️  사용자 '${user.email}' 이미 존재, 건너뜀`)
+        logger.info({ email: user.email }, "User already exists, skipping")
         const existingUser = existing[0]
         if (existingUser) {
           insertedUsers.push(existingUser)
         }
       }
     }
-    console.log(`✅ ${insertedUsers.length}명 사용자 처리 완료\n`)
+    logger.info({ count: insertedUsers.length }, "Users processed")
 
     // 3. 워크스페이스 데이터 생성
-    console.log("🏢 워크스페이스 데이터 생성 중...")
+    logger.info("Creating workspace data")
     const workspaceSeeds = [
       insertedUsers[0]?.id && {
         name: "퓨어글로우 코스메틱",
@@ -229,16 +230,16 @@ export async function seed() {
           insertedWorkspaces.push(inserted)
         }
       } else {
-        console.log(`  ⏭️  워크스페이스 '${workspace.name}' 이미 존재, 건너뜀`)
+        logger.info({ workspace: workspace.name }, "Workspace already exists, skipping")
         if (existing[0]) {
           insertedWorkspaces.push(existing[0])
         }
       }
     }
-    console.log(`✅ ${insertedWorkspaces.length}개 워크스페이스 처리 완료\n`)
+    logger.info({ count: insertedWorkspaces.length }, "Workspaces processed")
 
     // 4. 워크스페이스 멤버 데이터 생성
-    console.log("👥 워크스페이스 멤버 데이터 생성 중...")
+    logger.info("Creating workspace member data")
     const memberSeeds: {
       workspaceId: string
       userId: string
@@ -298,10 +299,10 @@ export async function seed() {
     })
 
     const insertedMembers = await db.insert(workspaceMembers).values(memberSeeds).returning()
-    console.log(`✅ ${insertedMembers.length}명 워크스페이스 멤버 생성 완료\n`)
+    logger.info({ count: insertedMembers.length }, "Workspace members created")
 
     // 5. 이메일 계정 데이터 생성
-    console.log("📧 이메일 계정 데이터 생성 중...")
+    logger.info("Creating email account data")
     const emailAccountSeeds = [
       insertedUsers[0]?.id &&
         insertedWorkspaces[0]?.id && {
@@ -391,10 +392,10 @@ export async function seed() {
       .insert(userEmailAccounts)
       .values(emailAccountSeeds)
       .returning()
-    console.log(`✅ ${insertedEmailAccounts.length}개 이메일 계정 생성 완료\n`)
+    logger.info({ count: insertedEmailAccounts.length }, "Email accounts created")
 
     // 6. 리드 데이터 생성 (워크스페이스별 10개씩)
-    console.log("🎯 리드 데이터 생성 중...")
+    logger.info("Creating lead data")
     const leadSeeds: Omit<NewLead, "id" | "createdAt" | "updatedAt">[] = []
 
     // 워크스페이스별로 10개씩 리드 데이터 생성
@@ -800,10 +801,10 @@ export async function seed() {
     })
 
     const insertedLeads = await db.insert(leads).values(leadSeeds).returning()
-    console.log(`✅ ${insertedLeads.length}개 리드 생성 완료 (워크스페이스별 10개)\n`)
+    logger.info({ count: insertedLeads.length }, "Leads created (10 per workspace)")
 
     // 7. 리드 연락처 데이터 생성 (각 리드당 1-2개)
-    console.log("📞 리드 연락처 데이터 생성 중...")
+    logger.info("Creating lead contact data")
     const contactSeeds: Omit<NewLeadContact, "id" | "createdAt" | "updatedAt">[] = []
 
     // 모든 리드에 대해 연락처 생성
@@ -866,10 +867,10 @@ export async function seed() {
     })
 
     const insertedContacts = await db.insert(leadContacts).values(contactSeeds).returning()
-    console.log(`✅ ${insertedContacts.length}개 리드 연락처 생성 완료\n`)
+    logger.info({ count: insertedContacts.length }, "Lead contacts created")
 
     // 8. 리드 소셜미디어 데이터 생성 (각 리드당 1-3개)
-    console.log("📱 리드 소셜미디어 데이터 생성 중...")
+    logger.info("Creating lead social media data")
     const socialMediaSeeds: Omit<NewLeadSocialMedia, "id" | "createdAt" | "updatedAt">[] = []
     const platforms = ["linkedin", "facebook", "instagram", "twitter"] as const
     const followerCounts = ["1K", "5K", "10K", "25K", "50K", "100K", "500K", "1M"]
@@ -903,10 +904,10 @@ export async function seed() {
       .insert(leadSocialMedia)
       .values(socialMediaSeeds)
       .returning()
-    console.log(`✅ ${insertedSocialMedia.length}개 소셜미디어 생성 완료\n`)
+    logger.info({ count: insertedSocialMedia.length }, "Social media entries created")
 
     // 9. 리드 제품 데이터 생성 (각 리드당 1-2개)
-    console.log("📦 리드 제품 데이터 생성 중...")
+    logger.info("Creating lead product data")
     const productSeeds: Omit<NewLeadProduct, "id" | "createdAt">[] = []
 
     const productsByType: Record<string, string[]> = {
@@ -964,10 +965,10 @@ export async function seed() {
     })
 
     const insertedProducts = await db.insert(leadProducts).values(productSeeds).returning()
-    console.log(`✅ ${insertedProducts.length}개 제품 생성 완료\n`)
+    logger.info({ count: insertedProducts.length }, "Products created")
 
     // 10. 리드 비즈니스 섹터 데이터 생성
-    console.log("🏭 리드 비즈니스 섹터 데이터 생성 중...")
+    logger.info("Creating lead business sector data")
     const sectorSeeds = [
       insertedLeads[0]?.id && { leadId: insertedLeads[0].id, sectorName: "Enterprise Software" },
       insertedLeads[1]?.id && { leadId: insertedLeads[1].id, sectorName: "E-commerce" },
@@ -977,10 +978,10 @@ export async function seed() {
       insertedLeads[4]?.id && { leadId: insertedLeads[4].id, sectorName: "Financial Services" },
     ].filter(isNotFalsy)
     const insertedSectors = await db.insert(leadBusinessSectors).values(sectorSeeds).returning()
-    console.log(`✅ ${insertedSectors.length}개 비즈니스 섹터 생성 완료\n`)
+    logger.info({ count: insertedSectors.length }, "Business sectors created")
 
     // 11. 리드 제품 카테고리 데이터 생성
-    console.log("🏷️ 리드 제품 카테고리 데이터 생성 중...")
+    logger.info("Creating lead product category data")
     const categorySeeds = [
       insertedLeads[0]?.id && { leadId: insertedLeads[0].id, categoryName: "SaaS" },
       insertedLeads[0]?.id && { leadId: insertedLeads[0].id, categoryName: "B2B Software" },
@@ -993,10 +994,10 @@ export async function seed() {
       .insert(leadProductCategories)
       .values(categorySeeds)
       .returning()
-    console.log(`✅ ${insertedCategories.length}개 제품 카테고리 생성 완료\n`)
+    logger.info({ count: insertedCategories.length }, "Product categories created")
 
     // 12. 리드 산업 유형 데이터 생성
-    console.log("🏢 리드 산업 유형 데이터 생성 중...")
+    logger.info("Creating lead industry type data")
     const industrySeeds = [
       insertedLeads[0]?.id && {
         leadId: insertedLeads[0].id,
@@ -1011,10 +1012,10 @@ export async function seed() {
       insertedLeads[4]?.id && { leadId: insertedLeads[4].id, industryName: "Finance & Banking" },
     ].filter(isNotFalsy)
     const insertedIndustries = await db.insert(leadIndustryTypes).values(industrySeeds).returning()
-    console.log(`✅ ${insertedIndustries.length}개 산업 유형 생성 완료\n`)
+    logger.info({ count: insertedIndustries.length }, "Industry types created")
 
     // 13. 고객 그룹 데이터 생성
-    console.log("👥 고객 그룹 데이터 생성 중...")
+    logger.info("Creating customer group data")
     const groupSeeds = [
       insertedWorkspaces[0]?.id &&
         insertedUsers[0]?.id && {
@@ -1065,14 +1066,14 @@ export async function seed() {
 
     let insertedGroups: (typeof customerGroups.$inferSelect)[] = []
     if (groupSeeds.length === 0) {
-      console.log("⚠️  고객 그룹 시드 데이터가 없습니다. 건너뜀")
+      logger.warn("No customer group seed data, skipping")
     } else {
       insertedGroups = await db.insert(customerGroups).values(groupSeeds).returning()
-      console.log(`✅ ${insertedGroups.length}개 고객 그룹 생성 완료\n`)
+      logger.info({ count: insertedGroups.length }, "Customer groups created")
     }
 
     // 14. 고객 그룹 멤버 데이터 생성 (각 그룹당 10개 이상)
-    console.log("👤 고객 그룹 멤버 데이터 생성 중...")
+    logger.info("Creating customer group member data")
     const groupMemberSeeds: Omit<NewCustomerGroupMember, "id" | "addedAt">[] = []
 
     // 각 고객 그룹에 대해 멤버 추가
@@ -1153,10 +1154,10 @@ export async function seed() {
       .insert(customerGroupMembers)
       .values(uniqueGroupMembers)
       .returning()
-    console.log(`✅ ${insertedGroupMembers.length}개 그룹 멤버 생성 완료\n`)
+    logger.info({ count: insertedGroupMembers.length }, "Group members created")
 
     // 15. 이메일 템플릿 데이터 생성
-    console.log("✉️ 이메일 템플릿 데이터 생성 중...")
+    logger.info("Creating email template data")
     const templateSeeds = [
       insertedWorkspaces[0]?.id &&
         insertedUsers[0]?.id && {
@@ -1232,10 +1233,10 @@ export async function seed() {
         },
     ].filter(isNotFalsy)
     const insertedTemplates = await db.insert(emailTemplates).values(templateSeeds).returning()
-    console.log(`✅ ${insertedTemplates.length}개 이메일 템플릿 생성 완료\n`)
+    logger.info({ count: insertedTemplates.length }, "Email templates created")
 
     // 16. 시퀀스 데이터 생성
-    console.log("📊 시퀀스 데이터 생성 중...")
+    logger.info("Creating sequence data")
     const sequenceSeeds = [
       insertedWorkspaces[0]?.id &&
         insertedGroups[0]?.id &&
@@ -1289,10 +1290,10 @@ export async function seed() {
         },
     ].filter(isNotFalsy)
     const insertedSequences = await db.insert(sequences).values(sequenceSeeds).returning()
-    console.log(`✅ ${insertedSequences.length}개 시퀀스 생성 완료\n`)
+    logger.info({ count: insertedSequences.length }, "Sequences created")
 
     // 17. 시퀀스 스텝 데이터 생성
-    console.log("📝 시퀀스 스텝 데이터 생성 중...")
+    logger.info("Creating sequence step data")
     const stepSeeds = [
       insertedSequences[0]?.id &&
         insertedTemplates[0]?.id && {
@@ -1346,29 +1347,33 @@ export async function seed() {
         },
     ].filter(isNotFalsy)
     const insertedSteps = await db.insert(sequenceSteps).values(stepSeeds).returning()
-    console.log(`✅ ${insertedSteps.length}개 시퀀스 스텝 생성 완료\n`)
+    logger.info({ count: insertedSteps.length }, "Sequence steps created")
 
-    console.log("✨ 모든 시드 데이터 생성 완료!\n")
-    console.log("📊 생성된 데이터 요약:")
-    console.log(`  - 부서: ${insertedDepartments.length}개`)
-    console.log(`  - 사용자: ${insertedUsers.length}명`)
-    console.log(`  - 워크스페이스: ${insertedWorkspaces.length}개`)
-    console.log(`  - 워크스페이스 멤버: ${insertedMembers.length}명`)
-    console.log(`  - 이메일 계정: ${insertedEmailAccounts.length}개`)
-    console.log(`  - 리드: ${insertedLeads.length}개`)
-    console.log(`  - 리드 연락처: ${insertedContacts.length}개`)
-    console.log(`  - 소셜미디어: ${insertedSocialMedia.length}개`)
-    console.log(`  - 제품: ${insertedProducts.length}개`)
-    console.log(`  - 비즈니스 섹터: ${insertedSectors.length}개`)
-    console.log(`  - 제품 카테고리: ${insertedCategories.length}개`)
-    console.log(`  - 산업 유형: ${insertedIndustries.length}개`)
-    console.log(`  - 고객 그룹: ${insertedGroups.length}개`)
-    console.log(`  - 그룹 멤버: ${insertedGroupMembers.length}개`)
-    console.log(`  - 이메일 템플릿: ${insertedTemplates.length}개`)
-    console.log(`  - 시퀀스: ${insertedSequences.length}개`)
-    console.log(`  - 시퀀스 스텝: ${insertedSteps.length}개`)
+    logger.info("All seed data creation completed")
+    logger.info(
+      {
+        departments: insertedDepartments.length,
+        users: insertedUsers.length,
+        workspaces: insertedWorkspaces.length,
+        workspaceMembers: insertedMembers.length,
+        emailAccounts: insertedEmailAccounts.length,
+        leads: insertedLeads.length,
+        leadContacts: insertedContacts.length,
+        socialMedia: insertedSocialMedia.length,
+        products: insertedProducts.length,
+        businessSectors: insertedSectors.length,
+        productCategories: insertedCategories.length,
+        industryTypes: insertedIndustries.length,
+        customerGroups: insertedGroups.length,
+        groupMembers: insertedGroupMembers.length,
+        emailTemplates: insertedTemplates.length,
+        sequences: insertedSequences.length,
+        sequenceSteps: insertedSteps.length,
+      },
+      "Seed data summary",
+    )
   } catch (error) {
-    console.error("❌ 시드 데이터 생성 실패:", error)
+    logger.error({ err: error }, "Seed data creation failed")
     throw error
   }
 }
@@ -1377,11 +1382,11 @@ export async function seed() {
 if (import.meta.main) {
   seed()
     .then(() => {
-      console.log("시드 스크립트 완료")
+      logger.info("Seed script completed")
       process.exit(0)
     })
     .catch((error) => {
-      console.error("시드 스크립트 실패:", error)
+      logger.error({ err: error }, "Seed script failed")
       process.exit(1)
     })
 }

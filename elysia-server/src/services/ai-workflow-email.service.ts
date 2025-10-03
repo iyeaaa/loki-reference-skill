@@ -1,5 +1,6 @@
 import { createOpenAI } from "@ai-sdk/openai"
 import { generateText } from "ai"
+import logger from "../utils/logger"
 
 interface LeadContext {
   companyName: string
@@ -143,7 +144,7 @@ BODY:
 
       return parsedEmail
     } catch (error) {
-      console.error("[AI Email Generation] Failed:", error)
+      logger.error({ err: error }, "AI email generation failed")
       throw error
     }
   }
@@ -232,7 +233,10 @@ BODY:
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error"
-        console.error(`Failed to generate email for ${lead.companyName}:`, errorMessage)
+        logger.error(
+          { err: error, companyName: lead.companyName },
+          "Failed to generate email for lead",
+        )
 
         results.push({
           error: errorMessage,

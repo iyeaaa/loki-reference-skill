@@ -119,18 +119,17 @@ async function sendSequenceEmail(execution: {
 }
 
 async function processSequenceEmails() {
-  logger.info("Starting email processing")
-
   try {
     // Get pending step executions
     const pendingExecutions = await sequenceService.getPendingStepExecutions(50)
 
     if (pendingExecutions.length === 0) {
-      logger.debug("No pending emails to send")
+      // Only log at trace level to reduce noise
+      logger.trace("No pending emails to send")
       return
     }
 
-    logger.info({ count: pendingExecutions.length }, "Found pending emails")
+    logger.info({ count: pendingExecutions.length }, "Processing pending emails")
 
     // Process each execution
     for (const execution of pendingExecutions) {
@@ -177,7 +176,7 @@ async function processSequenceEmails() {
       }
     }
 
-    logger.info("Finished processing emails")
+    logger.debug("Finished processing emails")
   } catch (error) {
     logger.error({ err: error }, "Error in processSequenceEmails")
   }
@@ -185,7 +184,7 @@ async function processSequenceEmails() {
 
 // Run worker every minute
 export function startEmailSequenceWorker() {
-  logger.info("Starting email sequence worker")
+  logger.debug("✅ Email sequence worker started")
 
   // Run immediately
   processSequenceEmails()

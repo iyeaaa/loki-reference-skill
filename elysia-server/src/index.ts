@@ -4,10 +4,10 @@ import { Elysia } from "elysia"
 import { config, isDevelopment } from "./config"
 import { migrateDatabase } from "./db/migrate"
 import { errorHandler } from "./plugins/error-handler.plugin"
+import { httpLogger } from "./plugins/http-logger.plugin"
 import { rateLimit } from "./plugins/rate-limit.plugin"
 import { requestId } from "./plugins/request-id.plugin"
 import { responseTransformer } from "./plugins/response-transformer.plugin"
-import { simpleLogger } from "./plugins/simple-logger.plugin"
 import { activityLogRoutes } from "./routes/activity-logs.routes"
 import { aiRoutes } from "./routes/ai.routes"
 import { authRoutes } from "./routes/auth.routes"
@@ -31,26 +31,21 @@ import { startScheduledEmailWorker } from "./workers/scheduled-email-worker"
 import { startWorkflowExecutionWorker } from "./workers/workflow-execution-worker"
 
 // Initialize database
-logger.info("Initializing database...")
+logger.info("🔄 Initializing database...")
 migrateDatabase().catch((error) => {
   logger.error({ err: error }, "Database migration failed")
 })
 
 // Start workers
-logger.info("Starting email sequence worker...")
+logger.debug("Starting background workers...")
 startEmailSequenceWorker() // 구 기능 (sequence_steps)
-
-logger.info("Starting workflow execution worker...")
 startWorkflowExecutionWorker() // 신 기능 (workflow 기반)
-
-// Start scheduled email worker
-logger.info("Starting scheduled email worker...")
 startScheduledEmailWorker()
 
 const app = new Elysia()
   // Core plugins (order matters)
   .use(requestId) // Add request ID first for tracing
-  .use(simpleLogger) // Apply logger second to log request IDs
+  .use(httpLogger) // Apply logger second to log request IDs
   .onError(({ error }) => {
     logger.error({ err: error }, "Application Error")
     throw error
@@ -152,7 +147,4 @@ const app = new Elysia()
 
   .listen(config.port)
 
-logger.info(
-  { hostname: app.server?.hostname, port: app.server?.port },
-  `Elysia server started at http://${app.server?.hostname}:${app.server?.port}`,
-)
+logger.info(`🚀 Server ready at http://${app.server?.hostname}:${config.port}`)

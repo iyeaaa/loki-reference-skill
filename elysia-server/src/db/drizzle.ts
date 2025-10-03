@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres"
 import { Pool } from "pg"
-import { config } from "../config"
+import { config, isDevelopment } from "../config"
 import logger from "../utils/logger"
 import * as schema from "./schema"
 
@@ -13,20 +13,21 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000, // Fail fast if connection takes > 2s
 })
 
-// Monitor pool errors
+// Monitor pool errors (always log errors)
 pool.on("error", (err) => {
   logger.error({ err }, "PostgreSQL pool error")
 })
 
-// Log new connections (only in development)
-pool.on("connect", () => {
-  logger.debug("New database connection established")
-})
+// Only log connection events in development with TRACE level
+if (isDevelopment && process.env.LOG_LEVEL === "trace") {
+  pool.on("connect", () => {
+    logger.trace("New database connection established")
+  })
 
-// Log when client is removed from pool
-pool.on("remove", () => {
-  logger.debug("Database connection removed from pool")
-})
+  pool.on("remove", () => {
+    logger.trace("Database connection removed from pool")
+  })
+}
 
 // Export drizzle instance with schema
 export const db = drizzle(pool, { schema })

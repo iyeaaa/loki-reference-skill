@@ -10,18 +10,21 @@ export const logger = pino({
         target: "pino-pretty",
         options: {
           colorize: true,
-          translateTime: "HH:MM:ss Z",
-          ignore: "pid,hostname",
-          singleLine: false,
+          translateTime: "HH:MM:ss",
+          ignore: "pid,hostname,env,service,method,path,status,duration,requestId", // Hide metadata, show in message
+          singleLine: true, // Single line for cleaner output
+          messageFormat: "{msg}", // Simplified message format
         },
       }
     : undefined,
 
-  // Add service context
-  base: {
-    env: config.nodeEnv,
-    service: "elysia-server",
-  },
+  // Add service context (only in production)
+  base: isProduction
+    ? {
+        env: config.nodeEnv,
+        service: "elysia-server",
+      }
+    : undefined,
 
   // Format log levels
   formatters: {

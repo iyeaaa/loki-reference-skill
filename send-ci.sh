@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # 색상 정의 (Docker 스타일)
 RED='\033[0;31m'
 GREEN='\033[0;32m'

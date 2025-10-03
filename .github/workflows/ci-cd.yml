@@ -1,41 +1,39 @@
-name: Main Branch CI/CD
+name: SendGrinda CD Pipeline
 
 on:
   push:
     branches: [main]
 
 jobs:
-  # 배포
   deploy:
-    name: Deploy to Production
+    name: Deploy SendGrinda to AWS EC2
     runs-on: ubuntu-latest
-    # needs 제거 - 타입 체크 없이 바로 배포
 
     steps:
-    - name: Checkout code
+    - name: Checkout SendGrinda Repository
       uses: actions/checkout@v4
 
-    - name: Setup SSH
+    - name: Configure AWS EC2 SSH Connection
       uses: webfactory/ssh-agent@v0.9.0
       with:
         ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-    - name: Add EC2 to known hosts
+    - name: Register EC2 Host to Known Hosts
       run: |
         mkdir -p ~/.ssh
         ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Prepare environment files
+    - name: Prepare SendGrinda Environment Files
       run: |
         echo "${{ secrets.ADMIN_ENV }}" > ./admin/.env
         echo "${{ secrets.ELYSIA_SERVER_ENV }}" > ./elysia-server/.env
 
-    - name: Deploy to EC2
+    - name: Deploy SendGrinda to EC2 via Rsync
       run: |
-        # EC2에 디렉토리 생성
+        echo "📦 Creating deployment directory on EC2..."
         ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "mkdir -p ~/send-grid-test"
 
-        # rsync로 파일 전송 (node_modules, .git 등 제외)
+        echo "🚀 Syncing SendGrinda files to EC2..."
         rsync -avz --delete \
           --exclude='.git/' \
           --exclude='node_modules/' \
@@ -46,25 +44,24 @@ jobs:
           --exclude='.DS_Store' \
           ./ ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:~/send-grid-test/
 
-    - name: Build and deploy with Docker Compose
+    - name: Build and Deploy SendGrinda with Docker Compose
       run: |
         ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
-          set -e  # 오류 발생 시 즉시 종료
-          set -o pipefail  # 파이프라인에서 오류 전파
+          set -e
+          set -o pipefail
 
           cd ~/send-grid-test
 
-          # 이전 컨테이너 백업 (롤백용)
+          echo "💾 Backing up current containers for rollback..."
           docker compose ps -q > /tmp/previous_containers.txt
 
-          # 새 이미지 빌드 (캐싱 활용)
+          echo "🔨 Building SendGrinda Docker images..."
           docker compose build --pull
 
-          # Blue-Green 배포: 새 컨테이너 시작 후 이전 컨테이너 종료
+          echo "🚢 Deploying SendGrinda containers..."
           docker compose up -d --no-build --remove-orphans
 
-          # 헬스체크 대기 (최대 60초)
-          echo "Waiting for services to be healthy..."
+          echo "🏥 Running health checks (timeout: 60s)..."
           HEALTH_CHECK_TIMEOUT=60
           HEALTH_CHECK_INTERVAL=5
           ELAPSED=0
@@ -74,52 +71,52 @@ jobs:
             ELYSIA_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/health || echo "000")
 
             if [ "$ADMIN_STATUS" = "200" ] && [ "$ELYSIA_STATUS" = "200" ]; then
-              echo "✅ All services are healthy!"
+              echo "✅ SendGrinda services are healthy and ready!"
               break
             fi
 
-            echo "Waiting for services... (Admin: $ADMIN_STATUS, Elysia: $ELYSIA_STATUS)"
+            echo "⏳ Health check in progress... (Admin: $ADMIN_STATUS, Elysia: $ELYSIA_STATUS) [$ELAPSED/$HEALTH_CHECK_TIMEOUT s]"
             sleep $HEALTH_CHECK_INTERVAL
             ELAPSED=$((ELAPSED + HEALTH_CHECK_INTERVAL))
           done
 
-          # 헬스체크 실패 시 롤백
           if [ $ELAPSED -ge $HEALTH_CHECK_TIMEOUT ]; then
-            echo "❌ Health check failed. Rolling back..."
+            echo "❌ SendGrinda health check failed - Rolling back deployment..."
             docker compose down
             if [ -f /tmp/previous_containers.txt ]; then
-              # 이전 컨테이너로 롤백 시도
+              echo "🔄 Restoring previous containers..."
               docker compose up -d --no-build
             fi
             exit 1
           fi
 
-          # 배포 성공 시 사용하지 않는 이미지 정리
+          echo "🧹 Cleaning up unused Docker images..."
           docker image prune -f
 
-          # 최종 컨테이너 상태 확인
-          echo -e "\n📦 Container Status:"
+          echo -e "\n📦 SendGrinda Container Status:"
           docker compose ps
 
-          # 서비스 로그 확인 (최근 10줄)
-          echo -e "\n📋 Recent Logs:"
+          echo -e "\n📋 SendGrinda Service Logs (last 10 lines):"
           docker compose logs --tail=10
         EOF
 
-    - name: Verify deployment
+    - name: Verify SendGrinda Deployment
       run: |
-        echo "Verifying deployment from GitHub Actions..."
+        echo "🔍 Verifying SendGrinda deployment from external network..."
         sleep 5
 
-        # 외부에서 서비스 접근 확인
         ADMIN_CHECK=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.EC2_HOST }}:3000/health || echo "000")
         ELYSIA_CHECK=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.EC2_HOST }}:3001/health || echo "000")
 
         if [ "$ADMIN_CHECK" != "200" ] || [ "$ELYSIA_CHECK" != "200" ]; then
-          echo "❌ Deployment verification failed!"
-          echo "Admin service: $ADMIN_CHECK, Elysia service: $ELYSIA_CHECK"
+          echo "❌ SendGrinda deployment verification failed!"
+          echo "   Admin service: $ADMIN_CHECK (expected: 200)"
+          echo "   Elysia service: $ELYSIA_CHECK (expected: 200)"
           exit 1
         fi
 
-        echo "✅ Deployment verified successfully!"
-        echo "Admin service: $ADMIN_CHECK, Elysia service: $ELYSIA_CHECK"
+        echo "✅ SendGrinda deployment verified successfully!"
+        echo "   Admin service: $ADMIN_CHECK ✓"
+        echo "   Elysia service: $ELYSIA_CHECK ✓"
+        echo ""
+        echo "🎉 SendGrinda is now live on AWS EC2!"

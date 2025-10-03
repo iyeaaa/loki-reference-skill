@@ -10,7 +10,7 @@ class RateLimiter {
 
   constructor(
     private max: number,
-    private windowMs: number
+    private windowMs: number,
   ) {
     // Clean up old entries every minute
     setInterval(() => this.cleanup(), 60000)
@@ -67,7 +67,7 @@ const limiter = new RateLimiter(config.rateLimit.max, config.rateLimit.windowMs)
  * Limits requests based on IP address or user ID
  */
 export const rateLimit = new Elysia({ name: "rate-limit" })
-  .derive(({ headers, request }) => {
+  .derive(({ headers }) => {
     // Extract identifier (IP address or forwarded IP)
     const identifier =
       (headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||

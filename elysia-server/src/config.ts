@@ -42,7 +42,10 @@ function validateEmail(email: string, fieldName: string): string {
 }
 
 // Environment detection
-export const NODE_ENV = getEnvOrDefault("NODE_ENV", "development") as "development" | "production" | "test"
+export const NODE_ENV = getEnvOrDefault("NODE_ENV", "development") as
+  | "development"
+  | "production"
+  | "test"
 export const isDevelopment = NODE_ENV === "development"
 export const isProduction = NODE_ENV === "production"
 export const isTest = NODE_ENV === "test"
@@ -65,7 +68,7 @@ export const config = {
     apiKey: getEnv("SENDGRID_API_KEY"),
     fromEmail: validateEmail(
       getEnvOrDefault("SENDGRID_FROM_EMAIL", "rinda@partners.grinda.ai"),
-      "SENDGRID_FROM_EMAIL"
+      "SENDGRID_FROM_EMAIL",
     ),
     fromName: getEnvOrDefault("SENDGRID_FROM_NAME", "Rinda Expert - 그린다에이아이"),
   },

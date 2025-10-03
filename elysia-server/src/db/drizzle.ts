@@ -19,7 +19,7 @@ pool.on("error", (err) => {
 })
 
 // Log new connections (only in development)
-pool.on("connect", (client) => {
+pool.on("connect", () => {
   logger.debug("New database connection established")
 })
 

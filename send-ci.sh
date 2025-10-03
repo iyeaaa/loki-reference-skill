@@ -125,8 +125,6 @@ fi
 TEMP_DIR=$(mktemp -d)
 ADMIN_RESULT="$TEMP_DIR/admin.result"
 SERVER_RESULT="$TEMP_DIR/server.result"
-ADMIN_LOG="$TEMP_DIR/admin.log"
-SERVER_LOG="$TEMP_DIR/server.log"
 
 # 시작 시간
 START_TIME=$(date +%s)
@@ -174,33 +172,38 @@ fi
 
 # Admin 검사
 if [ "$SKIP_ADMIN" = true ]; then
-  ADMIN_EXIT=0
+  echo "0" > "$ADMIN_RESULT"
 else
-  if [ "$QUIET" = false ]; then
-    if [ "$MODE" = "fast" ]; then
-      log_admin "Running ${WHITE}lint + type-check${NC}..."
-    else
-      log_admin "Running ${WHITE}vite build${NC}..."
-    fi
-  fi
 
   if [ "$MODE" = "fast" ]; then
     (
       cd admin
       if [ "$QUIET" = false ]; then
-        stream_logs "admin" "$ADMIN_COLOR" yarn lint && \
-        stream_logs "admin" "$ADMIN_COLOR" yarn type-check
+        log_admin "Running ${WHITE}yarn lint${NC}..."
+        stream_logs "admin" "$ADMIN_COLOR" yarn lint
+        LINT_EXIT=$?
+        if [ $LINT_EXIT -eq 0 ]; then
+          log_admin "Running ${WHITE}yarn type-check${NC}..."
+          stream_logs "admin" "$ADMIN_COLOR" yarn type-check
+          echo $? > "$ADMIN_RESULT"
+        else
+          echo $LINT_EXIT > "$ADMIN_RESULT"
+        fi
       else
         yarn lint > /dev/null 2>&1 && yarn type-check > /dev/null 2>&1
+        echo $? > "$ADMIN_RESULT"
       fi
     ) &
   else
     (
       cd admin
       if [ "$QUIET" = false ]; then
+        log_admin "Running ${WHITE}yarn build${NC}..."
         stream_logs "admin" "$ADMIN_COLOR" yarn build
+        echo $? > "$ADMIN_RESULT"
       else
         yarn build > /dev/null 2>&1
+        echo $? > "$ADMIN_RESULT"
       fi
     ) &
   fi
@@ -209,33 +212,38 @@ fi
 
 # Elysia-server 검사
 if [ "$SKIP_SERVER" = true ]; then
-  SERVER_EXIT=0
+  echo "0" > "$SERVER_RESULT"
 else
-  if [ "$QUIET" = false ]; then
-    if [ "$MODE" = "fast" ]; then
-      log_server "Running ${WHITE}lint + type-check${NC}..."
-    else
-      log_server "Running ${WHITE}bun build${NC}..."
-    fi
-  fi
 
   if [ "$MODE" = "fast" ]; then
     (
       cd elysia-server
       if [ "$QUIET" = false ]; then
-        stream_logs "elysia-server" "$SERVER_COLOR" bun lint && \
-        stream_logs "elysia-server" "$SERVER_COLOR" bun type-check
+        log_server "Running ${WHITE}bun lint${NC}..."
+        stream_logs "elysia-server" "$SERVER_COLOR" bun lint
+        LINT_EXIT=$?
+        if [ $LINT_EXIT -eq 0 ]; then
+          log_server "Running ${WHITE}bun type-check${NC}..."
+          stream_logs "elysia-server" "$SERVER_COLOR" bun type-check
+          echo $? > "$SERVER_RESULT"
+        else
+          echo $LINT_EXIT > "$SERVER_RESULT"
+        fi
       else
         bun lint > /dev/null 2>&1 && bun type-check > /dev/null 2>&1
+        echo $? > "$SERVER_RESULT"
       fi
     ) &
   else
     (
       cd elysia-server
       if [ "$QUIET" = false ]; then
+        log_server "Running ${WHITE}bun run build${NC}..."
         stream_logs "elysia-server" "$SERVER_COLOR" bun run build
+        echo $? > "$SERVER_RESULT"
       else
         bun run build > /dev/null 2>&1
+        echo $? > "$SERVER_RESULT"
       fi
     ) &
   fi
@@ -245,13 +253,15 @@ fi
 # 모든 작업 완료 대기
 if [ ! -z "$ADMIN_PID" ]; then
   wait $ADMIN_PID
-  ADMIN_EXIT=$?
 fi
 
 if [ ! -z "$SERVER_PID" ]; then
   wait $SERVER_PID
-  SERVER_EXIT=$?
 fi
+
+# 결과 파일에서 exit code 읽기
+ADMIN_EXIT=$(cat "$ADMIN_RESULT")
+SERVER_EXIT=$(cat "$SERVER_RESULT")
 
 # 소요 시간 계산
 END_TIME=$(date +%s)

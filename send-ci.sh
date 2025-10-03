@@ -125,18 +125,23 @@ SERVER_LOG="$TEMP_DIR/server.log"
 # 시작 시간
 START_TIME=$(date +%s)
 
+# 작업 설명 생성
+if [ "$MODE" = "fast" ]; then
+  JOB_DESC="lint+types"
+else
+  JOB_DESC="build"
+fi
+
 # 헤더 출력 (SendCI 브랜딩)
 if [ "$QUIET" = false ]; then
   echo ""
   echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-  echo -e "${BOLD}  SendCI ${NC}${GRAY}v1.0 (2025.10.04)${NC}"
+  echo -e "${BOLD}${CYAN}  SendCI ${NC}${GRAY}v1.0 (2025.10.04)${NC}"
   echo -e "${GRAY}  Continuous Integration by Grinda AI${NC}"
   echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-  log_info "Mode: ${BOLD}$MODE${NC}"
-  log_info "Only changed: ${BOLD}$ONLY_CHANGED${NC}"
+  log_info "Mode: ${BOLD}${CYAN}$MODE${NC}"
+  log_info "Only changed: ${BOLD}${YELLOW}$ONLY_CHANGED${NC}"
   echo ""
-else
-  echo -e "${CYAN}SendCI${NC} ${GRAY}[$MODE]${NC}"
 fi
 
 # 변경된 파일 확인
@@ -153,20 +158,36 @@ if [ "$ONLY_CHANGED" = true ]; then
 
   if [ "$ADMIN_CHANGED" -eq 0 ]; then
     SKIP_ADMIN=true
-    [ "$QUIET" = false ] && log_skip "Admin (no changes detected)"
+    [ "$QUIET" = false ] && log_skip "Admin ${GRAY}(no changes)${NC}"
   else
-    [ "$QUIET" = false ] && log_info "Admin ($ADMIN_CHANGED files changed)"
+    [ "$QUIET" = false ] && log_info "Admin ${CYAN}($ADMIN_CHANGED files)${NC}"
   fi
 
   if [ "$SERVER_CHANGED" -eq 0 ]; then
     SKIP_SERVER=true
-    [ "$QUIET" = false ] && log_skip "Elysia-server (no changes detected)"
+    [ "$QUIET" = false ] && log_skip "Server ${GRAY}(no changes)${NC}"
   else
-    [ "$QUIET" = false ] && log_info "Elysia-server ($SERVER_CHANGED files changed)"
+    [ "$QUIET" = false ] && log_info "Server ${CYAN}($SERVER_CHANGED files)${NC}"
   fi
 
   if [ "$QUIET" = false ]; then
     log_group_end
+  fi
+fi
+
+# --quiet 모드일 때 한 줄로 진행 상황 표시
+if [ "$QUIET" = true ]; then
+  JOBS_LIST=""
+  [ "$SKIP_ADMIN" = false ] && JOBS_LIST="${JOBS_LIST}Admin"
+  [ "$SKIP_SERVER" = false ] && [ ! -z "$JOBS_LIST" ] && JOBS_LIST="${JOBS_LIST}, "
+  [ "$SKIP_SERVER" = false ] && JOBS_LIST="${JOBS_LIST}Server"
+
+  if [ ! -z "$JOBS_LIST" ]; then
+    if [ "$MODE" = "fast" ]; then
+      echo -e "${BLUE}→${NC} Checking: ${CYAN}${JOBS_LIST}${NC} ${GRAY}(lint+types)${NC}..."
+    else
+      echo -e "${BLUE}→${NC} Building: ${CYAN}${JOBS_LIST}${NC} ${GRAY}(vite+bun)${NC}..."
+    fi
   fi
 fi
 
@@ -180,10 +201,10 @@ if [ "$SKIP_ADMIN" = true ]; then
   echo "0" > "$ADMIN_RESULT"
 else
   if [ "$MODE" = "fast" ]; then
-    [ "$QUIET" = false ] && log_step "Admin: lint + type-check"
+    [ "$QUIET" = false ] && log_step "Admin ${GRAY}(lint+types)${NC}"
     (cd admin && yarn lint > "$ADMIN_LOG" 2>&1 && yarn type-check >> "$ADMIN_LOG" 2>&1 && echo "0" > "$ADMIN_RESULT" || echo "1" > "$ADMIN_RESULT") &
   else
-    [ "$QUIET" = false ] && log_step "Admin: build"
+    [ "$QUIET" = false ] && log_step "Admin ${GRAY}(vite build)${NC}"
     (cd admin && yarn build > "$ADMIN_LOG" 2>&1 && echo "0" > "$ADMIN_RESULT" || echo "1" > "$ADMIN_RESULT") &
   fi
   ADMIN_PID=$!
@@ -194,10 +215,10 @@ if [ "$SKIP_SERVER" = true ]; then
   echo "0" > "$SERVER_RESULT"
 else
   if [ "$MODE" = "fast" ]; then
-    [ "$QUIET" = false ] && log_step "Elysia-server: lint + type-check"
+    [ "$QUIET" = false ] && log_step "Server ${GRAY}(lint+types)${NC}"
     (cd elysia-server && bun lint > "$SERVER_LOG" 2>&1 && bun type-check >> "$SERVER_LOG" 2>&1 && echo "0" > "$SERVER_RESULT" || echo "1" > "$SERVER_RESULT") &
   else
-    [ "$QUIET" = false ] && log_step "Elysia-server: build"
+    [ "$QUIET" = false ] && log_step "Server ${GRAY}(bun build)${NC}"
     (cd elysia-server && bun run build > "$SERVER_LOG" 2>&1 && echo "0" > "$SERVER_RESULT" || echo "1" > "$SERVER_RESULT") &
   fi
   SERVER_PID=$!
@@ -208,7 +229,7 @@ if [ "$QUIET" = false ]; then
 
   # 진행 상황 표시
   if [ ! -z "$ADMIN_PID" ] || [ ! -z "$SERVER_PID" ]; then
-    log_info "Jobs running in parallel..."
+    log_info "Jobs running in ${YELLOW}parallel${NC}..."
     echo ""
   fi
 fi
@@ -239,15 +260,11 @@ fi
 
 # Admin 결과
 if [ "$SKIP_ADMIN" = true ]; then
-  [ "$QUIET" = false ] && log_skip "Admin (skipped)"
+  [ "$QUIET" = false ] && log_skip "Admin ${GRAY}(skipped)${NC}"
 elif [ "$ADMIN_EXIT" = "0" ]; then
-  if [ "$QUIET" = false ]; then
-    log_success "Admin passed"
-  else
-    echo -e "${GREEN}✓${NC} Admin"
-  fi
+  [ "$QUIET" = false ] && log_success "Admin ${GREEN}passed${NC}"
 else
-  log_error "Admin failed"
+  log_error "Admin ${RED}failed${NC}"
   echo ""
   echo -e "${RED}╭─ Admin Error Details${NC}"
   while IFS= read -r line; do
@@ -259,17 +276,13 @@ fi
 
 # Server 결과
 if [ "$SKIP_SERVER" = true ]; then
-  [ "$QUIET" = false ] && log_skip "Elysia-server (skipped)"
+  [ "$QUIET" = false ] && log_skip "Server ${GRAY}(skipped)${NC}"
 elif [ "$SERVER_EXIT" = "0" ]; then
-  if [ "$QUIET" = false ]; then
-    log_success "Elysia-server passed"
-  else
-    echo -e "${GREEN}✓${NC} Elysia-server"
-  fi
+  [ "$QUIET" = false ] && log_success "Server ${GREEN}passed${NC}"
 else
-  log_error "Elysia-server failed"
+  log_error "Server ${RED}failed${NC}"
   echo ""
-  echo -e "${RED}╭─ Elysia-server Error Details${NC}"
+  echo -e "${RED}╭─ Server Error Details${NC}"
   while IFS= read -r line; do
     echo -e "${RED}│${NC} $line"
   done < "$SERVER_LOG"
@@ -284,12 +297,26 @@ fi
 # 임시 파일 정리
 rm -rf "$TEMP_DIR"
 
-# 최종 결과
-echo ""
-if [ "$ADMIN_EXIT" = "0" ] && [ "$SERVER_EXIT" = "0" ]; then
-  echo -e "${GREEN}${BOLD}✓ All checks passed${NC} ${GRAY}(${DURATION}s)${NC}"
-  exit 0
+# 최종 결과 (quiet 모드는 한 줄로)
+if [ "$QUIET" = true ]; then
+  if [ "$ADMIN_EXIT" = "0" ] && [ "$SERVER_EXIT" = "0" ]; then
+    echo -e "${GREEN}✓${NC} All passed ${GRAY}(${DURATION}s)${NC}"
+    exit 0
+  else
+    FAILED=""
+    [ "$ADMIN_EXIT" != "0" ] && FAILED="Admin"
+    [ "$SERVER_EXIT" != "0" ] && [ ! -z "$FAILED" ] && FAILED="${FAILED}, "
+    [ "$SERVER_EXIT" != "0" ] && FAILED="${FAILED}Server"
+    echo -e "${RED}✗${NC} Failed: ${RED}${FAILED}${NC} ${GRAY}(${DURATION}s)${NC}"
+    exit 1
+  fi
 else
-  echo -e "${RED}${BOLD}✗ Some checks failed${NC} ${GRAY}(${DURATION}s)${NC}"
-  exit 1
+  echo ""
+  if [ "$ADMIN_EXIT" = "0" ] && [ "$SERVER_EXIT" = "0" ]; then
+    echo -e "${GREEN}${BOLD}✓ All checks passed${NC} ${GRAY}(${DURATION}s)${NC}"
+    exit 0
+  else
+    echo -e "${RED}${BOLD}✗ Some checks failed${NC} ${GRAY}(${DURATION}s)${NC}"
+    exit 1
+  fi
 fi

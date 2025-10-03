@@ -25,7 +25,7 @@ export function RichTextEditor({
     <div className={`rich-text-editor-container ${className}`}>
       <MDEditor
         value={value}
-        onChange={(val: any) => onChange(val || "")}
+        onChange={(val: string | undefined) => onChange(val || "")}
         preview="edit"
         hideToolbar={false}
         // visibleDragBar={false}

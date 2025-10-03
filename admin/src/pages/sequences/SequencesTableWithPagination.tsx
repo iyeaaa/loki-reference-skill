@@ -9,7 +9,14 @@ import { Input } from "@/components/ui/input"
 import { useCustomerGroupMembers } from "@/lib/api/hooks/customer-groups"
 import { useSequences, useUpdateSequence } from "@/lib/api/hooks/sequences"
 import type { Sequence, SequenceStatus, SequencesParams } from "@/lib/api/types/sequence"
+import type { CustomerGroupMember } from "@/lib/api/types/customer-group"
 import { formatRelativeTime } from "@/lib/date-utils"
+
+interface CustomerGroupMemberWithLead extends CustomerGroupMember {
+  leadCompanyName?: string
+  leadWebsiteUrl?: string
+  leadStatus?: string
+}
 
 interface SequencesTableWithPaginationProps {
   searchQuery: string
@@ -507,7 +514,7 @@ export function SequencesTableWithPagination({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {customerGroupData.members.map((member: any) => (
+                      {customerGroupData.members.map((member: CustomerGroupMemberWithLead) => (
                         <tr key={member.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm text-gray-900">
                             {member.leadCompanyName || "-"}

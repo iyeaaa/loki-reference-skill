@@ -60,7 +60,7 @@ show_spinner() {
 
 # 사용법 출력
 usage() {
-  echo -e "${BOLD}Usage:${NC} ./ci.sh [option] [flags]"
+  echo -e "${BOLD}Usage:${NC} ./send-ci.sh [option] [flags]"
   echo ""
   echo -e "${BOLD}Options:${NC}"
   echo "  fast    - Lint + Type check only (5-10초)"
@@ -69,32 +69,47 @@ usage() {
   echo ""
   echo -e "${BOLD}Flags:${NC}"
   echo "  --only-changed  - Check only changed projects (staged files)"
+  echo "  --quiet         - Minimal output (no banner)"
   echo ""
   echo -e "${BOLD}Examples:${NC}"
-  echo "  ./ci.sh                      # 전체 빌드"
-  echo "  ./ci.sh fast                 # 빠른 검사"
-  echo "  ./ci.sh fast --only-changed  # 변경된 프로젝트만 빠른 검사"
-  echo "  ./ci.sh full --only-changed  # 변경된 프로젝트만 빌드"
+  echo "  ./send-ci.sh                      # 전체 빌드"
+  echo "  ./send-ci.sh fast                 # 빠른 검사"
+  echo "  ./send-ci.sh fast --only-changed  # 변경된 프로젝트만 빠른 검사"
+  echo "  ./send-ci.sh full --only-changed  # 변경된 프로젝트만 빌드"
+  echo "  ./send-ci.sh fast --quiet         # 최소 출력"
 }
 
 # 옵션 파싱
 MODE=${1:-full}
 ONLY_CHANGED=false
+QUIET=false
 
-if [ "$MODE" = "--only-changed" ]; then
-  MODE="full"
-  ONLY_CHANGED=true
-elif [ "$MODE" != "fast" ] && [ "$MODE" != "full" ]; then
+# 인자 파싱
+for arg in "$@"; do
+  case $arg in
+    --only-changed)
+      ONLY_CHANGED=true
+      ;;
+    --quiet)
+      QUIET=true
+      ;;
+    fast|full)
+      MODE=$arg
+      ;;
+    *)
+      if [ "$arg" != "$MODE" ]; then
+        log_error "Invalid flag: $arg"
+        echo ""
+        usage
+        exit 1
+      fi
+      ;;
+  esac
+done
+
+# MODE 검증
+if [ "$MODE" != "fast" ] && [ "$MODE" != "full" ]; then
   log_error "Invalid option: $MODE"
-  echo ""
-  usage
-  exit 1
-fi
-
-if [ "$2" = "--only-changed" ]; then
-  ONLY_CHANGED=true
-elif [ ! -z "$2" ]; then
-  log_error "Invalid flag: $2"
   echo ""
   usage
   exit 1
@@ -111,54 +126,64 @@ SERVER_LOG="$TEMP_DIR/server.log"
 START_TIME=$(date +%s)
 
 # 헤더 출력 (SendCI 브랜딩)
-echo ""
-echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}  SendCI ${NC}${GRAY}v1.0 (2025.10.04)${NC}"
-echo -e "${GRAY}  Continuous Integration by Grinda AI${NC}"
-echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-log_info "Mode: ${BOLD}$MODE${NC}"
-log_info "Only changed: ${BOLD}$ONLY_CHANGED${NC}"
-echo ""
+if [ "$QUIET" = false ]; then
+  echo ""
+  echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo -e "${BOLD}  SendCI ${NC}${GRAY}v1.0 (2025.10.04)${NC}"
+  echo -e "${GRAY}  Continuous Integration by Grinda AI${NC}"
+  echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  log_info "Mode: ${BOLD}$MODE${NC}"
+  log_info "Only changed: ${BOLD}$ONLY_CHANGED${NC}"
+  echo ""
+else
+  echo -e "${CYAN}SendCI${NC} ${GRAY}[$MODE]${NC}"
+fi
 
 # 변경된 파일 확인
 SKIP_ADMIN=false
 SKIP_SERVER=false
 
 if [ "$ONLY_CHANGED" = true ]; then
-  log_group_start "Detecting Changes"
+  if [ "$QUIET" = false ]; then
+    log_group_start "Detecting Changes"
+  fi
 
   ADMIN_CHANGED=$(git diff --cached --name-only | grep "^admin/" | wc -l | tr -d ' ')
   SERVER_CHANGED=$(git diff --cached --name-only | grep "^elysia-server/" | wc -l | tr -d ' ')
 
   if [ "$ADMIN_CHANGED" -eq 0 ]; then
     SKIP_ADMIN=true
-    log_skip "Admin (no changes detected)"
+    [ "$QUIET" = false ] && log_skip "Admin (no changes detected)"
   else
-    log_info "Admin ($ADMIN_CHANGED files changed)"
+    [ "$QUIET" = false ] && log_info "Admin ($ADMIN_CHANGED files changed)"
   fi
 
   if [ "$SERVER_CHANGED" -eq 0 ]; then
     SKIP_SERVER=true
-    log_skip "Elysia-server (no changes detected)"
+    [ "$QUIET" = false ] && log_skip "Elysia-server (no changes detected)"
   else
-    log_info "Elysia-server ($SERVER_CHANGED files changed)"
+    [ "$QUIET" = false ] && log_info "Elysia-server ($SERVER_CHANGED files changed)"
   fi
 
-  log_group_end
+  if [ "$QUIET" = false ]; then
+    log_group_end
+  fi
 fi
 
 # 작업 시작
-log_group_start "Running Jobs"
+if [ "$QUIET" = false ]; then
+  log_group_start "Running Jobs"
+fi
 
 # Admin 검사
 if [ "$SKIP_ADMIN" = true ]; then
   echo "0" > "$ADMIN_RESULT"
 else
   if [ "$MODE" = "fast" ]; then
-    log_step "Admin: lint + type-check"
+    [ "$QUIET" = false ] && log_step "Admin: lint + type-check"
     (cd admin && yarn lint > "$ADMIN_LOG" 2>&1 && yarn type-check >> "$ADMIN_LOG" 2>&1 && echo "0" > "$ADMIN_RESULT" || echo "1" > "$ADMIN_RESULT") &
   else
-    log_step "Admin: build"
+    [ "$QUIET" = false ] && log_step "Admin: build"
     (cd admin && yarn build > "$ADMIN_LOG" 2>&1 && echo "0" > "$ADMIN_RESULT" || echo "1" > "$ADMIN_RESULT") &
   fi
   ADMIN_PID=$!
@@ -169,21 +194,23 @@ if [ "$SKIP_SERVER" = true ]; then
   echo "0" > "$SERVER_RESULT"
 else
   if [ "$MODE" = "fast" ]; then
-    log_step "Elysia-server: lint + type-check"
+    [ "$QUIET" = false ] && log_step "Elysia-server: lint + type-check"
     (cd elysia-server && bun lint > "$SERVER_LOG" 2>&1 && bun type-check >> "$SERVER_LOG" 2>&1 && echo "0" > "$SERVER_RESULT" || echo "1" > "$SERVER_RESULT") &
   else
-    log_step "Elysia-server: build"
+    [ "$QUIET" = false ] && log_step "Elysia-server: build"
     (cd elysia-server && bun run build > "$SERVER_LOG" 2>&1 && echo "0" > "$SERVER_RESULT" || echo "1" > "$SERVER_RESULT") &
   fi
   SERVER_PID=$!
 fi
 
-log_group_end
+if [ "$QUIET" = false ]; then
+  log_group_end
 
-# 진행 상황 표시
-if [ ! -z "$ADMIN_PID" ] || [ ! -z "$SERVER_PID" ]; then
-  log_info "Jobs running in parallel..."
-  echo ""
+  # 진행 상황 표시
+  if [ ! -z "$ADMIN_PID" ] || [ ! -z "$SERVER_PID" ]; then
+    log_info "Jobs running in parallel..."
+    echo ""
+  fi
 fi
 
 # 모든 작업 완료 대기
@@ -203,16 +230,22 @@ SERVER_EXIT=$(cat "$SERVER_RESULT")
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
 
-# 결과 출력 (GitHub Actions 스타일)
-echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}  Results${NC}"
-echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+# 결과 출력
+if [ "$QUIET" = false ]; then
+  echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo -e "${BOLD}  Results${NC}"
+  echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+fi
 
 # Admin 결과
 if [ "$SKIP_ADMIN" = true ]; then
-  log_skip "Admin (skipped)"
+  [ "$QUIET" = false ] && log_skip "Admin (skipped)"
 elif [ "$ADMIN_EXIT" = "0" ]; then
-  log_success "Admin passed"
+  if [ "$QUIET" = false ]; then
+    log_success "Admin passed"
+  else
+    echo -e "${GREEN}✓${NC} Admin"
+  fi
 else
   log_error "Admin failed"
   echo ""
@@ -226,9 +259,13 @@ fi
 
 # Server 결과
 if [ "$SKIP_SERVER" = true ]; then
-  log_skip "Elysia-server (skipped)"
+  [ "$QUIET" = false ] && log_skip "Elysia-server (skipped)"
 elif [ "$SERVER_EXIT" = "0" ]; then
-  log_success "Elysia-server passed"
+  if [ "$QUIET" = false ]; then
+    log_success "Elysia-server passed"
+  else
+    echo -e "${GREEN}✓${NC} Elysia-server"
+  fi
 else
   log_error "Elysia-server failed"
   echo ""
@@ -240,7 +277,9 @@ else
   echo ""
 fi
 
-echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+if [ "$QUIET" = false ]; then
+  echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+fi
 
 # 임시 파일 정리
 rm -rf "$TEMP_DIR"

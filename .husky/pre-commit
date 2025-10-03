@@ -1,4 +1,4 @@
 #!/bin/sh
 
-# SendCI 스크립트를 사용하여 변경된 파일만 검사 (간소화된 로그)
-./send-ci.sh fast --only-changed --quiet
+# SendCI 스크립트를 사용하여 변경된 파일만 검사
+./send-ci.sh fast --only-changed

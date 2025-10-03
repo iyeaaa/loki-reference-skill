@@ -158,8 +158,27 @@ SKIP_ADMIN=false
 SKIP_SERVER=false
 
 if [ "$ONLY_CHANGED" = true ]; then
-  ADMIN_CHANGED=$(git diff --cached --name-only | grep "^admin/" | wc -l | tr -d ' ')
-  SERVER_CHANGED=$(git diff --cached --name-only | grep "^elysia-server/" | wc -l | tr -d ' ')
+  # staged 파일이 있으면 그것을 사용 (pre-commit용)
+  # 없으면 원격과 비교 (pre-push용)
+  STAGED_FILES=$(git diff --cached --name-only 2>/dev/null)
+
+  if [ -z "$STAGED_FILES" ]; then
+    # pre-push: 원격과 비교 (없으면 HEAD와 비교)
+    REMOTE_BRANCH=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null)
+    if [ -z "$REMOTE_BRANCH" ]; then
+      # 원격 브랜치가 없으면 HEAD와 비교
+      ADMIN_CHANGED=$(git diff HEAD --name-only | grep "^admin/" | wc -l | tr -d ' ')
+      SERVER_CHANGED=$(git diff HEAD --name-only | grep "^elysia-server/" | wc -l | tr -d ' ')
+    else
+      # 원격 브랜치와 비교
+      ADMIN_CHANGED=$(git diff $REMOTE_BRANCH --name-only | grep "^admin/" | wc -l | tr -d ' ')
+      SERVER_CHANGED=$(git diff $REMOTE_BRANCH --name-only | grep "^elysia-server/" | wc -l | tr -d ' ')
+    fi
+  else
+    # pre-commit: staged 파일 확인
+    ADMIN_CHANGED=$(echo "$STAGED_FILES" | grep "^admin/" | wc -l | tr -d ' ')
+    SERVER_CHANGED=$(echo "$STAGED_FILES" | grep "^elysia-server/" | wc -l | tr -d ' ')
+  fi
 
   if [ "$ADMIN_CHANGED" -eq 0 ]; then
     SKIP_ADMIN=true

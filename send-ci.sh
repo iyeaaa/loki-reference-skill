@@ -188,19 +188,17 @@ if [ "$ONLY_CHANGED" = true ]; then
 
   if [ "$ADMIN_CHANGED" -eq 0 ]; then
     SKIP_ADMIN=true
-    [ "$QUIET" = false ] && log_admin "${GRAY}Skipped (no changes)${NC}"
   else
     [ "$QUIET" = false ] && log_admin "Detected ${WHITE}$ADMIN_CHANGED${NC} changed files"
   fi
 
   if [ "$SERVER_CHANGED" -eq 0 ]; then
     SKIP_SERVER=true
-    [ "$QUIET" = false ] && log_server "${GRAY}Skipped (no changes)${NC}"
   else
     [ "$QUIET" = false ] && log_server "Detected ${WHITE}$SERVER_CHANGED${NC} changed files"
   fi
 
-  [ "$QUIET" = false ] && echo ""
+  [ "$QUIET" = false ] && [ "$ADMIN_CHANGED" -gt 0 ] || [ "$SERVER_CHANGED" -gt 0 ] && echo ""
 fi
 
 # Admin 검사
@@ -304,24 +302,27 @@ DURATION=$((END_TIME - START_TIME))
 
 # 결과 출력
 if [ "$QUIET" = false ]; then
-  echo ""
+  # 실제로 실행된 작업이 있을 때만 빈 줄과 결과 출력
+  if [ "$SKIP_ADMIN" = false ] || [ "$SKIP_SERVER" = false ]; then
+    echo ""
 
-  # Admin 결과
-  if [ "$SKIP_ADMIN" = true ]; then
-    log_admin "${GRAY}Skipped${NC}"
-  elif [ "$ADMIN_EXIT" = "0" ]; then
-    log_admin "${GREEN}Exited with code 0${NC}"
-  else
-    log_admin "${RED}Exited with code $ADMIN_EXIT${NC}"
-  fi
+    # Admin 결과
+    if [ "$SKIP_ADMIN" = false ]; then
+      if [ "$ADMIN_EXIT" = "0" ]; then
+        log_admin "${GREEN}Exited with code 0${NC}"
+      else
+        log_admin "${RED}Exited with code $ADMIN_EXIT${NC}"
+      fi
+    fi
 
-  # Server 결과
-  if [ "$SKIP_SERVER" = true ]; then
-    log_server "${GRAY}Skipped${NC}"
-  elif [ "$SERVER_EXIT" = "0" ]; then
-    log_server "${GREEN}Exited with code 0${NC}"
-  else
-    log_server "${RED}Exited with code $SERVER_EXIT${NC}"
+    # Server 결과
+    if [ "$SKIP_SERVER" = false ]; then
+      if [ "$SERVER_EXIT" = "0" ]; then
+        log_server "${GREEN}Exited with code 0${NC}"
+      else
+        log_server "${RED}Exited with code $SERVER_EXIT${NC}"
+      fi
+    fi
   fi
 fi
 

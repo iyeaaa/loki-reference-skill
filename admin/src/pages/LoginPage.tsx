@@ -183,7 +183,7 @@ export default function AdminLoginPage() {
                       id={loginEmailId}
                       type="email"
                       placeholder="admin@rinda.ai"
-                      className="pl-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                      className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...loginForm.register("email")}
                       disabled={isLoading}
                     />
@@ -205,7 +205,7 @@ export default function AdminLoginPage() {
                       id={loginPasswordId}
                       type={showPassword ? "text" : "password"}
                       placeholder="비밀번호를 입력하세요"
-                      className="pl-10 pr-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                      className="pl-10 pr-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...loginForm.register("password")}
                       disabled={isLoading}
                     />
@@ -292,7 +292,7 @@ export default function AdminLoginPage() {
                       id={signupUsernameId}
                       type="text"
                       placeholder="사용자명을 입력하세요"
-                      className="pl-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                      className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...signupForm.register("username")}
                       disabled={isLoading}
                     />
@@ -314,7 +314,7 @@ export default function AdminLoginPage() {
                       id={signupEmailId}
                       type="email"
                       placeholder="이메일을 입력하세요"
-                      className="pl-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                      className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...signupForm.register("email")}
                       disabled={isLoading}
                     />
@@ -336,7 +336,7 @@ export default function AdminLoginPage() {
                       id={signupEmployeeId}
                       type="text"
                       placeholder="사번을 입력하세요"
-                      className="pl-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                      className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...signupForm.register("employeeId")}
                       disabled={isLoading}
                     />
@@ -386,7 +386,7 @@ export default function AdminLoginPage() {
                       id={signupPasswordId}
                       type={showSignupPassword ? "text" : "password"}
                       placeholder="비밀번호를 입력하세요"
-                      className="pl-10 pr-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                      className="pl-10 pr-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...signupForm.register("password")}
                       disabled={isLoading}
                     />
@@ -422,7 +422,7 @@ export default function AdminLoginPage() {
                       id={signupConfirmPasswordId}
                       type={showConfirmPassword ? "text" : "password"}
                       placeholder="비밀번호를 다시 입력하세요"
-                      className="pl-10 pr-10 h-11 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                      className="pl-10 pr-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...signupForm.register("confirmPassword")}
                       disabled={isLoading}
                     />

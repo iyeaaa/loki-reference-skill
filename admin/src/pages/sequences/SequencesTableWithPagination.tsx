@@ -8,8 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input"
 import { useCustomerGroupMembers } from "@/lib/api/hooks/customer-groups"
 import { useSequences, useUpdateSequence } from "@/lib/api/hooks/sequences"
-import type { Sequence, SequenceStatus, SequencesParams } from "@/lib/api/types/sequence"
 import type { CustomerGroupMember } from "@/lib/api/types/customer-group"
+import type { Sequence, SequenceStatus, SequencesParams } from "@/lib/api/types/sequence"
 import { formatRelativeTime } from "@/lib/date-utils"
 
 interface CustomerGroupMemberWithLead extends CustomerGroupMember {

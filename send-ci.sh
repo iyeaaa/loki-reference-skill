@@ -148,7 +148,13 @@ fi
 if [ "$QUIET" = false ]; then
   echo ""
   log_system "${GREEN}Starting SendCI v1.0${NC}"
-  log_system "Mode: ${WHITE}${MODE}${NC}"
+
+  if [ "$MODE" = "fast" ]; then
+    log_system "Mode: ${WHITE}fast${NC} ${GRAY}(lint + type-check)${NC}"
+  else
+    log_system "Mode: ${WHITE}full${NC} ${GRAY}(lint + type-check + build)${NC}"
+  fi
+
   [ "$ONLY_CHANGED" = true ] && log_system "Scope: ${WHITE}changed files only${NC}"
   echo ""
 fi

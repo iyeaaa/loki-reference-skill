@@ -1,9 +1,11 @@
 import { cors } from "@elysiajs/cors"
 import { swagger } from "@elysiajs/swagger"
 import { Elysia } from "elysia"
-import { config } from "./config"
+import { config, isDevelopment } from "./config"
 import { migrateDatabase } from "./db/migrate"
 import { errorHandler } from "./plugins/error-handler.plugin"
+import { rateLimit } from "./plugins/rate-limit.plugin"
+import { requestId } from "./plugins/request-id.plugin"
 import { responseTransformer } from "./plugins/response-transformer.plugin"
 import { simpleLogger } from "./plugins/simple-logger.plugin"
 import { activityLogRoutes } from "./routes/activity-logs.routes"
@@ -46,19 +48,38 @@ logger.info("Starting scheduled email worker...")
 startScheduledEmailWorker()
 
 const app = new Elysia()
-  .use(simpleLogger) // Apply logger first
+  // Core plugins (order matters)
+  .use(requestId) // Add request ID first for tracing
+  .use(simpleLogger) // Apply logger second to log request IDs
   .onError(({ error }) => {
     logger.error({ err: error }, "Application Error")
     throw error
   })
   .use(errorHandler) // Apply global error handler
   .use(responseTransformer) // Apply response transformer
+
+  // Security plugins
+  .use(rateLimit) // Apply rate limiting to all routes
+  .onBeforeHandle(({ set }) => {
+    // Security headers
+    set.headers["x-content-type-options"] = "nosniff"
+    set.headers["x-frame-options"] = "DENY"
+    set.headers["x-xss-protection"] = "1; mode=block"
+    set.headers["referrer-policy"] = "strict-origin-when-cross-origin"
+
+    if (!isDevelopment) {
+      set.headers["strict-transport-security"] = "max-age=31536000; includeSubDomains"
+    }
+  })
   .use(
     cors({
-      origin: true, // Allow all origins in development
+      // In production, restrict to specific origins
+      origin: isDevelopment ? true : config.cors.allowedOrigins,
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
+      exposeHeaders: ["X-Request-ID", "X-RateLimit-Limit", "X-RateLimit-Remaining"],
+      maxAge: 86400, // 24 hours
     }),
   )
   .use(
@@ -69,8 +90,36 @@ const app = new Elysia()
           version: "2.1.0",
           description:
             "SendGrid 기반 이메일 관리 시스템 - 이메일 송수신, AI 자동 답장, 주소록 관리, 사용자 인증",
+          contact: {
+            name: "Grinda AI",
+            email: "support@grinda.ai",
+          },
+        },
+        servers: [
+          {
+            url: isDevelopment ? `http://localhost:${config.port}` : "https://api.grinda.ai",
+            description: isDevelopment ? "Development" : "Production",
+          },
+        ],
+        tags: [
+          { name: "auth", description: "Authentication endpoints" },
+          { name: "emails", description: "Email management" },
+          { name: "workflows", description: "Workflow automation" },
+          { name: "leads", description: "Lead management" },
+          { name: "admin", description: "Admin-only endpoints" },
+        ],
+        components: {
+          securitySchemes: {
+            bearerAuth: {
+              type: "http",
+              scheme: "bearer",
+              bearerFormat: "JWT",
+              description: "JWT token from /api/v1/auth/login",
+            },
+          },
         },
       },
+      exclude: ["/health", "/health/ready", "/health/live"], // Exclude health checks from docs
     }),
   )
   .get("/", () => ({ message: "SendGrid Email Service API", version: "2.1.0" }))

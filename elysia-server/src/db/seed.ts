@@ -269,12 +269,25 @@ export async function seed() {
       {
         userId: insertedUsers[0]!.id,
         workspaceId: insertedWorkspaces[0]!.id,
-        emailAddress: 'sales@greenda.ai',
-        displayName: '그린다AI 영업팀',
+        emailAddress: 'rinda@partners.grinda.ai',
+        displayName: 'Rinda Expert - 그린다에이아이',
+        apiKey: Bun.env.SENDGRID_API_KEY || 'SG.test_api_key_default',
+        sendgridVerifiedSenderId: 'sender_id_rinda',
+        isVerified: true,
+        isDefault: true,
+        dailyLimit: 1000,
+        monthlyLimit: 25000,
+        status: 'active' as const,
+      },
+      {
+        userId: insertedUsers[0]!.id,
+        workspaceId: insertedWorkspaces[0]!.id,
+        emailAddress: 'rinda@partners.grinda.ai',
+        displayName: 'Rinda Expert - 그린다에이아이 (User 1-2)',
         apiKey: 'SG.test_api_key_1234567890',
         sendgridVerifiedSenderId: 'sender_id_001',
         isVerified: true,
-        isDefault: true,
+        isDefault: false,
         dailyLimit: 500,
         monthlyLimit: 10000,
         status: 'active' as const,
@@ -282,8 +295,8 @@ export async function seed() {
       {
         userId: insertedUsers[1]!.id,
         workspaceId: insertedWorkspaces[0]!.id,
-        emailAddress: 'marketing@greenda.ai',
-        displayName: '그린다AI 마케팅팀',
+        emailAddress: 'rinda@partners.grinda.ai',
+        displayName: 'Rinda Expert - 그린다에이아이 (User 2)',
         apiKey: 'SG.test_api_key_2234567890',
         sendgridVerifiedSenderId: 'sender_id_002',
         isVerified: true,
@@ -295,8 +308,8 @@ export async function seed() {
       {
         userId: insertedUsers[2]!.id,
         workspaceId: insertedWorkspaces[2]!.id,
-        emailAddress: 'global@greenda.ai',
-        displayName: '그린다AI 글로벌팀',
+        emailAddress: 'rinda@partners.grinda.ai',
+        displayName: 'Rinda Expert - 그린다에이아이 (User 3)',
         apiKey: 'SG.test_api_key_3234567890',
         sendgridVerifiedSenderId: 'sender_id_003',
         isVerified: true,
@@ -308,8 +321,8 @@ export async function seed() {
       {
         userId: insertedUsers[3]!.id,
         workspaceId: insertedWorkspaces[4]!.id,
-        emailAddress: 'success@greenda.ai',
-        displayName: '그린다AI 고객성공팀',
+        emailAddress: 'rinda@partners.grinda.ai',
+        displayName: 'Rinda Expert - 그린다에이아이 (User 4)',
         apiKey: 'SG.test_api_key_4234567890',
         isVerified: false,
         isDefault: true,
@@ -320,8 +333,8 @@ export async function seed() {
       {
         userId: insertedUsers[0]!.id,
         workspaceId: insertedWorkspaces[3]!.id,
-        emailAddress: 'events@greenda.ai',
-        displayName: '그린다AI 이벤트팀',
+        emailAddress: 'rinda@partners.grinda.ai',
+        displayName: 'Rinda Expert - 그린다에이아이 (User 5)',
         apiKey: 'SG.test_api_key_5234567890',
         sendgridVerifiedSenderId: 'sender_id_005',
         isVerified: true,
@@ -1155,6 +1168,7 @@ export async function seed() {
     const sequenceSeeds = [
       {
         workspaceId: insertedWorkspaces[0]!.id,
+        customerGroupId: insertedGroups[0]!.id,
         name: '신규 리드 육성 시퀀스',
         description: '신규 리드를 고객으로 전환하기 위한 7일 시퀀스',
         status: 'active' as const,
@@ -1162,6 +1176,7 @@ export async function seed() {
       },
       {
         workspaceId: insertedWorkspaces[0]!.id,
+        customerGroupId: insertedGroups[1]!.id,
         name: '데모 후 팔로우업',
         description: '제품 데모 후 후속 조치를 위한 시퀀스',
         status: 'active' as const,
@@ -1169,6 +1184,7 @@ export async function seed() {
       },
       {
         workspaceId: insertedWorkspaces[0]!.id,
+        customerGroupId: insertedGroups[0]!.id,
         name: '재참여 캠페인',
         description: '90일 이상 미응답 리드 재활성화',
         status: 'paused' as const,
@@ -1176,6 +1192,7 @@ export async function seed() {
       },
       {
         workspaceId: insertedWorkspaces[1]!.id,
+        customerGroupId: insertedGroups[2]!.id,
         name: '파트너십 제안 시퀀스',
         description: '파트너사 제안을 위한 단계별 접근',
         status: 'active' as const,
@@ -1183,6 +1200,7 @@ export async function seed() {
       },
       {
         workspaceId: insertedWorkspaces[2]!.id,
+        customerGroupId: insertedGroups[3]!.id,
         name: '글로벌 아웃리치',
         description: '해외 시장 진출을 위한 영문 시퀀스',
         status: 'draft' as const,

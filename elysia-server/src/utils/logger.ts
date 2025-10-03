@@ -11,7 +11,7 @@ export const logger = pino({
         options: {
           colorize: true,
           translateTime: "HH:MM:ss",
-          ignore: "pid,hostname,env,service", // Hide env and service in dev
+          ignore: "pid,hostname,env,service,method,path,status,duration,requestId", // Hide metadata, show in message
           singleLine: true, // Single line for cleaner output
           messageFormat: "{msg}", // Simplified message format
         },

@@ -4,10 +4,10 @@ import { Elysia } from "elysia"
 import { config, isDevelopment } from "./config"
 import { migrateDatabase } from "./db/migrate"
 import { errorHandler } from "./plugins/error-handler.plugin"
+import { httpLogger } from "./plugins/http-logger.plugin"
 import { rateLimit } from "./plugins/rate-limit.plugin"
 import { requestId } from "./plugins/request-id.plugin"
 import { responseTransformer } from "./plugins/response-transformer.plugin"
-import { simpleLogger } from "./plugins/simple-logger.plugin"
 import { activityLogRoutes } from "./routes/activity-logs.routes"
 import { aiRoutes } from "./routes/ai.routes"
 import { authRoutes } from "./routes/auth.routes"
@@ -45,7 +45,7 @@ startScheduledEmailWorker()
 const app = new Elysia()
   // Core plugins (order matters)
   .use(requestId) // Add request ID first for tracing
-  .use(simpleLogger) // Apply logger second to log request IDs
+  .use(httpLogger) // Apply logger second to log request IDs
   .onError(({ error }) => {
     logger.error({ err: error }, "Application Error")
     throw error

@@ -28,7 +28,7 @@ log_admin() {
 }
 
 log_server() {
-  echo -e "$(log_prefix "server" "$SERVER_COLOR") $1"
+  echo -e "$(log_prefix "elysia-server" "$SERVER_COLOR") $1"
 }
 
 log_system() {
@@ -55,11 +55,11 @@ log_skip() {
 stream_logs() {
   local project=$1
   local color=$2
-  local cmd=$3
+  shift 2
 
   while IFS= read -r line; do
     echo -e "$(log_prefix "$project" "$color") ${GRAY}$line${NC}"
-  done < <($cmd 2>&1)
+  done < <("$@" 2>&1)
 
   return ${PIPESTATUS[0]}
 }
@@ -188,8 +188,8 @@ else
     (
       cd admin
       if [ "$QUIET" = false ]; then
-        stream_logs "admin" "$ADMIN_COLOR" "yarn lint" && \
-        stream_logs "admin" "$ADMIN_COLOR" "yarn type-check"
+        stream_logs "admin" "$ADMIN_COLOR" yarn lint && \
+        stream_logs "admin" "$ADMIN_COLOR" yarn type-check
       else
         yarn lint > /dev/null 2>&1 && yarn type-check > /dev/null 2>&1
       fi
@@ -198,7 +198,7 @@ else
     (
       cd admin
       if [ "$QUIET" = false ]; then
-        stream_logs "admin" "$ADMIN_COLOR" "yarn build"
+        stream_logs "admin" "$ADMIN_COLOR" yarn build
       else
         yarn build > /dev/null 2>&1
       fi
@@ -223,8 +223,8 @@ else
     (
       cd elysia-server
       if [ "$QUIET" = false ]; then
-        stream_logs "server" "$SERVER_COLOR" "bun lint" && \
-        stream_logs "server" "$SERVER_COLOR" "bun type-check"
+        stream_logs "elysia-server" "$SERVER_COLOR" bun lint && \
+        stream_logs "elysia-server" "$SERVER_COLOR" bun type-check
       else
         bun lint > /dev/null 2>&1 && bun type-check > /dev/null 2>&1
       fi
@@ -233,7 +233,7 @@ else
     (
       cd elysia-server
       if [ "$QUIET" = false ]; then
-        stream_logs "server" "$SERVER_COLOR" "bun run build"
+        stream_logs "elysia-server" "$SERVER_COLOR" bun run build
       else
         bun run build > /dev/null 2>&1
       fi

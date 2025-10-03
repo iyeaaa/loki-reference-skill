@@ -57,11 +57,19 @@ stream_logs() {
   local color=$2
   shift 2
 
-  while IFS= read -r line; do
-    echo -e "$(log_prefix "$project" "$color") ${GRAY}$line${NC}"
-  done < <("$@" 2>&1)
+  # 임시 파일에 exit code 저장
+  local tmp_exit=$(mktemp)
 
-  return ${PIPESTATUS[0]}
+  {
+    "$@" 2>&1
+    echo $? > "$tmp_exit"
+  } | while IFS= read -r line; do
+    echo -e "$(log_prefix "$project" "$color") ${GRAY}$line${NC}"
+  done
+
+  local exit_code=$(cat "$tmp_exit")
+  rm -f "$tmp_exit"
+  return $exit_code
 }
 
 # 사용법 출력
@@ -200,7 +208,8 @@ else
       if [ "$QUIET" = false ]; then
         log_admin "Running ${WHITE}yarn build${NC}..."
         stream_logs "admin" "$ADMIN_COLOR" yarn build
-        echo $? > "$ADMIN_RESULT"
+        BUILD_EXIT=$?
+        echo $BUILD_EXIT > "$ADMIN_RESULT"
       else
         yarn build > /dev/null 2>&1
         echo $? > "$ADMIN_RESULT"
@@ -240,7 +249,8 @@ else
       if [ "$QUIET" = false ]; then
         log_server "Running ${WHITE}bun run build${NC}..."
         stream_logs "elysia-server" "$SERVER_COLOR" bun run build
-        echo $? > "$SERVER_RESULT"
+        BUILD_EXIT=$?
+        echo $BUILD_EXIT > "$SERVER_RESULT"
       else
         bun run build > /dev/null 2>&1
         echo $? > "$SERVER_RESULT"

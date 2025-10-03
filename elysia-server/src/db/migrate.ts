@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { Pool } from 'pg'
-import { sql } from 'drizzle-orm'
 import * as schema from './schema'
 
 export async function migrateDatabase() {
@@ -41,7 +41,7 @@ export async function migrateDatabase() {
       )
       await db.execute(sql.raw(workflowEmailsSql))
       console.log('  ├─ ✅ workflow_generated_emails table migration completed')
-    } catch (manualError) {
+    } catch {
       // If manual migrations fail (e.g., already applied or files not found), continue
       console.log('  ├─ ⚠️  Manual migrations skipped (already applied or not found)')
     }

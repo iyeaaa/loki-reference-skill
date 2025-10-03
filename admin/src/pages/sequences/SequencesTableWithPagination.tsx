@@ -40,7 +40,7 @@ export function SequencesTableWithPagination({
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
   const [currentWorkspace, setCurrentWorkspace] = useState(
-    () => localStorage.getItem("selectedWorkspace") || "all"
+    () => localStorage.getItem("selectedWorkspace") || "all",
   )
   const [selectedSequenceForModal, setSelectedSequenceForModal] = useState<Sequence | null>(null)
   const limit = 10
@@ -183,7 +183,7 @@ export function SequencesTableWithPagination({
     selectedSequenceForModal?.customerGroupId || "",
     1,
     100,
-    !!selectedSequenceForModal?.customerGroupId
+    !!selectedSequenceForModal?.customerGroupId,
   )
 
   return (

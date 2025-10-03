@@ -1,6 +1,6 @@
-import sgMail from '@sendgrid/mail'
-import { config } from '../config'
-import type { Attachment } from '../models/email.model'
+import sgMail from "@sendgrid/mail"
+import { config } from "../config"
+import type { Attachment } from "../models/email.model"
 
 class EmailService {
   constructor() {
@@ -25,8 +25,8 @@ class EmailService {
           if (info) {
             parsedAttachments.push({
               filename: info.filename || `attachment${i}`,
-              type: info.type || 'application/octet-stream',
-              size: Number.parseInt(info['content-length'] || '0', 10),
+              type: info.type || "application/octet-stream",
+              size: Number.parseInt(info["content-length"] || "0", 10),
             })
           }
         }
@@ -34,7 +34,7 @@ class EmailService {
 
       return parsedAttachments
     } catch (error) {
-      console.error('첨부파일 파싱 중 오류:', error)
+      console.error("첨부파일 파싱 중 오류:", error)
       return []
     }
   }
@@ -43,7 +43,7 @@ class EmailService {
     if (text) return text
     if (html) return html
     if (email) return email
-    return ''
+    return ""
   }
 
   async sendEmail(data: {
@@ -70,7 +70,7 @@ class EmailService {
       if (!apiKey) {
         return {
           success: false,
-          error: 'SendGrid API Key가 설정되지 않았습니다.',
+          error: "SendGrid API Key가 설정되지 않았습니다.",
         }
       }
 
@@ -82,21 +82,26 @@ class EmailService {
       // RFC 2822 Message-ID 생성 (답장 추적을 위해 필요)
       const timestamp = Date.now()
       const randomString = Math.random().toString(36).substring(2, 15)
-      const domain = data.fromEmail.split('@')[1] || 'mail.grinda.ai'
+      const domain = data.fromEmail.split("@")[1] || "mail.grinda.ai"
       const generatedMessageId = `<${timestamp}.${randomString}@${domain}>`
 
-      const msg: any = {
+      const msg = {
         to: data.toEmail,
         from: {
           email: data.fromEmail,
           name: data.fromName || data.fromEmail,
         },
         subject: data.subject,
-        headers: {},
+        headers: {} as Record<string, string>,
+        text: undefined as string | undefined,
+        html: undefined as string | undefined,
+        cc: undefined as string[] | undefined,
+        bcc: undefined as string[] | undefined,
+        replyTo: undefined as string | undefined,
       }
 
       // Message-ID 헤더 추가 (답장 추적용)
-      msg.headers['Message-ID'] = generatedMessageId
+      msg.headers["Message-ID"] = generatedMessageId
 
       // 본문 설정
       if (data.bodyText) {
@@ -119,27 +124,27 @@ class EmailService {
         msg.replyTo = data.replyTo
       }
       if (data.inReplyTo) {
-        msg.headers['In-Reply-To'] = data.inReplyTo
+        msg.headers["In-Reply-To"] = data.inReplyTo
       }
       if (data.references && data.references.length > 0) {
-        msg.headers.References = data.references.join(' ')
+        msg.headers.References = data.references.join(" ")
       }
 
-      const response = await sgMail.send(msg)
+      const response = await sgMail.send(msg as never)
 
       // SendGrid 응답에서 x-message-id 추출
-      const sendgridMessageId = response[0]?.headers['x-message-id'] || undefined
+      const sendgridMessageId = response[0]?.headers["x-message-id"] || undefined
 
       return {
         success: true,
         messageId: generatedMessageId, // 우리가 생성한 Message-ID (답장 추적용)
         sendgridMessageId, // SendGrid의 내부 ID
       }
-    } catch (error: any) {
-      console.error('이메일 발송 실패:', error)
+    } catch (error: unknown) {
+      console.error("이메일 발송 실패:", error)
       return {
         success: false,
-        error: error.message || '이메일 발송 중 오류가 발생했습니다.',
+        error: error instanceof Error ? error.message : "이메일 발송 중 오류가 발생했습니다.",
       }
     } finally {
       // API Key 원복 (다른 요청에 영향 없도록)
@@ -159,11 +164,11 @@ class EmailService {
   ): Promise<boolean> {
     try {
       if (!config.sendgrid.apiKey) {
-        console.log('SendGrid API Key가 설정되지 않았습니다.')
+        console.log("SendGrid API Key가 설정되지 않았습니다.")
         return false
       }
 
-      const replySubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`
+      const replySubject = subject.startsWith("Re:") ? subject : `Re: ${subject}`
 
       const msg = {
         to,
@@ -175,15 +180,15 @@ class EmailService {
         text: `안녕하세요,\n\n메일을 잘 받았습니다. 확인 후 회신드리겠습니다.\n\n감사합니다.`,
         html: `<p>안녕하세요,</p><p>메일을 잘 받았습니다. 확인 후 회신드리겠습니다.</p><p>감사합니다.</p>`,
         headers: {
-          ...(inReplyTo && { 'In-Reply-To': inReplyTo }),
-          ...(references && references.length > 0 && { References: references.join(' ') }),
+          ...(inReplyTo && { "In-Reply-To": inReplyTo }),
+          ...(references && references.length > 0 && { References: references.join(" ") }),
         },
       }
 
       await sgMail.send(msg)
       return true
     } catch (error) {
-      console.error('자동 답장 발송 실패:', error)
+      console.error("자동 답장 발송 실패:", error)
       return false
     }
   }

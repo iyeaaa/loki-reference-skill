@@ -1,9 +1,9 @@
-import { and, between, desc, eq, ilike, or, sql } from 'drizzle-orm'
-import { db } from '../db/index'
-import type { NewActivityLog } from '../db/schema/activity-logs'
-import { activityLogs } from '../db/schema/activity-logs'
-import { users } from '../db/schema/users'
-import { workspaces } from '../db/schema/workspaces'
+import { and, between, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { db } from "../db/index"
+import type { NewActivityLog } from "../db/schema/activity-logs"
+import { activityLogs } from "../db/schema/activity-logs"
+import { users } from "../db/schema/users"
+import { workspaces } from "../db/schema/workspaces"
 
 // ====================================
 // ACTIVITY LOG CRUD OPERATIONS
@@ -123,21 +123,30 @@ export async function listActivityLogsWithFilters(
   }
 
   if (filters?.search) {
-    conditions.push(
-      or(
-        ilike(activityLogs.entityType, `%${filters.search}%`),
-        ilike(activityLogs.action, `%${filters.search}%`),
-        ilike(activityLogs.entityId, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(activityLogs.entityType, `%${filters.search}%`),
+      ilike(activityLogs.action, `%${filters.search}%`),
+      ilike(activityLogs.entityId, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
-    conditions.push(or(...filters.workspaceIds.map((id) => eq(activityLogs.workspaceId, id)))!)
+    const workspaceCondition = or(
+      ...filters.workspaceIds.map((id) => eq(activityLogs.workspaceId, id)),
+    )
+    if (workspaceCondition) {
+      conditions.push(workspaceCondition)
+    }
   }
 
   if (filters?.userIds && filters.userIds.length > 0) {
-    conditions.push(or(...filters.userIds.map((id) => eq(activityLogs.userId, id)))!)
+    const userCondition = or(...filters.userIds.map((id) => eq(activityLogs.userId, id)))
+    if (userCondition) {
+      conditions.push(userCondition)
+    }
   }
 
   if (filters?.startDate && filters?.endDate) {
@@ -209,21 +218,30 @@ export async function countActivityLogsWithFilters(filters?: {
   }
 
   if (filters?.search) {
-    conditions.push(
-      or(
-        ilike(activityLogs.entityType, `%${filters.search}%`),
-        ilike(activityLogs.action, `%${filters.search}%`),
-        ilike(activityLogs.entityId, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(activityLogs.entityType, `%${filters.search}%`),
+      ilike(activityLogs.action, `%${filters.search}%`),
+      ilike(activityLogs.entityId, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
-    conditions.push(or(...filters.workspaceIds.map((id) => eq(activityLogs.workspaceId, id)))!)
+    const workspaceCondition = or(
+      ...filters.workspaceIds.map((id) => eq(activityLogs.workspaceId, id)),
+    )
+    if (workspaceCondition) {
+      conditions.push(workspaceCondition)
+    }
   }
 
   if (filters?.userIds && filters.userIds.length > 0) {
-    conditions.push(or(...filters.userIds.map((id) => eq(activityLogs.userId, id)))!)
+    const userCondition = or(...filters.userIds.map((id) => eq(activityLogs.userId, id)))
+    if (userCondition) {
+      conditions.push(userCondition)
+    }
   }
 
   if (filters?.startDate && filters?.endDate) {
@@ -354,7 +372,7 @@ export async function createLog(
   action: string,
   options?: {
     userId?: string | null
-    details?: any
+    details?: Record<string, unknown>
     ipAddress?: string | null
     userAgent?: string | null
   },

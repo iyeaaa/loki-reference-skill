@@ -68,7 +68,7 @@ export default function CustomerGroupsPage() {
         onSuccess: () => {
           setEditingCustomerGroup(null)
         },
-      }
+      },
     )
   }
 
@@ -77,7 +77,7 @@ export default function CustomerGroupsPage() {
 
     if (
       !confirm(
-        `선택한 ${selectedCustomerGroups.length}개의 고객 그룹을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`
+        `선택한 ${selectedCustomerGroups.length}개의 고객 그룹을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`,
       )
     )
       return
@@ -123,13 +123,13 @@ export default function CustomerGroupsPage() {
     setSelectedCustomerGroups((prev) =>
       prev.includes(customerGroupId)
         ? prev.filter((id) => id !== customerGroupId)
-        : [...prev, customerGroupId]
+        : [...prev, customerGroupId],
     )
   }, [])
 
   const toggleAllCustomerGroups = useCallback((customerGroupIds: string[]) => {
     setSelectedCustomerGroups((prev) =>
-      prev.length === customerGroupIds.length ? [] : customerGroupIds
+      prev.length === customerGroupIds.length ? [] : customerGroupIds,
     )
   }, [])
 

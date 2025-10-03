@@ -89,7 +89,7 @@ export const customerGroupsApi = {
         page,
         limit,
         totalPages: Math.ceil(response.total / limit),
-      })
+      }),
     )
   },
 
@@ -112,7 +112,7 @@ export const customerGroupsApi = {
       {
         method: "DELETE",
         body: JSON.stringify({ leadIds }),
-      }
+      },
     )
   },
 
@@ -138,7 +138,7 @@ export const customerGroupsApi = {
       {
         method: "POST",
         body: JSON.stringify({ leadIds }),
-      }
+      },
     )
   },
 }

@@ -1,32 +1,32 @@
-import { Elysia, t } from 'elysia'
-import * as activityLogService from '../services/activity-log.service'
-import { errorResponse, ResponseCode } from '../types/response.types'
+import { Elysia, t } from "elysia"
+import * as activityLogService from "../services/activity-log.service"
+import { errorResponse, ResponseCode } from "../types/response.types"
 
 const activityLogSchema = t.Object({
-  workspaceId: t.String({ format: 'uuid' }),
-  userId: t.Optional(t.Union([t.String({ format: 'uuid' }), t.Null()])),
+  workspaceId: t.String({ format: "uuid" }),
+  userId: t.Optional(t.Union([t.String({ format: "uuid" }), t.Null()])),
   entityType: t.String({ minLength: 1, maxLength: 100 }),
-  entityId: t.String({ format: 'uuid' }),
+  entityId: t.String({ format: "uuid" }),
   action: t.String({ minLength: 1, maxLength: 100 }),
   details: t.Optional(t.Any()),
   ipAddress: t.Optional(t.Union([t.String({ maxLength: 50 }), t.Null()])),
   userAgent: t.Optional(t.Union([t.String(), t.Null()])),
 })
 
-export const activityLogRoutes = new Elysia({ prefix: '/api/v1/activity-logs' })
+export const activityLogRoutes = new Elysia({ prefix: "/api/v1/activity-logs" })
   // Search activity logs with filters (must be before /:id route)
   .get(
-    '/search',
+    "/search",
     async ({ query }) => {
-      const limit = parseInt(query.limit || '10', 10)
-      const offset = parseInt(query.offset || '0', 10)
+      const limit = parseInt(query.limit || "10", 10)
+      const offset = parseInt(query.offset || "0", 10)
 
       // Parse workspaceIds and userIds from comma-separated strings
       const workspaceIds = query.workspaceIds
-        ? query.workspaceIds.split(',').filter(Boolean)
+        ? query.workspaceIds.split(",").filter(Boolean)
         : undefined
 
-      const userIds = query.userIds ? query.userIds.split(',').filter(Boolean) : undefined
+      const userIds = query.userIds ? query.userIds.split(",").filter(Boolean) : undefined
 
       // Parse date range
       const startDate = query.startDate ? new Date(query.startDate) : undefined
@@ -69,9 +69,9 @@ export const activityLogRoutes = new Elysia({ prefix: '/api/v1/activity-logs' })
 
   // Get recent activity
   .get(
-    '/recent',
+    "/recent",
     async ({ query }) => {
-      const limit = parseInt(query.limit || '20', 10)
+      const limit = parseInt(query.limit || "20", 10)
       const workspaceId = query.workspaceId
 
       const logs = await activityLogService.getRecentActivity(limit, workspaceId)
@@ -84,17 +84,17 @@ export const activityLogRoutes = new Elysia({ prefix: '/api/v1/activity-logs' })
     {
       query: t.Object({
         limit: t.Optional(t.String()),
-        workspaceId: t.Optional(t.String({ format: 'uuid' })),
+        workspaceId: t.Optional(t.String({ format: "uuid" })),
       }),
     },
   )
 
   // Get logs by entity
   .get(
-    '/entity/:entityType/:entityId',
+    "/entity/:entityType/:entityId",
     async ({ params: { entityType, entityId }, query }) => {
-      const limit = parseInt(query.limit || '50', 10)
-      const offset = parseInt(query.offset || '0', 10)
+      const limit = parseInt(query.limit || "50", 10)
+      const offset = parseInt(query.offset || "0", 10)
 
       const logs = await activityLogService.getLogsByEntity(entityType, entityId, limit, offset)
 
@@ -107,7 +107,7 @@ export const activityLogRoutes = new Elysia({ prefix: '/api/v1/activity-logs' })
     {
       params: t.Object({
         entityType: t.String(),
-        entityId: t.String({ format: 'uuid' }),
+        entityId: t.String({ format: "uuid" }),
       }),
       query: t.Object({
         limit: t.Optional(t.String()),
@@ -118,10 +118,10 @@ export const activityLogRoutes = new Elysia({ prefix: '/api/v1/activity-logs' })
 
   // Get logs by user
   .get(
-    '/user/:userId',
+    "/user/:userId",
     async ({ params: { userId }, query }) => {
-      const limit = parseInt(query.limit || '50', 10)
-      const offset = parseInt(query.offset || '0', 10)
+      const limit = parseInt(query.limit || "50", 10)
+      const offset = parseInt(query.offset || "0", 10)
 
       const logs = await activityLogService.getLogsByUser(userId, limit, offset)
 
@@ -133,7 +133,7 @@ export const activityLogRoutes = new Elysia({ prefix: '/api/v1/activity-logs' })
     },
     {
       params: t.Object({
-        userId: t.String({ format: 'uuid' }),
+        userId: t.String({ format: "uuid" }),
       }),
       query: t.Object({
         limit: t.Optional(t.String()),
@@ -144,25 +144,25 @@ export const activityLogRoutes = new Elysia({ prefix: '/api/v1/activity-logs' })
 
   // Get activity log by ID
   .get(
-    '/:id',
+    "/:id",
     async ({ params: { id }, set }) => {
       const log = await activityLogService.getActivityLog(id)
       if (!log) {
         set.status = 404
-        return errorResponse('활동 로그를 찾을 수 없습니다.', ResponseCode.NOT_FOUND)
+        return errorResponse("활동 로그를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
       }
       return log
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Create new activity log (typically for internal use)
   .post(
-    '/',
+    "/",
     async ({ body }) => {
       const log = await activityLogService.createActivityLog(body)
       return log
@@ -174,10 +174,10 @@ export const activityLogRoutes = new Elysia({ prefix: '/api/v1/activity-logs' })
 
   // List activity logs with pagination
   .get(
-    '/',
+    "/",
     async ({ query }) => {
-      const limit = parseInt(query.limit || '10', 10)
-      const offset = parseInt(query.offset || '0', 10)
+      const limit = parseInt(query.limit || "10", 10)
+      const offset = parseInt(query.offset || "0", 10)
 
       const logs = await activityLogService.listActivityLogs(limit, offset)
       const total = await activityLogService.countActivityLogs()

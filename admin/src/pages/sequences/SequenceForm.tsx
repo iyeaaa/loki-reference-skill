@@ -35,7 +35,7 @@ export function SequenceForm({ sequence, isEdit = false, onSave, onCancel }: Seq
   })
   const { data: customerGroups } = useCustomerGroupsByWorkspace(
     formData.workspaceId,
-    Boolean(formData.workspaceId)
+    Boolean(formData.workspaceId),
   )
   const nameId = useId()
   const descriptionId = useId()

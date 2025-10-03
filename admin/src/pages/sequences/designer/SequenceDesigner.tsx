@@ -160,7 +160,7 @@ export default function SequenceDesigner() {
       setEdges((eds) => [...eds, newEdge])
       setHasChanges(true)
     },
-    [nodes]
+    [nodes],
   )
 
   const deleteNode = useCallback((nodeId: string) => {
@@ -204,7 +204,7 @@ export default function SequenceDesigner() {
           return updatedNode
         }
         return n
-      })
+      }),
     )
     setHasChanges(true)
   }, [])
@@ -229,7 +229,7 @@ export default function SequenceDesigner() {
           onManageEmails: node.type === "emailDraft" ? () => handleManageEmails(node) : undefined,
         },
       })),
-    [nodes, id, addNode, deleteNode, updateNodeData, handleManageEmails]
+    [nodes, id, addNode, deleteNode, updateNodeData, handleManageEmails],
   )
 
   const handleSave = async () => {
@@ -288,7 +288,7 @@ export default function SequenceDesigner() {
             setHasChanges(false)
             toast.success("워크플로우가 저장되었습니다")
           },
-        }
+        },
       )
     } catch (error) {
       console.error("Failed to save workflow:", error)
@@ -348,7 +348,7 @@ export default function SequenceDesigner() {
               setHasChanges(false)
               console.log("[Workflow Save] Auto-save completed")
             },
-          }
+          },
         )
       } catch (error) {
         console.error("Auto-save failed:", error)

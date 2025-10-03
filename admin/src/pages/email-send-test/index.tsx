@@ -89,7 +89,7 @@ export default function EmailSendTestPage() {
   } = useSuspenseWorkspaces({ limit: 100 })
   const { data: customerGroups } = useCustomerGroupsByWorkspace(
     selectedWorkspace,
-    !!selectedWorkspace
+    !!selectedWorkspace,
   )
   const sendEmailMutation = useSendEmail()
 
@@ -99,7 +99,7 @@ export default function EmailSendTestPage() {
     try {
       console.log("Fetching group members for groupId:", groupId)
       const response = await fetch(
-        `http://localhost:3001/api/v1/customer-groups/${groupId}/members-with-emails`
+        `http://localhost:3001/api/v1/customer-groups/${groupId}/members-with-emails`,
       )
 
       console.log("Response status:", response.status)
@@ -140,7 +140,7 @@ export default function EmailSendTestPage() {
       toast.error(
         `고객 그룹 멤버를 가져오는데 실패했습니다: ${
           error instanceof Error ? error.message : "알 수 없는 오류"
-        }`
+        }`,
       )
       setGroupMembers([])
     } finally {
@@ -234,7 +234,7 @@ export default function EmailSendTestPage() {
     }
 
     toast.success(
-      `대량 발송 완료: 성공 ${successCount}건, 실패 ${failCount}건 (총 ${recipients.length}건)`
+      `대량 발송 완료: 성공 ${successCount}건, 실패 ${failCount}건 (총 ${recipients.length}건)`,
     )
 
     // 성공 시 폼 초기화
@@ -342,7 +342,7 @@ export default function EmailSendTestPage() {
     }
 
     toast.success(
-      `스케줄 발송 예약 완료: 성공 ${successCount}건, 실패 ${failCount}건 (총 ${recipients.length}건)`
+      `스케줄 발송 예약 완료: 성공 ${successCount}건, 실패 ${failCount}건 (총 ${recipients.length}건)`,
     )
 
     // 성공 시 폼 초기화
@@ -483,7 +483,7 @@ export default function EmailSendTestPage() {
     }
 
     toast.success(
-      `고객 그룹 발송 완료: 성공 ${successCount}건, 실패 ${failCount}건 (총 ${membersWithEmail.length}건)`
+      `고객 그룹 발송 완료: 성공 ${successCount}건, 실패 ${failCount}건 (총 ${membersWithEmail.length}건)`,
     )
 
     // 성공 시 폼 초기화

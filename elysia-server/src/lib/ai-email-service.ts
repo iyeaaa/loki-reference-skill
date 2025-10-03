@@ -1,5 +1,5 @@
-import { createOpenAI } from '@ai-sdk/openai'
-import { generateText } from 'ai'
+import { createOpenAI } from "@ai-sdk/openai"
+import { generateText } from "ai"
 
 interface EmailContext {
   fromEmail: string
@@ -44,9 +44,9 @@ class AIEmailService {
 
 [고객 정보]
 - 회사명: ${context.companyName}
-- 담당자: ${context.contactName || '담당자'}
-${context.industry ? `- 업종: ${context.industry}` : ''}
-${context.website ? `- 웹사이트: ${context.website}` : ''}
+- 담당자: ${context.contactName || "담당자"}
+${context.industry ? `- 업종: ${context.industry}` : ""}
+${context.website ? `- 웹사이트: ${context.website}` : ""}
 
 [작성 원칙]
 1. 친근하면서도 전문적인 톤
@@ -71,17 +71,17 @@ BODY:
 [이메일 본문]`
 
       const userPrompt =
-        context.prompt || '위 고객 정보를 바탕으로 맞춤형 영업 이메일을 작성해주세요.'
+        context.prompt || "위 고객 정보를 바탕으로 맞춤형 영업 이메일을 작성해주세요."
 
       const { text } = await generateText({
-        model: this.openai('gpt-4-turbo-preview'),
+        model: this.openai("gpt-4-turbo-preview"),
         system: systemPrompt,
         prompt: userPrompt,
         temperature: 0.7,
       })
 
       if (!text || text.trim().length === 0) {
-        throw new Error('AI 응답 생성 실패')
+        throw new Error("AI 응답 생성 실패")
       }
 
       // Parse response
@@ -89,17 +89,17 @@ BODY:
       const bodyMatch = text.match(/BODY:\s*([\s\S]+)$/)
 
       if (!subjectMatch || !bodyMatch) {
-        throw new Error('AI 응답 형식 오류')
+        throw new Error("AI 응답 형식 오류")
       }
 
       return {
         success: true,
-        subject: subjectMatch[1].trim(),
-        bodyText: bodyMatch[1].trim(),
+        subject: subjectMatch[1]?.trim() || "",
+        bodyText: bodyMatch[1]?.trim() || "",
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류 발생'
-      console.error('❌ AI 이메일 초안 생성 실패:', errorMessage)
+      const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류 발생"
+      console.error("❌ AI 이메일 초안 생성 실패:", errorMessage)
 
       return {
         success: false,
@@ -146,16 +146,16 @@ BODY:
       인사말 포함, 핵심 답변, 필요시 미팅 링크만 포함하세요.`
 
       const { text } = await generateText({
-        model: this.openai('gpt-4o-mini'),
+        model: this.openai("gpt-4o-mini"),
         system: systemPrompt,
         prompt: userPrompt,
       })
 
       if (!text || text.trim().length === 0) {
-        throw new Error('AI 응답 생성 실패')
+        throw new Error("AI 응답 생성 실패")
       }
 
-      console.log('✅ AI 응답 생성 성공')
+      console.log("✅ AI 응답 생성 성공")
       console.log(`내용: ${text}`)
 
       return {
@@ -163,26 +163,26 @@ BODY:
         replyContent: text,
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류 발생'
-      console.error('❌ AI 응답 생성 실패:', errorMessage)
+      const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류 발생"
+      console.error("❌ AI 응답 생성 실패:", errorMessage)
 
       // 에러 타입에 따른 처리
       if (
         error &&
-        typeof error === 'object' &&
-        'code' in error &&
-        error.code === 'insufficient_quota'
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "insufficient_quota"
       ) {
         return {
           success: false,
-          error: 'OpenAI API 사용량 한도 초과',
+          error: "OpenAI API 사용량 한도 초과",
         }
       }
 
-      if (error && typeof error === 'object' && 'status' in error && error.status === 401) {
+      if (error && typeof error === "object" && "status" in error && error.status === 401) {
         return {
           success: false,
-          error: 'OpenAI API 키 인증 실패',
+          error: "OpenAI API 키 인증 실패",
         }
       }
 
@@ -200,7 +200,7 @@ BODY:
     return `안녕하세요,
 
 문의 주셔서 감사합니다.
-"${context.subject || '문의사항'}"에 대해 확인했습니다.
+"${context.subject || "문의사항"}"에 대해 확인했습니다.
 
 담당자가 24시간 이내 답변 드리겠습니다.
 
@@ -221,7 +221,7 @@ export function getAIEmailService(): AIEmailService {
   if (!aiEmailServiceInstance) {
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) {
-      throw new Error('OPENAI_API_KEY 환경변수가 설정되지 않았습니다')
+      throw new Error("OPENAI_API_KEY 환경변수가 설정되지 않았습니다")
     }
     aiEmailServiceInstance = new AIEmailService(apiKey)
   }

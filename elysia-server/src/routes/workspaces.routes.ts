@@ -1,51 +1,51 @@
-import { Elysia, t } from 'elysia'
-import * as workspaceService from '../services/workspace.service'
-import { errorResponse, ResponseCode } from '../types/response.types'
+import { Elysia, t } from "elysia"
+import * as workspaceService from "../services/workspace.service"
+import { errorResponse, ResponseCode } from "../types/response.types"
 
 const workspaceSchema = t.Object({
   name: t.String({ minLength: 1, maxLength: 255 }),
   description: t.Optional(t.String()),
-  ownerId: t.String({ format: 'uuid' }),
+  ownerId: t.String({ format: "uuid" }),
   isActive: t.Optional(t.Boolean()),
 })
 
 const updateWorkspaceSchema = t.Object({
   name: t.String({ minLength: 1, maxLength: 255 }),
   description: t.Optional(t.String()),
-  ownerId: t.Optional(t.String({ format: 'uuid' })),
+  ownerId: t.Optional(t.String({ format: "uuid" })),
   isActive: t.Boolean(),
 })
 
 const _workspaceMemberSchema = t.Object({
-  workspaceId: t.String({ format: 'uuid' }),
-  userId: t.String({ format: 'uuid' }),
+  workspaceId: t.String({ format: "uuid" }),
+  userId: t.String({ format: "uuid" }),
   role: t.Optional(
-    t.Union([t.Literal('owner'), t.Literal('admin'), t.Literal('member'), t.Literal('viewer')]),
+    t.Union([t.Literal("owner"), t.Literal("admin"), t.Literal("member"), t.Literal("viewer")]),
   ),
-  invitedBy: t.Optional(t.String({ format: 'uuid' })),
+  invitedBy: t.Optional(t.String({ format: "uuid" })),
   status: t.Optional(
     t.Union([
-      t.Literal('invited'),
-      t.Literal('active'),
-      t.Literal('inactive'),
-      t.Literal('removed'),
+      t.Literal("invited"),
+      t.Literal("active"),
+      t.Literal("inactive"),
+      t.Literal("removed"),
     ]),
   ),
 })
 
-export const workspaceRoutes = new Elysia({ prefix: '/api/v1/workspaces' })
+export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
   // Search workspaces with filters (must be before /:id route)
   .get(
-    '/search',
+    "/search",
     async ({ query }) => {
-      const limit = parseInt(query.limit || '10', 10)
-      const offset = parseInt(query.offset || '0', 10)
+      const limit = parseInt(query.limit || "10", 10)
+      const offset = parseInt(query.offset || "0", 10)
 
       // Parse ownerIds from comma-separated string
-      const ownerIds = query.ownerIds ? query.ownerIds.split(',').filter(Boolean) : undefined
+      const ownerIds = query.ownerIds ? query.ownerIds.split(",").filter(Boolean) : undefined
 
       const filters = {
-        isActive: query.isActive ? query.isActive === 'true' : undefined,
+        isActive: query.isActive ? query.isActive === "true" : undefined,
         search: query.search,
         ownerIds,
       }
@@ -73,25 +73,25 @@ export const workspaceRoutes = new Elysia({ prefix: '/api/v1/workspaces' })
 
   // Get workspace by ID
   .get(
-    '/:id',
+    "/:id",
     async ({ params: { id }, set }) => {
       const workspace = await workspaceService.getWorkspace(id)
       if (!workspace) {
         set.status = 404
-        return errorResponse('워크스페이스를 찾을 수 없습니다.', ResponseCode.NOT_FOUND)
+        return errorResponse("워크스페이스를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
       }
       return workspace
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Create new workspace
   .post(
-    '/',
+    "/",
     async ({ body }) => {
       const workspace = await workspaceService.createWorkspace(body)
       return workspace
@@ -103,18 +103,18 @@ export const workspaceRoutes = new Elysia({ prefix: '/api/v1/workspaces' })
 
   // Update workspace
   .put(
-    '/:id',
+    "/:id",
     async ({ params: { id }, body, set }) => {
       const workspace = await workspaceService.updateWorkspace(id, body)
       if (!workspace) {
         set.status = 404
-        return errorResponse('워크스페이스를 찾을 수 없습니다.', ResponseCode.NOT_FOUND)
+        return errorResponse("워크스페이스를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
       }
       return workspace
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
       body: updateWorkspaceSchema,
     },
@@ -122,24 +122,24 @@ export const workspaceRoutes = new Elysia({ prefix: '/api/v1/workspaces' })
 
   // Delete workspace
   .delete(
-    '/:id',
+    "/:id",
     async ({ params: { id } }) => {
       await workspaceService.deleteWorkspace(id)
-      return { success: true, message: '워크스페이스가 삭제되었습니다.' }
+      return { success: true, message: "워크스페이스가 삭제되었습니다." }
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // List workspaces with pagination
   .get(
-    '/',
+    "/",
     async ({ query }) => {
-      const limit = parseInt(query.limit || '10', 10)
-      const offset = parseInt(query.offset || '0', 10)
+      const limit = parseInt(query.limit || "10", 10)
+      const offset = parseInt(query.offset || "0", 10)
 
       const workspaces = await workspaceService.listWorkspaces(limit, offset)
       const total = await workspaceService.countWorkspaces()
@@ -161,60 +161,60 @@ export const workspaceRoutes = new Elysia({ prefix: '/api/v1/workspaces' })
 
   // Get workspaces by owner
   .get(
-    '/owner/:ownerId',
+    "/owner/:ownerId",
     async ({ params: { ownerId } }) => {
       const workspaces = await workspaceService.getWorkspacesByOwner(ownerId)
       return workspaces
     },
     {
       params: t.Object({
-        ownerId: t.String({ format: 'uuid' }),
+        ownerId: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Get workspace members
   .get(
-    '/:id/members',
+    "/:id/members",
     async ({ params: { id } }) => {
       const members = await workspaceService.getWorkspaceMembers(id)
       return members
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Add workspace member
   .post(
-    '/:id/members',
+    "/:id/members",
     async ({ params: { id }, body }) => {
       const member = await workspaceService.addWorkspaceMember({ ...body, workspaceId: id })
       return member
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
       body: t.Object({
-        userId: t.String({ format: 'uuid' }),
+        userId: t.String({ format: "uuid" }),
         role: t.Optional(
           t.Union([
-            t.Literal('owner'),
-            t.Literal('admin'),
-            t.Literal('member'),
-            t.Literal('viewer'),
+            t.Literal("owner"),
+            t.Literal("admin"),
+            t.Literal("member"),
+            t.Literal("viewer"),
           ]),
         ),
-        invitedBy: t.Optional(t.String({ format: 'uuid' })),
+        invitedBy: t.Optional(t.String({ format: "uuid" })),
         status: t.Optional(
           t.Union([
-            t.Literal('invited'),
-            t.Literal('active'),
-            t.Literal('inactive'),
-            t.Literal('removed'),
+            t.Literal("invited"),
+            t.Literal("active"),
+            t.Literal("inactive"),
+            t.Literal("removed"),
           ]),
         ),
       }),
@@ -223,26 +223,26 @@ export const workspaceRoutes = new Elysia({ prefix: '/api/v1/workspaces' })
 
   // Update member role
   .patch(
-    '/:id/members/:memberId/role',
+    "/:id/members/:memberId/role",
     async ({ params: { memberId }, body, set }) => {
       const member = await workspaceService.updateWorkspaceMemberRole(memberId, body.role)
       if (!member) {
         set.status = 404
-        return errorResponse('멤버를 찾을 수 없습니다.', ResponseCode.NOT_FOUND)
+        return errorResponse("멤버를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
       }
       return member
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
-        memberId: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
+        memberId: t.String({ format: "uuid" }),
       }),
       body: t.Object({
         role: t.Union([
-          t.Literal('owner'),
-          t.Literal('admin'),
-          t.Literal('member'),
-          t.Literal('viewer'),
+          t.Literal("owner"),
+          t.Literal("admin"),
+          t.Literal("member"),
+          t.Literal("viewer"),
         ]),
       }),
     },
@@ -250,26 +250,26 @@ export const workspaceRoutes = new Elysia({ prefix: '/api/v1/workspaces' })
 
   // Update member status
   .patch(
-    '/:id/members/:memberId/status',
+    "/:id/members/:memberId/status",
     async ({ params: { memberId }, body, set }) => {
       const member = await workspaceService.updateWorkspaceMemberStatus(memberId, body.status)
       if (!member) {
         set.status = 404
-        return errorResponse('멤버를 찾을 수 없습니다.', ResponseCode.NOT_FOUND)
+        return errorResponse("멤버를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
       }
       return member
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
-        memberId: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
+        memberId: t.String({ format: "uuid" }),
       }),
       body: t.Object({
         status: t.Union([
-          t.Literal('invited'),
-          t.Literal('active'),
-          t.Literal('inactive'),
-          t.Literal('removed'),
+          t.Literal("invited"),
+          t.Literal("active"),
+          t.Literal("inactive"),
+          t.Literal("removed"),
         ]),
       }),
     },
@@ -277,45 +277,45 @@ export const workspaceRoutes = new Elysia({ prefix: '/api/v1/workspaces' })
 
   // Remove workspace member
   .delete(
-    '/:id/members/:memberId',
+    "/:id/members/:memberId",
     async ({ params: { memberId } }) => {
       await workspaceService.removeWorkspaceMember(memberId)
-      return { success: true, message: '멤버가 제거되었습니다.' }
+      return { success: true, message: "멤버가 제거되었습니다." }
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
-        memberId: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
+        memberId: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Get user's workspaces (owned or member)
   .get(
-    '/user/:userId',
+    "/user/:userId",
     async ({ params: { userId } }) => {
       const workspaces = await workspaceService.getAllUserRelatedWorkspaces(userId)
       return workspaces
     },
     {
       params: t.Object({
-        userId: t.String({ format: 'uuid' }),
+        userId: t.String({ format: "uuid" }),
       }),
     },
   )
 
 // Admin bulk update routes
-export const adminWorkspaceRoutes = new Elysia({ prefix: '/api/v1/admin/workspaces' })
+export const adminWorkspaceRoutes = new Elysia({ prefix: "/api/v1/admin/workspaces" })
   // Bulk update status
   .put(
-    '/bulk/status',
+    "/bulk/status",
     async ({ body }) => {
       const updatedCount = await workspaceService.bulkUpdateStatus(body.workspaceIds, body.isActive)
       return { updatedCount }
     },
     {
       body: t.Object({
-        workspaceIds: t.Array(t.String({ format: 'uuid' })),
+        workspaceIds: t.Array(t.String({ format: "uuid" })),
         isActive: t.Boolean(),
       }),
     },
@@ -323,21 +323,21 @@ export const adminWorkspaceRoutes = new Elysia({ prefix: '/api/v1/admin/workspac
 
   // Transfer ownership
   .put(
-    '/:id/transfer',
+    "/:id/transfer",
     async ({ params: { id }, body, set }) => {
       const workspace = await workspaceService.transferOwnership(id, body.newOwnerId)
       if (!workspace) {
         set.status = 404
-        return errorResponse('워크스페이스를 찾을 수 없습니다.', ResponseCode.NOT_FOUND)
+        return errorResponse("워크스페이스를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
       }
       return workspace
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
       body: t.Object({
-        newOwnerId: t.String({ format: 'uuid' }),
+        newOwnerId: t.String({ format: "uuid" }),
       }),
     },
   )

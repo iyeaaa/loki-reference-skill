@@ -109,7 +109,7 @@ export function LeadFilters({
                     type="button"
                     onClick={() =>
                       onBusinessTypeChange(
-                        selectedBusinessTypes.filter((bt) => bt !== businessType)
+                        selectedBusinessTypes.filter((bt) => bt !== businessType),
                       )
                     }
                     className="ml-1 hover:text-green-600 dark:hover:text-green-200"

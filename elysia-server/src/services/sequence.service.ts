@@ -1,17 +1,17 @@
-import { and, desc, eq, ilike, lte, or, sql } from 'drizzle-orm'
-import { db } from '../db/index'
-import { customerGroups } from '../db/schema/customer-groups'
-import { userEmailAccounts } from '../db/schema/email-accounts'
-import { leadContacts } from '../db/schema/lead-details'
-import { leads } from '../db/schema/leads'
+import { and, desc, eq, ilike, lte, or, sql } from "drizzle-orm"
+import { db } from "../db/index"
+import { customerGroups } from "../db/schema/customer-groups"
+import { userEmailAccounts } from "../db/schema/email-accounts"
+import { leadContacts } from "../db/schema/lead-details"
+import { leads } from "../db/schema/leads"
 import {
   sequenceEnrollments,
   sequenceStepExecutions,
   sequenceSteps,
   sequences,
-} from '../db/schema/sequences'
-import { users } from '../db/schema/users'
-import { workspaces } from '../db/schema/workspaces'
+} from "../db/schema/sequences"
+import { users } from "../db/schema/users"
+import { workspaces } from "../db/schema/workspaces"
 
 // ====================================
 // SEQUENCE CRUD OPERATIONS
@@ -52,7 +52,7 @@ export async function createSequence(data: {
   customerGroupId?: string
   name: string
   description?: string
-  status?: 'draft' | 'active' | 'paused' | 'archived'
+  status?: "draft" | "active" | "paused" | "archived"
   workflowData?: string
   createdBy?: string
 }) {
@@ -60,10 +60,10 @@ export async function createSequence(data: {
     .insert(sequences)
     .values({
       workspaceId: data.workspaceId,
-      customerGroupId: data.customerGroupId || null,
+      customerGroupId: data.customerGroupId,
       name: data.name,
       description: data.description || null,
-      status: data.status || 'draft',
+      status: data.status || "draft",
       workflowData: data.workflowData || null,
       createdBy: data.createdBy || null,
     })
@@ -89,7 +89,7 @@ export async function updateSequence(
   data: {
     name?: string
     description?: string
-    status?: 'draft' | 'active' | 'paused' | 'archived'
+    status?: "draft" | "active" | "paused" | "archived"
     workflowData?: string
     customerGroupId?: string
   },
@@ -165,7 +165,7 @@ export async function listSequencesWithFilters(
   limit: number,
   offset: number,
   filters?: {
-    status?: 'draft' | 'active' | 'paused' | 'archived'
+    status?: "draft" | "active" | "paused" | "archived"
     search?: string
     workspaceIds?: string[]
     createdByIds?: string[]
@@ -178,20 +178,29 @@ export async function listSequencesWithFilters(
   }
 
   if (filters?.search) {
-    conditions.push(
-      or(
-        ilike(sequences.name, `%${filters.search}%`),
-        ilike(sequences.description, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(sequences.name, `%${filters.search}%`),
+      ilike(sequences.description, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
-    conditions.push(or(...filters.workspaceIds.map((id) => eq(sequences.workspaceId, id)))!)
+    const workspaceCondition = or(
+      ...filters.workspaceIds.map((id) => eq(sequences.workspaceId, id)),
+    )
+    if (workspaceCondition) {
+      conditions.push(workspaceCondition)
+    }
   }
 
   if (filters?.createdByIds && filters.createdByIds.length > 0) {
-    conditions.push(or(...filters.createdByIds.map((id) => eq(sequences.createdBy, id)))!)
+    const createdByCondition = or(...filters.createdByIds.map((id) => eq(sequences.createdBy, id)))
+    if (createdByCondition) {
+      conditions.push(createdByCondition)
+    }
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -392,7 +401,7 @@ export async function createSequenceEnrollment(data: {
   leadId: string
   userEmailAccountId: string
   enrolledBy?: string
-  status?: 'active' | 'paused' | 'completed' | 'stopped' | 'bounced' | 'unsubscribed'
+  status?: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed"
 }) {
   const [newEnrollment] = await db
     .insert(sequenceEnrollments)
@@ -401,7 +410,7 @@ export async function createSequenceEnrollment(data: {
       leadId: data.leadId,
       userEmailAccountId: data.userEmailAccountId,
       enrolledBy: data.enrolledBy || null,
-      status: data.status || 'active',
+      status: data.status || "active",
     })
     .returning({
       id: sequenceEnrollments.id,
@@ -418,14 +427,14 @@ export async function createSequenceEnrollment(data: {
 // UpdateEnrollmentStatus :one
 export async function updateEnrollmentStatus(
   id: string,
-  status: 'active' | 'paused' | 'completed' | 'stopped' | 'bounced' | 'unsubscribed',
+  status: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed",
 ) {
   const [updatedEnrollment] = await db
     .update(sequenceEnrollments)
     .set({
       status,
-      stoppedAt: status === 'stopped' ? new Date() : undefined,
-      completedAt: status === 'completed' ? new Date() : undefined,
+      stoppedAt: status === "stopped" ? new Date() : undefined,
+      completedAt: status === "completed" ? new Date() : undefined,
     })
     .where(eq(sequenceEnrollments.id, id))
     .returning({
@@ -451,7 +460,7 @@ export async function countSequences() {
 
 // CountSequencesWithFilters :one
 export async function countSequencesWithFilters(filters?: {
-  status?: 'draft' | 'active' | 'paused' | 'archived'
+  status?: "draft" | "active" | "paused" | "archived"
   search?: string
   workspaceIds?: string[]
   createdByIds?: string[]
@@ -463,20 +472,29 @@ export async function countSequencesWithFilters(filters?: {
   }
 
   if (filters?.search) {
-    conditions.push(
-      or(
-        ilike(sequences.name, `%${filters.search}%`),
-        ilike(sequences.description, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(sequences.name, `%${filters.search}%`),
+      ilike(sequences.description, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
-    conditions.push(or(...filters.workspaceIds.map((id) => eq(sequences.workspaceId, id)))!)
+    const workspaceCondition = or(
+      ...filters.workspaceIds.map((id) => eq(sequences.workspaceId, id)),
+    )
+    if (workspaceCondition) {
+      conditions.push(workspaceCondition)
+    }
   }
 
   if (filters?.createdByIds && filters.createdByIds.length > 0) {
-    conditions.push(or(...filters.createdByIds.map((id) => eq(sequences.createdBy, id)))!)
+    const createdByCondition = or(...filters.createdByIds.map((id) => eq(sequences.createdBy, id)))
+    if (createdByCondition) {
+      conditions.push(createdByCondition)
+    }
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -506,15 +524,20 @@ export async function countEnrollments(sequenceId: string) {
 // BulkUpdateStatus :exec
 export async function bulkUpdateStatus(
   sequenceIds: string[],
-  status: 'draft' | 'active' | 'paused' | 'archived',
+  status: "draft" | "active" | "paused" | "archived",
 ) {
+  const sequenceCondition = or(...sequenceIds.map((id) => eq(sequences.id, id)))
+  if (!sequenceCondition) {
+    return 0
+  }
+
   const result = await db
     .update(sequences)
     .set({
       status,
       updatedAt: new Date(),
     })
-    .where(or(...sequenceIds.map((id) => eq(sequences.id, id)))!)
+    .where(sequenceCondition)
     .returning({ id: sequences.id })
 
   return result.length
@@ -522,10 +545,12 @@ export async function bulkUpdateStatus(
 
 // BulkDelete :exec
 export async function bulkDelete(sequenceIds: string[]) {
-  const result = await db
-    .delete(sequences)
-    .where(or(...sequenceIds.map((id) => eq(sequences.id, id)))!)
-    .returning({ id: sequences.id })
+  const sequenceCondition = or(...sequenceIds.map((id) => eq(sequences.id, id)))
+  if (!sequenceCondition) {
+    return 0
+  }
+
+  const result = await db.delete(sequences).where(sequenceCondition).returning({ id: sequences.id })
 
   return result.length
 }
@@ -554,13 +579,18 @@ export async function bulkEnroll(data: {
 
 // BulkUnenroll :exec
 export async function bulkUnenroll(enrollmentIds: string[]) {
+  const enrollmentCondition = or(...enrollmentIds.map((id) => eq(sequenceEnrollments.id, id)))
+  if (!enrollmentCondition) {
+    return 0
+  }
+
   const result = await db
     .update(sequenceEnrollments)
     .set({
-      status: 'stopped',
+      status: "stopped",
       stoppedAt: new Date(),
     })
-    .where(or(...enrollmentIds.map((id) => eq(sequenceEnrollments.id, id)))!)
+    .where(enrollmentCondition)
     .returning({ id: sequenceEnrollments.id })
 
   return result.length
@@ -581,10 +611,15 @@ export async function bulkEnrollWithScheduling(data: {
   const steps = await getSequenceSteps(data.sequenceId)
 
   if (steps.length === 0) {
-    throw new Error('시퀀스에 스텝이 없습니다.')
+    throw new Error("시퀀스에 스텝이 없습니다.")
   }
 
   // Filter leads with valid email contacts
+  const leadCondition = or(...data.leadIds.map((id) => eq(leads.id, id)))
+  if (!leadCondition) {
+    return []
+  }
+
   const leadsWithEmails = await db
     .select({
       leadId: leads.id,
@@ -593,15 +628,11 @@ export async function bulkEnrollWithScheduling(data: {
     .from(leads)
     .innerJoin(leadContacts, eq(leads.id, leadContacts.leadId))
     .where(
-      and(
-        or(...data.leadIds.map((id) => eq(leads.id, id)))!,
-        eq(leadContacts.contactType, 'email'),
-        eq(leadContacts.isPrimary, true),
-      ),
+      and(leadCondition, eq(leadContacts.contactType, "email"), eq(leadContacts.isPrimary, true)),
     )
 
   if (leadsWithEmails.length === 0) {
-    throw new Error('이메일이 있는 리드가 없습니다.')
+    throw new Error("이메일이 있는 리드가 없습니다.")
   }
 
   const validLeadIds = leadsWithEmails.map((l) => l.leadId)
@@ -613,7 +644,7 @@ export async function bulkEnrollWithScheduling(data: {
     userEmailAccountId: data.userEmailAccountId,
     enrolledBy: data.enrolledBy || null,
     currentStepOrder: 0,
-    status: 'active' as const,
+    status: "active" as const,
   }))
 
   const enrollments = await db.insert(sequenceEnrollments).values(enrollmentValues).returning({
@@ -634,7 +665,7 @@ export async function bulkEnrollWithScheduling(data: {
         enrollmentId: enrollment.id,
         stepId: step.id,
         stepOrder: step.stepOrder,
-        status: 'pending' as const,
+        status: "pending" as const,
         scheduledAt,
       })
     }
@@ -668,6 +699,11 @@ export async function bulkEnrollWithScheduling(data: {
 
 // GetLeadsWithEmails - Get leads from a list that have email contacts
 export async function getLeadsWithEmails(leadIds: string[]) {
+  const leadCondition = or(...leadIds.map((id) => eq(leads.id, id)))
+  if (!leadCondition) {
+    return []
+  }
+
   const result = await db
     .select({
       leadId: leads.id,
@@ -677,9 +713,7 @@ export async function getLeadsWithEmails(leadIds: string[]) {
     })
     .from(leads)
     .innerJoin(leadContacts, eq(leads.id, leadContacts.leadId))
-    .where(
-      and(or(...leadIds.map((id) => eq(leads.id, id)))!, eq(leadContacts.contactType, 'email')),
-    )
+    .where(and(leadCondition, eq(leadContacts.contactType, "email")))
     .orderBy(leads.companyName, desc(leadContacts.isPrimary))
 
   return result
@@ -712,10 +746,10 @@ export async function getPendingStepExecutions(limit: number = 100) {
     .innerJoin(sequences, eq(sequenceEnrollments.sequenceId, sequences.id))
     .where(
       and(
-        eq(sequenceStepExecutions.status, 'pending'),
+        eq(sequenceStepExecutions.status, "pending"),
         lte(sequenceStepExecutions.scheduledAt, now),
-        eq(sequenceEnrollments.status, 'active'),
-        eq(sequences.status, 'active'),
+        eq(sequenceEnrollments.status, "active"),
+        eq(sequences.status, "active"),
       ),
     )
     .orderBy(sequenceStepExecutions.scheduledAt)
@@ -727,7 +761,7 @@ export async function getPendingStepExecutions(limit: number = 100) {
 // UpdateStepExecutionStatus - Update step execution status after sending
 export async function updateStepExecutionStatus(
   executionId: string,
-  status: 'sent' | 'failed' | 'skipped',
+  status: "sent" | "failed" | "skipped",
   errorMessage?: string,
   emailId?: string,
 ) {
@@ -766,7 +800,14 @@ export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: 
   const steps = await getSequenceSteps(enrollment[0].sequenceId)
   const isLastStep = stepOrder >= steps.length
 
-  const updateData: any = {
+  const updateData: {
+    currentStepOrder: number
+    lastEmailSentAt: Date
+    firstEmailSentAt?: Date
+    status?: "active" | "paused" | "completed" | "stopped"
+    completedAt?: Date
+    nextStepScheduledAt?: Date | null
+  } = {
     currentStepOrder: stepOrder,
     lastEmailSentAt: new Date(),
   }
@@ -784,7 +825,7 @@ export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: 
 
   // If last step, mark as completed
   if (isLastStep) {
-    updateData.status = 'completed'
+    updateData.status = "completed"
     updateData.completedAt = new Date()
     updateData.nextStepScheduledAt = null
   } else {

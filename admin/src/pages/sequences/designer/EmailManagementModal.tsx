@@ -96,7 +96,7 @@ export function EmailManagementModal({
 
   const totalEmails = emails.length
   const generatedEmails = emails.filter(
-    (e) => e.status === "generated" || e.status === "edited"
+    (e) => e.status === "generated" || e.status === "edited",
   ).length
   const failedEmails = emails.filter((e) => e.status === "failed").length
 

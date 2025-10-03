@@ -1,49 +1,56 @@
-import { Readable } from 'node:stream'
-import busboy from 'busboy'
-import type { FileData, FormData } from '../models/email.model'
+import { Readable } from "node:stream"
+import busboy from "busboy"
+import type { FileData, FormData } from "../models/email.model"
 
 export function parseMultipartFormData(
   contentType: string | null,
   body: ArrayBuffer,
 ): Promise<{ formData: FormData; files: FileData[] }> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve, _reject) => {
     const formData: FormData = {}
     const files: FileData[] = []
 
     const bb = busboy({
       headers: {
-        'content-type': contentType || '',
+        "content-type": contentType || "",
       },
     })
 
-    bb.on('field', (name: string, value: string) => {
+    bb.on("field", (name: string, value: string) => {
       formData[name] = value
     })
 
-    bb.on('file', (name: string, stream: NodeJS.ReadableStream, info: any) => {
-      const chunks: Buffer[] = []
+    bb.on(
+      "file",
+      (
+        name: string,
+        stream: NodeJS.ReadableStream,
+        info: { filename: string; mimeType: string },
+      ) => {
+        const chunks: Buffer[] = []
 
-      stream.on('data', (chunk: Buffer) => {
-        chunks.push(chunk)
-      })
-
-      stream.on('end', () => {
-        files.push({
-          fieldname: name,
-          originalname: info.filename,
-          mimetype: info.mimeType,
-          buffer: Buffer.concat(chunks),
-          size: Buffer.concat(chunks).length,
+        stream.on("data", (chunk: Buffer) => {
+          chunks.push(chunk)
         })
-      })
-    })
 
-    bb.on('finish', () => {
+        stream.on("end", () => {
+          files.push({
+            fieldname: name,
+            originalname: info.filename,
+            mimetype: info.mimeType,
+            buffer: Buffer.concat(chunks),
+            size: Buffer.concat(chunks).length,
+          })
+        })
+      },
+    )
+
+    bb.on("finish", () => {
       resolve({ formData, files })
     })
 
-    bb.on('error', (err: Error) => {
-      reject(err)
+    bb.on("error", (err: Error) => {
+      _reject(err)
     })
 
     const nodeStream = Readable.from(Buffer.from(body))

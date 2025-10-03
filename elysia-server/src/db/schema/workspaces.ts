@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm'
+import { relations } from "drizzle-orm"
 import {
   boolean,
   index,
@@ -8,65 +8,65 @@ import {
   timestamp,
   uuid,
   varchar,
-} from 'drizzle-orm/pg-core'
-import { users } from './users'
+} from "drizzle-orm/pg-core"
+import { users } from "./users"
 
 // Enums
-export const workspaceMemberRoleEnum = pgEnum('workspace_member_role_enum', [
-  'owner',
-  'admin',
-  'member',
-  'viewer',
+export const workspaceMemberRoleEnum = pgEnum("workspace_member_role_enum", [
+  "owner",
+  "admin",
+  "member",
+  "viewer",
 ])
 
-export const workspaceMemberStatusEnum = pgEnum('workspace_member_status_enum', [
-  'invited',
-  'active',
-  'inactive',
-  'removed',
+export const workspaceMemberStatusEnum = pgEnum("workspace_member_status_enum", [
+  "invited",
+  "active",
+  "inactive",
+  "removed",
 ])
 
 // Workspaces table
 export const workspaces = pgTable(
-  'workspaces',
+  "workspaces",
   {
-    id: uuid('id').defaultRandom().primaryKey(),
-    name: varchar('name', { length: 255 }).notNull(),
-    description: text('description'),
-    ownerId: uuid('owner_id')
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    ownerId: uuid("owner_id")
       .notNull()
       .references(() => users.id),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    isActive: boolean("is_active").notNull().default(true),
   },
   (table) => ({
-    ownerIdx: index('workspaces_owner_id_idx').on(table.ownerId),
-    isActiveIdx: index('workspaces_is_active_idx').on(table.isActive),
+    ownerIdx: index("workspaces_owner_id_idx").on(table.ownerId),
+    isActiveIdx: index("workspaces_is_active_idx").on(table.isActive),
   }),
 )
 
 // Workspace members table
 export const workspaceMembers = pgTable(
-  'workspace_members',
+  "workspace_members",
   {
-    id: uuid('id').defaultRandom().primaryKey(),
-    workspaceId: uuid('workspace_id')
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
       .notNull()
-      .references(() => workspaces.id, { onDelete: 'cascade' }),
-    userId: uuid('user_id')
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
       .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    role: workspaceMemberRoleEnum('role').notNull().default('member'),
-    invitedBy: uuid('invited_by').references(() => users.id),
-    invitedAt: timestamp('invited_at', { withTimezone: true }).notNull().defaultNow(),
-    joinedAt: timestamp('joined_at', { withTimezone: true }),
-    status: workspaceMemberStatusEnum('status').notNull().default('invited'),
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: workspaceMemberRoleEnum("role").notNull().default("member"),
+    invitedBy: uuid("invited_by").references(() => users.id),
+    invitedAt: timestamp("invited_at", { withTimezone: true }).notNull().defaultNow(),
+    joinedAt: timestamp("joined_at", { withTimezone: true }),
+    status: workspaceMemberStatusEnum("status").notNull().default("invited"),
   },
   (table) => ({
-    workspaceIdx: index('workspace_members_workspace_id_idx').on(table.workspaceId),
-    userIdx: index('workspace_members_user_id_idx').on(table.userId),
-    statusIdx: index('workspace_members_status_idx').on(table.status),
+    workspaceIdx: index("workspace_members_workspace_id_idx").on(table.workspaceId),
+    userIdx: index("workspace_members_user_id_idx").on(table.userId),
+    statusIdx: index("workspace_members_status_idx").on(table.status),
   }),
 )
 

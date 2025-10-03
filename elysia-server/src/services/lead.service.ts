@@ -1,6 +1,6 @@
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
-import { db } from '../db/index'
-import { customerGroupMembers } from '../db/schema/customer-groups'
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { db } from "../db/index"
+import { customerGroupMembers } from "../db/schema/customer-groups"
 import {
   leadBusinessSectors,
   leadContacts,
@@ -8,10 +8,10 @@ import {
   leadProductCategories,
   leadProducts,
   leadSocialMedia,
-} from '../db/schema/lead-details'
-import { leads } from '../db/schema/leads'
-import { users } from '../db/schema/users'
-import { workspaces } from '../db/schema/workspaces'
+} from "../db/schema/lead-details"
+import { leads } from "../db/schema/leads"
+import { users } from "../db/schema/users"
+import { workspaces } from "../db/schema/workspaces"
 
 // ====================================
 // LEAD CRUD OPERATIONS
@@ -83,13 +83,13 @@ export async function createLead(data: {
   employeeCount?: string
   leadSource?: string
   leadStatus?:
-    | 'new'
-    | 'contacted'
-    | 'qualified'
-    | 'unqualified'
-    | 'converted'
-    | 'lost'
-    | 'unsubscribed'
+    | "new"
+    | "contacted"
+    | "qualified"
+    | "unqualified"
+    | "converted"
+    | "lost"
+    | "unsubscribed"
   leadScore?: number
   notes?: string
   crawlTimeSeconds?: string
@@ -98,13 +98,13 @@ export async function createLead(data: {
   errorMessage?: string
   createdBy?: string
   contacts?: Array<{
-    contactType: 'phone' | 'email' | 'fax' | 'other'
+    contactType: "phone" | "email" | "fax" | "other"
     contactValue: string
     label?: string
     isPrimary?: boolean
   }>
   socialMedia?: Array<{
-    platform: 'facebook' | 'instagram' | 'twitter' | 'linkedin'
+    platform: "facebook" | "instagram" | "twitter" | "linkedin"
     url: string
     username?: string
   }>
@@ -129,7 +129,7 @@ export async function createLead(data: {
       foundedYear: data.foundedYear,
       employeeCount: data.employeeCount,
       leadSource: data.leadSource,
-      leadStatus: data.leadStatus || 'new',
+      leadStatus: data.leadStatus || "new",
       leadScore: data.leadScore,
       notes: data.notes,
       crawlTimeSeconds: data.crawlTimeSeconds,
@@ -152,6 +152,10 @@ export async function createLead(data: {
       createdAt: leads.createdAt,
       updatedAt: leads.updatedAt,
     })
+
+  if (!newLead) {
+    throw new Error("Failed to create lead")
+  }
 
   // Insert contacts if provided
   if (data.contacts && data.contacts.length > 0) {
@@ -205,13 +209,13 @@ export async function updateLead(
     employeeCount?: string
     leadSource?: string
     leadStatus?:
-      | 'new'
-      | 'contacted'
-      | 'qualified'
-      | 'unqualified'
-      | 'converted'
-      | 'lost'
-      | 'unsubscribed'
+      | "new"
+      | "contacted"
+      | "qualified"
+      | "unqualified"
+      | "converted"
+      | "lost"
+      | "unsubscribed"
     leadScore?: number
     notes?: string
     crawlTimeSeconds?: string
@@ -220,13 +224,13 @@ export async function updateLead(
     errorMessage?: string
     lastContactedAt?: Date
     contacts?: Array<{
-      contactType: 'phone' | 'email' | 'fax' | 'other'
+      contactType: "phone" | "email" | "fax" | "other"
       contactValue: string
       label?: string
       isPrimary?: boolean
     }>
     socialMedia?: Array<{
-      platform: 'facebook' | 'instagram' | 'twitter' | 'linkedin'
+      platform: "facebook" | "instagram" | "twitter" | "linkedin"
       url: string
       username?: string
     }>
@@ -345,13 +349,13 @@ export async function listLeadsWithFilters(
   offset: number,
   filters?: {
     leadStatus?:
-      | 'new'
-      | 'contacted'
-      | 'qualified'
-      | 'unqualified'
-      | 'converted'
-      | 'lost'
-      | 'unsubscribed'
+      | "new"
+      | "contacted"
+      | "qualified"
+      | "unqualified"
+      | "converted"
+      | "lost"
+      | "unsubscribed"
     businessType?: string
     country?: string
     city?: string
@@ -380,27 +384,34 @@ export async function listLeadsWithFilters(
   }
 
   if (filters?.search) {
-    conditions.push(
-      or(
-        ilike(leads.companyName, `%${filters.search}%`),
-        ilike(leads.foundCompanyName, `%${filters.search}%`),
-        ilike(leads.websiteUrl, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(leads.companyName, `%${filters.search}%`),
+      ilike(leads.foundCompanyName, `%${filters.search}%`),
+      ilike(leads.websiteUrl, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
-    conditions.push(or(...filters.workspaceIds.map((id) => eq(leads.workspaceId, id)))!)
+    const workspaceCondition = or(...filters.workspaceIds.map((id) => eq(leads.workspaceId, id)))
+    if (workspaceCondition) {
+      conditions.push(workspaceCondition)
+    }
   }
 
   if (filters?.createdByIds && filters.createdByIds.length > 0) {
-    conditions.push(or(...filters.createdByIds.map((id) => eq(leads.createdBy, id)))!)
+    const createdByCondition = or(...filters.createdByIds.map((id) => eq(leads.createdBy, id)))
+    if (createdByCondition) {
+      conditions.push(createdByCondition)
+    }
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
   // Get basic lead data
-  let query = db
+  const baseQuery = db
     .select({
       id: leads.id,
       workspaceId: leads.workspaceId,
@@ -424,15 +435,23 @@ export async function listLeadsWithFilters(
     .leftJoin(users, eq(leads.createdBy, users.id))
 
   // If customerGroupId is specified, join with customerGroupMembers table
+  let result: Awaited<ReturnType<typeof baseQuery.orderBy>>
   if (filters?.customerGroupId) {
-    query = query
+    result = await baseQuery
       .innerJoin(customerGroupMembers, eq(leads.id, customerGroupMembers.leadId))
       .where(and(eq(customerGroupMembers.groupId, filters.customerGroupId), whereClause))
+      .orderBy(desc(leads.createdAt))
+      .limit(limit)
+      .offset(offset)
+  } else if (whereClause) {
+    result = await baseQuery
+      .where(whereClause)
+      .orderBy(desc(leads.createdAt))
+      .limit(limit)
+      .offset(offset)
   } else {
-    query = query.where(whereClause)
+    result = await baseQuery.orderBy(desc(leads.createdAt)).limit(limit).offset(offset)
   }
-
-  const result = await query.orderBy(desc(leads.createdAt)).limit(limit).offset(offset)
 
   // Get contacts and social media for each lead
   const leadIds = result.map((lead) => lead.id)
@@ -441,32 +460,36 @@ export async function listLeadsWithFilters(
   const socialMediaMap = new Map()
 
   if (leadIds.length > 0) {
+    const leadIdCondition = or(...leadIds.map((id) => eq(leadContacts.leadId, id)))
+    const leadIdSocialCondition = or(...leadIds.map((id) => eq(leadSocialMedia.leadId, id)))
+
     // Get contacts for all leads
-    const allContacts = await db
-      .select()
-      .from(leadContacts)
-      .where(or(...leadIds.map((id) => eq(leadContacts.leadId, id)))!)
-      .orderBy(desc(leadContacts.isPrimary))
+    const allContacts = leadIdCondition
+      ? await db
+          .select()
+          .from(leadContacts)
+          .where(leadIdCondition)
+          .orderBy(desc(leadContacts.isPrimary))
+      : []
 
     // Get social media for all leads
-    const allSocialMedia = await db
-      .select()
-      .from(leadSocialMedia)
-      .where(or(...leadIds.map((id) => eq(leadSocialMedia.leadId, id)))!)
+    const allSocialMedia = leadIdSocialCondition
+      ? await db.select().from(leadSocialMedia).where(leadIdSocialCondition)
+      : []
 
     // Group by leadId
     allContacts.forEach((contact) => {
       if (!contactsMap.has(contact.leadId)) {
         contactsMap.set(contact.leadId, [])
       }
-      contactsMap.get(contact.leadId).push(contact)
+      contactsMap.get(contact.leadId)?.push(contact)
     })
 
     allSocialMedia.forEach((social) => {
       if (!socialMediaMap.has(social.leadId)) {
         socialMediaMap.set(social.leadId, [])
       }
-      socialMediaMap.get(social.leadId).push(social)
+      socialMediaMap.get(social.leadId)?.push(social)
     })
   }
 
@@ -511,13 +534,13 @@ export async function getLeadsByWorkspace(workspaceId: string, limit: number, of
 // GetLeadsByStatus :many
 export async function getLeadsByStatus(
   leadStatus:
-    | 'new'
-    | 'contacted'
-    | 'qualified'
-    | 'unqualified'
-    | 'converted'
-    | 'lost'
-    | 'unsubscribed',
+    | "new"
+    | "contacted"
+    | "qualified"
+    | "unqualified"
+    | "converted"
+    | "lost"
+    | "unsubscribed",
   limit: number,
   offset: number,
 ) {
@@ -565,13 +588,13 @@ export async function countLeads() {
 // CountLeadsWithFilters :one
 export async function countLeadsWithFilters(filters?: {
   leadStatus?:
-    | 'new'
-    | 'contacted'
-    | 'qualified'
-    | 'unqualified'
-    | 'converted'
-    | 'lost'
-    | 'unsubscribed'
+    | "new"
+    | "contacted"
+    | "qualified"
+    | "unqualified"
+    | "converted"
+    | "lost"
+    | "unsubscribed"
   businessType?: string
   country?: string
   city?: string
@@ -599,37 +622,45 @@ export async function countLeadsWithFilters(filters?: {
   }
 
   if (filters?.search) {
-    conditions.push(
-      or(
-        ilike(leads.companyName, `%${filters.search}%`),
-        ilike(leads.foundCompanyName, `%${filters.search}%`),
-        ilike(leads.websiteUrl, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(leads.companyName, `%${filters.search}%`),
+      ilike(leads.foundCompanyName, `%${filters.search}%`),
+      ilike(leads.websiteUrl, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
-    conditions.push(or(...filters.workspaceIds.map((id) => eq(leads.workspaceId, id)))!)
+    const workspaceCondition = or(...filters.workspaceIds.map((id) => eq(leads.workspaceId, id)))
+    if (workspaceCondition) {
+      conditions.push(workspaceCondition)
+    }
   }
 
   if (filters?.createdByIds && filters.createdByIds.length > 0) {
-    conditions.push(or(...filters.createdByIds.map((id) => eq(leads.createdBy, id)))!)
+    const createdByCondition = or(...filters.createdByIds.map((id) => eq(leads.createdBy, id)))
+    if (createdByCondition) {
+      conditions.push(createdByCondition)
+    }
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-  let query = db.select({ count: sql<number>`count(*)::int` }).from(leads)
-
   // If customerGroupId is specified, join with customerGroupMembers table
+  let result: { count: number }[]
   if (filters?.customerGroupId) {
-    query = query
+    result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(leads)
       .innerJoin(customerGroupMembers, eq(leads.id, customerGroupMembers.leadId))
       .where(and(eq(customerGroupMembers.groupId, filters.customerGroupId), whereClause))
+  } else if (whereClause) {
+    result = await db.select({ count: sql<number>`count(*)::int` }).from(leads).where(whereClause)
   } else {
-    query = query.where(whereClause)
+    result = await db.select({ count: sql<number>`count(*)::int` }).from(leads)
   }
-
-  const result = await query
 
   return result[0]?.count ?? 0
 }
@@ -652,21 +683,26 @@ export async function countLeadsByWorkspace(workspaceId: string) {
 export async function bulkUpdateStatus(
   leadIds: string[],
   leadStatus:
-    | 'new'
-    | 'contacted'
-    | 'qualified'
-    | 'unqualified'
-    | 'converted'
-    | 'lost'
-    | 'unsubscribed',
+    | "new"
+    | "contacted"
+    | "qualified"
+    | "unqualified"
+    | "converted"
+    | "lost"
+    | "unsubscribed",
 ) {
+  const leadCondition = or(...leadIds.map((id) => eq(leads.id, id)))
+  if (!leadCondition) {
+    return 0
+  }
+
   const result = await db
     .update(leads)
     .set({
       leadStatus,
       updatedAt: new Date(),
     })
-    .where(or(...leadIds.map((id) => eq(leads.id, id)))!)
+    .where(leadCondition)
     .returning({ id: leads.id })
 
   return result.length
@@ -674,23 +710,30 @@ export async function bulkUpdateStatus(
 
 // BulkDelete :exec
 export async function bulkDelete(leadIds: string[]) {
-  const result = await db
-    .delete(leads)
-    .where(or(...leadIds.map((id) => eq(leads.id, id)))!)
-    .returning({ id: leads.id })
+  const leadCondition = or(...leadIds.map((id) => eq(leads.id, id)))
+  if (!leadCondition) {
+    return 0
+  }
+
+  const result = await db.delete(leads).where(leadCondition).returning({ id: leads.id })
 
   return result.length
 }
 
 // BulkUpdateBusinessType :exec
 export async function bulkUpdateBusinessType(leadIds: string[], businessType: string) {
+  const leadCondition = or(...leadIds.map((id) => eq(leads.id, id)))
+  if (!leadCondition) {
+    return 0
+  }
+
   const result = await db
     .update(leads)
     .set({
       businessType,
       updatedAt: new Date(),
     })
-    .where(or(...leadIds.map((id) => eq(leads.id, id)))!)
+    .where(leadCondition)
     .returning({ id: leads.id })
 
   return result.length
@@ -811,7 +854,15 @@ export async function bulkCreateLeads(data: {
     state: lead.state || null,
     address: lead.address || null,
     leadSource: lead.leadSource || null,
-    leadStatus: (lead.leadStatus as any) || 'new',
+    leadStatus:
+      (lead.leadStatus as
+        | "new"
+        | "contacted"
+        | "qualified"
+        | "unqualified"
+        | "converted"
+        | "lost"
+        | "unsubscribed") || "new",
     leadScore: lead.leadScore || null,
     notes: lead.notes || null,
     createdBy: data.createdBy || null,
@@ -833,15 +884,22 @@ export async function bulkCreateLeads(data: {
   })
 
   // 연락처 정보가 있는 경우 leadContacts 테이블에 추가
-  const contactValues = []
+  const contactValues: Array<{
+    leadId: string
+    contactType: "email" | "phone" | "fax" | "other"
+    contactValue: string
+    isPrimary: boolean
+  }> = []
   for (let i = 0; i < data.leads.length; i++) {
     const lead = data.leads[i]
     const createdLead = createdLeads[i]
 
+    if (!lead || !createdLead) continue
+
     if (lead.primaryEmail) {
       contactValues.push({
         leadId: createdLead.id,
-        contactType: 'email',
+        contactType: "email",
         contactValue: lead.primaryEmail,
         isPrimary: true,
       })
@@ -849,7 +907,7 @@ export async function bulkCreateLeads(data: {
     if (lead.primaryPhone) {
       contactValues.push({
         leadId: createdLead.id,
-        contactType: 'phone',
+        contactType: "phone",
         contactValue: lead.primaryPhone,
         isPrimary: true,
       })
@@ -857,7 +915,7 @@ export async function bulkCreateLeads(data: {
     if (lead.secondaryEmail) {
       contactValues.push({
         leadId: createdLead.id,
-        contactType: 'email',
+        contactType: "email",
         contactValue: lead.secondaryEmail,
         isPrimary: false,
       })
@@ -865,7 +923,7 @@ export async function bulkCreateLeads(data: {
     if (lead.secondaryPhone) {
       contactValues.push({
         leadId: createdLead.id,
-        contactType: 'phone',
+        contactType: "phone",
         contactValue: lead.secondaryPhone,
         isPrimary: false,
       })

@@ -46,7 +46,7 @@ export function AddMembersDialog({
     customerGroup?.id || "",
     1,
     1000, // 충분히 큰 수로 모든 멤버 조회
-    !!customerGroup?.id && isOpen
+    !!customerGroup?.id && isOpen,
   )
   const existingMemberLeadIds = new Set(membersData?.members.map((m) => m.leadId) || [])
 
@@ -82,7 +82,7 @@ export function AddMembersDialog({
 
   const handleToggleLead = (leadId: string) => {
     setSelectedLeads((prev) =>
-      prev.includes(leadId) ? prev.filter((id) => id !== leadId) : [...prev, leadId]
+      prev.includes(leadId) ? prev.filter((id) => id !== leadId) : [...prev, leadId],
     )
   }
 

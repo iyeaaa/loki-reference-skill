@@ -75,11 +75,11 @@ export function LeadForm({
   })
 
   const [contacts, setContacts] = useState<Partial<LeadContact>[]>(
-    lead?.contacts && lead.contacts.length > 0 ? lead.contacts : []
+    lead?.contacts && lead.contacts.length > 0 ? lead.contacts : [],
   )
 
   const [socialMedia, setSocialMedia] = useState<Partial<LeadSocialMedia>[]>(
-    lead?.socialMedia && lead.socialMedia.length > 0 ? lead.socialMedia : []
+    lead?.socialMedia && lead.socialMedia.length > 0 ? lead.socialMedia : [],
   )
 
   const finalUrlId = useId()
@@ -92,7 +92,7 @@ export function LeadForm({
       ...formData,
       leadScore: formData.leadScore ? parseInt(formData.leadScore, 10) : undefined,
       contacts: contacts.filter(
-        (c) => c.contactValue && c.contactValue.trim() !== ""
+        (c) => c.contactValue && c.contactValue.trim() !== "",
       ) as LeadContact[],
       socialMedia: socialMedia.filter((s) => s.url && s.url.trim() !== "") as LeadSocialMedia[],
     }

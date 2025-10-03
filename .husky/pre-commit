@@ -1,7 +1,4 @@
 #!/bin/sh
 
-# Change to admin directory and run biome check with yarn
-cd admin && yarn lint
-
-# Change to elysia-server directory and run biome check with bun
-cd ../elysia-server && bun lint
+# CI 스크립트를 사용하여 변경된 파일만 검사
+./ci.sh fast --only-changed

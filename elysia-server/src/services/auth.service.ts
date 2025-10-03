@@ -1,14 +1,14 @@
-import bcrypt from 'bcrypt'
-import jwt from 'jsonwebtoken'
+import bcrypt from "bcrypt"
+import jwt from "jsonwebtoken"
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production'
-const JWT_EXPIRES_IN = '24h'
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-this-in-production"
+const JWT_EXPIRES_IN = "24h"
 const SALT_ROUNDS = 10
 
 export interface TokenPayload {
   userId: string
   email: string
-  userRole: 'admin' | 'user'
+  userRole: "admin" | "user"
 }
 
 // Hash password
@@ -33,6 +33,6 @@ export async function verifyToken(token: string): Promise<TokenPayload> {
     const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload
     return decoded
   } catch (_error) {
-    throw new Error('유효하지 않은 토큰입니다.')
+    throw new Error("유효하지 않은 토큰입니다.")
   }
 }

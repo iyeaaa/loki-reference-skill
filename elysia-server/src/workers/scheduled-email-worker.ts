@@ -6,11 +6,11 @@
  * sends them via SendGrid, and updates their status.
  */
 
-import sgMail from '@sendgrid/mail'
-import { and, eq, lte } from 'drizzle-orm'
-import { config } from '../config'
-import { db } from '../db/index'
-import { emails } from '../db/schema/emails'
+import sgMail from "@sendgrid/mail"
+import { and, eq, lte } from "drizzle-orm"
+import { config } from "../config"
+import { db } from "../db/index"
+import { emails } from "../db/schema/emails"
 
 // Initialize SendGrid
 if (config.sendgrid.apiKey) {
@@ -42,48 +42,34 @@ async function sendScheduledEmail(email: {
     const fixedFromName = config.sendgrid.fromName
 
     // Prepare email message
-    const msg: any = {
+    const msg = {
       to: email.toEmail,
       from: {
         email: fixedFromEmail,
         name: fixedFromName,
       },
-      subject: email.subject || '(제목 없음)',
-    }
-
-    // Add CC/BCC if present
-    if (email.ccEmails && email.ccEmails.length > 0) {
-      msg.cc = email.ccEmails
-    }
-    if (email.bccEmails && email.bccEmails.length > 0) {
-      msg.bcc = email.bccEmails
-    }
-
-    // Set body (at least one required)
-    if (email.bodyText) {
-      msg.text = email.bodyText
-    }
-    if (email.bodyHtml) {
-      msg.html = email.bodyHtml
-    }
-
-    // If no body provided, use default
-    if (!email.bodyText && !email.bodyHtml) {
-      msg.text = '(본문 없음)'
+      subject: email.subject || "(제목 없음)",
+      text: email.bodyText || (email.bodyHtml ? undefined : "(본문 없음)"),
+      html: email.bodyHtml || undefined,
+      cc: email.ccEmails && email.ccEmails.length > 0 ? email.ccEmails : undefined,
+      bcc: email.bccEmails && email.bccEmails.length > 0 ? email.bccEmails : undefined,
     }
 
     // Send email
-    const [response] = await sgMail.send(msg)
+    const [response] = await sgMail.send(msg as never)
 
     return {
       success: true,
-      messageId: response.headers['x-message-id'] as string,
+      messageId: response.headers["x-message-id"] as string,
     }
-  } catch (error: any) {
-    console.error('[Scheduled Email Worker] SendGrid error:', error.response?.body || error)
+  } catch (error: unknown) {
+    console.error(
+      "[Scheduled Email Worker] SendGrid error:",
+      error instanceof Error ? error.message : error,
+    )
     return {
       success: false,
-      error: error.message || 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     }
   }
 }
@@ -92,7 +78,7 @@ async function sendScheduledEmail(email: {
  * Process all scheduled emails that are due
  */
 async function processScheduledEmails() {
-  console.log('[Scheduled Email Worker] Starting scheduled email processing...')
+  console.log("[Scheduled Email Worker] Starting scheduled email processing...")
 
   try {
     const now = new Date()
@@ -103,11 +89,11 @@ async function processScheduledEmails() {
     const scheduledEmails = await db
       .select()
       .from(emails)
-      .where(and(eq(emails.status, 'scheduled'), lte(emails.scheduledAt, now)))
+      .where(and(eq(emails.status, "scheduled"), lte(emails.scheduledAt, now)))
       .limit(100) // Process max 100 emails per run
 
     if (scheduledEmails.length === 0) {
-      console.log('[Scheduled Email Worker] No scheduled emails to send')
+      console.log("[Scheduled Email Worker] No scheduled emails to send")
       return
     }
 
@@ -123,7 +109,7 @@ async function processScheduledEmails() {
       // Update status to 'queued' to prevent duplicate processing
       await db
         .update(emails)
-        .set({ status: 'queued', updatedAt: new Date() })
+        .set({ status: "queued", updatedAt: new Date() })
         .where(eq(emails.id, email.id))
 
       // Send email
@@ -134,7 +120,7 @@ async function processScheduledEmails() {
         await db
           .update(emails)
           .set({
-            status: 'sent',
+            status: "sent",
             sentAt: new Date(),
             sendgridMessageId: result.messageId,
             updatedAt: new Date(),
@@ -148,7 +134,7 @@ async function processScheduledEmails() {
         await db
           .update(emails)
           .set({
-            status: 'failed',
+            status: "failed",
             errorMessage: result.error,
             retryCount: email.retryCount + 1,
             lastRetryAt: new Date(),
@@ -165,7 +151,7 @@ async function processScheduledEmails() {
       `[Scheduled Email Worker] Finished: ${successCount} sent, ${failureCount} failed (total: ${scheduledEmails.length})`,
     )
   } catch (error) {
-    console.error('[Scheduled Email Worker] Error in processScheduledEmails:', error)
+    console.error("[Scheduled Email Worker] Error in processScheduledEmails:", error)
   }
 }
 
@@ -174,7 +160,7 @@ async function processScheduledEmails() {
  * Runs every 30 seconds to check for due emails
  */
 export function startScheduledEmailWorker() {
-  console.log('[Scheduled Email Worker] Starting worker...')
+  console.log("[Scheduled Email Worker] Starting worker...")
 
   // Run immediately on startup
   processScheduledEmails()
@@ -184,7 +170,7 @@ export function startScheduledEmailWorker() {
 
   // Return function to stop worker
   return () => {
-    console.log('[Scheduled Email Worker] Stopping worker...')
+    console.log("[Scheduled Email Worker] Stopping worker...")
     clearInterval(intervalId)
   }
 }

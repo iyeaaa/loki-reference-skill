@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "bun src/index.ts",
-    "build": "biome check ./src && bun build src/index.ts --target bun --outdir dist",
+    "build": "biome check ./src && bun type-check && bun build src/index.ts --target bun --outdir dist",
+    "type-check": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
@@ -33,7 +34,6 @@
     "@ai-sdk/openai": "^2.0.38",
     "@elysiajs/cors": "^1.4.0",
     "@elysiajs/swagger": "^1.3.1",
-    "@prisma/client": "^6.16.2",
     "@sendgrid/mail": "^8.1.6",
     "@types/bcrypt": "^6.0.0",
     "@types/busboy": "^1.5.4",

@@ -1,8 +1,8 @@
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
-import { db } from '../db/index'
-import { userEmailAccounts } from '../db/schema/email-accounts'
-import { users } from '../db/schema/users'
-import { workspaces } from '../db/schema/workspaces'
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { db } from "../db/index"
+import { userEmailAccounts } from "../db/schema/email-accounts"
+import { users } from "../db/schema/users"
+import { workspaces } from "../db/schema/workspaces"
 
 // ====================================
 // EMAIL ACCOUNT CRUD OPERATIONS
@@ -57,7 +57,7 @@ export async function createEmailAccount(data: {
   isDefault?: boolean
   dailyLimit?: number
   monthlyLimit?: number
-  status?: 'active' | 'inactive' | 'error' | 'rate_limited' | 'suspended'
+  status?: "active" | "inactive" | "error" | "rate_limited" | "suspended"
 }) {
   const [newAccount] = await db
     .insert(userEmailAccounts)
@@ -72,7 +72,7 @@ export async function createEmailAccount(data: {
       isDefault: data.isDefault || false,
       dailyLimit: data.dailyLimit || null,
       monthlyLimit: data.monthlyLimit || null,
-      status: data.status || 'inactive',
+      status: data.status || "inactive",
     })
     .returning({
       id: userEmailAccounts.id,
@@ -102,7 +102,7 @@ export async function updateEmailAccount(
     isDefault: boolean
     dailyLimit?: number
     monthlyLimit?: number
-    status: 'active' | 'inactive' | 'error' | 'rate_limited' | 'suspended'
+    status: "active" | "inactive" | "error" | "rate_limited" | "suspended"
   },
 ) {
   const [updatedAccount] = await db
@@ -183,7 +183,7 @@ export async function listEmailAccountsWithFilters(
   limit: number,
   offset: number,
   filters?: {
-    status?: 'active' | 'inactive' | 'error' | 'rate_limited' | 'suspended'
+    status?: "active" | "inactive" | "error" | "rate_limited" | "suspended"
     isVerified?: boolean
     isDefault?: boolean
     search?: string
@@ -206,20 +206,29 @@ export async function listEmailAccountsWithFilters(
   }
 
   if (filters?.search) {
-    conditions.push(
-      or(
-        ilike(userEmailAccounts.emailAddress, `%${filters.search}%`),
-        ilike(userEmailAccounts.displayName, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(userEmailAccounts.emailAddress, `%${filters.search}%`),
+      ilike(userEmailAccounts.displayName, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (filters?.userIds && filters.userIds.length > 0) {
-    conditions.push(or(...filters.userIds.map((id) => eq(userEmailAccounts.userId, id)))!)
+    const userCondition = or(...filters.userIds.map((id) => eq(userEmailAccounts.userId, id)))
+    if (userCondition) {
+      conditions.push(userCondition)
+    }
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
-    conditions.push(or(...filters.workspaceIds.map((id) => eq(userEmailAccounts.workspaceId, id)))!)
+    const workspaceCondition = or(
+      ...filters.workspaceIds.map((id) => eq(userEmailAccounts.workspaceId, id)),
+    )
+    if (workspaceCondition) {
+      conditions.push(workspaceCondition)
+    }
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -314,7 +323,7 @@ export async function getActiveEmailAccounts(workspaceId: string) {
     })
     .from(userEmailAccounts)
     .where(
-      and(eq(userEmailAccounts.workspaceId, workspaceId), eq(userEmailAccounts.status, 'active')),
+      and(eq(userEmailAccounts.workspaceId, workspaceId), eq(userEmailAccounts.status, "active")),
     )
     .orderBy(userEmailAccounts.emailAddress)
 
@@ -334,7 +343,7 @@ export async function countEmailAccounts() {
 
 // CountEmailAccountsWithFilters :one
 export async function countEmailAccountsWithFilters(filters?: {
-  status?: 'active' | 'inactive' | 'error' | 'rate_limited' | 'suspended'
+  status?: "active" | "inactive" | "error" | "rate_limited" | "suspended"
   isVerified?: boolean
   isDefault?: boolean
   search?: string
@@ -356,20 +365,29 @@ export async function countEmailAccountsWithFilters(filters?: {
   }
 
   if (filters?.search) {
-    conditions.push(
-      or(
-        ilike(userEmailAccounts.emailAddress, `%${filters.search}%`),
-        ilike(userEmailAccounts.displayName, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(userEmailAccounts.emailAddress, `%${filters.search}%`),
+      ilike(userEmailAccounts.displayName, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (filters?.userIds && filters.userIds.length > 0) {
-    conditions.push(or(...filters.userIds.map((id) => eq(userEmailAccounts.userId, id)))!)
+    const userCondition = or(...filters.userIds.map((id) => eq(userEmailAccounts.userId, id)))
+    if (userCondition) {
+      conditions.push(userCondition)
+    }
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
-    conditions.push(or(...filters.workspaceIds.map((id) => eq(userEmailAccounts.workspaceId, id)))!)
+    const workspaceCondition = or(
+      ...filters.workspaceIds.map((id) => eq(userEmailAccounts.workspaceId, id)),
+    )
+    if (workspaceCondition) {
+      conditions.push(workspaceCondition)
+    }
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -389,15 +407,20 @@ export async function countEmailAccountsWithFilters(filters?: {
 // BulkUpdateStatus :exec
 export async function bulkUpdateStatus(
   accountIds: string[],
-  status: 'active' | 'inactive' | 'error' | 'rate_limited' | 'suspended',
+  status: "active" | "inactive" | "error" | "rate_limited" | "suspended",
 ) {
+  const idCondition = or(...accountIds.map((id) => eq(userEmailAccounts.id, id)))
+  if (!idCondition) {
+    return 0
+  }
+
   const result = await db
     .update(userEmailAccounts)
     .set({
       status,
       updatedAt: new Date(),
     })
-    .where(or(...accountIds.map((id) => eq(userEmailAccounts.id, id)))!)
+    .where(idCondition)
     .returning({ id: userEmailAccounts.id })
 
   return result.length
@@ -428,7 +451,7 @@ export async function resetDailySentCount(id: string) {
     .update(userEmailAccounts)
     .set({
       dailySentCount: 0,
-      lastResetDaily: new Date(),
+      lastResetDaily: new Date().toISOString().split("T")[0],
       updatedAt: new Date(),
     })
     .where(eq(userEmailAccounts.id, id))
@@ -440,7 +463,7 @@ export async function resetMonthlySentCount(id: string) {
     .update(userEmailAccounts)
     .set({
       monthlySentCount: 0,
-      lastResetMonthly: new Date(),
+      lastResetMonthly: new Date().toISOString().split("T")[0],
       updatedAt: new Date(),
     })
     .where(eq(userEmailAccounts.id, id))
@@ -452,7 +475,7 @@ export async function updateLastError(id: string, errorMessage: string) {
     .update(userEmailAccounts)
     .set({
       lastError: errorMessage,
-      status: 'error',
+      status: "error",
       updatedAt: new Date(),
     })
     .where(eq(userEmailAccounts.id, id))

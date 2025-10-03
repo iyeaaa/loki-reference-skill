@@ -13,6 +13,12 @@
     "dev:admin": "cd admin && yarn dev",
     "dev:server": "cd elysia-server && bun run dev",
     "lint": "sh biome.sh",
+    "check": "sh check.sh full",
+    "check:fast": "sh check.sh fast",
+    "check:admin": "sh check-admin.sh full",
+    "check:admin:fast": "sh check-admin.sh fast",
+    "check:server": "sh check-server.sh full",
+    "check:server:fast": "sh check-server.sh fast",
     "build:admin": "cd admin && yarn build",
     "build:server": "cd elysia-server && bun run build"
   },

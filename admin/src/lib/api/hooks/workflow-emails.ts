@@ -29,7 +29,7 @@ export function useGeneratedEmail(
   sequenceId: string,
   nodeId: string,
   emailId: string,
-  enabled = true
+  enabled = true,
 ) {
   return useQuery({
     queryKey: workflowEmailKeys.detail(sequenceId, nodeId, emailId),
@@ -61,7 +61,7 @@ export function useGenerateAllEmails() {
       toast.success(
         `${response.generated}/${response.total}개의 이메일이 생성되었습니다${
           response.failed > 0 ? ` (${response.failed}개 실패)` : ""
-        }`
+        }`,
       )
     },
     onError: (error: Error) => {
@@ -93,7 +93,7 @@ export function useUpdateGeneratedEmail() {
         queryKey: workflowEmailKeys.detail(
           variables.sequenceId,
           variables.nodeId,
-          variables.emailId
+          variables.emailId,
         ),
       })
       toast.success("이메일이 업데이트되었습니다")

@@ -42,7 +42,7 @@ export const TimerNode: FC<TimerNodeProps> = ({ data }) => {
   const { data: stats } = useNodeStatistics(
     data.sequenceId || "",
     data.nodeId || "",
-    !!(data.sequenceId && data.nodeId)
+    !!(data.sequenceId && data.nodeId),
   )
 
   // data가 변경되면 로컬 state 업데이트

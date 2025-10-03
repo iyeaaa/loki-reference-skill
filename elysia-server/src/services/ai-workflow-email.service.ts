@@ -1,5 +1,5 @@
-import { createOpenAI } from '@ai-sdk/openai'
-import { generateText } from 'ai'
+import { createOpenAI } from "@ai-sdk/openai"
+import { generateText } from "ai"
 
 interface LeadContext {
   companyName: string
@@ -42,7 +42,7 @@ class AIWorkflowEmailService {
     // 영문 변수 치환
     for (const [key, value] of Object.entries(context)) {
       if (value) {
-        const regex = new RegExp(`{{${key}}}`, 'gi')
+        const regex = new RegExp(`{{${key}}}`, "gi")
         result = result.replace(regex, value)
       }
     }
@@ -50,35 +50,35 @@ class AIWorkflowEmailService {
     // 한글 변수 매핑 (모든 리드 필드)
     const koreanMap: Record<string, string> = {
       // 회사 정보
-      회사명: context.companyName || '',
-      웹사이트: context.website || '',
-      업종: context.industry || '',
-      설명: context.description || '',
-      직원수: context.employeeCount || '',
-      규모: context.size || '',
-      설립연도: context.foundedYear || '',
+      회사명: context.companyName || "",
+      웹사이트: context.website || "",
+      업종: context.industry || "",
+      설명: context.description || "",
+      직원수: context.employeeCount || "",
+      규모: context.size || "",
+      설립연도: context.foundedYear || "",
 
       // 위치 정보
-      국가: context.country || '',
-      도시: context.city || '',
-      주: context.state || '',
-      '주/도': context.state || '',
-      주소: context.address || '',
+      국가: context.country || "",
+      도시: context.city || "",
+      주: context.state || "",
+      "주/도": context.state || "",
+      주소: context.address || "",
 
       // 연락처
-      담당자명: context.contactName || '',
-      이름: context.contactName || '',
-      이메일: context.contactEmail || '',
+      담당자명: context.contactName || "",
+      이름: context.contactName || "",
+      이메일: context.contactEmail || "",
 
       // 리드 관리
-      리드소스: context.leadSource || '',
-      리드상태: context.leadStatus || '',
-      리드점수: context.leadScore || '',
+      리드소스: context.leadSource || "",
+      리드상태: context.leadStatus || "",
+      리드점수: context.leadScore || "",
     }
 
     for (const [key, value] of Object.entries(koreanMap)) {
       if (value) {
-        const regex = new RegExp(`{{${key}}}`, 'g')
+        const regex = new RegExp(`{{${key}}}`, "g")
         result = result.replace(regex, value)
       }
     }
@@ -90,7 +90,7 @@ class AIWorkflowEmailService {
    * AI를 사용하여 개별 이메일 생성
    */
   async generateEmail(options: GenerateEmailOptions): Promise<GeneratedEmail> {
-    const { prompt, lead, model = 'gpt-3.5-turbo', temperature = 0.7 } = options
+    const { prompt, lead, model = "gpt-3.5-turbo", temperature = 0.7 } = options
 
     try {
       // 1. 프롬프트 변수 치환
@@ -102,11 +102,11 @@ class AIWorkflowEmailService {
 
 [고객 정보]
 - 회사명: ${lead.companyName}
-- 담당자: ${lead.contactName || '담당자'}
+- 담당자: ${lead.contactName || "담당자"}
 - 이메일: ${lead.contactEmail}
-- 업종: ${lead.industry || '알 수 없음'}
-${lead.website ? `- 웹사이트: ${lead.website}` : ''}
-${lead.size ? `- 규모: ${lead.size}` : ''}
+- 업종: ${lead.industry || "알 수 없음"}
+${lead.website ? `- 웹사이트: ${lead.website}` : ""}
+${lead.size ? `- 규모: ${lead.size}` : ""}
 
 [작성 원칙]
 1. 친근하면서도 전문적인 톤
@@ -143,7 +143,7 @@ BODY:
 
       return parsedEmail
     } catch (error) {
-      console.error('[AI Email Generation] Failed:', error)
+      console.error("[AI Email Generation] Failed:", error)
       throw error
     }
   }
@@ -152,15 +152,15 @@ BODY:
    * AI 응답에서 제목과 본문 파싱
    */
   private parseAIResponse(response: string): GeneratedEmail {
-    const lines = response.trim().split('\n')
-    let subject = ''
+    const lines = response.trim().split("\n")
+    let subject = ""
     let bodyLines: string[] = []
     let inBody = false
 
     for (const line of lines) {
-      if (line.startsWith('SUBJECT:')) {
-        subject = line.substring('SUBJECT:'.length).trim()
-      } else if (line.startsWith('BODY:')) {
+      if (line.startsWith("SUBJECT:")) {
+        subject = line.substring("SUBJECT:".length).trim()
+      } else if (line.startsWith("BODY:")) {
         inBody = true
       } else if (inBody) {
         bodyLines.push(line)
@@ -170,17 +170,17 @@ BODY:
     // SUBJECT/BODY 형식이 아니면 전체를 본문으로
     if (!subject && bodyLines.length === 0) {
       // 첫 줄을 제목으로, 나머지를 본문으로
-      subject = lines[0] || '제목 없음'
+      subject = lines[0] || "제목 없음"
       bodyLines = lines.slice(1)
     }
 
-    const bodyText = bodyLines.join('\n').trim()
+    const bodyText = bodyLines.join("\n").trim()
 
     // HTML 버전 생성 (간단한 변환)
     const bodyHtml = bodyText
-      .split('\n\n')
-      .map((para) => `<p>${para.replace(/\n/g, '<br>')}</p>`)
-      .join('\n')
+      .split("\n\n")
+      .map((para) => `<p>${para.replace(/\n/g, "<br>")}</p>`)
+      .join("\n")
 
     return {
       subject,
@@ -231,7 +231,7 @@ BODY:
           await new Promise((resolve) => setTimeout(resolve, 1000))
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        const errorMessage = error instanceof Error ? error.message : "Unknown error"
         console.error(`Failed to generate email for ${lead.companyName}:`, errorMessage)
 
         results.push({
@@ -261,7 +261,7 @@ export function getAIWorkflowEmailService(): AIWorkflowEmailService {
   if (!aiWorkflowEmailServiceInstance) {
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) {
-      throw new Error('OPENAI_API_KEY 환경변수가 설정되지 않았습니다')
+      throw new Error("OPENAI_API_KEY 환경변수가 설정되지 않았습니다")
     }
     aiWorkflowEmailServiceInstance = new AIWorkflowEmailService(apiKey)
   }

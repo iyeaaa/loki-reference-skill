@@ -1,6 +1,6 @@
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
-import { db } from '../db/index'
-import { departments, users } from '../db/schema/users'
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { db } from "../db/index"
+import { departments, users } from "../db/schema/users"
 
 // ====================================
 // USER CRUD OPERATIONS
@@ -37,7 +37,7 @@ export async function createUser(data: {
   username: string
   email: string
   passwordHash?: string
-  userRole?: 'admin' | 'user'
+  userRole?: "admin" | "user"
   isActive?: boolean
   departmentId: string
   employeeId: string
@@ -48,7 +48,7 @@ export async function createUser(data: {
       username: data.username,
       email: data.email,
       passwordHash: data.passwordHash || null,
-      userRole: data.userRole || 'user',
+      userRole: data.userRole || "user",
       isActive: data.isActive !== undefined ? data.isActive : true,
       departmentId: data.departmentId,
       employeeId: data.employeeId,
@@ -74,7 +74,7 @@ export async function updateUser(
   data: {
     username: string
     email: string
-    userRole: 'admin' | 'user'
+    userRole: "admin" | "user"
     isActive: boolean
     departmentId: string
     employeeId: string
@@ -171,7 +171,7 @@ export async function listUsersWithFilters(
   limit: number,
   offset: number,
   filters?: {
-    role?: 'admin' | 'user'
+    role?: "admin" | "user"
     isActive?: boolean
     search?: string
     departmentIds?: string[]
@@ -188,17 +188,21 @@ export async function listUsersWithFilters(
   }
 
   if (filters?.search) {
-    conditions.push(
-      or(
-        ilike(users.email, `%${filters.search}%`),
-        ilike(users.username, `%${filters.search}%`),
-        ilike(users.employeeId, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(users.email, `%${filters.search}%`),
+      ilike(users.username, `%${filters.search}%`),
+      ilike(users.employeeId, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (filters?.departmentIds && filters.departmentIds.length > 0) {
-    conditions.push(or(...filters.departmentIds.map((id) => eq(users.departmentId, id)))!)
+    const departmentCondition = or(...filters.departmentIds.map((id) => eq(users.departmentId, id)))
+    if (departmentCondition) {
+      conditions.push(departmentCondition)
+    }
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -270,7 +274,7 @@ export async function getAssignableUsers() {
     })
     .from(users)
     .innerJoin(departments, eq(users.departmentId, departments.id))
-    .where(and(eq(users.isActive, true), eq(users.userRole, 'admin')))
+    .where(and(eq(users.isActive, true), eq(users.userRole, "admin")))
     .orderBy(users.username)
 
   return result
@@ -289,7 +293,7 @@ export async function countUsers() {
 
 // CountUsersWithFilters :one
 export async function countUsersWithFilters(filters?: {
-  role?: 'admin' | 'user'
+  role?: "admin" | "user"
   isActive?: boolean
   search?: string
   departmentIds?: string[]
@@ -305,17 +309,21 @@ export async function countUsersWithFilters(filters?: {
   }
 
   if (filters?.search) {
-    conditions.push(
-      or(
-        ilike(users.email, `%${filters.search}%`),
-        ilike(users.username, `%${filters.search}%`),
-        ilike(users.employeeId, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(users.email, `%${filters.search}%`),
+      ilike(users.username, `%${filters.search}%`),
+      ilike(users.employeeId, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (filters?.departmentIds && filters.departmentIds.length > 0) {
-    conditions.push(or(...filters.departmentIds.map((id) => eq(users.departmentId, id)))!)
+    const departmentCondition = or(...filters.departmentIds.map((id) => eq(users.departmentId, id)))
+    if (departmentCondition) {
+      conditions.push(departmentCondition)
+    }
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -366,7 +374,7 @@ export async function updateUserPassword(id: string, passwordHash: string) {
 export async function createOrUpdateGoogleUser(data: {
   username: string
   email: string
-  userRole?: 'admin' | 'user'
+  userRole?: "admin" | "user"
   isActive?: boolean
   departmentId: string
   employeeId: string
@@ -376,7 +384,7 @@ export async function createOrUpdateGoogleUser(data: {
     .values({
       username: data.username,
       email: data.email,
-      userRole: data.userRole || 'user',
+      userRole: data.userRole || "user",
       isActive: data.isActive ?? true,
       departmentId: data.departmentId,
       employeeId: data.employeeId,
@@ -422,27 +430,37 @@ export async function updateLastLogin(id: string) {
 
 // BulkUpdateStatus :exec
 export async function bulkUpdateStatus(userIds: string[], isActive: boolean) {
+  const userCondition = or(...userIds.map((id) => eq(users.id, id)))
+  if (!userCondition) {
+    return 0
+  }
+
   const result = await db
     .update(users)
     .set({
       isActive,
       updatedAt: new Date(),
     })
-    .where(or(...userIds.map((id) => eq(users.id, id)))!)
+    .where(userCondition)
     .returning({ id: users.id })
 
   return result.length
 }
 
 // BulkUpdateRole :exec
-export async function bulkUpdateRole(userIds: string[], userRole: 'admin' | 'user') {
+export async function bulkUpdateRole(userIds: string[], userRole: "admin" | "user") {
+  const userCondition = or(...userIds.map((id) => eq(users.id, id)))
+  if (!userCondition) {
+    return 0
+  }
+
   const result = await db
     .update(users)
     .set({
       userRole,
       updatedAt: new Date(),
     })
-    .where(or(...userIds.map((id) => eq(users.id, id)))!)
+    .where(userCondition)
     .returning({ id: users.id })
 
   return result.length
@@ -450,13 +468,18 @@ export async function bulkUpdateRole(userIds: string[], userRole: 'admin' | 'use
 
 // BulkUpdateDepartment :exec
 export async function bulkUpdateDepartment(userIds: string[], departmentId: string) {
+  const userCondition = or(...userIds.map((id) => eq(users.id, id)))
+  if (!userCondition) {
+    return 0
+  }
+
   const result = await db
     .update(users)
     .set({
       departmentId,
       updatedAt: new Date(),
     })
-    .where(or(...userIds.map((id) => eq(users.id, id)))!)
+    .where(userCondition)
     .returning({ id: users.id })
 
   return result.length

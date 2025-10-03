@@ -41,7 +41,7 @@ export function Modal({ open, title, onClose, children, footer, className }: Mod
         className={cn(
           "relative z-[1] w-[520px] max-w-[92vw] rounded-md border bg-white text-card-foreground shadow-lg",
           "outline-none",
-          className
+          className,
         )}
         role="dialog"
         aria-modal="true"

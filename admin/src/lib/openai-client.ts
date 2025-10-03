@@ -11,7 +11,7 @@ export interface Lead {
 }
 
 export async function generateEmailDraft(
-  prompt: string
+  prompt: string,
 ): Promise<{ subject: string; body: string }> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/ai/email-draft`, {
@@ -86,7 +86,7 @@ export async function generateEmailDraftForLead(lead: Lead): Promise<LeadEmailDr
 // Sequentially generate email drafts for a list of leads with light pacing
 export async function generateEmailDraftsForLeads(
   leads: Lead[],
-  onProgress?: (p: { index: number; total: number; leadId: string }) => void
+  onProgress?: (p: { index: number; total: number; leadId: string }) => void,
 ): Promise<LeadEmailDraft[]> {
   const results: LeadEmailDraft[] = []
   for (let i = 0; i < leads.length; i++) {

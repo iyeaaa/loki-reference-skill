@@ -28,7 +28,7 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
     sequenceId,
     currentPage,
     limit,
-    !!sequenceId
+    !!sequenceId,
   )
 
   const { data: steps = [] } = useSequenceSteps(sequenceId, !!sequenceId)

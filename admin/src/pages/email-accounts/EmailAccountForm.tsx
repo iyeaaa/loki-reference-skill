@@ -63,7 +63,7 @@ export function EmailAccountForm({
   const filteredWorkspaces = workspaces.filter(
     (workspace) =>
       workspace.name.toLowerCase().includes(workspaceSearch.toLowerCase()) ||
-      workspace.id.toLowerCase().includes(workspaceSearch.toLowerCase())
+      workspace.id.toLowerCase().includes(workspaceSearch.toLowerCase()),
   )
 
   const handleSubmit = (e: React.FormEvent) => {

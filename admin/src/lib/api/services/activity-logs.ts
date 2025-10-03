@@ -63,7 +63,7 @@ export const activityLogsApi = {
     if (workspaceId) searchParams.append("workspaceId", workspaceId)
 
     return apiFetch<{ data: ActivityLog[]; limit: number }>(
-      `/api/v1/activity-logs/recent?${searchParams.toString()}`
+      `/api/v1/activity-logs/recent?${searchParams.toString()}`,
     ).then((response) => response.data)
   },
 
@@ -74,7 +74,7 @@ export const activityLogsApi = {
     })
 
     return apiFetch<{ data: ActivityLog[]; limit: number; offset: number }>(
-      `/api/v1/activity-logs/entity/${entityType}/${entityId}?${searchParams.toString()}`
+      `/api/v1/activity-logs/entity/${entityType}/${entityId}?${searchParams.toString()}`,
     ).then((response) => response.data)
   },
 
@@ -85,7 +85,7 @@ export const activityLogsApi = {
     })
 
     return apiFetch<{ data: ActivityLog[]; limit: number; offset: number }>(
-      `/api/v1/activity-logs/user/${userId}?${searchParams.toString()}`
+      `/api/v1/activity-logs/user/${userId}?${searchParams.toString()}`,
     ).then((response) => response.data)
   },
 }

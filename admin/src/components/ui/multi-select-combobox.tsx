@@ -55,7 +55,7 @@ export function MultiSelectCombobox({
     return options.filter(
       (option) =>
         option.label.toLowerCase().includes(searchLower) ||
-        option.sublabel?.toLowerCase().includes(searchLower)
+        option.sublabel?.toLowerCase().includes(searchLower),
     )
   }, [options, searchValue])
 
@@ -171,7 +171,7 @@ export function MultiSelectCombobox({
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4",
-                        value.length === filteredOptions.length ? "opacity-100" : "opacity-0"
+                        value.length === filteredOptions.length ? "opacity-100" : "opacity-0",
                       )}
                     />
                     전체 선택 ({filteredOptions.length}개)
@@ -187,7 +187,7 @@ export function MultiSelectCombobox({
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4",
-                        value.includes(option.value) ? "opacity-100" : "opacity-0"
+                        value.includes(option.value) ? "opacity-100" : "opacity-0",
                       )}
                     />
                     <div className="flex-1">

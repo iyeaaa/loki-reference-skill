@@ -5,13 +5,13 @@
  * It fetches pending steps, sends emails via SendGrid, and updates execution status.
  */
 
-import sgMail from '@sendgrid/mail'
-import { eq } from 'drizzle-orm'
-import { config } from '../config'
-import { db } from '../db/index'
-import { userEmailAccounts } from '../db/schema/email-accounts'
-import { leadContacts } from '../db/schema/lead-details'
-import * as sequenceService from '../services/sequence.service'
+import sgMail from "@sendgrid/mail"
+import { and, eq } from "drizzle-orm"
+import { config } from "../config"
+import { db } from "../db/index"
+import { userEmailAccounts } from "../db/schema/email-accounts"
+import { leadContacts } from "../db/schema/lead-details"
+import * as sequenceService from "../services/sequence.service"
 
 // Initialize SendGrid
 if (config.sendgrid.apiKey) {
@@ -40,15 +40,19 @@ async function sendSequenceEmail(execution: {
     const [leadContact] = await db
       .select({ email: leadContacts.contactValue })
       .from(leadContacts)
-      .where(eq(leadContacts.leadId, execution.leadId))
-      .where(eq(leadContacts.contactType, 'email'))
-      .where(eq(leadContacts.isPrimary, true))
+      .where(
+        and(
+          eq(leadContacts.leadId, execution.leadId),
+          eq(leadContacts.contactType, "email"),
+          eq(leadContacts.isPrimary, true),
+        ),
+      )
       .limit(1)
 
     if (!leadContact) {
       return {
         success: false,
-        error: 'Lead email not found',
+        error: "Lead email not found",
       }
     }
 
@@ -57,7 +61,7 @@ async function sendSequenceEmail(execution: {
       .select({
         emailAddress: userEmailAccounts.emailAddress,
         displayName: userEmailAccounts.displayName,
-        sendgridApiKey: userEmailAccounts.sendgridApiKey,
+        apiKey: userEmailAccounts.apiKey,
       })
       .from(userEmailAccounts)
       .where(eq(userEmailAccounts.id, execution.emailAccountId))
@@ -66,16 +70,16 @@ async function sendSequenceEmail(execution: {
     if (!emailAccount) {
       return {
         success: false,
-        error: 'Email account not found',
+        error: "Email account not found",
       }
     }
 
     // Use account-specific API key or default
-    const apiKey = emailAccount.sendgridApiKey || config.sendgrid.apiKey
+    const apiKey = emailAccount.apiKey || config.sendgrid.apiKey
     if (!apiKey) {
       return {
         success: false,
-        error: 'SendGrid API key not configured',
+        error: "SendGrid API key not configured",
       }
     }
 
@@ -83,48 +87,42 @@ async function sendSequenceEmail(execution: {
     sgMail.setApiKey(apiKey)
 
     // Prepare email message
-    const msg: any = {
+    const msg = {
       to: leadContact.email,
       from: {
         email: emailAccount.emailAddress,
         name: emailAccount.displayName || emailAccount.emailAddress,
       },
       subject: execution.emailSubject,
-    }
-
-    // Set body
-    if (execution.emailBodyText) {
-      msg.text = execution.emailBodyText
-    }
-    if (execution.emailBodyHtml) {
-      msg.html = execution.emailBodyHtml
+      text: execution.emailBodyText || undefined,
+      html: execution.emailBodyHtml || undefined,
     }
 
     // Send email
-    const [response] = await sgMail.send(msg)
+    const [response] = await sgMail.send(msg as never)
 
     return {
       success: true,
-      messageId: response.headers['x-message-id'] as string,
+      messageId: response.headers["x-message-id"] as string,
     }
-  } catch (error: any) {
-    console.error('Error sending sequence email:', error)
+  } catch (error: unknown) {
+    console.error("Error sending sequence email:", error instanceof Error ? error.message : error)
     return {
       success: false,
-      error: error.message || 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     }
   }
 }
 
 async function processSequenceEmails() {
-  console.log('[Email Sequence Worker] Starting email processing...')
+  console.log("[Email Sequence Worker] Starting email processing...")
 
   try {
     // Get pending step executions
     const pendingExecutions = await sequenceService.getPendingStepExecutions(50)
 
     if (pendingExecutions.length === 0) {
-      console.log('[Email Sequence Worker] No pending emails to send')
+      console.log("[Email Sequence Worker] No pending emails to send")
       return
     }
 
@@ -143,7 +141,7 @@ async function processSequenceEmails() {
         // Update execution status to 'sent'
         await sequenceService.updateStepExecutionStatus(
           execution.executionId,
-          'sent',
+          "sent",
           undefined,
           result.messageId,
         )
@@ -156,7 +154,7 @@ async function processSequenceEmails() {
         // Update execution status to 'failed'
         await sequenceService.updateStepExecutionStatus(
           execution.executionId,
-          'failed',
+          "failed",
           result.error,
         )
 
@@ -164,15 +162,15 @@ async function processSequenceEmails() {
       }
     }
 
-    console.log('[Email Sequence Worker] Finished processing emails')
+    console.log("[Email Sequence Worker] Finished processing emails")
   } catch (error) {
-    console.error('[Email Sequence Worker] Error in processSequenceEmails:', error)
+    console.error("[Email Sequence Worker] Error in processSequenceEmails:", error)
   }
 }
 
 // Run worker every minute
 export function startEmailSequenceWorker() {
-  console.log('[Email Sequence Worker] Starting worker...')
+  console.log("[Email Sequence Worker] Starting worker...")
 
   // Run immediately
   processSequenceEmails()
@@ -182,7 +180,7 @@ export function startEmailSequenceWorker() {
 
   // Return function to stop worker
   return () => {
-    console.log('[Email Sequence Worker] Stopping worker...')
+    console.log("[Email Sequence Worker] Stopping worker...")
     clearInterval(intervalId)
   }
 }

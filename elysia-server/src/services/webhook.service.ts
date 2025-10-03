@@ -1,11 +1,11 @@
-import { and, eq } from 'drizzle-orm'
-import { db } from '../db'
-import { userEmailAccounts } from '../db/schema/email-accounts'
-import { emailReplies, emails as emailsTable } from '../db/schema/emails'
-import { leads } from '../db/schema/leads'
-import type { Email, FileData, FormData } from '../models/email.model'
-import { emails } from '../types/email-storage'
-import { emailService } from './email.service'
+import { and, eq } from "drizzle-orm"
+import { db } from "../db"
+import { userEmailAccounts } from "../db/schema/email-accounts"
+import { emailReplies, emails as emailsTable } from "../db/schema/emails"
+import { leadContacts } from "../db/schema/lead-details"
+import type { Email, FileData, FormData } from "../models/email.model"
+import { emails } from "../types/email-storage"
+import { emailService } from "./email.service"
 
 class WebhookService {
   async processInboundEmail(body: FormData, files: FileData[]) {
@@ -28,7 +28,7 @@ class WebhookService {
     try {
       await this.storeInboundEmailInDB(body, headers, parsedAttachments)
     } catch (error) {
-      console.error('Failed to store inbound email in DB:', error)
+      console.error("Failed to store inbound email in DB:", error)
     }
 
     // Send auto-reply if needed
@@ -36,18 +36,18 @@ class WebhookService {
       this.handleAutoReply(body, headers)
     }
 
-    return { status: 'OK' }
+    return { status: "OK" }
   }
 
   processInboundStore(body: FormData, files: FileData[]) {
     const email = {
       id: Date.now().toString(),
       timestamp: new Date().toISOString(),
-      from: body.from || '',
-      to: body.to || '',
-      subject: body.subject || '',
-      text: body.text || '',
-      html: body.html || '',
+      from: body.from || "",
+      to: body.to || "",
+      subject: body.subject || "",
+      text: body.text || "",
+      html: body.html || "",
       attachments: files
         ? files.map((f: FileData) => ({
             filename: f.originalname,
@@ -60,10 +60,14 @@ class WebhookService {
     emails.push(email)
     console.log(`이메일 저장됨: ${email.subject} (ID: ${email.id})`)
 
-    return { status: 'OK' }
+    return { status: "OK" }
   }
 
-  private extractHeaders(headersString?: string) {
+  private extractHeaders(headersString?: string): {
+    messageId: string | undefined
+    inReplyTo: string | undefined
+    references: string[]
+  } {
     let messageId: string | undefined
     let inReplyTo: string | undefined
     let references: string[] = []
@@ -71,57 +75,61 @@ class WebhookService {
     if (headersString) {
       try {
         const headers = JSON.parse(headersString)
-        messageId = headers['Message-ID'] || headers['message-id']
-        inReplyTo = headers['In-Reply-To'] || headers['in-reply-to']
+        messageId = headers["Message-ID"] || headers["message-id"]
+        inReplyTo = headers["In-Reply-To"] || headers["in-reply-to"]
         const referencesStr = headers.References || headers.references
         if (referencesStr) {
           references = referencesStr.split(/\s+/).filter((ref: string) => ref.length > 0)
         }
       } catch (e) {
-        console.log('헤더 파싱 실패:', e)
+        console.log("헤더 파싱 실패:", e)
       }
     }
 
     return { messageId, inReplyTo, references }
   }
 
-  private logEmailInfo(body: FormData, headers: any, files: FileData[]) {
-    console.log('\n========================================')
-    console.log('         새 이메일 수신 알림')
-    console.log('========================================')
-    console.log('📅 수신 시간:', new Date().toISOString())
+  private logEmailInfo(
+    body: FormData,
+    headers: { messageId: string | undefined; inReplyTo: string | undefined; references: string[] },
+    files: FileData[],
+  ) {
+    console.log("\n========================================")
+    console.log("         새 이메일 수신 알림")
+    console.log("========================================")
+    console.log("📅 수신 시간:", new Date().toISOString())
 
-    console.log('\n📧 [이메일 기본 정보]')
-    console.log('├─ From:', body.from || '없음')
-    console.log('├─ To:', body.to || '없음')
-    console.log('├─ CC:', body.cc || '없음')
-    console.log('├─ Subject:', body.subject || '없음')
-    console.log('├─ Message-ID:', headers.messageId || '없음')
-    console.log('├─ In-Reply-To:', headers.inReplyTo || '없음')
+    console.log("\n📧 [이메일 기본 정보]")
+    console.log("├─ From:", body.from || "없음")
+    console.log("├─ To:", body.to || "없음")
+    console.log("├─ CC:", body.cc || "없음")
+    console.log("├─ Subject:", body.subject || "없음")
+    console.log("├─ Message-ID:", headers.messageId || "없음")
+    console.log("├─ In-Reply-To:", headers.inReplyTo || "없음")
     console.log(
-      '└─ References:',
-      headers.references.length > 0 ? headers.references.join(', ') : '없음',
+      "└─ References:",
+      headers.references.length > 0 ? headers.references.join(", ") : "없음",
     )
 
-    console.log('\n🌐 [발신자 정보]')
-    console.log('├─ Sender IP:', body.sender_ip || '없음')
+    console.log("\n🌐 [발신자 정보]")
+    console.log("├─ Sender IP:", body.sender_ip || "없음")
     console.log(
-      '└─ Envelope From:',
+      "└─ Envelope From:",
       (() => {
         try {
-          const envelope = JSON.parse(body.envelope || '{}')
-          return envelope.from || '없음'
+          const envelope = JSON.parse(body.envelope || "{}")
+          return envelope.from || "없음"
         } catch {
-          return '파싱 실패'
+          return "파싱 실패"
         }
       })(),
     )
 
-    console.log('\n📄 [이메일 내용]')
+    console.log("\n📄 [이메일 내용]")
     if (body.text) {
       const textPreview = body.text.slice(0, 200)
-      console.log('├─ Text 내용:')
-      console.log(`│  ${textPreview}${body.text.length > 200 ? '...' : ''}`)
+      console.log("├─ Text 내용:")
+      console.log(`│  ${textPreview}${body.text.length > 200 ? "..." : ""}`)
       console.log(`│  (총 ${body.text.length}자)`)
     }
     if (body.html) {
@@ -129,7 +137,7 @@ class WebhookService {
     }
 
     if (files && files.length > 0) {
-      console.log('\n📁 [업로드된 파일 (Multipart)]')
+      console.log("\n📁 [업로드된 파일 (Multipart)]")
       files.forEach((file: FileData) => {
         console.log(`├─ 파일명: ${file.originalname}`)
         console.log(`│  ├─ 필드명: ${file.fieldname}`)
@@ -143,62 +151,62 @@ class WebhookService {
   }
 
   private logMetadata(body: FormData) {
-    console.log('\n📝 [추가 메타데이터]')
+    console.log("\n📝 [추가 메타데이터]")
 
     if (body.charsets) {
       try {
         const charsets = JSON.parse(body.charsets)
-        console.log('├─ 문자 인코딩:')
+        console.log("├─ 문자 인코딩:")
         Object.entries(charsets).forEach(([key, value]) => {
           console.log(`│  └─ ${key}: ${value}`)
         })
       } catch {
-        console.log('├─ charsets 파싱 실패')
+        console.log("├─ charsets 파싱 실패")
       }
     }
 
-    if (body['content-ids']) {
+    if (body["content-ids"]) {
       try {
-        const contentIds = JSON.parse(body['content-ids'])
+        const contentIds = JSON.parse(body["content-ids"])
         if (Object.keys(contentIds).length > 0) {
-          console.log('├─ Content-IDs:')
+          console.log("├─ Content-IDs:")
           Object.entries(contentIds).forEach(([key, value]) => {
             console.log(`│  └─ ${key}: ${value}`)
           })
         }
       } catch {
-        console.log('├─ content-ids 파싱 실패')
+        console.log("├─ content-ids 파싱 실패")
       }
     }
   }
 
   private logAllKeys(body: FormData) {
-    console.log('\n🔍 [전체 수신 데이터 키 목록]')
+    console.log("\n🔍 [전체 수신 데이터 키 목록]")
     const allKeys = Object.keys(body)
     console.log(`├─ 총 ${allKeys.length}개 필드`)
     allKeys.forEach((key, index) => {
       const isLast = index === allKeys.length - 1
       const value = body[key]
-      const preview = value ? (value.length > 50 ? `${value.substring(0, 50)}...` : value) : '빈 값'
-      console.log(`${isLast ? '└─' : '├─'} ${key}: ${preview}`)
+      const preview = value ? (value.length > 50 ? `${value.substring(0, 50)}...` : value) : "빈 값"
+      console.log(`${isLast ? "└─" : "├─"} ${key}: ${preview}`)
     })
   }
 
   private async processAttachments(body: FormData) {
-    const attachmentsJson = body.attachments || '[]'
-    const attachmentInfo = body['attachment-info']
+    const attachmentsJson = body.attachments || "[]"
+    const attachmentInfo = body["attachment-info"]
     return await emailService.processAttachments(attachmentsJson, attachmentInfo)
   }
 
-  private createEmailData(body: FormData, attachments: any[]): Email {
+  private createEmailData(body: FormData, attachments: unknown[]): Email {
     return {
       id: Date.now().toString(),
-      from: body.from || 'Unknown',
-      to: body.to || 'Unknown',
-      subject: body.subject || 'No subject',
+      from: body.from || "Unknown",
+      to: body.to || "Unknown",
+      subject: body.subject || "No subject",
       text: body.text,
       html: body.html,
-      attachments: attachments,
+      attachments: attachments as { filename: string; content: string }[],
       timestamp: new Date().toISOString(),
     }
   }
@@ -206,12 +214,16 @@ class WebhookService {
   /**
    * 인바운드 이메일을 DB에 저장하고 답장인 경우 email_replies 테이블에도 저장
    */
-  private async storeInboundEmailInDB(body: FormData, headers: any, _attachments: any[]) {
-    console.log('\n💾 DB에 인바운드 이메일 저장 중...')
+  private async storeInboundEmailInDB(
+    body: FormData,
+    headers: { messageId: string | undefined; inReplyTo: string | undefined; references: string[] },
+    _attachments: unknown[],
+  ) {
+    console.log("\n💾 DB에 인바운드 이메일 저장 중...")
 
     // 1. 수신 이메일 주소로 이메일 계정 찾기
-    const toEmail = body.to || ''
-    const fromEmail = body.from || ''
+    const toEmail = body.to || ""
+    const fromEmail = body.from || ""
 
     const emailAccount = await db
       .select({
@@ -228,35 +240,44 @@ class WebhookService {
     }
 
     const account = emailAccount[0]
+    if (!account) {
+      console.log(`⚠️  이메일 계정을 찾을 수 없음`)
+      return
+    }
 
     // 2. 발신자 이메일로 리드 찾기
-    const leadResults = await db
-      .select({ id: leads.id })
-      .from(leads)
-      .where(eq(leads.email, fromEmail))
+    const leadContactResults = await db
+      .select({ leadId: leadContacts.leadId })
+      .from(leadContacts)
+      .where(and(eq(leadContacts.contactType, "email"), eq(leadContacts.contactValue, fromEmail)))
       .limit(1)
 
-    const leadId = leadResults.length > 0 ? leadResults[0].id : null
+    const leadId = leadContactResults.length > 0 ? leadContactResults[0]?.leadId : null
 
     // 3. 인바운드 이메일을 emails 테이블에 저장
-    const [inboundEmail] = await db
+    const inboundEmailResults = await db
       .insert(emailsTable)
       .values({
         workspaceId: account.workspaceId,
         userEmailAccountId: account.id,
         leadId,
-        direction: 'inbound',
+        direction: "inbound",
         fromEmail,
         toEmail,
-        subject: body.subject || '',
+        subject: body.subject || "",
         bodyText: body.text,
         bodyHtml: body.html,
-        status: 'received',
         sentAt: new Date(),
         messageId: headers.messageId,
         inReplyTo: headers.inReplyTo,
       })
       .returning()
+
+    const inboundEmail = inboundEmailResults[0]
+    if (!inboundEmail) {
+      console.log(`❌ 인바운드 이메일 저장 실패`)
+      return
+    }
 
     console.log(`✅ 인바운드 이메일 저장 완료: ${inboundEmail.id}`)
 
@@ -274,13 +295,12 @@ class WebhookService {
         })
         .from(emailsTable)
         .where(
-          and(eq(emailsTable.messageId, headers.inReplyTo), eq(emailsTable.direction, 'outbound')),
+          and(eq(emailsTable.messageId, headers.inReplyTo), eq(emailsTable.direction, "outbound")),
         )
         .limit(1)
 
-      if (originalEmailResults.length > 0) {
-        const originalEmail = originalEmailResults[0]
-
+      const originalEmail = originalEmailResults[0]
+      if (originalEmail) {
         console.log(`✅ 원본 이메일 찾음: ${originalEmail.id}`)
 
         // email_replies 테이블에 저장
@@ -309,35 +329,41 @@ class WebhookService {
     }
   }
 
-  private async handleAutoReply(body: FormData, headers: any) {
-    console.log('\n📤 자동 답장 발송 시도 중...')
+  private async handleAutoReply(
+    body: FormData,
+    headers:
+      | Record<string, string | undefined>
+      | { messageId?: string; inReplyTo?: string; references: string[] },
+  ) {
+    console.log("\n📤 자동 답장 발송 시도 중...")
 
     const emailContent = emailService.extractEmailContent(body.text, body.html, body.email)
 
-    console.log('├─ 이메일 내용 길이:', emailContent.length, '자')
+    console.log("├─ 이메일 내용 길이:", emailContent.length, "자")
 
-    const updatedReferences = headers.messageId
-      ? [...headers.references, headers.messageId]
-      : headers.references
+    const baseReferences: string[] = Array.isArray(headers.references) ? headers.references : []
+    const updatedReferences: string[] = headers.messageId
+      ? [...baseReferences, headers.messageId]
+      : baseReferences
 
     const autoReplySuccess = await emailService.sendAutoReply(
-      body.to || '',
-      body.from || '',
-      body.subject || '',
+      body.to || "",
+      body.from || "",
+      body.subject || "",
       emailContent,
       headers.messageId,
       updatedReferences,
     )
 
     if (autoReplySuccess) {
-      console.log('✅ 자동 답장 발송 완료!')
+      console.log("✅ 자동 답장 발송 완료!")
     } else {
-      console.log('❌ 자동 답장 발송 실패!')
+      console.log("❌ 자동 답장 발송 실패!")
     }
 
-    console.log('\n========================================')
-    console.log('         이메일 처리 완료')
-    console.log('========================================\n')
+    console.log("\n========================================")
+    console.log("         이메일 처리 완료")
+    console.log("========================================\n")
   }
 }
 

@@ -46,7 +46,7 @@ export function Combobox({
           aria-expanded={open}
           className={cn(
             "w-full justify-between h-11 border-gray-200 hover:bg-gray-50 focus:border-indigo-500 focus:ring-indigo-500",
-            className
+            className,
           )}
           disabled={disabled}
         >
@@ -76,7 +76,7 @@ export function Combobox({
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
+                      value === option.value ? "opacity-100" : "opacity-0",
                     )}
                   />
                   <div className="flex flex-col">

@@ -48,7 +48,7 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
   // 이메일 계정 목록 조회
   const { data: emailAccounts = [] } = useEmailAccountsByWorkspace(
     sequence.workspaceId,
-    Boolean(sequence.workspaceId)
+    Boolean(sequence.workspaceId),
   )
 
   // 고객그룹의 멤버 목록 조회
@@ -56,7 +56,7 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
     sequence.customerGroupId || "",
     1,
     1000,
-    Boolean(sequence.customerGroupId)
+    Boolean(sequence.customerGroupId),
   )
 
   const members = (membersData?.members || []) as CustomerGroupMemberWithLead[]
@@ -99,7 +99,7 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
         onSuccess: () => {
           onOpenChange(false)
         },
-      }
+      },
     )
   }
 

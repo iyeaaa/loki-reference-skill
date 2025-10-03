@@ -1,36 +1,36 @@
 // 응답 코드 정의
 export const ResponseCode = {
   // Success codes
-  SUCCESS: 'S200',
-  CREATED: 'S201',
-  ACCEPTED: 'S202',
-  NO_CONTENT: 'S204',
+  SUCCESS: "S200",
+  CREATED: "S201",
+  ACCEPTED: "S202",
+  NO_CONTENT: "S204",
 
   // Client error codes
-  BAD_REQUEST: 'E400',
-  UNAUTHORIZED: 'E401',
-  FORBIDDEN: 'E403',
-  NOT_FOUND: 'E404',
-  CONFLICT: 'E409',
-  VALIDATION_ERROR: 'E422',
-  TOO_MANY_REQUESTS: 'E429',
+  BAD_REQUEST: "E400",
+  UNAUTHORIZED: "E401",
+  FORBIDDEN: "E403",
+  NOT_FOUND: "E404",
+  CONFLICT: "E409",
+  VALIDATION_ERROR: "E422",
+  TOO_MANY_REQUESTS: "E429",
 
   // Server error codes
-  INTERNAL_ERROR: 'E500',
-  NOT_IMPLEMENTED: 'E501',
-  SERVICE_UNAVAILABLE: 'E503',
+  INTERNAL_ERROR: "E500",
+  NOT_IMPLEMENTED: "E501",
+  SERVICE_UNAVAILABLE: "E503",
 
   // Business logic codes
-  DUPLICATE_EMAIL: 'B001',
-  INVALID_TOKEN: 'B002',
-  EXPIRED_TOKEN: 'B003',
-  INSUFFICIENT_PERMISSION: 'B004',
+  DUPLICATE_EMAIL: "B001",
+  INVALID_TOKEN: "B002",
+  EXPIRED_TOKEN: "B003",
+  INSUFFICIENT_PERMISSION: "B004",
 } as const
 
 export type ResponseCodeType = (typeof ResponseCode)[keyof typeof ResponseCode]
 
 // 공통 응답 인터페이스
-export interface CommonResponse<T = any> {
+export interface CommonResponse<T = unknown> {
   success: boolean
   code: ResponseCodeType
   message: string
@@ -42,7 +42,7 @@ export interface CommonResponse<T = any> {
 // 성공 응답 생성 함수
 export function successResponse<T>(
   data: T,
-  message: string = '정상 처리되었습니다.',
+  message: string = "정상 처리되었습니다.",
   code: ResponseCodeType = ResponseCode.SUCCESS,
 ): CommonResponse<T> {
   return {

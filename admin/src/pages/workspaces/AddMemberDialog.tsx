@@ -42,7 +42,7 @@ export function AddMemberDialog({
   const [selectedUserId, setSelectedUserId] = useState("")
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [selectedRole, setSelectedRole] = useState<"owner" | "admin" | "member" | "viewer">(
-    "member"
+    "member",
   )
   const [userOpen, setUserOpen] = useState(false)
   const [userSearch, setUserSearch] = useState("")
@@ -64,7 +64,7 @@ export function AddMemberDialog({
       limit: 50,
       page: 1,
     },
-    { enabled: debouncedSearch.length > 0 }
+    { enabled: debouncedSearch.length > 0 },
   )
 
   const addMember = useAddWorkspaceMember()
@@ -97,7 +97,7 @@ export function AddMemberDialog({
           setDebouncedSearch("")
           onClose()
         },
-      }
+      },
     )
   }
 

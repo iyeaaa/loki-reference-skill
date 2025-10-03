@@ -1,11 +1,11 @@
-import { Elysia } from 'elysia'
+import { Elysia } from "elysia"
 
 export const healthRoutes = new Elysia()
-  .get('/health', () => ({
-    status: 'ok',
+  .get("/health", () => ({
+    status: "ok",
     timestamp: new Date().toISOString(),
   }))
-  .get('/api/health', () => ({
-    status: 'ok',
+  .get("/api/health", () => ({
+    status: "ok",
     timestamp: new Date().toISOString(),
   }))

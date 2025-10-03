@@ -58,7 +58,7 @@ export function UserForm({
   const filteredDepartments = departments.filter(
     (dept) =>
       dept.name.toLowerCase().includes(departmentSearch.toLowerCase()) ||
-      dept.code.toLowerCase().includes(departmentSearch.toLowerCase())
+      dept.code.toLowerCase().includes(departmentSearch.toLowerCase()),
   )
 
   const handleSubmit = (e: React.FormEvent) => {

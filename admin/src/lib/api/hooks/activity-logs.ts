@@ -51,7 +51,7 @@ export function useActivityLogsByEntity(
   entityId: string,
   limit = 50,
   offset = 0,
-  enabled = true
+  enabled = true,
 ) {
   return useQuery({
     queryKey: activityLogKeys.entity(entityType, entityId),

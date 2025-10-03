@@ -29,7 +29,7 @@ export const workflowEmailsApi = {
   generateAll: async (
     sequenceId: string,
     nodeId: string,
-    data: GenerateAllEmailsRequest
+    data: GenerateAllEmailsRequest,
   ): Promise<GenerateAllEmailsResponse> => {
     return apiFetch(`/api/v1/sequences/${sequenceId}/nodes/${nodeId}/generate-emails`, {
       method: "POST",
@@ -41,7 +41,7 @@ export const workflowEmailsApi = {
   get: async (
     sequenceId: string,
     nodeId: string,
-    emailId: string
+    emailId: string,
   ): Promise<WorkflowGeneratedEmail> => {
     return apiFetch(`/api/v1/sequences/${sequenceId}/nodes/${nodeId}/generated-emails/${emailId}`)
   },
@@ -51,7 +51,7 @@ export const workflowEmailsApi = {
     sequenceId: string,
     nodeId: string,
     emailId: string,
-    data: UpdateGeneratedEmailRequest
+    data: UpdateGeneratedEmailRequest,
   ): Promise<WorkflowGeneratedEmail> => {
     return apiFetch(`/api/v1/sequences/${sequenceId}/nodes/${nodeId}/generated-emails/${emailId}`, {
       method: "PATCH",
@@ -70,13 +70,13 @@ export const workflowEmailsApi = {
   regenerate: async (
     sequenceId: string,
     nodeId: string,
-    emailId: string
+    emailId: string,
   ): Promise<{ message: string; email: WorkflowGeneratedEmail }> => {
     return apiFetch(
       `/api/v1/sequences/${sequenceId}/nodes/${nodeId}/generated-emails/${emailId}/regenerate`,
       {
         method: "POST",
-      }
+      },
     )
   },
 

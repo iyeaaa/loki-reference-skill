@@ -55,7 +55,7 @@ export default function SequencesPage() {
         onSuccess: () => {
           setIsCreating(false)
         },
-      }
+      },
     )
   }
 
@@ -74,7 +74,7 @@ export default function SequencesPage() {
         onSuccess: () => {
           setEditingSequence(null)
         },
-      }
+      },
     )
   }
 
@@ -83,7 +83,7 @@ export default function SequencesPage() {
 
     if (
       !confirm(
-        `선택한 ${selectedSequences.length}개의 시퀀스를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`
+        `선택한 ${selectedSequences.length}개의 시퀀스를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`,
       )
     )
       return
@@ -108,7 +108,7 @@ export default function SequencesPage() {
           onSuccess: () => {
             setSelectedSequences([])
           },
-        }
+        },
       )
     }
   }
@@ -136,7 +136,7 @@ export default function SequencesPage() {
 
   const toggleSequenceSelection = useCallback((sequenceId: string) => {
     setSelectedSequences((prev) =>
-      prev.includes(sequenceId) ? prev.filter((id) => id !== sequenceId) : [...prev, sequenceId]
+      prev.includes(sequenceId) ? prev.filter((id) => id !== sequenceId) : [...prev, sequenceId],
     )
   }, [])
 

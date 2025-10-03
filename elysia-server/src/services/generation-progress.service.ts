@@ -9,7 +9,7 @@ interface GenerationProgress {
   total: number
   generated: number
   failed: number
-  status: 'generating' | 'completed' | 'failed'
+  status: "generating" | "completed" | "failed"
   startedAt: Date
   completedAt?: Date
   errors?: Array<{ leadId: string; error: string }>
@@ -33,7 +33,7 @@ export function initProgress(sequenceId: string, nodeId: string, total: number):
     total,
     generated: 0,
     failed: 0,
-    status: 'generating',
+    status: "generating",
     startedAt: new Date(),
   })
 
@@ -80,7 +80,7 @@ export function addError(sequenceId: string, nodeId: string, leadId: string, err
 export function completeProgress(
   sequenceId: string,
   nodeId: string,
-  status: 'completed' | 'failed',
+  status: "completed" | "failed",
 ) {
   const key = getProgressKey(sequenceId, nodeId)
   const progress = progressStore.get(key)

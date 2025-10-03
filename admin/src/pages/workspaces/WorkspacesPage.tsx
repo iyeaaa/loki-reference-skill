@@ -86,7 +86,7 @@ export default function WorkspacesPage() {
         onSuccess: () => {
           setEditingWorkspace(null)
         },
-      }
+      },
     )
   }
 
@@ -95,7 +95,7 @@ export default function WorkspacesPage() {
 
     if (
       !confirm(
-        `선택한 ${selectedWorkspaces.length}개의 워크스페이스를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`
+        `선택한 ${selectedWorkspaces.length}개의 워크스페이스를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`,
       )
     )
       return
@@ -120,7 +120,7 @@ export default function WorkspacesPage() {
           onSuccess: () => {
             setSelectedWorkspaces([])
           },
-        }
+        },
       )
     }
   }
@@ -149,7 +149,7 @@ export default function WorkspacesPage() {
 
   const toggleWorkspaceSelection = useCallback((workspaceId: string) => {
     setSelectedWorkspaces((prev) =>
-      prev.includes(workspaceId) ? prev.filter((id) => id !== workspaceId) : [...prev, workspaceId]
+      prev.includes(workspaceId) ? prev.filter((id) => id !== workspaceId) : [...prev, workspaceId],
     )
   }, [])
 

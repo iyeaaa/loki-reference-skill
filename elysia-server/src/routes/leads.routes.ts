@@ -1,13 +1,13 @@
-import { Elysia, t } from 'elysia'
-import * as leadService from '../services/lead.service'
-import { errorResponse, ResponseCode } from '../types/response.types'
+import { Elysia, t } from "elysia"
+import * as leadService from "../services/lead.service"
+import { errorResponse, ResponseCode } from "../types/response.types"
 
 const contactSchema = t.Object({
   contactType: t.Union([
-    t.Literal('phone'),
-    t.Literal('email'),
-    t.Literal('fax'),
-    t.Literal('other'),
+    t.Literal("phone"),
+    t.Literal("email"),
+    t.Literal("fax"),
+    t.Literal("other"),
   ]),
   contactValue: t.String({ maxLength: 255 }),
   label: t.Optional(t.String({ maxLength: 100 })),
@@ -16,17 +16,17 @@ const contactSchema = t.Object({
 
 const socialMediaSchema = t.Object({
   platform: t.Union([
-    t.Literal('facebook'),
-    t.Literal('instagram'),
-    t.Literal('twitter'),
-    t.Literal('linkedin'),
+    t.Literal("facebook"),
+    t.Literal("instagram"),
+    t.Literal("twitter"),
+    t.Literal("linkedin"),
   ]),
   url: t.String({ maxLength: 500 }),
   username: t.Optional(t.String({ maxLength: 255 })),
 })
 
 const leadSchema = t.Object({
-  workspaceId: t.String({ format: 'uuid' }),
+  workspaceId: t.String({ format: "uuid" }),
   companyName: t.Optional(t.String({ maxLength: 255 })),
   foundCompanyName: t.Optional(t.String({ maxLength: 255 })),
   websiteUrl: t.Optional(t.String({ maxLength: 500 })),
@@ -45,13 +45,13 @@ const leadSchema = t.Object({
   leadSource: t.Optional(t.String({ maxLength: 100 })),
   leadStatus: t.Optional(
     t.Union([
-      t.Literal('new'),
-      t.Literal('contacted'),
-      t.Literal('qualified'),
-      t.Literal('unqualified'),
-      t.Literal('converted'),
-      t.Literal('lost'),
-      t.Literal('unsubscribed'),
+      t.Literal("new"),
+      t.Literal("contacted"),
+      t.Literal("qualified"),
+      t.Literal("unqualified"),
+      t.Literal("converted"),
+      t.Literal("lost"),
+      t.Literal("unsubscribed"),
     ]),
   ),
   leadScore: t.Optional(t.Number()),
@@ -60,7 +60,7 @@ const leadSchema = t.Object({
   gptTimeSeconds: t.Optional(t.String()),
   collectedAt: t.Optional(t.String()),
   errorMessage: t.Optional(t.String()),
-  createdBy: t.Optional(t.String({ format: 'uuid' })),
+  createdBy: t.Optional(t.String({ format: "uuid" })),
   contacts: t.Optional(t.Array(contactSchema)),
   socialMedia: t.Optional(t.Array(socialMediaSchema)),
 })
@@ -84,13 +84,13 @@ const updateLeadSchema = t.Object({
   leadSource: t.Optional(t.String({ maxLength: 100 })),
   leadStatus: t.Optional(
     t.Union([
-      t.Literal('new'),
-      t.Literal('contacted'),
-      t.Literal('qualified'),
-      t.Literal('unqualified'),
-      t.Literal('converted'),
-      t.Literal('lost'),
-      t.Literal('unsubscribed'),
+      t.Literal("new"),
+      t.Literal("contacted"),
+      t.Literal("qualified"),
+      t.Literal("unqualified"),
+      t.Literal("converted"),
+      t.Literal("lost"),
+      t.Literal("unsubscribed"),
     ]),
   ),
   leadScore: t.Optional(t.Number()),
@@ -99,24 +99,32 @@ const updateLeadSchema = t.Object({
   socialMedia: t.Optional(t.Array(socialMediaSchema)),
 })
 
-export const leadRoutes = new Elysia({ prefix: '/api/v1/leads' })
+export const leadRoutes = new Elysia({ prefix: "/api/v1/leads" })
   // Search leads with filters (must be before /:id route)
   .get(
-    '/search',
+    "/search",
     async ({ query }) => {
-      const limit = parseInt(query.limit || '10', 10)
-      const offset = parseInt(query.offset || '0', 10)
+      const limit = parseInt(query.limit || "10", 10)
+      const offset = parseInt(query.offset || "0", 10)
 
       // Parse workspaceIds and createdByIds from comma-separated string
       const workspaceIds = query.workspaceIds
-        ? query.workspaceIds.split(',').filter(Boolean)
+        ? query.workspaceIds.split(",").filter(Boolean)
         : undefined
       const createdByIds = query.createdByIds
-        ? query.createdByIds.split(',').filter(Boolean)
+        ? query.createdByIds.split(",").filter(Boolean)
         : undefined
 
       const filters = {
-        leadStatus: query.leadStatus as any,
+        leadStatus: query.leadStatus as
+          | "new"
+          | "contacted"
+          | "qualified"
+          | "unqualified"
+          | "converted"
+          | "lost"
+          | "unsubscribed"
+          | undefined,
         businessType: query.businessType,
         country: query.country,
         city: query.city,
@@ -154,24 +162,35 @@ export const leadRoutes = new Elysia({ prefix: '/api/v1/leads' })
 
   // Get leads by status
   .get(
-    '/status/:status',
+    "/status/:status",
     async ({ params: { status }, query }) => {
-      const limit = parseInt(query.limit || '10', 10)
-      const offset = parseInt(query.offset || '0', 10)
+      const limit = parseInt(query.limit || "10", 10)
+      const offset = parseInt(query.offset || "0", 10)
 
-      const leads = await leadService.getLeadsByStatus(status as any, limit, offset)
+      const leads = await leadService.getLeadsByStatus(
+        status as
+          | "new"
+          | "contacted"
+          | "qualified"
+          | "unqualified"
+          | "converted"
+          | "lost"
+          | "unsubscribed",
+        limit,
+        offset,
+      )
       return leads
     },
     {
       params: t.Object({
         status: t.Union([
-          t.Literal('new'),
-          t.Literal('contacted'),
-          t.Literal('qualified'),
-          t.Literal('unqualified'),
-          t.Literal('converted'),
-          t.Literal('lost'),
-          t.Literal('unsubscribed'),
+          t.Literal("new"),
+          t.Literal("contacted"),
+          t.Literal("qualified"),
+          t.Literal("unqualified"),
+          t.Literal("converted"),
+          t.Literal("lost"),
+          t.Literal("unsubscribed"),
         ]),
       }),
       query: t.Object({
@@ -183,27 +202,33 @@ export const leadRoutes = new Elysia({ prefix: '/api/v1/leads' })
 
   // Get lead by ID
   .get(
-    '/:id',
+    "/:id",
     async ({ params: { id }, set }) => {
       const lead = await leadService.getLead(id)
       if (!lead) {
         set.status = 404
-        return errorResponse('리드를 찾을 수 없습니다.', ResponseCode.NOT_FOUND)
+        return errorResponse("리드를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
       }
       return lead
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Create new lead
   .post(
-    '/',
+    "/",
     async ({ body }) => {
-      const lead = await leadService.createLead(body)
+      const leadData = {
+        ...body,
+        collectedAt: body.collectedAt ? new Date(body.collectedAt) : undefined,
+      }
+      const lead = await leadService.createLead(
+        leadData as Parameters<typeof leadService.createLead>[0],
+      )
       return lead
     },
     {
@@ -213,14 +238,14 @@ export const leadRoutes = new Elysia({ prefix: '/api/v1/leads' })
 
   // Bulk create leads
   .post(
-    '/bulk',
+    "/bulk",
     async ({ body }) => {
       const leads = await leadService.bulkCreateLeads(body)
       return { leads }
     },
     {
       body: t.Object({
-        workspaceId: t.String({ format: 'uuid' }),
+        workspaceId: t.String({ format: "uuid" }),
         leads: t.Array(
           t.Object({
             companyName: t.String(),
@@ -244,25 +269,25 @@ export const leadRoutes = new Elysia({ prefix: '/api/v1/leads' })
             secondaryPhone: t.Optional(t.String()),
           }),
         ),
-        createdBy: t.Optional(t.String({ format: 'uuid' })),
+        createdBy: t.Optional(t.String({ format: "uuid" })),
       }),
     },
   )
 
   // Update lead
   .put(
-    '/:id',
+    "/:id",
     async ({ params: { id }, body, set }) => {
       const lead = await leadService.updateLead(id, body)
       if (!lead) {
         set.status = 404
-        return errorResponse('리드를 찾을 수 없습니다.', ResponseCode.NOT_FOUND)
+        return errorResponse("리드를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
       }
       return lead
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
       body: updateLeadSchema,
     },
@@ -270,24 +295,24 @@ export const leadRoutes = new Elysia({ prefix: '/api/v1/leads' })
 
   // Delete lead
   .delete(
-    '/:id',
+    "/:id",
     async ({ params: { id } }) => {
       await leadService.deleteLead(id)
-      return { success: true, message: '리드가 삭제되었습니다.' }
+      return { success: true, message: "리드가 삭제되었습니다." }
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // List leads with pagination
   .get(
-    '/',
+    "/",
     async ({ query }) => {
-      const limit = parseInt(query.limit || '10', 10)
-      const offset = parseInt(query.offset || '0', 10)
+      const limit = parseInt(query.limit || "10", 10)
+      const offset = parseInt(query.offset || "0", 10)
 
       const leads = await leadService.listLeads(limit, offset)
       const total = await leadService.countLeads()
@@ -309,10 +334,10 @@ export const leadRoutes = new Elysia({ prefix: '/api/v1/leads' })
 
   // Get leads by workspace
   .get(
-    '/workspace/:workspaceId',
+    "/workspace/:workspaceId",
     async ({ params: { workspaceId }, query }) => {
-      const limit = parseInt(query.limit || '10', 10)
-      const offset = parseInt(query.offset || '0', 10)
+      const limit = parseInt(query.limit || "10", 10)
+      const offset = parseInt(query.offset || "0", 10)
 
       const leads = await leadService.getLeadsByWorkspace(workspaceId, limit, offset)
       const total = await leadService.countLeadsByWorkspace(workspaceId)
@@ -326,7 +351,7 @@ export const leadRoutes = new Elysia({ prefix: '/api/v1/leads' })
     },
     {
       params: t.Object({
-        workspaceId: t.String({ format: 'uuid' }),
+        workspaceId: t.String({ format: "uuid" }),
       }),
       query: t.Object({
         limit: t.Optional(t.String()),
@@ -336,25 +361,25 @@ export const leadRoutes = new Elysia({ prefix: '/api/v1/leads' })
   )
 
 // Admin bulk update routes
-export const adminLeadRoutes = new Elysia({ prefix: '/api/v1/admin/leads' })
+export const adminLeadRoutes = new Elysia({ prefix: "/api/v1/admin/leads" })
   // Bulk update status
   .put(
-    '/bulk/status',
+    "/bulk/status",
     async ({ body }) => {
       const updatedCount = await leadService.bulkUpdateStatus(body.leadIds, body.leadStatus)
       return { updatedCount }
     },
     {
       body: t.Object({
-        leadIds: t.Array(t.String({ format: 'uuid' })),
+        leadIds: t.Array(t.String({ format: "uuid" })),
         leadStatus: t.Union([
-          t.Literal('new'),
-          t.Literal('contacted'),
-          t.Literal('qualified'),
-          t.Literal('unqualified'),
-          t.Literal('converted'),
-          t.Literal('lost'),
-          t.Literal('unsubscribed'),
+          t.Literal("new"),
+          t.Literal("contacted"),
+          t.Literal("qualified"),
+          t.Literal("unqualified"),
+          t.Literal("converted"),
+          t.Literal("lost"),
+          t.Literal("unsubscribed"),
         ]),
       }),
     },
@@ -362,28 +387,28 @@ export const adminLeadRoutes = new Elysia({ prefix: '/api/v1/admin/leads' })
 
   // Bulk delete
   .delete(
-    '/bulk',
+    "/bulk",
     async ({ body }) => {
       const deletedCount = await leadService.bulkDelete(body.leadIds)
       return { deletedCount }
     },
     {
       body: t.Object({
-        leadIds: t.Array(t.String({ format: 'uuid' })),
+        leadIds: t.Array(t.String({ format: "uuid" })),
       }),
     },
   )
 
   // Bulk update business type
   .put(
-    '/bulk/business-type',
+    "/bulk/business-type",
     async ({ body }) => {
       const updatedCount = await leadService.bulkUpdateBusinessType(body.leadIds, body.businessType)
       return { updatedCount }
     },
     {
       body: t.Object({
-        leadIds: t.Array(t.String({ format: 'uuid' })),
+        leadIds: t.Array(t.String({ format: "uuid" })),
         businessType: t.String({ maxLength: 100 }),
       }),
     },
@@ -391,84 +416,84 @@ export const adminLeadRoutes = new Elysia({ prefix: '/api/v1/admin/leads' })
 
   // Get lead contacts
   .get(
-    '/:id/contacts',
+    "/:id/contacts",
     async ({ params }) => {
       const contacts = await leadService.getLeadContacts(params.id)
       return { contacts }
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Get lead social media
   .get(
-    '/:id/social-media',
+    "/:id/social-media",
     async ({ params }) => {
       const socialMedia = await leadService.getLeadSocialMedia(params.id)
       return { socialMedia }
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Get lead products
   .get(
-    '/:id/products',
+    "/:id/products",
     async ({ params }) => {
       const products = await leadService.getLeadProducts(params.id)
       return { products }
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Get lead business sectors
   .get(
-    '/:id/business-sectors',
+    "/:id/business-sectors",
     async ({ params }) => {
       const businessSectors = await leadService.getLeadBusinessSectors(params.id)
       return { businessSectors }
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Get lead product categories
   .get(
-    '/:id/product-categories',
+    "/:id/product-categories",
     async ({ params }) => {
       const productCategories = await leadService.getLeadProductCategories(params.id)
       return { productCategories }
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Get lead industry types
   .get(
-    '/:id/industry-types',
+    "/:id/industry-types",
     async ({ params }) => {
       const industryTypes = await leadService.getLeadIndustryTypes(params.id)
       return { industryTypes }
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )

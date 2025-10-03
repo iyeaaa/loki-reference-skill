@@ -1,10 +1,10 @@
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
-import { db } from '../db/index'
-import { customerGroupMembers, customerGroups } from '../db/schema/customer-groups'
-import { leadContacts } from '../db/schema/lead-details'
-import { leads } from '../db/schema/leads'
-import { users } from '../db/schema/users'
-import { workspaces } from '../db/schema/workspaces'
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { db } from "../db/index"
+import { customerGroupMembers, customerGroups } from "../db/schema/customer-groups"
+import { leadContacts } from "../db/schema/lead-details"
+import { leads } from "../db/schema/leads"
+import { users } from "../db/schema/users"
+import { workspaces } from "../db/schema/workspaces"
 
 // ====================================
 // CUSTOMER GROUP CRUD OPERATIONS
@@ -41,7 +41,7 @@ export async function createCustomerGroup(data: {
   workspaceId: string
   name: string
   description?: string
-  criteria?: any
+  criteria?: Record<string, unknown>
   isDynamic?: boolean
   createdBy?: string
   csvData?: Array<{
@@ -126,7 +126,7 @@ async function createLeadsFromCSV(
     const [newLead] = await db
       .insert(leads)
       .values({
-        workspaceId: (await getCustomerGroup(groupId))?.workspaceId || '',
+        workspaceId: (await getCustomerGroup(groupId))?.workspaceId || "",
         companyName: leadData.companyName,
         foundCompanyName: leadData.foundCompanyName || null,
         businessType: leadData.businessType || null,
@@ -138,8 +138,16 @@ async function createLeadsFromCSV(
         city: leadData.city || null,
         state: leadData.state || null,
         address: leadData.address || null,
-        leadSource: leadData.leadSource || 'CSV Import',
-        leadStatus: (leadData.leadStatus as any) || 'new',
+        leadSource: leadData.leadSource || "CSV Import",
+        leadStatus:
+          (leadData.leadStatus as
+            | "new"
+            | "contacted"
+            | "qualified"
+            | "unqualified"
+            | "converted"
+            | "lost"
+            | "unsubscribed") || "new",
         leadScore: leadData.leadScore || null,
         notes: leadData.notes || null,
         createdBy: createdBy || null,
@@ -156,9 +164,9 @@ async function createLeadsFromCSV(
       if (leadData.primaryEmail) {
         contactsToInsert.push({
           leadId: newLead.id,
-          contactType: 'email' as const,
+          contactType: "email" as const,
           contactValue: leadData.primaryEmail,
-          label: 'primary',
+          label: "primary",
           isPrimary: true,
           isVerified: false,
         })
@@ -168,9 +176,9 @@ async function createLeadsFromCSV(
       if (leadData.primaryPhone) {
         contactsToInsert.push({
           leadId: newLead.id,
-          contactType: 'phone' as const,
+          contactType: "phone" as const,
           contactValue: leadData.primaryPhone,
-          label: 'primary',
+          label: "primary",
           isPrimary: true,
           isVerified: false,
         })
@@ -180,9 +188,9 @@ async function createLeadsFromCSV(
       if (leadData.secondaryEmail) {
         contactsToInsert.push({
           leadId: newLead.id,
-          contactType: 'email' as const,
+          contactType: "email" as const,
           contactValue: leadData.secondaryEmail,
-          label: 'secondary',
+          label: "secondary",
           isPrimary: false,
           isVerified: false,
         })
@@ -192,9 +200,9 @@ async function createLeadsFromCSV(
       if (leadData.secondaryPhone) {
         contactsToInsert.push({
           leadId: newLead.id,
-          contactType: 'phone' as const,
+          contactType: "phone" as const,
           contactValue: leadData.secondaryPhone,
-          label: 'secondary',
+          label: "secondary",
           isPrimary: false,
           isVerified: false,
         })
@@ -225,7 +233,7 @@ export async function updateCustomerGroup(
   data: {
     name: string
     description?: string
-    criteria?: any
+    criteria?: Record<string, unknown>
     isDynamic: boolean
   },
 ) {
@@ -308,20 +316,31 @@ export async function listCustomerGroupsWithFilters(
   }
 
   if (filters?.search) {
-    conditions.push(
-      or(
-        ilike(customerGroups.name, `%${filters.search}%`),
-        ilike(customerGroups.description, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(customerGroups.name, `%${filters.search}%`),
+      ilike(customerGroups.description, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
-    conditions.push(or(...filters.workspaceIds.map((id) => eq(customerGroups.workspaceId, id)))!)
+    const workspaceCondition = or(
+      ...filters.workspaceIds.map((id) => eq(customerGroups.workspaceId, id)),
+    )
+    if (workspaceCondition) {
+      conditions.push(workspaceCondition)
+    }
   }
 
   if (filters?.createdByIds && filters.createdByIds.length > 0) {
-    conditions.push(or(...filters.createdByIds.map((id) => eq(customerGroups.createdBy, id)))!)
+    const createdByCondition = or(
+      ...filters.createdByIds.map((id) => eq(customerGroups.createdBy, id)),
+    )
+    if (createdByCondition) {
+      conditions.push(createdByCondition)
+    }
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -406,20 +425,31 @@ export async function countCustomerGroupsWithFilters(filters?: {
   }
 
   if (filters?.search) {
-    conditions.push(
-      or(
-        ilike(customerGroups.name, `%${filters.search}%`),
-        ilike(customerGroups.description, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(customerGroups.name, `%${filters.search}%`),
+      ilike(customerGroups.description, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
-    conditions.push(or(...filters.workspaceIds.map((id) => eq(customerGroups.workspaceId, id)))!)
+    const workspaceCondition = or(
+      ...filters.workspaceIds.map((id) => eq(customerGroups.workspaceId, id)),
+    )
+    if (workspaceCondition) {
+      conditions.push(workspaceCondition)
+    }
   }
 
   if (filters?.createdByIds && filters.createdByIds.length > 0) {
-    conditions.push(or(...filters.createdByIds.map((id) => eq(customerGroups.createdBy, id)))!)
+    const createdByCondition = or(
+      ...filters.createdByIds.map((id) => eq(customerGroups.createdBy, id)),
+    )
+    if (createdByCondition) {
+      conditions.push(createdByCondition)
+    }
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -438,9 +468,14 @@ export async function countCustomerGroupsWithFilters(filters?: {
 
 // BulkDeleteCustomerGroups :exec
 export async function bulkDeleteCustomerGroups(groupIds: string[]) {
+  const deleteCondition = or(...groupIds.map((id) => eq(customerGroups.id, id)))
+  if (!deleteCondition) {
+    return 0
+  }
+
   const result = await db
     .delete(customerGroups)
-    .where(or(...groupIds.map((id) => eq(customerGroups.id, id)))!)
+    .where(deleteCondition)
     .returning({ id: customerGroups.id })
 
   return result.length
@@ -577,14 +612,14 @@ export async function bulkAddMembers(data: {
 
 // BulkRemoveMembers :exec
 export async function bulkRemoveMembers(groupId: string, leadIds: string[]) {
+  const leadCondition = or(...leadIds.map((leadId) => eq(customerGroupMembers.leadId, leadId)))
+  if (!leadCondition) {
+    return 0
+  }
+
   const result = await db
     .delete(customerGroupMembers)
-    .where(
-      and(
-        eq(customerGroupMembers.groupId, groupId),
-        or(...leadIds.map((leadId) => eq(customerGroupMembers.leadId, leadId)))!,
-      ),
-    )
+    .where(and(eq(customerGroupMembers.groupId, groupId), leadCondition))
     .returning({ id: customerGroupMembers.id })
 
   return result.length
@@ -609,7 +644,7 @@ export async function getGroupMembersWithEmails(groupId: string) {
          AND ${leadContacts.isPrimary} = true 
          LIMIT 1),
         LOWER(REPLACE(${leads.companyName}, ' ', '.')) || '@example.com'
-      )`.as('primaryEmail'),
+      )`.as("primaryEmail"),
     })
     .from(customerGroupMembers)
     .innerJoin(leads, eq(customerGroupMembers.leadId, leads.id))

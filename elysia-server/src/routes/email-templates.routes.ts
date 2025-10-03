@@ -1,9 +1,9 @@
-import { Elysia, t } from 'elysia'
-import * as emailTemplateService from '../services/email-template.service'
-import { errorResponse, ResponseCode } from '../types/response.types'
+import { Elysia, t } from "elysia"
+import * as emailTemplateService from "../services/email-template.service"
+import { errorResponse, ResponseCode } from "../types/response.types"
 
 const emailTemplateSchema = t.Object({
-  workspaceId: t.String({ format: 'uuid' }),
+  workspaceId: t.String({ format: "uuid" }),
   name: t.String({ minLength: 1, maxLength: 255 }),
   description: t.Optional(t.String()),
   subject: t.String({ minLength: 1, maxLength: 500 }),
@@ -12,7 +12,7 @@ const emailTemplateSchema = t.Object({
   variables: t.Optional(t.Any()),
   category: t.Optional(t.String({ maxLength: 100 })),
   isShared: t.Optional(t.Boolean()),
-  createdBy: t.Optional(t.String({ format: 'uuid' })),
+  createdBy: t.Optional(t.String({ format: "uuid" })),
 })
 
 const updateEmailTemplateSchema = t.Object({
@@ -26,24 +26,24 @@ const updateEmailTemplateSchema = t.Object({
   isShared: t.Boolean(),
 })
 
-export const emailTemplateRoutes = new Elysia({ prefix: '/api/v1/email-templates' })
+export const emailTemplateRoutes = new Elysia({ prefix: "/api/v1/email-templates" })
   // Search email templates with filters (must be before /:id route)
   .get(
-    '/search',
+    "/search",
     async ({ query }) => {
-      const limit = parseInt(query.limit || '10', 10)
-      const offset = parseInt(query.offset || '0', 10)
+      const limit = parseInt(query.limit || "10", 10)
+      const offset = parseInt(query.offset || "0", 10)
 
       // Parse workspaceIds and createdByIds from comma-separated string
       const workspaceIds = query.workspaceIds
-        ? query.workspaceIds.split(',').filter(Boolean)
+        ? query.workspaceIds.split(",").filter(Boolean)
         : undefined
       const createdByIds = query.createdByIds
-        ? query.createdByIds.split(',').filter(Boolean)
+        ? query.createdByIds.split(",").filter(Boolean)
         : undefined
 
       const filters = {
-        isShared: query.isShared ? query.isShared === 'true' : undefined,
+        isShared: query.isShared ? query.isShared === "true" : undefined,
         search: query.search,
         category: query.category,
         workspaceIds,
@@ -79,53 +79,53 @@ export const emailTemplateRoutes = new Elysia({ prefix: '/api/v1/email-templates
 
   // Get template categories for workspace
   .get(
-    '/workspace/:workspaceId/categories',
+    "/workspace/:workspaceId/categories",
     async ({ params: { workspaceId } }) => {
       const categories = await emailTemplateService.getTemplateCategories(workspaceId)
       return categories
     },
     {
       params: t.Object({
-        workspaceId: t.String({ format: 'uuid' }),
+        workspaceId: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Get shared templates for workspace
   .get(
-    '/workspace/:workspaceId/shared',
+    "/workspace/:workspaceId/shared",
     async ({ params: { workspaceId } }) => {
       const templates = await emailTemplateService.getSharedEmailTemplates(workspaceId)
       return templates
     },
     {
       params: t.Object({
-        workspaceId: t.String({ format: 'uuid' }),
+        workspaceId: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Get email template by ID
   .get(
-    '/:id',
+    "/:id",
     async ({ params: { id }, set }) => {
       const template = await emailTemplateService.getEmailTemplate(id)
       if (!template) {
         set.status = 404
-        return errorResponse('이메일 템플릿을 찾을 수 없습니다.', ResponseCode.NOT_FOUND)
+        return errorResponse("이메일 템플릿을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
       }
       return template
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Create new email template
   .post(
-    '/',
+    "/",
     async ({ body }) => {
       const template = await emailTemplateService.createEmailTemplate(body)
       return template
@@ -137,18 +137,18 @@ export const emailTemplateRoutes = new Elysia({ prefix: '/api/v1/email-templates
 
   // Update email template
   .put(
-    '/:id',
+    "/:id",
     async ({ params: { id }, body, set }) => {
       const template = await emailTemplateService.updateEmailTemplate(id, body)
       if (!template) {
         set.status = 404
-        return errorResponse('이메일 템플릿을 찾을 수 없습니다.', ResponseCode.NOT_FOUND)
+        return errorResponse("이메일 템플릿을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
       }
       return template
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
       body: updateEmailTemplateSchema,
     },
@@ -156,24 +156,24 @@ export const emailTemplateRoutes = new Elysia({ prefix: '/api/v1/email-templates
 
   // Delete email template
   .delete(
-    '/:id',
+    "/:id",
     async ({ params: { id } }) => {
       await emailTemplateService.deleteEmailTemplate(id)
-      return { success: true, message: '이메일 템플릿이 삭제되었습니다.' }
+      return { success: true, message: "이메일 템플릿이 삭제되었습니다." }
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // List email templates with pagination
   .get(
-    '/',
+    "/",
     async ({ query }) => {
-      const limit = parseInt(query.limit || '10', 10)
-      const offset = parseInt(query.offset || '0', 10)
+      const limit = parseInt(query.limit || "10", 10)
+      const offset = parseInt(query.offset || "0", 10)
 
       const templates = await emailTemplateService.listEmailTemplates(limit, offset)
       const total = await emailTemplateService.countEmailTemplates()
@@ -195,21 +195,21 @@ export const emailTemplateRoutes = new Elysia({ prefix: '/api/v1/email-templates
 
   // Get email templates by workspace
   .get(
-    '/workspace/:workspaceId',
+    "/workspace/:workspaceId",
     async ({ params: { workspaceId } }) => {
       const templates = await emailTemplateService.getEmailTemplatesByWorkspace(workspaceId)
       return templates
     },
     {
       params: t.Object({
-        workspaceId: t.String({ format: 'uuid' }),
+        workspaceId: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Get email templates by category
   .get(
-    '/workspace/:workspaceId/category/:category',
+    "/workspace/:workspaceId/category/:category",
     async ({ params: { workspaceId, category } }) => {
       const templates = await emailTemplateService.getEmailTemplatesByCategory(
         workspaceId,
@@ -219,31 +219,31 @@ export const emailTemplateRoutes = new Elysia({ prefix: '/api/v1/email-templates
     },
     {
       params: t.Object({
-        workspaceId: t.String({ format: 'uuid' }),
+        workspaceId: t.String({ format: "uuid" }),
         category: t.String(),
       }),
     },
   )
 
 // Admin bulk update routes
-export const adminEmailTemplateRoutes = new Elysia({ prefix: '/api/v1/admin/email-templates' })
+export const adminEmailTemplateRoutes = new Elysia({ prefix: "/api/v1/admin/email-templates" })
   // Bulk delete
   .delete(
-    '/bulk',
+    "/bulk",
     async ({ body }) => {
       const deletedCount = await emailTemplateService.bulkDeleteEmailTemplates(body.templateIds)
       return { deletedCount }
     },
     {
       body: t.Object({
-        templateIds: t.Array(t.String({ format: 'uuid' })),
+        templateIds: t.Array(t.String({ format: "uuid" })),
       }),
     },
   )
 
   // Bulk update category
   .put(
-    '/bulk/category',
+    "/bulk/category",
     async ({ body }) => {
       const updatedCount = await emailTemplateService.bulkUpdateCategory(
         body.templateIds,
@@ -253,7 +253,7 @@ export const adminEmailTemplateRoutes = new Elysia({ prefix: '/api/v1/admin/emai
     },
     {
       body: t.Object({
-        templateIds: t.Array(t.String({ format: 'uuid' })),
+        templateIds: t.Array(t.String({ format: "uuid" })),
         category: t.String({ maxLength: 100 }),
       }),
     },
@@ -261,7 +261,7 @@ export const adminEmailTemplateRoutes = new Elysia({ prefix: '/api/v1/admin/emai
 
   // Bulk update shared
   .put(
-    '/bulk/shared',
+    "/bulk/shared",
     async ({ body }) => {
       const updatedCount = await emailTemplateService.bulkUpdateShared(
         body.templateIds,
@@ -271,7 +271,7 @@ export const adminEmailTemplateRoutes = new Elysia({ prefix: '/api/v1/admin/emai
     },
     {
       body: t.Object({
-        templateIds: t.Array(t.String({ format: 'uuid' })),
+        templateIds: t.Array(t.String({ format: "uuid" })),
         isShared: t.Boolean(),
       }),
     },

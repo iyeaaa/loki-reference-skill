@@ -1,8 +1,8 @@
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
-import { db } from '../db/index'
-import { emailTemplates } from '../db/schema/email-templates'
-import { users } from '../db/schema/users'
-import { workspaces } from '../db/schema/workspaces'
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { db } from "../db/index"
+import { emailTemplates } from "../db/schema/email-templates"
+import { users } from "../db/schema/users"
+import { workspaces } from "../db/schema/workspaces"
 
 // ====================================
 // EMAIL TEMPLATE CRUD OPERATIONS
@@ -46,7 +46,7 @@ export async function createEmailTemplate(data: {
   subject: string
   bodyText?: string
   bodyHtml?: string
-  variables?: any
+  variables?: Record<string, unknown>
   category?: string
   isShared?: boolean
   createdBy?: string
@@ -93,7 +93,7 @@ export async function updateEmailTemplate(
     subject: string
     bodyText?: string
     bodyHtml?: string
-    variables?: any
+    variables?: Record<string, unknown>
     category?: string
     isShared: boolean
   },
@@ -185,13 +185,14 @@ export async function listEmailTemplatesWithFilters(
   }
 
   if (filters?.search) {
-    conditions.push(
-      or(
-        ilike(emailTemplates.name, `%${filters.search}%`),
-        ilike(emailTemplates.description, `%${filters.search}%`),
-        ilike(emailTemplates.subject, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(emailTemplates.name, `%${filters.search}%`),
+      ilike(emailTemplates.description, `%${filters.search}%`),
+      ilike(emailTemplates.subject, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (filters?.category) {
@@ -199,11 +200,21 @@ export async function listEmailTemplatesWithFilters(
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
-    conditions.push(or(...filters.workspaceIds.map((id) => eq(emailTemplates.workspaceId, id)))!)
+    const workspaceCondition = or(
+      ...filters.workspaceIds.map((id) => eq(emailTemplates.workspaceId, id)),
+    )
+    if (workspaceCondition) {
+      conditions.push(workspaceCondition)
+    }
   }
 
   if (filters?.createdByIds && filters.createdByIds.length > 0) {
-    conditions.push(or(...filters.createdByIds.map((id) => eq(emailTemplates.createdBy, id)))!)
+    const createdByCondition = or(
+      ...filters.createdByIds.map((id) => eq(emailTemplates.createdBy, id)),
+    )
+    if (createdByCondition) {
+      conditions.push(createdByCondition)
+    }
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -315,13 +326,14 @@ export async function countEmailTemplatesWithFilters(filters?: {
   }
 
   if (filters?.search) {
-    conditions.push(
-      or(
-        ilike(emailTemplates.name, `%${filters.search}%`),
-        ilike(emailTemplates.description, `%${filters.search}%`),
-        ilike(emailTemplates.subject, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(emailTemplates.name, `%${filters.search}%`),
+      ilike(emailTemplates.description, `%${filters.search}%`),
+      ilike(emailTemplates.subject, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (filters?.category) {
@@ -329,11 +341,21 @@ export async function countEmailTemplatesWithFilters(filters?: {
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
-    conditions.push(or(...filters.workspaceIds.map((id) => eq(emailTemplates.workspaceId, id)))!)
+    const workspaceCondition = or(
+      ...filters.workspaceIds.map((id) => eq(emailTemplates.workspaceId, id)),
+    )
+    if (workspaceCondition) {
+      conditions.push(workspaceCondition)
+    }
   }
 
   if (filters?.createdByIds && filters.createdByIds.length > 0) {
-    conditions.push(or(...filters.createdByIds.map((id) => eq(emailTemplates.createdBy, id)))!)
+    const createdByCondition = or(
+      ...filters.createdByIds.map((id) => eq(emailTemplates.createdBy, id)),
+    )
+    if (createdByCondition) {
+      conditions.push(createdByCondition)
+    }
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -367,9 +389,14 @@ export async function getTemplateCategories(workspaceId: string) {
 
 // BulkDelete :exec
 export async function bulkDeleteEmailTemplates(templateIds: string[]) {
+  const idCondition = or(...templateIds.map((id) => eq(emailTemplates.id, id)))
+  if (!idCondition) {
+    return 0
+  }
+
   const result = await db
     .delete(emailTemplates)
-    .where(or(...templateIds.map((id) => eq(emailTemplates.id, id)))!)
+    .where(idCondition)
     .returning({ id: emailTemplates.id })
 
   return result.length
@@ -377,13 +404,18 @@ export async function bulkDeleteEmailTemplates(templateIds: string[]) {
 
 // BulkUpdateCategory :exec
 export async function bulkUpdateCategory(templateIds: string[], category: string) {
+  const idCondition = or(...templateIds.map((id) => eq(emailTemplates.id, id)))
+  if (!idCondition) {
+    return 0
+  }
+
   const result = await db
     .update(emailTemplates)
     .set({
       category,
       updatedAt: new Date(),
     })
-    .where(or(...templateIds.map((id) => eq(emailTemplates.id, id)))!)
+    .where(idCondition)
     .returning({ id: emailTemplates.id })
 
   return result.length
@@ -391,13 +423,18 @@ export async function bulkUpdateCategory(templateIds: string[], category: string
 
 // BulkUpdateShared :exec
 export async function bulkUpdateShared(templateIds: string[], isShared: boolean) {
+  const idCondition = or(...templateIds.map((id) => eq(emailTemplates.id, id)))
+  if (!idCondition) {
+    return 0
+  }
+
   const result = await db
     .update(emailTemplates)
     .set({
       isShared,
       updatedAt: new Date(),
     })
-    .where(or(...templateIds.map((id) => eq(emailTemplates.id, id)))!)
+    .where(idCondition)
     .returning({ id: emailTemplates.id })
 
   return result.length

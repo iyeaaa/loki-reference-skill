@@ -51,7 +51,7 @@ export function WorkspaceForm({
   const filteredUsers = users.filter(
     (user) =>
       user.username.toLowerCase().includes(ownerSearch.toLowerCase()) ||
-      user.email.toLowerCase().includes(ownerSearch.toLowerCase())
+      user.email.toLowerCase().includes(ownerSearch.toLowerCase()),
   )
 
   const handleSubmit = (e: React.FormEvent) => {

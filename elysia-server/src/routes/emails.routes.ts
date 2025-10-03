@@ -1,25 +1,25 @@
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
-import { Elysia, t } from 'elysia'
-import { config } from '../config'
-import { db } from '../db/index'
-import { userEmailAccounts } from '../db/schema/email-accounts'
-import { emailEvents, emails } from '../db/schema/emails'
-import { leads } from '../db/schema/leads'
-import { sequences } from '../db/schema/sequences'
-import { workspaces } from '../db/schema/workspaces'
-import { emailService } from '../services/email.service'
-import { errorResponse, ResponseCode } from '../types/response.types'
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { Elysia, t } from "elysia"
+import { config } from "../config"
+import { db } from "../db/index"
+import { userEmailAccounts } from "../db/schema/email-accounts"
+import { emailEvents, emails } from "../db/schema/emails"
+import { leads } from "../db/schema/leads"
+import { sequences } from "../db/schema/sequences"
+import { workspaces } from "../db/schema/workspaces"
+import { emailService } from "../services/email.service"
+import { errorResponse, ResponseCode } from "../types/response.types"
 
 // Email Schema
 const emailSchema = t.Object({
-  workspaceId: t.String({ format: 'uuid' }),
-  userEmailAccountId: t.String({ format: 'uuid' }),
-  leadId: t.Optional(t.String({ format: 'uuid' })),
-  sequenceId: t.Optional(t.String({ format: 'uuid' })),
-  stepId: t.Optional(t.String({ format: 'uuid' })),
-  direction: t.Union([t.Literal('outbound'), t.Literal('inbound')]),
-  fromEmail: t.String({ format: 'email', maxLength: 255 }),
-  toEmail: t.String({ format: 'email', maxLength: 255 }),
+  workspaceId: t.String({ format: "uuid" }),
+  userEmailAccountId: t.String({ format: "uuid" }),
+  leadId: t.Optional(t.String({ format: "uuid" })),
+  sequenceId: t.Optional(t.String({ format: "uuid" })),
+  stepId: t.Optional(t.String({ format: "uuid" })),
+  direction: t.Union([t.Literal("outbound"), t.Literal("inbound")]),
+  fromEmail: t.String({ format: "email", maxLength: 255 }),
+  toEmail: t.String({ format: "email", maxLength: 255 }),
   ccEmails: t.Optional(t.Array(t.String())),
   bccEmails: t.Optional(t.Array(t.String())),
   subject: t.Optional(t.String({ maxLength: 500 })),
@@ -27,18 +27,18 @@ const emailSchema = t.Object({
   bodyHtml: t.Optional(t.String()),
   status: t.Optional(
     t.Union([
-      t.Literal('draft'),
-      t.Literal('scheduled'),
-      t.Literal('queued'),
-      t.Literal('sent'),
-      t.Literal('delivered'),
-      t.Literal('opened'),
-      t.Literal('clicked'),
-      t.Literal('replied'),
-      t.Literal('bounced'),
-      t.Literal('failed'),
-      t.Literal('spam'),
-      t.Literal('unsubscribed'),
+      t.Literal("draft"),
+      t.Literal("scheduled"),
+      t.Literal("queued"),
+      t.Literal("sent"),
+      t.Literal("delivered"),
+      t.Literal("opened"),
+      t.Literal("clicked"),
+      t.Literal("replied"),
+      t.Literal("bounced"),
+      t.Literal("failed"),
+      t.Literal("spam"),
+      t.Literal("unsubscribed"),
     ]),
   ),
   scheduledAt: t.Optional(t.String()),
@@ -46,29 +46,29 @@ const emailSchema = t.Object({
 
 // Send Email Schema
 const sendEmailSchema = t.Object({
-  toEmail: t.String({ format: 'email', maxLength: 255 }),
+  toEmail: t.String({ format: "email", maxLength: 255 }),
   subject: t.String({ minLength: 1, maxLength: 500 }),
   bodyText: t.Optional(t.String()),
   bodyHtml: t.Optional(t.String()),
-  ccEmails: t.Optional(t.Array(t.String({ format: 'email' }))),
-  bccEmails: t.Optional(t.Array(t.String({ format: 'email' }))),
+  ccEmails: t.Optional(t.Array(t.String({ format: "email" }))),
+  bccEmails: t.Optional(t.Array(t.String({ format: "email" }))),
   fromName: t.Optional(t.String({ maxLength: 255 })),
-  leadId: t.Optional(t.String({ format: 'uuid' })),
-  sequenceId: t.Optional(t.String({ format: 'uuid' })),
-  stepId: t.Optional(t.String({ format: 'uuid' })),
-  replyTo: t.Optional(t.String({ format: 'email' })),
+  leadId: t.Optional(t.String({ format: "uuid" })),
+  sequenceId: t.Optional(t.String({ format: "uuid" })),
+  stepId: t.Optional(t.String({ format: "uuid" })),
+  replyTo: t.Optional(t.String({ format: "email" })),
   inReplyTo: t.Optional(t.String()),
   references: t.Optional(t.Array(t.String())),
   scheduledAt: t.Optional(t.String()), // ISO 8601 datetime for scheduled sending
   // Optional fields for backward compatibility
-  workspaceId: t.Optional(t.String({ format: 'uuid' })),
-  userEmailAccountId: t.Optional(t.String({ format: 'uuid' })),
+  workspaceId: t.Optional(t.String({ format: "uuid" })),
+  userEmailAccountId: t.Optional(t.String({ format: "uuid" })),
 })
 
-export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
+export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
   // Send email via SendGrid (Simple test mode - no DB)
   .post(
-    '/send',
+    "/send",
     async ({ body, set }) => {
       try {
         // Use fixed sender configuration from config
@@ -79,12 +79,12 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
         if (!fixedApiKey) {
           set.status = 500
           return errorResponse(
-            'SendGrid API Key가 설정되지 않았습니다.',
-            ResponseCode.INTERNAL_SERVER_ERROR,
+            "SendGrid API Key가 설정되지 않았습니다.",
+            ResponseCode.INTERNAL_ERROR,
           )
         }
 
-        console.log('📧 Sending email:', {
+        console.log("📧 Sending email:", {
           from: `${fixedFromName} <${fixedFromEmail}>`,
           to: body.toEmail,
           subject: body.subject,
@@ -92,16 +92,16 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
 
         // If scheduled, save to database
         if (body.scheduledAt) {
-          console.log('⏰ Scheduling email for:', body.scheduledAt)
+          console.log("⏰ Scheduling email for:", body.scheduledAt)
 
           try {
             // Insert into database with 'scheduled' status
             const [newEmail] = await db
               .insert(emails)
               .values({
-                workspaceId: '92df2e10-d214-4cc0-bebe-4685805c77a6', // 퓨어글로우 코스메틱
-                userEmailAccountId: 'dac512b0-3369-44af-99a6-337a4f2f4bcc', // sales@greenda.ai
-                direction: 'outbound',
+                workspaceId: "92df2e10-d214-4cc0-bebe-4685805c77a6", // 퓨어글로우 코스메틱
+                userEmailAccountId: "dac512b0-3369-44af-99a6-337a4f2f4bcc", // sales@greenda.ai
+                direction: "outbound",
                 fromEmail: fixedFromEmail,
                 toEmail: body.toEmail,
                 subject: body.subject,
@@ -109,7 +109,7 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
                 bodyHtml: body.bodyHtml || null,
                 ccEmails: body.ccEmails || null,
                 bccEmails: body.bccEmails || null,
-                status: 'scheduled',
+                status: "scheduled",
                 scheduledAt: new Date(body.scheduledAt),
                 leadId: body.leadId || null,
                 sequenceId: body.sequenceId || null,
@@ -117,16 +117,21 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
               })
               .returning()
 
-            console.log('✅ Email scheduled successfully:', newEmail.id)
+            if (!newEmail) {
+              set.status = 500
+              return errorResponse("이메일 저장에 실패했습니다", ResponseCode.INTERNAL_ERROR)
+            }
+
+            console.log("✅ Email scheduled successfully:", newEmail.id)
 
             return {
               success: true,
               email: newEmail,
-              message: '이메일이 예약되었습니다.',
+              message: "이메일이 예약되었습니다.",
             }
-          } catch (error: any) {
-            console.error('❌ Failed to schedule email:', error)
-            throw new Error('이메일 예약 중 오류가 발생했습니다.')
+          } catch (error: unknown) {
+            console.error("❌ Failed to schedule email:", error)
+            throw new Error("이메일 예약 중 오류가 발생했습니다.")
           }
         }
 
@@ -148,7 +153,7 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
 
         // Return result without DB operations
         if (sendResult.success) {
-          console.log('✅ Email sent successfully:', sendResult.messageId)
+          console.log("✅ Email sent successfully:", sendResult.messageId)
           return {
             success: true,
             email: {
@@ -156,27 +161,24 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
               fromEmail: fixedFromEmail,
               toEmail: body.toEmail,
               subject: body.subject,
-              status: 'sent',
+              status: "sent",
               sentAt: new Date().toISOString(),
               sendgridMessageId: sendResult.messageId,
             },
-            message: '이메일이 발송되었습니다.',
+            message: "이메일이 발송되었습니다.",
           }
         } else {
-          console.error('❌ Email send failed:', sendResult.error)
+          console.error("❌ Email send failed:", sendResult.error)
           set.status = 500
           return errorResponse(
-            sendResult.error || '이메일 발송에 실패했습니다.',
-            ResponseCode.INTERNAL_SERVER_ERROR,
+            sendResult.error || "이메일 발송에 실패했습니다.",
+            ResponseCode.INTERNAL_ERROR,
           )
         }
-      } catch (error: any) {
-        console.error('❌ 이메일 발송 중 오류:', error)
+      } catch (error: unknown) {
+        console.error("❌ 이메일 발송 중 오류:", error)
         set.status = 500
-        return errorResponse(
-          '이메일 발송 중 오류가 발생했습니다.',
-          ResponseCode.INTERNAL_SERVER_ERROR,
-        )
+        return errorResponse("이메일 발송 중 오류가 발생했습니다.", ResponseCode.INTERNAL_ERROR)
       }
     },
     {
@@ -186,19 +188,36 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
 
   // Search emails with filters
   .get(
-    '/search',
+    "/search",
     async ({ query }) => {
-      const limit = parseInt(query.limit || '10', 10)
-      const offset = parseInt(query.offset || '0', 10)
+      const limit = parseInt(query.limit || "10", 10)
+      const offset = parseInt(query.offset || "0", 10)
 
       const conditions = []
 
       if (query.status) {
-        conditions.push(eq(emails.status, query.status as any))
+        conditions.push(
+          eq(
+            emails.status,
+            query.status as
+              | "draft"
+              | "scheduled"
+              | "queued"
+              | "sent"
+              | "delivered"
+              | "opened"
+              | "clicked"
+              | "replied"
+              | "bounced"
+              | "failed"
+              | "spam"
+              | "unsubscribed",
+          ),
+        )
       }
 
       if (query.direction) {
-        conditions.push(eq(emails.direction, query.direction as any))
+        conditions.push(eq(emails.direction, query.direction as "outbound" | "inbound"))
       }
 
       if (query.workspaceId) {
@@ -214,13 +233,14 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
       }
 
       if (query.search) {
-        conditions.push(
-          or(
-            ilike(emails.subject, `%${query.search}%`),
-            ilike(emails.fromEmail, `%${query.search}%`),
-            ilike(emails.toEmail, `%${query.search}%`),
-          )!,
+        const searchCondition = or(
+          ilike(emails.subject, `%${query.search}%`),
+          ilike(emails.fromEmail, `%${query.search}%`),
+          ilike(emails.toEmail, `%${query.search}%`),
         )
+        if (searchCondition) {
+          conditions.push(searchCondition)
+        }
       }
 
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -282,7 +302,7 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
 
   // Get email by ID
   .get(
-    '/:id',
+    "/:id",
     async ({ params: { id }, set }) => {
       const result = await db
         .select({
@@ -335,31 +355,37 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
 
       if (!result[0]) {
         set.status = 404
-        return errorResponse('이메일을 찾을 수 없습니다.', ResponseCode.NOT_FOUND)
+        return errorResponse("이메일을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
       }
 
       return result[0]
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Create email
   .post(
-    '/',
+    "/",
     async ({ body }) => {
-      const [newEmail] = await db.insert(emails).values(body).returning({
-        id: emails.id,
-        workspaceId: emails.workspaceId,
-        fromEmail: emails.fromEmail,
-        toEmail: emails.toEmail,
-        subject: emails.subject,
-        status: emails.status,
-        createdAt: emails.createdAt,
-      })
+      const [newEmail] = await db
+        .insert(emails)
+        .values({
+          ...body,
+          scheduledAt: body.scheduledAt ? new Date(body.scheduledAt) : null,
+        })
+        .returning({
+          id: emails.id,
+          workspaceId: emails.workspaceId,
+          fromEmail: emails.fromEmail,
+          toEmail: emails.toEmail,
+          subject: emails.subject,
+          status: emails.status,
+          createdAt: emails.createdAt,
+        })
 
       return newEmail
     },
@@ -370,7 +396,7 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
 
   // Update email status
   .patch(
-    '/:id/status',
+    "/:id/status",
     async ({ params: { id }, body, set }) => {
       const [updatedEmail] = await db
         .update(emails)
@@ -387,29 +413,29 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
 
       if (!updatedEmail) {
         set.status = 404
-        return errorResponse('이메일을 찾을 수 없습니다.', ResponseCode.NOT_FOUND)
+        return errorResponse("이메일을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
       }
 
       return updatedEmail
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
       body: t.Object({
         status: t.Union([
-          t.Literal('draft'),
-          t.Literal('scheduled'),
-          t.Literal('queued'),
-          t.Literal('sent'),
-          t.Literal('delivered'),
-          t.Literal('opened'),
-          t.Literal('clicked'),
-          t.Literal('replied'),
-          t.Literal('bounced'),
-          t.Literal('failed'),
-          t.Literal('spam'),
-          t.Literal('unsubscribed'),
+          t.Literal("draft"),
+          t.Literal("scheduled"),
+          t.Literal("queued"),
+          t.Literal("sent"),
+          t.Literal("delivered"),
+          t.Literal("opened"),
+          t.Literal("clicked"),
+          t.Literal("replied"),
+          t.Literal("bounced"),
+          t.Literal("failed"),
+          t.Literal("spam"),
+          t.Literal("unsubscribed"),
         ]),
       }),
     },
@@ -417,21 +443,21 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
 
   // Delete email
   .delete(
-    '/:id',
+    "/:id",
     async ({ params: { id } }) => {
       await db.delete(emails).where(eq(emails.id, id))
-      return { success: true, message: '이메일이 삭제되었습니다.' }
+      return { success: true, message: "이메일이 삭제되었습니다." }
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Get email events
   .get(
-    '/:id/events',
+    "/:id/events",
     async ({ params: { id } }) => {
       const events = await db
         .select({
@@ -455,13 +481,13 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
     },
     {
       params: t.Object({
-        id: t.String({ format: 'uuid' }),
+        id: t.String({ format: "uuid" }),
       }),
     },
   )
 
   // Webhook endpoint for email events (SendGrid)
-  .post('/webhook', async ({ body }) => {
+  .post("/webhook", async ({ body }) => {
     // SendGrid sends events as an array
     const events = Array.isArray(body) ? body : [body]
 
@@ -491,41 +517,41 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
       })
 
       // Update email status based on event
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         updatedAt: new Date(),
       }
 
       switch (event.event) {
-        case 'delivered':
-          updateData.status = 'delivered'
+        case "delivered":
+          updateData.status = "delivered"
           updateData.deliveredAt = new Date(event.timestamp * 1000)
           break
-        case 'open':
-          updateData.status = 'opened'
+        case "open":
+          updateData.status = "opened"
           updateData.openedAt = updateData.openedAt || new Date(event.timestamp * 1000)
           updateData.openCount = sql`${emails.openCount} + 1`
           break
-        case 'click':
-          updateData.status = 'clicked'
+        case "click":
+          updateData.status = "clicked"
           updateData.clickedAt = updateData.clickedAt || new Date(event.timestamp * 1000)
           updateData.clickCount = sql`${emails.clickCount} + 1`
           break
-        case 'bounce':
-          updateData.status = 'bounced'
+        case "bounce":
+          updateData.status = "bounced"
           updateData.bounceType = event.bounce_classification
           updateData.bounceReason = event.reason
           break
-        case 'dropped':
-        case 'deferred':
-          updateData.status = 'failed'
+        case "dropped":
+        case "deferred":
+          updateData.status = "failed"
           updateData.errorMessage = event.reason
           break
-        case 'spam_report':
-          updateData.status = 'spam'
+        case "spam_report":
+          updateData.status = "spam"
           updateData.spamReportedAt = new Date(event.timestamp * 1000)
           break
-        case 'unsubscribe':
-          updateData.status = 'unsubscribed'
+        case "unsubscribe":
+          updateData.status = "unsubscribed"
           updateData.unsubscribedAt = new Date(event.timestamp * 1000)
           break
       }
@@ -537,38 +563,43 @@ export const emailRoutes = new Elysia({ prefix: '/api/v1/emails' })
   })
 
 // Admin bulk routes
-export const adminEmailRoutes = new Elysia({ prefix: '/api/v1/admin/emails' })
+export const adminEmailRoutes = new Elysia({ prefix: "/api/v1/admin/emails" })
   // Bulk update status
   .put(
-    '/bulk/status',
+    "/bulk/status",
     async ({ body }) => {
+      const idCondition = or(...body.emailIds.map((id) => eq(emails.id, id)))
+      if (!idCondition) {
+        return { updatedCount: 0 }
+      }
+
       const result = await db
         .update(emails)
         .set({
           status: body.status,
           updatedAt: new Date(),
         })
-        .where(or(...body.emailIds.map((id) => eq(emails.id, id)))!)
+        .where(idCondition)
         .returning({ id: emails.id })
 
       return { updatedCount: result.length }
     },
     {
       body: t.Object({
-        emailIds: t.Array(t.String({ format: 'uuid' })),
+        emailIds: t.Array(t.String({ format: "uuid" })),
         status: t.Union([
-          t.Literal('draft'),
-          t.Literal('scheduled'),
-          t.Literal('queued'),
-          t.Literal('sent'),
-          t.Literal('delivered'),
-          t.Literal('opened'),
-          t.Literal('clicked'),
-          t.Literal('replied'),
-          t.Literal('bounced'),
-          t.Literal('failed'),
-          t.Literal('spam'),
-          t.Literal('unsubscribed'),
+          t.Literal("draft"),
+          t.Literal("scheduled"),
+          t.Literal("queued"),
+          t.Literal("sent"),
+          t.Literal("delivered"),
+          t.Literal("opened"),
+          t.Literal("clicked"),
+          t.Literal("replied"),
+          t.Literal("bounced"),
+          t.Literal("failed"),
+          t.Literal("spam"),
+          t.Literal("unsubscribed"),
         ]),
       }),
     },
@@ -576,18 +607,20 @@ export const adminEmailRoutes = new Elysia({ prefix: '/api/v1/admin/emails' })
 
   // Bulk delete
   .delete(
-    '/bulk',
+    "/bulk",
     async ({ body }) => {
-      const result = await db
-        .delete(emails)
-        .where(or(...body.emailIds.map((id) => eq(emails.id, id)))!)
-        .returning({ id: emails.id })
+      const idCondition = or(...body.emailIds.map((id) => eq(emails.id, id)))
+      if (!idCondition) {
+        return { deletedCount: 0 }
+      }
+
+      const result = await db.delete(emails).where(idCondition).returning({ id: emails.id })
 
       return { deletedCount: result.length }
     },
     {
       body: t.Object({
-        emailIds: t.Array(t.String({ format: 'uuid' })),
+        emailIds: t.Array(t.String({ format: "uuid" })),
       }),
     },
   )

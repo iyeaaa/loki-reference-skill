@@ -78,7 +78,7 @@ export default function UsersPage() {
         onSuccess: () => {
           setEditingUser(null)
         },
-      }
+      },
     )
   }
 
@@ -87,7 +87,7 @@ export default function UsersPage() {
 
     if (
       !confirm(
-        `선택한 ${selectedUsers.length}명의 사용자를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`
+        `선택한 ${selectedUsers.length}명의 사용자를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`,
       )
     )
       return
@@ -125,7 +125,7 @@ export default function UsersPage() {
           onSuccess: () => {
             setSelectedUsers([])
           },
-        }
+        },
       )
     } else if (actionType === "role") {
       bulkUpdateRole.mutate(
@@ -134,7 +134,7 @@ export default function UsersPage() {
           onSuccess: () => {
             setSelectedUsers([])
           },
-        }
+        },
       )
     } else if (actionType === "department") {
       bulkUpdateDepartment.mutate(
@@ -143,13 +143,13 @@ export default function UsersPage() {
           onSuccess: () => {
             setSelectedUsers([])
           },
-        }
+        },
       )
     }
   }
 
   const openBulkActionModal = (
-    type: "status" | "role" | "department" | "edit_languages" | "review_languages"
+    type: "status" | "role" | "department" | "edit_languages" | "review_languages",
   ) => {
     if (selectedUsers.length === 0) {
       toast.error("선택된 사용자가 없습니다.")
@@ -175,7 +175,7 @@ export default function UsersPage() {
 
   const toggleUserSelection = useCallback((userId: string) => {
     setSelectedUsers((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
     )
   }, [])
 

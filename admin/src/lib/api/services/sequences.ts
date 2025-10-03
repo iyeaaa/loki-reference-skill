@@ -118,7 +118,7 @@ export const sequencesApi = {
         page,
         limit,
         totalPages: Math.ceil(response.total / limit),
-      })
+      }),
     )
   },
 
@@ -135,7 +135,7 @@ export const sequencesApi = {
       {
         method: "PATCH",
         body: JSON.stringify({ status }),
-      }
+      },
     )
   },
 
@@ -164,7 +164,7 @@ export const sequencesApi = {
           userEmailAccountId: data.userEmailAccountId,
           enrolledBy: data.enrolledBy,
         }),
-      }
+      },
     )
   },
 
@@ -174,13 +174,13 @@ export const sequencesApi = {
       {
         method: "PUT",
         body: JSON.stringify({ enrollmentIds }),
-      }
+      },
     )
   },
 
   bulkEnrollWithScheduling: (
     sequenceId: string,
-    data: { leadIds: string[]; userEmailAccountId: string; enrolledBy?: string }
+    data: { leadIds: string[]; userEmailAccountId: string; enrolledBy?: string },
   ) => {
     return apiFetch<{
       enrolledCount: number

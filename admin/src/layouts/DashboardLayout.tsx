@@ -48,7 +48,7 @@ function DashboardContent() {
   // "전체" 옵션을 포함한 워크스페이스 목록 생성 (useMemo로 메모이제이션)
   const workspaceOptions: WorkspaceOption[] = useMemo(
     () => [{ value: "all", label: "전체", sublabel: "모든 워크스페이스 보기" }, ...workspaces],
-    [workspaces]
+    [workspaces],
   )
 
   // 디버깅: 워크스페이스 정보 확인

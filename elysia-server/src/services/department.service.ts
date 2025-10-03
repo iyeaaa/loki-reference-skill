@@ -1,6 +1,6 @@
-import { eq } from 'drizzle-orm'
-import { db } from '../db/index'
-import { departments } from '../db/schema/users'
+import { eq } from "drizzle-orm"
+import { db } from "../db/index"
+import { departments } from "../db/schema/users"
 
 // List all departments
 export async function listDepartments() {

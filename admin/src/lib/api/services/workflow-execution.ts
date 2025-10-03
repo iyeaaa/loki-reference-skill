@@ -32,10 +32,10 @@ export const workflowExecutionApi = {
   getEnrollments: async (
     sequenceId: string,
     limit = 50,
-    offset = 0
+    offset = 0,
   ): Promise<WorkflowEnrollment[]> => {
     return await apiFetch<WorkflowEnrollment[]>(
-      `/api/v1/sequences/${sequenceId}/workflow-enrollments?limit=${limit}&offset=${offset}`
+      `/api/v1/sequences/${sequenceId}/workflow-enrollments?limit=${limit}&offset=${offset}`,
     )
   },
 

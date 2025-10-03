@@ -56,7 +56,7 @@ export function WorkspaceSelector({
     return options.filter(
       (option) =>
         option.label.toLowerCase().includes(searchLower) ||
-        option.sublabel?.toLowerCase().includes(searchLower)
+        option.sublabel?.toLowerCase().includes(searchLower),
     )
   }, [options, searchValue])
 
@@ -76,7 +76,7 @@ export function WorkspaceSelector({
           className={cn(
             "justify-between min-w-[200px] max-w-full overflow-hidden",
             compact ? "h-10" : "h-auto py-2",
-            className
+            className,
           )}
           disabled={disabled}
         >
@@ -126,7 +126,7 @@ export function WorkspaceSelector({
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4 shrink-0",
-                        value === option.value ? "opacity-100" : "opacity-0"
+                        value === option.value ? "opacity-100" : "opacity-0",
                       )}
                     />
                     <div className="flex-1 overflow-hidden min-w-0">

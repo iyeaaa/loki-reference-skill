@@ -1,7 +1,7 @@
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
-import { db } from '../db/index'
-import { users } from '../db/schema/users'
-import { workspaceMembers, workspaces } from '../db/schema/workspaces'
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { db } from "../db/index"
+import { users } from "../db/schema/users"
+import { workspaceMembers, workspaces } from "../db/schema/workspaces"
 
 // ====================================
 // WORKSPACE CRUD OPERATIONS
@@ -151,16 +151,20 @@ export async function listWorkspacesWithFilters(
   }
 
   if (filters?.search) {
-    conditions.push(
-      or(
-        ilike(workspaces.name, `%${filters.search}%`),
-        ilike(workspaces.description, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(workspaces.name, `%${filters.search}%`),
+      ilike(workspaces.description, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (filters?.ownerIds && filters.ownerIds.length > 0) {
-    conditions.push(or(...filters.ownerIds.map((id) => eq(workspaces.ownerId, id)))!)
+    const ownerCondition = or(...filters.ownerIds.map((id) => eq(workspaces.ownerId, id)))
+    if (ownerCondition) {
+      conditions.push(ownerCondition)
+    }
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -230,16 +234,20 @@ export async function countWorkspacesWithFilters(filters?: {
   }
 
   if (filters?.search) {
-    conditions.push(
-      or(
-        ilike(workspaces.name, `%${filters.search}%`),
-        ilike(workspaces.description, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(workspaces.name, `%${filters.search}%`),
+      ilike(workspaces.description, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   if (filters?.ownerIds && filters.ownerIds.length > 0) {
-    conditions.push(or(...filters.ownerIds.map((id) => eq(workspaces.ownerId, id)))!)
+    const ownerCondition = or(...filters.ownerIds.map((id) => eq(workspaces.ownerId, id)))
+    if (ownerCondition) {
+      conditions.push(ownerCondition)
+    }
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -258,13 +266,18 @@ export async function countWorkspacesWithFilters(filters?: {
 
 // BulkUpdateStatus :exec
 export async function bulkUpdateStatus(workspaceIds: string[], isActive: boolean) {
+  const workspaceCondition = or(...workspaceIds.map((id) => eq(workspaces.id, id)))
+  if (!workspaceCondition) {
+    return 0
+  }
+
   const result = await db
     .update(workspaces)
     .set({
       isActive,
       updatedAt: new Date(),
     })
-    .where(or(...workspaceIds.map((id) => eq(workspaces.id, id)))!)
+    .where(workspaceCondition)
     .returning({ id: workspaces.id })
 
   return result.length
@@ -320,18 +333,18 @@ export async function getWorkspaceMembers(workspaceId: string) {
 export async function addWorkspaceMember(data: {
   workspaceId: string
   userId: string
-  role?: 'owner' | 'admin' | 'member' | 'viewer'
+  role?: "owner" | "admin" | "member" | "viewer"
   invitedBy?: string
-  status?: 'invited' | 'active' | 'inactive' | 'removed'
+  status?: "invited" | "active" | "inactive" | "removed"
 }) {
   const [newMember] = await db
     .insert(workspaceMembers)
     .values({
       workspaceId: data.workspaceId,
       userId: data.userId,
-      role: data.role || 'member',
+      role: data.role || "member",
       invitedBy: data.invitedBy || null,
-      status: data.status || 'invited',
+      status: data.status || "invited",
     })
     .returning({
       id: workspaceMembers.id,
@@ -349,7 +362,7 @@ export async function addWorkspaceMember(data: {
 // UpdateWorkspaceMemberRole :one
 export async function updateWorkspaceMemberRole(
   memberId: string,
-  role: 'owner' | 'admin' | 'member' | 'viewer',
+  role: "owner" | "admin" | "member" | "viewer",
 ) {
   const [updatedMember] = await db
     .update(workspaceMembers)
@@ -371,13 +384,13 @@ export async function updateWorkspaceMemberRole(
 // UpdateWorkspaceMemberStatus :one
 export async function updateWorkspaceMemberStatus(
   memberId: string,
-  status: 'invited' | 'active' | 'inactive' | 'removed',
+  status: "invited" | "active" | "inactive" | "removed",
 ) {
   const [updatedMember] = await db
     .update(workspaceMembers)
     .set({
       status,
-      joinedAt: status === 'active' ? new Date() : undefined,
+      joinedAt: status === "active" ? new Date() : undefined,
     })
     .where(eq(workspaceMembers.id, memberId))
     .returning({
@@ -447,7 +460,7 @@ export async function getAllUserRelatedWorkspaces(userId: string) {
     })
     .from(workspaceMembers)
     .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
-    .where(and(eq(workspaceMembers.userId, userId), eq(workspaceMembers.status, 'active')))
+    .where(and(eq(workspaceMembers.userId, userId), eq(workspaceMembers.status, "active")))
     .orderBy(desc(workspaces.createdAt))
 
   // 중복 제거 (소유자이면서 멤버인 경우)

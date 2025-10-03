@@ -11,6 +11,9 @@ export default defineConfig({
     },
   },
   build: {
+    // 청크 크기 경고 제한 설정 (500KB → 1100KB)
+    // MDEditor 같은 큰 라이브러리는 별도 청크로 분리되어 필요할 때만 로드됨
+    chunkSizeWarningLimit: 1100,
     // 파일 해시를 사용하여 캐시 무효화
     rollupOptions: {
       output: {
@@ -22,6 +25,16 @@ export default defineConfig({
         manualChunks(id) {
           // node_modules에 있는 패키지들만 처리
           if (id.includes('node_modules')) {
+            // MDEditor 및 관련 패키지 (매우 큰 라이브러리)
+            if (id.includes('@uiw/react-md-editor') || id.includes('codemirror')) {
+              return 'md-editor-vendor';
+            }
+
+            // Monaco Editor (큰 라이브러리)
+            if (id.includes('@monaco-editor') || id.includes('monaco-editor')) {
+              return 'monaco-vendor';
+            }
+
             // Radix UI를 먼저 체크 (React보다 우선)
             if (id.includes('@radix-ui')) {
               return 'ui-vendor';

@@ -5,20 +5,20 @@
  * sequence_steps 기반 워커와 별개로 동작
  */
 
-import { and, eq } from 'drizzle-orm'
-import { db } from '../db'
-import { workflowEnrollments, workflowExecutionLogs } from '../db/schema/workflow-executions'
-import * as workflowExecutionService from '../services/workflow-execution.service'
+import { and, eq } from "drizzle-orm"
+import { db } from "../db"
+import { workflowEnrollments, workflowExecutionLogs } from "../db/schema/workflow-executions"
+import * as workflowExecutionService from "../services/workflow-execution.service"
 
 async function processWorkflowExecutions() {
-  console.log('[Workflow Execution Worker] Starting workflow processing...')
+  console.log("[Workflow Execution Worker] Starting workflow processing...")
 
   try {
     // 스케줄된 실행 항목 조회
     const pendingExecutions = await workflowExecutionService.getPendingWorkflowExecutions(50)
 
     if (pendingExecutions.length === 0) {
-      console.log('[Workflow Execution Worker] No pending workflows to execute')
+      console.log("[Workflow Execution Worker] No pending workflows to execute")
       return
     }
 
@@ -32,11 +32,11 @@ async function processWorkflowExecutions() {
         )
 
         // 타이머 노드 완료 처리
-        if (execution.nodeType === 'timer') {
+        if (execution.nodeType === "timer") {
           await db
             .update(workflowExecutionLogs)
             .set({
-              status: 'completed',
+              status: "completed",
               waitCompletedAt: new Date(),
               completedAt: new Date(),
             })
@@ -56,15 +56,15 @@ async function processWorkflowExecutions() {
             `[Workflow Execution Worker] ✓ Workflow executed successfully: ${execution.enrollmentId}`,
           )
         } else {
-          const errorMessage = 'error' in result ? result.error : 'Unknown error'
+          const errorMessage = "error" in result ? result.error : "Unknown error"
           console.error(`[Workflow Execution Worker] ✗ Workflow execution failed: ${errorMessage}`)
 
           // 실행 로그 상태 업데이트
           await db
             .update(workflowExecutionLogs)
             .set({
-              status: 'failed',
-              errorMessage: errorMessage || 'Unknown error',
+              status: "failed",
+              errorMessage: errorMessage || "Unknown error",
               completedAt: new Date(),
             })
             .where(
@@ -82,9 +82,9 @@ async function processWorkflowExecutions() {
       }
     }
 
-    console.log('[Workflow Execution Worker] Finished processing workflows')
+    console.log("[Workflow Execution Worker] Finished processing workflows")
   } catch (error) {
-    console.error('[Workflow Execution Worker] Error in processWorkflowExecutions:', error)
+    console.error("[Workflow Execution Worker] Error in processWorkflowExecutions:", error)
   }
 }
 
@@ -93,7 +93,7 @@ async function processWorkflowExecutions() {
  * replied_emails 테이블을 모니터링하여 답장이 온 경우 워크플로우 중단
  */
 async function checkRepliesAndStopWorkflows() {
-  console.log('[Workflow Execution Worker] Checking for replies...')
+  console.log("[Workflow Execution Worker] Checking for replies...")
 
   try {
     // 답장이 온 이메일에 해당하는 활성 enrollment 찾기
@@ -112,7 +112,7 @@ async function checkRepliesAndStopWorkflows() {
     )
 
     if (result.rows.length === 0) {
-      console.log('[Workflow Execution Worker] No replies found')
+      console.log("[Workflow Execution Worker] No replies found")
       return
     }
 
@@ -124,9 +124,9 @@ async function checkRepliesAndStopWorkflows() {
         await db
           .update(workflowEnrollments)
           .set({
-            status: 'stopped',
+            status: "stopped",
             stoppedAt: new Date(),
-            stoppedReason: 'reply_received',
+            stoppedReason: "reply_received",
           })
           .where(eq(workflowEnrollments.id, row.enrollment_id))
 
@@ -135,13 +135,13 @@ async function checkRepliesAndStopWorkflows() {
           .update(workflowExecutionLogs)
           .set({
             repliedDuringWait: new Date(),
-            status: 'skipped',
+            status: "skipped",
             completedAt: new Date(),
           })
           .where(
             and(
               eq(workflowExecutionLogs.enrollmentId, row.enrollment_id),
-              eq(workflowExecutionLogs.status, 'pending'),
+              eq(workflowExecutionLogs.status, "pending"),
             ),
           )
 
@@ -156,13 +156,13 @@ async function checkRepliesAndStopWorkflows() {
       }
     }
   } catch (error) {
-    console.error('[Workflow Execution Worker] Error in checkRepliesAndStopWorkflows:', error)
+    console.error("[Workflow Execution Worker] Error in checkRepliesAndStopWorkflows:", error)
   }
 }
 
 // 워커 실행 주기: 1분마다
 export function startWorkflowExecutionWorker() {
-  console.log('[Workflow Execution Worker] Starting worker...')
+  console.log("[Workflow Execution Worker] Starting worker...")
 
   // 즉시 실행
   processWorkflowExecutions()
@@ -174,7 +174,7 @@ export function startWorkflowExecutionWorker() {
 
   // 정지 함수 반환
   return () => {
-    console.log('[Workflow Execution Worker] Stopping worker...')
+    console.log("[Workflow Execution Worker] Stopping worker...")
     clearInterval(executionInterval)
     clearInterval(replyCheckInterval)
   }

@@ -1,8 +1,8 @@
-import { Elysia, t } from 'elysia'
-import { getAIWorkflowEmailService } from '../services/ai-workflow-email.service'
-import * as progressService from '../services/generation-progress.service'
-import * as workflowEmailService from '../services/workflow-email.service'
-import { errorResponse, ResponseCode } from '../types/response.types'
+import { Elysia, t } from "elysia"
+import { getAIWorkflowEmailService } from "../services/ai-workflow-email.service"
+import * as progressService from "../services/generation-progress.service"
+import * as workflowEmailService from "../services/workflow-email.service"
+import { errorResponse, ResponseCode } from "../types/response.types"
 
 // Schema for creating generated email (reserved for future use)
 // const generatedEmailSchema = t.Object({
@@ -31,7 +31,7 @@ const updateEmailSchema = t.Object({
 })
 
 const generateAllEmailsSchema = t.Object({
-  mode: t.Union([t.Literal('ai'), t.Literal('manual')]),
+  mode: t.Union([t.Literal("ai"), t.Literal("manual")]),
   aiPrompt: t.Optional(t.String()),
   aiModel: t.Optional(t.String()),
   templateSubject: t.Optional(t.String()),
@@ -39,9 +39,9 @@ const generateAllEmailsSchema = t.Object({
   templateBodyHtml: t.Optional(t.String()),
 })
 
-export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
+export const workflowEmailRoutes = new Elysia({ prefix: "/api/v1/sequences" })
   // Get all generated emails for a node
-  .get('/:id/nodes/:nodeId/generated-emails', async ({ params }) => {
+  .get("/:id/nodes/:nodeId/generated-emails", async ({ params }) => {
     const { id: sequenceId, nodeId } = params
 
     const emails = await workflowEmailService.getGeneratedEmailsByNode(sequenceId, nodeId)
@@ -50,20 +50,20 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
 
   // Generate emails for all leads (manual template or AI)
   .post(
-    '/:id/nodes/:nodeId/generate-emails',
+    "/:id/nodes/:nodeId/generate-emails",
     async ({ params, body }) => {
       const { id: sequenceId, nodeId } = params
 
-      console.log('[Generate Emails] Request body:', JSON.stringify(body, null, 2))
-      console.log('[Generate Emails] Mode:', body.mode)
-      console.log('[Generate Emails] AI Prompt:', body.aiPrompt)
+      console.log("[Generate Emails] Request body:", JSON.stringify(body, null, 2))
+      console.log("[Generate Emails] Mode:", body.mode)
+      console.log("[Generate Emails] AI Prompt:", body.aiPrompt)
 
       // Get all leads in sequence
       const leads = await workflowEmailService.getSequenceLeads(sequenceId)
 
       if (leads.length === 0) {
         return {
-          message: '시퀀스에 등록된 연락처가 없습니다',
+          message: "시퀀스에 등록된 연락처가 없습니다",
           generated: 0,
           total: 0,
         }
@@ -78,60 +78,60 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
 
       for (const lead of leads) {
         try {
-          let subject = ''
-          let bodyText = ''
-          let bodyHtml = ''
-          let emailStatus: 'pending' | 'generating' | 'generated' | 'edited' | 'failed' =
-            'generated'
+          let subject = ""
+          let bodyText = ""
+          let bodyHtml = ""
+          let emailStatus: "pending" | "generating" | "generated" | "edited" | "failed" =
+            "generated"
           let generationError: string | undefined
 
-          if (body.mode === 'manual') {
+          if (body.mode === "manual") {
             // 템플릿 변수 치환 (모든 리드 필드 포함)
             const leadContext = {
-              companyName: lead.companyName || '',
-              contactName: lead.contactName || '',
-              contactEmail: lead.contactEmail || '',
-              industry: lead.industry || '',
-              website: lead.website || '',
-              description: lead.description || '',
-              address: lead.address || '',
-              country: lead.country || '',
-              city: lead.city || '',
-              state: lead.state || '',
-              foundedYear: lead.foundedYear || '',
-              employeeCount: lead.employeeCount || '',
-              leadSource: lead.leadSource || '',
-              leadStatus: lead.leadStatus || '',
-              leadScore: lead.leadScore || '',
+              companyName: lead.companyName || "",
+              contactName: lead.contactName || "",
+              contactEmail: lead.contactEmail || "",
+              industry: lead.industry || "",
+              website: lead.website || "",
+              description: lead.description || "",
+              address: lead.address || "",
+              country: lead.country || "",
+              city: lead.city || "",
+              state: lead.state || "",
+              foundedYear: lead.foundedYear || "",
+              employeeCount: lead.employeeCount || "",
+              leadSource: lead.leadSource || "",
+              leadStatus: lead.leadStatus || "",
+              leadScore: lead.leadScore || "",
             }
 
             subject = workflowEmailService.replaceTemplateVariables(
-              body.templateSubject || '',
+              body.templateSubject || "",
               leadContext,
             )
 
             bodyText = workflowEmailService.replaceTemplateVariables(
-              body.templateBody || '',
+              body.templateBody || "",
               leadContext,
             )
 
             bodyHtml = body.templateBodyHtml
               ? workflowEmailService.replaceTemplateVariables(body.templateBodyHtml, leadContext)
-              : ''
+              : ""
           } else {
             // AI mode - 실제 AI 생성
             try {
               console.log(`[AI Generation] Starting for lead: ${lead.companyName}`)
-              console.log(`[AI Generation] Prompt: ${body.aiPrompt || '(empty)'}`)
+              console.log(`[AI Generation] Prompt: ${body.aiPrompt || "(empty)"}`)
 
               const aiService = getAIWorkflowEmailService()
               const generatedEmail = await aiService.generateEmail({
                 prompt:
-                  body.aiPrompt || '위 고객 정보를 바탕으로 맞춤형 영업 이메일을 작성해주세요.',
+                  body.aiPrompt || "위 고객 정보를 바탕으로 맞춤형 영업 이메일을 작성해주세요.",
                 lead: {
-                  companyName: lead.companyName || '',
+                  companyName: lead.companyName || "",
                   contactName: lead.contactName,
-                  contactEmail: lead.contactEmail || '',
+                  contactEmail: lead.contactEmail || "",
                   industry: lead.industry,
                   website: lead.website,
                   size: lead.size,
@@ -144,14 +144,14 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
 
               subject = generatedEmail.subject
               bodyText = generatedEmail.bodyText
-              bodyHtml = generatedEmail.bodyHtml || ''
+              bodyHtml = generatedEmail.bodyHtml || ""
             } catch (aiError) {
               // AI 생성 실패 시 템플릿 폴백
               console.error(`AI generation failed for ${lead.companyName}, using fallback`)
               subject = `${lead.companyName}님께`
               bodyText = `안녕하세요,\n\n${lead.companyName} 담당자님께 연락드립니다.\n\n[AI 생성 실패 - 수동 편집 필요]`
-              emailStatus = 'failed'
-              generationError = aiError instanceof Error ? aiError.message : 'AI generation failed'
+              emailStatus = "failed"
+              generationError = aiError instanceof Error ? aiError.message : "AI generation failed"
             }
           }
 
@@ -178,7 +178,7 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
           generated++
           progressService.updateProgress(sequenceId, nodeId, { generated: 1 })
         } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+          const errorMsg = error instanceof Error ? error.message : "Unknown error"
           errors.push({
             leadId: lead.id,
             error: errorMsg,
@@ -193,11 +193,11 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
       progressService.completeProgress(
         sequenceId,
         nodeId,
-        errors.length > 0 ? 'completed' : 'completed',
+        errors.length > 0 ? "completed" : "completed",
       )
 
       return {
-        message: '이메일 생성이 완료되었습니다',
+        message: "이메일 생성이 완료되었습니다",
         generated,
         total: leads.length,
         failed: errors.length,
@@ -210,12 +210,12 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
   )
 
   // Get single generated email
-  .get('/:id/nodes/:nodeId/generated-emails/:emailId', async ({ params }) => {
+  .get("/:id/nodes/:nodeId/generated-emails/:emailId", async ({ params }) => {
     const { emailId } = params
 
     const email = await workflowEmailService.getGeneratedEmail(emailId)
     if (!email) {
-      return errorResponse('이메일을 찾을 수 없습니다', ResponseCode.NOT_FOUND)
+      return errorResponse("이메일을 찾을 수 없습니다", ResponseCode.NOT_FOUND)
     }
 
     return email
@@ -223,17 +223,17 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
 
   // Update generated email
   .patch(
-    '/:id/nodes/:nodeId/generated-emails/:emailId',
+    "/:id/nodes/:nodeId/generated-emails/:emailId",
     async ({ params, body }) => {
       const { emailId } = params
 
       const updated = await workflowEmailService.updateGeneratedEmail(emailId, {
         ...body,
-        status: 'edited',
+        status: "edited",
       })
 
       if (!updated) {
-        return errorResponse('이메일 업데이트에 실패했습니다', ResponseCode.NOT_FOUND)
+        return errorResponse("이메일 업데이트에 실패했습니다", ResponseCode.NOT_FOUND)
       }
 
       return updated
@@ -244,32 +244,32 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
   )
 
   // Delete generated email
-  .delete('/:id/nodes/:nodeId/generated-emails/:emailId', async ({ params }) => {
+  .delete("/:id/nodes/:nodeId/generated-emails/:emailId", async ({ params }) => {
     const { emailId } = params
 
     await workflowEmailService.deleteGeneratedEmail(emailId)
-    return { message: '이메일이 삭제되었습니다' }
+    return { message: "이메일이 삭제되었습니다" }
   })
 
   // Regenerate single email (AI mode)
-  .post('/:id/nodes/:nodeId/generated-emails/:emailId/regenerate', async ({ params }) => {
+  .post("/:id/nodes/:nodeId/generated-emails/:emailId/regenerate", async ({ params }) => {
     const { emailId } = params
 
     const email = await workflowEmailService.getGeneratedEmail(emailId)
     if (!email) {
-      return errorResponse('이메일을 찾을 수 없습니다', ResponseCode.NOT_FOUND)
+      return errorResponse("이메일을 찾을 수 없습니다", ResponseCode.NOT_FOUND)
     }
 
     // AI 재생성
-    if (email.generationMode === 'ai' && email.aiPrompt) {
+    if (email.generationMode === "ai" && email.aiPrompt) {
       try {
         const aiService = getAIWorkflowEmailService()
         const regenerated = await aiService.generateEmail({
           prompt: email.aiPrompt,
           lead: {
-            companyName: email.companyName || '',
+            companyName: email.companyName || "",
             contactName: email.contactName,
-            contactEmail: email.contactEmail || '',
+            contactEmail: email.contactEmail || "",
             industry: email.industry,
           },
           model: email.aiModel || undefined,
@@ -278,34 +278,34 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
         const updated = await workflowEmailService.updateGeneratedEmail(emailId, {
           subject: regenerated.subject,
           bodyText: regenerated.bodyText,
-          status: 'generated',
+          status: "generated",
         })
 
         return {
-          message: 'AI 재생성이 완료되었습니다',
+          message: "AI 재생성이 완료되었습니다",
           email: updated,
         }
       } catch (error) {
         return errorResponse(
-          error instanceof Error ? error.message : 'AI 재생성에 실패했습니다',
+          error instanceof Error ? error.message : "AI 재생성에 실패했습니다",
           ResponseCode.INTERNAL_ERROR,
         )
       }
     }
 
-    return errorResponse('AI 모드가 아니거나 프롬프트가 없습니다', ResponseCode.BAD_REQUEST)
+    return errorResponse("AI 모드가 아니거나 프롬프트가 없습니다", ResponseCode.BAD_REQUEST)
   })
 
   // Delete all generated emails for a node
-  .delete('/:id/nodes/:nodeId/generated-emails', async ({ params }) => {
+  .delete("/:id/nodes/:nodeId/generated-emails", async ({ params }) => {
     const { id: sequenceId, nodeId } = params
 
     await workflowEmailService.deleteGeneratedEmailsByNode(sequenceId, nodeId)
-    return { message: '모든 이메일이 삭제되었습니다' }
+    return { message: "모든 이메일이 삭제되었습니다" }
   })
 
   // Get generation progress
-  .get('/:id/nodes/:nodeId/generation-progress', async ({ params }) => {
+  .get("/:id/nodes/:nodeId/generation-progress", async ({ params }) => {
     const { id: sequenceId, nodeId } = params
 
     const progress = progressService.getProgress(sequenceId, nodeId)
@@ -318,7 +318,7 @@ export const workflowEmailRoutes = new Elysia({ prefix: '/api/v1/sequences' })
         generated: 0,
         failed: 0,
         percentage: 0,
-        status: 'idle',
+        status: "idle",
       }
     }
 

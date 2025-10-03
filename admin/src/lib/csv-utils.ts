@@ -32,7 +32,7 @@ export function parseCSV(csvText: string): LeadCSVData[] {
   // 파일 형식 검증 - ZIP 파일이나 Numbers 파일인지 확인
   if (csvText.startsWith("PK") || csvText.includes("Index/Document.iwa")) {
     throw new Error(
-      "잘못된 파일 형식입니다. Numbers 앱에서 CSV로 내보낸 파일이 아닌 것 같습니다. 텍스트 에디터에서 직접 CSV 파일을 만들어주세요."
+      "잘못된 파일 형식입니다. Numbers 앱에서 CSV로 내보낸 파일이 아닌 것 같습니다. 텍스트 에디터에서 직접 CSV 파일을 만들어주세요.",
     )
   }
 

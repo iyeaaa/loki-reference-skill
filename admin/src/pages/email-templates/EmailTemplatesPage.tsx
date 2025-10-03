@@ -111,7 +111,7 @@ export default function EmailTemplatesPage() {
         onSuccess: () => {
           setEditingTemplate(null)
         },
-      }
+      },
     )
   }
 
@@ -120,7 +120,7 @@ export default function EmailTemplatesPage() {
 
     if (
       !confirm(
-        `선택한 ${selectedTemplates.length}개의 템플릿을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`
+        `선택한 ${selectedTemplates.length}개의 템플릿을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`,
       )
     )
       return
@@ -145,7 +145,7 @@ export default function EmailTemplatesPage() {
           onSuccess: () => {
             setSelectedTemplates([])
           },
-        }
+        },
       )
     } else if (actionType === "shared") {
       const isShared = value === "true"
@@ -155,7 +155,7 @@ export default function EmailTemplatesPage() {
           onSuccess: () => {
             setSelectedTemplates([])
           },
-        }
+        },
       )
     }
   }
@@ -185,7 +185,7 @@ export default function EmailTemplatesPage() {
 
   const toggleTemplateSelection = useCallback((templateId: string) => {
     setSelectedTemplates((prev) =>
-      prev.includes(templateId) ? prev.filter((id) => id !== templateId) : [...prev, templateId]
+      prev.includes(templateId) ? prev.filter((id) => id !== templateId) : [...prev, templateId],
     )
   }, [])
 

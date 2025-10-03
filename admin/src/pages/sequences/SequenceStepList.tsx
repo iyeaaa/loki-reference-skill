@@ -71,7 +71,7 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
         onSuccess: () => {
           setEditingStep(null)
         },
-      }
+      },
     )
   }
 

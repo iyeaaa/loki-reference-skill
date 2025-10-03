@@ -1,7 +1,13 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.2.4/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
   "files": {
     "ignoreUnknown": true,
+    "experimentalScannerIgnores": ["node_modules", "dist", "build", ".next", "*.min.js", "*.lock"],
     "includes": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx"]
   },
   "linter": {
@@ -17,11 +23,13 @@
       },
       "style": {
         "noNonNullAssertion": "warn",
-        "useConst": "error"
+        "useConst": "error",
+        "useTemplate": "error"
       },
       "correctness": {
         "useExhaustiveDependencies": "warn",
         "noUnusedVariables": "error",
+        "noUnusedImports": "error",
         "noUndeclaredVariables": "error"
       },
       "a11y": {
@@ -41,9 +49,12 @@
     "formatter": {
       "quoteStyle": "double",
       "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "trailingCommas": "all",
       "semicolons": "asNeeded",
-      "trailingCommas": "es5",
-      "arrowParentheses": "always"
+      "arrowParentheses": "always",
+      "bracketSpacing": true,
+      "bracketSameLine": false
     }
   }
 }

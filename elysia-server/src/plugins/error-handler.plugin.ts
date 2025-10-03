@@ -1,33 +1,33 @@
-import { Elysia } from 'elysia'
-import type { ResponseCodeType } from '../types/response.types'
-import { errorResponse, getResponseCodeByStatus, ResponseCode } from '../types/response.types'
-import { handleDatabaseError, isDatabaseError } from '../utils/db-error-handler'
+import { Elysia } from "elysia"
+import type { ResponseCodeType } from "../types/response.types"
+import { errorResponse, getResponseCodeByStatus, ResponseCode } from "../types/response.types"
+import { handleDatabaseError, isDatabaseError } from "../utils/db-error-handler"
 
-export const errorHandler = new Elysia({ name: 'error-handler' }).onError(
+export const errorHandler = new Elysia({ name: "error-handler" }).onError(
   ({ code, error, set, request }) => {
     const path = request.url
 
     // Content-Type을 JSON으로 명시적 설정
-    set.headers['content-type'] = 'application/json'
+    set.headers["content-type"] = "application/json"
 
     // 에러 타입별 처리
     switch (code) {
-      case 'VALIDATION':
+      case "VALIDATION":
         set.status = 400
-        return errorResponse('유효성 검증에 실패했습니다.', ResponseCode.VALIDATION_ERROR, path)
+        return errorResponse("유효성 검증에 실패했습니다.", ResponseCode.VALIDATION_ERROR, path)
 
-      case 'NOT_FOUND':
+      case "NOT_FOUND":
         set.status = 404
-        return errorResponse('요청한 리소스를 찾을 수 없습니다.', ResponseCode.NOT_FOUND, path)
+        return errorResponse("요청한 리소스를 찾을 수 없습니다.", ResponseCode.NOT_FOUND, path)
 
-      case 'PARSE':
+      case "PARSE":
         set.status = 400
-        return errorResponse('요청 데이터 파싱에 실패했습니다.', ResponseCode.BAD_REQUEST, path)
+        return errorResponse("요청 데이터 파싱에 실패했습니다.", ResponseCode.BAD_REQUEST, path)
 
-      case 'INTERNAL_SERVER_ERROR': {
+      case "INTERNAL_SERVER_ERROR": {
         set.status = 500
         const errorMessage =
-          error instanceof Error ? error.message : '서버 내부 오류가 발생했습니다.'
+          error instanceof Error ? error.message : "서버 내부 오류가 발생했습니다."
         return errorResponse(errorMessage, ResponseCode.INTERNAL_ERROR, path)
       }
 
@@ -46,13 +46,13 @@ export const errorHandler = new Elysia({ name: 'error-handler' }).onError(
           let responseCode: ResponseCodeType = ResponseCode.INTERNAL_ERROR
           const message = error.message
 
-          if ('statusCode' in error && typeof error.statusCode === 'number') {
+          if ("statusCode" in error && typeof error.statusCode === "number") {
             statusCode = error.statusCode
             responseCode = getResponseCodeByStatus(statusCode)
           }
 
           // 커스텀 에러 코드가 있는 경우
-          if ('code' in error && typeof error.code === 'string') {
+          if ("code" in error && typeof error.code === "string") {
             const customCode = error.code as keyof typeof ResponseCode
             if (ResponseCode[customCode]) {
               responseCode = ResponseCode[customCode]
@@ -65,7 +65,7 @@ export const errorHandler = new Elysia({ name: 'error-handler' }).onError(
 
         // 알 수 없는 에러
         set.status = 500
-        return errorResponse('알 수 없는 오류가 발생했습니다.', ResponseCode.INTERNAL_ERROR, path)
+        return errorResponse("알 수 없는 오류가 발생했습니다.", ResponseCode.INTERNAL_ERROR, path)
     }
   },
 )

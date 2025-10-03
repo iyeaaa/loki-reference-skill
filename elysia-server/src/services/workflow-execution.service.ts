@@ -1,14 +1,14 @@
-import { and, desc, eq, isNull, lte, sql } from 'drizzle-orm'
-import { config } from '../config'
-import { db } from '../db/index'
-import { customerGroupMembers } from '../db/schema/customer-groups'
-import { emails } from '../db/schema/emails'
-import { leadContacts } from '../db/schema/lead-details'
-import { leads } from '../db/schema/leads'
-import { sequences } from '../db/schema/sequences'
-import { workflowGeneratedEmails } from '../db/schema/workflow-emails'
-import { workflowEnrollments, workflowExecutionLogs } from '../db/schema/workflow-executions'
-import { emailService } from './email.service'
+import { and, desc, eq, isNull, lte, sql } from "drizzle-orm"
+import { config } from "../config"
+import { db } from "../db/index"
+import { customerGroupMembers } from "../db/schema/customer-groups"
+import { emails } from "../db/schema/emails"
+import { leadContacts } from "../db/schema/lead-details"
+import { leads } from "../db/schema/leads"
+import { sequences } from "../db/schema/sequences"
+import { workflowGeneratedEmails } from "../db/schema/workflow-emails"
+import { workflowEnrollments, workflowExecutionLogs } from "../db/schema/workflow-executions"
+import { emailService } from "./email.service"
 
 // ====================================
 // WORKFLOW DATA TYPES
@@ -16,16 +16,16 @@ import { emailService } from './email.service'
 
 interface WorkflowNode {
   id: string
-  type: 'start' | 'emailDraft' | 'timer' | 'comment'
+  type: "start" | "emailDraft" | "timer" | "comment"
   position: { x: number; y: number }
   data: {
     subject?: string
     bodyText?: string
     delayDays?: number
-    generationMode?: 'ai' | 'manual'
+    generationMode?: "ai" | "manual"
     aiPrompt?: string
     comment?: string
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 
@@ -61,13 +61,13 @@ export async function enrollInWorkflow(data: {
       leadId: data.leadId,
       userEmailAccountId: data.userEmailAccountId,
       enrolledBy: data.enrolledBy,
-      status: 'active',
-      currentNodeId: 'start',
+      status: "active",
+      currentNodeId: "start",
     })
     .returning()
 
   if (!enrollment) {
-    throw new Error('Failed to create enrollment')
+    throw new Error("Failed to create enrollment")
   }
 
   // 시작 노드 실행 로그 생성
@@ -75,9 +75,9 @@ export async function enrollInWorkflow(data: {
     enrollmentId: enrollment.id,
     sequenceId: data.sequenceId,
     leadId: data.leadId,
-    nodeId: 'start',
-    nodeType: 'start',
-    status: 'completed',
+    nodeId: "start",
+    nodeType: "start",
+    status: "completed",
     startedAt: new Date(),
     completedAt: new Date(),
   })
@@ -167,7 +167,7 @@ function parseWorkflowData(workflowDataJson: string | null): WorkflowData | null
   try {
     return JSON.parse(workflowDataJson) as WorkflowData
   } catch (error) {
-    console.error('Failed to parse workflow data:', error)
+    console.error("Failed to parse workflow data:", error)
     return null
   }
 }
@@ -233,7 +233,7 @@ async function executeEmailDraftNode(data: {
       leadContacts,
       and(
         eq(leadContacts.leadId, workflowGeneratedEmails.leadId),
-        eq(leadContacts.contactType, 'email'),
+        eq(leadContacts.contactType, "email"),
         // eq(leadContacts.isPrimary, true),
       ),
     )
@@ -248,7 +248,7 @@ async function executeEmailDraftNode(data: {
 
   const generatedEmail = generatedEmailResults[0]
 
-  if (!generatedEmail || generatedEmail.status === 'failed') {
+  if (!generatedEmail || generatedEmail.status === "failed") {
     console.error(`[Workflow] No generated email found for node ${node.id}`)
 
     // 실행 로그에 실패 기록
@@ -257,22 +257,22 @@ async function executeEmailDraftNode(data: {
       sequenceId: enrollment.sequenceId,
       leadId: enrollment.leadId,
       nodeId: node.id,
-      nodeType: 'emailDraft',
+      nodeType: "emailDraft",
       nodeData: JSON.stringify(node.data),
-      status: 'failed',
-      errorMessage: 'No generated email found or email generation failed',
+      status: "failed",
+      errorMessage: "No generated email found or email generation failed",
       startedAt: new Date(),
       completedAt: new Date(),
     })
 
-    return { success: false, error: 'No generated email found' }
+    return { success: false, error: "No generated email found" }
   }
 
   // 이메일 발송 (emailService 사용)
   try {
-    const toEmail = generatedEmail.contactEmail || ''
+    const toEmail = generatedEmail.contactEmail || ""
     if (!toEmail) {
-      throw new Error('No contact email found')
+      throw new Error("No contact email found")
     }
 
     // emailService를 사용하여 이메일 발송
@@ -290,7 +290,7 @@ async function executeEmailDraftNode(data: {
     })
 
     if (!sendResult.success) {
-      throw new Error(sendResult.error || 'Failed to send email')
+      throw new Error(sendResult.error || "Failed to send email")
     }
 
     const messageId = sendResult.messageId
@@ -300,17 +300,17 @@ async function executeEmailDraftNode(data: {
     const sentEmailResults = await db
       .insert(emails)
       .values({
-        workspaceId: enrollment.sequence?.workspaceId || '',
+        workspaceId: enrollment.sequence?.workspaceId || "",
         userEmailAccountId: enrollment.userEmailAccountId,
         leadId: enrollment.leadId,
         sequenceId: enrollment.sequenceId,
-        direction: 'outbound',
+        direction: "outbound",
         fromEmail: enrollment.userEmailAccount.emailAddress,
         toEmail,
         subject: generatedEmail.subject,
         bodyText: generatedEmail.bodyText,
         bodyHtml: generatedEmail.bodyHtml,
-        status: 'sent',
+        status: "sent",
         sentAt: new Date(),
         messageId, // RFC 2822 Message-ID (답장 추적용)
         sendgridMessageId, // SendGrid 내부 ID
@@ -319,7 +319,7 @@ async function executeEmailDraftNode(data: {
 
     const sentEmail = sentEmailResults[0]
     if (!sentEmail) {
-      throw new Error('Failed to save sent email')
+      throw new Error("Failed to save sent email")
     }
 
     // 실행 로그 생성
@@ -328,9 +328,9 @@ async function executeEmailDraftNode(data: {
       sequenceId: enrollment.sequenceId,
       leadId: enrollment.leadId,
       nodeId: node.id,
-      nodeType: 'emailDraft',
+      nodeType: "emailDraft",
       nodeData: JSON.stringify(node.data),
-      status: 'completed',
+      status: "completed",
       generatedEmailId: generatedEmail.id,
       emailId: sentEmail.id,
       sentAt: new Date(),
@@ -351,7 +351,7 @@ async function executeEmailDraftNode(data: {
 
     return { success: true, emailId: sentEmail.id }
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
     console.error(`[Workflow] ✗ Failed to send email:`, errorMessage)
 
     // 실행 로그에 실패 기록
@@ -360,16 +360,16 @@ async function executeEmailDraftNode(data: {
       sequenceId: enrollment.sequenceId,
       leadId: enrollment.leadId,
       nodeId: node.id,
-      nodeType: 'emailDraft',
+      nodeType: "emailDraft",
       nodeData: JSON.stringify(node.data),
-      status: 'failed',
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      status: "failed",
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
       generatedEmailId: generatedEmail.id,
       startedAt: new Date(),
       completedAt: new Date(),
     })
 
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }
 
@@ -398,7 +398,7 @@ async function executeTimerNode(data: {
     await db
       .update(workflowEnrollments)
       .set({
-        status: 'completed',
+        status: "completed",
         completedAt: new Date(),
       })
       .where(eq(workflowEnrollments.id, enrollment.id))
@@ -412,9 +412,9 @@ async function executeTimerNode(data: {
     sequenceId: enrollment.sequenceId,
     leadId: enrollment.leadId,
     nodeId: node.id,
-    nodeType: 'timer',
+    nodeType: "timer",
     nodeData: JSON.stringify(node.data),
-    status: 'pending',
+    status: "pending",
     scheduledFor,
     delayDays,
     waitStartedAt: new Date(),
@@ -429,7 +429,7 @@ async function executeTimerNode(data: {
     nodeId: nextNode.id,
     nodeType: nextNode.type,
     nodeData: JSON.stringify(nextNode.data),
-    status: 'pending',
+    status: "pending",
     scheduledFor,
   })
 
@@ -480,28 +480,28 @@ export async function executeWorkflow(enrollmentId: string): Promise<{
 
   const enrollment = enrollmentResults[0]
 
-  if (!enrollment || enrollment.status !== 'active') {
-    return { success: false, error: 'Enrollment not found or not active' }
+  if (!enrollment || enrollment.status !== "active") {
+    return { success: false, error: "Enrollment not found or not active" }
   }
 
   if (!enrollment.sequence) {
-    return { success: false, error: 'Sequence not found' }
+    return { success: false, error: "Sequence not found" }
   }
 
   // 워크플로우 데이터 파싱
   const workflowData = parseWorkflowData(enrollment.sequence.workflowData)
   if (!workflowData) {
-    return { success: false, error: 'Invalid workflow data' }
+    return { success: false, error: "Invalid workflow data" }
   }
 
   // 현재 노드 찾기
   const currentNode = workflowData.nodes.find((n) => n.id === enrollment.currentNodeId)
   if (!currentNode) {
-    return { success: false, error: 'Current node not found' }
+    return { success: false, error: "Current node not found" }
   }
 
   // 시작 노드는 스킵
-  if (currentNode.type === 'start') {
+  if (currentNode.type === "start") {
     const nextNode = getNextNode(currentNode.id, workflowData)
     if (nextNode) {
       await db
@@ -523,7 +523,7 @@ export async function executeWorkflow(enrollmentId: string): Promise<{
   })
 
   if (!enrollmentWithAccount) {
-    return { success: false, error: 'Enrollment not found' }
+    return { success: false, error: "Enrollment not found" }
   }
 
   const enrichedEnrollment = {
@@ -533,7 +533,7 @@ export async function executeWorkflow(enrollmentId: string): Promise<{
   }
 
   // 노드 타입별 실행
-  if (currentNode.type === 'emailDraft') {
+  if (currentNode.type === "emailDraft") {
     const result = await executeEmailDraftNode({
       enrollment: enrichedEnrollment,
       node: currentNode,
@@ -553,7 +553,7 @@ export async function executeWorkflow(enrollmentId: string): Promise<{
         .where(eq(workflowEnrollments.id, enrollmentId))
 
       // 다음 노드가 타이머가 아니면 즉시 실행
-      if (nextNode.type !== 'timer') {
+      if (nextNode.type !== "timer") {
         return executeWorkflow(enrollmentId)
       }
       return executeWorkflow(enrollmentId) // 타이머 노드도 실행 (스케줄링)
@@ -562,14 +562,14 @@ export async function executeWorkflow(enrollmentId: string): Promise<{
       await db
         .update(workflowEnrollments)
         .set({
-          status: 'completed',
+          status: "completed",
           completedAt: new Date(),
         })
         .where(eq(workflowEnrollments.id, enrollmentId))
 
       return { success: true, completed: true }
     }
-  } else if (currentNode.type === 'timer') {
+  } else if (currentNode.type === "timer") {
     return executeTimerNode({
       enrollment: enrichedEnrollment,
       node: currentNode,
@@ -577,7 +577,7 @@ export async function executeWorkflow(enrollmentId: string): Promise<{
     })
   }
 
-  return { success: false, error: 'Unknown node type' }
+  return { success: false, error: "Unknown node type" }
 }
 
 /**
@@ -600,11 +600,11 @@ export async function getPendingWorkflowExecutions(limit = 50) {
     .innerJoin(workflowEnrollments, eq(workflowExecutionLogs.enrollmentId, workflowEnrollments.id))
     .where(
       and(
-        eq(workflowExecutionLogs.status, 'pending'),
+        eq(workflowExecutionLogs.status, "pending"),
         lte(workflowExecutionLogs.scheduledFor, now),
         isNull(workflowExecutionLogs.repliedDuringWait),
-        eq(sequences.status, 'active'), // 활성 시퀀스만
-        eq(workflowEnrollments.status, 'active'), // 활성 enrollment만
+        eq(sequences.status, "active"), // 활성 시퀀스만
+        eq(workflowEnrollments.status, "active"), // 활성 enrollment만
       ),
     )
     .limit(limit)
@@ -626,8 +626,8 @@ export async function getNodeStatistics(sequenceId: string, nodeId: string) {
       and(
         eq(workflowExecutionLogs.sequenceId, sequenceId),
         eq(workflowExecutionLogs.nodeId, nodeId),
-        eq(workflowExecutionLogs.nodeType, 'emailDraft'),
-        eq(workflowExecutionLogs.status, 'completed'),
+        eq(workflowExecutionLogs.nodeType, "emailDraft"),
+        eq(workflowExecutionLogs.status, "completed"),
       ),
     )
 
@@ -638,7 +638,7 @@ export async function getNodeStatistics(sequenceId: string, nodeId: string) {
     .where(
       and(
         eq(workflowEnrollments.sequenceId, sequenceId),
-        eq(workflowEnrollments.status, 'stopped'),
+        eq(workflowEnrollments.status, "stopped"),
         sql`${workflowEnrollments.stoppedReason} LIKE '%reply%'`,
       ),
     )
@@ -651,8 +651,8 @@ export async function getNodeStatistics(sequenceId: string, nodeId: string) {
       and(
         eq(workflowExecutionLogs.sequenceId, sequenceId),
         eq(workflowExecutionLogs.nodeId, nodeId),
-        eq(workflowExecutionLogs.nodeType, 'timer'),
-        eq(workflowExecutionLogs.status, 'pending'),
+        eq(workflowExecutionLogs.nodeType, "timer"),
+        eq(workflowExecutionLogs.status, "pending"),
       ),
     )
 

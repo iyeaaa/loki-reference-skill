@@ -1,11 +1,11 @@
-import { and, desc, eq } from 'drizzle-orm'
-import { db } from '../db/index'
-import { customerGroupMembers } from '../db/schema/customer-groups'
-import { leadContacts } from '../db/schema/lead-details'
-import { leads } from '../db/schema/leads'
-import { sequences } from '../db/schema/sequences'
-import { workflowGeneratedEmails } from '../db/schema/workflow-emails'
-import { getAIEmailService } from '../lib/ai-email-service'
+import { and, desc, eq } from "drizzle-orm"
+import { db } from "../db/index"
+import { customerGroupMembers } from "../db/schema/customer-groups"
+import { leadContacts } from "../db/schema/lead-details"
+import { leads } from "../db/schema/leads"
+import { sequences } from "../db/schema/sequences"
+import { workflowGeneratedEmails } from "../db/schema/workflow-emails"
+import { getAIEmailService } from "../lib/ai-email-service"
 
 // ====================================
 // WORKFLOW GENERATED EMAILS CRUD
@@ -41,7 +41,7 @@ export async function getGeneratedEmailsByNode(sequenceId: string, nodeId: strin
       leadContacts,
       and(
         eq(leadContacts.leadId, leads.id),
-        eq(leadContacts.contactType, 'email'),
+        eq(leadContacts.contactType, "email"),
         eq(leadContacts.isPrimary, true),
       ),
     )
@@ -56,8 +56,8 @@ export async function getGeneratedEmailsByNode(sequenceId: string, nodeId: strin
   // Map to flat structure
   return result.map((row) => ({
     ...row,
-    contactName: row.companyName || '담당자',
-    industry: row.businessType || '',
+    contactName: row.companyName || "담당자",
+    industry: row.businessType || "",
   }))
 }
 
@@ -91,7 +91,7 @@ export async function getGeneratedEmail(emailId: string) {
       leadContacts,
       and(
         eq(leadContacts.leadId, leads.id),
-        eq(leadContacts.contactType, 'email'),
+        eq(leadContacts.contactType, "email"),
         eq(leadContacts.isPrimary, true),
       ),
     )
@@ -104,8 +104,8 @@ export async function getGeneratedEmail(emailId: string) {
   if (!row) return null
   return {
     ...row,
-    contactName: row.companyName || '담당자',
-    industry: row.businessType || '',
+    contactName: row.companyName || "담당자",
+    industry: row.businessType || "",
   }
 }
 
@@ -117,16 +117,16 @@ export async function upsertGeneratedEmail(data: {
   subject: string
   bodyText?: string
   bodyHtml?: string
-  status?: 'pending' | 'generating' | 'generated' | 'edited' | 'failed'
-  generationMode?: 'ai' | 'manual' | 'template'
-  mode?: 'ai' | 'manual' | 'template' // From frontend
+  status?: "pending" | "generating" | "generated" | "edited" | "failed"
+  generationMode?: "ai" | "manual" | "template"
+  mode?: "ai" | "manual" | "template" // From frontend
   aiPrompt?: string
   aiModel?: string
   generationError?: string
   contextSnapshot?: Record<string, unknown>
 }) {
   // If AI mode and no content yet, generate content
-  if ((data.generationMode === 'ai' || data.mode === 'ai') && (!data.subject || !data.bodyText)) {
+  if ((data.generationMode === "ai" || data.mode === "ai") && (!data.subject || !data.bodyText)) {
     try {
       // Get lead info for AI context
       const [lead] = await db
@@ -140,29 +140,29 @@ export async function upsertGeneratedEmail(data: {
         .limit(1)
 
       if (!lead) {
-        throw new Error('리드 정보를 찾을 수 없습니다')
+        throw new Error("리드 정보를 찾을 수 없습니다")
       }
 
       // Generate email content using AI
       const aiService = getAIEmailService()
       const result = await aiService.generateSequenceEmail({
-        companyName: lead.companyName || '',
+        companyName: lead.companyName || "",
         industry: lead.businessType || undefined,
         website: lead.websiteUrl || undefined,
         prompt: data.aiPrompt,
       })
 
       if (!result.success) {
-        throw new Error(result.error || 'AI 이메일 생성 실패')
+        throw new Error(result.error || "AI 이메일 생성 실패")
       }
 
       // Update data with AI generated content
-      data.subject = result.subject!
+      data.subject = result.subject || ""
       data.bodyText = result.bodyText
-      data.status = 'generated'
+      data.status = "generated"
     } catch (error) {
-      data.status = 'failed'
-      data.generationError = error instanceof Error ? error.message : '알 수 없는 오류'
+      data.status = "failed"
+      data.generationError = error instanceof Error ? error.message : "알 수 없는 오류"
     }
   }
 
@@ -179,7 +179,8 @@ export async function upsertGeneratedEmail(data: {
     )
     .limit(1)
 
-  if (existing.length > 0) {
+  const existingEmail = existing[0]
+  if (existingEmail) {
     // Update existing
     const [updated] = await db
       .update(workflowGeneratedEmails)
@@ -193,10 +194,10 @@ export async function upsertGeneratedEmail(data: {
         aiModel: data.aiModel,
         generationError: data.generationError,
         contextSnapshot: data.contextSnapshot,
-        generatedAt: data.status === 'generated' ? new Date() : undefined,
+        generatedAt: data.status === "generated" ? new Date() : undefined,
         updatedAt: new Date(),
       })
-      .where(eq(workflowGeneratedEmails.id, existing[0]!.id))
+      .where(eq(workflowGeneratedEmails.id, existingEmail.id))
       .returning()
 
     return updated
@@ -212,13 +213,13 @@ export async function upsertGeneratedEmail(data: {
       subject: data.subject,
       bodyText: data.bodyText || null,
       bodyHtml: data.bodyHtml || null,
-      status: data.status || 'pending',
-      generationMode: data.mode || data.generationMode || 'manual',
+      status: data.status || "pending",
+      generationMode: data.mode || data.generationMode || "manual",
       aiPrompt: data.aiPrompt || null,
       aiModel: data.aiModel || null,
       generationError: data.generationError || null,
       contextSnapshot: data.contextSnapshot || {},
-      generatedAt: data.status === 'generated' ? new Date() : null,
+      generatedAt: data.status === "generated" ? new Date() : null,
     })
     .returning()
 
@@ -232,7 +233,7 @@ export async function updateGeneratedEmail(
     subject?: string
     bodyText?: string
     bodyHtml?: string
-    status?: 'pending' | 'generating' | 'generated' | 'edited' | 'failed'
+    status?: "pending" | "generating" | "generated" | "edited" | "failed"
   },
 ) {
   const [updated] = await db
@@ -304,7 +305,7 @@ export async function getSequenceLeads(sequenceId: string) {
       leadContacts,
       and(
         eq(leadContacts.leadId, leads.id),
-        eq(leadContacts.contactType, 'email'),
+        eq(leadContacts.contactType, "email"),
         eq(leadContacts.isPrimary, true),
       ),
     )
@@ -313,21 +314,21 @@ export async function getSequenceLeads(sequenceId: string) {
   // Map to flat structure with proper field mapping
   return result.map((row) => ({
     id: row.id,
-    companyName: row.companyName || '',
-    contactName: row.companyName || '담당자',
-    contactEmail: row.contactEmail || '',
-    industry: row.businessType || '',
-    website: row.websiteUrl || '',
-    description: row.description || '',
-    address: row.address || '',
-    country: row.country || '',
-    city: row.city || '',
-    state: row.state || '',
-    foundedYear: row.foundedYear?.toString() || '',
-    employeeCount: row.employeeCount || '',
-    leadSource: row.leadSource || '',
-    leadStatus: row.leadStatus || '',
-    leadScore: row.leadScore?.toString() || '',
+    companyName: row.companyName || "",
+    contactName: row.companyName || "담당자",
+    contactEmail: row.contactEmail || "",
+    industry: row.businessType || "",
+    website: row.websiteUrl || "",
+    description: row.description || "",
+    address: row.address || "",
+    country: row.country || "",
+    city: row.city || "",
+    state: row.state || "",
+    foundedYear: row.foundedYear?.toString() || "",
+    employeeCount: row.employeeCount || "",
+    leadSource: row.leadSource || "",
+    leadStatus: row.leadStatus || "",
+    leadScore: row.leadScore?.toString() || "",
     size: undefined,
   }))
 }
@@ -347,7 +348,7 @@ export function replaceTemplateVariables(
 
   for (const [key, value] of Object.entries(context)) {
     if (value) {
-      const regex = new RegExp(`{{${key}}}`, 'gi')
+      const regex = new RegExp(`{{${key}}}`, "gi")
       result = result.replace(regex, value)
     }
   }
@@ -355,34 +356,34 @@ export function replaceTemplateVariables(
   // 한글 변수도 지원 (모든 리드 필드)
   const koreanMap: Record<string, string> = {
     // 회사 정보
-    회사명: context.companyName || '',
-    웹사이트: context.website || '',
-    업종: context.industry || '',
-    설명: context.description || '',
-    직원수: context.employeeCount || '',
-    설립연도: context.foundedYear || '',
+    회사명: context.companyName || "",
+    웹사이트: context.website || "",
+    업종: context.industry || "",
+    설명: context.description || "",
+    직원수: context.employeeCount || "",
+    설립연도: context.foundedYear || "",
 
     // 위치 정보
-    국가: context.country || '',
-    도시: context.city || '',
-    주: context.state || '',
-    '주/도': context.state || '',
-    주소: context.address || '',
+    국가: context.country || "",
+    도시: context.city || "",
+    주: context.state || "",
+    "주/도": context.state || "",
+    주소: context.address || "",
 
     // 연락처
-    담당자명: context.contactName || '',
-    이름: context.contactName || '',
-    이메일: context.contactEmail || '',
+    담당자명: context.contactName || "",
+    이름: context.contactName || "",
+    이메일: context.contactEmail || "",
 
     // 리드 관리
-    리드소스: context.leadSource || '',
-    리드상태: context.leadStatus || '',
-    리드점수: context.leadScore || '',
+    리드소스: context.leadSource || "",
+    리드상태: context.leadStatus || "",
+    리드점수: context.leadScore || "",
   }
 
   for (const [key, value] of Object.entries(koreanMap)) {
     if (value) {
-      const regex = new RegExp(`{{${key}}}`, 'g')
+      const regex = new RegExp(`{{${key}}}`, "g")
       result = result.replace(regex, value)
     }
   }

@@ -66,7 +66,7 @@ export function useSignupMutation() {
     mutationFn: authApi.signup,
     onSuccess: (response) => {
       toast.success(
-        response.message || "회원가입이 완료되었습니다. 관리자 승인 후 이용 가능합니다."
+        response.message || "회원가입이 완료되었습니다. 관리자 승인 후 이용 가능합니다.",
       )
       navigate("/login")
     },

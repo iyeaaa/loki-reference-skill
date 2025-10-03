@@ -82,7 +82,7 @@ export default function EmailAccountsPage() {
         onSuccess: () => {
           setEditingAccount(null)
         },
-      }
+      },
     )
   }
 
@@ -91,7 +91,7 @@ export default function EmailAccountsPage() {
 
     if (
       !confirm(
-        `선택한 ${selectedAccounts.length}개의 이메일 계정을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`
+        `선택한 ${selectedAccounts.length}개의 이메일 계정을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`,
       )
     )
       return
@@ -115,7 +115,7 @@ export default function EmailAccountsPage() {
           onSuccess: () => {
             setSelectedAccounts([])
           },
-        }
+        },
       )
     }
   }
@@ -145,7 +145,7 @@ export default function EmailAccountsPage() {
 
   const toggleAccountSelection = useCallback((accountId: string) => {
     setSelectedAccounts((prev) =>
-      prev.includes(accountId) ? prev.filter((id) => id !== accountId) : [...prev, accountId]
+      prev.includes(accountId) ? prev.filter((id) => id !== accountId) : [...prev, accountId],
     )
   }, [])
 

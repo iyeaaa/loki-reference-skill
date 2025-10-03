@@ -69,7 +69,7 @@ export function BulkActionModal({
   const filteredDepartments = departments.filter(
     (dept) =>
       dept.name.toLowerCase().includes(departmentSearch.toLowerCase()) ||
-      dept.code.toLowerCase().includes(departmentSearch.toLowerCase())
+      dept.code.toLowerCase().includes(departmentSearch.toLowerCase()),
   )
 
   const getTitle = () => {

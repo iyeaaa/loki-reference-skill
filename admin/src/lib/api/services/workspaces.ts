@@ -92,7 +92,7 @@ export const workspacesApi = {
       userId: string
       role?: "owner" | "admin" | "member" | "viewer"
       invitedBy?: string
-    }
+    },
   ): Promise<WorkspaceMember> => {
     return apiFetch<WorkspaceMember>(`/api/v1/workspaces/${workspaceId}/members`, {
       method: "POST",
@@ -104,7 +104,7 @@ export const workspacesApi = {
   updateMemberRole: async (
     workspaceId: string,
     memberId: string,
-    role: string
+    role: string,
   ): Promise<WorkspaceMember> => {
     return apiFetch<WorkspaceMember>(`/api/v1/workspaces/${workspaceId}/members/${memberId}/role`, {
       method: "PATCH",
@@ -116,14 +116,14 @@ export const workspacesApi = {
   updateMemberStatus: async (
     workspaceId: string,
     memberId: string,
-    status: string
+    status: string,
   ): Promise<WorkspaceMember> => {
     return apiFetch<WorkspaceMember>(
       `/api/v1/workspaces/${workspaceId}/members/${memberId}/status`,
       {
         method: "PATCH",
         body: JSON.stringify({ status }),
-      }
+      },
     )
   },
 
@@ -137,7 +137,7 @@ export const workspacesApi = {
   // Bulk update status
   bulkUpdateStatus: async (
     workspaceIds: string[],
-    isActive: boolean
+    isActive: boolean,
   ): Promise<{ updatedCount: number }> => {
     return apiFetch<{ updatedCount: number }>("/api/v1/admin/workspaces/bulk/status", {
       method: "PUT",

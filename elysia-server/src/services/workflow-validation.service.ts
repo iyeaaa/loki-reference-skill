@@ -4,16 +4,16 @@
 
 interface WorkflowNode {
   id: string
-  type: 'start' | 'emailDraft' | 'timer' | 'comment'
+  type: "start" | "emailDraft" | "timer" | "comment"
   position: { x: number; y: number }
   data: {
     subject?: string
     bodyText?: string
     delayDays?: number
-    generationMode?: 'ai' | 'manual'
+    generationMode?: "ai" | "manual"
     aiPrompt?: string
     comment?: string
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 
@@ -42,59 +42,59 @@ export function validateWorkflow(workflowData: WorkflowData): {
   const errors: ValidationError[] = []
 
   // 1. 시작 노드 확인
-  const startNode = workflowData.nodes.find((n) => n.type === 'start')
+  const startNode = workflowData.nodes.find((n) => n.type === "start")
   if (!startNode) {
     errors.push({
-      field: 'start',
-      message: '워크플로우에 시작 노드가 필요합니다',
+      field: "start",
+      message: "워크플로우에 시작 노드가 필요합니다",
     })
   }
 
   // 2. 각 노드 타입별 검증
   workflowData.nodes.forEach((node) => {
     // 주석 노드는 검증 스킵
-    if (node.type === 'comment') {
+    if (node.type === "comment") {
       return
     }
 
-    if (node.type === 'emailDraft') {
+    if (node.type === "emailDraft") {
       const mode = node.data.generationMode
 
       if (!mode) {
         errors.push({
-          field: 'generationMode',
-          message: '이메일 생성 모드를 선택해주세요',
+          field: "generationMode",
+          message: "이메일 생성 모드를 선택해주세요",
           nodeId: node.id,
         })
-      } else if (mode === 'ai') {
-        if (!node.data.aiPrompt || node.data.aiPrompt.trim() === '') {
+      } else if (mode === "ai") {
+        if (!node.data.aiPrompt || node.data.aiPrompt.trim() === "") {
           errors.push({
-            field: 'aiPrompt',
-            message: 'AI 프롬프트를 입력해주세요',
+            field: "aiPrompt",
+            message: "AI 프롬프트를 입력해주세요",
             nodeId: node.id,
           })
         }
-      } else if (mode === 'manual') {
-        if (!node.data.subject || node.data.subject.trim() === '') {
+      } else if (mode === "manual") {
+        if (!node.data.subject || node.data.subject.trim() === "") {
           errors.push({
-            field: 'subject',
-            message: '이메일 제목을 입력해주세요',
+            field: "subject",
+            message: "이메일 제목을 입력해주세요",
             nodeId: node.id,
           })
         }
-        if (!node.data.bodyText || node.data.bodyText.trim() === '') {
+        if (!node.data.bodyText || node.data.bodyText.trim() === "") {
           errors.push({
-            field: 'bodyText',
-            message: '이메일 본문을 입력해주세요',
+            field: "bodyText",
+            message: "이메일 본문을 입력해주세요",
             nodeId: node.id,
           })
         }
       }
-    } else if (node.type === 'timer') {
+    } else if (node.type === "timer") {
       if (!node.data.delayDays || node.data.delayDays < 1) {
         errors.push({
-          field: 'delayDays',
-          message: '타이머 대기 시간을 1일 이상으로 설정해주세요',
+          field: "delayDays",
+          message: "타이머 대기 시간을 1일 이상으로 설정해주세요",
           nodeId: node.id,
         })
       }
@@ -110,10 +110,10 @@ export function validateWorkflow(workflowData: WorkflowData): {
 
   workflowData.nodes.forEach((node) => {
     // 시작 노드와 주석 노드는 제외
-    if (node.type !== 'start' && node.type !== 'comment' && !connectedNodes.has(node.id)) {
+    if (node.type !== "start" && node.type !== "comment" && !connectedNodes.has(node.id)) {
       errors.push({
-        field: 'connection',
-        message: '연결되지 않은 노드가 있습니다',
+        field: "connection",
+        message: "연결되지 않은 노드가 있습니다",
         nodeId: node.id,
       })
     }
@@ -141,8 +141,8 @@ export function validateWorkflow(workflowData: WorkflowData): {
 
   if (startNode && hasCycle(startNode.id)) {
     errors.push({
-      field: 'cycle',
-      message: '워크플로우에 순환 참조가 있습니다',
+      field: "cycle",
+      message: "워크플로우에 순환 참조가 있습니다",
     })
   }
 
@@ -164,14 +164,14 @@ export function parseAndValidateWorkflow(workflowDataJson: string): {
     if (!workflowData.nodes || !Array.isArray(workflowData.nodes)) {
       return {
         valid: false,
-        errors: [{ field: 'nodes', message: '워크플로우 노드 데이터가 유효하지 않습니다' }],
+        errors: [{ field: "nodes", message: "워크플로우 노드 데이터가 유효하지 않습니다" }],
       }
     }
 
     if (!workflowData.edges || !Array.isArray(workflowData.edges)) {
       return {
         valid: false,
-        errors: [{ field: 'edges', message: '워크플로우 연결 데이터가 유효하지 않습니다' }],
+        errors: [{ field: "edges", message: "워크플로우 연결 데이터가 유효하지 않습니다" }],
       }
     }
 
@@ -186,8 +186,8 @@ export function parseAndValidateWorkflow(workflowDataJson: string): {
       valid: false,
       errors: [
         {
-          field: 'json',
-          message: `JSON 파싱 실패: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          field: "json",
+          message: `JSON 파싱 실패: ${error instanceof Error ? error.message : "Unknown error"}`,
         },
       ],
     }

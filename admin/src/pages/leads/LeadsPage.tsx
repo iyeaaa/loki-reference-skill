@@ -95,7 +95,7 @@ export default function LeadsPage() {
   // 고객 그룹 데이터 가져오기
   const { data: customerGroups } = useCustomerGroupsByWorkspace(
     selectedWorkspaceId !== "all" ? selectedWorkspaceId : "",
-    selectedWorkspaceId !== "all"
+    selectedWorkspaceId !== "all",
   )
 
   const loadWorkspaces = useCallback(async () => {
@@ -171,7 +171,7 @@ export default function LeadsPage() {
           })
           setEditingLead(null)
         },
-      }
+      },
     )
   }
 
@@ -180,7 +180,7 @@ export default function LeadsPage() {
 
     if (
       !confirm(
-        `선택한 ${selectedLeads.length}개의 리드를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`
+        `선택한 ${selectedLeads.length}개의 리드를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`,
       )
     )
       return
@@ -213,7 +213,7 @@ export default function LeadsPage() {
             })
             setSelectedLeads([])
           },
-        }
+        },
       )
     } else if (actionType === "businessType") {
       bulkUpdateBusinessType.mutate(
@@ -226,7 +226,7 @@ export default function LeadsPage() {
             })
             setSelectedLeads([])
           },
-        }
+        },
       )
     }
   }
@@ -248,7 +248,7 @@ export default function LeadsPage() {
 
   const toggleLeadSelection = useCallback((leadId: string) => {
     setSelectedLeads((prev) =>
-      prev.includes(leadId) ? prev.filter((id) => id !== leadId) : [...prev, leadId]
+      prev.includes(leadId) ? prev.filter((id) => id !== leadId) : [...prev, leadId],
     )
   }, [])
 
@@ -349,7 +349,7 @@ export default function LeadsPage() {
       toast.success(
         `${csvData.length}개의 리드가 ${
           isNewGroup ? "새로 생성된 그룹" : "선택된 그룹"
-        }에 성공적으로 추가되었습니다.`
+        }에 성공적으로 추가되었습니다.`,
       )
       setShowCSVUpload(false)
       setCsvData(null)

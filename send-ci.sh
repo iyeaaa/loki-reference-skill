@@ -197,8 +197,6 @@ if [ "$ONLY_CHANGED" = true ]; then
   else
     [ "$QUIET" = false ] && log_server "Detected ${WHITE}$SERVER_CHANGED${NC} changed files"
   fi
-
-  [ "$QUIET" = false ] && [ "$ADMIN_CHANGED" -gt 0 ] || [ "$SERVER_CHANGED" -gt 0 ] && echo ""
 fi
 
 # Admin 검사

@@ -20,7 +20,7 @@ import {
   workspaces,
 } from './schema'
 
-async function seed() {
+export async function seed() {
   console.log('🌱 시드 데이터 생성 시작...\n')
 
   try {
@@ -1266,13 +1266,18 @@ async function seed() {
   } catch (error) {
     console.error('❌ 시드 데이터 생성 실패:', error)
     throw error
-  } finally {
-    process.exit(0)
   }
 }
 
-// 스크립트 실행
-seed().catch((error) => {
-  console.error('시드 스크립트 실패:', error)
-  process.exit(1)
-})
+// 스크립트로 직접 실행될 때만 실행 (bun src/db/seed.ts)
+if (import.meta.main) {
+  seed()
+    .then(() => {
+      console.log('시드 스크립트 완료')
+      process.exit(0)
+    })
+    .catch((error) => {
+      console.error('시드 스크립트 실패:', error)
+      process.exit(1)
+    })
+}

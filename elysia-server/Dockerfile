@@ -13,6 +13,9 @@ RUN bun install --frozen-lockfile || bun install
 COPY src ./src
 COPY tsconfig.json ./
 COPY drizzle.config.ts ./
+# Copy migration files
+COPY drizzle ./drizzle
+COPY migrations ./migrations
 # Copy .env files
 COPY .env* ./
 

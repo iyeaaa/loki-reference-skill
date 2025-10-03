@@ -76,8 +76,6 @@ async function sendScheduledEmail(email: {
  * Process all scheduled emails that are due
  */
 async function processScheduledEmails() {
-  logger.info("Starting scheduled email processing")
-
   try {
     const now = new Date()
 
@@ -91,11 +89,11 @@ async function processScheduledEmails() {
       .limit(100) // Process max 100 emails per run
 
     if (scheduledEmails.length === 0) {
-      logger.debug("No scheduled emails to send")
+      logger.trace("No scheduled emails to send")
       return
     }
 
-    logger.info({ count: scheduledEmails.length }, "Found scheduled emails")
+    logger.info({ count: scheduledEmails.length }, "Processing scheduled emails")
 
     let successCount = 0
     let failureCount = 0
@@ -159,7 +157,7 @@ async function processScheduledEmails() {
  * Runs every 30 seconds to check for due emails
  */
 export function startScheduledEmailWorker() {
-  logger.info("Starting scheduled email worker")
+  logger.debug("✅ Scheduled email worker started")
 
   // Run immediately on startup
   processScheduledEmails()

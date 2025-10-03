@@ -31,20 +31,15 @@ import { startScheduledEmailWorker } from "./workers/scheduled-email-worker"
 import { startWorkflowExecutionWorker } from "./workers/workflow-execution-worker"
 
 // Initialize database
-logger.info("Initializing database...")
+logger.info("🔄 Initializing database...")
 migrateDatabase().catch((error) => {
   logger.error({ err: error }, "Database migration failed")
 })
 
 // Start workers
-logger.info("Starting email sequence worker...")
+logger.debug("Starting background workers...")
 startEmailSequenceWorker() // 구 기능 (sequence_steps)
-
-logger.info("Starting workflow execution worker...")
 startWorkflowExecutionWorker() // 신 기능 (workflow 기반)
-
-// Start scheduled email worker
-logger.info("Starting scheduled email worker...")
 startScheduledEmailWorker()
 
 const app = new Elysia()
@@ -152,7 +147,4 @@ const app = new Elysia()
 
   .listen(config.port)
 
-logger.info(
-  { hostname: app.server?.hostname, port: app.server?.port },
-  `Elysia server started at http://${app.server?.hostname}:${app.server?.port}`,
-)
+logger.info(`🚀 Server ready at http://${app.server?.hostname}:${config.port}`)

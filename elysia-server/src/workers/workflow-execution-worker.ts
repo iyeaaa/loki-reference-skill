@@ -12,18 +12,16 @@ import * as workflowExecutionService from "../services/workflow-execution.servic
 import logger from "../utils/logger"
 
 async function processWorkflowExecutions() {
-  logger.info("Starting workflow processing")
-
   try {
     // 스케줄된 실행 항목 조회
     const pendingExecutions = await workflowExecutionService.getPendingWorkflowExecutions(50)
 
     if (pendingExecutions.length === 0) {
-      logger.debug("No pending workflows to execute")
+      logger.trace("No pending workflows to execute")
       return
     }
 
-    logger.info({ count: pendingExecutions.length }, "Found pending workflows")
+    logger.info({ count: pendingExecutions.length }, "Processing pending workflows")
 
     // 각 워크플로우 실행
     for (const execution of pendingExecutions) {
@@ -85,7 +83,7 @@ async function processWorkflowExecutions() {
       }
     }
 
-    logger.info("Finished processing workflows")
+    logger.debug("Finished processing workflows")
   } catch (error) {
     logger.error({ err: error }, "Error in processWorkflowExecutions")
   }
@@ -96,8 +94,6 @@ async function processWorkflowExecutions() {
  * replied_emails 테이블을 모니터링하여 답장이 온 경우 워크플로우 중단
  */
 async function checkRepliesAndStopWorkflows() {
-  logger.info("Checking for replies")
-
   try {
     // 답장이 온 이메일에 해당하는 활성 enrollment 찾기
     const result = await db.execute<{ enrollment_id: string; lead_id: string }>(
@@ -115,7 +111,7 @@ async function checkRepliesAndStopWorkflows() {
     )
 
     if (result.rows.length === 0) {
-      logger.debug("No replies found")
+      logger.trace("No replies found")
       return
     }
 
@@ -160,7 +156,7 @@ async function checkRepliesAndStopWorkflows() {
 
 // 워커 실행 주기: 1분마다
 export function startWorkflowExecutionWorker() {
-  logger.info("Starting workflow execution worker")
+  logger.debug("✅ Workflow execution worker started")
 
   // 즉시 실행
   processWorkflowExecutions()

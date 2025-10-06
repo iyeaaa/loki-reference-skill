@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm"
 import { Elysia, t } from "elysia"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
@@ -445,10 +445,40 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         },
       })
 
-      // Build filter conditions - direction (inbound) is always required
-      const conditions = [eq(emails.direction, "inbound")]
+      // Step 1: Find threadIds that have at least one inbound message (replies)
+      const inboundConditions = [eq(emails.direction, "inbound")]
 
-      // Workspace filter: "all" means all workspaces, otherwise specific workspace
+      if (workspaceId !== "all") {
+        inboundConditions.push(eq(emails.workspaceId, workspaceId))
+      }
+
+      const repliedThreadIds = await db
+        .selectDistinct({ threadId: emails.threadId })
+        .from(emails)
+        .where(and(...inboundConditions))
+
+      const threadIdsList = repliedThreadIds
+        .map((t) => t.threadId)
+        .filter((id): id is string => !!id)
+
+      logger.info({
+        msg: "✓ [REPLIED-EMAILS] Found threads with replies",
+        threadIdsCount: threadIdsList.length,
+        threadIds: threadIdsList.slice(0, 10), // Log first 10 for debugging
+      })
+
+      if (threadIdsList.length === 0) {
+        return {
+          data: [],
+          total: 0,
+          limit,
+          offset,
+        }
+      }
+
+      // Step 2: Build filter conditions for all emails in replied threads
+      const conditions = [inArray(emails.threadId, threadIdsList)]
+
       if (workspaceId !== "all") {
         conditions.push(eq(emails.workspaceId, workspaceId))
       }
@@ -502,7 +532,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         hasSearchFilter: !!searchFilter,
       })
 
-      // Get threads with their latest message (스레드별 최신 메시지)
+      // Step 3: Get threads with their latest message (스레드별 최신 메시지 - any direction)
       // Use subquery to get latest email per thread
       const threadsQuery = db
         .select({
@@ -575,7 +605,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         }
       })
 
-      // Count total threads
+      // Count total threads (only threads with inbound replies)
       const totalThreadsResult = await db
         .select({ count: sql<number>`COUNT(DISTINCT ${emails.threadId})` })
         .from(emails)

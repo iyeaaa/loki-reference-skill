@@ -114,7 +114,10 @@ export function parseEmailBody(emailContent: string): {
   } else {
     // Simple email - try to find body after headers
     const headersPart = emailContent.split(/\r?\n\r?\n/)[0] || ""
-    const body = emailContent.substring(headersPart.length).replace(/^\r?\n\r?\n/, "").trim()
+    const body = emailContent
+      .substring(headersPart.length)
+      .replace(/^\r?\n\r?\n/, "")
+      .trim()
 
     if (!body) {
       return { text: undefined, html: undefined }
@@ -132,7 +135,12 @@ export function parseEmailBody(emailContent: string): {
     const decodedBody = decodeContent(body, encoding)
 
     // Determine if it's HTML or text based on content type or content
-    if (contentType?.includes("text/html") || decodedBody.includes("<html") || decodedBody.includes("<HTML") || decodedBody.includes("<!DOCTYPE")) {
+    if (
+      contentType?.includes("text/html") ||
+      decodedBody.includes("<html") ||
+      decodedBody.includes("<HTML") ||
+      decodedBody.includes("<!DOCTYPE")
+    ) {
       html = decodedBody
     } else {
       text = decodedBody

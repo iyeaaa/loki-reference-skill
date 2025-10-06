@@ -352,7 +352,7 @@ Content analysis details:   (1.2 points, 5.0 required)
 
 ## 실제 수신 데이터 예시
 
-### 완전한 로그 출력
+### 예시 1: 로컬 테스트 이메일 (Postfix)
 
 ```json
 {
@@ -391,6 +391,106 @@ Content analysis details:   (1.2 points, 5.0 required)
   "msg": "Complete webhook payload received"
 }
 ```
+
+### 예시 2: Gmail 발송 이메일 (프로덕션)
+
+**특징:**
+- ✅ DKIM 서명 포함 (gmail.com)
+- ✅ SPF 인증 통과 예상
+- ✅ UTF-8 한글 지원 (RFC 2047 Base64 인코딩)
+- ✅ Multipart/alternative (텍스트 + HTML)
+- ✅ Gmail 전용 헤더 다수
+
+**원본 이메일 (`email` 필드):**
+```
+Received: from mail-ed1-f42.google.com (mxd [209.85.208.42]) by mx.sendgrid.net with ESMTP id zUTGYMQyQJS0i_ni71A4YA for <rinda@send.grinda.ai>; Mon, 06 Oct 2025 11:18:37.444 +0000 (UTC)
+Received: by mail-ed1-f42.google.com with SMTP id 4fb4d7f45d1cf-6395172532fso5820621a12.0
+        for <rinda@send.grinda.ai>; Mon, 06 Oct 2025 04:18:37 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20230601; t=1759749516; x=1760354316; darn=send.grinda.ai;
+        h=to:subject:message-id:date:from:mime-version:from:to:cc:subject
+         :date:message-id:reply-to;
+        bh=WWDkfHWZC/gSepNF/yiRszjpqa0fG0PU25MudI/yoNU=;
+        b=e9XOG3tZJGgd1dFIrI6Wn8h9xXD6rUc3wvuVR/ys5LH2Wrledo5ST3EzYDT7UXgYIJ
+         giUA6q9dGwmVufVm7PaEd1EYBzYMo3EN50Y/e2ByiidAtl5JyKimJe+OrSTQYa9W9q0J
+         lPZ0uHuHNAdBXu0WCF0F1JdiAout470HXzQ53AJujcG2TalcfHg42NnrtQObyO3jB/u8
+         hxcFBPIKztC9yJI4ZJPy2fnTI+ZuOCrRed2GLK3dUNytvZXvH7NMyXg2PoSnabHT57AB
+         cp0aS7Imb7TeXWSZyFLnba8D6mLqK2h6a/pnUZVyEWdmYDdCVv54la1uAiUx2s5g7zhd
+         O3TA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1759749516; x=1760354316;
+        h=to:subject:message-id:date:from:mime-version:x-gm-message-state
+         :from:to:cc:subject:date:message-id:reply-to;
+        bh=WWDkfHWZC/gSepNF/yiRszjpqa0fG0PU25MudI/yoNU=;
+        b=jUYf0MxDnQ9jBWBp1IRqIhBsV90epmz2Ab8xwyRLGlcVw5WiAa6EP+C5iwh7mPi8GT
+         WYCXT6zXnd75HBoeptwJOHnokosz+WB2iwzmDUcFw+kGBC/O8sR5pbLm6TuXNfNfpAHw
+         r4Hq2hcCApVlYwvHmIh1ZVJOM8zmvfe6fEaIiIgbMl5v8Yd7jfyxe8KSfqLRy5jApKgg
+         jkQ/1I2dgkBFi/og+ODw4K1aGyXFrXPc065E5QBOeo/lPa/DhnLBwQoO4u5xresLeq0M
+         766e5JSwmY3oaMbKamngL4Kqgdw112M2zd5xX2dArjHY6L67aP1PQLL4Hg8/31QIa1Nb
+         FWzg==
+X-Gm-Message-State: AOJu0Yyq3D3iFXHlW5KHX9y3FBHoeu5S9v89bd9r1ia4XOp5+/kiqPsq
+    ERWPL4WCa/0iiKtdHKd3M7md40r1jJbA4Gfm7qt5kt3sr7A2iv8BVDTkUD45JFYHKz9niVBi+av
+    FXhaYiHHYaM/zJubOpGTMFUBVhcym0oiW9JyV2Ks=
+X-Gm-Gg: ASbGncvF5huE+XgeMn629ZnnqpVdXMAreMYyjeYjZq/NkvB6KpDbmOj9299z+xWJvMQ
+    Fm4dhdIY8VUa9n0MUnFn+GKU6QOBFqei92Q8jq9qTIRkKbwVp0/0qbC9Nn5QFn1v9ss3AT6j6uP
+    0BIYTJ8yU6uOJ1iezF5BflVR46ssx/cHw+1o39bgQqIDTFda7Vbk+hqrDt+S/RUyOb5vDe7CniD
+    75JJWfCum5ozakrMvdPcAeu7tlIZGA/ZcaNLQ09gm+s1aLe0FvzcTep8x0o8Znim5xMxXOzLa/m
+X-Google-Smtp-Source: AGHT+IE2MhJfP8stCXUtppXmg7CcvamoCqKrCuH8bFCzqE9qfgdrLvvlLCEWdgf4lBZdkuo4kt/owWvetaPC77+ELQw=
+X-Received: by 2002:a05:6402:1a2d:b0:634:4f76:25cd with SMTP id
+ 4fb4d7f45d1cf-63934fd122emr9819560a12.22.1759749515870; Mon, 06 Oct 2025
+ 04:18:35 -0700 (PDT)
+MIME-Version: 1.0
+From: =?UTF-8?B?7J207LKg7Z2s?= <wks0968@gmail.com>
+Date: Mon, 6 Oct 2025 20:18:23 +0900
+X-Gm-Features: AS18NWC1peRbdRNpbjBAuhRji5-kQRW2tBsy43510Dgg01WGBb_Ft2V98R90sd8
+Message-ID: <CAAt3oNgzVftS0vhkfJJBrfxy3Y2htqaq9CYcpxMZtC7WnUYC1A@mail.gmail.com>
+Subject: =?UTF-8?B?7JWI64WV7ZWY7IS47JqULCE=?=
+To: rinda@send.grinda.ai
+Content-Type: multipart/alternative; boundary="000000000000c9874f06407b9c87"
+
+--000000000000c9874f06407b9c87
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: base64
+
+7JWI64WV7ZWY7IS47JqULA0KDQrrqZTsnbzsnYQg7J6YIOuwm+yVmOyKteuLiOuLpC4g7ZmV7J24
+IO2bhCDtmozsi6Drk5zrpqzqsqDsirXri4jri6QuDQo=
+--000000000000c9874f06407b9c87
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: base64
+
+PGRpdiBkaXI9Imx0ciI+PGRpdiBjbGFzcz0iZ21haWxfZGVmYXVsdCIgc3R5bGU9ImZvbnQtZmFt
+aWx5OmFyaWFsLHNhbnMtc2VyaWYiPjxwIHN0eWxlPSJmb250LWZhbWlseTpBcmlhbCxIZWx2ZXRp
+Y2Esc2Fucy1zZXJpZiI+7JWI64WV7ZWY7IS47JqULDwvcD48cCBzdHlsZT0iZm9udC1mYW1pbHk6
+QXJpYWwsSGVsdmV0aWNhLHNhbnMtc2VyaWYiPuuplOydvOydhCDsnpgg67Cb7JWY7Iq164uI64uk
+LiDtmZXsnbgg7ZuEIO2ajOyLoOuTnOumrOqyoOyKteuLiOuLpC48L3A+PGJyIGNsYXNzPSJnbWFp
+bC1BcHBsZS1pbnRlcmNoYW5nZS1uZXdsaW5lIj48L2Rpdj48L2Rpdj4NCg==
+--000000000000c9874f06407b9c87--
+```
+
+**파싱된 필드 (예상):**
+```typescript
+{
+  from: "이청희 <wks0968@gmail.com>",
+  to: "rinda@send.grinda.ai",
+  subject: "안녕하세요,!",
+  text: "안녕하세요,\n\n메일을 잘 받았습니다. 확인 부탁드립니다.",
+  html: "<div dir=\"ltr\"><div class=\"gmail_default\" style=\"font-family:arial,sans-serif\">...</div></div>",
+  email: "[위 원본 이메일 전체]",
+  envelope: "{\"to\":[\"rinda@send.grinda.ai\"],\"from\":\"wks0968@gmail.com\"}",
+  dkim: "pass",  // Gmail DKIM 서명 검증 성공
+  SPF: "pass",   // Gmail SPF 검증 성공
+  sender_ip: "209.85.208.42",  // Gmail 서버 IP
+  charsets: "{\"to\":\"UTF-8\",\"from\":\"UTF-8\",\"subject\":\"UTF-8\",\"text\":\"UTF-8\",\"html\":\"UTF-8\"}",
+  spam_score: "0.0",  // Gmail 발송이므로 낮은 점수
+  spam_report: "[SpamAssassin 보고서]"
+}
+```
+
+**디코딩된 내용:**
+- **From:** 이청희 (wks0968@gmail.com)
+- **Subject:** 안녕하세요,!
+- **본문 (텍스트):** "안녕하세요,\n\n메일을 잘 받았습니다. 확인 부탁드립니다."
+- **본문 (HTML):** Gmail 스타일 HTML 버전
 
 ---
 
@@ -476,6 +576,32 @@ Content-Type: multipart/form-data
 
 **권장사항:** 더 쉬운 콘텐츠 추출을 위해 SendGrid를 파싱 모드로 설정하거나, `email` 필드에 대한 RFC 822 파싱을 구현하세요.
 
+### Gmail 이메일 처리 시 고려사항
+
+Gmail 이메일은 프로덕션 환경에서 가장 흔한 케이스이므로 다음을 고려해야 합니다:
+
+1. **RFC 2047 인코딩:**
+   - `From`, `Subject` 필드가 Base64로 인코딩됨
+   - 예: `=?UTF-8?B?7J207LKg7Z2s?=` → "이청희"
+   - 파싱 라이브러리 필요 (예: `mailparser`, `iconv-lite`)
+
+2. **Multipart 본문:**
+   - 대부분 `multipart/alternative` 형식
+   - 텍스트와 HTML 버전 모두 포함
+   - Base64 전송 인코딩 사용
+
+3. **DKIM/SPF 인증:**
+   - Gmail은 항상 DKIM 서명 포함
+   - 검증 결과는 `dkim: "pass"`, `SPF: "pass"` 예상
+   - 인증 실패 시 스팸 처리 고려
+
+4. **Gmail 전용 헤더:**
+   - `X-Google-DKIM-Signature`
+   - `X-Gm-Message-State`
+   - `X-Gm-Gg` (Gmail Group)
+   - `X-Google-Smtp-Source`
+   - 이 헤더들은 `email` 필드에서만 확인 가능
+
 ### 보안 고려사항
 
 1. **SPF/DKIM 검증:**
@@ -517,12 +643,28 @@ Content-Type: multipart/form-data
 - [x] 필드 추출 및 로깅
 - [x] 데이터베이스 저장
 - [x] TypeScript 타입 정의 및 적용
+- [x] SPF/DKIM 인증된 이메일 (Gmail 테스트)
+- [x] UTF-8 한글 이메일 (RFC 2047 Base64 인코딩)
+- [x] Multipart/alternative 이메일 (텍스트 + HTML)
 - [ ] 이미지가 포함된 HTML 이메일
 - [ ] 첨부파일이 있는 이메일
 - [ ] 답장 감지 및 스레딩
 - [ ] CC/BCC 수신자
 - [ ] 전달된 이메일
-- [ ] SPF/DKIM 인증된 이메일
+
+### 테스트 비교
+
+| 항목 | 로컬 테스트 (Postfix) | Gmail 테스트 |
+|------|---------------------|-------------|
+| **발신 서버** | 로컬 Postfix | Gmail (mail-ed1-f42.google.com) |
+| **DKIM** | none | pass ✅ |
+| **SPF** | none | pass ✅ |
+| **Spam Score** | 1.2 | 0.0 (예상) ✅ |
+| **한글 지원** | ASCII | UTF-8 Base64 ✅ |
+| **본문 형식** | Plain text | Multipart (text + HTML) ✅ |
+| **발신 IP** | 125.138.122.162 | 209.85.208.42 |
+| **Message-ID** | Postfix 형식 | Gmail 형식 |
+| **특수 헤더** | 기본만 | Gmail 전용 헤더 다수 ✅ |
 
 ---
 

@@ -308,7 +308,7 @@ export async function seed() {
         insertedWorkspaces[0]?.id && {
           userId: insertedUsers[0].id,
           workspaceId: insertedWorkspaces[0].id,
-          emailAddress: "rinda@partners.grinda.ai",
+          emailAddress: "rinda@send.grinda.ai",
           displayName: "Rinda Expert - 그린다에이아이",
           apiKey: Bun.env.SENDGRID_API_KEY || "SG.test_api_key_default",
           sendgridVerifiedSenderId: "sender_id_rinda",
@@ -322,7 +322,7 @@ export async function seed() {
         insertedWorkspaces[0]?.id && {
           userId: insertedUsers[0].id,
           workspaceId: insertedWorkspaces[0].id,
-          emailAddress: "rinda@partners.grinda.ai",
+          emailAddress: "rinda@send.grinda.ai",
           displayName: "Rinda Expert - 그린다에이아이 (User 1-2)",
           apiKey: "SG.test_api_key_1234567890",
           sendgridVerifiedSenderId: "sender_id_001",
@@ -336,7 +336,7 @@ export async function seed() {
         insertedWorkspaces[0]?.id && {
           userId: insertedUsers[1].id,
           workspaceId: insertedWorkspaces[0].id,
-          emailAddress: "rinda@partners.grinda.ai",
+          emailAddress: "rinda@send.grinda.ai",
           displayName: "Rinda Expert - 그린다에이아이 (User 2)",
           apiKey: "SG.test_api_key_2234567890",
           sendgridVerifiedSenderId: "sender_id_002",
@@ -350,7 +350,7 @@ export async function seed() {
         insertedWorkspaces[2]?.id && {
           userId: insertedUsers[2].id,
           workspaceId: insertedWorkspaces[2].id,
-          emailAddress: "rinda@partners.grinda.ai",
+          emailAddress: "rinda@send.grinda.ai",
           displayName: "Rinda Expert - 그린다에이아이 (User 3)",
           apiKey: "SG.test_api_key_3234567890",
           sendgridVerifiedSenderId: "sender_id_003",
@@ -364,7 +364,7 @@ export async function seed() {
         insertedWorkspaces[4]?.id && {
           userId: insertedUsers[3].id,
           workspaceId: insertedWorkspaces[4].id,
-          emailAddress: "rinda@partners.grinda.ai",
+          emailAddress: "rinda@send.grinda.ai",
           displayName: "Rinda Expert - 그린다에이아이 (User 4)",
           apiKey: "SG.test_api_key_4234567890",
           isVerified: false,
@@ -377,7 +377,7 @@ export async function seed() {
         insertedWorkspaces[3]?.id && {
           userId: insertedUsers[0].id,
           workspaceId: insertedWorkspaces[3].id,
-          emailAddress: "rinda@partners.grinda.ai",
+          emailAddress: "rinda@send.grinda.ai",
           displayName: "Rinda Expert - 그린다에이아이 (User 5)",
           apiKey: "SG.test_api_key_5234567890",
           sendgridVerifiedSenderId: "sender_id_005",

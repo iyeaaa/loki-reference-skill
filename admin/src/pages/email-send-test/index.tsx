@@ -45,7 +45,7 @@ export default function EmailSendTestPage() {
   const groupBodyHtmlId = useId()
 
   // 고정된 발신자 설정
-  const FIXED_FROM_EMAIL = "rinda@partners.grinda.ai"
+  const FIXED_FROM_EMAIL = "rinda@send.grinda.ai"
   const FIXED_FROM_NAME = "Rinda Expert 팀"
 
   // 발신자 이름 (공통)

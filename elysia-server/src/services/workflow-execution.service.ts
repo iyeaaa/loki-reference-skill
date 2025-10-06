@@ -278,7 +278,7 @@ async function executeEmailDraftNode(data: {
 
     // emailService를 사용하여 이메일 발송
     const sendResult = await emailService.sendEmail({
-      // TODO: 현재는 partners.grinda.ai로 고정해놓고
+      // TODO: 현재는 send.grinda.ai로 고정해놓고
       // 나중에 각 워크스페이스의 계정으로 보내도록 수정해야 함
       // fromEmail: enrollment.userEmailAccount.emailAddress,
       fromEmail: config.sendgrid.fromEmail,

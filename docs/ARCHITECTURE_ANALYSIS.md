@@ -86,7 +86,7 @@ export const config = {
   port: process.env.PORT || 3001,
   sendgrid: {
     apiKey: process.env.SENDGRID_API_KEY,
-    fromEmail: "rinda@partners.grinda.ai", // ❌ 하드코딩
+    fromEmail: "rinda@send.grinda.ai", // ❌ 하드코딩
   },
 }
 ```

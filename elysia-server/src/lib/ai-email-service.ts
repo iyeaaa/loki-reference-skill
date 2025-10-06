@@ -207,7 +207,7 @@ BODY:
 감사합니다.
 
 Rinda Expert 팀
-📧 rinda@partners.grinda.ai`
+📧 rinda@send.grinda.ai`
   }
 }
 

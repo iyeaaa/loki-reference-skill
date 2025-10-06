@@ -67,7 +67,7 @@ export const config = {
   sendgrid: {
     apiKey: getEnv("SENDGRID_API_KEY"),
     fromEmail: validateEmail(
-      getEnvOrDefault("SENDGRID_FROM_EMAIL", "rinda@partners.grinda.ai"),
+      getEnvOrDefault("SENDGRID_FROM_EMAIL", "rinda@send.grinda.ai"),
       "SENDGRID_FROM_EMAIL",
     ),
     fromName: getEnvOrDefault("SENDGRID_FROM_NAME", "Rinda Expert - 그린다에이아이"),

@@ -112,7 +112,7 @@ base: {
    - Environment: development
    - Port: 3001
    - Database: 15.165.2.108:5432/postgres
-   - SendGrid: rinda@partners.grinda.ai
+   - SendGrid: rinda@send.grinda.ai
 [17:42:40 UTC] INFO: Initializing database...
     env: "development"
     service: "elysia-server"
@@ -140,7 +140,7 @@ base: {
    - Environment: development
    - Port: 3001
    - Database: 15.165.2.108:5432/postgres
-   - SendGrid: rinda@partners.grinda.ai
+   - SendGrid: rinda@send.grinda.ai
 17:42:40 INFO 🔄 Initializing database...
 17:42:40 DEBUG Starting background workers...
 17:42:40 DEBUG ✅ Email sequence worker started

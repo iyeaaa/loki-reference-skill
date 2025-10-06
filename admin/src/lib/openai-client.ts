@@ -18,7 +18,7 @@ export async function generateEmailDraft(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        fromEmail: "admin@partners.grinda.ai",
+        fromEmail: "rinda@send.grinda.ai",
         subject: "",
         content: prompt,
       }),

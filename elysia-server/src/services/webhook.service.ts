@@ -10,7 +10,7 @@ import type {
   SendGridInboundPayload,
 } from "../models/email.model"
 import { emails } from "../types/email-storage"
-import { extractEmailAddress, parseEmailBody } from "../utils/email.util"
+import { extractEmailAddress, parseEmailBody, parseEmailHeaders } from "../utils/email.util"
 import logger from "../utils/logger"
 import { emailService } from "./email.service"
 
@@ -53,8 +53,8 @@ class WebhookService {
       "Complete webhook payload received",
     )
 
-    // Extract headers
-    const headers = this.extractHeaders(body.headers)
+    // Extract headers - PRIORITY: Parse from body.email (RFC 822) first
+    const headers = this.extractHeaders(body.headers, body.email)
 
     // Log email information
     this.logEmailInfo(body, headers, files)
@@ -107,16 +107,39 @@ class WebhookService {
     return { status: "OK" }
   }
 
-  private extractHeaders(headersString?: string): {
+  private extractHeaders(
+    headersString?: string,
+    emailContent?: string,
+  ): {
     messageId: string | undefined
     inReplyTo: string | undefined
     references: string[]
   } {
     let messageId: string | undefined
     let inReplyTo: string | undefined
-    const references: string[] = []
+    let references: string[] = []
 
-    if (headersString) {
+    // PRIORITY 1: Parse from RFC 822 email content (body.email field)
+    // This is the most reliable source for SendGrid Inbound Parse
+    if (emailContent) {
+      const parsedHeaders = parseEmailHeaders(emailContent)
+      messageId = parsedHeaders.messageId
+      inReplyTo = parsedHeaders.inReplyTo
+      references = parsedHeaders.references
+
+      logger.info(
+        {
+          messageId,
+          inReplyTo,
+          referencesCount: references.length,
+          source: "RFC822",
+        },
+        "Headers extracted from RFC 822 email content",
+      )
+    }
+
+    // PRIORITY 2: Fallback to headers string (legacy support)
+    if (!messageId && headersString) {
       try {
         const headers = JSON.parse(headersString)
         messageId = headers["Message-ID"] || headers["message-id"]
@@ -125,8 +148,17 @@ class WebhookService {
         if (referencesStr) {
           references.push(...referencesStr.split(/\s+/).filter((ref: string) => ref.length > 0))
         }
+        logger.info(
+          {
+            messageId,
+            inReplyTo,
+            referencesCount: references.length,
+            source: "JSON",
+          },
+          "Headers extracted from JSON headers string",
+        )
       } catch (e) {
-        logger.warn({ err: e }, "Failed to parse headers")
+        logger.warn({ err: e }, "Failed to parse headers string as JSON")
       }
     }
 

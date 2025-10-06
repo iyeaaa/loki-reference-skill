@@ -164,3 +164,54 @@ export function htmlToText(html: string): string {
     .replace(/\s+/g, " ") // Collapse whitespace
     .trim()
 }
+
+/**
+ * Parse RFC 822 email headers from raw email content
+ * Extracts Message-ID, In-Reply-To, and References headers
+ *
+ * @param emailContent - Full RFC 822 email content or headers string
+ * @returns { messageId, inReplyTo, references }
+ */
+export function parseEmailHeaders(emailContent: string): {
+  messageId: string | undefined
+  inReplyTo: string | undefined
+  references: string[]
+} {
+  let messageId: string | undefined
+  let inReplyTo: string | undefined
+  const references: string[] = []
+
+  if (!emailContent) {
+    return { messageId, inReplyTo, references }
+  }
+
+  // Extract the headers section (before the first blank line)
+  const headerSection = emailContent.split(/\r?\n\r?\n/)[0] || emailContent
+
+  // Parse Message-ID
+  // Format: Message-ID: <1759766737118.l4n09bwtdc@send.grinda.ai>
+  const messageIdMatch = headerSection.match(/^Message-ID:\s*(.+)$/im)
+  if (messageIdMatch?.[1]) {
+    messageId = messageIdMatch[1].trim()
+  }
+
+  // Parse In-Reply-To
+  // Format: In-Reply-To: <1759766737118.l4n09bwtdc@send.grinda.ai>
+  const inReplyToMatch = headerSection.match(/^In-Reply-To:\s*(.+)$/im)
+  if (inReplyToMatch?.[1]) {
+    inReplyTo = inReplyToMatch[1].trim()
+  }
+
+  // Parse References
+  // Format: References: <id1@example.com> <id2@example.com>
+  // Can span multiple lines with continuation (starts with whitespace)
+  const referencesMatch = headerSection.match(/^References:\s*(.+?)(?=\r?\n(?![\\s]))/ims)
+  if (referencesMatch?.[1]) {
+    const referencesStr = referencesMatch[1].replace(/\r?\n\s+/g, " ").trim()
+    // Split by whitespace and filter out empty strings
+    const refIds = referencesStr.split(/\s+/).filter((ref) => ref.length > 0)
+    references.push(...refIds)
+  }
+
+  return { messageId, inReplyTo, references }
+}

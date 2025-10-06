@@ -3,6 +3,7 @@ import { webhookService } from "../services/webhook.service"
 import { parseMultipartFormData } from "../utils/multipart.util"
 
 export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
+  // SendGrid Inbound Parse
   .post("/inbound", async ({ request }) => {
     const contentType = request.headers.get("content-type")
     const arrayBuffer = await request.arrayBuffer()
@@ -16,4 +17,8 @@ export const webhookRoutes = new Elysia({ prefix: "/api/webhook" })
     const { formData: body, files } = await parseMultipartFormData(contentType, arrayBuffer)
 
     return webhookService.processInboundStore(body, files)
+  })
+  // SendGrid Event Webhook
+  .post("/sendgrid-events", async ({ body }) => {
+    return webhookService.processSendGridEvents(body as unknown)
   })

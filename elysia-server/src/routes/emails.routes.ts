@@ -621,7 +621,28 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         }
       }
 
-      // Find user's email account
+      // Find user's email account - check all accounts first for debugging
+      const allAccounts = await db
+        .select({
+          id: userEmailAccounts.id,
+          workspaceId: userEmailAccounts.workspaceId,
+          userId: userEmailAccounts.userId,
+          status: userEmailAccounts.status,
+          emailAddress: userEmailAccounts.emailAddress,
+        })
+        .from(userEmailAccounts)
+        .where(
+          and(eq(userEmailAccounts.workspaceId, workspaceId), eq(userEmailAccounts.userId, userId)),
+        )
+
+      logger.info({
+        msg: "All email accounts for user",
+        workspaceId,
+        userId,
+        accounts: allAccounts,
+        count: allAccounts.length,
+      })
+
       const [emailAccount] = await db
         .select({ id: userEmailAccounts.id })
         .from(userEmailAccounts)
@@ -639,6 +660,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           msg: "No active email account found",
           workspaceId,
           userId,
+          allAccountsCount: allAccounts.length,
         })
         return {
           data: [],

@@ -1,7 +1,7 @@
-import { and, eq } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { db } from "../db"
 import { userEmailAccounts } from "../db/schema/email-accounts"
-import { emailReplies, emails as emailsTable } from "../db/schema/emails"
+import { emailEvents, emailReplies, emails as emailsTable } from "../db/schema/emails"
 import { leadContacts } from "../db/schema/lead-details"
 import type {
   Email,
@@ -13,6 +13,32 @@ import { emails } from "../types/email-storage"
 import { extractEmailAddress, parseEmailBody } from "../utils/email.util"
 import logger from "../utils/logger"
 import { emailService } from "./email.service"
+
+interface SendGridEvent {
+  event:
+    | "processed"
+    | "delivered"
+    | "open"
+    | "click"
+    | "bounce"
+    | "dropped"
+    | "deferred"
+    | "spam_report"
+    | "unsubscribe"
+  email: string
+  timestamp: number
+  sg_event_id?: string
+  sg_message_id?: string
+  useragent?: string
+  ip?: string
+  url?: string
+  bounce_classification?: string
+  reason?: string
+  status?: string
+  response?: string
+  type?: string
+  [key: string]: unknown
+}
 
 class WebhookService {
   async processInboundEmail(body: SendGridInboundPayload, files: FileData[]) {
@@ -344,7 +370,9 @@ class WebhookService {
         bodyText,
         bodyHtml,
         rawEmail: body.email, // 원본 RFC 822 이메일 저장
+        status: "delivered", // Inbound emails are already delivered
         sentAt: new Date(),
+        deliveredAt: new Date(), // Set delivered time
         messageId: headers.messageId,
         inReplyTo: headers.inReplyTo,
       })
@@ -439,6 +467,121 @@ class WebhookService {
     }
 
     logger.info("Email processing completed")
+  }
+
+  /**
+   * SendGrid Event Webhook 처리
+   * @param events - SendGrid에서 전송하는 이벤트 배열
+   */
+  async processSendGridEvents(events: unknown) {
+    const eventArray = Array.isArray(events) ? events : [events]
+
+    logger.info({ count: eventArray.length }, "Processing SendGrid events")
+
+    for (const event of eventArray) {
+      try {
+        await this.processSingleEvent(event as SendGridEvent)
+      } catch (error) {
+        logger.error({ err: error, event }, "Failed to process SendGrid event")
+      }
+    }
+
+    return { status: "OK", processed: eventArray.length }
+  }
+
+  private async processSingleEvent(event: SendGridEvent) {
+    logger.info({ event: event.event, sgMessageId: event.sg_message_id }, "Processing event")
+
+    // 1. sg_message_id로 이메일 찾기
+    if (!event.sg_message_id) {
+      logger.warn("Event missing sg_message_id")
+      return
+    }
+
+    const emailResults = await db
+      .select({ id: emailsTable.id, status: emailsTable.status })
+      .from(emailsTable)
+      .where(eq(emailsTable.sendgridMessageId, event.sg_message_id))
+      .limit(1)
+
+    if (emailResults.length === 0) {
+      logger.warn({ sgMessageId: event.sg_message_id }, "Email not found for event")
+      return
+    }
+
+    const email = emailResults[0]
+    if (!email) return
+
+    // 2. email_events 테이블에 이벤트 저장
+    await db.insert(emailEvents).values({
+      emailId: email.id,
+      eventType: event.event,
+      timestamp: new Date(event.timestamp * 1000),
+      sendgridEventId: event.sg_event_id,
+      userAgent: event.useragent,
+      ipAddress: event.ip,
+      url: event.url,
+      bounceType: event.bounce_classification,
+      bounceReason: event.reason,
+      smtpResponse: event.response,
+      rawEventData: event as unknown as Record<string, unknown>,
+      processed: false,
+    })
+
+    logger.info({ emailId: email.id, eventType: event.event }, "Event saved to database")
+
+    // 3. 이메일 상태 업데이트
+    await this.updateEmailStatus(email.id, event)
+  }
+
+  private async updateEmailStatus(emailId: string, event: SendGridEvent) {
+    const updates: Record<string, unknown> = {
+      updatedAt: new Date(),
+    }
+
+    switch (event.event) {
+      case "delivered":
+        updates.status = "delivered"
+        updates.deliveredAt = new Date(event.timestamp * 1000)
+        break
+      case "open":
+        updates.status = "opened"
+        updates.openedAt = new Date(event.timestamp * 1000)
+        // Increment open count separately
+        updates.openCount = sql`${emailsTable.openCount} + 1`
+        break
+      case "click":
+        updates.status = "clicked"
+        updates.clickedAt = new Date(event.timestamp * 1000)
+        // Increment click count separately
+        updates.clickCount = sql`${emailsTable.clickCount} + 1`
+        break
+      case "bounce":
+        updates.status = "bounced"
+        updates.bounceType = event.bounce_classification === "hard" ? "hard" : "soft"
+        updates.bounceReason = event.reason
+        break
+      case "dropped":
+      case "deferred":
+        updates.status = "failed"
+        updates.errorMessage = event.reason
+        break
+      case "spam_report":
+        updates.status = "spam"
+        updates.spamReportedAt = new Date(event.timestamp * 1000)
+        break
+      case "unsubscribe":
+        updates.status = "unsubscribed"
+        updates.unsubscribedAt = new Date(event.timestamp * 1000)
+        break
+    }
+
+    if (Object.keys(updates).length > 1) {
+      // More than just updatedAt
+      await db.update(emailsTable).set(updates).where(eq(emailsTable.id, emailId))
+
+      logger.info({ emailId, status: updates.status, event: event.event }, "Email status updated")
+    }
   }
 }
 

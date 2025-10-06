@@ -33,6 +33,35 @@ export function extractEmailAddress(emailString: string): string {
 }
 
 /**
+ * Decode content based on Content-Transfer-Encoding
+ */
+function decodeContent(content: string, encoding?: string): string {
+  if (!encoding || encoding === "7bit" || encoding === "8bit") {
+    return content
+  }
+
+  if (encoding === "base64") {
+    try {
+      // Remove whitespace and decode base64
+      const cleaned = content.replace(/\s/g, "")
+      return Buffer.from(cleaned, "base64").toString("utf-8")
+    } catch (error) {
+      console.error("Failed to decode base64:", error)
+      return content
+    }
+  }
+
+  if (encoding === "quoted-printable") {
+    // Basic quoted-printable decoding
+    return content
+      .replace(/=\r?\n/g, "") // Remove soft line breaks
+      .replace(/=([0-9A-F]{2})/gi, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
+  }
+
+  return content
+}
+
+/**
  * Parse RFC 822 email content to extract text and HTML parts
  *
  * @param emailContent - Full RFC 822 email content
@@ -60,32 +89,53 @@ export function parseEmailBody(emailContent: string): {
     for (const part of parts) {
       // Check for plain text part
       if (part.includes("Content-Type: text/plain")) {
+        // Extract encoding
+        const encodingMatch = part.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i)
+        const encoding = encodingMatch?.[1]?.trim().toLowerCase()
+
         const textMatch = part.match(/\r?\n\r?\n([\s\S]+?)(?=\r?\n--|\r?\n$|$)/)
         if (textMatch?.[1]) {
-          text = textMatch[1].trim()
+          text = decodeContent(textMatch[1].trim(), encoding)
         }
       }
 
       // Check for HTML part
       if (part.includes("Content-Type: text/html")) {
+        // Extract encoding
+        const encodingMatch = part.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i)
+        const encoding = encodingMatch?.[1]?.trim().toLowerCase()
+
         const htmlMatch = part.match(/\r?\n\r?\n([\s\S]+?)(?=\r?\n--|\r?\n$|$)/)
         if (htmlMatch?.[1]) {
-          html = htmlMatch[1].trim()
+          html = decodeContent(htmlMatch[1].trim(), encoding)
         }
       }
     }
   } else {
     // Simple email - try to find body after headers
-    const headerBodySplit = emailContent.split(/\r?\n\r?\n/)
-    if (headerBodySplit.length > 1) {
-      const body = headerBodySplit.slice(1).join("\n\n").trim()
+    const headersPart = emailContent.split(/\r?\n\r?\n/)[0] || ""
+    const body = emailContent.substring(headersPart.length).replace(/^\r?\n\r?\n/, "").trim()
 
-      // Check if it looks like HTML
-      if (body.includes("<html") || body.includes("<HTML") || body.includes("<!DOCTYPE")) {
-        html = body
-      } else {
-        text = body
-      }
+    if (!body) {
+      return { text: undefined, html: undefined }
+    }
+
+    // Extract encoding from headers
+    const encodingMatch = headersPart.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i)
+    const encoding = encodingMatch?.[1]?.trim().toLowerCase()
+
+    // Extract content type
+    const contentTypeMatch = headersPart.match(/Content-Type:\s*([^\r\n;]+)/i)
+    const contentType = contentTypeMatch?.[1]?.trim().toLowerCase()
+
+    // Decode the body
+    const decodedBody = decodeContent(body, encoding)
+
+    // Determine if it's HTML or text based on content type or content
+    if (contentType?.includes("text/html") || decodedBody.includes("<html") || decodedBody.includes("<HTML") || decodedBody.includes("<!DOCTYPE")) {
+      html = decodedBody
+    } else {
+      text = decodedBody
     }
   }
 

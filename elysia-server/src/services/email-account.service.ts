@@ -330,6 +330,37 @@ export async function getActiveEmailAccounts(workspaceId: string) {
   return result
 }
 
+// GetEmailAccountByWorkspaceAndUser :one
+export async function getEmailAccountByWorkspaceAndUser(workspaceId: string, userId: string) {
+  const result = await db
+    .select({
+      id: userEmailAccounts.id,
+      userId: userEmailAccounts.userId,
+      workspaceId: userEmailAccounts.workspaceId,
+      emailAddress: userEmailAccounts.emailAddress,
+      displayName: userEmailAccounts.displayName,
+      isVerified: userEmailAccounts.isVerified,
+      isDefault: userEmailAccounts.isDefault,
+      status: userEmailAccounts.status,
+      dailyLimit: userEmailAccounts.dailyLimit,
+      monthlyLimit: userEmailAccounts.monthlyLimit,
+      dailySentCount: userEmailAccounts.dailySentCount,
+      monthlySentCount: userEmailAccounts.monthlySentCount,
+      createdAt: userEmailAccounts.createdAt,
+    })
+    .from(userEmailAccounts)
+    .where(
+      and(
+        eq(userEmailAccounts.workspaceId, workspaceId),
+        eq(userEmailAccounts.userId, userId),
+        eq(userEmailAccounts.status, "active"),
+      ),
+    )
+    .limit(1)
+
+  return result[0]
+}
+
 // ====================================
 // STATISTICS AND UTILITY QUERIES
 // ====================================

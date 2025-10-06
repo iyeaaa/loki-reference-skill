@@ -132,4 +132,10 @@ export const emailAccountsApi = {
   getActiveByWorkspace: (workspaceId: string) => {
     return apiFetch<UserEmailAccount[]>(`/api/v1/email-accounts/workspace/${workspaceId}/active`)
   },
+
+  getByWorkspaceAndUser: (workspaceId: string, userId: string) => {
+    return apiFetch<UserEmailAccount>(
+      `/api/v1/email-accounts/workspace/${workspaceId}/user/${userId}`,
+    )
+  },
 }

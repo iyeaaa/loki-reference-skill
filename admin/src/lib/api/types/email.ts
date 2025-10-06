@@ -142,9 +142,9 @@ export interface SendEmailRequest {
   inReplyTo?: string
   references?: string[]
   scheduledAt?: string // ISO 8601 datetime for scheduled sending
-  // Optional for backward compatibility
-  workspaceId?: string
-  userEmailAccountId?: string
+  // Required fields for user_email_accounts integration
+  workspaceId: string
+  userId: string
 }
 
 export interface CreateEmailRequest {

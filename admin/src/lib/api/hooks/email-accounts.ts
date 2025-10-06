@@ -20,6 +20,8 @@ export const emailAccountKeys = {
   workspace: (workspaceId: string) => [...emailAccountKeys.all, "workspace", workspaceId] as const,
   activeWorkspace: (workspaceId: string) =>
     [...emailAccountKeys.all, "activeWorkspace", workspaceId] as const,
+  workspaceAndUser: (workspaceId: string, userId: string) =>
+    [...emailAccountKeys.all, "workspaceAndUser", workspaceId, userId] as const,
 }
 
 // Queries
@@ -69,6 +71,21 @@ export function useActiveEmailAccountsByWorkspace(workspaceId: string, enabled =
     enabled,
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
+  })
+}
+
+export function useEmailAccountByWorkspaceAndUser(
+  workspaceId: string,
+  userId: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: emailAccountKeys.workspaceAndUser(workspaceId, userId),
+    queryFn: () => emailAccountsApi.getByWorkspaceAndUser(workspaceId, userId),
+    enabled: enabled && !!workspaceId && !!userId,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: false, // Don't retry if account not found
   })
 }
 

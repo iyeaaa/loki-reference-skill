@@ -26,6 +26,10 @@ export interface UserEmailAccount {
   lastSyncAt?: string | null
   createdAt: string
   updatedAt: string
+  // Joined fields from relations
+  username?: string
+  email?: string
+  workspaceName?: string
 }
 
 export interface CreateEmailAccountRequest {

@@ -1,6 +1,5 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { Elysia, t } from "elysia"
-import { config } from "../config"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emailEvents, emails } from "../db/schema/emails"
@@ -61,35 +60,64 @@ const sendEmailSchema = t.Object({
   inReplyTo: t.Optional(t.String()),
   references: t.Optional(t.Array(t.String())),
   scheduledAt: t.Optional(t.String()), // ISO 8601 datetime for scheduled sending
-  // Optional fields for backward compatibility
-  workspaceId: t.Optional(t.String({ format: "uuid" })),
-  userEmailAccountId: t.Optional(t.String({ format: "uuid" })),
+  // Required fields for user_email_accounts integration
+  workspaceId: t.String({ format: "uuid" }),
+  userId: t.String({ format: "uuid" }),
 })
 
 export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
-  // Send email via SendGrid (Simple test mode - no DB)
+  // Send email via SendGrid (using user_email_accounts)
   .post(
     "/send",
     async ({ body, set }) => {
       try {
-        // Use fixed sender configuration from config
-        const fixedFromEmail = config.sendgrid.fromEmail
-        const fixedFromName = body.fromName || config.sendgrid.fromName
-        const fixedApiKey = config.sendgrid.apiKey
+        // Find user's email account by workspaceId and userId
+        const [emailAccount] = await db
+          .select({
+            id: userEmailAccounts.id,
+            emailAddress: userEmailAccounts.emailAddress,
+            displayName: userEmailAccounts.displayName,
+            apiKey: userEmailAccounts.apiKey,
+            status: userEmailAccounts.status,
+            isVerified: userEmailAccounts.isVerified,
+          })
+          .from(userEmailAccounts)
+          .where(
+            and(
+              eq(userEmailAccounts.workspaceId, body.workspaceId),
+              eq(userEmailAccounts.userId, body.userId),
+              eq(userEmailAccounts.status, "active"),
+            ),
+          )
+          .limit(1)
 
-        if (!fixedApiKey) {
-          set.status = 500
+        if (!emailAccount) {
+          set.status = 404
           return errorResponse(
-            "SendGrid API Key가 설정되지 않았습니다.",
-            ResponseCode.INTERNAL_ERROR,
+            "해당 워크스페이스와 사용자에 대한 활성화된 이메일 계정을 찾을 수 없습니다.",
+            ResponseCode.NOT_FOUND,
           )
         }
 
+        if (!emailAccount.isVerified) {
+          set.status = 400
+          return errorResponse(
+            "이메일 계정이 인증되지 않았습니다. 먼저 이메일 계정을 인증해주세요.",
+            ResponseCode.VALIDATION_ERROR,
+          )
+        }
+
+        const fromEmail = emailAccount.emailAddress
+        const fromName = body.fromName || emailAccount.displayName || emailAccount.emailAddress
+        const apiKey = emailAccount.apiKey
+
         logger.info(
           {
-            from: `${fixedFromName} <${fixedFromEmail}>`,
+            from: `${fromName} <${fromEmail}>`,
             to: body.toEmail,
             subject: body.subject,
+            workspaceId: body.workspaceId,
+            userId: body.userId,
           },
           "Sending email",
         )
@@ -103,10 +131,10 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             const [newEmail] = await db
               .insert(emails)
               .values({
-                workspaceId: "92df2e10-d214-4cc0-bebe-4685805c77a6", // 퓨어글로우 코스메틱
-                userEmailAccountId: "dac512b0-3369-44af-99a6-337a4f2f4bcc", // sales@greenda.ai
+                workspaceId: body.workspaceId,
+                userEmailAccountId: emailAccount.id,
                 direction: "outbound",
-                fromEmail: fixedFromEmail,
+                fromEmail: fromEmail,
                 toEmail: body.toEmail,
                 subject: body.subject,
                 bodyText: body.bodyText || null,
@@ -141,8 +169,8 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
 
         // Send email via SendGrid directly
         const sendResult = await emailService.sendEmail({
-          fromEmail: fixedFromEmail,
-          fromName: fixedFromName,
+          fromEmail: fromEmail,
+          fromName: fromName,
           toEmail: body.toEmail,
           subject: body.subject,
           bodyText: body.bodyText,
@@ -152,7 +180,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           replyTo: body.replyTo,
           inReplyTo: body.inReplyTo,
           references: body.references,
-          apiKey: fixedApiKey,
+          apiKey: apiKey,
         })
 
         // Return result without DB operations
@@ -162,7 +190,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             success: true,
             email: {
               id: `test-${Date.now()}`,
-              fromEmail: fixedFromEmail,
+              fromEmail: fromEmail,
               toEmail: body.toEmail,
               subject: body.subject,
               status: "sent",

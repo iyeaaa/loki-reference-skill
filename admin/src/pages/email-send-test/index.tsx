@@ -1,5 +1,15 @@
-import { Building2, Calendar, Mail, Send, TestTube, Trash2, UserCheck, Users } from "lucide-react"
-import { useId, useState } from "react"
+import {
+  Building2,
+  Calendar,
+  Mail,
+  Send,
+  TestTube,
+  Trash2,
+  User,
+  UserCheck,
+  Users,
+} from "lucide-react"
+import { useEffect, useId, useState } from "react"
 import toast from "react-hot-toast"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -16,7 +26,9 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useCustomerGroupsByWorkspace } from "@/lib/api/hooks/customer-groups"
+import { useEmailAccountByWorkspaceAndUser } from "@/lib/api/hooks/email-accounts"
 import { useSendEmail } from "@/lib/api/hooks/emails"
+import { useUsers } from "@/lib/api/hooks/users"
 import { useSuspenseWorkspaces } from "@/lib/api/hooks/workspaces"
 import type { SendEmailRequest } from "@/lib/api/types/email"
 
@@ -35,6 +47,8 @@ export default function EmailSendTestPage() {
   const bulkBodyHtmlId = useId()
   const scheduleRecipientsId = useId()
   const scheduleDateTimeId = useId()
+  const sendWorkspaceId = useId()
+  const sendUserId = useId()
   const scheduleSubjectId = useId()
   const scheduleBodyTextId = useId()
   const scheduleBodyHtmlId = useId()
@@ -44,12 +58,12 @@ export default function EmailSendTestPage() {
   const groupBodyTextId = useId()
   const groupBodyHtmlId = useId()
 
-  // 고정된 발신자 설정
-  const FIXED_FROM_EMAIL = "rinda@send.grinda.ai"
-  const FIXED_FROM_NAME = "Rinda Expert 팀"
+  // 워크스페이스 및 사용자 선택 (자동 선택)
+  const [selectedSendWorkspace, setSelectedSendWorkspace] = useState("")
+  const [selectedSendUser, setSelectedSendUser] = useState("")
 
   // 발신자 이름 (공통)
-  const [fromName, setFromName] = useState(FIXED_FROM_NAME)
+  const [fromName, setFromName] = useState("")
 
   // 단일 발송 상태
   const [singleRecipient, setSingleRecipient] = useState("")
@@ -87,11 +101,33 @@ export default function EmailSendTestPage() {
   const {
     data: { workspaces },
   } = useSuspenseWorkspaces({ limit: 100 })
+  const { data: usersData } = useUsers({ limit: 100 })
   const { data: customerGroups } = useCustomerGroupsByWorkspace(
     selectedWorkspace,
     !!selectedWorkspace,
   )
   const sendEmailMutation = useSendEmail()
+
+  // 워크스페이스와 유저가 선택되면 이메일 계정 정보 조회 (TanStack Query)
+  const {
+    data: emailAccountInfo,
+    isLoading: isLoadingEmailAccount,
+    error: emailAccountError,
+  } = useEmailAccountByWorkspaceAndUser(selectedSendWorkspace, selectedSendUser)
+
+  // 워크스페이스를 첫 번째 항목으로 자동 선택
+  useEffect(() => {
+    if (workspaces && workspaces.length > 0 && !selectedSendWorkspace) {
+      setSelectedSendWorkspace(workspaces[0].id)
+    }
+  }, [workspaces, selectedSendWorkspace])
+
+  // 유저를 첫 번째 항목으로 자동 선택
+  useEffect(() => {
+    if (usersData?.users && usersData.users.length > 0 && !selectedSendUser) {
+      setSelectedSendUser(usersData.users[0].id)
+    }
+  }, [usersData, selectedSendUser])
 
   // 고객 그룹 멤버 가져오기
   const fetchGroupMembers = async (groupId: string) => {
@@ -166,12 +202,19 @@ export default function EmailSendTestPage() {
   }
 
   const handleSingleSend = async () => {
+    if (!selectedSendWorkspace || !selectedSendUser) {
+      toast.error("워크스페이스와 사용자를 선택해주세요")
+      return
+    }
+
     if (!singleRecipient || !singleSubject) {
       toast.error("필수 항목을 모두 입력해주세요 (수신자, 제목)")
       return
     }
 
     const emailData: SendEmailRequest = {
+      workspaceId: selectedSendWorkspace,
+      userId: selectedSendUser,
       toEmail: singleRecipient,
       subject: singleSubject,
       bodyText: singleBodyText || undefined,
@@ -197,6 +240,11 @@ export default function EmailSendTestPage() {
   }
 
   const handleBulkSend = async () => {
+    if (!selectedSendWorkspace || !selectedSendUser) {
+      toast.error("워크스페이스와 사용자를 선택해주세요")
+      return
+    }
+
     if (!bulkRecipients || !bulkSubject) {
       toast.error("필수 항목을 모두 입력해주세요 (수신자 목록, 제목)")
       return
@@ -217,6 +265,8 @@ export default function EmailSendTestPage() {
 
     for (const recipient of recipients) {
       const emailData: SendEmailRequest = {
+        workspaceId: selectedSendWorkspace,
+        userId: selectedSendUser,
         toEmail: recipient,
         subject: bulkSubject,
         bodyText: bulkBodyText || undefined,
@@ -263,6 +313,11 @@ export default function EmailSendTestPage() {
   }
 
   const handleScheduleSend = async () => {
+    if (!selectedSendWorkspace || !selectedSendUser) {
+      toast.error("워크스페이스와 사용자를 선택해주세요")
+      return
+    }
+
     if (!scheduleRecipients || !scheduleSubject || !scheduleDateTime) {
       toast.error("필수 항목을 모두 입력해주세요 (수신자 목록, 제목, 예약 시간)")
       return
@@ -324,6 +379,8 @@ export default function EmailSendTestPage() {
         : undefined
 
       const emailData: SendEmailRequest = {
+        workspaceId: selectedSendWorkspace,
+        userId: selectedSendUser,
         toEmail: recipient,
         subject: scheduleSubject,
         bodyText: bodyTextWithSchedule,
@@ -357,6 +414,11 @@ export default function EmailSendTestPage() {
 
   // 30초 후 테스트 발송 (3명)
   const handleQuickTest = async () => {
+    if (!selectedSendWorkspace || !selectedSendUser) {
+      toast.error("워크스페이스와 사용자를 선택해주세요")
+      return
+    }
+
     const testRecipients = ["wks0968@gmail.com", "admin@grinda.ai", "grindaai1@gmail.com"]
 
     // 30초 후 시간 계산
@@ -412,6 +474,8 @@ export default function EmailSendTestPage() {
 `
 
       const emailData: SendEmailRequest = {
+        workspaceId: selectedSendWorkspace,
+        userId: selectedSendUser,
         toEmail: recipient,
         subject: `스케줄 테스트 (${scheduledKSTString} KST 발송 예정)`,
         bodyText,
@@ -444,6 +508,11 @@ export default function EmailSendTestPage() {
   }
 
   const handleGroupSend = async () => {
+    if (!selectedSendWorkspace || !selectedSendUser) {
+      toast.error("워크스페이스와 사용자를 선택해주세요")
+      return
+    }
+
     if (!selectedWorkspace || !selectedCustomerGroup || !groupSubject) {
       toast.error("필수 항목을 모두 입력해주세요 (워크스페이스, 고객 그룹, 제목)")
       return
@@ -466,6 +535,8 @@ export default function EmailSendTestPage() {
 
     for (const member of membersWithEmail) {
       const emailData: SendEmailRequest = {
+        workspaceId: selectedSendWorkspace,
+        userId: selectedSendUser,
         toEmail: member.email,
         subject: groupSubject,
         bodyText: groupBodyText || undefined,
@@ -505,29 +576,144 @@ export default function EmailSendTestPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* 발송 설정 - 고정된 발신자 정보 표시 */}
+      {/* 발송 설정 - 워크스페이스 및 사용자 선택 */}
       <Card>
         <CardHeader>
           <CardTitle>발송 설정</CardTitle>
-          <CardDescription>고정된 발신자 정보로 이메일을 발송합니다</CardDescription>
+          <CardDescription>
+            선택한 워크스페이스와 사용자에 따라 발송 이메일 계정이 자동으로 설정됩니다
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>발신 이메일</Label>
-              <div className="px-3 py-2 bg-muted rounded-md text-sm">{FIXED_FROM_EMAIL}</div>
+              <Label htmlFor={sendWorkspaceId}>워크스페이스 *</Label>
+              <Select value={selectedSendWorkspace} onValueChange={setSelectedSendWorkspace}>
+                <SelectTrigger id={sendWorkspaceId}>
+                  <SelectValue placeholder="워크스페이스 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {workspaces?.map((workspace) => (
+                    <SelectItem key={workspace.id} value={workspace.id}>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        {workspace.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                이 워크스페이스의 이메일 계정으로 발송됩니다
+              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={fromNameId}>발신자 이름</Label>
-              <Input
-                id={fromNameId}
-                placeholder="Rinda Expert 팀"
-                value={fromName}
-                onChange={(e) => setFromName(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">수신자에게 표시될 발신자 이름입니다</p>
+              <Label htmlFor={sendUserId}>사용자 *</Label>
+              <Select value={selectedSendUser} onValueChange={setSelectedSendUser}>
+                <SelectTrigger id={sendUserId}>
+                  <SelectValue placeholder="사용자 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {usersData?.users?.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        {user.username} ({user.email})
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                이 사용자에게 등록된 이메일 계정으로 발송됩니다
+              </p>
             </div>
+          </div>
+
+          {/* 로딩 상태 */}
+          {isLoadingEmailAccount && selectedSendWorkspace && selectedSendUser && (
+            <div className="p-4 bg-muted rounded-lg text-sm text-muted-foreground">
+              이메일 계정 정보를 불러오는 중...
+            </div>
+          )}
+
+          {/* 이메일 계정 정보 표시 */}
+          {emailAccountInfo && !isLoadingEmailAccount && (
+            <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center w-8 h-8 bg-green-100 dark:bg-green-900 rounded-full">
+                  <Mail className="h-4 w-4 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-green-900 dark:text-green-100">
+                    발신 이메일 계정 설정됨
+                  </div>
+                  <div className="text-xs text-green-600 dark:text-green-400">
+                    이 계정으로 모든 이메일이 발송됩니다
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2 pl-10">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-green-700 dark:text-green-300 font-medium">이메일:</span>
+                  <span className="font-mono text-green-900 dark:text-green-100">
+                    {emailAccountInfo.emailAddress}
+                  </span>
+                </div>
+                {emailAccountInfo.displayName && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-green-700 dark:text-green-300 font-medium">
+                      표시 이름:
+                    </span>
+                    <span className="text-green-900 dark:text-green-100">
+                      {emailAccountInfo.displayName}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 에러 상태 */}
+          {emailAccountError &&
+            !isLoadingEmailAccount &&
+            selectedSendWorkspace &&
+            selectedSendUser && (
+              <div className="p-4 bg-destructive/10 text-destructive rounded-lg space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center w-8 h-8 bg-destructive/20 rounded-full">
+                    <Mail className="h-4 w-4" />
+                  </div>
+                  <div className="font-semibold">이메일 계정을 찾을 수 없습니다</div>
+                </div>
+                <p className="text-sm pl-10">
+                  선택한 워크스페이스(
+                  <strong>{workspaces.find((w) => w.id === selectedSendWorkspace)?.name}</strong>)와
+                  사용자(
+                  <strong>
+                    {usersData?.users?.find((u) => u.id === selectedSendUser)?.username}
+                  </strong>
+                  )에 대한 활성화된 이메일 계정이 없습니다.
+                  <br />
+                  이메일 계정 페이지에서 먼저 등록해주세요.
+                </p>
+              </div>
+            )}
+
+          <div className="space-y-2">
+            <Label htmlFor={fromNameId}>발신자 이름 (선택)</Label>
+            <Input
+              id={fromNameId}
+              placeholder="발신자 이름"
+              value={fromName}
+              onChange={(e) => setFromName(e.target.value)}
+              disabled={!emailAccountInfo}
+            />
+            <p className="text-xs text-muted-foreground">
+              비어있으면 이메일 계정의 표시 이름({emailAccountInfo?.displayName || "미설정"})이
+              사용됩니다
+            </p>
           </div>
         </CardContent>
       </Card>

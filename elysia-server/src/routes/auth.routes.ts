@@ -95,13 +95,13 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
         // Hash password
         const passwordHash = await authService.hashPassword(body.password)
 
-        // Create user (default to inactive, needs admin approval)
+        // Create user (active by default)
         const newUser = await userService.createUser({
           username: body.username,
           email: body.email,
           passwordHash,
           userRole: "user",
-          isActive: false, // Needs admin approval
+          isActive: true, // Active by default
           departmentId: body.departmentId,
           employeeId: body.employeeId,
         })
@@ -112,7 +112,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
         }
 
         return {
-          message: "회원가입이 완료되었습니다. 관리자 승인 후 사용할 수 있습니다.",
+          message: "회원가입이 완료되었습니다. 이제 로그인하실 수 있습니다.",
           user: {
             id: newUser.id,
             username: newUser.username,

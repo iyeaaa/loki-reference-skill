@@ -8,15 +8,10 @@
 
 import sgMail from "@sendgrid/mail"
 import { and, eq, lte } from "drizzle-orm"
-import { config } from "../config"
 import { db } from "../db/index"
+import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emails } from "../db/schema/emails"
 import logger from "../utils/logger"
-
-// Initialize SendGrid
-if (config.sendgrid.apiKey) {
-  sgMail.setApiKey(config.sendgrid.apiKey)
-}
 
 interface EmailSendResult {
   success: boolean
@@ -25,10 +20,11 @@ interface EmailSendResult {
 }
 
 /**
- * Send a single email via SendGrid
+ * Send a single email via SendGrid using user_email_accounts
  */
 async function sendScheduledEmail(email: {
   id: string
+  userEmailAccountId: string
   fromEmail: string
   toEmail: string
   ccEmails: string[] | null
@@ -38,16 +34,42 @@ async function sendScheduledEmail(email: {
   bodyHtml: string | null
 }): Promise<EmailSendResult> {
   try {
-    // Use fixed sender configuration from config
-    const fixedFromEmail = config.sendgrid.fromEmail
-    const fixedFromName = config.sendgrid.fromName
+    // Get email account details from user_email_accounts
+    const [emailAccount] = await db
+      .select({
+        emailAddress: userEmailAccounts.emailAddress,
+        displayName: userEmailAccounts.displayName,
+        apiKey: userEmailAccounts.apiKey,
+      })
+      .from(userEmailAccounts)
+      .where(eq(userEmailAccounts.id, email.userEmailAccountId))
+      .limit(1)
+
+    if (!emailAccount) {
+      return {
+        success: false,
+        error: "Email account not found",
+      }
+    }
+
+    // Use account-specific API key
+    const apiKey = emailAccount.apiKey
+    if (!apiKey) {
+      return {
+        success: false,
+        error: "SendGrid API key not configured for this account",
+      }
+    }
+
+    // Set API key for this request
+    sgMail.setApiKey(apiKey)
 
     // Prepare email message
     const msg = {
       to: email.toEmail,
       from: {
-        email: fixedFromEmail,
-        name: fixedFromName,
+        email: emailAccount.emailAddress,
+        name: emailAccount.displayName || emailAccount.emailAddress,
       },
       subject: email.subject || "(제목 없음)",
       text: email.bodyText || (email.bodyHtml ? undefined : "(본문 없음)"),
@@ -83,7 +105,18 @@ async function processScheduledEmails() {
     // - status = 'scheduled'
     // - scheduledAt <= now
     const scheduledEmails = await db
-      .select()
+      .select({
+        id: emails.id,
+        userEmailAccountId: emails.userEmailAccountId,
+        fromEmail: emails.fromEmail,
+        toEmail: emails.toEmail,
+        ccEmails: emails.ccEmails,
+        bccEmails: emails.bccEmails,
+        subject: emails.subject,
+        bodyText: emails.bodyText,
+        bodyHtml: emails.bodyHtml,
+        retryCount: emails.retryCount,
+      })
       .from(emails)
       .where(and(eq(emails.status, "scheduled"), lte(emails.scheduledAt, now)))
       .limit(100) // Process max 100 emails per run

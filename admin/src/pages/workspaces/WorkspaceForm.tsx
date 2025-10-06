@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Textarea } from "@/components/ui/textarea"
 import type { User } from "@/lib/api/types/user"
 import type { Workspace } from "@/lib/api/types/workspace"
+import { WorkspaceEmailAccountsSection } from "./WorkspaceEmailAccountsSection"
 import { WorkspaceMembersSection } from "./WorkspaceMembersSection"
 
 interface WorkspaceFormProps {
@@ -159,13 +160,19 @@ export function WorkspaceForm({
         </div>
 
         {workspace?.id && (
-          <div className="pt-6 border-t">
-            <WorkspaceMembersSection
-              workspaceId={workspace.id}
-              isEdit={isEdit}
-              onAddMemberClick={onAddMemberClick || (() => {})}
-            />
-          </div>
+          <>
+            <div className="pt-6 border-t">
+              <WorkspaceMembersSection
+                workspaceId={workspace.id}
+                isEdit={isEdit}
+                onAddMemberClick={onAddMemberClick || (() => {})}
+              />
+            </div>
+
+            <div className="pt-6 border-t">
+              <WorkspaceEmailAccountsSection workspaceId={workspace.id} isEdit={isEdit} />
+            </div>
+          </>
         )}
 
         <div className="flex justify-end gap-3 pt-6 border-t sticky bottom-0 bg-white">

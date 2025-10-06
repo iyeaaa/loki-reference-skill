@@ -99,20 +99,6 @@ export const emailAccountRoutes = new Elysia({ prefix: "/api/v1/email-accounts" 
     },
   )
 
-  // Get active email accounts for workspace
-  .get(
-    "/workspace/:workspaceId/active",
-    async ({ params: { workspaceId } }) => {
-      const accounts = await emailAccountService.getActiveEmailAccounts(workspaceId)
-      return accounts
-    },
-    {
-      params: t.Object({
-        workspaceId: t.String({ format: "uuid" }),
-      }),
-    },
-  )
-
   // Get email account by ID
   .get(
     "/:id",
@@ -201,16 +187,41 @@ export const emailAccountRoutes = new Elysia({ prefix: "/api/v1/email-accounts" 
     },
   )
 
-  // Get email accounts by user
+  // Get email account by workspace and user (MUST be before /workspace/:workspaceId)
   .get(
-    "/user/:userId",
-    async ({ params: { userId } }) => {
-      const accounts = await emailAccountService.getEmailAccountsByUser(userId)
+    "/workspace/:workspaceId/user/:userId",
+    async ({ params: { workspaceId, userId }, set }) => {
+      const account = await emailAccountService.getEmailAccountByWorkspaceAndUser(
+        workspaceId,
+        userId,
+      )
+      if (!account) {
+        set.status = 404
+        return errorResponse(
+          "해당 워크스페이스와 사용자에 대한 활성화된 이메일 계정을 찾을 수 없습니다.",
+          ResponseCode.NOT_FOUND,
+        )
+      }
+      return account
+    },
+    {
+      params: t.Object({
+        workspaceId: t.String({ format: "uuid" }),
+        userId: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
+  // Get active email accounts for workspace (MUST be before /workspace/:workspaceId)
+  .get(
+    "/workspace/:workspaceId/active",
+    async ({ params: { workspaceId } }) => {
+      const accounts = await emailAccountService.getActiveEmailAccounts(workspaceId)
       return accounts
     },
     {
       params: t.Object({
-        userId: t.String({ format: "uuid" }),
+        workspaceId: t.String({ format: "uuid" }),
       }),
     },
   )
@@ -225,6 +236,20 @@ export const emailAccountRoutes = new Elysia({ prefix: "/api/v1/email-accounts" 
     {
       params: t.Object({
         workspaceId: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
+  // Get email accounts by user
+  .get(
+    "/user/:userId",
+    async ({ params: { userId } }) => {
+      const accounts = await emailAccountService.getEmailAccountsByUser(userId)
+      return accounts
+    },
+    {
+      params: t.Object({
+        userId: t.String({ format: "uuid" }),
       }),
     },
   )

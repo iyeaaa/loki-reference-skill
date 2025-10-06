@@ -1,5 +1,4 @@
 import { and, desc, eq, isNull, lte, sql } from "drizzle-orm"
-import { config } from "../config"
 import { db } from "../db/index"
 import { customerGroupMembers } from "../db/schema/customer-groups"
 import { emails } from "../db/schema/emails"
@@ -276,18 +275,15 @@ async function executeEmailDraftNode(data: {
       throw new Error("No contact email found")
     }
 
-    // emailService를 사용하여 이메일 발송
+    // emailService를 사용하여 이메일 발송 (user_email_accounts 기반)
     const sendResult = await emailService.sendEmail({
-      // TODO: 현재는 send.grinda.ai로 고정해놓고
-      // 나중에 각 워크스페이스의 계정으로 보내도록 수정해야 함
-      // fromEmail: enrollment.userEmailAccount.emailAddress,
-      fromEmail: config.sendgrid.fromEmail,
+      fromEmail: enrollment.userEmailAccount.emailAddress,
       fromName: enrollment.userEmailAccount.displayName || enrollment.userEmailAccount.emailAddress,
       toEmail,
       subject: generatedEmail.subject,
       bodyText: generatedEmail.bodyText || undefined,
       bodyHtml: generatedEmail.bodyHtml || undefined,
-      apiKey: config.sendgrid.apiKey,
+      apiKey: enrollment.userEmailAccount.apiKey,
     })
 
     if (!sendResult.success) {

@@ -148,10 +148,6 @@ export default function AdminLoginPage() {
           </CardTitle>
           <CardDescription className="text-gray-600 mt-2">
             스마트한 이메일 마케팅 솔루션
-            <br />
-            <span className="text-xs text-indigo-600 font-medium mt-3 block">
-              ※ 관리자 승인 후 이용 가능
-            </span>
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">

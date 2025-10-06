@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { Elysia, t } from "elysia"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
@@ -595,7 +595,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
     },
   )
 
-  // Get replied emails by workspace and user
+  // Get replied emails by workspace and user (with filters and thread grouping)
   .get(
     "/replied",
     async ({ query }) => {
@@ -603,10 +603,18 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       const userId = query.userId
       const limit = Math.min(Number.parseInt(query.limit || "50", 10), 100)
       const offset = Number.parseInt(query.offset || "0", 10)
+      const groupByThread = query.groupByThread === "true"
+
+      // Filters
+      const statusFilter = query.status
+      const leadIdFilter = query.leadId
+      const sequenceIdFilter = query.sequenceIdFilter
+      const searchFilter = query.search
 
       if (!workspaceId || !userId) {
         return {
           data: [],
+          threads: [],
           total: 0,
           limit,
           offset,
@@ -629,64 +637,144 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       if (!emailAccount) {
         return {
           data: [],
+          threads: [],
           total: 0,
           limit,
           offset,
         }
       }
 
-      // Get replied emails (inbound emails) - OPTIMIZED: No JOINs needed!
-      const repliedEmails = await db
-        .select({
-          id: emails.id,
-          fromEmail: emails.fromEmail,
-          toEmail: emails.toEmail,
-          subject: emails.subject,
-          bodyText: emails.bodyText,
-          bodyHtml: emails.bodyHtml,
-          status: emails.status,
-          repliedAt: emails.repliedAt,
-          inReplyTo: emails.inReplyTo,
-          threadId: emails.threadId,
-          leadId: emails.leadId,
-          sequenceId: emails.sequenceId,
-          createdAt: emails.createdAt,
-          // Use denormalized fields (no JOINs = 10x faster!)
-          leadName: emails.leadName,
-          leadEmail: emails.leadEmail,
-          sequenceName: emails.sequenceName,
-        })
-        .from(emails)
-        .where(
-          and(
-            eq(emails.workspaceId, workspaceId),
-            eq(emails.userEmailAccountId, emailAccount.id),
-            eq(emails.direction, "inbound"),
+      // Build filter conditions
+      const conditions = [
+        eq(emails.workspaceId, workspaceId),
+        eq(emails.userEmailAccountId, emailAccount.id),
+        eq(emails.direction, "inbound"),
+      ]
+
+      if (statusFilter && statusFilter !== "all") {
+        conditions.push(
+          eq(
+            emails.status,
+            statusFilter as
+              | "draft"
+              | "scheduled"
+              | "queued"
+              | "sent"
+              | "delivered"
+              | "opened"
+              | "clicked"
+              | "replied"
+              | "bounced"
+              | "failed"
+              | "spam"
+              | "unsubscribed",
           ),
         )
-        .orderBy(desc(emails.createdAt))
-        .limit(limit)
-        .offset(offset)
-
-      // Count total
-      const countResult = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(emails)
-        .where(
-          and(
-            eq(emails.workspaceId, workspaceId),
-            eq(emails.userEmailAccountId, emailAccount.id),
-            eq(emails.direction, "inbound"),
-          ),
+      }
+      if (leadIdFilter) {
+        conditions.push(eq(emails.leadId, leadIdFilter))
+      }
+      if (sequenceIdFilter) {
+        conditions.push(eq(emails.sequenceId, sequenceIdFilter))
+      }
+      if (searchFilter) {
+        const searchCondition = or(
+          ilike(emails.subject, `%${searchFilter}%`),
+          ilike(emails.fromEmail, `%${searchFilter}%`),
+          ilike(emails.leadName, `%${searchFilter}%`),
         )
+        if (searchCondition) {
+          conditions.push(searchCondition)
+        }
+      }
 
-      const totalCount = countResult[0]?.count || 0
+      const whereClause = and(...conditions)
 
-      return {
-        data: repliedEmails,
-        total: Number(totalCount),
-        limit,
-        offset,
+      if (groupByThread) {
+        // Get unique threads with latest email info
+        const threadsWithEmails = await db
+          .select({
+            threadId: emails.threadId,
+            latestEmailId: sql<string>`MAX(${emails.id})`,
+            emailCount: sql<number>`COUNT(*)`,
+            latestActivity: sql<string>`MAX(${emails.createdAt})`,
+            subject: sql<string>`MAX(${emails.subject})`,
+            fromEmail: sql<string>`MAX(${emails.fromEmail})`,
+            leadName: sql<string>`MAX(${emails.leadName})`,
+            leadEmail: sql<string>`MAX(${emails.leadEmail})`,
+            sequenceName: sql<string>`MAX(${emails.sequenceName})`,
+            status: sql<string>`MAX(${emails.status})`,
+          })
+          .from(emails)
+          .where(whereClause)
+          .groupBy(emails.threadId)
+          .having(sql`${emails.threadId} IS NOT NULL`)
+          .orderBy(sql`MAX(${emails.createdAt}) DESC`)
+          .limit(limit)
+          .offset(offset)
+
+        // Count total threads
+        const threadCountResult = await db
+          .select({
+            count: sql<number>`COUNT(DISTINCT ${emails.threadId})`,
+          })
+          .from(emails)
+          .where(whereClause)
+
+        const totalThreads = threadCountResult[0]?.count || 0
+
+        return {
+          data: [],
+          threads: threadsWithEmails,
+          total: Number(totalThreads),
+          limit,
+          offset,
+          groupedByThread: true,
+        }
+      } else {
+        // Get replied emails (inbound emails) - OPTIMIZED: No JOINs needed!
+        const repliedEmails = await db
+          .select({
+            id: emails.id,
+            fromEmail: emails.fromEmail,
+            toEmail: emails.toEmail,
+            subject: emails.subject,
+            bodyText: emails.bodyText,
+            bodyHtml: emails.bodyHtml,
+            status: emails.status,
+            repliedAt: emails.repliedAt,
+            inReplyTo: emails.inReplyTo,
+            threadId: emails.threadId,
+            leadId: emails.leadId,
+            sequenceId: emails.sequenceId,
+            createdAt: emails.createdAt,
+            // Use denormalized fields (no JOINs = 10x faster!)
+            leadName: emails.leadName,
+            leadEmail: emails.leadEmail,
+            sequenceName: emails.sequenceName,
+          })
+          .from(emails)
+          .where(whereClause)
+          .orderBy(desc(emails.createdAt))
+          .limit(limit)
+          .offset(offset)
+
+        // Count total
+        const countResult = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(emails)
+          .where(whereClause)
+
+        const totalCount = countResult[0]?.count || 0
+
+        return {
+          data: repliedEmails,
+          threads: [],
+          total: Number(totalCount),
+          limit,
+          offset,
+          groupedByThread: false,
+        }
       }
     },
     {
@@ -695,6 +783,83 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         userId: t.Optional(t.String({ format: "uuid" })),
         limit: t.Optional(t.String()),
         offset: t.Optional(t.String()),
+        groupByThread: t.Optional(t.String()),
+        status: t.Optional(t.String()),
+        leadId: t.Optional(t.String({ format: "uuid" })),
+        sequenceIdFilter: t.Optional(t.String({ format: "uuid" })),
+        search: t.Optional(t.String()),
+      }),
+    },
+  )
+
+  // Get emails in a specific thread
+  .get(
+    "/thread/:threadId",
+    async ({ params: { threadId }, query }) => {
+      const workspaceId = query.workspaceId
+      const userId = query.userId
+
+      if (!workspaceId || !userId) {
+        return { data: [] }
+      }
+
+      // Find user's email account
+      const [emailAccount] = await db
+        .select({ id: userEmailAccounts.id })
+        .from(userEmailAccounts)
+        .where(
+          and(
+            eq(userEmailAccounts.workspaceId, workspaceId),
+            eq(userEmailAccounts.userId, userId),
+            eq(userEmailAccounts.status, "active"),
+          ),
+        )
+        .limit(1)
+
+      if (!emailAccount) {
+        return { data: [] }
+      }
+
+      // Get all emails in thread
+      const threadEmails = await db
+        .select({
+          id: emails.id,
+          direction: emails.direction,
+          fromEmail: emails.fromEmail,
+          toEmail: emails.toEmail,
+          subject: emails.subject,
+          bodyText: emails.bodyText,
+          bodyHtml: emails.bodyHtml,
+          status: emails.status,
+          sentAt: emails.sentAt,
+          repliedAt: emails.repliedAt,
+          createdAt: emails.createdAt,
+          threadId: emails.threadId,
+          inReplyTo: emails.inReplyTo,
+          messageId: emails.messageId,
+          leadName: emails.leadName,
+          leadEmail: emails.leadEmail,
+          sequenceName: emails.sequenceName,
+        })
+        .from(emails)
+        .where(
+          and(
+            eq(emails.threadId, threadId),
+            eq(emails.workspaceId, workspaceId),
+            eq(emails.userEmailAccountId, emailAccount.id),
+          ),
+        )
+        .orderBy(asc(emails.createdAt))
+
+      return { data: threadEmails }
+    },
+    {
+      params: t.Object({
+        threadId: t.String(),
+      }),
+      query: t.Object({
+        workspaceId: t.Optional(t.String({ format: "uuid" })),
+        userId: t.Optional(t.String({ format: "uuid" })),
       }),
     },
   )

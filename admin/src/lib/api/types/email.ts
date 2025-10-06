@@ -204,3 +204,14 @@ export interface RepliedEmail {
   leadEmail?: string | null
   sequenceName?: string | null
 }
+
+export interface ThreadGroupedEmail {
+  threadId: string
+  latestEmailId: string
+  emailCount: number
+  latestActivity: string
+  subject: string | null
+  fromEmail: string
+  leadName: string | null
+  sequenceName: string | null
+}

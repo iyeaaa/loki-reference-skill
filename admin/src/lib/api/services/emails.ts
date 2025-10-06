@@ -7,6 +7,7 @@ import type {
   EmailsParams,
   RepliedEmail,
   SendEmailRequest,
+  ThreadGroupedEmail,
   UpdateEmailStatusRequest,
 } from "../types/email"
 
@@ -105,16 +106,27 @@ export const emailsApi = {
     userId?: string
     limit?: number
     offset?: number
+    groupByThread?: boolean
+    status?: string
+    leadId?: string
+    sequenceId?: string
+    search?: string
   }) => {
     const searchParams = new URLSearchParams()
     if (params.workspaceId) searchParams.append("workspaceId", params.workspaceId)
     if (params.userId) searchParams.append("userId", params.userId)
     if (params.limit) searchParams.append("limit", params.limit.toString())
     if (params.offset) searchParams.append("offset", params.offset.toString())
+    if (params.groupByThread !== undefined)
+      searchParams.append("groupByThread", params.groupByThread.toString())
+    if (params.status && params.status !== "all") searchParams.append("status", params.status)
+    if (params.leadId) searchParams.append("leadId", params.leadId)
+    if (params.sequenceId) searchParams.append("sequenceId", params.sequenceId)
+    if (params.search) searchParams.append("search", params.search)
 
     const query = searchParams.toString()
     return apiFetch<{
-      data: RepliedEmail[]
+      data: (RepliedEmail | ThreadGroupedEmail)[]
       total: number
       limit: number
       offset: number

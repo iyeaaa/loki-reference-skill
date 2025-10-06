@@ -146,16 +146,29 @@ export function useBulkDeleteEmails() {
 export function useRepliedEmails(
   workspaceId?: string,
   userId?: string,
-  options?: { limit?: number; offset?: number },
+  options?: {
+    limit?: number
+    offset?: number
+    groupByThread?: boolean
+    status?: string
+    leadId?: string
+    sequenceId?: string
+    search?: string
+  },
 ) {
   return useQuery({
-    queryKey: emailKeys.replied(workspaceId, userId),
+    queryKey: [...emailKeys.replied(workspaceId, userId), options],
     queryFn: () =>
       emailsApi.getRepliedEmails({
         workspaceId,
         userId,
         limit: options?.limit || 50,
         offset: options?.offset || 0,
+        groupByThread: options?.groupByThread,
+        status: options?.status,
+        leadId: options?.leadId,
+        sequenceId: options?.sequenceId,
+        search: options?.search,
       }),
     enabled: !!workspaceId && !!userId,
     staleTime: 30 * 1000,

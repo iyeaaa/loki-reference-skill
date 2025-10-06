@@ -18,7 +18,7 @@ export type EmailStatus =
 
 export type EmailBounceType = "soft" | "hard" | "block"
 
-export type EmailThreadStatus = "active" | "archived" | "snoozed"
+// EmailThreadStatus removed - not needed without email_threads table
 
 export type EmailReplySentiment =
   | "positive"
@@ -88,18 +88,7 @@ export interface Email {
   updatedAt: string
 }
 
-export interface EmailThread {
-  id: string
-  workspaceId: string
-  leadId?: string | null
-  subject?: string | null
-  firstEmailId?: string | null
-  lastEmailId?: string | null
-  lastActivityAt?: string | null
-  status: EmailThreadStatus
-  createdAt: string
-  updatedAt: string
-}
+// EmailThread interface removed - using threadId field in Email instead
 
 export interface EmailReply {
   id: string

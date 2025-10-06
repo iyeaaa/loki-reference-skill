@@ -37,11 +37,7 @@ export const emailStatusEnum = pgEnum("email_status_enum", [
 
 export const emailBounceTypeEnum = pgEnum("email_bounce_type_enum", ["soft", "hard", "block"])
 
-export const emailThreadStatusEnum = pgEnum("email_thread_status_enum", [
-  "active",
-  "archived",
-  "snoozed",
-])
+// emailThreadStatusEnum removed - not needed without email_threads table
 
 export const emailReplySentimentEnum = pgEnum("email_reply_sentiment_enum", [
   "positive",
@@ -149,29 +145,7 @@ export const emails = pgTable(
   }),
 )
 
-// Email threads table
-export const emailThreads = pgTable(
-  "email_threads",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    workspaceId: uuid("workspace_id")
-      .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
-    leadId: uuid("lead_id").references(() => leads.id, { onDelete: "set null" }),
-    subject: varchar("subject", { length: 500 }),
-    firstEmailId: uuid("first_email_id"),
-    lastEmailId: uuid("last_email_id"),
-    lastActivityAt: timestamp("last_activity_at", { withTimezone: true }),
-    status: emailThreadStatusEnum("status").notNull().default("active"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => ({
-    workspaceIdx: index("email_threads_workspace_id_idx").on(table.workspaceId),
-    leadIdx: index("email_threads_lead_id_idx").on(table.leadId),
-    lastActivityIdx: index("email_threads_last_activity_idx").on(table.lastActivityAt),
-  }),
-)
+// Email threads table removed - using threadId field in emails table instead
 
 // Email replies table
 export const emailReplies = pgTable(
@@ -254,34 +228,11 @@ export const emailsRelations = relations(emails, ({ one, many }) => ({
     fields: [emails.stepId],
     references: [sequenceSteps.id],
   }),
-  thread: one(emailThreads, {
-    fields: [emails.threadId],
-    references: [emailThreads.id],
-  }),
+  // thread relation removed - using threadId string field instead
   events: many(emailEvents),
 }))
 
-export const emailThreadsRelations = relations(emailThreads, ({ one, many }) => ({
-  workspace: one(workspaces, {
-    fields: [emailThreads.workspaceId],
-    references: [workspaces.id],
-  }),
-  lead: one(leads, {
-    fields: [emailThreads.leadId],
-    references: [leads.id],
-  }),
-  firstEmail: one(emails, {
-    fields: [emailThreads.firstEmailId],
-    references: [emails.id],
-    relationName: "threadFirstEmail",
-  }),
-  lastEmail: one(emails, {
-    fields: [emailThreads.lastEmailId],
-    references: [emails.id],
-    relationName: "threadLastEmail",
-  }),
-  emails: many(emails),
-}))
+// emailThreadsRelations removed - table no longer exists
 
 export const emailRepliesRelations = relations(emailReplies, ({ one }) => ({
   workspace: one(workspaces, {
@@ -314,8 +265,7 @@ export const emailEventsRelations = relations(emailEvents, ({ one }) => ({
 // Type exports
 export type Email = typeof emails.$inferSelect
 export type NewEmail = typeof emails.$inferInsert
-export type EmailThread = typeof emailThreads.$inferSelect
-export type NewEmailThread = typeof emailThreads.$inferInsert
+// EmailThread and NewEmailThread types removed - table no longer exists
 export type EmailReply = typeof emailReplies.$inferSelect
 export type NewEmailReply = typeof emailReplies.$inferInsert
 export type EmailEvent = typeof emailEvents.$inferSelect

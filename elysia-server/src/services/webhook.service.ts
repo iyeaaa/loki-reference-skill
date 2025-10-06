@@ -75,10 +75,10 @@ class WebhookService {
       logger.error({ err: error }, "Failed to store inbound email in DB")
     }
 
-    // Send auto-reply if needed
-    if (body.from && body.subject) {
-      this.handleAutoReply(body, headers)
-    }
+    // Auto-reply disabled
+    // if (body.from && body.subject) {
+    //   this.handleAutoReply(body, headers)
+    // }
 
     return { status: "OK" }
   }
@@ -503,41 +503,6 @@ class WebhookService {
         logger.warn({ inReplyTo: headers.inReplyTo }, "Original email not found")
       }
     }
-  }
-
-  private async handleAutoReply(
-    body: SendGridInboundPayload,
-    headers:
-      | Record<string, string | undefined>
-      | { messageId?: string; inReplyTo?: string; references: string[] },
-  ) {
-    logger.info("Attempting to send auto-reply")
-
-    const emailContent = emailService.extractEmailContent(body.text, body.html, body.email)
-
-    logger.debug({ contentLength: emailContent.length }, "Email content length")
-
-    const baseReferences: string[] = Array.isArray(headers.references) ? headers.references : []
-    const updatedReferences: string[] = headers.messageId
-      ? [...baseReferences, headers.messageId]
-      : baseReferences
-
-    const autoReplySuccess = await emailService.sendAutoReply(
-      body.to || "",
-      body.from || "",
-      body.subject || "",
-      emailContent,
-      headers.messageId,
-      updatedReferences,
-    )
-
-    if (autoReplySuccess) {
-      logger.info("Auto-reply sent successfully")
-    } else {
-      logger.error("Failed to send auto-reply")
-    }
-
-    logger.info("Email processing completed")
   }
 
   /**

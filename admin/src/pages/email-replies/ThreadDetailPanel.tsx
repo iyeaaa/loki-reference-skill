@@ -1,4 +1,5 @@
-import { ChevronDown, X } from "lucide-react"
+import { ChevronDown, ChevronUp, MoreHorizontal, X } from "lucide-react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -11,6 +12,80 @@ interface ThreadDetailPanelProps {
   threadId: string
   workspaceId?: string
   onClose: () => void
+}
+
+/**
+ * Split email body by email address pattern
+ * Detects lines containing <email@example.com> and treats everything from that line onwards as quoted text
+ */
+function splitEmailByEmailPattern(bodyText: string): {
+  mainContent: string
+  quotedText: string | null
+} {
+  if (!bodyText) {
+    return { mainContent: "", quotedText: null }
+  }
+
+  // Pattern to detect email in angle brackets: <email@example.com>
+  const emailPattern = /<[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}>/
+
+  const lines = bodyText.split("\n")
+
+  // Find the first line containing an email address in angle brackets
+  for (let i = 0; i < lines.length; i++) {
+    if (emailPattern.test(lines[i])) {
+      const mainContent = lines.slice(0, i).join("\n").trim()
+      const quotedText = lines.slice(i).join("\n").trim()
+      return { mainContent, quotedText }
+    }
+  }
+
+  // No email pattern found, return all as main content
+  return { mainContent: bodyText, quotedText: null }
+}
+
+/**
+ * Email body component with collapsible quoted text
+ */
+function EmailBody({ bodyText, bodyHtml }: { bodyText?: string; bodyHtml?: string }) {
+  const [isQuotedExpanded, setIsQuotedExpanded] = useState(false)
+
+  const content = bodyText || (bodyHtml ? bodyHtml.replace(/<[^>]*>/g, "").trim() : "")
+  const { mainContent, quotedText } = splitEmailByEmailPattern(content)
+
+  if (!content) {
+    return <div className="text-muted-foreground italic">(내용 없음)</div>
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Main content */}
+      {mainContent && <div className="whitespace-pre-wrap break-words">{mainContent}</div>}
+
+      {/* Quoted text (collapsible) - default collapsed */}
+      {quotedText && (
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={() => setIsQuotedExpanded(!isQuotedExpanded)}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors border border-gray-200 dark:border-gray-700"
+          >
+            {isQuotedExpanded ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <MoreHorizontal className="h-4 w-4" />
+            )}
+          </button>
+
+          {isQuotedExpanded && (
+            <div className="mt-2 pl-3 border-l-2 border-gray-300 dark:border-gray-600 text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words">
+              {quotedText}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDetailPanelProps) {
@@ -107,88 +182,15 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
                           {senderName}{" "}
                           <span className="text-gray-500 font-normal">&lt;{senderEmail}&gt;</span>
                         </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {formatKoreanDateTime(email.createdAt)}
-                        </div>
-                        {email.direction === "outbound" && (
-                          <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                            <span>{recipientName}에게</span>
-                            <Popover>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <PopoverTrigger asChild>
-                                    <button
-                                      type="button"
-                                      className="ml-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded p-0.5 transition-colors"
-                                    >
-                                      <ChevronDown className="h-3 w-3 text-gray-400" />
-                                    </button>
-                                  </PopoverTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>상세 정보 보기</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <PopoverContent className="w-80" align="start">
-                                <div className="space-y-2 text-xs">
-                                  <div className="flex">
-                                    <span className="font-medium w-24 text-gray-700 dark:text-gray-300">
-                                      보낸사람:
-                                    </span>
-                                    <span className="text-gray-600 dark:text-gray-400">
-                                      {senderName} &lt;{senderEmail}&gt;
-                                    </span>
-                                  </div>
-                                  <div className="flex">
-                                    <span className="font-medium w-24 text-gray-700 dark:text-gray-300">
-                                      받는사람:
-                                    </span>
-                                    <span className="text-gray-600 dark:text-gray-400">
-                                      {recipientEmail}
-                                    </span>
-                                  </div>
-                                  <div className="flex">
-                                    <span className="font-medium w-24 text-gray-700 dark:text-gray-300">
-                                      날짜:
-                                    </span>
-                                    <span className="text-gray-600 dark:text-gray-400">
-                                      {formatKoreanDateTime(email.createdAt)}
-                                    </span>
-                                  </div>
-                                  <div className="flex">
-                                    <span className="font-medium w-24 text-gray-700 dark:text-gray-300">
-                                      제목:
-                                    </span>
-                                    <span className="text-gray-600 dark:text-gray-400">
-                                      {email.subject || "(제목 없음)"}
-                                    </span>
-                                  </div>
-                                  <div className="flex">
-                                    <span className="font-medium w-24 text-gray-700 dark:text-gray-300">
-                                      발송 도메인:
-                                    </span>
-                                    <span className="text-gray-600 dark:text-gray-400">
-                                      {senderDomain}
-                                    </span>
-                                  </div>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-xs text-muted-foreground whitespace-nowrap">
-                          {formatKoreanDateTime(email.createdAt)}
-                        </div>
-                        {email.direction === "inbound" && (
+                        <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                          <span>{recipientName}에게</span>
                           <Popover>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <PopoverTrigger asChild>
                                   <button
                                     type="button"
-                                    className="hover:bg-gray-200 dark:hover:bg-gray-700 rounded p-0.5 transition-colors"
+                                    className="ml-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded p-0.5 transition-colors"
                                   >
                                     <ChevronDown className="h-3 w-3 text-gray-400" />
                                   </button>
@@ -198,7 +200,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
                                 <p>상세 정보 보기</p>
                               </TooltipContent>
                             </Tooltip>
-                            <PopoverContent className="w-80" align="end">
+                            <PopoverContent className="w-80" align="start">
                               <div className="space-y-2 text-xs">
                                 <div className="flex">
                                   <span className="font-medium w-24 text-gray-700 dark:text-gray-300">
@@ -243,42 +245,23 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
                               </div>
                             </PopoverContent>
                           </Popover>
-                        )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-xs text-muted-foreground whitespace-nowrap">
+                          {formatKoreanDateTime(email.createdAt)}
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Email body */}
                   <div className="ml-13 text-sm text-gray-700 dark:text-gray-300 mt-3">
-                    {email.bodyText ? (
-                      <div className="whitespace-pre-wrap break-words">{email.bodyText}</div>
-                    ) : email.bodyHtml ? (
-                      <div className="whitespace-pre-wrap break-words">
-                        {email.bodyHtml.replace(/<[^>]*>/g, "").trim() || "(내용 없음)"}
-                      </div>
-                    ) : (
-                      <div className="text-muted-foreground italic">(내용 없음)</div>
-                    )}
+                    <EmailBody
+                      bodyText={email.bodyText ?? undefined}
+                      bodyHtml={email.bodyHtml ?? undefined}
+                    />
                   </div>
-
-                  {/* Referenced previous message (if exists) */}
-                  {email.inReplyTo && index > 0 && (
-                    <div className="ml-13 mt-4 pl-4 border-l-2 border-gray-300 text-xs text-gray-500">
-                      <div className="mb-1">
-                        {formatKoreanDateTime(emails[index - 1]?.createdAt)},{" "}
-                        {getName(
-                          emails[index - 1]?.fromEmail,
-                          emails[index - 1]?.direction === "inbound"
-                            ? emails[index - 1]?.leadName
-                            : null,
-                        )}{" "}
-                        &lt;{emails[index - 1]?.fromEmail}&gt;님이 작성:
-                      </div>
-                      <div className="line-clamp-3">
-                        {emails[index - 1]?.bodyText?.substring(0, 100) || "..."}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )
             })}

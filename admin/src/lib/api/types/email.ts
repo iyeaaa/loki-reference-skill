@@ -69,11 +69,15 @@ export interface Email {
   sendgridMessageId?: string | null
   messageId?: string | null
   inReplyTo?: string | null
-  // Thread relationship
+  // Thread relationship (optimized: varchar for messageId-based threading)
   threadId?: string | null
   // Engagement metrics
   openCount: number
   clickCount: number
+  // Denormalized fields for performance (避免 JOIN)
+  leadName?: string | null
+  leadEmail?: string | null
+  sequenceName?: string | null
   // Unsubscribe/spam
   unsubscribedAt?: string | null
   spamReportedAt?: string | null
@@ -190,4 +194,24 @@ export interface EmailsParams {
 export interface BulkUpdateEmailStatusRequest {
   emailIds: string[]
   status: EmailStatus
+}
+
+export interface RepliedEmail {
+  id: string
+  fromEmail: string
+  toEmail: string
+  subject?: string | null
+  bodyText?: string | null
+  bodyHtml?: string | null
+  status: EmailStatus
+  repliedAt?: string | null
+  inReplyTo?: string | null
+  threadId?: string | null
+  leadId?: string | null
+  sequenceId?: string | null
+  createdAt: string
+  // Joined fields
+  leadName?: string | null
+  leadEmail?: string | null
+  sequenceName?: string | null
 }

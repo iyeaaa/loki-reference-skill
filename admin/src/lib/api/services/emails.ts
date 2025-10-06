@@ -5,6 +5,7 @@ import type {
   Email,
   EmailEvent,
   EmailsParams,
+  RepliedEmail,
   SendEmailRequest,
   UpdateEmailStatusRequest,
 } from "../types/email"
@@ -97,5 +98,26 @@ export const emailsApi = {
       method: "DELETE",
       body: JSON.stringify({ emailIds }),
     })
+  },
+
+  getRepliedEmails: (params: {
+    workspaceId?: string
+    userId?: string
+    limit?: number
+    offset?: number
+  }) => {
+    const searchParams = new URLSearchParams()
+    if (params.workspaceId) searchParams.append("workspaceId", params.workspaceId)
+    if (params.userId) searchParams.append("userId", params.userId)
+    if (params.limit) searchParams.append("limit", params.limit.toString())
+    if (params.offset) searchParams.append("offset", params.offset.toString())
+
+    const query = searchParams.toString()
+    return apiFetch<{
+      data: RepliedEmail[]
+      total: number
+      limit: number
+      offset: number
+    }>(`/api/v1/emails/replied${query ? `?${query}` : ""}`)
   },
 }

@@ -16,6 +16,8 @@ export const emailKeys = {
   list: (params?: EmailsParams) => [...emailKeys.lists(), params] as const,
   detail: (id: string) => [...emailKeys.all, "detail", id] as const,
   events: (emailId: string) => [...emailKeys.all, "events", emailId] as const,
+  replied: (workspaceId?: string, userId?: string) =>
+    [...emailKeys.all, "replied", workspaceId, userId] as const,
 }
 
 // Queries
@@ -138,5 +140,25 @@ export function useBulkDeleteEmails() {
     onError: (error: Error) => {
       toast.error(error.message || "이메일 삭제에 실패했습니다")
     },
+  })
+}
+
+export function useRepliedEmails(
+  workspaceId?: string,
+  userId?: string,
+  options?: { limit?: number; offset?: number },
+) {
+  return useQuery({
+    queryKey: emailKeys.replied(workspaceId, userId),
+    queryFn: () =>
+      emailsApi.getRepliedEmails({
+        workspaceId,
+        userId,
+        limit: options?.limit || 50,
+        offset: options?.offset || 0,
+      }),
+    enabled: !!workspaceId && !!userId,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
   })
 }

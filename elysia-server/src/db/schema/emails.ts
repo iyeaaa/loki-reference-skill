@@ -109,12 +109,17 @@ export const emails = pgTable(
     messageId: varchar("message_id", { length: 500 }), // Standard email Message-ID header
     inReplyTo: varchar("in_reply_to", { length: 500 }), // For threading
 
-    // Thread relationship
-    threadId: uuid("thread_id"),
+    // Thread relationship (changed to varchar for messageId-based threading)
+    threadId: varchar("thread_id", { length: 500 }),
 
     // Engagement metrics
     openCount: integer("open_count").notNull().default(0),
     clickCount: integer("click_count").notNull().default(0),
+
+    // Denormalized fields for performance (避免 JOIN)
+    leadName: varchar("lead_name", { length: 255 }),
+    leadEmail: varchar("lead_email", { length: 255 }),
+    sequenceName: varchar("sequence_name", { length: 255 }),
 
     // Unsubscribe/spam
     unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
@@ -128,11 +133,15 @@ export const emails = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
-    workspaceIdx: index("emails_workspace_id_idx").on(table.workspaceId),
-    emailAccountIdx: index("emails_user_email_account_id_idx").on(table.userEmailAccountId),
+    // Composite index for most common query pattern
+    workspaceUserIdx: index("emails_workspace_user_idx").on(
+      table.workspaceId,
+      table.userEmailAccountId,
+    ),
+    // Single field indexes
     leadIdx: index("emails_lead_id_idx").on(table.leadId),
     sequenceIdx: index("emails_sequence_id_idx").on(table.sequenceId),
-    statusIdx: index("emails_status_idx").on(table.status),
+    statusDirectionIdx: index("emails_status_direction_idx").on(table.status, table.direction),
     threadIdx: index("emails_thread_id_idx").on(table.threadId),
     scheduledIdx: index("emails_scheduled_at_idx").on(table.scheduledAt),
     messageIdIdx: index("emails_message_id_idx").on(table.messageId),

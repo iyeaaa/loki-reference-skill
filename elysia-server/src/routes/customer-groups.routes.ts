@@ -282,7 +282,16 @@ export const customerGroupRoutes = new Elysia({
     "/:id/members-with-emails",
     async ({ params: { id } }) => {
       const members = await customerGroupService.getGroupMembersWithEmails(id)
-      return members
+      // Transform data to match frontend expectations
+      const transformedMembers = members.map((member) => ({
+        id: member.leadId,
+        name: member.companyName,
+        email: member.primaryEmail,
+      }))
+      return {
+        success: true,
+        data: transformedMembers,
+      }
     },
     {
       params: t.Object({

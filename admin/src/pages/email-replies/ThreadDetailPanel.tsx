@@ -1,4 +1,5 @@
-import { ChevronDown, ChevronUp, MoreHorizontal, X } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
+import { ChevronDown, ChevronUp, MoreHorizontal, Reply, X } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -7,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useThreadEmails } from "@/lib/api/hooks/emails"
 import { formatKoreanDateTime } from "@/lib/date-utils"
+import { InlineComposeBox } from "./InlineComposeBox"
 
 interface ThreadDetailPanelProps {
   threadId: string
@@ -91,6 +93,12 @@ function EmailBody({ bodyText, bodyHtml }: { bodyText?: string; bodyHtml?: strin
 export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDetailPanelProps) {
   const { data, isLoading, error } = useThreadEmails(threadId, workspaceId)
   const emails = data?.data || []
+  const queryClient = useQueryClient()
+
+  // 답장 상태
+  const [showReply, setShowReply] = useState(false)
+  const [composeExpanded, setComposeExpanded] = useState(false)
+  const [composeFullscreen, setComposeFullscreen] = useState(false)
 
   if (isLoading) {
     return (
@@ -149,7 +157,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
       {/* Email thread */}
       <TooltipProvider>
         <ScrollArea className="flex-1 px-4 pb-4">
-          <div className="space-y-8">
+          <div className="space-y-8 pb-4">
             {emails.map((email, index) => {
               const senderEmail = email.fromEmail
               const senderName = getName(
@@ -265,9 +273,48 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
                 </div>
               )
             })}
+
+            {/* 인라인 작성 영역 */}
+            {showReply && emails.length > 0 && (
+              <InlineComposeBox
+                originalEmail={emails[emails.length - 1]}
+                workspaceId={workspaceId || ""}
+                expanded={composeExpanded}
+                fullscreen={composeFullscreen}
+                onExpand={() => setComposeExpanded(!composeExpanded)}
+                onFullscreen={() => setComposeFullscreen(!composeFullscreen)}
+                onClose={() => {
+                  setShowReply(false)
+                  setComposeExpanded(false)
+                  setComposeFullscreen(false)
+                }}
+                onSent={() => {
+                  // 스레드 새로고침
+                  queryClient.invalidateQueries({ queryKey: ["thread-emails", threadId] })
+                  queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
+                }}
+              />
+            )}
           </div>
         </ScrollArea>
       </TooltipProvider>
+
+      {/* 하단 답장 버튼 (Gmail 스타일) */}
+      {!showReply && emails.length > 0 && (
+        <div className="px-4 py-3 border-t">
+          <Button
+            onClick={() => {
+              setShowReply(true)
+              setComposeExpanded(false)
+            }}
+            size="sm"
+            variant="default"
+          >
+            <Reply className="h-4 w-4 mr-2" />
+            답장
+          </Button>
+        </div>
+      )}
     </Card>
   )
 }

@@ -288,10 +288,7 @@ export const customerGroupRoutes = new Elysia({
         name: member.companyName,
         email: member.primaryEmail,
       }))
-      return {
-        success: true,
-        data: transformedMembers,
-      }
+      return transformedMembers
     },
     {
       params: t.Object({

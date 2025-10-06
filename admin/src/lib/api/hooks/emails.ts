@@ -159,8 +159,10 @@ export function useRepliedEmails(params: RepliedEmailsParams) {
     queryKey: ["replied-emails", params],
     queryFn: () => emailsApi.searchRepliedEmails(params),
     enabled: !!params.workspaceId,
-    staleTime: 30 * 1000,
+    staleTime: 0, // Always fetch fresh data
     gcTime: 5 * 60 * 1000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -170,7 +172,9 @@ export function useThreadEmails(threadId: string | null, workspaceId?: string) {
     queryKey: ["thread-emails", threadId, workspaceId],
     queryFn: () => emailsApi.getThreadEmails(threadId || "", workspaceId),
     enabled: !!threadId,
-    staleTime: 60 * 1000,
+    staleTime: 0, // Always fetch fresh data
     gcTime: 10 * 60 * 1000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   })
 }

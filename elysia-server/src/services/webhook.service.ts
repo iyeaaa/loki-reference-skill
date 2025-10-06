@@ -357,30 +357,44 @@ class WebhookService {
     const leadId = leadContactResults.length > 0 ? leadContactResults[0]?.leadId : null
 
     // 4. threadId 결정: 답장이면 원본의 threadId 사용, 아니면 messageId를 threadId로 사용
-    let threadId = headers.messageId // 기본값: 자신의 messageId
+    let threadId: string | null | undefined = null
 
     if (headers.inReplyTo) {
       // 답장인 경우: 원본 이메일의 threadId 찾기
       const originalEmailForThread = await db
-        .select({ threadId: emailsTable.threadId })
+        .select({ threadId: emailsTable.threadId, messageId: emailsTable.messageId })
         .from(emailsTable)
         .where(eq(emailsTable.messageId, headers.inReplyTo))
         .limit(1)
 
-      if (originalEmailForThread.length > 0 && originalEmailForThread[0]?.threadId) {
-        threadId = originalEmailForThread[0].threadId
+      if (originalEmailForThread.length > 0) {
+        const original = originalEmailForThread[0]
+        // 원본의 threadId가 있으면 사용, 없으면 원본의 messageId를 threadId로 사용
+        threadId = original?.threadId || original?.messageId || headers.inReplyTo
         logger.info(
-          { threadId, inReplyTo: headers.inReplyTo },
+          {
+            threadId,
+            inReplyTo: headers.inReplyTo,
+            originalThreadId: original?.threadId,
+            originalMessageId: original?.messageId,
+          },
           "Thread ID inherited from original email",
         )
       } else {
-        // 원본을 못 찾으면 inReplyTo를 threadId로 사용
+        // 원본을 못 찾으면 inReplyTo를 threadId로 사용 (첫 이메일이 외부에서 온 경우)
         threadId = headers.inReplyTo
         logger.info(
           { threadId: headers.inReplyTo },
           "Using In-Reply-To as thread ID (original not found)",
         )
       }
+    } else {
+      // 새 스레드: messageId를 threadId로 사용
+      threadId = headers.messageId || `thread-${Date.now()}`
+      logger.info(
+        { threadId, messageId: headers.messageId },
+        "New thread - using messageId as thread ID",
+      )
     }
 
     logger.info(

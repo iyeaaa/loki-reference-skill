@@ -10,6 +10,7 @@ import type {
   SendGridInboundPayload,
 } from "../models/email.model"
 import { emails } from "../types/email-storage"
+import { extractEmailAddress, parseEmailBody } from "../utils/email.util"
 import logger from "../utils/logger"
 import { emailService } from "./email.service"
 
@@ -271,9 +272,34 @@ class WebhookService {
   ) {
     logger.info("Storing inbound email in DB")
 
-    // 1. 수신 이메일 주소로 이메일 계정 찾기
-    const toEmail = body.to || ""
-    const fromEmail = body.from || ""
+    // 1. 이메일 주소 추출 및 본문 파싱
+    const toEmail = extractEmailAddress(body.to || "")
+    const fromEmail = extractEmailAddress(body.from || "")
+
+    // 본문 파싱: 항상 body.email에서 파싱 (SendGrid는 Raw 모드로 설정됨)
+    let bodyText: string | undefined
+    let bodyHtml: string | undefined
+
+    if (body.email) {
+      const parsed = parseEmailBody(body.email)
+      bodyText = parsed.text
+      bodyHtml = parsed.html
+      logger.info(
+        {
+          hasText: !!bodyText,
+          hasHtml: !!bodyHtml,
+          textLength: bodyText?.length || 0,
+          htmlLength: bodyHtml?.length || 0,
+        },
+        "Parsed email body from RFC 822 format",
+      )
+    } else {
+      // Fallback: SendGrid가 파싱 모드인 경우
+      bodyText = body.text
+      bodyHtml = body.html
+    }
+
+    // 2. 수신 이메일 주소로 이메일 계정 찾기
 
     const emailAccount = await db
       .select({
@@ -295,7 +321,7 @@ class WebhookService {
       return
     }
 
-    // 2. 발신자 이메일로 리드 찾기
+    // 3. 발신자 이메일로 리드 찾기
     const leadContactResults = await db
       .select({ leadId: leadContacts.leadId })
       .from(leadContacts)
@@ -304,7 +330,7 @@ class WebhookService {
 
     const leadId = leadContactResults.length > 0 ? leadContactResults[0]?.leadId : null
 
-    // 3. 인바운드 이메일을 emails 테이블에 저장
+    // 4. 인바운드 이메일을 emails 테이블에 저장
     const inboundEmailResults = await db
       .insert(emailsTable)
       .values({
@@ -315,8 +341,9 @@ class WebhookService {
         fromEmail,
         toEmail,
         subject: body.subject || "",
-        bodyText: body.text,
-        bodyHtml: body.html,
+        bodyText,
+        bodyHtml,
+        rawEmail: body.email, // 원본 RFC 822 이메일 저장
         sentAt: new Date(),
         messageId: headers.messageId,
         inReplyTo: headers.inReplyTo,

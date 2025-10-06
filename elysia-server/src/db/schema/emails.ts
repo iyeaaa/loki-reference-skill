@@ -87,6 +87,7 @@ export const emails = pgTable(
     subject: varchar("subject", { length: 500 }),
     bodyText: text("body_text"),
     bodyHtml: text("body_html"),
+    rawEmail: text("raw_email"), // RFC 822 format raw email (for inbound emails)
 
     status: emailStatusEnum("status").notNull().default("draft"),
 

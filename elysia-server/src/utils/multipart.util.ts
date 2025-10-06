@@ -1,13 +1,13 @@
 import { Readable } from "node:stream"
 import busboy from "busboy"
-import type { FileData, FormData } from "../models/email.model"
+import type { FileData, SendGridInboundPayload } from "../models/email.model"
 
 export function parseMultipartFormData(
   contentType: string | null,
   body: ArrayBuffer,
-): Promise<{ formData: FormData; files: FileData[] }> {
+): Promise<{ formData: SendGridInboundPayload; files: FileData[] }> {
   return new Promise((resolve, _reject) => {
-    const formData: FormData = {}
+    const formData: SendGridInboundPayload = {} as SendGridInboundPayload
     const files: FileData[] = []
 
     const bb = busboy({
@@ -17,7 +17,8 @@ export function parseMultipartFormData(
     })
 
     bb.on("field", (name: string, value: string) => {
-      formData[name] = value
+      // biome-ignore lint/suspicious/noExplicitAny: Dynamic field assignment for SendGrid webhook
+      ;(formData as any)[name] = value
     })
 
     bb.on(

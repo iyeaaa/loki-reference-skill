@@ -3,20 +3,28 @@ import { db } from "../db"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emailReplies, emails as emailsTable } from "../db/schema/emails"
 import { leadContacts } from "../db/schema/lead-details"
-import type { Email, FileData, FormData } from "../models/email.model"
+import type {
+  Email,
+  FileData,
+  SendGridEnvelope,
+  SendGridInboundPayload,
+} from "../models/email.model"
 import { emails } from "../types/email-storage"
 import logger from "../utils/logger"
 import { emailService } from "./email.service"
 
 class WebhookService {
-  async processInboundEmail(body: FormData, files: FileData[]) {
+  async processInboundEmail(body: SendGridInboundPayload, files: FileData[]) {
     // Log complete raw data first
-    logger.info({
-      fullBody: body,
-      fullFiles: files,
-      bodyKeys: Object.keys(body),
-      filesCount: files?.length || 0
-    }, "Complete webhook payload received")
+    logger.info(
+      {
+        fullBody: body,
+        fullFiles: files,
+        bodyKeys: Object.keys(body),
+        filesCount: files?.length || 0,
+      },
+      "Complete webhook payload received",
+    )
 
     // Extract headers
     const headers = this.extractHeaders(body.headers)
@@ -48,7 +56,7 @@ class WebhookService {
     return { status: "OK" }
   }
 
-  processInboundStore(body: FormData, files: FileData[]) {
+  processInboundStore(body: SendGridInboundPayload, files: FileData[]) {
     const email = {
       id: Date.now().toString(),
       timestamp: new Date().toISOString(),
@@ -79,7 +87,7 @@ class WebhookService {
   } {
     let messageId: string | undefined
     let inReplyTo: string | undefined
-    let references: string[] = []
+    const references: string[] = []
 
     if (headersString) {
       try {
@@ -88,7 +96,7 @@ class WebhookService {
         inReplyTo = headers["In-Reply-To"] || headers["in-reply-to"]
         const referencesStr = headers.References || headers.references
         if (referencesStr) {
-          references = referencesStr.split(/\s+/).filter((ref: string) => ref.length > 0)
+          references.push(...referencesStr.split(/\s+/).filter((ref: string) => ref.length > 0))
         }
       } catch (e) {
         logger.warn({ err: e }, "Failed to parse headers")
@@ -99,14 +107,14 @@ class WebhookService {
   }
 
   private logEmailInfo(
-    body: FormData,
+    body: SendGridInboundPayload,
     headers: { messageId: string | undefined; inReplyTo: string | undefined; references: string[] },
     files: FileData[],
   ) {
     let envelopeFrom = "none"
-    let envelopeParsed = null
+    let envelopeParsed: SendGridEnvelope | null = null
     try {
-      envelopeParsed = JSON.parse(body.envelope || "{}")
+      envelopeParsed = JSON.parse(body.envelope || "{}") as SendGridEnvelope
       envelopeFrom = envelopeParsed.from || "none"
     } catch {
       envelopeFrom = "parse failed"
@@ -141,7 +149,7 @@ class WebhookService {
       spamReport: body.spam_report || "none",
       spamScore: body.spam_score || "none",
       dkim: body.dkim || "none",
-      spf: body.spf || "none",
+      spf: body.SPF || "none",
 
       // Attachments
       attachments: body.attachments || "none",
@@ -178,7 +186,7 @@ class WebhookService {
     this.logAllKeys(body)
   }
 
-  private logMetadata(body: FormData) {
+  private logMetadata(body: SendGridInboundPayload) {
     if (body.charsets) {
       try {
         const charsets = JSON.parse(body.charsets)
@@ -200,13 +208,13 @@ class WebhookService {
     }
   }
 
-  private logAllKeys(body: FormData) {
+  private logAllKeys(body: SendGridInboundPayload) {
     const allKeys = Object.keys(body)
     const keyPreviews: Record<string, string> = {}
-    const fullValues: Record<string, any> = {}
+    const fullValues: Record<string, string | undefined> = {}
 
     allKeys.forEach((key) => {
-      const value = body[key]
+      const value = body[key as keyof SendGridInboundPayload]
 
       // Store full value for complete logging
       fullValues[key] = value
@@ -219,22 +227,28 @@ class WebhookService {
         : "empty"
     })
 
-    logger.info({
-      fieldsCount: allKeys.length,
-      allKeys,
-      fullValues
-    }, "Complete field dump - all keys and values")
+    logger.info(
+      {
+        fieldsCount: allKeys.length,
+        allKeys,
+        fullValues,
+      },
+      "Complete field dump - all keys and values",
+    )
 
-    logger.debug({ fieldsCount: allKeys.length, keys: keyPreviews }, "All received data keys (preview)")
+    logger.debug(
+      { fieldsCount: allKeys.length, keys: keyPreviews },
+      "All received data keys (preview)",
+    )
   }
 
-  private async processAttachments(body: FormData) {
+  private async processAttachments(body: SendGridInboundPayload) {
     const attachmentsJson = body.attachments || "[]"
     const attachmentInfo = body["attachment-info"]
     return await emailService.processAttachments(attachmentsJson, attachmentInfo)
   }
 
-  private createEmailData(body: FormData, attachments: unknown[]): Email {
+  private createEmailData(body: SendGridInboundPayload, attachments: unknown[]): Email {
     return {
       id: Date.now().toString(),
       from: body.from || "Unknown",
@@ -251,7 +265,7 @@ class WebhookService {
    * 인바운드 이메일을 DB에 저장하고 답장인 경우 email_replies 테이블에도 저장
    */
   private async storeInboundEmailInDB(
-    body: FormData,
+    body: SendGridInboundPayload,
     headers: { messageId: string | undefined; inReplyTo: string | undefined; references: string[] },
     _attachments: unknown[],
   ) {
@@ -366,7 +380,7 @@ class WebhookService {
   }
 
   private async handleAutoReply(
-    body: FormData,
+    body: SendGridInboundPayload,
     headers:
       | Record<string, string | undefined>
       | { messageId?: string; inReplyTo?: string; references: string[] },

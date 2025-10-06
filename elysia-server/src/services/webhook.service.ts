@@ -10,6 +10,14 @@ import { emailService } from "./email.service"
 
 class WebhookService {
   async processInboundEmail(body: FormData, files: FileData[]) {
+    // Log complete raw data first
+    logger.info({
+      fullBody: body,
+      fullFiles: files,
+      bodyKeys: Object.keys(body),
+      filesCount: files?.length || 0
+    }, "Complete webhook payload received")
+
     // Extract headers
     const headers = this.extractHeaders(body.headers)
 
@@ -96,30 +104,56 @@ class WebhookService {
     files: FileData[],
   ) {
     let envelopeFrom = "none"
+    let envelopeParsed = null
     try {
-      const envelope = JSON.parse(body.envelope || "{}")
-      envelopeFrom = envelope.from || "none"
+      envelopeParsed = JSON.parse(body.envelope || "{}")
+      envelopeFrom = envelopeParsed.from || "none"
     } catch {
       envelopeFrom = "parse failed"
     }
 
+    // Log all standard SendGrid Inbound Parse fields
     const emailInfo = {
       receivedAt: new Date().toISOString(),
+
+      // Basic fields
       from: body.from || "none",
       to: body.to || "none",
       cc: body.cc || "none",
+      bcc: body.bcc || "none",
       subject: body.subject || "none",
+
+      // Headers
       messageId: headers.messageId || "none",
       inReplyTo: headers.inReplyTo || "none",
       references: headers.references.length > 0 ? headers.references.join(", ") : "none",
-      senderIp: body.sender_ip || "none",
+
+      // Envelope
+      envelope: envelopeParsed,
       envelopeFrom,
+
+      // Content
       textLength: body.text?.length || 0,
       htmlLength: body.html?.length || 0,
+
+      // Metadata
+      senderIp: body.sender_ip || "none",
+      spamReport: body.spam_report || "none",
+      spamScore: body.spam_score || "none",
+      dkim: body.dkim || "none",
+      spf: body.spf || "none",
+
+      // Attachments
+      attachments: body.attachments || "none",
+      attachmentInfo: body["attachment-info"] || "none",
       filesCount: files?.length || 0,
+
+      // Character sets and content IDs
+      charsets: body.charsets || "none",
+      contentIds: body["content-ids"] || "none",
     }
 
-    logger.info(emailInfo, "Inbound email received")
+    logger.info(emailInfo, "Inbound email received with full metadata")
 
     if (body.text) {
       const textPreview = body.text.slice(0, 200)
@@ -169,9 +203,15 @@ class WebhookService {
   private logAllKeys(body: FormData) {
     const allKeys = Object.keys(body)
     const keyPreviews: Record<string, string> = {}
+    const fullValues: Record<string, any> = {}
 
     allKeys.forEach((key) => {
       const value = body[key]
+
+      // Store full value for complete logging
+      fullValues[key] = value
+
+      // Create preview for debug log
       keyPreviews[key] = value
         ? value.length > 50
           ? `${value.substring(0, 50)}...`
@@ -179,7 +219,13 @@ class WebhookService {
         : "empty"
     })
 
-    logger.debug({ fieldsCount: allKeys.length, keys: keyPreviews }, "All received data keys")
+    logger.info({
+      fieldsCount: allKeys.length,
+      allKeys,
+      fullValues
+    }, "Complete field dump - all keys and values")
+
+    logger.debug({ fieldsCount: allKeys.length, keys: keyPreviews }, "All received data keys (preview)")
   }
 
   private async processAttachments(body: FormData) {

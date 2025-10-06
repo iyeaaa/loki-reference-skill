@@ -635,6 +635,11 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         .limit(1)
 
       if (!emailAccount) {
+        logger.warn({
+          msg: "No active email account found",
+          workspaceId,
+          userId,
+        })
         return {
           data: [],
           threads: [],
@@ -643,6 +648,13 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           offset,
         }
       }
+
+      logger.info({
+        msg: "Found email account",
+        emailAccountId: emailAccount.id,
+        workspaceId,
+        userId,
+      })
 
       // Build filter conditions
       const conditions = [

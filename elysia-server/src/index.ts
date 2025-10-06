@@ -13,6 +13,7 @@ import { authRoutes } from "./routes/auth.routes"
 import { adminCustomerGroupRoutes, customerGroupRoutes } from "./routes/customer-groups.routes"
 import { departmentsRoutes } from "./routes/departments.routes"
 import { adminEmailAccountRoutes, emailAccountRoutes } from "./routes/email-accounts.routes"
+import { emailRepliesRoutes } from "./routes/email-replies.routes"
 import { adminEmailTemplateRoutes, emailTemplateRoutes } from "./routes/email-templates.routes"
 import { adminEmailRoutes, emailRoutes } from "./routes/emails.routes"
 // Import routes
@@ -130,6 +131,7 @@ const app = new Elysia()
   .use(adminEmailTemplateRoutes)
   .use(emailRoutes)
   .use(adminEmailRoutes)
+  .use(emailRepliesRoutes)
   .use(leadRoutes)
   .use(adminLeadRoutes)
   .use(sequenceRoutes)

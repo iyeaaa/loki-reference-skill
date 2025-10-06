@@ -1,0 +1,98 @@
+import { apiFetch } from "../client"
+import type {
+  EmailReplyFilters,
+  EmailReplyListResponse,
+  EmailReplyWithDetails,
+} from "../types/email-reply"
+
+export const emailRepliesApi = {
+  /**
+   * List email replies with pagination and filters
+   */
+  list: async (params: {
+    limit?: number
+    offset?: number
+    filters?: EmailReplyFilters
+  }): Promise<EmailReplyListResponse> => {
+    const queryParams = new URLSearchParams()
+
+    if (params.limit !== undefined) queryParams.append("limit", params.limit.toString())
+    if (params.offset !== undefined) queryParams.append("offset", params.offset.toString())
+
+    if (params.filters?.workspaceId) {
+      queryParams.append("workspaceId", params.filters.workspaceId)
+    }
+    if (params.filters?.isRead !== undefined) {
+      queryParams.append("isRead", params.filters.isRead.toString())
+    }
+    if (params.filters?.sentiment) {
+      queryParams.append("sentiment", params.filters.sentiment)
+    }
+    if (params.filters?.search) {
+      queryParams.append("search", params.filters.search)
+    }
+    if (params.filters?.emailAccountId) {
+      queryParams.append("emailAccountId", params.filters.emailAccountId)
+    }
+
+    return apiFetch<EmailReplyListResponse>(`/api/v1/email-replies?${queryParams.toString()}`)
+  },
+
+  /**
+   * Get single email reply by ID
+   */
+  getById: async (id: string): Promise<EmailReplyWithDetails> => {
+    return apiFetch<EmailReplyWithDetails>(`/api/v1/email-replies/${id}`)
+  },
+
+  /**
+   * Mark reply as read
+   */
+  markAsRead: async (id: string): Promise<void> => {
+    await apiFetch(`/api/v1/email-replies/${id}/read`, { method: "PATCH" })
+  },
+
+  /**
+   * Mark reply as unread
+   */
+  markAsUnread: async (id: string): Promise<void> => {
+    await apiFetch(`/api/v1/email-replies/${id}/unread`, { method: "PATCH" })
+  },
+
+  /**
+   * Bulk mark as read
+   */
+  bulkMarkAsRead: async (replyIds: string[]): Promise<{ updatedCount: number }> => {
+    return apiFetch<{ updatedCount: number }>("/api/v1/email-replies/bulk/read", {
+      method: "PUT",
+      body: JSON.stringify({ replyIds }),
+    })
+  },
+
+  /**
+   * Bulk mark as unread
+   */
+  bulkMarkAsUnread: async (replyIds: string[]): Promise<{ updatedCount: number }> => {
+    return apiFetch<{ updatedCount: number }>("/api/v1/email-replies/bulk/unread", {
+      method: "PUT",
+      body: JSON.stringify({ replyIds }),
+    })
+  },
+
+  /**
+   * Delete email reply
+   */
+  delete: async (id: string): Promise<void> => {
+    await apiFetch(`/api/v1/email-replies/${id}`, { method: "DELETE" })
+  },
+
+  /**
+   * Bulk delete
+   */
+  bulkDelete: async (replyIds: string[]): Promise<{ deletedCount: number }> => {
+    return apiFetch<{ deletedCount: number }>("/api/v1/email-replies/bulk", {
+      method: "DELETE",
+      body: JSON.stringify({ replyIds }),
+    })
+  },
+}

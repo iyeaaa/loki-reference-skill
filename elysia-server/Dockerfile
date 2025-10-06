@@ -15,15 +15,11 @@ COPY tsconfig.json ./
 COPY drizzle.config.ts ./
 # Copy migration files
 COPY drizzle ./drizzle
-COPY migrations ./migrations
 # Copy .env files
 COPY .env* ./
-
-# Generate Drizzle migrations if needed
-RUN bun run db:generate || true
 
 # Expose port
 EXPOSE 3001
 
-# Run the application using bun
+# Start the application
 CMD ["bun", "run", "start"]

@@ -15,4 +15,10 @@ export default {
     database: process.env.DB_NAME || 'postgres',
     ssl: false,
   },
+  migrations: {
+    table: '__drizzle_migrations',
+    schema: 'public',
+  },
+  verbose: true,
+  strict: true,
 } satisfies Config

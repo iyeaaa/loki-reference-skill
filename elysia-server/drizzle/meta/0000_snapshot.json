@@ -1,6 +1,6 @@
 {
-  "id": "242f10dc-1045-4600-b6bc-c4c92d9e1ad0",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "2c0426a8-c9c9-4312-978f-4beafce839fc",
+  "prevId": "242f10dc-1045-4600-b6bc-c4c92d9e1ad0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3276,7 +3276,7 @@
           "name": "customer_group_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "name": {
           "name": "name",
@@ -4634,6 +4634,17 @@
         "ai",
         "manual",
         "template"
+      ]
+    },
+    "public.workflow_email_status_enum": {
+      "name": "workflow_email_status_enum",
+      "schema": "public",
+      "values": [
+        "pending",
+        "generating",
+        "generated",
+        "edited",
+        "failed"
       ]
     },
     "public.workspace_member_role_enum": {

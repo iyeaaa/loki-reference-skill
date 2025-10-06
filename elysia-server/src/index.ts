@@ -2,7 +2,6 @@ import { cors } from "@elysiajs/cors"
 import { swagger } from "@elysiajs/swagger"
 import { Elysia } from "elysia"
 import { config, isDevelopment } from "./config"
-import { migrateDatabase } from "./db/migrate"
 import { errorHandler } from "./plugins/error-handler.plugin"
 import { httpLogger } from "./plugins/http-logger.plugin"
 import { rateLimit } from "./plugins/rate-limit.plugin"
@@ -29,12 +28,6 @@ import logger from "./utils/logger"
 import { startEmailSequenceWorker } from "./workers/email-sequence-worker"
 import { startScheduledEmailWorker } from "./workers/scheduled-email-worker"
 import { startWorkflowExecutionWorker } from "./workers/workflow-execution-worker"
-
-// Initialize database
-logger.info("🔄 Initializing database...")
-migrateDatabase().catch((error) => {
-  logger.error({ err: error }, "Database migration failed")
-})
 
 // Start workers
 logger.debug("Starting background workers...")

@@ -187,6 +187,8 @@ export interface BulkUpdateEmailStatusRequest {
 
 export interface RepliedEmail {
   id: string
+  threadId?: string | null
+  workspaceId: string
   fromEmail: string
   toEmail: string
   subject?: string | null
@@ -194,15 +196,46 @@ export interface RepliedEmail {
   bodyHtml?: string | null
   status: EmailStatus
   repliedAt?: string | null
+  deliveredAt?: string | null
+  openedAt?: string | null
   inReplyTo?: string | null
-  threadId?: string | null
   leadId?: string | null
   sequenceId?: string | null
   createdAt: string
-  // Joined fields
+  updatedAt: string
+  // Denormalized fields
   leadName?: string | null
   leadEmail?: string | null
   sequenceName?: string | null
+  // Thread info (스레드 기반 조회 시 추가됨)
+  messageCount?: number
+}
+
+// Thread email for conversation history (스레드 대화 이력)
+export interface ThreadEmail {
+  id: string
+  direction: EmailDirection
+  fromEmail: string
+  toEmail: string
+  subject?: string | null
+  bodyText?: string | null
+  bodyHtml?: string | null
+  status: EmailStatus
+  sentAt?: string | null
+  repliedAt?: string | null
+  deliveredAt?: string | null
+  openedAt?: string | null
+  createdAt: string
+  updatedAt: string
+  threadId?: string | null
+  inReplyTo?: string | null
+  messageId?: string | null
+  leadName?: string | null
+  leadEmail?: string | null
+  sequenceName?: string | null
+  leadId?: string | null
+  sequenceId?: string | null
+  workspaceId: string
 }
 
 export interface ThreadGroupedEmail {

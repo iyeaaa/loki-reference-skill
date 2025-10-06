@@ -1,38 +1,21 @@
-import { BookOpen, Mail, MailCheck, Search, Trash2, X } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
-import toast from "react-hot-toast"
-import { Button } from "@/components/ui/button"
+import { AlertCircle, Search, X } from "lucide-react"
+import { useEffect, useId, useState } from "react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import {
-  useBulkDeleteEmailReplies,
-  useBulkMarkAsRead,
-  useBulkMarkAsUnread,
-} from "@/lib/api/hooks/email-replies"
-import type { EmailReplyWithDetails } from "@/lib/api/types/email-reply"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
-import { EmailReplyDetailsDialog } from "./EmailReplyDetailsDialog"
-import { EmailReplyFilters } from "./EmailReplyFilters"
-import { RepliesTableWithPagination } from "./RepliesTableWithPagination"
+import { RepliedEmailsTableWithPagination } from "./RepliedEmailsTableWithPagination"
+import { ThreadDetailPanel } from "./ThreadDetailPanel"
 
 export default function EmailRepliesPage() {
   const { selectedWorkspace } = useWorkspace()
+  const containerId = useId()
 
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedReadStatus, setSelectedReadStatus] = useState<boolean | undefined>(undefined)
-  const [selectedSentiments, setSelectedSentiments] = useState<string[]>([])
-  const [selectedEmailAccountId, setSelectedEmailAccountId] = useState<string | undefined>(
-    undefined,
-  )
-
-  const [selectedReplies, setSelectedReplies] = useState<string[]>([])
-  const [viewingReply, setViewingReply] = useState<EmailReplyWithDetails | null>(null)
-
-  const bulkMarkAsRead = useBulkMarkAsRead()
-  const bulkMarkAsUnread = useBulkMarkAsUnread()
-  const bulkDeleteReplies = useBulkDeleteEmailReplies()
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
+  const [leftWidth, setLeftWidth] = useState(50) // percentage
+  const [isResizing, setIsResizing] = useState(false)
 
   // Debounce search input
   useEffect(() => {
@@ -43,181 +26,151 @@ export default function EmailRepliesPage() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  const handleBulkMarkAsRead = async () => {
-    if (selectedReplies.length === 0) {
-      toast.error("선택된 답장이 없습니다.")
-      return
-    }
-
-    bulkMarkAsRead.mutate(selectedReplies, {
-      onSuccess: () => {
-        setSelectedReplies([])
-      },
-    })
-  }
-
-  const handleBulkMarkAsUnread = async () => {
-    if (selectedReplies.length === 0) {
-      toast.error("선택된 답장이 없습니다.")
-      return
-    }
-
-    bulkMarkAsUnread.mutate(selectedReplies, {
-      onSuccess: () => {
-        setSelectedReplies([])
-      },
-    })
-  }
-
-  const handleBulkDelete = async () => {
-    if (selectedReplies.length === 0) {
-      toast.error("선택된 답장이 없습니다.")
-      return
-    }
-
-    if (
-      !confirm(
-        `선택한 ${selectedReplies.length}개의 답장을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`,
-      )
-    )
-      return
-
-    bulkDeleteReplies.mutate(selectedReplies, {
-      onSuccess: () => {
-        setSelectedReplies([])
-      },
-    })
-  }
-
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       setSearchQuery(searchInput)
     }
   }
 
-  const clearFilters = () => {
-    setSelectedReadStatus(undefined)
-    setSelectedSentiments([])
-    setSelectedEmailAccountId(undefined)
-    setSearchInput("")
-    setSearchQuery("")
+  // Resizer handlers
+  const handleMouseDown = () => {
+    setIsResizing(true)
   }
 
-  const toggleReplySelection = useCallback((replyId: string) => {
-    setSelectedReplies((prev) =>
-      prev.includes(replyId) ? prev.filter((id) => id !== replyId) : [...prev, replyId],
-    )
-  }, [])
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return
 
-  const toggleAllReplies = useCallback((replyIds: string[]) => {
-    setSelectedReplies((prev) => (prev.length === replyIds.length ? [] : replyIds))
-  }, [])
+      const container = document.getElementById(containerId)
+      if (!container) return
+
+      const containerRect = container.getBoundingClientRect()
+      const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100
+
+      // Limit between 30% and 70%
+      if (newLeftWidth >= 30 && newLeftWidth <= 70) {
+        setLeftWidth(newLeftWidth)
+      }
+    }
+
+    const handleMouseUp = () => {
+      setIsResizing(false)
+    }
+
+    if (isResizing) {
+      document.addEventListener("mousemove", handleMouseMove)
+      document.addEventListener("mouseup", handleMouseUp)
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove)
+      document.removeEventListener("mouseup", handleMouseUp)
+    }
+  }, [isResizing, containerId])
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto">
-      {/* Filters */}
-      <EmailReplyFilters
-        selectedReadStatus={selectedReadStatus}
-        selectedSentiments={selectedSentiments}
-        selectedEmailAccountId={selectedEmailAccountId}
-        workspaceId={selectedWorkspace?.id}
-        onReadStatusChange={setSelectedReadStatus}
-        onSentimentsChange={setSelectedSentiments}
-        onEmailAccountChange={setSelectedEmailAccountId}
-        onClearFilters={clearFilters}
-      />
+    <div className="flex flex-col" style={{ height: "calc(100vh - 120px)" }}>
+      {/* Workspace 선택 안내 */}
+      {!selectedWorkspace && (
+        <Alert className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>워크스페이스를 선택해주세요</AlertTitle>
+          <AlertDescription>
+            답장 이메일을 조회하려면 사이드바에서 워크스페이스를 선택해주세요.
+          </AlertDescription>
+        </Alert>
+      )}
 
-      {/* Replies Table */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">이메일 답장 관리</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* Search input */}
-          <div className="mb-4">
-            <div className="relative w-full md:w-[400px]">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="제목, 발신자 이메일로 검색..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
-                className="pl-10 pr-10 w-full"
-              />
-              {searchInput && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchInput("")
-                    setSearchQuery("")
-                  }}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
+      {/* Gmail-style Split View */}
+      <div id={containerId} className="flex-1 flex relative min-h-0">
+        {/* Left: Thread List */}
+        <div style={{ width: `${leftWidth}%` }} className="flex flex-col h-full">
+          <Card className="h-full flex flex-col overflow-hidden">
+            <CardHeader className="pb-3 pt-3 flex-shrink-0">
+              <CardTitle className="text-base">
+                답장 이메일 관리
+                {selectedWorkspace && (
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    ({selectedWorkspace.name})
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col overflow-hidden pt-0">
+              {/* Search input */}
+              <div className="mb-3 flex-shrink-0">
+                <div className="relative w-full">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="제목, 발신자 이메일로 검색..."
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                    className="pl-10 pr-10 w-full h-9"
+                    disabled={!selectedWorkspace}
+                  />
+                  {searchInput && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchInput("")
+                        setSearchQuery("")
+                      }}
+                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
 
-          {/* Bulk Actions */}
-          {selectedReplies.length > 0 && (
-            <div className="flex items-center gap-4 mb-6">
-              <div className="text-sm text-muted-foreground">
-                <span className="font-medium">{selectedReplies.length}개 선택됨</span>
+              {/* Thread List Table */}
+              <div className="flex-1 overflow-auto">
+                {selectedWorkspace ? (
+                  <RepliedEmailsTableWithPagination
+                    workspaceId={selectedWorkspace.id}
+                    searchQuery={searchQuery}
+                    selectedStatuses={[]}
+                    selectedThreadId={selectedThreadId}
+                    onThreadSelect={setSelectedThreadId}
+                  />
+                ) : (
+                  <div className="py-12 text-center text-muted-foreground">
+                    워크스페이스를 선택하면 답장 이메일 목록이 표시됩니다.
+                  </div>
+                )}
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleBulkMarkAsRead}>
-                  <MailCheck className="h-4 w-4 mr-1" />
-                  읽음 표시
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleBulkMarkAsUnread}>
-                  <Mail className="h-4 w-4 mr-1" />
-                  읽지 않음 표시
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBulkDelete}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  선택 삭제
-                </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Resizer */}
+        <button
+          type="button"
+          aria-label="Resize panels"
+          className={`w-1 bg-gray-200 hover:bg-blue-400 cursor-col-resize flex-shrink-0 h-full border-0 p-0 ${
+            isResizing ? "bg-blue-400" : ""
+          }`}
+          onMouseDown={handleMouseDown}
+        />
+
+        {/* Right: Thread Detail Panel */}
+        <div style={{ width: `${100 - leftWidth}%` }} className="flex flex-col h-full">
+          {selectedThreadId ? (
+            <ThreadDetailPanel
+              threadId={selectedThreadId}
+              workspaceId={selectedWorkspace?.id}
+              onClose={() => setSelectedThreadId(null)}
+            />
+          ) : (
+            <Card className="h-full flex items-center justify-center">
+              <div className="text-center text-muted-foreground">
+                <div className="text-sm">선택한 대화가 없습니다.</div>
               </div>
-            </div>
+            </Card>
           )}
-
-          {/* Replies Table with Pagination */}
-          <RepliesTableWithPagination
-            searchQuery={searchQuery}
-            workspaceId={selectedWorkspace?.id}
-            selectedReadStatus={selectedReadStatus}
-            selectedSentiments={selectedSentiments}
-            selectedEmailAccountId={selectedEmailAccountId}
-            selectedReplies={selectedReplies}
-            onToggleReply={toggleReplySelection}
-            onToggleAll={toggleAllReplies}
-            onViewReply={setViewingReply}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Reply Details Dialog */}
-      <Dialog open={!!viewingReply} onOpenChange={() => setViewingReply(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              답장 상세 보기
-            </DialogTitle>
-          </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
-            {viewingReply && (
-              <EmailReplyDetailsDialog reply={viewingReply} onClose={() => setViewingReply(null)} />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </div>
     </div>
   )
 }

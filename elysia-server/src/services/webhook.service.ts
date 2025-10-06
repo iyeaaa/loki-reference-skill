@@ -356,7 +356,39 @@ class WebhookService {
 
     const leadId = leadContactResults.length > 0 ? leadContactResults[0]?.leadId : null
 
-    // 4. 인바운드 이메일을 emails 테이블에 저장
+    // 4. threadId 결정: 답장이면 원본의 threadId 사용, 아니면 messageId를 threadId로 사용
+    let threadId = headers.messageId // 기본값: 자신의 messageId
+
+    if (headers.inReplyTo) {
+      // 답장인 경우: 원본 이메일의 threadId 찾기
+      const originalEmailForThread = await db
+        .select({ threadId: emailsTable.threadId })
+        .from(emailsTable)
+        .where(eq(emailsTable.messageId, headers.inReplyTo))
+        .limit(1)
+
+      if (originalEmailForThread.length > 0 && originalEmailForThread[0]?.threadId) {
+        threadId = originalEmailForThread[0].threadId
+        logger.info(
+          { threadId, inReplyTo: headers.inReplyTo },
+          "Thread ID inherited from original email",
+        )
+      } else {
+        // 원본을 못 찾으면 inReplyTo를 threadId로 사용
+        threadId = headers.inReplyTo
+        logger.info(
+          { threadId: headers.inReplyTo },
+          "Using In-Reply-To as thread ID (original not found)",
+        )
+      }
+    }
+
+    logger.info(
+      { threadId, messageId: headers.messageId, inReplyTo: headers.inReplyTo },
+      "Thread ID determined for inbound email",
+    )
+
+    // 5. 인바운드 이메일을 emails 테이블에 저장
     const inboundEmailResults = await db
       .insert(emailsTable)
       .values({
@@ -375,6 +407,7 @@ class WebhookService {
         deliveredAt: new Date(), // Set delivered time
         messageId: headers.messageId,
         inReplyTo: headers.inReplyTo,
+        threadId, // threadId 추가!
       })
       .returning()
 
@@ -386,7 +419,7 @@ class WebhookService {
 
     logger.info({ emailId: inboundEmail.id }, "Inbound email saved successfully")
 
-    // 4. 답장인지 확인 (In-Reply-To 헤더가 있는 경우)
+    // 6. 답장인지 확인 (In-Reply-To 헤더가 있는 경우)
     if (headers.inReplyTo) {
       logger.info({ inReplyTo: headers.inReplyTo }, "Reply detected")
 

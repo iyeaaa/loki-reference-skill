@@ -65,7 +65,17 @@ function DashboardContent() {
   // 선택된 워크스페이스를 localStorage에 저장
   useEffect(() => {
     localStorage.setItem("selectedWorkspace", selectedWorkspace)
-  }, [selectedWorkspace])
+
+    // 워크스페이스 이름도 함께 저장
+    if (selectedWorkspace === "all") {
+      localStorage.setItem("selectedWorkspaceName", "전체")
+    } else {
+      const workspace = workspaces.find((ws) => ws.value === selectedWorkspace)
+      if (workspace) {
+        localStorage.setItem("selectedWorkspaceName", workspace.label)
+      }
+    }
+  }, [selectedWorkspace, workspaces])
 
   // 워크스페이스 목록이 로드되었을 때, 선택된 워크스페이스가 유효한지 확인
   useEffect(() => {

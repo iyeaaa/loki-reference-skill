@@ -143,35 +143,34 @@ export function useBulkDeleteEmails() {
   })
 }
 
-export function useRepliedEmails(
-  workspaceId?: string,
-  userId?: string,
-  options?: {
-    limit?: number
-    offset?: number
-    groupByThread?: boolean
-    status?: string
-    leadId?: string
-    sequenceId?: string
-    search?: string
-  },
-) {
+// Replied emails params type (users 패턴과 동일)
+export interface RepliedEmailsParams {
+  workspaceId: string
+  page?: number
+  limit?: number
+  status?: string
+  leadId?: string
+  sequenceId?: string
+  search?: string
+}
+
+export function useRepliedEmails(params: RepliedEmailsParams) {
   return useQuery({
-    queryKey: [...emailKeys.replied(workspaceId, userId), options],
-    queryFn: () =>
-      emailsApi.getRepliedEmails({
-        workspaceId,
-        userId,
-        limit: options?.limit || 50,
-        offset: options?.offset || 0,
-        groupByThread: options?.groupByThread,
-        status: options?.status,
-        leadId: options?.leadId,
-        sequenceId: options?.sequenceId,
-        search: options?.search,
-      }),
-    enabled: !!workspaceId && !!userId,
+    queryKey: ["replied-emails", params],
+    queryFn: () => emailsApi.searchRepliedEmails(params),
+    enabled: !!params.workspaceId,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
+  })
+}
+
+// Hook for thread emails (conversation history)
+export function useThreadEmails(threadId: string | null, workspaceId?: string) {
+  return useQuery({
+    queryKey: ["thread-emails", threadId, workspaceId],
+    queryFn: () => emailsApi.getThreadEmails(threadId || "", workspaceId),
+    enabled: !!threadId,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   })
 }

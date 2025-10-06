@@ -7,7 +7,6 @@ import type {
   EmailsParams,
   RepliedEmail,
   SendEmailRequest,
-  ThreadGroupedEmail,
   UpdateEmailStatusRequest,
 } from "../types/email"
 
@@ -101,24 +100,26 @@ export const emailsApi = {
     })
   },
 
-  getRepliedEmails: (params: {
-    workspaceId?: string
-    userId?: string
+  // Search replied emails with filters - THREAD-BASED (스레드 기반)
+  searchRepliedEmails: (params: {
+    workspaceId: string
+    page?: number
     limit?: number
-    offset?: number
-    groupByThread?: boolean
     status?: string
     leadId?: string
     sequenceId?: string
     search?: string
   }) => {
     const searchParams = new URLSearchParams()
-    if (params.workspaceId) searchParams.append("workspaceId", params.workspaceId)
-    if (params.userId) searchParams.append("userId", params.userId)
-    if (params.limit) searchParams.append("limit", params.limit.toString())
-    if (params.offset) searchParams.append("offset", params.offset.toString())
-    if (params.groupByThread !== undefined)
-      searchParams.append("groupByThread", params.groupByThread.toString())
+
+    const page = params.page || 1
+    const limit = params.limit || 20
+    const offset = (page - 1) * limit
+
+    searchParams.append("workspaceId", params.workspaceId)
+    searchParams.append("limit", limit.toString())
+    searchParams.append("offset", offset.toString())
+
     if (params.status && params.status !== "all") searchParams.append("status", params.status)
     if (params.leadId) searchParams.append("leadId", params.leadId)
     if (params.sequenceId) searchParams.append("sequenceId", params.sequenceId)
@@ -126,10 +127,28 @@ export const emailsApi = {
 
     const query = searchParams.toString()
     return apiFetch<{
-      data: (RepliedEmail | ThreadGroupedEmail)[]
+      data: RepliedEmail[]
       total: number
       limit: number
       offset: number
-    }>(`/api/v1/emails/replied${query ? `?${query}` : ""}`)
+    }>(`/api/v1/emails/search-replied?${query}`).then((response) => ({
+      repliedEmails: response.data,
+      total: response.total,
+      page,
+      limit,
+      totalPages: Math.ceil(response.total / limit),
+    }))
+  },
+
+  // Get thread emails (conversation history)
+  getThreadEmails: (threadId: string, workspaceId?: string) => {
+    const searchParams = new URLSearchParams()
+    if (workspaceId) {
+      searchParams.append("workspaceId", workspaceId)
+    }
+    const query = searchParams.toString()
+    return apiFetch<{ data: import("../types/email").ThreadEmail[] }>(
+      `/api/v1/emails/thread/${threadId}${query ? `?${query}` : ""}`,
+    )
   },
 }

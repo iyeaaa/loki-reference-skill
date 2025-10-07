@@ -1,7 +1,9 @@
-import { ChevronLeft, ChevronRight, MessageSquare } from "lucide-react"
+import { ChevronLeft, ChevronRight, User } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { type RepliedEmailsParams, useRepliedEmails } from "@/lib/api/hooks/emails"
 import { formatRelativeTime } from "@/lib/date-utils"
 
@@ -110,41 +112,45 @@ export function RepliedEmailsTableWithPagination({
   }
 
   return (
-    <>
+    <TooltipProvider>
       {/* Table */}
       <div className="rounded-md border">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <colgroup>
-              <col style={{ minWidth: "150px", width: "20%" }} />
-              <col style={{ minWidth: "180px", width: "22%" }} />
-              <col style={{ minWidth: "120px" }} />
-              <col style={{ minWidth: "100px", width: "10%" }} />
-              <col style={{ minWidth: "100px", width: "10%" }} />
-              <col style={{ minWidth: "80px", width: "8%" }} />
-              <col style={{ minWidth: "90px", width: "10%" }} />
+              <col className="w-[15%] min-w-[150px]" />
+              <col className="w-[17%] min-w-[160px]" />
+              <col className="w-[8%] min-w-[70px]" />
+              <col className="w-[20%] min-w-[100px]" />
+              <col className="w-[12%] min-w-[100px]" />
+              <col className="w-[12%] min-w-[100px]" />
+              <col className="w-[8%] min-w-[80px]" />
+              <col className="w-[8%] min-w-[90px]" />
             </colgroup>
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   발신자
                 </th>
-                <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   제목
                 </th>
-                <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  메시지
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   본문
                 </th>
-                <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   리드
                 </th>
-                <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   시퀀스
                 </th>
-                <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   상태
                 </th>
-                <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   수신일
                 </th>
               </tr>
@@ -152,7 +158,7 @@ export function RepliedEmailsTableWithPagination({
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {repliedEmails.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-2 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={8} className="px-2 py-4 text-center text-sm text-gray-500">
                     {isFetching ? "로딩 중..." : "답장 이메일이 없습니다"}
                   </td>
                 </tr>
@@ -178,9 +184,9 @@ export function RepliedEmailsTableWithPagination({
                           : "hover:bg-gray-50 dark:hover:bg-gray-750"
                       }`}
                     >
-                      <td className="px-2 py-1.5 text-sm">
-                        <div className="flex items-center gap-1.5">
-                          <div className="min-w-0">
+                      <td className="px-3 py-2 text-sm">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <div className="min-w-0 flex-1">
                             <div className="font-medium truncate">{email.fromEmail}</div>
                             {email.leadName && (
                               <div className="text-xs text-gray-500 truncate">{email.leadName}</div>
@@ -188,42 +194,97 @@ export function RepliedEmailsTableWithPagination({
                           </div>
                         </div>
                       </td>
-                      <td className="px-2 py-1.5 text-sm">
-                        <div className="min-w-0">
-                          <div className="truncate font-medium" title={email.subject || ""}>
-                            {email.subject || "(제목 없음)"}
-                          </div>
-                          {email.messageCount && email.messageCount > 1 && (
-                            <div className="flex items-center gap-1 text-xs text-gray-500">
-                              <MessageSquare className="h-3 w-3" />
-                              <span>{email.messageCount}</span>
-                            </div>
-                          )}
+                      <td className="px-3 py-2 text-sm">
+                        <div className="truncate font-medium" title={email.subject || ""}>
+                          {email.subject || "(제목 없음)"}
                         </div>
                       </td>
-                      <td className="px-2 py-1.5 text-xs text-gray-600 dark:text-gray-400">
-                        <div className="truncate max-w-xs" title={bodyPreview}>
+                      <td className="px-3 py-2 text-center text-xs text-gray-600 dark:text-gray-400">
+                        {email.messageCount && email.messageCount > 1 ? email.messageCount : "-"}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-400">
+                        <div className="truncate" title={bodyPreview}>
                           {bodyPreview || "-"}
                         </div>
                       </td>
-                      <td className="px-2 py-1.5 text-xs">
+                      <td className="px-3 py-2 text-xs">
                         {email.leadName ? (
-                          <span className="text-gray-600">{email.leadName}</span>
+                          <Popover>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <PopoverTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-1.5 py-1 -mx-1.5 transition-colors text-left w-full min-w-0"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <User className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                                    <span className="text-gray-600 dark:text-gray-300 truncate">
+                                      {email.leadName}
+                                    </span>
+                                  </button>
+                                </PopoverTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>리드 정보 보기</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <PopoverContent className="w-80" align="start">
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2 pb-2 border-b">
+                                  <User className="h-4 w-4 text-gray-500" />
+                                  <h4 className="font-semibold text-sm">리드 정보</h4>
+                                </div>
+                                <div className="space-y-2 text-xs">
+                                  <div className="flex">
+                                    <span className="font-medium w-20 text-gray-700 dark:text-gray-300">
+                                      이름:
+                                    </span>
+                                    <span className="text-gray-600 dark:text-gray-400">
+                                      {email.leadName}
+                                    </span>
+                                  </div>
+                                  {email.leadEmail && (
+                                    <div className="flex">
+                                      <span className="font-medium w-20 text-gray-700 dark:text-gray-300">
+                                        이메일:
+                                      </span>
+                                      <span className="text-gray-600 dark:text-gray-400">
+                                        {email.leadEmail}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {email.leadId && (
+                                    <div className="flex">
+                                      <span className="font-medium w-20 text-gray-700 dark:text-gray-300">
+                                        ID:
+                                      </span>
+                                      <span className="text-gray-600 dark:text-gray-400 font-mono text-xs">
+                                        {email.leadId}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         ) : (
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="px-2 py-1.5 text-xs">
-                        {email.sequenceName ? (
-                          <span className="text-gray-600">{email.sequenceName}</span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
+                      <td className="px-3 py-2 text-xs">
+                        <div className="truncate">
+                          {email.sequenceName ? (
+                            <span className="text-gray-600">{email.sequenceName}</span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-2 py-1.5 text-xs">
+                      <td className="px-3 py-2 text-xs whitespace-nowrap">
                         <span className="text-gray-600">{getStatusText(email.status)}</span>
                       </td>
-                      <td className="px-2 py-1.5 text-xs text-gray-500">
+                      <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">
                         {formatRelativeTime(email.createdAt)}
                       </td>
                     </tr>
@@ -326,6 +387,6 @@ export function RepliedEmailsTableWithPagination({
           <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
         </div>
       </div>
-    </>
+    </TooltipProvider>
   )
 }

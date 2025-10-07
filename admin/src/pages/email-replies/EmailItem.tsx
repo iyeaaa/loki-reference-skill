@@ -29,10 +29,18 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
     email.bodyText || (email.bodyHtml ? email.bodyHtml.replace(/<[^>]*>/g, "").trim() : "")
 
   return (
-    <button
-      type="button"
-      className="w-full cursor-pointer rounded-lg border-t pt-4 pb-2 px-2 text-left bg-transparent hover:bg-transparent"
+    // biome-ignore lint/a11y/useSemanticElements: Using div to avoid nested button issues with Popover
+    <div
+      className="w-full cursor-pointer rounded-lg border-t pt-4 pb-2 px-2"
       onClick={onToggle}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onToggle()
+        }
+      }}
+      role="button"
+      tabIndex={0}
     >
       <div>
         {/* Sender header */}
@@ -136,6 +144,6 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
           </div>
         )}
       </div>
-    </button>
+    </div>
   )
 }

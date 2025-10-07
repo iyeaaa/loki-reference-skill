@@ -21,6 +21,7 @@ const SequenceDesigner = lazy(() => import("../pages/sequences/designer/Sequence
 const SettingsPage = lazy(() => import("../pages/settings"))
 const UsersPage = lazy(() => import("../pages/users/UsersPage"))
 const WorkspacesPage = lazy(() => import("../pages/workspaces"))
+const TailwindTestPage = lazy(() => import("../pages/tailwind-test/TailwindTestPage"))
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>
@@ -98,6 +99,10 @@ export const router = createBrowserRouter([
           {
             path: "settings",
             element: <SettingsPage />,
+          },
+          {
+            path: "tailwind-test",
+            element: <TailwindTestPage />,
           },
         ],
       },

@@ -29,18 +29,10 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
     email.bodyText || (email.bodyHtml ? email.bodyHtml.replace(/<[^>]*>/g, "").trim() : "")
 
   return (
-    // biome-ignore lint/a11y/useSemanticElements: Using div to avoid nested button issues with Popover
-    <div
-      className="w-full cursor-pointer rounded-lg border-t pt-4 pb-2 px-2"
+    <button
+      type="button"
+      className="w-full cursor-pointer rounded-lg border-t pt-4 pb-2 px-2 text-left bg-transparent hover:bg-transparent border-0"
       onClick={onToggle}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault()
-          onToggle()
-        }
-      }}
-      role="button"
-      tabIndex={0}
     >
       <div>
         {/* Sender header */}
@@ -66,12 +58,20 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            className="ml-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded p-0.5 transition-colors"
+                          {/* biome-ignore lint/a11y/useSemanticElements: Cannot use button due to nesting in parent button */}
+                          <span
+                            className="ml-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded p-0.5 transition-colors inline-flex cursor-pointer"
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.stopPropagation()
+                              }
+                            }}
+                            role="button"
+                            tabIndex={0}
                           >
                             <ChevronDown className="h-3 w-3 text-gray-400" />
-                          </button>
+                          </span>
                         </PopoverTrigger>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -144,6 +144,6 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
           </div>
         )}
       </div>
-    </div>
+    </button>
   )
 }

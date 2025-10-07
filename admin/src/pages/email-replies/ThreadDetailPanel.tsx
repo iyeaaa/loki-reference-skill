@@ -1,93 +1,18 @@
 import { useQueryClient } from "@tanstack/react-query"
-import { ChevronDown, ChevronUp, MoreHorizontal, Reply, X } from "lucide-react"
-import { useState } from "react"
+import { ChevronDown, Reply, X } from "lucide-react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { useThreadEmails } from "@/lib/api/hooks/emails"
-import { formatKoreanDateTime } from "@/lib/date-utils"
+import { EmailItem } from "./EmailItem"
 import { InlineComposeBox } from "./InlineComposeBox"
 
 interface ThreadDetailPanelProps {
   threadId: string
   workspaceId?: string
   onClose: () => void
-}
-
-/**
- * Split email body by email address pattern
- * Detects lines containing <email@example.com> and treats everything from that line onwards as quoted text
- */
-function splitEmailByEmailPattern(bodyText: string): {
-  mainContent: string
-  quotedText: string | null
-} {
-  if (!bodyText) {
-    return { mainContent: "", quotedText: null }
-  }
-
-  // Pattern to detect email in angle brackets: <email@example.com>
-  const emailPattern = /<[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}>/
-
-  const lines = bodyText.split("\n")
-
-  // Find the first line containing an email address in angle brackets
-  for (let i = 0; i < lines.length; i++) {
-    if (emailPattern.test(lines[i])) {
-      const mainContent = lines.slice(0, i).join("\n").trim()
-      const quotedText = lines.slice(i).join("\n").trim()
-      return { mainContent, quotedText }
-    }
-  }
-
-  // No email pattern found, return all as main content
-  return { mainContent: bodyText, quotedText: null }
-}
-
-/**
- * Email body component with collapsible quoted text
- */
-function EmailBody({ bodyText, bodyHtml }: { bodyText?: string; bodyHtml?: string }) {
-  const [isQuotedExpanded, setIsQuotedExpanded] = useState(false)
-
-  const content = bodyText || (bodyHtml ? bodyHtml.replace(/<[^>]*>/g, "").trim() : "")
-  const { mainContent, quotedText } = splitEmailByEmailPattern(content)
-
-  if (!content) {
-    return <div className="text-muted-foreground italic">(내용 없음)</div>
-  }
-
-  return (
-    <div className="space-y-2">
-      {/* Main content */}
-      {mainContent && <div className="whitespace-pre-wrap break-words">{mainContent}</div>}
-
-      {/* Quoted text (collapsible) - default collapsed */}
-      {quotedText && (
-        <div className="mt-2">
-          <button
-            type="button"
-            onClick={() => setIsQuotedExpanded(!isQuotedExpanded)}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors border border-gray-200 dark:border-gray-700"
-          >
-            {isQuotedExpanded ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <MoreHorizontal className="h-4 w-4" />
-            )}
-          </button>
-
-          {isQuotedExpanded && (
-            <div className="mt-2 pl-3 border-l-2 border-gray-300 dark:border-gray-600 text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words">
-              {quotedText}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
 }
 
 export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDetailPanelProps) {
@@ -99,6 +24,40 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
   const [showReply, setShowReply] = useState(false)
   const [composeExpanded, setComposeExpanded] = useState(false)
   const [composeFullscreen, setComposeFullscreen] = useState(false)
+
+  // 각 이메일의 펼침/접힘 상태 (기본값: 모두 펼침)
+  const [expandedEmails, setExpandedEmails] = useState<Record<string, boolean>>({})
+
+  // 중간 메일들을 숨길지 여부
+  const [showMiddleEmails, setShowMiddleEmails] = useState(false)
+
+  // threadId가 변경되면 상태 초기화
+  // biome-ignore lint/correctness/useExhaustiveDependencies: threadId 변경 시에만 초기화 필요
+  useEffect(() => {
+    setExpandedEmails({})
+    setShowMiddleEmails(false)
+    setShowReply(false)
+    setComposeExpanded(false)
+    setComposeFullscreen(false)
+  }, [threadId])
+
+  // 이메일이 펼쳐져 있는지 확인 (기본값: 마지막 이메일만 펼침)
+  const isExpanded = (emailId: string) => {
+    if (expandedEmails[emailId] !== undefined) {
+      return expandedEmails[emailId]
+    }
+    // 기본값: 마지막 이메일만 펼침
+    return emails[emails.length - 1]?.id === emailId
+  }
+
+  // 이메일 토글 (현재 isExpanded 상태를 기반으로 토글)
+  const toggleEmail = (emailId: string) => {
+    const currentState = isExpanded(emailId)
+    setExpandedEmails((prev) => ({
+      ...prev,
+      [emailId]: !currentState,
+    }))
+  }
 
   if (isLoading) {
     return (
@@ -131,15 +90,6 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
     )
   }
 
-  const getInitials = (email: string) => {
-    return email.substring(0, 2).toUpperCase()
-  }
-
-  const getName = (email: string, leadName?: string | null) => {
-    if (leadName) return leadName
-    return email.split("@")[0]
-  }
-
   return (
     <Card className="h-full flex flex-col">
       {/* Header */}
@@ -157,122 +107,62 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
       {/* Email thread */}
       <TooltipProvider>
         <ScrollArea className="flex-1 px-4 pb-4">
-          <div className="space-y-8 pb-4">
-            {emails.map((email, index) => {
-              const senderEmail = email.fromEmail
-              const senderName = getName(
-                email.fromEmail,
-                email.direction === "inbound" ? email.leadName : null,
-              )
-              const recipientEmail = email.toEmail
-              const recipientName = getName(
-                email.toEmail,
-                email.direction === "outbound" ? email.leadName : null,
-              )
+          <div className="pb-4">
+            {emails.length >= 4 ? (
+              <>
+                {/* 첫 번째 메일 */}
+                <EmailItem
+                  key={emails[0].id}
+                  email={emails[0]}
+                  isExpanded={isExpanded(emails[0].id)}
+                  onToggle={() => toggleEmail(emails[0].id)}
+                />
 
-              const senderDomain = senderEmail.split("@")[1]
-
-              return (
-                <div key={email.id} className={index > 0 ? "pt-6 border-t" : ""}>
-                  {/* Sender header */}
-                  <div className="flex items-start gap-3 mb-2">
-                    {/* Profile Circle */}
-                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
-                        {getInitials(senderEmail)}
-                      </span>
-                    </div>
-
-                    {/* Sender info */}
-                    <div className="flex-1 min-w-0 flex justify-between items-start gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm">
-                          {senderName}{" "}
-                          <span className="text-gray-500 font-normal">&lt;{senderEmail}&gt;</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                          <span>{recipientName}에게</span>
-                          <Popover>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <PopoverTrigger asChild>
-                                  <button
-                                    type="button"
-                                    className="ml-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded p-0.5 transition-colors"
-                                  >
-                                    <ChevronDown className="h-3 w-3 text-gray-400" />
-                                  </button>
-                                </PopoverTrigger>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>상세 정보 보기</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            <PopoverContent className="w-80" align="start">
-                              <div className="space-y-2 text-xs">
-                                <div className="flex">
-                                  <span className="font-medium w-24 text-gray-700 dark:text-gray-300">
-                                    보낸사람:
-                                  </span>
-                                  <span className="text-gray-600 dark:text-gray-400">
-                                    {senderName} &lt;{senderEmail}&gt;
-                                  </span>
-                                </div>
-                                <div className="flex">
-                                  <span className="font-medium w-24 text-gray-700 dark:text-gray-300">
-                                    받는사람:
-                                  </span>
-                                  <span className="text-gray-600 dark:text-gray-400">
-                                    {recipientEmail}
-                                  </span>
-                                </div>
-                                <div className="flex">
-                                  <span className="font-medium w-24 text-gray-700 dark:text-gray-300">
-                                    날짜:
-                                  </span>
-                                  <span className="text-gray-600 dark:text-gray-400">
-                                    {formatKoreanDateTime(email.createdAt)}
-                                  </span>
-                                </div>
-                                <div className="flex">
-                                  <span className="font-medium w-24 text-gray-700 dark:text-gray-300">
-                                    제목:
-                                  </span>
-                                  <span className="text-gray-600 dark:text-gray-400">
-                                    {email.subject || "(제목 없음)"}
-                                  </span>
-                                </div>
-                                <div className="flex">
-                                  <span className="font-medium w-24 text-gray-700 dark:text-gray-300">
-                                    발송 도메인:
-                                  </span>
-                                  <span className="text-gray-600 dark:text-gray-400">
-                                    {senderDomain}
-                                  </span>
-                                </div>
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-xs text-muted-foreground whitespace-nowrap">
-                          {formatKoreanDateTime(email.createdAt)}
-                        </div>
-                      </div>
-                    </div>
+                {/* 중간 메일 압축/해제 버튼 */}
+                {!showMiddleEmails ? (
+                  <div className="relative flex items-center justify-center py-3">
+                    <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-gray-300 dark:border-gray-600" />
+                    <button
+                      type="button"
+                      onClick={() => setShowMiddleEmails(true)}
+                      className="relative bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-2"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                      <span>{emails.length - 2}</span>
+                    </button>
                   </div>
+                ) : (
+                  <>
+                    {/* 중간 메일들 */}
+                    {emails.slice(1, -1).map((email) => (
+                      <EmailItem
+                        key={email.id}
+                        email={email}
+                        isExpanded={isExpanded(email.id)}
+                        onToggle={() => toggleEmail(email.id)}
+                      />
+                    ))}
+                  </>
+                )}
 
-                  {/* Email body */}
-                  <div className="ml-13 text-sm text-gray-700 dark:text-gray-300 mt-3">
-                    <EmailBody
-                      bodyText={email.bodyText ?? undefined}
-                      bodyHtml={email.bodyHtml ?? undefined}
-                    />
-                  </div>
-                </div>
-              )
-            })}
+                {/* 마지막 메일 */}
+                <EmailItem
+                  key={emails[emails.length - 1].id}
+                  email={emails[emails.length - 1]}
+                  isExpanded={isExpanded(emails[emails.length - 1].id)}
+                  onToggle={() => toggleEmail(emails[emails.length - 1].id)}
+                />
+              </>
+            ) : (
+              emails.map((email) => (
+                <EmailItem
+                  key={email.id}
+                  email={email}
+                  isExpanded={isExpanded(email.id)}
+                  onToggle={() => toggleEmail(email.id)}
+                />
+              ))
+            )}
 
             {/* 인라인 작성 영역 */}
             {showReply && emails.length > 0 && (

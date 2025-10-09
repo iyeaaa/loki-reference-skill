@@ -11,9 +11,11 @@ done
 
 echo "[+] PostgreSQL is ready!"
 
-# Run database migrations
+# Run database migrations using drizzle-kit migrate
+# This executes pre-generated migration files from ./drizzle directory
+# Safer for production: tracks history, rollback-able, no data loss
 echo "[+] Running database migrations..."
-bun run db:push
+bun run db:migrate
 
 echo "[+] Migrations completed successfully!"
 

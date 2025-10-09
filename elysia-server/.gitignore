@@ -37,3 +37,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 backups/
 *.sql
 *.sql.gz
+
+# But include drizzle migration files
+!drizzle/**/*.sql

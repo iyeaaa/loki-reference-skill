@@ -18,13 +18,15 @@ COPY tsconfig.json ./
 COPY drizzle.config.ts ./
 # Copy migration files
 COPY drizzle ./drizzle
+# Copy scripts
+COPY scripts ./scripts
 # Copy entrypoint script
 COPY entrypoint.sh ./
 # Copy .env files
 COPY .env* ./
 
-# Make entrypoint script executable
-RUN chmod +x ./entrypoint.sh
+# Make scripts executable
+RUN chmod +x ./entrypoint.sh ./scripts/*.sh
 
 # Expose port
 EXPOSE 3001

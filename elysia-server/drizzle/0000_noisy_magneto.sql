@@ -1,2 +1,0 @@
-CREATE TYPE "public"."workflow_email_status_enum" AS ENUM('pending', 'generating', 'generated', 'edited', 'failed');--> statement-breakpoint
-ALTER TABLE "sequences" ALTER COLUMN "customer_group_id" DROP NOT NULL;

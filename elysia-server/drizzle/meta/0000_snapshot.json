@@ -1,6 +1,6 @@
 {
-  "id": "2c0426a8-c9c9-4312-978f-4beafce839fc",
-  "prevId": "242f10dc-1045-4600-b6bc-c4c92d9e1ad0",
+  "id": "a65d3271-53dd-447a-8581-11651ef4a643",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1273,157 +1273,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.email_threads": {
-      "name": "email_threads",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "workspace_id": {
-          "name": "workspace_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "lead_id": {
-          "name": "lead_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "subject": {
-          "name": "subject",
-          "type": "varchar(500)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "first_email_id": {
-          "name": "first_email_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_email_id": {
-          "name": "last_email_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_activity_at": {
-          "name": "last_activity_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "status": {
-          "name": "status",
-          "type": "email_thread_status_enum",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'active'"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "email_threads_workspace_id_idx": {
-          "name": "email_threads_workspace_id_idx",
-          "columns": [
-            {
-              "expression": "workspace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "email_threads_lead_id_idx": {
-          "name": "email_threads_lead_id_idx",
-          "columns": [
-            {
-              "expression": "lead_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "email_threads_last_activity_idx": {
-          "name": "email_threads_last_activity_idx",
-          "columns": [
-            {
-              "expression": "last_activity_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "email_threads_workspace_id_workspaces_id_fk": {
-          "name": "email_threads_workspace_id_workspaces_id_fk",
-          "tableFrom": "email_threads",
-          "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "email_threads_lead_id_leads_id_fk": {
-          "name": "email_threads_lead_id_leads_id_fk",
-          "tableFrom": "email_threads",
-          "tableTo": "leads",
-          "columnsFrom": [
-            "lead_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.emails": {
       "name": "emails",
       "schema": "",
@@ -1514,6 +1363,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "raw_email": {
+          "name": "raw_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "status": {
           "name": "status",
           "type": "email_status_enum",
@@ -1597,7 +1452,7 @@
         },
         "thread_id": {
           "name": "thread_id",
-          "type": "uuid",
+          "type": "varchar(500)",
           "primaryKey": false,
           "notNull": false
         },
@@ -1614,6 +1469,24 @@
           "primaryKey": false,
           "notNull": true,
           "default": 0
+        },
+        "lead_name": {
+          "name": "lead_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lead_email": {
+          "name": "lead_email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sequence_name": {
+          "name": "sequence_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
         },
         "unsubscribed_at": {
           "name": "unsubscribed_at",
@@ -1656,24 +1529,15 @@
         }
       },
       "indexes": {
-        "emails_workspace_id_idx": {
-          "name": "emails_workspace_id_idx",
+        "emails_workspace_user_idx": {
+          "name": "emails_workspace_user_idx",
           "columns": [
             {
               "expression": "workspace_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "emails_user_email_account_id_idx": {
-          "name": "emails_user_email_account_id_idx",
-          "columns": [
+            },
             {
               "expression": "user_email_account_id",
               "isExpression": false,
@@ -1716,11 +1580,17 @@
           "method": "btree",
           "with": {}
         },
-        "emails_status_idx": {
-          "name": "emails_status_idx",
+        "emails_status_direction_idx": {
+          "name": "emails_status_direction_idx",
           "columns": [
             {
               "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "direction",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4542,15 +4412,6 @@
         "failed",
         "spam",
         "unsubscribed"
-      ]
-    },
-    "public.email_thread_status_enum": {
-      "name": "email_thread_status_enum",
-      "schema": "public",
-      "values": [
-        "active",
-        "archived",
-        "snoozed"
       ]
     },
     "public.contact_type_enum": {

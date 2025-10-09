@@ -11,13 +11,14 @@ done
 
 echo "[+] PostgreSQL is ready!"
 
-# Run database migrations using drizzle-kit migrate
-# This executes pre-generated migration files from ./drizzle directory
-# Safer for production: tracks history, rollback-able, no data loss
-echo "[+] Running database migrations..."
-bun run db:migrate
+# Run smart migration script
+# Handles both fresh databases and existing schemas intelligently
+# - Fresh DB: runs migrations from scratch
+# - Existing schema: marks migrations as applied without re-running
+echo "[+] Running smart migration check..."
+sh ./scripts/smart-migrate.sh
 
-echo "[+] Migrations completed successfully!"
+echo "[+] Database is ready!"
 
 # Start the application
 echo "[+] Starting elysia-server..."

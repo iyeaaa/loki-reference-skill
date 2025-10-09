@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1759746236036,
-      "tag": "0000_noisy_magneto",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1759749412607,
-      "tag": "0001_easy_freak",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1759756743409,
-      "tag": "0002_cloudy_xavin",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1759757289931,
-      "tag": "0003_bizarre_falcon",
+      "when": 1760029328030,
+      "tag": "0000_tan_santa_claus",
       "breakpoints": true
     }
   ]

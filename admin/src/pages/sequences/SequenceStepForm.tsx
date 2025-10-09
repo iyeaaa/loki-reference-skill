@@ -1,8 +1,11 @@
+import { ChevronDown } from "lucide-react"
 import { useId, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { TimePicker } from "@/components/ui/time-picker"
 import type { SequenceStep } from "@/lib/api/types/sequence"
 
 interface SequenceStepFormProps {
@@ -11,6 +14,9 @@ interface SequenceStepFormProps {
   onSave: (stepData: {
     stepOrder: number
     delayDays: number
+    scheduledHour?: number
+    scheduledMinute?: number
+    timezone?: string
     emailSubject: string
     emailBodyText?: string
     emailBodyHtml?: string
@@ -19,7 +25,6 @@ interface SequenceStepFormProps {
 }
 
 export function SequenceStepForm({ step, stepOrder, onSave, onCancel }: SequenceStepFormProps) {
-  const stepOrderId = useId()
   const subjectId = useId()
   const delayDaysId = useId()
   const bodyTextId = useId()
@@ -27,6 +32,9 @@ export function SequenceStepForm({ step, stepOrder, onSave, onCancel }: Sequence
   const [formData, setFormData] = useState({
     stepOrder: step?.stepOrder ?? stepOrder,
     delayDays: step?.delayDays ?? 0,
+    scheduledHour: step?.scheduledHour ?? 9,
+    scheduledMinute: step?.scheduledMinute ?? 0,
+    timezone: step?.timezone ?? "Asia/Seoul",
     emailSubject: step?.emailSubject || "",
     emailBodyText: step?.emailBodyText || "",
   })
@@ -37,48 +45,67 @@ export function SequenceStepForm({ step, stepOrder, onSave, onCancel }: Sequence
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor={stepOrderId}>
-            스텝 순서 <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id={stepOrderId}
-            type="number"
-            min="1"
-            value={formData.stepOrder}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                stepOrder: parseInt(e.target.value, 10) || 1,
-              })
-            }
-            required
-            placeholder="예: 1"
-          />
-          <p className="text-xs text-muted-foreground">이메일 발송 순서</p>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* 스텝 순서 표시 */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-muted-foreground">스텝 순서:</span>
+        <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
+          {formData.stepOrder}
+        </span>
+      </div>
+
+      {/* 발송 스케줄 섹션 */}
+      <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+        <h3 className="text-sm font-semibold">발송 스케줄</h3>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor={delayDaysId}>
+              대기 일수 <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id={delayDaysId}
+              type="number"
+              min="0"
+              value={formData.delayDays}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  delayDays: parseInt(e.target.value, 10) || 0,
+                })
+              }
+              required
+              placeholder="0"
+              className="bg-background"
+            />
+            <p className="text-xs text-muted-foreground">이전 이메일 발송 후 며칠 뒤</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              발송 시각 (KST) <span className="text-red-500">*</span>
+            </Label>
+            <TimePicker
+              value={{ hour: formData.scheduledHour, minute: formData.scheduledMinute }}
+              onChange={(time) =>
+                setFormData({
+                  ...formData,
+                  scheduledHour: time.hour,
+                  scheduledMinute: time.minute,
+                })
+              }
+              className="bg-background"
+            />
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor={delayDaysId}>
-            발송 지연 일수 <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id={delayDaysId}
-            type="number"
-            min="0"
-            value={formData.delayDays}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                delayDays: parseInt(e.target.value, 10) || 0,
-              })
-            }
-            required
-            placeholder="예: 3"
-          />
-          <p className="text-xs text-muted-foreground">이전 스텝 후 며칠 뒤 발송</p>
+        {/* 발송 예정 미리보기 */}
+        <div className="rounded-md bg-primary/5 border border-primary/20 p-3">
+          <p className="text-sm font-medium text-primary">
+            📅 발송 예정: 이전 이메일 + {formData.delayDays}일 후{" "}
+            {formData.scheduledHour.toString().padStart(2, "0")}:
+            {formData.scheduledMinute.toString().padStart(2, "0")}
+          </p>
         </div>
       </div>
 
@@ -120,46 +147,53 @@ Best regards,
 [Your Company]`}
           height="300px"
         />
-        <div className="text-xs text-muted-foreground space-y-2 mt-2">
-          <p className="font-medium">사용 가능한 변수:</p>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <div className="space-y-1">
-              <p className="font-medium text-gray-700 dark:text-gray-300">회사 정보:</p>
-              <ul className="space-y-0.5 ml-2">
-                <li>{"{{회사명}}"}</li>
-                <li>{"{{웹사이트}}"}</li>
-                <li>{"{{업종}}"}</li>
-                <li>{"{{설명}}"}</li>
-                <li>{"{{직원수}}"}</li>
-                <li>{"{{설립연도}}"}</li>
-              </ul>
+        <Collapsible className="mt-2">
+          <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+            사용 가능한 변수 보기
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2">
+            <div className="text-xs text-muted-foreground rounded-md border bg-muted/30 p-3">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div className="space-y-1">
+                  <p className="font-medium text-foreground">회사 정보:</p>
+                  <ul className="space-y-0.5 ml-2 text-[11px]">
+                    <li>{"{{회사명}}"}</li>
+                    <li>{"{{웹사이트}}"}</li>
+                    <li>{"{{업종}}"}</li>
+                    <li>{"{{설명}}"}</li>
+                    <li>{"{{직원수}}"}</li>
+                    <li>{"{{설립연도}}"}</li>
+                  </ul>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium text-foreground">위치 정보:</p>
+                  <ul className="space-y-0.5 ml-2 text-[11px]">
+                    <li>{"{{국가}}"}</li>
+                    <li>{"{{도시}}"}</li>
+                    <li>{"{{주/도}}"}</li>
+                    <li>{"{{주소}}"}</li>
+                  </ul>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium text-foreground">연락처:</p>
+                  <ul className="space-y-0.5 ml-2 text-[11px]">
+                    <li>{"{{담당자명}}"}</li>
+                    <li>{"{{이메일}}"}</li>
+                  </ul>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium text-foreground">리드 관리:</p>
+                  <ul className="space-y-0.5 ml-2 text-[11px]">
+                    <li>{"{{리드소스}}"}</li>
+                    <li>{"{{리드상태}}"}</li>
+                    <li>{"{{리드점수}}"}</li>
+                  </ul>
+                </div>
+              </div>
             </div>
-            <div className="space-y-1">
-              <p className="font-medium text-gray-700 dark:text-gray-300">위치 정보:</p>
-              <ul className="space-y-0.5 ml-2">
-                <li>{"{{국가}}"}</li>
-                <li>{"{{도시}}"}</li>
-                <li>{"{{주/도}}"}</li>
-                <li>{"{{주소}}"}</li>
-              </ul>
-            </div>
-            <div className="space-y-1">
-              <p className="font-medium text-gray-700 dark:text-gray-300">연락처:</p>
-              <ul className="space-y-0.5 ml-2">
-                <li>{"{{담당자명}}"}</li>
-                <li>{"{{이메일}}"}</li>
-              </ul>
-            </div>
-            <div className="space-y-1">
-              <p className="font-medium text-gray-700 dark:text-gray-300">리드 관리:</p>
-              <ul className="space-y-0.5 ml-2">
-                <li>{"{{리드소스}}"}</li>
-                <li>{"{{리드상태}}"}</li>
-                <li>{"{{리드점수}}"}</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t">

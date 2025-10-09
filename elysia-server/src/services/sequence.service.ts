@@ -12,6 +12,7 @@ import {
 } from "../db/schema/sequences"
 import { users } from "../db/schema/users"
 import { workspaces } from "../db/schema/workspaces"
+import { calculateScheduledTime } from "../utils/timezone"
 
 // ====================================
 // SEQUENCE CRUD OPERATIONS
@@ -275,6 +276,9 @@ export async function getSequenceSteps(sequenceId: string) {
       sequenceId: sequenceSteps.sequenceId,
       stepOrder: sequenceSteps.stepOrder,
       delayDays: sequenceSteps.delayDays,
+      scheduledHour: sequenceSteps.scheduledHour,
+      scheduledMinute: sequenceSteps.scheduledMinute,
+      timezone: sequenceSteps.timezone,
       emailSubject: sequenceSteps.emailSubject,
       emailBodyText: sequenceSteps.emailBodyText,
       emailBodyHtml: sequenceSteps.emailBodyHtml,
@@ -294,6 +298,9 @@ export async function createSequenceStep(data: {
   sequenceId: string
   stepOrder: number
   delayDays: number
+  scheduledHour?: number
+  scheduledMinute?: number
+  timezone?: string
   emailSubject: string
   emailBodyText?: string
   emailBodyHtml?: string
@@ -305,6 +312,9 @@ export async function createSequenceStep(data: {
       sequenceId: data.sequenceId,
       stepOrder: data.stepOrder,
       delayDays: data.delayDays,
+      scheduledHour: data.scheduledHour ?? 9,
+      scheduledMinute: data.scheduledMinute ?? 0,
+      timezone: data.timezone ?? "Asia/Seoul",
       emailSubject: data.emailSubject,
       emailBodyText: data.emailBodyText || null,
       emailBodyHtml: data.emailBodyHtml || null,
@@ -315,6 +325,9 @@ export async function createSequenceStep(data: {
       sequenceId: sequenceSteps.sequenceId,
       stepOrder: sequenceSteps.stepOrder,
       delayDays: sequenceSteps.delayDays,
+      scheduledHour: sequenceSteps.scheduledHour,
+      scheduledMinute: sequenceSteps.scheduledMinute,
+      timezone: sequenceSteps.timezone,
       emailSubject: sequenceSteps.emailSubject,
       createdAt: sequenceSteps.createdAt,
       updatedAt: sequenceSteps.updatedAt,
@@ -329,6 +342,9 @@ export async function updateSequenceStep(
   data: {
     stepOrder: number
     delayDays: number
+    scheduledHour?: number
+    scheduledMinute?: number
+    timezone?: string
     emailSubject: string
     emailBodyText?: string
     emailBodyHtml?: string
@@ -339,6 +355,9 @@ export async function updateSequenceStep(
     .update(sequenceSteps)
     .set({
       ...data,
+      scheduledHour: data.scheduledHour ?? 9,
+      scheduledMinute: data.scheduledMinute ?? 0,
+      timezone: data.timezone ?? "Asia/Seoul",
       updatedAt: new Date(),
     })
     .where(eq(sequenceSteps.id, id))
@@ -347,6 +366,9 @@ export async function updateSequenceStep(
       sequenceId: sequenceSteps.sequenceId,
       stepOrder: sequenceSteps.stepOrder,
       delayDays: sequenceSteps.delayDays,
+      scheduledHour: sequenceSteps.scheduledHour,
+      scheduledMinute: sequenceSteps.scheduledMinute,
+      timezone: sequenceSteps.timezone,
       emailSubject: sequenceSteps.emailSubject,
       updatedAt: sequenceSteps.updatedAt,
     })
@@ -607,17 +629,49 @@ export async function bulkEnrollWithScheduling(data: {
   userEmailAccountId: string
   enrolledBy?: string
 }) {
+  const { default: logger } = await import("../utils/logger")
+
+  logger.info(
+    {
+      sequenceId: data.sequenceId,
+      leadCount: data.leadIds.length,
+      userEmailAccountId: data.userEmailAccountId,
+    },
+    "🔄 [STEP-BASED] Starting bulk enrollment with scheduling",
+  )
+
   // Get sequence steps to create schedules
   const steps = await getSequenceSteps(data.sequenceId)
 
   if (steps.length === 0) {
+    logger.error({ sequenceId: data.sequenceId }, "❌ [STEP-BASED] No steps found in sequence")
     throw new Error("시퀀스에 스텝이 없습니다.")
   }
+
+  logger.info(
+    {
+      sequenceId: data.sequenceId,
+      stepsCount: steps.length,
+      steps: steps.map((s) => ({
+        stepOrder: s.stepOrder,
+        delayDays: s.delayDays,
+        scheduledHour: s.scheduledHour,
+        scheduledMinute: s.scheduledMinute,
+        timezone: s.timezone,
+      })),
+    },
+    "📋 [STEP-BASED] Found sequence steps",
+  )
 
   // Filter leads with valid email contacts
   const leadCondition = or(...data.leadIds.map((id) => eq(leads.id, id)))
   if (!leadCondition) {
-    return []
+    logger.warn({ sequenceId: data.sequenceId }, "⚠️ [STEP-BASED] No lead IDs provided")
+    return {
+      enrolledCount: 0,
+      totalSteps: steps.length,
+      scheduledExecutions: 0,
+    }
   }
 
   const leadsWithEmails = await db
@@ -632,8 +686,21 @@ export async function bulkEnrollWithScheduling(data: {
     )
 
   if (leadsWithEmails.length === 0) {
+    logger.error(
+      { sequenceId: data.sequenceId, requestedLeadCount: data.leadIds.length },
+      "❌ [STEP-BASED] No leads with valid email found",
+    )
     throw new Error("이메일이 있는 리드가 없습니다.")
   }
+
+  logger.info(
+    {
+      sequenceId: data.sequenceId,
+      totalLeads: data.leadIds.length,
+      leadsWithEmail: leadsWithEmails.length,
+    },
+    "✅ [STEP-BASED] Found leads with valid email",
+  )
 
   const validLeadIds = leadsWithEmails.map((l) => l.leadId)
 
@@ -653,13 +720,53 @@ export async function bulkEnrollWithScheduling(data: {
     enrolledAt: sequenceEnrollments.enrolledAt,
   })
 
-  // Create step executions for each enrollment
-  const now = new Date()
+  logger.info(
+    {
+      sequenceId: data.sequenceId,
+      enrollmentsCreated: enrollments.length,
+      enrollmentIds: enrollments.map((e) => e.id),
+    },
+    "✅ [STEP-BASED] Created enrollments",
+  )
+
+  // Create step executions for each enrollment with KST scheduling
   const stepExecutionValues = []
 
   for (const enrollment of enrollments) {
+    let baseDate = new Date(enrollment.enrolledAt)
+
+    logger.debug(
+      {
+        enrollmentId: enrollment.id,
+        leadId: enrollment.leadId,
+        enrolledAt: enrollment.enrolledAt,
+      },
+      "📅 [STEP-BASED] Calculating schedules for enrollment",
+    )
+
     for (const step of steps) {
-      const scheduledAt = new Date(now.getTime() + step.delayDays * 24 * 60 * 60 * 1000)
+      // Calculate scheduled time in KST
+      const scheduledAt = calculateScheduledTime(
+        baseDate,
+        step.delayDays,
+        step.scheduledHour ?? 9,
+        step.scheduledMinute ?? 0,
+        step.timezone ?? "Asia/Seoul",
+      )
+
+      logger.debug(
+        {
+          enrollmentId: enrollment.id,
+          stepOrder: step.stepOrder,
+          delayDays: step.delayDays,
+          scheduledHour: step.scheduledHour ?? 9,
+          scheduledMinute: step.scheduledMinute ?? 0,
+          timezone: step.timezone ?? "Asia/Seoul",
+          baseDate: baseDate.toISOString(),
+          scheduledAt: scheduledAt.toISOString(),
+        },
+        "⏰ [STEP-BASED] Scheduled step execution",
+      )
 
       stepExecutionValues.push({
         enrollmentId: enrollment.id,
@@ -668,11 +775,22 @@ export async function bulkEnrollWithScheduling(data: {
         status: "pending" as const,
         scheduledAt,
       })
+
+      // Use this step's scheduled time as the base for the next step
+      baseDate = scheduledAt
     }
   }
 
   if (stepExecutionValues.length > 0) {
     await db.insert(sequenceStepExecutions).values(stepExecutionValues)
+    logger.info(
+      {
+        sequenceId: data.sequenceId,
+        totalExecutions: stepExecutionValues.length,
+        executionsPerEnrollment: steps.length,
+      },
+      "✅ [STEP-BASED] Created step executions",
+    )
   }
 
   // Update nextStepScheduledAt for enrollments
@@ -680,21 +798,44 @@ export async function bulkEnrollWithScheduling(data: {
     const firstStep = steps[0]
     if (!firstStep) continue
 
-    const nextScheduledAt = new Date(
-      new Date(enrollment.enrolledAt).getTime() + firstStep.delayDays * 24 * 60 * 60 * 1000,
+    // Calculate first step scheduled time in KST
+    const nextScheduledAt = calculateScheduledTime(
+      new Date(enrollment.enrolledAt),
+      firstStep.delayDays,
+      firstStep.scheduledHour ?? 9,
+      firstStep.scheduledMinute ?? 0,
+      firstStep.timezone ?? "Asia/Seoul",
     )
 
     await db
       .update(sequenceEnrollments)
       .set({ nextStepScheduledAt: nextScheduledAt })
       .where(eq(sequenceEnrollments.id, enrollment.id))
+
+    logger.debug(
+      {
+        enrollmentId: enrollment.id,
+        nextStepScheduledAt: nextScheduledAt.toISOString(),
+      },
+      "📅 [STEP-BASED] Updated enrollment next step schedule",
+    )
   }
 
-  return {
+  const result = {
     enrolledCount: enrollments.length,
     totalSteps: steps.length,
     scheduledExecutions: stepExecutionValues.length,
   }
+
+  logger.info(
+    {
+      sequenceId: data.sequenceId,
+      ...result,
+    },
+    "🎉 [STEP-BASED] Bulk enrollment with scheduling completed successfully",
+  )
+
+  return result
 }
 
 // GetLeadsWithEmails - Get leads from a list that have email contacts
@@ -721,7 +862,16 @@ export async function getLeadsWithEmails(leadIds: string[]) {
 
 // GetPendingStepExecutions - Get step executions that need to be sent
 export async function getPendingStepExecutions(limit: number = 100) {
+  const { default: logger } = await import("../utils/logger")
   const now = new Date()
+
+  logger.debug(
+    {
+      currentTime: now.toISOString(),
+      limit,
+    },
+    "🔍 [STEP-BASED] Querying pending step executions",
+  )
 
   const result = await db
     .select({
@@ -755,6 +905,17 @@ export async function getPendingStepExecutions(limit: number = 100) {
     .orderBy(sequenceStepExecutions.scheduledAt)
     .limit(limit)
 
+  if (result.length > 0) {
+    logger.info(
+      {
+        count: result.length,
+        sequences: [...new Set(result.map((r) => r.sequenceName))],
+        earliestSchedule: result[0]?.scheduledAt,
+      },
+      "📬 [STEP-BASED] Found pending step executions",
+    )
+  }
+
   return result
 }
 
@@ -785,6 +946,16 @@ export async function updateStepExecutionStatus(
 
 // UpdateEnrollmentProgress - Update enrollment progress after step execution
 export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: number) {
+  const { default: logger } = await import("../utils/logger")
+
+  logger.debug(
+    {
+      enrollmentId,
+      stepOrder,
+    },
+    "📊 [STEP-BASED] Updating enrollment progress",
+  )
+
   // Get total steps for this enrollment
   const enrollment = await db
     .select({
@@ -795,10 +966,24 @@ export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: 
     .where(eq(sequenceEnrollments.id, enrollmentId))
     .limit(1)
 
-  if (!enrollment[0]) return null
+  if (!enrollment[0]) {
+    logger.error({ enrollmentId }, "❌ [STEP-BASED] Enrollment not found")
+    return null
+  }
 
   const steps = await getSequenceSteps(enrollment[0].sequenceId)
   const isLastStep = stepOrder >= steps.length
+
+  logger.info(
+    {
+      enrollmentId,
+      sequenceId: enrollment[0].sequenceId,
+      currentStepOrder: stepOrder,
+      totalSteps: steps.length,
+      isLastStep,
+    },
+    "📈 [STEP-BASED] Enrollment progress check",
+  )
 
   const updateData: {
     currentStepOrder: number
@@ -821,6 +1006,7 @@ export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: 
 
   if (!enr[0]?.firstEmailSentAt) {
     updateData.firstEmailSentAt = new Date()
+    logger.info({ enrollmentId }, "🎉 [STEP-BASED] First email sent for this enrollment")
   }
 
   // If last step, mark as completed
@@ -828,12 +1014,32 @@ export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: 
     updateData.status = "completed"
     updateData.completedAt = new Date()
     updateData.nextStepScheduledAt = null
+    logger.info(
+      { enrollmentId, sequenceId: enrollment[0].sequenceId },
+      "🏁 [STEP-BASED] Enrollment completed - all steps sent",
+    )
   } else {
-    // Schedule next step
+    // Schedule next step with KST timezone
     const nextStep = steps.find((s) => s.stepOrder === stepOrder + 1)
     if (nextStep) {
-      const nextScheduledAt = new Date(Date.now() + nextStep.delayDays * 24 * 60 * 60 * 1000)
+      const baseDate = new Date()
+      const nextScheduledAt = calculateScheduledTime(
+        baseDate,
+        nextStep.delayDays,
+        nextStep.scheduledHour ?? 9,
+        nextStep.scheduledMinute ?? 0,
+        nextStep.timezone ?? "Asia/Seoul",
+      )
       updateData.nextStepScheduledAt = nextScheduledAt
+      logger.info(
+        {
+          enrollmentId,
+          nextStepOrder: nextStep.stepOrder,
+          nextStepDelayDays: nextStep.delayDays,
+          nextScheduledAt: nextScheduledAt.toISOString(),
+        },
+        "⏭️ [STEP-BASED] Scheduled next step",
+      )
     }
   }
 
@@ -846,6 +1052,17 @@ export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: 
       status: sequenceEnrollments.status,
       currentStepOrder: sequenceEnrollments.currentStepOrder,
     })
+
+  if (updated) {
+    logger.info(
+      {
+        enrollmentId: updated.id,
+        status: updated.status,
+        currentStepOrder: updated.currentStepOrder,
+      },
+      "✅ [STEP-BASED] Enrollment progress updated",
+    )
+  }
 
   return updated
 }

@@ -521,9 +521,24 @@ export async function getGroupMembers(groupId: string, limit: number, offset: nu
       leadId: customerGroupMembers.leadId,
       addedBy: customerGroupMembers.addedBy,
       addedAt: customerGroupMembers.addedAt,
+      // Lead full information
       leadCompanyName: leads.companyName,
+      leadFoundCompanyName: leads.foundCompanyName,
       leadWebsiteUrl: leads.websiteUrl,
+      leadFinalUrl: leads.finalUrl,
+      leadBusinessType: leads.businessType,
+      leadDescription: leads.description,
+      leadEmployeeCount: leads.employeeCount,
+      leadFoundedYear: leads.foundedYear,
+      leadCountry: leads.country,
+      leadCity: leads.city,
+      leadState: leads.state,
+      leadAddress: leads.address,
       leadStatus: leads.leadStatus,
+      leadSource: leads.leadSource,
+      leadScore: leads.leadScore,
+      leadNotes: leads.notes,
+      leadCreatedAt: leads.createdAt,
       addedByUsername: users.username,
       addedByEmail: users.email,
     })
@@ -638,13 +653,30 @@ export async function getGroupMembersWithEmails(groupId: string) {
       websiteUrl: leads.websiteUrl,
       leadStatus: leads.leadStatus,
       primaryEmail: sql<string>`COALESCE(
-        (SELECT contact_value FROM ${leadContacts} 
-         WHERE ${leadContacts.leadId} = ${leads.id} 
-         AND ${leadContacts.contactType} = 'email' 
-         AND ${leadContacts.isPrimary} = true 
+        (SELECT contact_value FROM ${leadContacts}
+         WHERE ${leadContacts.leadId} = ${leads.id}
+         AND ${leadContacts.contactType} = 'email'
+         AND ${leadContacts.isPrimary} = true
          LIMIT 1),
         LOWER(REPLACE(${leads.companyName}, ' ', '.')) || '@example.com'
       )`.as("primaryEmail"),
+    })
+    .from(customerGroupMembers)
+    .innerJoin(leads, eq(customerGroupMembers.leadId, leads.id))
+    .where(eq(customerGroupMembers.groupId, groupId))
+    .orderBy(leads.companyName)
+
+  return result
+}
+
+// GetCustomerGroupLeads :many - Get all leads in a customer group
+export async function getCustomerGroupLeads(groupId: string) {
+  const result = await db
+    .select({
+      id: leads.id,
+      companyName: leads.companyName,
+      websiteUrl: leads.websiteUrl,
+      leadStatus: leads.leadStatus,
     })
     .from(customerGroupMembers)
     .innerJoin(leads, eq(customerGroupMembers.leadId, leads.id))

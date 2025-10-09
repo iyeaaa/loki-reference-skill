@@ -78,6 +78,9 @@ export const sequenceSteps = pgTable(
       .references(() => sequences.id, { onDelete: "cascade" }),
     stepOrder: integer("step_order").notNull(), // Order of the step in the sequence
     delayDays: integer("delay_days").notNull().default(0), // Days to wait before sending
+    scheduledHour: integer("scheduled_hour").default(9), // Hour to send (0-23), default: 9AM
+    scheduledMinute: integer("scheduled_minute").default(0), // Minute to send (0-59), default: 0
+    timezone: varchar("timezone", { length: 50 }).default("Asia/Seoul"), // Timezone, default: KST
     emailSubject: varchar("email_subject", { length: 500 }).notNull(),
     emailBodyText: text("email_body_text"),
     emailBodyHtml: text("email_body_html"),

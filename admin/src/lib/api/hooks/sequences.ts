@@ -327,3 +327,20 @@ export function useBulkEnrollWithScheduling() {
     },
   })
 }
+
+export function useActivateStepBasedSequence() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (sequenceId: string) => sequencesApi.activateStepBased(sequenceId),
+    onSuccess: (response, sequenceId) => {
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.detail(sequenceId) })
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.enrollments(sequenceId) })
+      toast.success(response.message || "스텝 기반 시퀀스가 활성화되었습니다")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "시퀀스 활성화에 실패했습니다")
+    },
+  })
+}

@@ -195,4 +195,14 @@ export const sequencesApi = {
   getByWorkspace: (workspaceId: string) => {
     return apiFetch<Sequence[]>(`/api/v1/sequences/workspace/${workspaceId}`)
   },
+
+  // Activate step-based sequence
+  activateStepBased: (sequenceId: string) => {
+    return apiFetch<{ success: boolean; message: string; stepsCount: number }>(
+      `/api/v1/sequences/${sequenceId}/activate-step-based`,
+      {
+        method: "POST",
+      },
+    )
+  },
 }

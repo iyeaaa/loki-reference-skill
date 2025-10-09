@@ -37,6 +37,9 @@ export interface SequenceStep {
   sequenceId: string
   stepOrder: number
   delayDays: number
+  scheduledHour?: number | null
+  scheduledMinute?: number | null
+  timezone?: string | null
   emailSubject: string
   emailBodyText?: string | null
   emailBodyHtml?: string | null
@@ -95,6 +98,9 @@ export interface UpdateSequenceRequest {
 export interface CreateSequenceStepRequest {
   stepOrder: number
   delayDays: number
+  scheduledHour?: number
+  scheduledMinute?: number
+  timezone?: string
   emailSubject: string
   emailBodyText?: string
   emailBodyHtml?: string

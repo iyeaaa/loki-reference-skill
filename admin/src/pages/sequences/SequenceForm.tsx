@@ -20,9 +20,16 @@ interface SequenceFormProps {
   isEdit?: boolean
   onSave: (sequenceData: unknown) => Promise<void> | void
   onCancel: () => void
+  stepsCount?: number
 }
 
-export function SequenceForm({ sequence, isEdit = false, onSave, onCancel }: SequenceFormProps) {
+export function SequenceForm({
+  sequence,
+  isEdit = false,
+  onSave,
+  onCancel,
+  stepsCount = 0,
+}: SequenceFormProps) {
   const {
     data: { workspaces },
   } = useSuspenseWorkspaces({ limit: 100 })
@@ -161,11 +168,18 @@ export function SequenceForm({ sequence, isEdit = false, onSave, onCancel }: Seq
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="draft">초안</SelectItem>
-              <SelectItem value="active">활성</SelectItem>
+              <SelectItem value="active" disabled={stepsCount > 0}>
+                활성 {stepsCount > 0 && "(스텝 기반은 토글 버튼 사용)"}
+              </SelectItem>
               <SelectItem value="paused">일시정지</SelectItem>
               <SelectItem value="archived">보관됨</SelectItem>
             </SelectContent>
           </Select>
+          {stepsCount > 0 && formData.status !== "active" && (
+            <p className="text-xs text-amber-600">
+              💡 스텝 기반 시퀀스는 목록의 활성화 토글 버튼을 사용하세요
+            </p>
+          )}
         </div>
       )}
 

@@ -254,6 +254,7 @@ export default function SequencesPage() {
                   isEdit={true}
                   onSave={handleUpdateSequence}
                   onCancel={() => setEditingSequence(null)}
+                  stepsCount={editingSequence.stepsCount || 0}
                 />
                 <div className="border-t pt-6">
                   <SequenceDetailTabs sequenceId={editingSequence.id} />

@@ -31,6 +31,9 @@ const updateSequenceSchema = t.Object({
 const sequenceStepSchema = t.Object({
   stepOrder: t.Number(),
   delayDays: t.Number(),
+  scheduledHour: t.Optional(t.Number({ minimum: 0, maximum: 23 })),
+  scheduledMinute: t.Optional(t.Number({ minimum: 0, maximum: 59 })),
+  timezone: t.Optional(t.String({ maxLength: 50 })),
   emailSubject: t.String({ minLength: 1, maxLength: 500 }),
   emailBodyText: t.Optional(t.String()),
   emailBodyHtml: t.Optional(t.String()),
@@ -163,7 +166,20 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
           return errorResponse("시퀀스를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
         }
 
-        // 워크플로우 데이터 검증
+        // 스텝 기반 시퀀스인지 확인
+        const steps = await sequenceService.getSequenceSteps(id)
+        const isStepBased = steps.length > 0
+
+        // 스텝 기반 시퀀스는 activate-step-based API를 사용해야 함
+        if (isStepBased) {
+          set.status = 400
+          return errorResponse(
+            "스텝 기반 시퀀스는 활성화 토글 버튼을 사용해주세요.",
+            ResponseCode.BAD_REQUEST,
+          )
+        }
+
+        // 워크플로우 기반 시퀀스만 검증
         const workflowDataToValidate = body.workflowData || currentSequence.workflowData
         if (workflowDataToValidate) {
           const { parseAndValidateWorkflow } = await import(
@@ -263,6 +279,170 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
     async ({ params: { id } }) => {
       await sequenceService.deleteSequence(id)
       return { success: true, message: "시퀀스가 삭제되었습니다." }
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
+  // Activate step-based sequence (without workflow validation)
+  .post(
+    "/:id/activate-step-based",
+    async ({ params: { id }, set }) => {
+      logger.info({ sequenceId: id }, "🚀 [STEP-BASED] Activation request received")
+
+      // 현재 시퀀스 조회
+      const currentSequence = await sequenceService.getSequence(id)
+      if (!currentSequence) {
+        logger.error({ sequenceId: id }, "❌ [STEP-BASED] Sequence not found")
+        set.status = 404
+        return errorResponse("시퀀스를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      }
+
+      logger.info(
+        {
+          sequenceId: id,
+          sequenceName: currentSequence.name,
+          workspaceId: currentSequence.workspaceId,
+          customerGroupId: currentSequence.customerGroupId,
+        },
+        "✅ [STEP-BASED] Found sequence",
+      )
+
+      // 스텝이 있는지 확인
+      const steps = await sequenceService.getSequenceSteps(id)
+      if (steps.length === 0) {
+        logger.error({ sequenceId: id }, "❌ [STEP-BASED] No steps found in sequence")
+        set.status = 400
+        return errorResponse(
+          "시퀀스에 스텝이 없습니다. 먼저 스텝을 추가해주세요.",
+          ResponseCode.BAD_REQUEST,
+        )
+      }
+
+      logger.info(
+        {
+          sequenceId: id,
+          stepsCount: steps.length,
+          steps: steps.map((s) => ({
+            stepOrder: s.stepOrder,
+            delayDays: s.delayDays,
+            subject: s.emailSubject,
+          })),
+        },
+        "✅ [STEP-BASED] Found sequence steps",
+      )
+
+      // 고객그룹 확인
+      if (!currentSequence.customerGroupId) {
+        logger.error({ sequenceId: id }, "❌ [STEP-BASED] No customer group configured")
+        set.status = 400
+        return errorResponse(
+          "고객그룹이 설정되지 않았습니다. 먼저 고객그룹을 선택해주세요.",
+          ResponseCode.BAD_REQUEST,
+        )
+      }
+
+      // 이메일 계정 확인
+      logger.debug(
+        { sequenceId: id, workspaceId: currentSequence.workspaceId },
+        "🔍 [STEP-BASED] Checking for email account",
+      )
+
+      const [defaultEmailAccount] = await db
+        .select({ id: userEmailAccounts.id, emailAddress: userEmailAccounts.emailAddress })
+        .from(userEmailAccounts)
+        .where(eq(userEmailAccounts.workspaceId, currentSequence.workspaceId))
+        .limit(1)
+
+      if (!defaultEmailAccount) {
+        logger.error(
+          { sequenceId: id, workspaceId: currentSequence.workspaceId },
+          "❌ [STEP-BASED] No email account found in workspace",
+        )
+        set.status = 400
+        return errorResponse(
+          "이메일 계정이 없습니다. 먼저 이메일 계정을 추가해주세요.",
+          ResponseCode.BAD_REQUEST,
+        )
+      }
+
+      logger.info(
+        {
+          sequenceId: id,
+          emailAccountId: defaultEmailAccount.id,
+          emailAddress: defaultEmailAccount.emailAddress,
+        },
+        "✅ [STEP-BASED] Found email account",
+      )
+
+      // 상태를 active로 변경
+      await sequenceService.updateSequence(id, { status: "active" })
+
+      logger.info({ sequenceId: id }, "✅ [STEP-BASED] Updated sequence status to active")
+
+      // 백그라운드에서 스케줄링과 함께 리드 등록
+      ;(async () => {
+        try {
+          logger.info(
+            { sequenceId: id, customerGroupId: currentSequence.customerGroupId },
+            "🔄 [STEP-BASED] Starting background enrollment",
+          )
+
+          if (!currentSequence.customerGroupId) {
+            logger.warn({ sequenceId: id }, "⚠️ [STEP-BASED] No customer group ID")
+            return
+          }
+
+          const { getCustomerGroupLeads } = await import("../services/customer-group.service")
+          const leads = await getCustomerGroupLeads(currentSequence.customerGroupId)
+          const leadIds = leads.map((lead: { id: string }) => lead.id)
+
+          if (leadIds.length === 0) {
+            logger.warn({ sequenceId: id }, "⚠️ [STEP-BASED] No leads in customer group")
+            return
+          }
+
+          logger.info(
+            { sequenceId: id, leadCount: leadIds.length },
+            "📋 [STEP-BASED] Found leads in customer group",
+          )
+
+          const result = await sequenceService.bulkEnrollWithScheduling({
+            sequenceId: id,
+            leadIds,
+            userEmailAccountId: defaultEmailAccount.id,
+          })
+
+          logger.info(
+            {
+              sequenceId: id,
+              enrolledCount: result.enrolledCount,
+              totalSteps: result.totalSteps,
+              scheduledExecutions: result.scheduledExecutions,
+            },
+            "🎉 [STEP-BASED] Successfully enrolled leads to step-based sequence",
+          )
+        } catch (error) {
+          logger.error(
+            { err: error, sequenceId: id },
+            "💥 [STEP-BASED] Failed to enroll leads in background",
+          )
+        }
+      })()
+
+      logger.info(
+        { sequenceId: id, stepsCount: steps.length },
+        "🎯 [STEP-BASED] Activated step-based sequence - background enrollment started",
+      )
+
+      return {
+        success: true,
+        message: "스텝 기반 시퀀스가 활성화되었습니다.",
+        stepsCount: steps.length,
+      }
     },
     {
       params: t.Object({

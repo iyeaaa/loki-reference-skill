@@ -7,7 +7,11 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useCustomerGroupMembers } from "@/lib/api/hooks/customer-groups"
-import { useSequences, useUpdateSequence } from "@/lib/api/hooks/sequences"
+import {
+  useActivateStepBasedSequence,
+  useSequences,
+  useUpdateSequence,
+} from "@/lib/api/hooks/sequences"
 import type { CustomerGroupMember } from "@/lib/api/types/customer-group"
 import type { Sequence, SequenceStatus, SequencesParams } from "@/lib/api/types/sequence"
 import { formatRelativeTime } from "@/lib/date-utils"
@@ -37,6 +41,7 @@ export function SequencesTableWithPagination({
 }: SequencesTableWithPaginationProps) {
   const navigate = useNavigate()
   const updateSequence = useUpdateSequence()
+  const activateStepBased = useActivateStepBasedSequence()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
   const [currentWorkspace, setCurrentWorkspace] = useState(
@@ -162,12 +167,21 @@ export function SequencesTableWithPagination({
 
   const handleToggleStatus = (sequence: Sequence) => {
     const newStatus: SequenceStatus = sequence.status === "active" ? "paused" : "active"
-    updateSequence.mutate({
-      sequenceId: sequence.id,
-      data: {
-        status: newStatus,
-      },
-    })
+
+    // 활성화 시: stepsCount가 있으면 스텝 기반 시퀀스로 간주
+    // (워크플로우 기반 시퀀스는 stepsCount가 0이거나 없음)
+    if (newStatus === "active" && sequence.stepsCount && sequence.stepsCount > 0) {
+      // 스텝 기반 시퀀스 활성화 API 호출
+      activateStepBased.mutate(sequence.id)
+    } else {
+      // 일반 상태 업데이트 (워크플로우 기반 또는 일시정지)
+      updateSequence.mutate({
+        sequenceId: sequence.id,
+        data: {
+          status: newStatus,
+        },
+      })
+    }
   }
 
   const handleRowClick = (sequence: Sequence, e: React.MouseEvent) => {
@@ -348,7 +362,11 @@ export function SequencesTableWithPagination({
                         onClick={() => handleToggleStatus(sequence)}
                         className="text-xs h-8 px-3"
                         title={sequence.status === "active" ? "일시정지" : "활성화"}
-                        disabled={sequence.status !== "active" && sequence.status !== "paused"}
+                        disabled={
+                          sequence.status === "archived" ||
+                          (sequence.status === "draft" &&
+                            (!sequence.stepsCount || sequence.stepsCount === 0))
+                        }
                       >
                         {sequence.status === "active" ? (
                           <Pause className="h-3 w-3" />

@@ -1,0 +1,4 @@
+companyName,foundCompanyName,businessType,websiteUrl,description,employeeCount,foundedYear,country,city,state,address,leadSource,leadStatus,leadScore,notes,primaryEmail,primaryPhone,secondaryEmail,secondaryPhone
+"Grinda Beauty Lab","Grinda Beauty Lab Inc.","뷰티 테크","https://grinda.ai","AI 기반 피부 분석 뷰티 솔루션","10-20명",2023,"한국","서울","서울특별시","강남구 테헤란로 123","웹사이트","new",95,"AI 피부 진단 시스템 개발","admin@grinda.ai","+82-2-555-0001","grindaai1@gmail.com","+82-2-555-0002"
+"WKS Beauty Spa","WKS Beauty Spa","프리미엄 스파","https://wksbeauty.com","럭셔리 페이셜 전문 스파","30-50명",2020,"한국","서울","서울특별시","강남구 압구정로 456","추천","contacted",88,"VIP 고객 중심 운영","wks0968@gmail.com","+82-2-555-1001","contact@wksbeauty.com","+82-2-555-1002"
+"Seoul Glow Studio","Seoul Glow Studio","K뷰티 페이셜","https://seoulglowstudio.com","한국식 피부관리 전문","15-25명",2021,"한국","서울","서울특별시","서초구 강남대로 789","SNS","qualified",90,"K뷰티 글로벌 진출 계획","grindaai1@gmail.com","+82-2-555-2001","info@seoulglowstudio.com","+82-2-555-2002"

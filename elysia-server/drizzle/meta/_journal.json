@@ -15,6 +15,13 @@
       "when": 1760029972145,
       "tag": "0001_fancy_hiroim",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1760030492083,
+      "tag": "0002_late_black_panther",
+      "breakpoints": true
     }
   ]
 }

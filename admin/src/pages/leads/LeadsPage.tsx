@@ -146,11 +146,8 @@ export default function LeadsPage() {
 
   const handleCreateLead = async (leadData: unknown) => {
     createLead.mutate(leadData as Lead, {
-      onSuccess: async () => {
-        // 쿼리 무효화로 데이터 새로고침
-        await queryClient.invalidateQueries({
-          queryKey: leadKeys.lists(),
-        })
+      onSuccess: () => {
+        // Hooks already handle cache invalidation
         setShowCreateDialog(false)
       },
     })
@@ -164,11 +161,8 @@ export default function LeadsPage() {
         data: leadData as Partial<Lead>,
       },
       {
-        onSuccess: async () => {
-          // 쿼리 무효화로 데이터 새로고침
-          await queryClient.invalidateQueries({
-            queryKey: leadKeys.lists(),
-          })
+        onSuccess: () => {
+          // Hooks already handle cache invalidation
           setEditingLead(null)
         },
       },
@@ -186,11 +180,8 @@ export default function LeadsPage() {
       return
 
     bulkDeleteLeads.mutate(selectedLeads, {
-      onSuccess: async () => {
-        // 쿼리 무효화로 데이터 새로고침
-        await queryClient.invalidateQueries({
-          queryKey: leadKeys.lists(),
-        })
+      onSuccess: () => {
+        // Hooks already handle cache invalidation
         setSelectedLeads([])
       },
     })
@@ -206,11 +197,8 @@ export default function LeadsPage() {
       bulkUpdateStatus.mutate(
         { leadIds: selectedLeads, leadStatus: value as LeadStatus },
         {
-          onSuccess: async () => {
-            // 쿼리 무효화로 데이터 새로고침
-            await queryClient.invalidateQueries({
-              queryKey: leadKeys.lists(),
-            })
+          onSuccess: () => {
+            // Hooks already handle cache invalidation
             setSelectedLeads([])
           },
         },
@@ -219,11 +207,8 @@ export default function LeadsPage() {
       bulkUpdateBusinessType.mutate(
         { leadIds: selectedLeads, businessType: value as string },
         {
-          onSuccess: async () => {
-            // 쿼리 무효화로 데이터 새로고침
-            await queryClient.invalidateQueries({
-              queryKey: leadKeys.lists(),
-            })
+          onSuccess: () => {
+            // Hooks already handle cache invalidation
             setSelectedLeads([])
           },
         },
@@ -338,12 +323,12 @@ export default function LeadsPage() {
       const leadIds = createdLeads.leads.map((lead) => lead.id)
       await customerGroupsApi.bulkAddMembers(targetGroupId, leadIds)
 
-      // 쿼리 무효화로 데이터 새로고침
+      // Invalidate queries to refresh data
       await queryClient.invalidateQueries({
         queryKey: leadKeys.lists(),
       })
       await queryClient.invalidateQueries({
-        queryKey: customerGroupKeys.lists(),
+        queryKey: customerGroupKeys.all,
       })
 
       toast.success(

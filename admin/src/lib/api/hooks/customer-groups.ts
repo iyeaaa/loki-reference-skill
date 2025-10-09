@@ -135,6 +135,10 @@ export function useAddGroupMember() {
       queryClient.invalidateQueries({
         queryKey: customerGroupKeys.detail(variables.groupId),
       })
+      // Invalidate workspace queries to update leadCount
+      queryClient.invalidateQueries({
+        queryKey: customerGroupKeys.all,
+      })
       toast.success("그룹에 멤버가 추가되었습니다")
     },
     onError: (error: Error) => {
@@ -155,6 +159,10 @@ export function useRemoveGroupMember() {
       })
       queryClient.invalidateQueries({
         queryKey: customerGroupKeys.detail(variables.groupId),
+      })
+      // Invalidate workspace queries to update leadCount
+      queryClient.invalidateQueries({
+        queryKey: customerGroupKeys.all,
       })
       toast.success("그룹에서 멤버가 제거되었습니다")
     },
@@ -177,6 +185,10 @@ export function useBulkAddGroupMembers() {
       queryClient.invalidateQueries({
         queryKey: customerGroupKeys.detail(variables.groupId),
       })
+      // Invalidate workspace queries to update leadCount
+      queryClient.invalidateQueries({
+        queryKey: customerGroupKeys.all,
+      })
       toast.success(`${response.addedCount || 0}명의 멤버가 추가되었습니다`)
     },
     onError: (error: Error) => {
@@ -197,6 +209,10 @@ export function useBulkRemoveGroupMembers() {
       })
       queryClient.invalidateQueries({
         queryKey: customerGroupKeys.detail(variables.groupId),
+      })
+      // Invalidate workspace queries to update leadCount
+      queryClient.invalidateQueries({
+        queryKey: customerGroupKeys.all,
       })
       toast.success(`${response.removedCount || 0}명의 멤버가 제거되었습니다`)
     },

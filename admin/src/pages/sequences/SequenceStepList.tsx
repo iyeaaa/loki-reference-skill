@@ -36,12 +36,18 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
   const handleCreateStep = (stepData: {
     stepOrder: number
     delayDays: number
+    scheduledHour?: number
+    scheduledMinute?: number
+    timezone?: string
     emailSubject: string
     emailBodyText?: string
   }) => {
     const createData: SequenceStepCreateInput = {
       stepOrder: stepData.stepOrder,
       delayDays: stepData.delayDays,
+      scheduledHour: stepData.scheduledHour,
+      scheduledMinute: stepData.scheduledMinute,
+      timezone: stepData.timezone,
       emailSubject: stepData.emailSubject,
       emailBodyText: stepData.emailBodyText || "",
     }
@@ -55,6 +61,9 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
   const handleUpdateStep = (stepData: {
     stepOrder: number
     delayDays: number
+    scheduledHour?: number
+    scheduledMinute?: number
+    timezone?: string
     emailSubject: string
     emailBodyText?: string
   }) => {
@@ -62,6 +71,9 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
     const updateData: SequenceStepUpdateInput = {
       stepOrder: stepData.stepOrder,
       delayDays: stepData.delayDays,
+      scheduledHour: stepData.scheduledHour,
+      scheduledMinute: stepData.scheduledMinute,
+      timezone: stepData.timezone,
       emailSubject: stepData.emailSubject,
       emailBodyText: stepData.emailBodyText || "",
     }

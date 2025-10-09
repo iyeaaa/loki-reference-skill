@@ -888,6 +888,7 @@ export async function getPendingStepExecutions(limit: number = 100) {
       emailAccountId: sequenceEnrollments.userEmailAccountId,
       sequenceId: sequenceEnrollments.sequenceId,
       sequenceName: sequences.name,
+      workspaceId: sequences.workspaceId,
     })
     .from(sequenceStepExecutions)
     .innerJoin(sequenceSteps, eq(sequenceStepExecutions.stepId, sequenceSteps.id))

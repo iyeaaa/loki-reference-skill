@@ -10,6 +10,7 @@ import { and, eq } from "drizzle-orm"
 import { config } from "../config"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
+import { emails } from "../db/schema/emails"
 import { leadContacts } from "../db/schema/lead-details"
 import * as sequenceService from "../services/sequence.service"
 import logger from "../utils/logger"
@@ -22,6 +23,7 @@ if (config.sendgrid.apiKey) {
 interface EmailSendResult {
   success: boolean
   messageId?: string
+  emailRecordId?: string // UUID from emails table
   error?: string
 }
 
@@ -35,6 +37,9 @@ async function sendSequenceEmail(execution: {
   emailBodyText: string | null
   emailBodyHtml: string | null
   sequenceName: string
+  sequenceId: string
+  stepId: string
+  workspaceId: string
 }): Promise<EmailSendResult> {
   try {
     logger.debug(
@@ -150,17 +155,67 @@ async function sendSequenceEmail(execution: {
     // Send email
     const [response] = await sgMail.send(msg as never)
 
+    const sendgridMessageId = response.headers["x-message-id"] as string
+
     logger.info(
       {
         executionId: execution.executionId,
-        messageId: response.headers["x-message-id"],
+        messageId: sendgridMessageId,
       },
       "✅ [STEP-WORKER] SendGrid accepted email",
     )
 
+    // Create email record in database
+    const [emailRecord] = await db
+      .insert(emails)
+      .values({
+        workspaceId: execution.workspaceId,
+        userEmailAccountId: execution.emailAccountId,
+        leadId: execution.leadId,
+        sequenceId: execution.sequenceId,
+        stepId: execution.stepId,
+        direction: "outbound",
+        fromEmail: emailAccount.emailAddress,
+        toEmail: leadContact.email,
+        subject: execution.emailSubject,
+        bodyText: execution.emailBodyText || undefined,
+        bodyHtml: execution.emailBodyHtml || undefined,
+        status: "sent",
+        sendgridMessageId,
+        sentAt: new Date(),
+        // Denormalized fields for performance
+        leadName: execution.leadCompanyName || undefined,
+        leadEmail: leadContact.email,
+        sequenceName: execution.sequenceName,
+      })
+      .returning({
+        id: emails.id,
+      })
+
+    if (!emailRecord) {
+      logger.error(
+        { executionId: execution.executionId, sendgridMessageId },
+        "❌ [STEP-WORKER] Failed to create email record in database",
+      )
+      return {
+        success: false,
+        error: "Failed to create email record in database",
+      }
+    }
+
+    logger.info(
+      {
+        executionId: execution.executionId,
+        emailId: emailRecord.id,
+        sendgridMessageId,
+      },
+      "✅ [STEP-WORKER] Created email record in database",
+    )
+
     return {
       success: true,
-      messageId: response.headers["x-message-id"] as string,
+      messageId: sendgridMessageId,
+      emailRecordId: emailRecord.id,
     }
   } catch (error: unknown) {
     logger.error(
@@ -225,12 +280,12 @@ async function processSequenceEmails() {
       const result = await sendSequenceEmail(execution)
 
       if (result.success) {
-        // Update execution status to 'sent'
+        // Update execution status to 'sent' with email record UUID
         await sequenceService.updateStepExecutionStatus(
           execution.executionId,
           "sent",
           undefined,
-          result.messageId,
+          result.emailRecordId, // Pass UUID from emails table
         )
 
         // Update enrollment progress
@@ -240,7 +295,8 @@ async function processSequenceEmails() {
         logger.info(
           {
             executionId: execution.executionId,
-            messageId: result.messageId,
+            emailId: result.emailRecordId,
+            sendgridMessageId: result.messageId,
             leadCompanyName: execution.leadCompanyName,
             stepOrder: execution.stepOrder,
           },

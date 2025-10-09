@@ -82,7 +82,7 @@ export function SequenceStepForm({ step, stepOrder, onSave, onCancel }: Sequence
           </div>
 
           <div className="space-y-2">
-            <Label>
+            <Label className="mb-3 inline-block">
               발송 시각 (KST) <span className="text-red-500">*</span>
             </Label>
             <TimePicker
@@ -94,7 +94,6 @@ export function SequenceStepForm({ step, stepOrder, onSave, onCancel }: Sequence
                   scheduledMinute: time.minute,
                 })
               }
-              className="bg-background"
             />
           </div>
         </div>

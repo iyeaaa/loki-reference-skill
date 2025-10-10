@@ -71,6 +71,11 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
     "/send",
     async ({ body, set }) => {
       try {
+        logger.info({
+          workspaceId: body.workspaceId,
+          userId: body.userId,
+        }, "Looking for email account")
+
         // Find user's email account by workspaceId and userId
         const [emailAccount] = await db
           .select({
@@ -92,12 +97,23 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           .limit(1)
 
         if (!emailAccount) {
+          logger.error({
+            workspaceId: body.workspaceId,
+            userId: body.userId,
+          }, "Active email account not found")
           set.status = 404
           return errorResponse(
             "해당 워크스페이스와 사용자에 대한 활성화된 이메일 계정을 찾을 수 없습니다.",
             ResponseCode.NOT_FOUND,
           )
         }
+
+        logger.info({
+          emailAccountId: emailAccount.id,
+          emailAddress: emailAccount.emailAddress,
+          status: emailAccount.status,
+          isVerified: emailAccount.isVerified,
+        }, "Email account found")
 
         if (!emailAccount.isVerified) {
           set.status = 400
@@ -197,6 +213,14 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         }
 
         // Send email via SendGrid
+        logger.info({
+          fromEmail,
+          toEmail: body.toEmail,
+          subject: body.subject,
+          hasApiKey: !!apiKey,
+          apiKeyLength: apiKey?.length,
+        }, "Attempting to send email via SendGrid")
+
         const sendResult = await emailService.sendEmail({
           fromEmail: fromEmail,
           fromName: fromName,
@@ -213,13 +237,22 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         })
 
         if (!sendResult.success) {
-          logger.error({ error: sendResult.error }, "Email send failed")
+          logger.error({
+            error: sendResult.error,
+            fromEmail,
+            toEmail: body.toEmail,
+          }, "Email send failed")
           set.status = 500
           return errorResponse(
             sendResult.error || "이메일 발송에 실패했습니다.",
             ResponseCode.INTERNAL_ERROR,
           )
         }
+
+        logger.info({
+          messageId: sendResult.messageId,
+          sendgridMessageId: sendResult.sendgridMessageId,
+        }, "Email sent successfully via SendGrid")
 
         // Determine threadId: use messageId as threadId for first email, inherit for replies
         let threadId = sendResult.messageId // First email: messageId becomes threadId
@@ -238,50 +271,68 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         }
 
         // Save to database with optimized structure
-        const savedEmails = await db
-          .insert(emails)
-          .values({
-            workspaceId: body.workspaceId,
-            userEmailAccountId: emailAccount.id,
-            leadId: body.leadId || null,
-            sequenceId: body.sequenceId || null,
-            stepId: body.stepId || null,
-            direction: "outbound",
-            fromEmail: fromEmail,
-            toEmail: body.toEmail,
-            subject: body.subject,
-            bodyText: body.bodyText || null,
-            bodyHtml: body.bodyHtml || null,
-            ccEmails: body.ccEmails || null,
-            bccEmails: body.bccEmails || null,
-            status: "sent",
-            sentAt: new Date(),
+        logger.info({
+          threadId,
+          inReplyTo: body.inReplyTo,
+        }, "Saving email to database")
+
+        try {
+          const savedEmails = await db
+            .insert(emails)
+            .values({
+              workspaceId: body.workspaceId,
+              userEmailAccountId: emailAccount.id,
+              leadId: body.leadId || null,
+              sequenceId: body.sequenceId || null,
+              stepId: body.stepId || null,
+              direction: "outbound",
+              fromEmail: fromEmail,
+              toEmail: body.toEmail,
+              subject: body.subject,
+              bodyText: body.bodyText || null,
+              bodyHtml: body.bodyHtml || null,
+              ccEmails: body.ccEmails || null,
+              bccEmails: body.bccEmails || null,
+              status: "sent",
+              sentAt: new Date(),
+              messageId: sendResult.messageId,
+              sendgridMessageId: sendResult.sendgridMessageId,
+              inReplyTo: body.inReplyTo || null,
+              threadId: threadId, // Optimized threading
+              // Denormalized fields for performance
+              leadName: leadName,
+              leadEmail: leadEmail,
+              sequenceName: sequenceName,
+            })
+            .returning()
+
+          const savedEmail = savedEmails[0]
+          if (!savedEmail) {
+            logger.error("Failed to save email: no email returned")
+            set.status = 500
+            return errorResponse("이메일 저장에 실패했습니다", ResponseCode.INTERNAL_ERROR)
+          }
+
+          logger.info({
+            emailId: savedEmail.id,
             messageId: sendResult.messageId,
-            sendgridMessageId: sendResult.sendgridMessageId,
-            inReplyTo: body.inReplyTo || null,
-            threadId: threadId, // Optimized threading
-            // Denormalized fields for performance
-            leadName: leadName,
-            leadEmail: leadEmail,
-            sequenceName: sequenceName,
-          })
-          .returning()
+          }, "Email saved successfully")
 
-        const savedEmail = savedEmails[0]
-        if (!savedEmail) {
+          return {
+            success: true,
+            email: savedEmail,
+            message: "이메일이 발송되었습니다.",
+          }
+        } catch (dbError: unknown) {
+          logger.error({
+            err: dbError,
+            messageId: sendResult.messageId,
+          }, "Failed to save email to database")
           set.status = 500
-          return errorResponse("이메일 저장에 실패했습니다", ResponseCode.INTERNAL_ERROR)
-        }
-
-        logger.info(
-          { emailId: savedEmail.id, messageId: sendResult.messageId },
-          "Email sent and saved successfully",
-        )
-
-        return {
-          success: true,
-          email: savedEmail,
-          message: "이메일이 발송되었습니다.",
+          return errorResponse(
+            "이메일은 발송되었으나 저장에 실패했습니다.",
+            ResponseCode.INTERNAL_ERROR,
+          )
         }
       } catch (error: unknown) {
         logger.error({ err: error }, "Error sending email")

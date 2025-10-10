@@ -31,10 +31,15 @@ import { startScheduledEmailWorker } from "./workers/scheduled-email-worker"
 import { startWorkflowExecutionWorker } from "./workers/workflow-execution-worker"
 
 // Start workers
-logger.debug("Starting background workers...")
-startEmailSequenceWorker() // 구 기능 (sequence_steps)
-startWorkflowExecutionWorker() // 신 기능 (workflow 기반)
-startScheduledEmailWorker()
+if (!isDevelopment) {
+  logger.info("Starting background workers (production mode)...")
+  startEmailSequenceWorker() // 구 기능 (sequence_steps)
+  startWorkflowExecutionWorker() // 신 기능 (workflow 기반)
+  startScheduledEmailWorker()
+  logger.info("✅ Background workers started")
+} else {
+  logger.info("⏸️  Background workers disabled in development mode")
+}
 
 const app = new Elysia()
   // Core plugins (order matters)

@@ -71,10 +71,13 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
     "/send",
     async ({ body, set }) => {
       try {
-        logger.info({
-          workspaceId: body.workspaceId,
-          userId: body.userId,
-        }, "Looking for email account")
+        logger.info(
+          {
+            workspaceId: body.workspaceId,
+            userId: body.userId,
+          },
+          "Looking for email account",
+        )
 
         // Find user's email account by workspaceId and userId
         const [emailAccount] = await db
@@ -97,10 +100,13 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           .limit(1)
 
         if (!emailAccount) {
-          logger.error({
-            workspaceId: body.workspaceId,
-            userId: body.userId,
-          }, "Active email account not found")
+          logger.error(
+            {
+              workspaceId: body.workspaceId,
+              userId: body.userId,
+            },
+            "Active email account not found",
+          )
           set.status = 404
           return errorResponse(
             "해당 워크스페이스와 사용자에 대한 활성화된 이메일 계정을 찾을 수 없습니다.",
@@ -108,12 +114,15 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           )
         }
 
-        logger.info({
-          emailAccountId: emailAccount.id,
-          emailAddress: emailAccount.emailAddress,
-          status: emailAccount.status,
-          isVerified: emailAccount.isVerified,
-        }, "Email account found")
+        logger.info(
+          {
+            emailAccountId: emailAccount.id,
+            emailAddress: emailAccount.emailAddress,
+            status: emailAccount.status,
+            isVerified: emailAccount.isVerified,
+          },
+          "Email account found",
+        )
 
         if (!emailAccount.isVerified) {
           set.status = 400
@@ -213,13 +222,16 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         }
 
         // Send email via SendGrid
-        logger.info({
-          fromEmail,
-          toEmail: body.toEmail,
-          subject: body.subject,
-          hasApiKey: !!apiKey,
-          apiKeyLength: apiKey?.length,
-        }, "Attempting to send email via SendGrid")
+        logger.info(
+          {
+            fromEmail,
+            toEmail: body.toEmail,
+            subject: body.subject,
+            hasApiKey: !!apiKey,
+            apiKeyLength: apiKey?.length,
+          },
+          "Attempting to send email via SendGrid",
+        )
 
         const sendResult = await emailService.sendEmail({
           fromEmail: fromEmail,
@@ -237,11 +249,14 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         })
 
         if (!sendResult.success) {
-          logger.error({
-            error: sendResult.error,
-            fromEmail,
-            toEmail: body.toEmail,
-          }, "Email send failed")
+          logger.error(
+            {
+              error: sendResult.error,
+              fromEmail,
+              toEmail: body.toEmail,
+            },
+            "Email send failed",
+          )
           set.status = 500
           return errorResponse(
             sendResult.error || "이메일 발송에 실패했습니다.",
@@ -249,10 +264,13 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           )
         }
 
-        logger.info({
-          messageId: sendResult.messageId,
-          sendgridMessageId: sendResult.sendgridMessageId,
-        }, "Email sent successfully via SendGrid")
+        logger.info(
+          {
+            messageId: sendResult.messageId,
+            sendgridMessageId: sendResult.sendgridMessageId,
+          },
+          "Email sent successfully via SendGrid",
+        )
 
         // Determine threadId: use messageId as threadId for first email, inherit for replies
         let threadId = sendResult.messageId // First email: messageId becomes threadId
@@ -271,10 +289,13 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         }
 
         // Save to database with optimized structure
-        logger.info({
-          threadId,
-          inReplyTo: body.inReplyTo,
-        }, "Saving email to database")
+        logger.info(
+          {
+            threadId,
+            inReplyTo: body.inReplyTo,
+          },
+          "Saving email to database",
+        )
 
         try {
           const savedEmails = await db
@@ -313,10 +334,13 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             return errorResponse("이메일 저장에 실패했습니다", ResponseCode.INTERNAL_ERROR)
           }
 
-          logger.info({
-            emailId: savedEmail.id,
-            messageId: sendResult.messageId,
-          }, "Email saved successfully")
+          logger.info(
+            {
+              emailId: savedEmail.id,
+              messageId: sendResult.messageId,
+            },
+            "Email saved successfully",
+          )
 
           return {
             success: true,
@@ -324,10 +348,13 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             message: "이메일이 발송되었습니다.",
           }
         } catch (dbError: unknown) {
-          logger.error({
-            err: dbError,
-            messageId: sendResult.messageId,
-          }, "Failed to save email to database")
+          logger.error(
+            {
+              err: dbError,
+              messageId: sendResult.messageId,
+            },
+            "Failed to save email to database",
+          )
           set.status = 500
           return errorResponse(
             "이메일은 발송되었으나 저장에 실패했습니다.",

@@ -130,7 +130,7 @@ bun run db:seed
 
 ```bash
 # .env 파일에 원격 DB 정보 설정
-DB_HOST=15.165.2.108
+DB_HOST=43.200.230.4
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=postgres
@@ -478,7 +478,7 @@ docker ps | grep postgres
 cat .env | grep DB_
 
 # 3. 올바른 환경 변수 설정
-DB_HOST=15.165.2.108  # localhost가 아닌 실제 IP
+DB_HOST=43.200.230.4  # localhost가 아닌 실제 IP
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=postgres

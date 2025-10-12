@@ -44,7 +44,7 @@ services:
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=postgres
-      - DB_PASSWORD=postgres
+      - DB_PASSWORD=Pg7mK9nL2xR5wQ8vB4zT6yH3pN1dF9cM
       - DB_NAME=postgres
     networks:
       - app-network
@@ -55,7 +55,7 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: Pg7mK9nL2xR5wQ8vB4zT6yH3pN1dF9cM
       POSTGRES_DB: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data

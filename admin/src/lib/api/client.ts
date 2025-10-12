@@ -51,11 +51,20 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
 
   if (!response.ok) {
     const errorText = await response.text()
+    console.error("❌ API Error Response:", {
+      status: response.status,
+      statusText: response.statusText,
+      url: url,
+      errorText: errorText,
+    })
+
     let message: string
     try {
       const errorData = JSON.parse(errorText)
+      console.error("❌ Parsed error data:", errorData)
       message = errorData.message || errorData.error || `Request failed (${response.status})`
-    } catch {
+    } catch (parseError) {
+      console.error("❌ Failed to parse error response:", parseError)
       message = errorText.trim() || `Request failed (${response.status})`
     }
     throw new Error(message)

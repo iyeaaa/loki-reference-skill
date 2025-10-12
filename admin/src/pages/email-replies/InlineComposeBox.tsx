@@ -56,6 +56,12 @@ export function InlineComposeBox({
       return
     }
 
+    if (!workspaceId || workspaceId === "") {
+      toast.error("워크스페이스가 선택되지 않았습니다")
+      console.error("❌ workspaceId is empty:", { workspaceId, user: user.id })
+      return
+    }
+
     // 이메일 주소 검증
     const recipients = parseEmailList(to)
     if (recipients.length === 0) {
@@ -68,19 +74,28 @@ export function InlineComposeBox({
       return
     }
 
+    const payload = {
+      workspaceId,
+      userId: user.id,
+      toEmail: recipients[0], // 첫 번째 수신자
+      ccEmails: cc ? parseEmailList(cc) : undefined,
+      bccEmails: bcc ? parseEmailList(bcc) : undefined,
+      subject: subject.trim(),
+      bodyText: body,
+      // 스레드 정보 포함
+      inReplyTo: originalEmail.messageId ?? undefined,
+      references: originalEmail.messageId ? [originalEmail.messageId] : undefined,
+    }
+
+    console.log("📧 Sending email with payload:", {
+      ...payload,
+      workspaceId: workspaceId || "EMPTY",
+      userId: user.id || "EMPTY",
+      hasMessageId: !!originalEmail.messageId,
+    })
+
     try {
-      await sendEmail.mutateAsync({
-        workspaceId,
-        userId: user.id,
-        toEmail: recipients[0], // 첫 번째 수신자
-        ccEmails: cc ? parseEmailList(cc) : undefined,
-        bccEmails: bcc ? parseEmailList(bcc) : undefined,
-        subject: subject.trim(),
-        bodyText: body,
-        // 스레드 정보 포함
-        inReplyTo: originalEmail.messageId ?? undefined,
-        references: originalEmail.messageId ? [originalEmail.messageId] : undefined,
-      })
+      await sendEmail.mutateAsync(payload)
 
       // 성공 시 초기화 및 닫기
       onSent?.()

@@ -261,7 +261,7 @@ docker-compose up -d
 
 ### 서버 정보
 - Production URL: https://sendgrinda.cloud
-- Server IP: 15.165.2.108 (AWS EC2)
+- Server IP: 43.200.230.4 (AWS EC2)
 
 ## 유용한 명령어
 

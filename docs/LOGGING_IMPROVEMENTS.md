@@ -111,7 +111,7 @@ base: {
 ✅ Configuration loaded successfully
    - Environment: development
    - Port: 3001
-   - Database: 15.165.2.108:5432/postgres
+   - Database: 43.200.230.4:5432/postgres
    - SendGrid: rinda@send.grinda.ai
 [17:42:40 UTC] INFO: Initializing database...
     env: "development"
@@ -139,7 +139,7 @@ base: {
 ✅ Configuration loaded successfully
    - Environment: development
    - Port: 3001
-   - Database: 15.165.2.108:5432/postgres
+   - Database: 43.200.230.4:5432/postgres
    - SendGrid: rinda@send.grinda.ai
 17:42:40 INFO 🔄 Initializing database...
 17:42:40 DEBUG Starting background workers...

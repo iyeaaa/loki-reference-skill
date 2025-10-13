@@ -143,7 +143,7 @@ export default function LeadImportPage() {
         return { valid: false, error: "데이터 검증 중 오류가 발생했습니다" }
       }
     },
-    [requiredColumns, recommendedColumns],
+    [],
   )
 
   // 시트 검증 헬퍼 함수

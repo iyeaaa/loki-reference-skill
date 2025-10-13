@@ -449,13 +449,29 @@ export async function listLeadsWithFilters(
       companyName: leads.companyName,
       foundCompanyName: leads.foundCompanyName,
       websiteUrl: leads.websiteUrl,
+      finalUrl: leads.finalUrl,
+      httpStatus: leads.httpStatus,
+      nameUrlMatch: leads.nameUrlMatch,
       businessType: leads.businessType,
+      isBusinessTypeMatched: leads.isBusinessTypeMatched,
+      description: leads.description,
+      address: leads.address,
       country: leads.country,
       city: leads.city,
+      state: leads.state,
+      foundedYear: leads.foundedYear,
+      employeeCount: leads.employeeCount,
+      leadSource: leads.leadSource,
       leadStatus: leads.leadStatus,
       leadScore: leads.leadScore,
+      notes: leads.notes,
+      crawlTimeSeconds: leads.crawlTimeSeconds,
+      gptTimeSeconds: leads.gptTimeSeconds,
+      collectedAt: leads.collectedAt,
+      errorMessage: leads.errorMessage,
       createdBy: leads.createdBy,
       createdByUsername: users.username,
+      createdByEmail: users.email,
       createdAt: leads.createdAt,
       updatedAt: leads.updatedAt,
       lastContactedAt: leads.lastContactedAt,
@@ -483,15 +499,29 @@ export async function listLeadsWithFilters(
     result = await baseQuery.orderBy(desc(leads.createdAt)).limit(limit).offset(offset)
   }
 
-  // Get contacts and social media for each lead
+  // Get all related data for each lead
   const leadIds = result.map((lead) => lead.id)
 
   const contactsMap = new Map()
   const socialMediaMap = new Map()
+  const productsMap = new Map()
+  const businessSectorsMap = new Map()
+  const productCategoriesMap = new Map()
+  const industryTypesMap = new Map()
 
   if (leadIds.length > 0) {
     const leadIdCondition = or(...leadIds.map((id) => eq(leadContacts.leadId, id)))
     const leadIdSocialCondition = or(...leadIds.map((id) => eq(leadSocialMedia.leadId, id)))
+    const leadIdProductsCondition = or(...leadIds.map((id) => eq(leadProducts.leadId, id)))
+    const leadIdBusinessSectorsCondition = or(
+      ...leadIds.map((id) => eq(leadBusinessSectors.leadId, id)),
+    )
+    const leadIdProductCategoriesCondition = or(
+      ...leadIds.map((id) => eq(leadProductCategories.leadId, id)),
+    )
+    const leadIdIndustryTypesCondition = or(
+      ...leadIds.map((id) => eq(leadIndustryTypes.leadId, id)),
+    )
 
     // Get contacts for all leads
     const allContacts = leadIdCondition
@@ -505,6 +535,26 @@ export async function listLeadsWithFilters(
     // Get social media for all leads
     const allSocialMedia = leadIdSocialCondition
       ? await db.select().from(leadSocialMedia).where(leadIdSocialCondition)
+      : []
+
+    // Get products for all leads
+    const allProducts = leadIdProductsCondition
+      ? await db.select().from(leadProducts).where(leadIdProductsCondition)
+      : []
+
+    // Get business sectors for all leads
+    const allBusinessSectors = leadIdBusinessSectorsCondition
+      ? await db.select().from(leadBusinessSectors).where(leadIdBusinessSectorsCondition)
+      : []
+
+    // Get product categories for all leads
+    const allProductCategories = leadIdProductCategoriesCondition
+      ? await db.select().from(leadProductCategories).where(leadIdProductCategoriesCondition)
+      : []
+
+    // Get industry types for all leads
+    const allIndustryTypes = leadIdIndustryTypesCondition
+      ? await db.select().from(leadIndustryTypes).where(leadIdIndustryTypesCondition)
       : []
 
     // Group by leadId
@@ -521,6 +571,34 @@ export async function listLeadsWithFilters(
       }
       socialMediaMap.get(social.leadId)?.push(social)
     })
+
+    allProducts.forEach((product) => {
+      if (!productsMap.has(product.leadId)) {
+        productsMap.set(product.leadId, [])
+      }
+      productsMap.get(product.leadId)?.push(product)
+    })
+
+    allBusinessSectors.forEach((sector) => {
+      if (!businessSectorsMap.has(sector.leadId)) {
+        businessSectorsMap.set(sector.leadId, [])
+      }
+      businessSectorsMap.get(sector.leadId)?.push(sector)
+    })
+
+    allProductCategories.forEach((category) => {
+      if (!productCategoriesMap.has(category.leadId)) {
+        productCategoriesMap.set(category.leadId, [])
+      }
+      productCategoriesMap.get(category.leadId)?.push(category)
+    })
+
+    allIndustryTypes.forEach((industry) => {
+      if (!industryTypesMap.has(industry.leadId)) {
+        industryTypesMap.set(industry.leadId, [])
+      }
+      industryTypesMap.get(industry.leadId)?.push(industry)
+    })
   }
 
   // Combine data
@@ -528,6 +606,10 @@ export async function listLeadsWithFilters(
     ...lead,
     contacts: contactsMap.get(lead.id) || [],
     socialMedia: socialMediaMap.get(lead.id) || [],
+    products: productsMap.get(lead.id) || [],
+    businessSectors: businessSectorsMap.get(lead.id) || [],
+    productCategories: productCategoriesMap.get(lead.id) || [],
+    industryTypes: industryTypesMap.get(lead.id) || [],
   }))
 }
 

@@ -91,18 +91,20 @@ export function LeadForm({
     const submitData: LeadFormData = {
       ...formData,
       leadScore: formData.leadScore ? parseInt(formData.leadScore, 10) : undefined,
-      contacts: contacts.filter(
-        (c) =>
-          c.contactValue &&
-          c.contactValue.trim() !== "" &&
-          c.contactType !== undefined
-      ) as LeadContact[],
-      socialMedia: socialMedia.filter(
-        (s) =>
-          s.url &&
-          s.url.trim() !== "" &&
-          s.platform !== undefined
-      ) as LeadSocialMedia[],
+      contacts: contacts
+        .filter(
+          (c) => c.contactValue && c.contactValue.trim() !== "" && c.contactType !== undefined,
+        )
+        .map((c) => ({
+          ...c,
+          label: c.label && c.label.trim() !== "" ? c.label : undefined,
+        })) as LeadContact[],
+      socialMedia: socialMedia
+        .filter((s) => s.url && s.url.trim() !== "" && s.platform !== undefined)
+        .map((s) => ({
+          ...s,
+          username: s.username && s.username.trim() !== "" ? s.username : undefined,
+        })) as LeadSocialMedia[],
     }
 
     // Add workspaceId for create mode

@@ -10,7 +10,7 @@ const contactSchema = t.Object({
     t.Literal("other"),
   ]),
   contactValue: t.String({ maxLength: 255 }),
-  label: t.Optional(t.String({ maxLength: 100 })),
+  label: t.Optional(t.Union([t.String({ maxLength: 100 }), t.Null()])),
   isPrimary: t.Optional(t.Boolean()),
 })
 
@@ -22,7 +22,7 @@ const socialMediaSchema = t.Object({
     t.Literal("linkedin"),
   ]),
   url: t.String({ maxLength: 500 }),
-  username: t.Optional(t.String({ maxLength: 255 })),
+  username: t.Optional(t.Union([t.String({ maxLength: 255 }), t.Null()])),
 })
 
 const leadSchema = t.Object({

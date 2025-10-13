@@ -100,13 +100,13 @@ export async function createLead(data: {
   contacts?: Array<{
     contactType: "phone" | "email" | "fax" | "other"
     contactValue: string
-    label?: string
+    label?: string | null
     isPrimary?: boolean
   }>
   socialMedia?: Array<{
     platform: "facebook" | "instagram" | "twitter" | "linkedin"
     url: string
-    username?: string
+    username?: string | null
   }>
 }) {
   const [newLead] = await db
@@ -161,7 +161,8 @@ export async function createLead(data: {
   if (data.contacts && data.contacts.length > 0) {
     // Validate that all required fields are present
     const validContacts = data.contacts.filter(
-      (contact) => contact.contactType && contact.contactValue && contact.contactValue.trim() !== ""
+      (contact) =>
+        contact.contactType && contact.contactValue && contact.contactValue.trim() !== "",
     )
 
     if (validContacts.length > 0) {
@@ -182,7 +183,7 @@ export async function createLead(data: {
   if (data.socialMedia && data.socialMedia.length > 0) {
     // Validate that all required fields are present
     const validSocialMedia = data.socialMedia.filter(
-      (social) => social.platform && social.url && social.url.trim() !== ""
+      (social) => social.platform && social.url && social.url.trim() !== "",
     )
 
     if (validSocialMedia.length > 0) {
@@ -240,13 +241,13 @@ export async function updateLead(
     contacts?: Array<{
       contactType: "phone" | "email" | "fax" | "other"
       contactValue: string
-      label?: string
+      label?: string | null
       isPrimary?: boolean
     }>
     socialMedia?: Array<{
       platform: "facebook" | "instagram" | "twitter" | "linkedin"
       url: string
-      username?: string
+      username?: string | null
     }>
   },
 ) {
@@ -284,7 +285,8 @@ export async function updateLead(
     if (contacts.length > 0) {
       // Validate that all required fields are present
       const validContacts = contacts.filter(
-        (contact) => contact.contactType && contact.contactValue && contact.contactValue.trim() !== ""
+        (contact) =>
+          contact.contactType && contact.contactValue && contact.contactValue.trim() !== "",
       )
 
       if (validContacts.length > 0) {
@@ -311,7 +313,7 @@ export async function updateLead(
     if (socialMedia.length > 0) {
       // Validate that all required fields are present
       const validSocialMedia = socialMedia.filter(
-        (social) => social.platform && social.url && social.url.trim() !== ""
+        (social) => social.platform && social.url && social.url.trim() !== "",
       )
 
       if (validSocialMedia.length > 0) {

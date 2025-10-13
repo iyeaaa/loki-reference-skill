@@ -18,6 +18,7 @@ import { adminEmailTemplateRoutes, emailTemplateRoutes } from "./routes/email-te
 import { adminEmailRoutes, emailRoutes } from "./routes/emails.routes"
 // Import routes
 import { healthRoutes } from "./routes/health.routes"
+import { leadImportRoutes } from "./routes/lead-import.routes"
 import { adminLeadRoutes, leadRoutes } from "./routes/leads.routes"
 import { adminSequenceRoutes, sequenceRoutes } from "./routes/sequences.routes"
 import { adminUserRoutes, userRoutes } from "./routes/users.routes"
@@ -144,6 +145,7 @@ const app = new Elysia()
   .use(workflowEmailRoutes)
   .use(workflowExecutionRoutes)
   .use(activityLogRoutes)
+  .use(leadImportRoutes)
 
   .listen(config.port)
 

@@ -22,6 +22,7 @@ const SettingsPage = lazy(() => import("../pages/settings"))
 const UsersPage = lazy(() => import("../pages/users/UsersPage"))
 const WorkspacesPage = lazy(() => import("../pages/workspaces"))
 const TailwindTestPage = lazy(() => import("../pages/tailwind-test/TailwindTestPage"))
+const LeadImportPage = lazy(() => import("../pages/lead-import"))
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>
@@ -99,6 +100,10 @@ export const router = createBrowserRouter([
           {
             path: "settings",
             element: <SettingsPage />,
+          },
+          {
+            path: "lead-import",
+            element: <LeadImportPage />,
           },
           {
             path: "tailwind-test",

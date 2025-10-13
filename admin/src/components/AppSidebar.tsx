@@ -2,6 +2,7 @@ import {
   BarChart3,
   Building2,
   FileText,
+  FileUp,
   GitBranch,
   Mail,
   SendHorizontal,
@@ -71,6 +72,11 @@ const adminMenuItems = [
     title: "메일 발송 테스트",
     url: "/email-send-test",
     icon: SendHorizontal,
+  },
+  {
+    title: "리드 데이터 임포트",
+    url: "/lead-import",
+    icon: FileUp,
   },
 ]
 

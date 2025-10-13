@@ -72,11 +72,16 @@ const app = new Elysia()
       origin: isDevelopment ? true : config.cors.allowedOrigins,
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID", "Accept"],
       exposeHeaders: ["X-Request-ID", "X-RateLimit-Limit", "X-RateLimit-Remaining"],
       maxAge: 86400, // 24 hours
     }),
   )
+  // Handle OPTIONS requests explicitly
+  .options("*", ({ set }) => {
+    set.status = 204
+    return ""
+  })
   .use(
     swagger({
       documentation: {

@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query"
-import { Download, FileText, Plus, Search, Trash2, Upload, Users, X } from "lucide-react"
+import { Download, Edit2, FileText, Plus, Search, Trash2, Upload, Users, X } from "lucide-react"
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -18,8 +18,12 @@ import {
 } from "@/components/ui/select"
 import {
   customerGroupKeys,
+  useBulkAddGroupMembers,
+  useBulkRemoveGroupMembers,
   useCreateCustomerGroup,
   useCustomerGroupsByWorkspace,
+  useDeleteCustomerGroup,
+  useUpdateCustomerGroup,
 } from "@/lib/api/hooks/customer-groups"
 import {
   leadKeys,
@@ -32,12 +36,14 @@ import {
 import { customerGroupsApi } from "@/lib/api/services/customer-groups"
 import { leadsApi } from "@/lib/api/services/leads"
 import { workspacesApi } from "@/lib/api/services/workspaces"
-import type { CreateCustomerGroupRequest } from "@/lib/api/types/customer-group"
+import type { CreateCustomerGroupRequest, CustomerGroup } from "@/lib/api/types/customer-group"
 import type { Lead, LeadStatus } from "@/lib/api/types/lead"
 import type { Workspace } from "@/lib/api/types/workspace"
 import { generateCSVTemplate, type LeadCSVData, parseCSV, validateCSVData } from "@/lib/csv-utils"
 import { BulkActionModal } from "./BulkActionModal"
+import { GroupEditModal } from "./GroupEditModal"
 import { LeadForm } from "./LeadForm"
+import { LeadGroupManagementModal } from "./LeadGroupManagementModal"
 import { LeadsTableWithPagination } from "./LeadsTableWithPagination"
 
 export default function LeadsPage() {
@@ -76,6 +82,15 @@ export default function LeadsPage() {
 
   const [selectedGroupForNewLead, setSelectedGroupForNewLead] = useState("")
 
+  // 그룹 편집/삭제 관련 상태
+  const [editingGroup, setEditingGroup] = useState<CustomerGroup | null>(null)
+  const [showGroupEditModal, setShowGroupEditModal] = useState(false)
+
+  // 리드 그룹 관리 관련 상태
+  const [managingLeadGroups, setManagingLeadGroups] = useState<Lead | null>(null)
+  const [showLeadGroupModal, setShowLeadGroupModal] = useState(false)
+  const [leadCurrentGroups, setLeadCurrentGroups] = useState<CustomerGroup[]>([])
+
   // Generate unique IDs for form elements
   const existingGroupId = useId()
   const newGroupId = useId()
@@ -91,6 +106,10 @@ export default function LeadsPage() {
   const bulkUpdateBusinessType = useBulkUpdateLeadBusinessType()
   const bulkDeleteLeads = useBulkDeleteLeads()
   const createCustomerGroup = useCreateCustomerGroup()
+  const updateCustomerGroup = useUpdateCustomerGroup()
+  const deleteCustomerGroup = useDeleteCustomerGroup()
+  const bulkAddGroupMembers = useBulkAddGroupMembers()
+  const bulkRemoveGroupMembers = useBulkRemoveGroupMembers()
 
   // 고객 그룹 데이터 가져오기
   const { data: customerGroups } = useCustomerGroupsByWorkspace(
@@ -348,6 +367,103 @@ export default function LeadsPage() {
     }
   }
 
+  // 그룹 편집 핸들러
+  const handleEditGroup = (group: CustomerGroup) => {
+    setEditingGroup(group)
+    setShowGroupEditModal(true)
+  }
+
+  const handleSaveGroupEdit = async (groupId: string, name: string, description: string) => {
+    updateCustomerGroup.mutate(
+      {
+        groupId,
+        data: {
+          name,
+          description,
+          isDynamic: editingGroup?.isDynamic || false,
+        },
+      },
+      {
+        onSuccess: () => {
+          // 그룹 목록 및 상세 정보 쿼리 갱신
+          queryClient.invalidateQueries({
+            queryKey: customerGroupKeys.all,
+          })
+          setShowGroupEditModal(false)
+          setEditingGroup(null)
+        },
+      },
+    )
+  }
+
+  // 그룹 삭제 핸들러
+  const handleDeleteGroup = async (group: CustomerGroup) => {
+    if (!confirm(`"${group.name}" 그룹을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`)) {
+      return
+    }
+    deleteCustomerGroup.mutate(group.id, {
+      onSuccess: () => {
+        // 그룹 목록 쿼리 갱신
+        queryClient.invalidateQueries({
+          queryKey: customerGroupKeys.all,
+        })
+        // 삭제된 그룹이 선택되어 있었다면 선택 해제
+        if (selectedCustomerGroup === group.id) {
+          setSelectedCustomerGroup("")
+        }
+      },
+    })
+  }
+
+  // 리드 그룹 관리 핸들러
+  const handleManageLeadGroups = async (lead: Lead) => {
+    try {
+      // 현재 리드가 속한 그룹들을 가져옴
+      const groups = await customerGroupsApi.getLeadGroups(lead.id)
+      setLeadCurrentGroups(groups)
+      setManagingLeadGroups(lead)
+      setShowLeadGroupModal(true)
+    } catch (error) {
+      console.error("Failed to fetch lead groups:", error)
+      toast.error("리드 그룹 정보를 가져오는데 실패했습니다.")
+    }
+  }
+
+  const handleSaveLeadGroups = async (
+    leadId: string,
+    groupsToAdd: string[],
+    groupsToRemove: string[],
+  ) => {
+    try {
+      // 그룹에서 제거
+      for (const groupId of groupsToRemove) {
+        await bulkRemoveGroupMembers.mutateAsync({
+          groupId,
+          leadIds: [leadId],
+        })
+      }
+
+      // 그룹에 추가
+      for (const groupId of groupsToAdd) {
+        await bulkAddGroupMembers.mutateAsync({
+          groupId,
+          leadIds: [leadId],
+        })
+      }
+
+      // Refresh data
+      await queryClient.invalidateQueries({
+        queryKey: customerGroupKeys.all,
+      })
+
+      toast.success("리드 그룹이 업데이트되었습니다.")
+    } catch (error) {
+      console.error("Failed to update lead groups:", error)
+      toast.error("리드 그룹 업데이트에 실패했습니다.")
+      throw error
+    }
+  }
+
   return (
     <div className="space-y-6 h-full overflow-y-auto">
       {/* <LeadFilters
@@ -441,36 +557,48 @@ export default function LeadsPage() {
                   전체
                 </Button>
                 {customerGroups.map((group) => (
-                  <Button
-                    key={group.id}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedCustomerGroup(group.id)}
-                    className={`text-xs ${
-                      selectedCustomerGroup === group.id
-                        ? "bg-violet-500/10 border-violet-500 text-violet-500 font-medium"
-                        : "hover:bg-violet-500/5 hover:border-violet-500/50"
-                    }`}
-                  >
-                    <Users
-                      className={`h-3 w-3 mr-1 ${
-                        selectedCustomerGroup === group.id ? "text-violet-500" : ""
+                  <div key={group.id} className="inline-flex items-center gap-1 group/item">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedCustomerGroup(group.id)}
+                      className={`text-xs relative ${
+                        selectedCustomerGroup === group.id
+                          ? "bg-violet-500/10 border-violet-500 text-violet-500 font-medium"
+                          : "hover:bg-violet-500/5 hover:border-violet-500/50"
                       }`}
-                    />
-                    {group.name}
-                    {group.leadCount && (
-                      <Badge
-                        variant="secondary"
-                        className={`ml-1 text-xs ${
-                          selectedCustomerGroup === group.id
-                            ? "bg-violet-500/20 text-violet-600"
-                            : ""
+                    >
+                      <Users
+                        className={`h-3 w-3 mr-1 ${
+                          selectedCustomerGroup === group.id ? "text-violet-500" : ""
                         }`}
+                      />
+                      {group.name}
+                      {group.leadCount !== undefined && (
+                        <span className="ml-1.5 text-xs opacity-70">({group.leadCount})</span>
+                      )}
+                    </Button>
+                    <div className="opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditGroup(group)}
+                        className="h-8 w-8 p-0 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600"
+                        title="편집"
                       >
-                        {group.leadCount}
-                      </Badge>
-                    )}
-                  </Button>
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteGroup(group)}
+                        className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50 hover:text-red-600"
+                        title="삭제"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -516,6 +644,7 @@ export default function LeadsPage() {
             onToggleLead={toggleLeadSelection}
             onToggleAll={toggleAllLeads}
             onEditLead={setEditingLead}
+            onManageGroups={handleManageLeadGroups}
           />
         </CardContent>
       </Card>
@@ -785,6 +914,31 @@ export default function LeadsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Group Edit Modal */}
+      <GroupEditModal
+        group={editingGroup}
+        isOpen={showGroupEditModal}
+        onClose={() => {
+          setShowGroupEditModal(false)
+          setEditingGroup(null)
+        }}
+        onSave={handleSaveGroupEdit}
+      />
+
+      {/* Lead Group Management Modal */}
+      <LeadGroupManagementModal
+        lead={managingLeadGroups}
+        isOpen={showLeadGroupModal}
+        onClose={() => {
+          setShowLeadGroupModal(false)
+          setManagingLeadGroups(null)
+          setLeadCurrentGroups([])
+        }}
+        availableGroups={customerGroups || []}
+        currentGroups={leadCurrentGroups}
+        onSave={handleSaveLeadGroups}
+      />
     </div>
   )
 }

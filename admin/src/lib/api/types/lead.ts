@@ -1,6 +1,13 @@
 // Lead Management API Types (aligned with backend database schema)
 
-import type { LeadContact, LeadSocialMedia } from "./lead-detail"
+import type {
+  LeadBusinessSector,
+  LeadContact,
+  LeadIndustryType,
+  LeadProduct,
+  LeadProductCategory,
+  LeadSocialMedia,
+} from "./lead-detail"
 
 export type LeadStatus =
   | "new"
@@ -53,6 +60,10 @@ export interface Lead {
   // Related data
   contacts?: LeadContact[]
   socialMedia?: LeadSocialMedia[]
+  products?: LeadProduct[]
+  businessSectors?: LeadBusinessSector[]
+  productCategories?: LeadProductCategory[]
+  industryTypes?: LeadIndustryType[]
 }
 
 export interface CreateLeadRequest {

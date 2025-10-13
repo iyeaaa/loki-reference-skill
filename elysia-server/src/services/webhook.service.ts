@@ -167,7 +167,11 @@ class WebhookService {
 
   private logEmailInfo(
     body: SendGridInboundPayload,
-    headers: { messageId: string | undefined; inReplyTo: string | undefined; references: string[] },
+    headers: {
+      messageId: string | undefined
+      inReplyTo: string | undefined
+      references: string[]
+    },
     files: FileData[],
   ) {
     let envelopeFrom = "none"
@@ -325,7 +329,11 @@ class WebhookService {
    */
   private async storeInboundEmailInDB(
     body: SendGridInboundPayload,
-    headers: { messageId: string | undefined; inReplyTo: string | undefined; references: string[] },
+    headers: {
+      messageId: string | undefined
+      inReplyTo: string | undefined
+      references: string[]
+    },
     _attachments: unknown[],
   ) {
     logger.info("Storing inbound email in DB")
@@ -534,14 +542,22 @@ class WebhookService {
       return
     }
 
+    const shortMessageId = event.sg_message_id.split(".")[0] as string
+
     const emailResults = await db
       .select({ id: emailsTable.id, status: emailsTable.status })
       .from(emailsTable)
-      .where(eq(emailsTable.sendgridMessageId, event.sg_message_id))
+      .where(eq(emailsTable.sendgridMessageId, shortMessageId))
       .limit(1)
 
     if (emailResults.length === 0) {
-      logger.warn({ sgMessageId: event.sg_message_id }, "Email not found for event")
+      logger.warn(
+        {
+          originalSgMessageId: event.sg_message_id,
+          shortMessageId: shortMessageId,
+        },
+        "Email not found for event",
+      )
       return
     }
 

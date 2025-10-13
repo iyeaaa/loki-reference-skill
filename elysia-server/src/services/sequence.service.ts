@@ -307,6 +307,11 @@ export async function createSequenceStep(data: {
   emailBodyHtml?: string
   emailTemplateId?: string
 }) {
+  // Markdown을 HTML로 변환
+  const { markdownToHtml } = await import("../utils/markdown")
+  const emailBodyHtml =
+    data.emailBodyHtml || (data.emailBodyText ? markdownToHtml(data.emailBodyText) : null)
+
   const [newStep] = await db
     .insert(sequenceSteps)
     .values({
@@ -318,7 +323,7 @@ export async function createSequenceStep(data: {
       timezone: data.timezone ?? "Asia/Seoul",
       emailSubject: data.emailSubject,
       emailBodyText: data.emailBodyText || null,
-      emailBodyHtml: data.emailBodyHtml || null,
+      emailBodyHtml: emailBodyHtml,
       emailTemplateId: data.emailTemplateId || null,
     })
     .returning({
@@ -352,10 +357,15 @@ export async function updateSequenceStep(
     emailTemplateId?: string
   },
 ) {
+  // Markdown을 HTML로 변환
+  const { markdownToHtml } = await import("../utils/markdown")
+  const emailBodyHtml =
+    data.emailBodyHtml || (data.emailBodyText ? markdownToHtml(data.emailBodyText) : null)
   const [updatedStep] = await db
     .update(sequenceSteps)
     .set({
       ...data,
+      emailBodyHtml: emailBodyHtml,
       scheduledHour: data.scheduledHour ?? 9,
       scheduledMinute: data.scheduledMinute ?? 0,
       timezone: data.timezone ?? "Asia/Seoul",
@@ -1165,12 +1175,36 @@ export async function getSequenceMetrics(sequenceId: string) {
   })
 
   // Calculate rates
-  const openRate =
-    emailCounts.delivered > 0 ? (emailCounts.opened / emailCounts.delivered) * 100 : 0
-  const clickRate =
-    emailCounts.delivered > 0 ? (emailCounts.clicked / emailCounts.delivered) * 100 : 0
+  // delivered 이벤트가 없을 경우 totalSent를 기준으로 계산
+  const deliveredCount = emailCounts.delivered > 0 ? emailCounts.delivered : emailCounts.totalSent
+  const openRate = deliveredCount > 0 ? (emailCounts.opened / deliveredCount) * 100 : 0
+  const clickRate = deliveredCount > 0 ? (emailCounts.clicked / deliveredCount) * 100 : 0
   const bounceRate =
     emailCounts.totalSent > 0 ? (emailCounts.bounced / emailCounts.totalSent) * 100 : 0
+
+  // 디버깅: 이메일 카운트 로깅
+  logger.info(
+    {
+      sequenceId,
+      emailCounts: {
+        totalSent: emailCounts.totalSent,
+        delivered: emailCounts.delivered,
+        opened: emailCounts.opened,
+        clicked: emailCounts.clicked,
+        bounced: emailCounts.bounced,
+      },
+      calculatedRates: {
+        openRate,
+        clickRate,
+        bounceRate,
+      },
+      calculationDetails: {
+        deliveredCount,
+        usingDeliveredEvent: emailCounts.delivered > 0,
+      },
+    },
+    "🔍 [DEBUG] Email counts and calculated rates",
+  )
 
   const metrics = {
     // 발송 통계
@@ -1246,7 +1280,10 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
     throw new Error("Enrollment not found")
   }
 
-  const enrollment = enrollmentResult[0]!
+  const enrollment = enrollmentResult[0]
+  if (!enrollment) {
+    throw new Error("Enrollment not found")
+  }
 
   // 2. Get total steps for this sequence
   const stepsResult = await db
@@ -1257,8 +1294,16 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
 
   const totalSteps = stepsResult[0]?.count || 0
 
-  // 3. Get email statistics for this enrollment
-  // Note: We need to get emails through sequence_step_executions since emails table doesn't have enrollmentId
+  // 3. Get total emails sent for this enrollment (from sequence_step_executions)
+  const emailsSentResult = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(sequenceStepExecutions)
+    .innerJoin(emailsTable, eq(sequenceStepExecutions.emailId, emailsTable.id))
+    .where(eq(sequenceStepExecutions.enrollmentId, enrollmentId))
+
+  const emailsSent = emailsSentResult[0]?.count || 0
+
+  // 4. Get email event statistics for this enrollment
   const emailStats = await db
     .select({
       eventType: emailEvents.eventType,
@@ -1272,7 +1317,7 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
 
   // Process email statistics
   const emailCounts = {
-    emailsSent: 0,
+    emailsSent: emailsSent, // Use actual sent count from sequence_step_executions
     emailsDelivered: 0,
     emailsOpened: 0,
     emailsClicked: 0,
@@ -1282,9 +1327,6 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
 
   emailStats.forEach((stat) => {
     switch (stat.eventType) {
-      case "processed":
-        emailCounts.emailsSent = stat.count
-        break
       case "delivered":
         emailCounts.emailsDelivered = stat.count
         break
@@ -1301,14 +1343,11 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
   })
 
   // Calculate rates
-  const openRate =
-    emailCounts.emailsDelivered > 0
-      ? (emailCounts.emailsOpened / emailCounts.emailsDelivered) * 100
-      : 0
-  const clickRate =
-    emailCounts.emailsDelivered > 0
-      ? (emailCounts.emailsClicked / emailCounts.emailsDelivered) * 100
-      : 0
+  // delivered 이벤트가 없을 경우 emailsSent를 기준으로 계산
+  const deliveredCount =
+    emailCounts.emailsDelivered > 0 ? emailCounts.emailsDelivered : emailCounts.emailsSent
+  const openRate = deliveredCount > 0 ? (emailCounts.emailsOpened / deliveredCount) * 100 : 0
+  const clickRate = deliveredCount > 0 ? (emailCounts.emailsClicked / deliveredCount) * 100 : 0
   const bounceRate =
     emailCounts.emailsSent > 0 ? (emailCounts.emailsBounced / emailCounts.emailsSent) * 100 : 0
 

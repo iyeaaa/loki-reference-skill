@@ -31,6 +31,76 @@ import {
 } from "@/lib/api/hooks/sequences"
 import type { EnrollmentStatus } from "@/lib/api/types/sequence"
 
+// EnrollmentOpenStatus - 실제 오픈 상태를 표시하는 컴포넌트
+function EnrollmentOpenStatus({ enrollmentId }: { enrollmentId: string }) {
+  const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId)
+
+  if (isLoading) {
+    return <span className="text-sm text-muted-foreground">로딩중...</span>
+  }
+
+  if (!metricsData?.data) {
+    return <span className="text-sm text-muted-foreground">-</span>
+  }
+
+  const { emailsSent, emailsOpened } = metricsData.data
+
+  if (emailsSent === 0) {
+    return <span className="text-sm text-muted-foreground">-</span>
+  }
+
+  if (emailsOpened > 0) {
+    return (
+      <div className="flex items-center gap-1 text-sm text-green-600">
+        <Eye className="w-3 h-3" />
+        <span className="font-medium">오픈함</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1 text-sm text-gray-600">
+      <Eye className="w-3 h-3" />
+      <span className="font-medium">미오픈</span>
+    </div>
+  )
+}
+
+// EnrollmentClickStatus - 실제 클릭 상태를 표시하는 컴포넌트
+function EnrollmentClickStatus({ enrollmentId }: { enrollmentId: string }) {
+  const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId)
+
+  if (isLoading) {
+    return <span className="text-sm text-muted-foreground">로딩중...</span>
+  }
+
+  if (!metricsData?.data) {
+    return <span className="text-sm text-muted-foreground">-</span>
+  }
+
+  const { emailsSent, emailsClicked } = metricsData.data
+
+  if (emailsSent === 0) {
+    return <span className="text-sm text-muted-foreground">-</span>
+  }
+
+  if (emailsClicked > 0) {
+    return (
+      <div className="flex items-center gap-1 text-sm text-green-600">
+        <MousePointer className="w-3 h-3" />
+        <span className="font-medium">클릭함</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1 text-sm text-gray-600">
+      <MousePointer className="w-3 h-3" />
+      <span className="font-medium">미클릭</span>
+    </div>
+  )
+}
+
 // CompanyMetricsModalWithData - 실제 API 데이터를 사용하는 모달 컴포넌트
 interface CompanyMetricsModalWithDataProps {
   isOpen: boolean
@@ -180,7 +250,6 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
 
                       // 실제 데이터 기반 간단한 상태 표시
                       const hasEmailsSent = enrollment.currentStepOrder > 0
-                      const hasFirstEmailSent = enrollment.firstEmailSentAt !== null
                       const hasLastEmailSent = enrollment.lastEmailSentAt !== null
 
                       const handleViewDetails = () => {
@@ -226,28 +295,10 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                             )}
                           </TableCell>
                           <TableCell>
-                            {hasFirstEmailSent ? (
-                              <div className="flex items-center gap-1 text-sm text-gray-600">
-                                <Eye className="w-3 h-3" />
-                                <span className="font-medium">미오픈</span>
-                              </div>
-                            ) : hasEmailsSent ? (
-                              <span className="text-sm text-muted-foreground">발송중</span>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">-</span>
-                            )}
+                            <EnrollmentOpenStatus enrollmentId={enrollment.id} />
                           </TableCell>
                           <TableCell>
-                            {hasFirstEmailSent ? (
-                              <div className="flex items-center gap-1 text-sm text-gray-600">
-                                <MousePointer className="w-3 h-3" />
-                                <span className="font-medium">미클릭</span>
-                              </div>
-                            ) : hasEmailsSent ? (
-                              <span className="text-sm text-muted-foreground">발송중</span>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">-</span>
-                            )}
+                            <EnrollmentClickStatus enrollmentId={enrollment.id} />
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1 text-sm">

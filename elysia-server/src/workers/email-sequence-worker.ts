@@ -168,6 +168,7 @@ async function sendSequenceEmail(execution: {
       {
         executionId: execution.executionId,
         messageId: sendgridMessageId,
+        responseHeaders: Object.fromEntries(response.headers.entries()),
       },
       "✅ [STEP-WORKER] SendGrid accepted email",
     )
@@ -197,6 +198,7 @@ async function sendSequenceEmail(execution: {
       })
       .returning({
         id: emails.id,
+        sendgridMessageId: emails.sendgridMessageId,
       })
 
     if (!emailRecord) {
@@ -215,6 +217,7 @@ async function sendSequenceEmail(execution: {
         executionId: execution.executionId,
         emailId: emailRecord.id,
         sendgridMessageId,
+        storedMessageId: emailRecord.sendgridMessageId,
       },
       "✅ [STEP-WORKER] Created email record in database",
     )

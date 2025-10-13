@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { TimePicker } from "@/components/ui/time-picker"
 import type { SequenceStep } from "@/lib/api/types/sequence"
+import { markdownToHtml } from "@/lib/utils/markdown"
 
 interface SequenceStepFormProps {
   step?: SequenceStep
@@ -41,7 +42,16 @@ export function SequenceStepForm({ step, stepOrder, onSave, onCancel }: Sequence
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSave(formData)
+
+    // Markdown을 HTML로 변환
+    const emailBodyHtml = formData.emailBodyText
+      ? markdownToHtml(formData.emailBodyText)
+      : undefined
+
+    onSave({
+      ...formData,
+      emailBodyHtml,
+    })
   }
 
   return (

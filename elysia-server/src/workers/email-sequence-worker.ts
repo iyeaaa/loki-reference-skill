@@ -96,7 +96,10 @@ async function sendSequenceEmail(execution: {
 
     if (!emailAccount) {
       logger.error(
-        { executionId: execution.executionId, emailAccountId: execution.emailAccountId },
+        {
+          executionId: execution.executionId,
+          emailAccountId: execution.emailAccountId,
+        },
         "❌ [STEP-WORKER] Email account not found",
       )
       return {
@@ -140,6 +143,10 @@ async function sendSequenceEmail(execution: {
       subject: execution.emailSubject,
       text: execution.emailBodyText || undefined,
       html: execution.emailBodyHtml || undefined,
+      tracking_settings: {
+        open_tracking: { enable: true },
+        click_tracking: { enable: true, enable_text: true },
+      },
     }
 
     logger.info(
@@ -219,7 +226,11 @@ async function sendSequenceEmail(execution: {
     }
   } catch (error: unknown) {
     logger.error(
-      { err: error, leadId: execution.leadId, executionId: execution.executionId },
+      {
+        err: error,
+        leadId: execution.leadId,
+        executionId: execution.executionId,
+      },
       "💥 [STEP-WORKER] Error sending sequence email",
     )
     return {

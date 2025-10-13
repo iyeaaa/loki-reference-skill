@@ -18,6 +18,9 @@ export const sequenceKeys = {
   list: (params?: SequencesParams) => [...sequenceKeys.lists(), params] as const,
   detail: (id: string) => [...sequenceKeys.all, "detail", id] as const,
   steps: (sequenceId: string) => [...sequenceKeys.all, "steps", sequenceId] as const,
+  metrics: (sequenceId: string) => [...sequenceKeys.all, "metrics", sequenceId] as const,
+  enrollmentMetrics: (enrollmentId: string) =>
+    [...sequenceKeys.all, "enrollment-metrics", enrollmentId] as const,
   enrollments: (sequenceId: string) => [...sequenceKeys.all, "enrollments", sequenceId] as const,
   enrollmentsList: (sequenceId: string, page?: number) =>
     [...sequenceKeys.enrollments(sequenceId), page] as const,
@@ -97,7 +100,9 @@ export function useUpdateSequence() {
     mutationFn: ({ sequenceId, data }: { sequenceId: string; data: UpdateSequenceRequest }) =>
       sequencesApi.update(sequenceId, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: sequenceKeys.detail(variables.sequenceId) })
+      queryClient.invalidateQueries({
+        queryKey: sequenceKeys.detail(variables.sequenceId),
+      })
       queryClient.invalidateQueries({ queryKey: sequenceKeys.lists() })
       toast.success("시퀀스 정보가 업데이트되었습니다")
     },
@@ -209,8 +214,12 @@ export function useCreateEnrollment() {
     mutationFn: ({ sequenceId, data }: { sequenceId: string; data: CreateEnrollmentRequest }) =>
       sequencesApi.createEnrollment(sequenceId, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: sequenceKeys.enrollments(variables.sequenceId) })
-      queryClient.invalidateQueries({ queryKey: sequenceKeys.detail(variables.sequenceId) })
+      queryClient.invalidateQueries({
+        queryKey: sequenceKeys.enrollments(variables.sequenceId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: sequenceKeys.detail(variables.sequenceId),
+      })
       toast.success("시퀀스에 등록되었습니다")
     },
     onError: (error: Error) => {
@@ -233,7 +242,9 @@ export function useUpdateEnrollmentStatus() {
       status: string
     }) => sequencesApi.updateEnrollmentStatus(sequenceId, enrollmentId, status),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: sequenceKeys.enrollments(variables.sequenceId) })
+      queryClient.invalidateQueries({
+        queryKey: sequenceKeys.enrollments(variables.sequenceId),
+      })
       toast.success("등록 상태가 업데이트되었습니다")
     },
     onError: (error: Error) => {
@@ -278,8 +289,12 @@ export function useBulkEnroll() {
   return useMutation({
     mutationFn: (data: BulkEnrollRequest) => sequencesApi.bulkEnroll(data),
     onSuccess: (response, variables) => {
-      queryClient.invalidateQueries({ queryKey: sequenceKeys.enrollments(variables.sequenceId) })
-      queryClient.invalidateQueries({ queryKey: sequenceKeys.detail(variables.sequenceId) })
+      queryClient.invalidateQueries({
+        queryKey: sequenceKeys.enrollments(variables.sequenceId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: sequenceKeys.detail(variables.sequenceId),
+      })
       toast.success(`${response.enrolledCount || 0}명이 시퀀스에 등록되었습니다`)
     },
     onError: (error: Error) => {
@@ -312,14 +327,24 @@ export function useBulkEnrollWithScheduling() {
       data,
     }: {
       sequenceId: string
-      data: { leadIds: string[]; userEmailAccountId: string; enrolledBy?: string }
+      data: {
+        leadIds: string[]
+        userEmailAccountId: string
+        enrolledBy?: string
+      }
     }) => sequencesApi.bulkEnrollWithScheduling(sequenceId, data),
     onSuccess: (response, variables) => {
-      queryClient.invalidateQueries({ queryKey: sequenceKeys.enrollments(variables.sequenceId) })
-      queryClient.invalidateQueries({ queryKey: sequenceKeys.detail(variables.sequenceId) })
+      queryClient.invalidateQueries({
+        queryKey: sequenceKeys.enrollments(variables.sequenceId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: sequenceKeys.detail(variables.sequenceId),
+      })
       queryClient.invalidateQueries({ queryKey: sequenceKeys.lists() })
       toast.success(
-        `${response.enrolledCount || 0}명이 시퀀스에 등록되고 ${response.scheduledExecutions || 0}개의 이메일이 스케줄되었습니다`,
+        `${response.enrolledCount || 0}명이 시퀀스에 등록되고 ${
+          response.scheduledExecutions || 0
+        }개의 이메일이 스케줄되었습니다`,
       )
     },
     onError: (error: Error) => {
@@ -334,13 +359,37 @@ export function useActivateStepBasedSequence() {
   return useMutation({
     mutationFn: (sequenceId: string) => sequencesApi.activateStepBased(sequenceId),
     onSuccess: (response, sequenceId) => {
-      queryClient.invalidateQueries({ queryKey: sequenceKeys.detail(sequenceId) })
+      queryClient.invalidateQueries({
+        queryKey: sequenceKeys.detail(sequenceId),
+      })
       queryClient.invalidateQueries({ queryKey: sequenceKeys.lists() })
-      queryClient.invalidateQueries({ queryKey: sequenceKeys.enrollments(sequenceId) })
+      queryClient.invalidateQueries({
+        queryKey: sequenceKeys.enrollments(sequenceId),
+      })
       toast.success(response.message || "스텝 기반 시퀀스가 활성화되었습니다")
     },
     onError: (error: Error) => {
       toast.error(error.message || "시퀀스 활성화에 실패했습니다")
     },
+  })
+}
+
+// Get sequence metrics
+export function useSequenceMetrics(sequenceId: string) {
+  return useQuery({
+    queryKey: sequenceKeys.metrics(sequenceId),
+    queryFn: () => sequencesApi.getMetrics(sequenceId),
+    enabled: !!sequenceId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+}
+
+// Get enrollment metrics
+export function useEnrollmentMetrics(enrollmentId: string) {
+  return useQuery({
+    queryKey: sequenceKeys.enrollmentMetrics(enrollmentId),
+    queryFn: () => sequencesApi.getEnrollmentMetrics(enrollmentId),
+    enabled: !!enrollmentId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }

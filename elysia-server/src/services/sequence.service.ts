@@ -2,6 +2,7 @@ import { and, desc, eq, ilike, lte, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { customerGroups } from "../db/schema/customer-groups"
 import { userEmailAccounts } from "../db/schema/email-accounts"
+import { emailEvents, emails as emailsTable } from "../db/schema/emails"
 import { leadContacts } from "../db/schema/lead-details"
 import { leads } from "../db/schema/leads"
 import {
@@ -1066,4 +1067,331 @@ export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: 
   }
 
   return updated
+}
+
+// ====================================
+// SEQUENCE METRICS OPERATIONS
+// ====================================
+
+// GetSequenceMetrics - Get comprehensive metrics for a sequence
+export async function getSequenceMetrics(sequenceId: string) {
+  const { default: logger } = await import("../utils/logger")
+
+  logger.debug({ sequenceId }, "📊 [METRICS] Getting sequence metrics")
+
+  // 1. Get enrollment statistics
+  const enrollmentStats = await db
+    .select({
+      status: sequenceEnrollments.status,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(sequenceEnrollments)
+    .where(eq(sequenceEnrollments.sequenceId, sequenceId))
+    .groupBy(sequenceEnrollments.status)
+
+  // 2. Get email statistics from email_events
+  const emailStats = await db
+    .select({
+      eventType: emailEvents.eventType,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(emailEvents)
+    .innerJoin(emailsTable, eq(emailEvents.emailId, emailsTable.id))
+    .where(eq(emailsTable.sequenceId, sequenceId))
+    .groupBy(emailEvents.eventType)
+
+  // 3. Get total sent emails count
+  const totalSentResult = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(emailsTable)
+    .where(eq(emailsTable.sequenceId, sequenceId))
+
+  // 4. Get last sent email timestamp
+  const lastSentResult = await db
+    .select({ lastSentAt: emailsTable.sentAt })
+    .from(emailsTable)
+    .where(eq(emailsTable.sequenceId, sequenceId))
+    .orderBy(desc(emailsTable.sentAt))
+    .limit(1)
+
+  // Process enrollment statistics
+  const enrollmentCounts = {
+    total: 0,
+    active: 0,
+    completed: 0,
+    paused: 0,
+    stopped: 0,
+    bounced: 0,
+    unsubscribed: 0,
+  }
+
+  enrollmentStats.forEach((stat) => {
+    enrollmentCounts.total += stat.count
+    enrollmentCounts[stat.status as keyof typeof enrollmentCounts] = stat.count
+  })
+
+  // Process email statistics
+  const emailCounts = {
+    totalSent: totalSentResult[0]?.count || 0,
+    delivered: 0,
+    opened: 0,
+    clicked: 0,
+    bounced: 0,
+    dropped: 0,
+    unsubscribed: 0,
+  }
+
+  emailStats.forEach((stat) => {
+    switch (stat.eventType) {
+      case "delivered":
+        emailCounts.delivered = stat.count
+        break
+      case "open":
+        emailCounts.opened = stat.count
+        break
+      case "click":
+        emailCounts.clicked = stat.count
+        break
+      case "bounce":
+        emailCounts.bounced = stat.count
+        break
+      case "dropped":
+        emailCounts.dropped = stat.count
+        break
+      case "unsubscribe":
+        emailCounts.unsubscribed = stat.count
+        break
+    }
+  })
+
+  // Calculate rates
+  const openRate =
+    emailCounts.delivered > 0 ? (emailCounts.opened / emailCounts.delivered) * 100 : 0
+  const clickRate =
+    emailCounts.delivered > 0 ? (emailCounts.clicked / emailCounts.delivered) * 100 : 0
+  const bounceRate =
+    emailCounts.totalSent > 0 ? (emailCounts.bounced / emailCounts.totalSent) * 100 : 0
+
+  const metrics = {
+    // 발송 통계
+    totalSent: emailCounts.totalSent,
+    delivered: emailCounts.delivered,
+    bounced: emailCounts.bounced,
+    dropped: emailCounts.dropped,
+
+    // 참여 통계
+    opened: emailCounts.opened,
+    clicked: emailCounts.clicked,
+    replied: 0, // TODO: Implement reply detection
+    unsubscribed: emailCounts.unsubscribed,
+
+    // 성과 지표
+    openRate: Math.round(openRate * 10) / 10,
+    clickRate: Math.round(clickRate * 10) / 10,
+    replyRate: 0, // TODO: Implement reply detection
+    bounceRate: Math.round(bounceRate * 10) / 10,
+
+    // 시퀀스 진행도
+    totalEnrollments: enrollmentCounts.total,
+    activeEnrollments: enrollmentCounts.active,
+    completedEnrollments: enrollmentCounts.completed,
+    pausedEnrollments: enrollmentCounts.paused,
+
+    // 시간별 통계
+    lastSentAt: lastSentResult[0]?.lastSentAt?.toISOString(),
+  }
+
+  logger.info(
+    {
+      sequenceId,
+      metrics: {
+        totalSent: metrics.totalSent,
+        delivered: metrics.delivered,
+        openRate: metrics.openRate,
+        clickRate: metrics.clickRate,
+        totalEnrollments: metrics.totalEnrollments,
+      },
+    },
+    "📊 [METRICS] Sequence metrics calculated",
+  )
+
+  return metrics
+}
+
+// GetEnrollmentMetrics - Get detailed metrics for a specific enrollment
+export async function getEnrollmentMetrics(enrollmentId: string) {
+  const { default: logger } = await import("../utils/logger")
+
+  logger.debug({ enrollmentId }, "📊 [METRICS] Getting enrollment metrics")
+
+  // 1. Get enrollment details
+  const enrollmentResult = await db
+    .select({
+      id: sequenceEnrollments.id,
+      companyName: leads.companyName,
+      emailAddress: userEmailAccounts.emailAddress,
+      status: sequenceEnrollments.status,
+      enrolledAt: sequenceEnrollments.enrolledAt,
+      currentStep: sequenceEnrollments.currentStepOrder,
+      firstEmailSentAt: sequenceEnrollments.firstEmailSentAt,
+      lastEmailSentAt: sequenceEnrollments.lastEmailSentAt,
+    })
+    .from(sequenceEnrollments)
+    .innerJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
+    .innerJoin(userEmailAccounts, eq(sequenceEnrollments.userEmailAccountId, userEmailAccounts.id))
+    .where(eq(sequenceEnrollments.id, enrollmentId))
+    .limit(1)
+
+  if (enrollmentResult.length === 0) {
+    throw new Error("Enrollment not found")
+  }
+
+  const enrollment = enrollmentResult[0]!
+
+  // 2. Get total steps for this sequence
+  const stepsResult = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(sequenceSteps)
+    .innerJoin(sequenceEnrollments, eq(sequenceSteps.sequenceId, sequenceEnrollments.sequenceId))
+    .where(eq(sequenceEnrollments.id, enrollmentId))
+
+  const totalSteps = stepsResult[0]?.count || 0
+
+  // 3. Get email statistics for this enrollment
+  // Note: We need to get emails through sequence_step_executions since emails table doesn't have enrollmentId
+  const emailStats = await db
+    .select({
+      eventType: emailEvents.eventType,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(emailEvents)
+    .innerJoin(emailsTable, eq(emailEvents.emailId, emailsTable.id))
+    .innerJoin(sequenceStepExecutions, eq(emailsTable.id, sequenceStepExecutions.emailId))
+    .where(eq(sequenceStepExecutions.enrollmentId, enrollmentId))
+    .groupBy(emailEvents.eventType)
+
+  // Process email statistics
+  const emailCounts = {
+    emailsSent: 0,
+    emailsDelivered: 0,
+    emailsOpened: 0,
+    emailsClicked: 0,
+    emailsReplied: 0,
+    emailsBounced: 0,
+  }
+
+  emailStats.forEach((stat) => {
+    switch (stat.eventType) {
+      case "processed":
+        emailCounts.emailsSent = stat.count
+        break
+      case "delivered":
+        emailCounts.emailsDelivered = stat.count
+        break
+      case "open":
+        emailCounts.emailsOpened = stat.count
+        break
+      case "click":
+        emailCounts.emailsClicked = stat.count
+        break
+      case "bounce":
+        emailCounts.emailsBounced = stat.count
+        break
+    }
+  })
+
+  // Calculate rates
+  const openRate =
+    emailCounts.emailsDelivered > 0
+      ? (emailCounts.emailsOpened / emailCounts.emailsDelivered) * 100
+      : 0
+  const clickRate =
+    emailCounts.emailsDelivered > 0
+      ? (emailCounts.emailsClicked / emailCounts.emailsDelivered) * 100
+      : 0
+  const bounceRate =
+    emailCounts.emailsSent > 0 ? (emailCounts.emailsBounced / emailCounts.emailsSent) * 100 : 0
+
+  const metrics = {
+    companyName: enrollment.companyName || "알 수 없음",
+    emailAddress: enrollment.emailAddress || "",
+    enrollmentId: enrollment.id,
+    status: enrollment.status,
+    enrolledAt: enrollment.enrolledAt.toISOString(),
+    currentStep: enrollment.currentStep,
+    totalSteps: totalSteps,
+
+    // 이메일 발송 통계
+    emailsSent: emailCounts.emailsSent,
+    emailsDelivered: emailCounts.emailsDelivered,
+    emailsOpened: emailCounts.emailsOpened,
+    emailsClicked: emailCounts.emailsClicked,
+    emailsReplied: emailCounts.emailsReplied,
+    emailsBounced: emailCounts.emailsBounced,
+
+    // 성과 지표
+    openRate: Math.round(openRate * 10) / 10,
+    clickRate: Math.round(clickRate * 10) / 10,
+    replyRate: 0, // TODO: Implement reply detection
+    bounceRate: Math.round(bounceRate * 10) / 10,
+
+    // 시간 통계
+    firstEmailSentAt: enrollment.firstEmailSentAt?.toISOString(),
+    lastEmailSentAt: enrollment.lastEmailSentAt?.toISOString(),
+
+    // 상세 이메일 이력
+    emailHistory: await getEmailHistoryForEnrollment(enrollmentId),
+  }
+
+  logger.info(
+    {
+      enrollmentId,
+      companyName: metrics.companyName,
+      emailsSent: metrics.emailsSent,
+      openRate: metrics.openRate,
+      clickRate: metrics.clickRate,
+    },
+    "📊 [METRICS] Enrollment metrics calculated",
+  )
+
+  return metrics
+}
+
+// GetEmailHistoryForEnrollment - Get detailed email history for an enrollment
+async function getEmailHistoryForEnrollment(enrollmentId: string) {
+  const { default: logger } = await import("../utils/logger")
+
+  logger.debug({ enrollmentId }, "📧 [HISTORY] Getting email history for enrollment")
+
+  // Get emails through sequence_step_executions
+  const emailHistory = await db
+    .select({
+      stepOrder: sequenceStepExecutions.stepOrder,
+      subject: emailsTable.subject,
+      sentAt: emailsTable.sentAt,
+      status: emailsTable.status,
+      openCount: emailsTable.openCount,
+      clickCount: emailsTable.clickCount,
+      deliveredAt: emailsTable.deliveredAt,
+      openedAt: emailsTable.openedAt,
+      clickedAt: emailsTable.clickedAt,
+      repliedAt: emailsTable.repliedAt,
+    })
+    .from(sequenceStepExecutions)
+    .innerJoin(emailsTable, eq(sequenceStepExecutions.emailId, emailsTable.id))
+    .where(eq(sequenceStepExecutions.enrollmentId, enrollmentId))
+    .orderBy(sequenceStepExecutions.stepOrder)
+
+  return emailHistory.map((email) => ({
+    stepOrder: email.stepOrder,
+    subject: email.subject || "제목 없음",
+    sentAt: email.sentAt?.toISOString() || "",
+    status: email.status,
+    openCount: email.openCount || 0,
+    clickCount: email.clickCount || 0,
+    deliveredAt: email.deliveredAt?.toISOString(),
+    openedAt: email.openedAt?.toISOString(),
+    clickedAt: email.clickedAt?.toISOString(),
+    repliedAt: email.repliedAt?.toISOString(),
+  }))
 }

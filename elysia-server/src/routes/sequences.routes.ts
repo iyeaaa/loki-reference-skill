@@ -352,7 +352,10 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
       )
 
       const [defaultEmailAccount] = await db
-        .select({ id: userEmailAccounts.id, emailAddress: userEmailAccounts.emailAddress })
+        .select({
+          id: userEmailAccounts.id,
+          emailAddress: userEmailAccounts.emailAddress,
+        })
         .from(userEmailAccounts)
         .where(eq(userEmailAccounts.workspaceId, currentSequence.workspaceId))
         .limit(1)
@@ -387,7 +390,10 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
       ;(async () => {
         try {
           logger.info(
-            { sequenceId: id, customerGroupId: currentSequence.customerGroupId },
+            {
+              sequenceId: id,
+              customerGroupId: currentSequence.customerGroupId,
+            },
             "🔄 [STEP-BASED] Starting background enrollment",
           )
 
@@ -640,8 +646,41 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
     },
   )
 
+  // SEQUENCE METRICS ROUTES
+  // ====================================
+
+  // Get sequence metrics
+  .get(
+    "/:id/metrics",
+    async ({ params: { id } }) => {
+      const metrics = await sequenceService.getSequenceMetrics(id)
+      return { data: metrics }
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
+  // Get enrollment metrics
+  .get(
+    "/enrollments/:enrollmentId/metrics",
+    async ({ params: { enrollmentId } }) => {
+      const metrics = await sequenceService.getEnrollmentMetrics(enrollmentId)
+      return { data: metrics }
+    },
+    {
+      params: t.Object({
+        enrollmentId: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
 // Admin bulk update routes
-export const adminSequenceRoutes = new Elysia({ prefix: "/api/v1/admin/sequences" })
+export const adminSequenceRoutes = new Elysia({
+  prefix: "/api/v1/admin/sequences",
+})
   // Bulk update status
   .put(
     "/bulk/status",
@@ -714,7 +753,9 @@ export const adminSequenceRoutes = new Elysia({ prefix: "/api/v1/admin/sequences
         return result
       } catch (error: unknown) {
         set.status = 400
-        return { error: error instanceof Error ? error.message : "Unknown error" }
+        return {
+          error: error instanceof Error ? error.message : "Unknown error",
+        }
       }
     },
     {

@@ -1,9 +1,10 @@
 import { Play } from "lucide-react"
 import { useState } from "react"
+import { SequenceMetrics } from "@/components/SequenceMetrics"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useSequence } from "@/lib/api/hooks/sequences"
+import { useSequence, useSequenceMetrics } from "@/lib/api/hooks/sequences"
 import { EnrollLeadsDialog } from "./EnrollLeadsDialog"
 import { SequenceEnrollmentsTable } from "./SequenceEnrollmentsTable"
 import { SequenceStepsList } from "./SequenceStepList"
@@ -17,6 +18,7 @@ export function SequenceDetailTabs({ sequenceId }: SequenceDetailTabsProps) {
   const [showEnrollDialog, setShowEnrollDialog] = useState(false)
 
   const { data: sequence } = useSequence(sequenceId)
+  const { data: metricsData, isLoading: metricsLoading } = useSequenceMetrics(sequenceId)
 
   return (
     <>
@@ -36,10 +38,20 @@ export function SequenceDetailTabs({ sequenceId }: SequenceDetailTabsProps) {
         </CardHeader>
         <CardContent className="pt-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsList className="grid w-full grid-cols-3 mb-4">
               <TabsTrigger value="steps">시퀀스 스텝</TabsTrigger>
+              <TabsTrigger value="metrics">성과 지표</TabsTrigger>
               <TabsTrigger value="enrollments">등록 현황</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="metrics" className="space-y-4">
+              <SequenceMetrics
+                sequenceId={sequenceId}
+                sequenceName={sequence?.name || "시퀀스"}
+                metrics={metricsData?.data}
+                isLoading={metricsLoading}
+              />
+            </TabsContent>
 
             <TabsContent value="steps" className="space-y-4">
               <SequenceStepsList sequenceId={sequenceId} isEdit={true} />

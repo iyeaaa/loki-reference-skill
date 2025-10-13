@@ -205,4 +205,82 @@ export const sequencesApi = {
       },
     )
   },
+
+  // Get sequence metrics
+  getMetrics: (sequenceId: string) => {
+    return apiFetch<{
+      data: {
+        // 발송 통계
+        totalSent: number
+        delivered: number
+        bounced: number
+        dropped: number
+
+        // 참여 통계
+        opened: number
+        clicked: number
+        replied: number
+        unsubscribed: number
+
+        // 성과 지표
+        openRate: number
+        clickRate: number
+        replyRate: number
+        bounceRate: number
+
+        // 시퀀스 진행도
+        totalEnrollments: number
+        activeEnrollments: number
+        completedEnrollments: number
+        pausedEnrollments: number
+
+        // 시간별 통계
+        lastSentAt?: string
+      }
+    }>(`/api/v1/sequences/${sequenceId}/metrics`)
+  },
+
+  // Get enrollment metrics
+  getEnrollmentMetrics: (enrollmentId: string) => {
+    return apiFetch<{
+      data: {
+        companyName: string
+        emailAddress: string
+        enrollmentId: string
+        status: string
+        enrolledAt: string
+        currentStep: number
+        totalSteps: number
+
+        // 이메일 발송 통계
+        emailsSent: number
+        emailsDelivered: number
+        emailsOpened: number
+        emailsClicked: number
+        emailsReplied: number
+        emailsBounced: number
+
+        // 성과 지표
+        openRate: number
+        clickRate: number
+        replyRate: number
+        bounceRate: number
+
+        // 시간 통계
+        firstEmailSentAt?: string
+        lastEmailSentAt?: string
+
+        // 상세 이메일 이력
+        emailHistory: Array<{
+          stepOrder: number
+          subject: string
+          sentAt: string
+          status: "sent" | "delivered" | "opened" | "clicked" | "replied" | "bounced"
+          openCount: number
+          clickCount: number
+          replyAt?: string
+        }>
+      }
+    }>(`/api/v1/sequences/enrollments/${enrollmentId}/metrics`)
+  },
 }

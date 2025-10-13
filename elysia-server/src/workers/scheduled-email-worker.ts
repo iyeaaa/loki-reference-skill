@@ -76,6 +76,11 @@ async function sendScheduledEmail(email: {
       html: email.bodyHtml || undefined,
       cc: email.ccEmails && email.ccEmails.length > 0 ? email.ccEmails : undefined,
       bcc: email.bccEmails && email.bccEmails.length > 0 ? email.bccEmails : undefined,
+
+      tracking_settings: {
+        open_tracking: { enable: true },
+        click_tracking: { enable: true, enable_text: true },
+      },
     }
 
     // Send email

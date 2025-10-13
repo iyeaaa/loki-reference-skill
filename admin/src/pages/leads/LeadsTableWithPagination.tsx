@@ -296,17 +296,26 @@ export function LeadsTableWithPagination({
                   >
                     {lead.companyName || lead.foundCompanyName || "-"}
                   </td>
-                  <td
-                    className="p-2 text-sm text-gray-900 dark:text-gray-100"
-                    title={lead.websiteUrl || lead.finalUrl || "-"}
-                    style={{
-                      maxWidth: "300px",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {lead.websiteUrl || lead.finalUrl || "-"}
+                  <td className="p-2 text-sm text-gray-900 dark:text-gray-100">
+                    {lead.websiteUrl || lead.finalUrl ? (
+                      <a
+                        href={lead.websiteUrl || lead.finalUrl || ""}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline block truncate"
+                        title={lead.websiteUrl || lead.finalUrl || ""}
+                        style={{
+                          maxWidth: "300px",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {lead.websiteUrl || lead.finalUrl}
+                      </a>
+                    ) : (
+                      "-"
+                    )}
                   </td>
                   <td
                     className="p-2 text-sm text-gray-900 dark:text-gray-100"

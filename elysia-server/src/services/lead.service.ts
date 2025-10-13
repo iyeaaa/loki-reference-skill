@@ -159,29 +159,43 @@ export async function createLead(data: {
 
   // Insert contacts if provided
   if (data.contacts && data.contacts.length > 0) {
-    await db.insert(leadContacts).values(
-      data.contacts.map((contact) => ({
-        leadId: newLead.id,
-        contactType: contact.contactType,
-        contactValue: contact.contactValue,
-        label: contact.label,
-        isPrimary: contact.isPrimary || false,
-        isVerified: false,
-      })),
+    // Validate that all required fields are present
+    const validContacts = data.contacts.filter(
+      (contact) => contact.contactType && contact.contactValue && contact.contactValue.trim() !== ""
     )
+
+    if (validContacts.length > 0) {
+      await db.insert(leadContacts).values(
+        validContacts.map((contact) => ({
+          leadId: newLead.id,
+          contactType: contact.contactType,
+          contactValue: contact.contactValue,
+          label: contact.label,
+          isPrimary: contact.isPrimary || false,
+          isVerified: false,
+        })),
+      )
+    }
   }
 
   // Insert social media if provided
   if (data.socialMedia && data.socialMedia.length > 0) {
-    await db.insert(leadSocialMedia).values(
-      data.socialMedia.map((social) => ({
-        leadId: newLead.id,
-        platform: social.platform,
-        url: social.url,
-        username: social.username,
-        isVerified: false,
-      })),
+    // Validate that all required fields are present
+    const validSocialMedia = data.socialMedia.filter(
+      (social) => social.platform && social.url && social.url.trim() !== ""
     )
+
+    if (validSocialMedia.length > 0) {
+      await db.insert(leadSocialMedia).values(
+        validSocialMedia.map((social) => ({
+          leadId: newLead.id,
+          platform: social.platform,
+          url: social.url,
+          username: social.username,
+          isVerified: false,
+        })),
+      )
+    }
   }
 
   return newLead
@@ -268,16 +282,23 @@ export async function updateLead(
 
     // Insert new contacts
     if (contacts.length > 0) {
-      await db.insert(leadContacts).values(
-        contacts.map((contact) => ({
-          leadId: id,
-          contactType: contact.contactType,
-          contactValue: contact.contactValue,
-          label: contact.label,
-          isPrimary: contact.isPrimary || false,
-          isVerified: false,
-        })),
+      // Validate that all required fields are present
+      const validContacts = contacts.filter(
+        (contact) => contact.contactType && contact.contactValue && contact.contactValue.trim() !== ""
       )
+
+      if (validContacts.length > 0) {
+        await db.insert(leadContacts).values(
+          validContacts.map((contact) => ({
+            leadId: id,
+            contactType: contact.contactType,
+            contactValue: contact.contactValue,
+            label: contact.label,
+            isPrimary: contact.isPrimary || false,
+            isVerified: false,
+          })),
+        )
+      }
     }
   }
 
@@ -288,15 +309,22 @@ export async function updateLead(
 
     // Insert new social media
     if (socialMedia.length > 0) {
-      await db.insert(leadSocialMedia).values(
-        socialMedia.map((social) => ({
-          leadId: id,
-          platform: social.platform,
-          url: social.url,
-          username: social.username,
-          isVerified: false,
-        })),
+      // Validate that all required fields are present
+      const validSocialMedia = socialMedia.filter(
+        (social) => social.platform && social.url && social.url.trim() !== ""
       )
+
+      if (validSocialMedia.length > 0) {
+        await db.insert(leadSocialMedia).values(
+          validSocialMedia.map((social) => ({
+            leadId: id,
+            platform: social.platform,
+            url: social.url,
+            username: social.username,
+            isVerified: false,
+          })),
+        )
+      }
     }
   }
 

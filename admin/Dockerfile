@@ -23,7 +23,7 @@ COPY .yarn ./.yarn
 ENV SKIP_SWCPACK_POSTINSTALL=true
 
 # Install dependencies with retry logic
-RUN yarn install --immutable || yarn install --immutable --mode=skip-build
+RUN yarn install --immutable || yarn install --mode=skip-build
 
 # Copy source code including .env file
 COPY . .

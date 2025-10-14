@@ -47,9 +47,7 @@ export function ConfirmDialog({
           <AlertDialogAction
             onClick={handleConfirm}
             className={
-              variant === "destructive"
-                ? "bg-red-600 hover:bg-red-700 text-white"
-                : undefined
+              variant === "destructive" ? "bg-red-600 hover:bg-red-700 text-white" : undefined
             }
           >
             {confirmText}

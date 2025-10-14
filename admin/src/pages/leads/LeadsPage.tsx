@@ -41,6 +41,7 @@ import type { Lead, LeadStatus } from "@/lib/api/types/lead"
 import type { Workspace } from "@/lib/api/types/workspace"
 import { generateCSVTemplate, type LeadCSVData, parseCSV, validateCSVData } from "@/lib/csv-utils"
 import { BulkActionModal } from "./BulkActionModal"
+import { CreateGroupModal } from "./CreateGroupModal"
 import { GroupEditModal } from "./GroupEditModal"
 import { LeadForm } from "./LeadForm"
 import { LeadGroupManagementModal } from "./LeadGroupManagementModal"
@@ -537,70 +538,86 @@ export default function LeadsPage() {
           </div>
 
           {/* 고객 그룹 선택 */}
-          {selectedWorkspaceId !== "all" && customerGroups && customerGroups.length > 0 && (
+          {selectedWorkspaceId !== "all" && (
             <div className="mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <Users className="h-4 w-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700">고객 그룹 필터</span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-700">고객 그룹 필터</span>
+                </div>
+                <CreateGroupModal
+                  workspaces={workspaces}
+                  selectedWorkspaceId={selectedWorkspaceId}
+                  onSuccess={(groupId) => {
+                    // 생성된 그룹을 자동으로 선택
+                    setSelectedCustomerGroup(groupId)
+                  }}
+                />
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedCustomerGroup("")}
-                  className={`text-xs ${
-                    selectedCustomerGroup === ""
-                      ? "bg-violet-500/10 border-violet-500 text-violet-500 font-medium"
-                      : "hover:bg-violet-500/5 hover:border-violet-500/50"
-                  }`}
-                >
-                  전체
-                </Button>
-                {customerGroups.map((group) => (
-                  <div key={group.id} className="inline-flex items-center gap-1 group/item">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedCustomerGroup(group.id)}
-                      className={`text-xs relative ${
-                        selectedCustomerGroup === group.id
-                          ? "bg-violet-500/10 border-violet-500 text-violet-500 font-medium"
-                          : "hover:bg-violet-500/5 hover:border-violet-500/50"
-                      }`}
-                    >
-                      <Users
-                        className={`h-3 w-3 mr-1 ${
-                          selectedCustomerGroup === group.id ? "text-violet-500" : ""
+              {customerGroups && customerGroups.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedCustomerGroup("")}
+                    className={`text-xs ${
+                      selectedCustomerGroup === ""
+                        ? "bg-violet-500/10 border-violet-500 text-violet-500 font-medium"
+                        : "hover:bg-violet-500/5 hover:border-violet-500/50"
+                    }`}
+                  >
+                    전체
+                  </Button>
+                  {customerGroups.map((group) => (
+                    <div key={group.id} className="inline-flex items-center gap-1 group/item">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedCustomerGroup(group.id)}
+                        className={`text-xs relative ${
+                          selectedCustomerGroup === group.id
+                            ? "bg-violet-500/10 border-violet-500 text-violet-500 font-medium"
+                            : "hover:bg-violet-500/5 hover:border-violet-500/50"
                         }`}
-                      />
-                      {group.name}
-                      {group.leadCount !== undefined && (
-                        <span className="ml-1.5 text-xs opacity-70">({group.leadCount})</span>
-                      )}
-                    </Button>
-                    <div className="opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditGroup(group)}
-                        className="h-8 w-8 p-0 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600"
-                        title="편집"
                       >
-                        <Edit2 className="h-3.5 w-3.5" />
+                        <Users
+                          className={`h-3 w-3 mr-1 ${
+                            selectedCustomerGroup === group.id ? "text-violet-500" : ""
+                          }`}
+                        />
+                        {group.name}
+                        {group.leadCount !== undefined && (
+                          <span className="ml-1.5 text-xs opacity-70">({group.leadCount})</span>
+                        )}
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteGroup(group)}
-                        className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50 hover:text-red-600"
-                        title="삭제"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditGroup(group)}
+                          className="h-8 w-8 p-0 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600"
+                          title="편집"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteGroup(group)}
+                          className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50 hover:text-red-600"
+                          title="삭제"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground text-center py-4 bg-gray-50 rounded-md">
+                  이 워크스페이스에는 아직 그룹이 없습니다. 위 버튼을 클릭하여 첫 그룹을 생성하세요.
+                </div>
+              )}
             </div>
           )}
           {/* Bulk Actions */}

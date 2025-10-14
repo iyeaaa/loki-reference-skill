@@ -1,12 +1,19 @@
-import { ChevronLeft, ChevronRight, Copy, Edit, Users } from "lucide-react"
+import { ChevronLeft, ChevronRight, Copy, Edit, Trash2, Users } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useLeads } from "@/lib/api/hooks/leads"
+import { useDeleteLead, useLeads } from "@/lib/api/hooks/leads"
 import type { Lead, LeadStatus, LeadsParams } from "@/lib/api/types/lead"
 import { formatRelativeTime } from "@/lib/date-utils"
 
@@ -80,6 +87,9 @@ export function LeadsTableWithPagination({
   const leads = leadsData?.leads || []
   const totalPages = leadsData?.totalPages || 1
   const total = leadsData?.total || 0
+
+  // Delete mutation
+  const deleteLead = useDeleteLead()
 
   console.log("leads", leads)
 
@@ -168,6 +178,12 @@ export function LeadsTableWithPagination({
     } catch (error) {
       console.error("Failed to copy:", error)
       toast.error("복사에 실패했습니다")
+    }
+  }
+
+  const handleDeleteLead = (leadId: string, leadName: string) => {
+    if (window.confirm(`"${leadName}" 리드를 삭제하시겠습니까?`)) {
+      deleteLead.mutate(leadId)
     }
   }
 
@@ -318,704 +334,735 @@ export function LeadsTableWithPagination({
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {leads.map((lead) => (
-                <tr
-                  key={lead.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group/row relative"
-                >
-                  {/* 1. Checkbox */}
-                  <td className="sticky left-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800 group-hover/row:bg-gray-50 dark:group-hover/row:bg-gray-700">
-                    <Checkbox
-                      checked={selectedLeads.includes(lead.id)}
-                      onCheckedChange={() => onToggleLead(lead.id)}
-                    />
-                  </td>
+                <ContextMenu key={lead.id}>
+                  <ContextMenuTrigger asChild>
+                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group/row relative">
+                      {/* 1. Checkbox */}
+                      <td className="sticky left-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800 group-hover/row:bg-gray-50 dark:group-hover/row:bg-gray-700">
+                        <Checkbox
+                          checked={selectedLeads.includes(lead.id)}
+                          onCheckedChange={() => onToggleLead(lead.id)}
+                        />
+                      </td>
 
-                  {/* 2. 회사명 (companyName) */}
-                  <td className="p-2 text-sm font-medium text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.companyName || lead.foundCompanyName ? (
-                      <>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div
-                                className="cursor-default line-clamp-3 max-w-[180px]"
-                                style={{
-                                  display: "-webkit-box",
-                                  WebkitLineClamp: 3,
-                                  WebkitBoxOrient: "vertical",
-                                  overflow: "hidden",
-                                }}
-                              >
-                                {lead.companyName || lead.foundCompanyName}
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-md">
-                              <p className="whitespace-pre-wrap">
-                                {lead.companyName || lead.foundCompanyName}
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(lead.companyName || lead.foundCompanyName || "")
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
+                      {/* 2. 회사명 (companyName) */}
+                      <td className="p-2 text-sm font-medium text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.companyName || lead.foundCompanyName ? (
+                          <>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className="cursor-default line-clamp-3 max-w-[180px]"
+                                    style={{
+                                      display: "-webkit-box",
+                                      WebkitLineClamp: 3,
+                                      WebkitBoxOrient: "vertical",
+                                      overflow: "hidden",
+                                    }}
+                                  >
+                                    {lead.companyName || lead.foundCompanyName}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-md">
+                                  <p className="whitespace-pre-wrap">
+                                    {lead.companyName || lead.foundCompanyName}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(
+                                  lead.companyName || lead.foundCompanyName || "",
+                                )
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
 
-                  {/* 3. 웹사이트 (websiteUrl) */}
-                  <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.websiteUrl ? (
-                      <>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <a
-                                href={lead.websiteUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline block max-w-[220px]"
-                                style={{
-                                  display: "-webkit-box",
-                                  WebkitLineClamp: 3,
-                                  WebkitBoxOrient: "vertical",
-                                  overflow: "hidden",
-                                }}
-                              >
-                                {lead.websiteUrl}
-                              </a>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-md">
-                              <p className="break-all">{lead.websiteUrl}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(lead.websiteUrl || "")
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
+                      {/* 3. 웹사이트 (websiteUrl) */}
+                      <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.websiteUrl ? (
+                          <>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <a
+                                    href={lead.websiteUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline block max-w-[220px]"
+                                    style={{
+                                      display: "-webkit-box",
+                                      WebkitLineClamp: 3,
+                                      WebkitBoxOrient: "vertical",
+                                      overflow: "hidden",
+                                    }}
+                                  >
+                                    {lead.websiteUrl}
+                                  </a>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-md">
+                                  <p className="break-all">{lead.websiteUrl}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(lead.websiteUrl || "")
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
 
-                  {/* 4. 회사 설명 (description) */}
-                  <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.description ? (
-                      <>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div
-                                className="cursor-default max-w-[250px]"
-                                style={{
-                                  display: "-webkit-box",
-                                  WebkitLineClamp: 3,
-                                  WebkitBoxOrient: "vertical",
-                                  overflow: "hidden",
-                                }}
-                              >
-                                {lead.description}
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-md">
-                              <p className="whitespace-pre-wrap">{lead.description}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(lead.description || "")
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
+                      {/* 4. 회사 설명 (description) */}
+                      <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.description ? (
+                          <>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className="cursor-default max-w-[250px]"
+                                    style={{
+                                      display: "-webkit-box",
+                                      WebkitLineClamp: 3,
+                                      WebkitBoxOrient: "vertical",
+                                      overflow: "hidden",
+                                    }}
+                                  >
+                                    {lead.description}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-md">
+                                  <p className="whitespace-pre-wrap">{lead.description}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(lead.description || "")
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
 
-                  {/* 5. 상태 (leadStatus) */}
-                  <td className="p-2 whitespace-nowrap text-sm">
-                    <Badge variant={getStatusBadgeVariant(lead.leadStatus)} className="text-xs">
-                      {getStatusText(lead.leadStatus)}
-                    </Badge>
-                  </td>
+                      {/* 5. 상태 (leadStatus) */}
+                      <td className="p-2 whitespace-nowrap text-sm">
+                        <Badge variant={getStatusBadgeVariant(lead.leadStatus)} className="text-xs">
+                          {getStatusText(lead.leadStatus)}
+                        </Badge>
+                      </td>
 
-                  {/* 6. 업종 (businessType) */}
-                  <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.businessType ? (
-                      <>
-                        <div
-                          className="cursor-default max-w-[120px]"
-                          style={{
-                            display: "-webkit-box",
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                          title={lead.businessType}
-                        >
-                          {lead.businessType}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(lead.businessType || "")
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
+                      {/* 6. 업종 (businessType) */}
+                      <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.businessType ? (
+                          <>
+                            <div
+                              className="cursor-default max-w-[120px]"
+                              style={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                              title={lead.businessType}
+                            >
+                              {lead.businessType}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(lead.businessType || "")
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
 
-                  {/* 7. 국가 (country) */}
-                  <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.country ? (
-                      <>
-                        <div className="cursor-default" title={lead.country}>
-                          {lead.country}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(lead.country || "")
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
+                      {/* 7. 국가 (country) */}
+                      <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.country ? (
+                          <>
+                            <div className="cursor-default" title={lead.country}>
+                              {lead.country}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(lead.country || "")
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
 
-                  {/* 8. 도시 (city) */}
-                  <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.city ? (
-                      <>
-                        <div className="cursor-default" title={lead.city}>
-                          {lead.city}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(lead.city || "")
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
+                      {/* 8. 도시 (city) */}
+                      <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.city ? (
+                          <>
+                            <div className="cursor-default" title={lead.city}>
+                              {lead.city}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(lead.city || "")
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
 
-                  {/* 9. 설립년도 (foundedYear) */}
-                  <td className="p-2 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100">
-                    {lead.foundedYear || "-"}
-                  </td>
+                      {/* 9. 설립년도 (foundedYear) */}
+                      <td className="p-2 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100">
+                        {lead.foundedYear || "-"}
+                      </td>
 
-                  {/* 10. 직원수 (employeeCount) */}
-                  <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.employeeCount ? (
-                      <>
-                        <div className="cursor-default" title={lead.employeeCount}>
-                          {lead.employeeCount}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(lead.employeeCount || "")
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
+                      {/* 10. 직원수 (employeeCount) */}
+                      <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.employeeCount ? (
+                          <>
+                            <div className="cursor-default" title={lead.employeeCount}>
+                              {lead.employeeCount}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(lead.employeeCount || "")
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
 
-                  {/* 11. 전화번호 (contacts - phone) */}
-                  <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.contacts &&
-                    lead.contacts.filter((c) => c.contactType === "phone").length > 0 ? (
-                      <>
-                        <div
-                          className="cursor-default max-w-[140px]"
-                          style={{
-                            display: "-webkit-box",
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                          title={lead.contacts
-                            .filter((c) => c.contactType === "phone")
-                            .map((c) => c.contactValue)
-                            .join(", ")}
-                        >
-                          {lead.contacts
-                            .filter((c) => c.contactType === "phone")
-                            .map((c) => c.contactValue)
-                            .join(", ")}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(
-                              (lead.contacts || [])
+                      {/* 11. 전화번호 (contacts - phone) */}
+                      <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.contacts &&
+                        lead.contacts.filter((c) => c.contactType === "phone").length > 0 ? (
+                          <>
+                            <div
+                              className="cursor-default max-w-[140px]"
+                              style={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                              title={lead.contacts
                                 .filter((c) => c.contactType === "phone")
                                 .map((c) => c.contactValue)
-                                .join(", ") || "",
-                            )
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      <span>-</span>
-                    )}
-                  </td>
+                                .join(", ")}
+                            >
+                              {lead.contacts
+                                .filter((c) => c.contactType === "phone")
+                                .map((c) => c.contactValue)
+                                .join(", ")}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(
+                                  (lead.contacts || [])
+                                    .filter((c) => c.contactType === "phone")
+                                    .map((c) => c.contactValue)
+                                    .join(", ") || "",
+                                )
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          <span>-</span>
+                        )}
+                      </td>
 
-                  {/* 12. 이메일 (contacts - email) */}
-                  <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.contacts &&
-                    lead.contacts.filter((c) => c.contactType === "email").length > 0 ? (
-                      <>
-                        <div
-                          className="cursor-default max-w-[180px]"
-                          style={{
-                            display: "-webkit-box",
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                          title={lead.contacts
-                            .filter((c) => c.contactType === "email")
-                            .map((c) => c.contactValue)
-                            .join(", ")}
-                        >
-                          {lead.contacts
-                            .filter((c) => c.contactType === "email")
-                            .map((c) => c.contactValue)
-                            .join(", ")}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(
-                              (lead.contacts || [])
+                      {/* 12. 이메일 (contacts - email) */}
+                      <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.contacts &&
+                        lead.contacts.filter((c) => c.contactType === "email").length > 0 ? (
+                          <>
+                            <div
+                              className="cursor-default max-w-[180px]"
+                              style={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                              title={lead.contacts
                                 .filter((c) => c.contactType === "email")
                                 .map((c) => c.contactValue)
-                                .join(", ") || "",
-                            )
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      <span>-</span>
-                    )}
-                  </td>
+                                .join(", ")}
+                            >
+                              {lead.contacts
+                                .filter((c) => c.contactType === "email")
+                                .map((c) => c.contactValue)
+                                .join(", ")}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(
+                                  (lead.contacts || [])
+                                    .filter((c) => c.contactType === "email")
+                                    .map((c) => c.contactValue)
+                                    .join(", ") || "",
+                                )
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          <span>-</span>
+                        )}
+                      </td>
 
-                  {/* 13. Facebook */}
-                  <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.socialMedia &&
-                    lead.socialMedia.filter((s) => s.platform === "facebook").length > 0 ? (
-                      <>
-                        <div className="max-w-[150px]">
-                          {lead.socialMedia
-                            .filter((s) => s.platform === "facebook")
-                            .map((social, index) => (
-                              <a
-                                key={social.id || index}
-                                href={social.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline block truncate"
-                                title={social.username || social.url}
-                              >
-                                {social.username || social.url}
-                              </a>
-                            ))}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(
-                              (lead.socialMedia || [])
+                      {/* 13. Facebook */}
+                      <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.socialMedia &&
+                        lead.socialMedia.filter((s) => s.platform === "facebook").length > 0 ? (
+                          <>
+                            <div className="max-w-[150px]">
+                              {lead.socialMedia
                                 .filter((s) => s.platform === "facebook")
-                                .map((s) => s.url)
-                                .join(", ") || "",
-                            )
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      <span>-</span>
-                    )}
-                  </td>
+                                .map((social, index) => (
+                                  <a
+                                    key={social.id || index}
+                                    href={social.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline block truncate"
+                                    title={social.username || social.url}
+                                  >
+                                    {social.username || social.url}
+                                  </a>
+                                ))}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(
+                                  (lead.socialMedia || [])
+                                    .filter((s) => s.platform === "facebook")
+                                    .map((s) => s.url)
+                                    .join(", ") || "",
+                                )
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          <span>-</span>
+                        )}
+                      </td>
 
-                  {/* 14. Instagram */}
-                  <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.socialMedia &&
-                    lead.socialMedia.filter((s) => s.platform === "instagram").length > 0 ? (
-                      <>
-                        <div className="max-w-[150px]">
-                          {lead.socialMedia
-                            .filter((s) => s.platform === "instagram")
-                            .map((social, index) => (
-                              <a
-                                key={social.id || index}
-                                href={social.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline block truncate"
-                                title={social.username || social.url}
-                              >
-                                {social.username || social.url}
-                              </a>
-                            ))}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(
-                              (lead.socialMedia || [])
+                      {/* 14. Instagram */}
+                      <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.socialMedia &&
+                        lead.socialMedia.filter((s) => s.platform === "instagram").length > 0 ? (
+                          <>
+                            <div className="max-w-[150px]">
+                              {lead.socialMedia
                                 .filter((s) => s.platform === "instagram")
-                                .map((s) => s.url)
-                                .join(", ") || "",
-                            )
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      <span>-</span>
-                    )}
-                  </td>
+                                .map((social, index) => (
+                                  <a
+                                    key={social.id || index}
+                                    href={social.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline block truncate"
+                                    title={social.username || social.url}
+                                  >
+                                    {social.username || social.url}
+                                  </a>
+                                ))}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(
+                                  (lead.socialMedia || [])
+                                    .filter((s) => s.platform === "instagram")
+                                    .map((s) => s.url)
+                                    .join(", ") || "",
+                                )
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          <span>-</span>
+                        )}
+                      </td>
 
-                  {/* 15. Twitter */}
-                  <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.socialMedia &&
-                    lead.socialMedia.filter((s) => s.platform === "twitter").length > 0 ? (
-                      <>
-                        <div className="max-w-[150px]">
-                          {lead.socialMedia
-                            .filter((s) => s.platform === "twitter")
-                            .map((social, index) => (
-                              <a
-                                key={social.id || index}
-                                href={social.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline block truncate"
-                                title={social.username || social.url}
-                              >
-                                {social.username || social.url}
-                              </a>
-                            ))}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(
-                              (lead.socialMedia || [])
+                      {/* 15. Twitter */}
+                      <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.socialMedia &&
+                        lead.socialMedia.filter((s) => s.platform === "twitter").length > 0 ? (
+                          <>
+                            <div className="max-w-[150px]">
+                              {lead.socialMedia
                                 .filter((s) => s.platform === "twitter")
-                                .map((s) => s.url)
-                                .join(", ") || "",
-                            )
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      <span>-</span>
-                    )}
-                  </td>
+                                .map((social, index) => (
+                                  <a
+                                    key={social.id || index}
+                                    href={social.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline block truncate"
+                                    title={social.username || social.url}
+                                  >
+                                    {social.username || social.url}
+                                  </a>
+                                ))}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(
+                                  (lead.socialMedia || [])
+                                    .filter((s) => s.platform === "twitter")
+                                    .map((s) => s.url)
+                                    .join(", ") || "",
+                                )
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          <span>-</span>
+                        )}
+                      </td>
 
-                  {/* 16. LinkedIn */}
-                  <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.socialMedia &&
-                    lead.socialMedia.filter((s) => s.platform === "linkedin").length > 0 ? (
-                      <>
-                        <div className="max-w-[150px]">
-                          {lead.socialMedia
-                            .filter((s) => s.platform === "linkedin")
-                            .map((social, index) => (
-                              <a
-                                key={social.id || index}
-                                href={social.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline block truncate"
-                                title={social.username || social.url}
-                              >
-                                {social.username || social.url}
-                              </a>
-                            ))}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(
-                              (lead.socialMedia || [])
+                      {/* 16. LinkedIn */}
+                      <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.socialMedia &&
+                        lead.socialMedia.filter((s) => s.platform === "linkedin").length > 0 ? (
+                          <>
+                            <div className="max-w-[150px]">
+                              {lead.socialMedia
                                 .filter((s) => s.platform === "linkedin")
-                                .map((s) => s.url)
-                                .join(", ") || "",
-                            )
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      <span>-</span>
-                    )}
-                  </td>
+                                .map((social, index) => (
+                                  <a
+                                    key={social.id || index}
+                                    href={social.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline block truncate"
+                                    title={social.username || social.url}
+                                  >
+                                    {social.username || social.url}
+                                  </a>
+                                ))}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(
+                                  (lead.socialMedia || [])
+                                    .filter((s) => s.platform === "linkedin")
+                                    .map((s) => s.url)
+                                    .join(", ") || "",
+                                )
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          <span>-</span>
+                        )}
+                      </td>
 
-                  {/* 17. 제품 (products) */}
-                  <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.products && lead.products.length > 0 ? (
-                      <>
-                        <div
-                          className="cursor-default max-w-[150px]"
-                          style={{
-                            display: "-webkit-box",
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                          title={lead.products.map((p) => p.productName).join(", ")}
-                        >
-                          {lead.products.map((p) => p.productName).join(", ")}
+                      {/* 17. 제품 (products) */}
+                      <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.products && lead.products.length > 0 ? (
+                          <>
+                            <div
+                              className="cursor-default max-w-[150px]"
+                              style={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                              title={lead.products.map((p) => p.productName).join(", ")}
+                            >
+                              {lead.products.map((p) => p.productName).join(", ")}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(
+                                  (lead.products || []).map((p) => p.productName).join(", ") || "",
+                                )
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+
+                      {/* 18. 산업 부문 (businessSectors) */}
+                      <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.businessSectors && lead.businessSectors.length > 0 ? (
+                          <>
+                            <div
+                              className="cursor-default max-w-[150px]"
+                              style={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                              title={lead.businessSectors.map((s) => s.sectorName).join(", ")}
+                            >
+                              {lead.businessSectors.map((s) => s.sectorName).join(", ")}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(
+                                  (lead.businessSectors || [])
+                                    .map((s) => s.sectorName)
+                                    .join(", ") || "",
+                                )
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+
+                      {/* 19. 제품 카테고리 (productCategories) */}
+                      <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.productCategories && lead.productCategories.length > 0 ? (
+                          <>
+                            <div
+                              className="cursor-default max-w-[150px]"
+                              style={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                              title={lead.productCategories.map((c) => c.categoryName).join(", ")}
+                            >
+                              {lead.productCategories.map((c) => c.categoryName).join(", ")}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(
+                                  (lead.productCategories || [])
+                                    .map((c) => c.categoryName)
+                                    .join(", ") || "",
+                                )
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+
+                      {/* 20. 산업 카테고리 (industryTypes) */}
+                      <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.industryTypes && lead.industryTypes.length > 0 ? (
+                          <>
+                            <div
+                              className="cursor-default max-w-[150px]"
+                              style={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                              title={lead.industryTypes.map((i) => i.industryName).join(", ")}
+                            >
+                              {lead.industryTypes.map((i) => i.industryName).join(", ")}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(
+                                  (lead.industryTypes || [])
+                                    .map((i) => i.industryName)
+                                    .join(", ") || "",
+                                )
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+
+                      {/* 21. 생성일 (createdAt) */}
+                      <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                        {formatRelativeTime(lead.createdAt)}
+                      </td>
+
+                      {/* Hover Action Buttons */}
+                      <td className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onEditLead(lead)
+                            }}
+                            className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                            title="리드 편집"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onManageGroups(lead)
+                            }}
+                            className="h-8 w-8 p-0 hover:bg-violet-50 hover:text-violet-600"
+                            title="그룹 관리"
+                          >
+                            <Users className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(
-                              (lead.products || []).map((p) => p.productName).join(", ") || "",
-                            )
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-
-                  {/* 18. 산업 부문 (businessSectors) */}
-                  <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.businessSectors && lead.businessSectors.length > 0 ? (
-                      <>
-                        <div
-                          className="cursor-default max-w-[150px]"
-                          style={{
-                            display: "-webkit-box",
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                          title={lead.businessSectors.map((s) => s.sectorName).join(", ")}
-                        >
-                          {lead.businessSectors.map((s) => s.sectorName).join(", ")}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(
-                              (lead.businessSectors || []).map((s) => s.sectorName).join(", ") ||
-                                "",
-                            )
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-
-                  {/* 19. 제품 카테고리 (productCategories) */}
-                  <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.productCategories && lead.productCategories.length > 0 ? (
-                      <>
-                        <div
-                          className="cursor-default max-w-[150px]"
-                          style={{
-                            display: "-webkit-box",
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                          title={lead.productCategories.map((c) => c.categoryName).join(", ")}
-                        >
-                          {lead.productCategories.map((c) => c.categoryName).join(", ")}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(
-                              (lead.productCategories || [])
-                                .map((c) => c.categoryName)
-                                .join(", ") || "",
-                            )
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-
-                  {/* 20. 산업 카테고리 (industryTypes) */}
-                  <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
-                    {lead.industryTypes && lead.industryTypes.length > 0 ? (
-                      <>
-                        <div
-                          className="cursor-default max-w-[150px]"
-                          style={{
-                            display: "-webkit-box",
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                          title={lead.industryTypes.map((i) => i.industryName).join(", ")}
-                        >
-                          {lead.industryTypes.map((i) => i.industryName).join(", ")}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopyToClipboard(
-                              (lead.industryTypes || []).map((i) => i.industryName).join(", ") ||
-                                "",
-                            )
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-
-                  {/* 21. 생성일 (createdAt) */}
-                  <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
-                    {formatRelativeTime(lead.createdAt)}
-                  </td>
-
-                  {/* Hover Action Buttons */}
-                  <td className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 transition-opacity">
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onEditLead(lead)
-                        }}
-                        className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                        title="리드 편집"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onManageGroups(lead)
-                        }}
-                        className="h-8 w-8 p-0 hover:bg-violet-50 hover:text-violet-600"
-                        title="그룹 관리"
-                      >
-                        <Users className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
+                      </td>
+                    </tr>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent className="w-48">
+                    <ContextMenuItem onClick={() => onEditLead(lead)} className="cursor-pointer">
+                      <Edit className="mr-2 h-4 w-4" />
+                      리드 편집
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      onClick={() => onManageGroups(lead)}
+                      className="cursor-pointer"
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      그룹 관리
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem
+                      onClick={() =>
+                        handleDeleteLead(
+                          lead.id,
+                          lead.companyName || lead.foundCompanyName || "이름 없음",
+                        )
+                      }
+                      className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      리드 삭제
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
               ))}
             </tbody>
           </table>

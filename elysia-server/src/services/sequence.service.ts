@@ -1100,10 +1100,17 @@ export async function getSequenceMetrics(sequenceId: string) {
     .groupBy(sequenceEnrollments.status)
 
   // 2. Get email statistics from email_events
+  // For open and click events, count unique emails (not total events)
   const emailStats = await db
     .select({
       eventType: emailEvents.eventType,
-      count: sql<number>`count(*)::int`,
+      count: sql<number>`
+        CASE 
+          WHEN ${emailEvents.eventType} IN ('open', 'click') 
+          THEN COUNT(DISTINCT ${emailEvents.emailId})::int
+          ELSE COUNT(*)::int
+        END
+      `,
     })
     .from(emailEvents)
     .innerJoin(emailsTable, eq(emailEvents.emailId, emailsTable.id))
@@ -1304,10 +1311,17 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
   const emailsSent = emailsSentResult[0]?.count || 0
 
   // 4. Get email event statistics for this enrollment
+  // For open and click events, count unique emails (not total events)
   const emailStats = await db
     .select({
       eventType: emailEvents.eventType,
-      count: sql<number>`count(*)::int`,
+      count: sql<number>`
+        CASE 
+          WHEN ${emailEvents.eventType} IN ('open', 'click') 
+          THEN COUNT(DISTINCT ${emailEvents.emailId})::int
+          ELSE COUNT(*)::int
+        END
+      `,
     })
     .from(emailEvents)
     .innerJoin(emailsTable, eq(emailEvents.emailId, emailsTable.id))

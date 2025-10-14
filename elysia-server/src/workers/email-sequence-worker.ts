@@ -5,41 +5,41 @@
  * It fetches pending steps, sends emails via SendGrid, and updates execution status.
  */
 
-import sgMail from "@sendgrid/mail";
-import { and, eq } from "drizzle-orm";
-import { config } from "../config";
-import { db } from "../db/index";
-import { userEmailAccounts } from "../db/schema/email-accounts";
-import { emails } from "../db/schema/emails";
-import { leadContacts } from "../db/schema/lead-details";
-import * as sequenceService from "../services/sequence.service";
-import logger from "../utils/logger";
+import sgMail from "@sendgrid/mail"
+import { and, eq } from "drizzle-orm"
+import { config } from "../config"
+import { db } from "../db/index"
+import { userEmailAccounts } from "../db/schema/email-accounts"
+import { emails } from "../db/schema/emails"
+import { leadContacts } from "../db/schema/lead-details"
+import * as sequenceService from "../services/sequence.service"
+import logger from "../utils/logger"
 
 // Initialize SendGrid
 if (config.sendgrid.apiKey) {
-  sgMail.setApiKey(config.sendgrid.apiKey);
+  sgMail.setApiKey(config.sendgrid.apiKey)
 }
 
 interface EmailSendResult {
-  success: boolean;
-  messageId?: string;
-  emailRecordId?: string; // UUID from emails table
-  error?: string;
+  success: boolean
+  messageId?: string
+  emailRecordId?: string // UUID from emails table
+  error?: string
 }
 
 async function sendSequenceEmail(execution: {
-  executionId: string;
-  enrollmentId: string;
-  leadId: string;
-  leadCompanyName: string | null;
-  emailAccountId: string;
-  emailSubject: string;
-  emailBodyText: string | null;
-  emailBodyHtml: string | null;
-  sequenceName: string;
-  sequenceId: string;
-  stepId: string;
-  workspaceId: string;
+  executionId: string
+  enrollmentId: string
+  leadId: string
+  leadCompanyName: string | null
+  emailAccountId: string
+  emailSubject: string
+  emailBodyText: string | null
+  emailBodyHtml: string | null
+  sequenceName: string
+  sequenceId: string
+  stepId: string
+  workspaceId: string
 }): Promise<EmailSendResult> {
   try {
     logger.debug(
@@ -48,8 +48,8 @@ async function sendSequenceEmail(execution: {
         leadId: execution.leadId,
         leadCompanyName: execution.leadCompanyName,
       },
-      "🔍 [STEP-WORKER] Fetching lead email"
-    );
+      "🔍 [STEP-WORKER] Fetching lead email",
+    )
 
     // Get lead's primary email
     const [leadContact] = await db
@@ -59,20 +59,20 @@ async function sendSequenceEmail(execution: {
         and(
           eq(leadContacts.leadId, execution.leadId),
           eq(leadContacts.contactType, "email"),
-          eq(leadContacts.isPrimary, true)
-        )
+          eq(leadContacts.isPrimary, true),
+        ),
       )
-      .limit(1);
+      .limit(1)
 
     if (!leadContact) {
       logger.error(
         { executionId: execution.executionId, leadId: execution.leadId },
-        "❌ [STEP-WORKER] Lead email not found"
-      );
+        "❌ [STEP-WORKER] Lead email not found",
+      )
       return {
         success: false,
         error: "Lead email not found",
-      };
+      }
     }
 
     logger.debug(
@@ -80,8 +80,8 @@ async function sendSequenceEmail(execution: {
         executionId: execution.executionId,
         toEmail: leadContact.email,
       },
-      "✅ [STEP-WORKER] Found lead email"
-    );
+      "✅ [STEP-WORKER] Found lead email",
+    )
 
     // Get email account details
     const [emailAccount] = await db
@@ -92,7 +92,7 @@ async function sendSequenceEmail(execution: {
       })
       .from(userEmailAccounts)
       .where(eq(userEmailAccounts.id, execution.emailAccountId))
-      .limit(1);
+      .limit(1)
 
     if (!emailAccount) {
       logger.error(
@@ -100,12 +100,12 @@ async function sendSequenceEmail(execution: {
           executionId: execution.executionId,
           emailAccountId: execution.emailAccountId,
         },
-        "❌ [STEP-WORKER] Email account not found"
-      );
+        "❌ [STEP-WORKER] Email account not found",
+      )
       return {
         success: false,
         error: "Email account not found",
-      };
+      }
     }
 
     logger.debug(
@@ -114,24 +114,24 @@ async function sendSequenceEmail(execution: {
         fromEmail: emailAccount.emailAddress,
         displayName: emailAccount.displayName,
       },
-      "✅ [STEP-WORKER] Found email account"
-    );
+      "✅ [STEP-WORKER] Found email account",
+    )
 
     // Use account-specific API key or default
-    const apiKey = emailAccount.apiKey || config.sendgrid.apiKey;
+    const apiKey = emailAccount.apiKey || config.sendgrid.apiKey
     if (!apiKey) {
       logger.error(
         { executionId: execution.executionId },
-        "❌ [STEP-WORKER] SendGrid API key not configured"
-      );
+        "❌ [STEP-WORKER] SendGrid API key not configured",
+      )
       return {
         success: false,
         error: "SendGrid API key not configured",
-      };
+      }
     }
 
     // Set API key for this request
-    sgMail.setApiKey(apiKey);
+    sgMail.setApiKey(apiKey)
 
     // Prepare email message
     const msg = {
@@ -147,7 +147,7 @@ async function sendSequenceEmail(execution: {
         open_tracking: { enable: true },
         click_tracking: { enable: true, enable_text: true },
       },
-    };
+    }
 
     logger.info(
       {
@@ -156,21 +156,21 @@ async function sendSequenceEmail(execution: {
         to: leadContact.email,
         subject: execution.emailSubject,
       },
-      "📤 [STEP-WORKER] Sending email via SendGrid"
-    );
+      "📤 [STEP-WORKER] Sending email via SendGrid",
+    )
 
     // Send email
-    const [response] = await sgMail.send(msg as never);
+    const [response] = await sgMail.send(msg as never)
 
-    const sendgridMessageId = response.headers["x-message-id"] as string;
+    const sendgridMessageId = response.headers["x-message-id"] as string
 
     logger.info(
       {
         executionId: execution.executionId,
         messageId: sendgridMessageId,
       },
-      "✅ [STEP-WORKER] SendGrid accepted email"
-    );
+      "✅ [STEP-WORKER] SendGrid accepted email",
+    )
 
     // Create email record in database
     const [emailRecord] = await db
@@ -198,17 +198,17 @@ async function sendSequenceEmail(execution: {
       .returning({
         id: emails.id,
         sendgridMessageId: emails.sendgridMessageId,
-      });
+      })
 
     if (!emailRecord) {
       logger.error(
         { executionId: execution.executionId, sendgridMessageId },
-        "❌ [STEP-WORKER] Failed to create email record in database"
-      );
+        "❌ [STEP-WORKER] Failed to create email record in database",
+      )
       return {
         success: false,
         error: "Failed to create email record in database",
-      };
+      }
     }
 
     logger.info(
@@ -218,14 +218,14 @@ async function sendSequenceEmail(execution: {
         sendgridMessageId,
         storedMessageId: emailRecord.sendgridMessageId,
       },
-      "✅ [STEP-WORKER] Created email record in database"
-    );
+      "✅ [STEP-WORKER] Created email record in database",
+    )
 
     return {
       success: true,
       messageId: sendgridMessageId,
       emailRecordId: emailRecord.id,
-    };
+    }
   } catch (error: unknown) {
     logger.error(
       {
@@ -233,28 +233,26 @@ async function sendSequenceEmail(execution: {
         leadId: execution.leadId,
         executionId: execution.executionId,
       },
-      "💥 [STEP-WORKER] Error sending sequence email"
-    );
+      "💥 [STEP-WORKER] Error sending sequence email",
+    )
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
-    };
+    }
   }
 }
 
 async function processSequenceEmails() {
   try {
-    logger.debug("🔍 [STEP-WORKER] Checking for pending step executions");
+    logger.debug("🔍 [STEP-WORKER] Checking for pending step executions")
 
     // Get pending step executions
-    const pendingExecutions = await sequenceService.getPendingStepExecutions(
-      50
-    );
+    const pendingExecutions = await sequenceService.getPendingStepExecutions(50)
 
     if (pendingExecutions.length === 0) {
       // Only log at trace level to reduce noise
-      logger.trace("⏳ [STEP-WORKER] No pending emails to send");
-      return;
+      logger.trace("⏳ [STEP-WORKER] No pending emails to send")
+      return
     }
 
     logger.info(
@@ -269,11 +267,11 @@ async function processSequenceEmails() {
           stepOrder: e.stepOrder,
         })),
       },
-      "📬 [STEP-WORKER] Processing pending emails"
-    );
+      "📬 [STEP-WORKER] Processing pending emails",
+    )
 
-    let successCount = 0;
-    let failureCount = 0;
+    let successCount = 0
+    let failureCount = 0
 
     // Process each execution
     for (const execution of pendingExecutions) {
@@ -288,11 +286,11 @@ async function processSequenceEmails() {
           scheduledAt: execution.scheduledAt,
           emailSubject: execution.emailSubject,
         },
-        "📧 [STEP-WORKER] Processing execution"
-      );
+        "📧 [STEP-WORKER] Processing execution",
+      )
 
       // Send email
-      const result = await sendSequenceEmail(execution);
+      const result = await sendSequenceEmail(execution)
 
       if (result.success) {
         // Update execution status to 'sent' with email record UUID
@@ -300,16 +298,13 @@ async function processSequenceEmails() {
           execution.executionId,
           "sent",
           undefined,
-          result.emailRecordId // Pass UUID from emails table
-        );
+          result.emailRecordId, // Pass UUID from emails table
+        )
 
         // Update enrollment progress
-        await sequenceService.updateEnrollmentProgress(
-          execution.enrollmentId,
-          execution.stepOrder
-        );
+        await sequenceService.updateEnrollmentProgress(execution.enrollmentId, execution.stepOrder)
 
-        successCount++;
+        successCount++
         logger.info(
           {
             executionId: execution.executionId,
@@ -318,17 +313,17 @@ async function processSequenceEmails() {
             leadCompanyName: execution.leadCompanyName,
             stepOrder: execution.stepOrder,
           },
-          "✅ [STEP-WORKER] Email sent successfully"
-        );
+          "✅ [STEP-WORKER] Email sent successfully",
+        )
       } else {
         // Update execution status to 'failed'
         await sequenceService.updateStepExecutionStatus(
           execution.executionId,
           "failed",
-          result.error
-        );
+          result.error,
+        )
 
-        failureCount++;
+        failureCount++
         logger.error(
           {
             executionId: execution.executionId,
@@ -336,8 +331,8 @@ async function processSequenceEmails() {
             leadCompanyName: execution.leadCompanyName,
             stepOrder: execution.stepOrder,
           },
-          "❌ [STEP-WORKER] Email send failed"
-        );
+          "❌ [STEP-WORKER] Email send failed",
+        )
       }
     }
 
@@ -347,32 +342,29 @@ async function processSequenceEmails() {
         successCount,
         failureCount,
       },
-      "🎯 [STEP-WORKER] Finished processing emails"
-    );
+      "🎯 [STEP-WORKER] Finished processing emails",
+    )
   } catch (error) {
-    logger.error(
-      { err: error },
-      "💥 [STEP-WORKER] Error in processSequenceEmails"
-    );
+    logger.error({ err: error }, "💥 [STEP-WORKER] Error in processSequenceEmails")
   }
 }
 
 // Run worker every minute
 export function startEmailSequenceWorker() {
-  logger.debug("✅ Email sequence worker started");
+  logger.debug("✅ Email sequence worker started")
 
   // Run immediately
-  processSequenceEmails();
+  processSequenceEmails()
 
   // Then run every minute
-  const intervalId = setInterval(processSequenceEmails, 60 * 1000); // 60 seconds
+  const intervalId = setInterval(processSequenceEmails, 60 * 1000) // 60 seconds
 
   // Return function to stop worker
   return () => {
-    logger.info("Stopping email sequence worker");
-    clearInterval(intervalId);
-  };
+    logger.info("Stopping email sequence worker")
+    clearInterval(intervalId)
+  }
 }
 
 // Export for manual testing
-export { processSequenceEmails };
+export { processSequenceEmails }

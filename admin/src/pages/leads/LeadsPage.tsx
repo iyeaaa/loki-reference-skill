@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -98,6 +99,11 @@ export default function LeadsPage() {
   const [managingLeadGroups, setManagingLeadGroups] = useState<Lead | null>(null)
   const [showLeadGroupModal, setShowLeadGroupModal] = useState(false)
   const [leadCurrentGroups, setLeadCurrentGroups] = useState<CustomerGroup[]>([])
+
+  // 확인 다이얼로그 상태
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false)
+  const [groupDeleteConfirmOpen, setGroupDeleteConfirmOpen] = useState(false)
+  const [groupToDelete, setGroupToDelete] = useState<CustomerGroup | null>(null)
 
   // Generate unique IDs for form elements
   const existingGroupId = useId()
@@ -198,14 +204,10 @@ export default function LeadsPage() {
 
   const handleBulkDelete = async () => {
     if (selectedLeads.length === 0) return
+    setBulkDeleteConfirmOpen(true)
+  }
 
-    if (
-      !confirm(
-        `선택한 ${selectedLeads.length}개의 리드를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`,
-      )
-    )
-      return
-
+  const confirmBulkDelete = () => {
     bulkDeleteLeads.mutate(selectedLeads, {
       onSuccess: () => {
         // Hooks already handle cache invalidation
@@ -406,19 +408,24 @@ export default function LeadsPage() {
 
   // 그룹 삭제 핸들러
   const handleDeleteGroup = async (group: CustomerGroup) => {
-    if (!confirm(`"${group.name}" 그룹을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`)) {
-      return
-    }
-    deleteCustomerGroup.mutate(group.id, {
+    setGroupToDelete(group)
+    setGroupDeleteConfirmOpen(true)
+  }
+
+  const confirmGroupDelete = () => {
+    if (!groupToDelete) return
+
+    deleteCustomerGroup.mutate(groupToDelete.id, {
       onSuccess: () => {
         // 그룹 목록 쿼리 갱신
         queryClient.invalidateQueries({
           queryKey: customerGroupKeys.all,
         })
         // 삭제된 그룹이 선택되어 있었다면 선택 해제
-        if (selectedCustomerGroup === group.id) {
+        if (selectedCustomerGroup === groupToDelete.id) {
           setSelectedCustomerGroup("")
         }
+        setGroupToDelete(null)
       },
     })
   }
@@ -961,6 +968,30 @@ export default function LeadsPage() {
         availableGroups={customerGroups || []}
         currentGroups={leadCurrentGroups}
         onSave={handleSaveLeadGroups}
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={bulkDeleteConfirmOpen}
+        onOpenChange={setBulkDeleteConfirmOpen}
+        title="리드 대량 삭제"
+        description={`선택한 ${selectedLeads.length}개의 리드를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`}
+        confirmText="삭제"
+        cancelText="취소"
+        onConfirm={confirmBulkDelete}
+        variant="destructive"
+      />
+
+      {/* Group Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={groupDeleteConfirmOpen}
+        onOpenChange={setGroupDeleteConfirmOpen}
+        title="그룹 삭제"
+        description={`"${groupToDelete?.name || ""}" 그룹을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`}
+        confirmText="삭제"
+        cancelText="취소"
+        onConfirm={confirmGroupDelete}
+        variant="destructive"
       />
     </div>
   )

@@ -4,6 +4,7 @@ import toast from "react-hot-toast"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -49,6 +50,8 @@ export function LeadsTableWithPagination({
   const [currentWorkspace, setCurrentWorkspace] = useState(
     () => localStorage.getItem("selectedWorkspace") || "all",
   )
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [leadToDelete, setLeadToDelete] = useState<{ id: string; name: string } | null>(null)
 
   const limit = 10
 
@@ -182,8 +185,14 @@ export function LeadsTableWithPagination({
   }
 
   const handleDeleteLead = (leadId: string, leadName: string) => {
-    if (window.confirm(`"${leadName}" 리드를 삭제하시겠습니까?`)) {
-      deleteLead.mutate(leadId)
+    setLeadToDelete({ id: leadId, name: leadName })
+    setDeleteConfirmOpen(true)
+  }
+
+  const confirmDelete = () => {
+    if (leadToDelete) {
+      deleteLead.mutate(leadToDelete.id)
+      setLeadToDelete(null)
     }
   }
 
@@ -1135,6 +1144,18 @@ export function LeadsTableWithPagination({
           <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="리드 삭제"
+        description={`"${leadToDelete?.name || ""}" 리드를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`}
+        confirmText="삭제"
+        cancelText="취소"
+        onConfirm={confirmDelete}
+        variant="destructive"
+      />
     </>
   )
 }

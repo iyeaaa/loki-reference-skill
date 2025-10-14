@@ -1004,36 +1004,6 @@ export function LeadsTableWithPagination({
                       <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                         {formatRelativeTime(lead.createdAt)}
                       </td>
-
-                      {/* Hover Action Buttons */}
-                      <td className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 transition-opacity">
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onEditLead(lead)
-                            }}
-                            className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                            title="리드 편집"
-                          >
-                            <Edit className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onManageGroups(lead)
-                            }}
-                            className="h-8 w-8 p-0 hover:bg-violet-50 hover:text-violet-600"
-                            title="그룹 관리"
-                          >
-                            <Users className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </td>
                     </tr>
                   </ContextMenuTrigger>
                   <ContextMenuContent className="w-48">

@@ -6,6 +6,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -41,6 +49,7 @@ import type { Lead, LeadStatus } from "@/lib/api/types/lead"
 import type { Workspace } from "@/lib/api/types/workspace"
 import { generateCSVTemplate, type LeadCSVData, parseCSV, validateCSVData } from "@/lib/csv-utils"
 import { BulkActionModal } from "./BulkActionModal"
+import { CreateGroupModal } from "./CreateGroupModal"
 import { GroupEditModal } from "./GroupEditModal"
 import { LeadForm } from "./LeadForm"
 import { LeadGroupManagementModal } from "./LeadGroupManagementModal"
@@ -90,6 +99,11 @@ export default function LeadsPage() {
   const [managingLeadGroups, setManagingLeadGroups] = useState<Lead | null>(null)
   const [showLeadGroupModal, setShowLeadGroupModal] = useState(false)
   const [leadCurrentGroups, setLeadCurrentGroups] = useState<CustomerGroup[]>([])
+
+  // 확인 다이얼로그 상태
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false)
+  const [groupDeleteConfirmOpen, setGroupDeleteConfirmOpen] = useState(false)
+  const [groupToDelete, setGroupToDelete] = useState<CustomerGroup | null>(null)
 
   // Generate unique IDs for form elements
   const existingGroupId = useId()
@@ -190,14 +204,10 @@ export default function LeadsPage() {
 
   const handleBulkDelete = async () => {
     if (selectedLeads.length === 0) return
+    setBulkDeleteConfirmOpen(true)
+  }
 
-    if (
-      !confirm(
-        `선택한 ${selectedLeads.length}개의 리드를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`,
-      )
-    )
-      return
-
+  const confirmBulkDelete = () => {
     bulkDeleteLeads.mutate(selectedLeads, {
       onSuccess: () => {
         // Hooks already handle cache invalidation
@@ -398,19 +408,24 @@ export default function LeadsPage() {
 
   // 그룹 삭제 핸들러
   const handleDeleteGroup = async (group: CustomerGroup) => {
-    if (!confirm(`"${group.name}" 그룹을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`)) {
-      return
-    }
-    deleteCustomerGroup.mutate(group.id, {
+    setGroupToDelete(group)
+    setGroupDeleteConfirmOpen(true)
+  }
+
+  const confirmGroupDelete = () => {
+    if (!groupToDelete) return
+
+    deleteCustomerGroup.mutate(groupToDelete.id, {
       onSuccess: () => {
         // 그룹 목록 쿼리 갱신
         queryClient.invalidateQueries({
           queryKey: customerGroupKeys.all,
         })
         // 삭제된 그룹이 선택되어 있었다면 선택 해제
-        if (selectedCustomerGroup === group.id) {
+        if (selectedCustomerGroup === groupToDelete.id) {
           setSelectedCustomerGroup("")
         }
+        setGroupToDelete(null)
       },
     })
   }
@@ -537,70 +552,85 @@ export default function LeadsPage() {
           </div>
 
           {/* 고객 그룹 선택 */}
-          {selectedWorkspaceId !== "all" && customerGroups && customerGroups.length > 0 && (
+          {selectedWorkspaceId !== "all" && (
             <div className="mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <Users className="h-4 w-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700">고객 그룹 필터</span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-700">고객 그룹 필터</span>
+                </div>
+                <CreateGroupModal
+                  workspaces={workspaces}
+                  selectedWorkspaceId={selectedWorkspaceId}
+                  onSuccess={(groupId) => {
+                    // 생성된 그룹을 자동으로 선택
+                    setSelectedCustomerGroup(groupId)
+                  }}
+                />
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedCustomerGroup("")}
-                  className={`text-xs ${
-                    selectedCustomerGroup === ""
-                      ? "bg-violet-500/10 border-violet-500 text-violet-500 font-medium"
-                      : "hover:bg-violet-500/5 hover:border-violet-500/50"
-                  }`}
-                >
-                  전체
-                </Button>
-                {customerGroups.map((group) => (
-                  <div key={group.id} className="inline-flex items-center gap-1 group/item">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedCustomerGroup(group.id)}
-                      className={`text-xs relative ${
-                        selectedCustomerGroup === group.id
-                          ? "bg-violet-500/10 border-violet-500 text-violet-500 font-medium"
-                          : "hover:bg-violet-500/5 hover:border-violet-500/50"
-                      }`}
-                    >
-                      <Users
-                        className={`h-3 w-3 mr-1 ${
-                          selectedCustomerGroup === group.id ? "text-violet-500" : ""
-                        }`}
-                      />
-                      {group.name}
-                      {group.leadCount !== undefined && (
-                        <span className="ml-1.5 text-xs opacity-70">({group.leadCount})</span>
-                      )}
-                    </Button>
-                    <div className="opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditGroup(group)}
-                        className="h-8 w-8 p-0 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600"
-                        title="편집"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteGroup(group)}
-                        className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50 hover:text-red-600"
-                        title="삭제"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {customerGroups && customerGroups.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedCustomerGroup("")}
+                    className={`text-xs ${
+                      selectedCustomerGroup === ""
+                        ? "bg-violet-500/10 border-violet-500 text-violet-500 font-medium"
+                        : "hover:bg-violet-500/5 hover:border-violet-500/50"
+                    }`}
+                  >
+                    전체
+                  </Button>
+                  {customerGroups.map((group) => (
+                    <ContextMenu key={group.id}>
+                      <ContextMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedCustomerGroup(group.id)}
+                          className={`text-xs ${
+                            selectedCustomerGroup === group.id
+                              ? "bg-violet-500/10 border-violet-500 text-violet-500 font-medium"
+                              : "hover:bg-violet-500/5 hover:border-violet-500/50"
+                          }`}
+                        >
+                          <Users
+                            className={`h-3 w-3 mr-1 ${
+                              selectedCustomerGroup === group.id ? "text-violet-500" : ""
+                            }`}
+                          />
+                          {group.name}
+                          {group.leadCount !== undefined && (
+                            <span className="ml-1.5 text-xs opacity-70">({group.leadCount})</span>
+                          )}
+                        </Button>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent className="w-48">
+                        <ContextMenuItem
+                          onClick={() => handleEditGroup(group)}
+                          className="cursor-pointer"
+                        >
+                          <Edit2 className="mr-2 h-4 w-4" />
+                          그룹 편집
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem
+                          onClick={() => handleDeleteGroup(group)}
+                          className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          그룹 삭제
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground text-center py-4 bg-gray-50 rounded-md">
+                  이 워크스페이스에는 아직 그룹이 없습니다. 위 버튼을 클릭하여 첫 그룹을 생성하세요.
+                </div>
+              )}
             </div>
           )}
           {/* Bulk Actions */}
@@ -938,6 +968,30 @@ export default function LeadsPage() {
         availableGroups={customerGroups || []}
         currentGroups={leadCurrentGroups}
         onSave={handleSaveLeadGroups}
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={bulkDeleteConfirmOpen}
+        onOpenChange={setBulkDeleteConfirmOpen}
+        title="리드 대량 삭제"
+        description={`선택한 ${selectedLeads.length}개의 리드를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`}
+        confirmText="삭제"
+        cancelText="취소"
+        onConfirm={confirmBulkDelete}
+        variant="destructive"
+      />
+
+      {/* Group Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={groupDeleteConfirmOpen}
+        onOpenChange={setGroupDeleteConfirmOpen}
+        title="그룹 삭제"
+        description={`"${groupToDelete?.name || ""}" 그룹을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`}
+        confirmText="삭제"
+        cancelText="취소"
+        onConfirm={confirmGroupDelete}
+        variant="destructive"
       />
     </div>
   )

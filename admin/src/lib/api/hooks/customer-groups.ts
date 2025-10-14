@@ -79,7 +79,8 @@ export function useCreateCustomerGroup() {
   return useMutation({
     mutationFn: (data: CreateCustomerGroupRequest) => customerGroupsApi.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: customerGroupKeys.lists() })
+      // Invalidate all customer group queries to ensure UI updates everywhere
+      queryClient.invalidateQueries({ queryKey: customerGroupKeys.all })
       toast.success("고객 그룹이 생성되었습니다")
     },
     onError: (error: Error) => {
@@ -94,11 +95,9 @@ export function useUpdateCustomerGroup() {
   return useMutation({
     mutationFn: ({ groupId, data }: { groupId: string; data: UpdateCustomerGroupRequest }) =>
       customerGroupsApi.update(groupId, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: customerGroupKeys.detail(variables.groupId),
-      })
-      queryClient.invalidateQueries({ queryKey: customerGroupKeys.lists() })
+    onSuccess: () => {
+      // Invalidate all customer group queries to ensure UI updates everywhere
+      queryClient.invalidateQueries({ queryKey: customerGroupKeys.all })
       toast.success("고객 그룹 정보가 업데이트되었습니다")
     },
     onError: (error: Error) => {
@@ -113,7 +112,8 @@ export function useDeleteCustomerGroup() {
   return useMutation({
     mutationFn: (groupId: string) => customerGroupsApi.delete(groupId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: customerGroupKeys.lists() })
+      // Invalidate all customer group queries to ensure UI updates everywhere
+      queryClient.invalidateQueries({ queryKey: customerGroupKeys.all })
       toast.success("고객 그룹이 삭제되었습니다")
     },
     onError: (error: Error) => {
@@ -228,7 +228,8 @@ export function useBulkDeleteCustomerGroups() {
   return useMutation({
     mutationFn: (groupIds: string[]) => customerGroupsApi.bulkDelete(groupIds),
     onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: customerGroupKeys.lists() })
+      // Invalidate all customer group queries to ensure UI updates everywhere
+      queryClient.invalidateQueries({ queryKey: customerGroupKeys.all })
       toast.success(`${response.deletedCount || 0}개의 고객 그룹이 삭제되었습니다`)
     },
     onError: (error: Error) => {

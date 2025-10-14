@@ -6,6 +6,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -569,48 +576,47 @@ export default function LeadsPage() {
                     전체
                   </Button>
                   {customerGroups.map((group) => (
-                    <div key={group.id} className="inline-flex items-center gap-1 group/item">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedCustomerGroup(group.id)}
-                        className={`text-xs relative ${
-                          selectedCustomerGroup === group.id
-                            ? "bg-violet-500/10 border-violet-500 text-violet-500 font-medium"
-                            : "hover:bg-violet-500/5 hover:border-violet-500/50"
-                        }`}
-                      >
-                        <Users
-                          className={`h-3 w-3 mr-1 ${
-                            selectedCustomerGroup === group.id ? "text-violet-500" : ""
+                    <ContextMenu key={group.id}>
+                      <ContextMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedCustomerGroup(group.id)}
+                          className={`text-xs ${
+                            selectedCustomerGroup === group.id
+                              ? "bg-violet-500/10 border-violet-500 text-violet-500 font-medium"
+                              : "hover:bg-violet-500/5 hover:border-violet-500/50"
                           }`}
-                        />
-                        {group.name}
-                        {group.leadCount !== undefined && (
-                          <span className="ml-1.5 text-xs opacity-70">({group.leadCount})</span>
-                        )}
-                      </Button>
-                      <div className="opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                        >
+                          <Users
+                            className={`h-3 w-3 mr-1 ${
+                              selectedCustomerGroup === group.id ? "text-violet-500" : ""
+                            }`}
+                          />
+                          {group.name}
+                          {group.leadCount !== undefined && (
+                            <span className="ml-1.5 text-xs opacity-70">({group.leadCount})</span>
+                          )}
+                        </Button>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent className="w-48">
+                        <ContextMenuItem
                           onClick={() => handleEditGroup(group)}
-                          className="h-8 w-8 p-0 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600"
-                          title="편집"
+                          className="cursor-pointer"
                         >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                          <Edit2 className="mr-2 h-4 w-4" />
+                          그룹 편집
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem
                           onClick={() => handleDeleteGroup(group)}
-                          className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50 hover:text-red-600"
-                          title="삭제"
+                          className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          그룹 삭제
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
                   ))}
                 </div>
               ) : (

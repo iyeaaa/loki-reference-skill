@@ -298,6 +298,18 @@ export function LeadsTableWithPagination({
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  style={{ minWidth: "150px" }}
+                >
+                  제품 카테고리
+                </th>
+                <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  style={{ minWidth: "150px" }}
+                >
+                  산업 카테고리
+                </th>
+                <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ minWidth: "120px" }}
                 >
                   생성일
@@ -896,7 +908,80 @@ export function LeadsTableWithPagination({
                     )}
                   </td>
 
-                  {/* 19. 생성일 (createdAt) */}
+                  {/* 19. 제품 카테고리 (productCategories) */}
+                  <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
+                    {lead.productCategories && lead.productCategories.length > 0 ? (
+                      <>
+                        <div
+                          className="cursor-default max-w-[150px]"
+                          style={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                          title={lead.productCategories.map((c) => c.categoryName).join(", ")}
+                        >
+                          {lead.productCategories.map((c) => c.categoryName).join(", ")}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCopyToClipboard(
+                              (lead.productCategories || [])
+                                .map((c) => c.categoryName)
+                                .join(", ") || "",
+                            )
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+
+                  {/* 20. 산업 카테고리 (industryTypes) */}
+                  <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
+                    {lead.industryTypes && lead.industryTypes.length > 0 ? (
+                      <>
+                        <div
+                          className="cursor-default max-w-[150px]"
+                          style={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                          title={lead.industryTypes.map((i) => i.industryName).join(", ")}
+                        >
+                          {lead.industryTypes.map((i) => i.industryName).join(", ")}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCopyToClipboard(
+                              (lead.industryTypes || []).map((i) => i.industryName).join(", ") ||
+                                "",
+                            )
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+
+                  {/* 21. 생성일 (createdAt) */}
                   <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                     {formatRelativeTime(lead.createdAt)}
                   </td>

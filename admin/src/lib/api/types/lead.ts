@@ -138,6 +138,8 @@ export interface LeadsParams {
   workspaceIds?: string[]
   createdByIds?: string[]
   customerGroupId?: string
+  sortField?: string
+  sortOrder?: "asc" | "desc"
 }
 
 export interface BulkUpdateLeadStatusRequest {

@@ -1,5 +1,15 @@
-import { ChevronLeft, ChevronRight, Copy, Edit, Trash2, Users } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Edit,
+  Trash2,
+  Users,
+} from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -52,6 +62,10 @@ export function LeadsTableWithPagination({
   const [currentWorkspace, setCurrentWorkspace] = useState(
     () => localStorage.getItem("selectedWorkspace") || "all",
   )
+
+  // 정렬 상태 관리
+  const [sortField, setSortField] = useState<string>("createdAt")
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [leadToDelete, setLeadToDelete] = useState<{
     id: string
@@ -92,9 +106,169 @@ export function LeadsTableWithPagination({
 
   // Use React Query hook for fetching leads
   const { data: leadsData, isFetching } = useLeads(params)
-  const leads = leadsData?.leads || []
+  const rawLeads = leadsData?.leads || []
   const totalPages = leadsData?.totalPages || 1
   const total = leadsData?.total || 0
+
+  // 클라이언트 사이드 정렬
+  const leads = useMemo(() => {
+    if (!rawLeads.length) return rawLeads
+
+    return [...rawLeads].sort((a, b) => {
+      let aValue: string | number
+      let bValue: string | number
+
+      switch (sortField) {
+        case "companyName":
+          aValue = a.companyName || a.foundCompanyName || ""
+          bValue = b.companyName || b.foundCompanyName || ""
+          break
+        case "websiteUrl":
+          aValue = a.websiteUrl || ""
+          bValue = b.websiteUrl || ""
+          break
+        case "description":
+          aValue = a.description || ""
+          bValue = b.description || ""
+          break
+        case "leadStatus":
+          aValue = a.leadStatus
+          bValue = b.leadStatus
+          break
+        case "businessType":
+          aValue = a.businessType || ""
+          bValue = b.businessType || ""
+          break
+        case "country":
+          aValue = a.country || ""
+          bValue = b.country || ""
+          break
+        case "city":
+          aValue = a.city || ""
+          bValue = b.city || ""
+          break
+        case "foundedYear":
+          aValue = a.foundedYear || 0
+          bValue = b.foundedYear || 0
+          break
+        case "employeeCount": {
+          // 직원수를 숫자로 변환하여 정렬
+          const aEmployeeCount = a.employeeCount || ""
+          const bEmployeeCount = b.employeeCount || ""
+          aValue = parseInt(aEmployeeCount.replace(/\D/g, ""), 10) || 0
+          bValue = parseInt(bEmployeeCount.replace(/\D/g, ""), 10) || 0
+          break
+        }
+        case "phone": {
+          // 전화번호 (첫 번째 전화번호로 정렬)
+          const aPhone =
+            (a.contacts || []).find((c) => c.contactType === "phone")?.contactValue || ""
+          const bPhone =
+            (b.contacts || []).find((c) => c.contactType === "phone")?.contactValue || ""
+          aValue = aPhone
+          bValue = bPhone
+          break
+        }
+        case "email": {
+          // 이메일 (첫 번째 이메일로 정렬)
+          const aEmail =
+            (a.contacts || []).find((c) => c.contactType === "email")?.contactValue || ""
+          const bEmail =
+            (b.contacts || []).find((c) => c.contactType === "email")?.contactValue || ""
+          aValue = aEmail
+          bValue = bEmail
+          break
+        }
+        case "facebook": {
+          // Facebook URL (첫 번째 Facebook URL로 정렬)
+          const aFacebook = (a.socialMedia || []).find((s) => s.platform === "facebook")?.url || ""
+          const bFacebook = (b.socialMedia || []).find((s) => s.platform === "facebook")?.url || ""
+          aValue = aFacebook
+          bValue = bFacebook
+          break
+        }
+        case "instagram": {
+          // Instagram URL (첫 번째 Instagram URL로 정렬)
+          const aInstagram =
+            (a.socialMedia || []).find((s) => s.platform === "instagram")?.url || ""
+          const bInstagram =
+            (b.socialMedia || []).find((s) => s.platform === "instagram")?.url || ""
+          aValue = aInstagram
+          bValue = bInstagram
+          break
+        }
+        case "twitter": {
+          // Twitter URL (첫 번째 Twitter URL로 정렬)
+          const aTwitter = (a.socialMedia || []).find((s) => s.platform === "twitter")?.url || ""
+          const bTwitter = (b.socialMedia || []).find((s) => s.platform === "twitter")?.url || ""
+          aValue = aTwitter
+          bValue = bTwitter
+          break
+        }
+        case "linkedin": {
+          // LinkedIn URL (첫 번째 LinkedIn URL로 정렬)
+          const aLinkedin = (a.socialMedia || []).find((s) => s.platform === "linkedin")?.url || ""
+          const bLinkedin = (b.socialMedia || []).find((s) => s.platform === "linkedin")?.url || ""
+          aValue = aLinkedin
+          bValue = bLinkedin
+          break
+        }
+        case "products": {
+          // 제품 (첫 번째 제품명으로 정렬)
+          const aProduct = (a.products || [])[0]?.productName || ""
+          const bProduct = (b.products || [])[0]?.productName || ""
+          aValue = aProduct
+          bValue = bProduct
+          break
+        }
+        case "businessSectors": {
+          // 산업 부문 (첫 번째 산업 부문으로 정렬)
+          const aSector = (a.businessSectors || [])[0]?.sectorName || ""
+          const bSector = (b.businessSectors || [])[0]?.sectorName || ""
+          aValue = aSector
+          bValue = bSector
+          break
+        }
+        case "productCategories": {
+          // 제품 카테고리 (첫 번째 제품 카테고리로 정렬)
+          const aCategory = (a.productCategories || [])[0]?.categoryName || ""
+          const bCategory = (b.productCategories || [])[0]?.categoryName || ""
+          aValue = aCategory
+          bValue = bCategory
+          break
+        }
+        case "industryTypes": {
+          // 산업 카테고리 (첫 번째 산업 카테고리로 정렬)
+          const aIndustry = (a.industryTypes || [])[0]?.industryName || ""
+          const bIndustry = (b.industryTypes || [])[0]?.industryName || ""
+          aValue = aIndustry
+          bValue = bIndustry
+          break
+        }
+        case "createdAt":
+          aValue = new Date(a.createdAt).getTime()
+          bValue = new Date(b.createdAt).getTime()
+          break
+        default:
+          return 0
+      }
+
+      // 문자열 비교
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        const comparison = aValue.localeCompare(bValue, "ko", {
+          numeric: true,
+        })
+        return sortOrder === "asc" ? comparison : -comparison
+      }
+
+      // 숫자 비교
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortOrder === "asc" ? aValue - bValue : bValue - aValue
+      }
+
+      return 0
+    })
+  }, [rawLeads, sortField, sortOrder])
 
   // Delete mutation
   const deleteLead = useDeleteLead()
@@ -139,6 +313,34 @@ export function LeadsTableWithPagination({
   const handleToggleAll = useCallback(() => {
     onToggleAll(leads.map((l) => l.id))
   }, [leads, onToggleAll])
+
+  // 정렬 핸들러
+  const handleSort = useCallback(
+    (field: string) => {
+      if (sortField === field) {
+        // 같은 필드 클릭 시 정렬 순서 변경
+        setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+      } else {
+        // 다른 필드 클릭 시 해당 필드로 정렬 (기본 desc)
+        setSortField(field)
+        setSortOrder("desc")
+      }
+      // 클라이언트 사이드 정렬이므로 페이지 이동 불필요
+    },
+    [sortField, sortOrder],
+  )
+
+  // 정렬 아이콘 렌더링 함수
+  const renderSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-4 w-4 text-gray-400" />
+    }
+    return sortOrder === "asc" ? (
+      <ArrowUp className="h-4 w-4 text-blue-500" />
+    ) : (
+      <ArrowDown className="h-4 w-4 text-blue-500" />
+    )
+  }
 
   // Pagination handlers
   const handlePageChange = (page: number) => {
@@ -232,124 +434,204 @@ export function LeadsTableWithPagination({
                   />
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "180px" }}
+                  onClick={() => handleSort("companyName")}
                 >
-                  회사명
+                  <div className="flex items-center gap-1">
+                    회사명
+                    {renderSortIcon("companyName")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "220px" }}
+                  onClick={() => handleSort("websiteUrl")}
                 >
-                  웹사이트
+                  <div className="flex items-center gap-1">
+                    웹사이트
+                    {renderSortIcon("websiteUrl")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "250px" }}
+                  onClick={() => handleSort("description")}
                 >
-                  회사 설명
+                  <div className="flex items-center gap-1">
+                    회사 설명
+                    {renderSortIcon("description")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "100px" }}
+                  onClick={() => handleSort("leadStatus")}
                 >
-                  상태
+                  <div className="flex items-center gap-1">
+                    상태
+                    {renderSortIcon("leadStatus")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "120px" }}
+                  onClick={() => handleSort("businessType")}
                 >
-                  업종
+                  <div className="flex items-center gap-1">
+                    업종
+                    {renderSortIcon("businessType")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "100px" }}
+                  onClick={() => handleSort("country")}
                 >
-                  국가
+                  <div className="flex items-center gap-1">
+                    국가
+                    {renderSortIcon("country")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "100px" }}
+                  onClick={() => handleSort("city")}
                 >
-                  도시
+                  <div className="flex items-center gap-1">
+                    도시
+                    {renderSortIcon("city")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "100px" }}
+                  onClick={() => handleSort("foundedYear")}
                 >
-                  설립년도
+                  <div className="flex items-center gap-1">
+                    설립년도
+                    {renderSortIcon("foundedYear")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "100px" }}
+                  onClick={() => handleSort("employeeCount")}
                 >
-                  직원수
+                  <div className="flex items-center gap-1">
+                    직원수
+                    {renderSortIcon("employeeCount")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "140px" }}
+                  onClick={() => handleSort("phone")}
                 >
-                  전화번호
+                  <div className="flex items-center gap-1">
+                    전화번호
+                    {renderSortIcon("phone")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "180px" }}
+                  onClick={() => handleSort("email")}
                 >
-                  이메일
+                  <div className="flex items-center gap-1">
+                    이메일
+                    {renderSortIcon("email")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "150px" }}
+                  onClick={() => handleSort("facebook")}
                 >
-                  Facebook
+                  <div className="flex items-center gap-1">
+                    Facebook
+                    {renderSortIcon("facebook")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "150px" }}
+                  onClick={() => handleSort("instagram")}
                 >
-                  Instagram
+                  <div className="flex items-center gap-1">
+                    Instagram
+                    {renderSortIcon("instagram")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "150px" }}
+                  onClick={() => handleSort("twitter")}
                 >
-                  Twitter
+                  <div className="flex items-center gap-1">
+                    Twitter
+                    {renderSortIcon("twitter")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "150px" }}
+                  onClick={() => handleSort("linkedin")}
                 >
-                  LinkedIn
+                  <div className="flex items-center gap-1">
+                    LinkedIn
+                    {renderSortIcon("linkedin")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "150px" }}
+                  onClick={() => handleSort("products")}
                 >
-                  제품
+                  <div className="flex items-center gap-1">
+                    제품
+                    {renderSortIcon("products")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "150px" }}
+                  onClick={() => handleSort("businessSectors")}
                 >
-                  산업 부문
+                  <div className="flex items-center gap-1">
+                    산업 부문
+                    {renderSortIcon("businessSectors")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "150px" }}
+                  onClick={() => handleSort("productCategories")}
                 >
-                  제품 카테고리
+                  <div className="flex items-center gap-1">
+                    제품 카테고리
+                    {renderSortIcon("productCategories")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "150px" }}
+                  onClick={() => handleSort("industryTypes")}
                 >
-                  산업 카테고리
+                  <div className="flex items-center gap-1">
+                    산업 카테고리
+                    {renderSortIcon("industryTypes")}
+                  </div>
                 </th>
                 <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "120px" }}
+                  onClick={() => handleSort("createdAt")}
                 >
-                  생성일
+                  <div className="flex items-center gap-1">
+                    생성일
+                    {renderSortIcon("createdAt")}
+                  </div>
                 </th>
               </tr>
             </thead>

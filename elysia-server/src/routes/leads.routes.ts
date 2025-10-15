@@ -497,3 +497,100 @@ export const adminLeadRoutes = new Elysia({ prefix: "/api/v1/admin/leads" })
       }),
     },
   )
+
+  // Download leads as CSV
+  .get(
+    "/download/csv",
+    async ({ query, set }) => {
+      try {
+        // Parse workspaceIds from comma-separated string
+        const workspaceIds = query.workspaceIds
+          ? query.workspaceIds.split(",").filter(Boolean)
+          : undefined
+
+        const filters = {
+          leadStatus: query.leadStatus as
+            | "new"
+            | "contacted"
+            | "qualified"
+            | "unqualified"
+            | "converted"
+            | "lost"
+            | "unsubscribed"
+            | undefined,
+          businessType: query.businessType,
+          country: query.country,
+          city: query.city,
+          search: query.search,
+          workspaceIds,
+          customerGroupId: query.customerGroupId,
+        }
+
+        const csvData = await leadService.exportLeadsToCSV(filters)
+
+        // Set headers for CSV download
+        set.headers = {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="leads_${
+            new Date().toISOString().split("T")[0]
+          }.csv"`,
+        }
+
+        return csvData
+      } catch (error) {
+        console.error("CSV export error:", error)
+        set.status = 500
+        return errorResponse("CSV 다운로드에 실패했습니다.", ResponseCode.INTERNAL_ERROR)
+      }
+    },
+    {
+      query: t.Object({
+        leadStatus: t.Optional(t.String()),
+        businessType: t.Optional(t.String()),
+        country: t.Optional(t.String()),
+        city: t.Optional(t.String()),
+        search: t.Optional(t.String()),
+        workspaceIds: t.Optional(t.String()),
+        customerGroupId: t.Optional(t.String()),
+      }),
+    },
+  )
+
+  // Download selected leads as CSV
+  .post(
+    "/download/csv/selected",
+    async ({ body, set }) => {
+      try {
+        const { leadIds } = body
+
+        if (!leadIds || leadIds.length === 0) {
+          set.status = 400
+          return errorResponse("다운로드할 리드가 선택되지 않았습니다.", ResponseCode.BAD_REQUEST)
+        }
+
+        const csvData = await leadService.exportSelectedLeadsToCSV(leadIds)
+
+        // Set headers for CSV download
+        set.headers = {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="selected_leads_${
+            new Date().toISOString().split("T")[0]
+          }.csv"`,
+        }
+
+        return csvData
+      } catch (error) {
+        console.error("Selected leads CSV export error:", error)
+        set.status = 500
+        return errorResponse(
+          "선택된 리드 CSV 다운로드에 실패했습니다.",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      body: t.Object({
+        leadIds: t.Array(t.String({ format: "uuid" })),
+      }),
+    },
+  )

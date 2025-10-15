@@ -5,6 +5,7 @@ import type {
   BulkUpdateBusinessTypeRequest,
   BulkUpdateLeadStatusRequest,
   CreateLeadRequest,
+  Lead,
   LeadsParams,
   UpdateLeadRequest,
 } from "../types/lead"
@@ -60,7 +61,9 @@ export function useUpdateLead() {
     mutationFn: ({ leadId, data }: { leadId: string; data: UpdateLeadRequest }) =>
       leadsApi.update(leadId, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: leadKeys.detail(variables.leadId) })
+      queryClient.invalidateQueries({
+        queryKey: leadKeys.detail(variables.leadId),
+      })
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() })
       toast.success("리드 정보가 업데이트되었습니다")
     },
@@ -126,6 +129,19 @@ export function useBulkDeleteLeads() {
     },
     onError: (error: Error) => {
       toast.error(error.message || "리드 삭제에 실패했습니다")
+    },
+  })
+}
+
+export function useDownloadSelectedLeadsCSV() {
+  return useMutation({
+    mutationFn: ({ leadIds, leadsData }: { leadIds: string[]; leadsData?: Lead[] }) =>
+      leadsApi.downloadSelectedLeadsCSV(leadIds, leadsData),
+    onSuccess: (response) => {
+      toast.success(`선택된 리드 데이터가 다운로드되었습니다 (${response.filename})`)
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "선택된 리드 CSV 다운로드에 실패했습니다")
     },
   })
 }

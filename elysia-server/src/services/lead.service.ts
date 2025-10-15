@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { customerGroupMembers } from "../db/schema/customer-groups"
 import {
@@ -9,7 +9,7 @@ import {
   leadProducts,
   leadSocialMedia,
 } from "../db/schema/lead-details"
-import { leads } from "../db/schema/leads"
+import { type leadStatusEnum, leads } from "../db/schema/leads"
 import { users } from "../db/schema/users"
 import { workspaces } from "../db/schema/workspaces"
 
@@ -1047,4 +1047,403 @@ export async function bulkCreateLeads(data: {
   }
 
   return createdLeads
+}
+
+// ====================================
+// CSV EXPORT
+// ====================================
+
+export async function exportLeadsToCSV(filters: {
+  leadStatus?: string
+  businessType?: string
+  country?: string
+  city?: string
+  search?: string
+  workspaceIds?: string[]
+  customerGroupId?: string
+}) {
+  // Build where conditions
+  const conditions = []
+
+  if (filters.leadStatus && filters.leadStatus !== "all") {
+    conditions.push(
+      eq(leads.leadStatus, filters.leadStatus as (typeof leadStatusEnum.enumValues)[number]),
+    )
+  }
+
+  if (filters.businessType) {
+    conditions.push(ilike(leads.businessType, `%${filters.businessType}%`))
+  }
+
+  if (filters.country) {
+    conditions.push(ilike(leads.country, `%${filters.country}%`))
+  }
+
+  if (filters.city) {
+    conditions.push(ilike(leads.city, `%${filters.city}%`))
+  }
+
+  if (filters.search) {
+    conditions.push(
+      or(
+        ilike(leads.companyName, `%${filters.search}%`),
+        ilike(leads.foundCompanyName, `%${filters.search}%`),
+        ilike(leads.websiteUrl, `%${filters.search}%`),
+        ilike(leads.description, `%${filters.search}%`),
+      ),
+    )
+  }
+
+  if (filters.workspaceIds && filters.workspaceIds.length > 0) {
+    conditions.push(inArray(leads.workspaceId, filters.workspaceIds))
+  }
+
+  if (filters.customerGroupId) {
+    conditions.push(
+      sql`${leads.id} IN (
+        SELECT lead_id FROM customer_group_members 
+        WHERE customer_group_id = ${filters.customerGroupId}
+      )`,
+    )
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+
+  // Get all leads with related data
+  const leadsData = await db
+    .select({
+      id: leads.id,
+      workspaceName: workspaces.name,
+      companyName: leads.companyName,
+      foundCompanyName: leads.foundCompanyName,
+      websiteUrl: leads.websiteUrl,
+      businessType: leads.businessType,
+      description: leads.description,
+      country: leads.country,
+      city: leads.city,
+      foundedYear: leads.foundedYear,
+      employeeCount: leads.employeeCount,
+      leadStatus: leads.leadStatus,
+      leadScore: leads.leadScore,
+      notes: leads.notes,
+      createdAt: leads.createdAt,
+    })
+    .from(leads)
+    .leftJoin(workspaces, eq(leads.workspaceId, workspaces.id))
+    .where(whereClause)
+    .orderBy(desc(leads.createdAt))
+
+  // Get contacts for all leads
+  const leadIds = leadsData.map((lead) => lead.id)
+  const contactsData =
+    leadIds.length > 0
+      ? await db
+          .select({
+            leadId: leadContacts.leadId,
+            contactType: leadContacts.contactType,
+            contactValue: leadContacts.contactValue,
+            isPrimary: leadContacts.isPrimary,
+          })
+          .from(leadContacts)
+          .where(inArray(leadContacts.leadId, leadIds))
+          .orderBy(leadContacts.leadId, leadContacts.isPrimary)
+      : []
+
+  // Get social media for all leads
+  const socialMediaData =
+    leadIds.length > 0
+      ? await db
+          .select({
+            leadId: leadSocialMedia.leadId,
+            platform: leadSocialMedia.platform,
+            url: leadSocialMedia.url,
+            username: leadSocialMedia.username,
+          })
+          .from(leadSocialMedia)
+          .where(inArray(leadSocialMedia.leadId, leadIds))
+          .orderBy(leadSocialMedia.leadId)
+      : []
+
+  // Group contacts and social media by lead ID
+  const contactsByLead = contactsData.reduce(
+    (acc, contact) => {
+      if (!acc[contact.leadId]) acc[contact.leadId] = []
+      acc[contact.leadId]?.push(contact)
+      return acc
+    },
+    {} as Record<string, typeof contactsData>,
+  )
+
+  const socialMediaByLead = socialMediaData.reduce(
+    (acc, social) => {
+      if (!acc[social.leadId]) acc[social.leadId] = []
+      acc[social.leadId]?.push(social)
+      return acc
+    },
+    {} as Record<string, typeof socialMediaData>,
+  )
+
+  // Create CSV headers
+  const headers = [
+    "ID",
+    "워크스페이스",
+    "회사명",
+    "발견된 회사명",
+    "웹사이트",
+    "업종",
+    "설명",
+    "국가",
+    "도시",
+    "설립년도",
+    "직원수",
+    "상태",
+    "리드 점수",
+    "메모",
+    "이메일",
+    "전화번호",
+    "Facebook",
+    "Instagram",
+    "Twitter",
+    "LinkedIn",
+    "생성일",
+  ]
+
+  // Create CSV rows
+  const rows = leadsData.map((lead) => {
+    const contacts = contactsByLead[lead.id] || []
+    const socialMedia = socialMediaByLead[lead.id] || []
+
+    const emails = contacts
+      .filter((c) => c.contactType === "email")
+      .map((c) => c.contactValue)
+      .join("; ")
+
+    const phones = contacts
+      .filter((c) => c.contactType === "phone")
+      .map((c) => c.contactValue)
+      .join("; ")
+
+    const facebook = socialMedia
+      .filter((s) => s.platform === "facebook")
+      .map((s) => s.url)
+      .join("; ")
+
+    const instagram = socialMedia
+      .filter((s) => s.platform === "instagram")
+      .map((s) => s.url)
+      .join("; ")
+
+    const twitter = socialMedia
+      .filter((s) => s.platform === "twitter")
+      .map((s) => s.url)
+      .join("; ")
+
+    const linkedin = socialMedia
+      .filter((s) => s.platform === "linkedin")
+      .map((s) => s.url)
+      .join("; ")
+
+    return [
+      lead.id,
+      lead.workspaceName || "",
+      lead.companyName || "",
+      lead.foundCompanyName || "",
+      lead.websiteUrl || "",
+      lead.businessType || "",
+      (lead.description || "").replace(/"/g, '""'), // Escape quotes
+      lead.country || "",
+      lead.city || "",
+      lead.foundedYear || "",
+      lead.employeeCount || "",
+      lead.leadStatus || "",
+      lead.leadScore || "",
+      (lead.notes || "").replace(/"/g, '""'), // Escape quotes
+      emails,
+      phones,
+      facebook,
+      instagram,
+      twitter,
+      linkedin,
+      lead.createdAt ? new Date(lead.createdAt).toLocaleDateString("ko-KR") : "",
+    ]
+  })
+
+  // Convert to CSV format
+  const csvContent = [
+    headers.map((h) => `"${h}"`).join(","),
+    ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+  ].join("\n")
+
+  // Add BOM for proper UTF-8 encoding in Excel
+  return `\uFEFF${csvContent}`
+}
+
+export async function exportSelectedLeadsToCSV(leadIds: string[]) {
+  if (leadIds.length === 0) {
+    return (
+      "\uFEFF" +
+      '"ID","워크스페이스","회사명","발견된 회사명","웹사이트","업종","설명","국가","도시","설립년도","직원수","상태","리드 점수","메모","이메일","전화번호","Facebook","Instagram","Twitter","LinkedIn","생성일"\n'
+    )
+  }
+
+  // Get all leads with related data by IDs
+  const leadsData = await db
+    .select({
+      id: leads.id,
+      workspaceName: workspaces.name,
+      companyName: leads.companyName,
+      foundCompanyName: leads.foundCompanyName,
+      websiteUrl: leads.websiteUrl,
+      businessType: leads.businessType,
+      description: leads.description,
+      country: leads.country,
+      city: leads.city,
+      foundedYear: leads.foundedYear,
+      employeeCount: leads.employeeCount,
+      leadStatus: leads.leadStatus,
+      leadScore: leads.leadScore,
+      notes: leads.notes,
+      createdAt: leads.createdAt,
+    })
+    .from(leads)
+    .leftJoin(workspaces, eq(leads.workspaceId, workspaces.id))
+    .where(inArray(leads.id, leadIds))
+    .orderBy(desc(leads.createdAt))
+
+  // Get contacts for all leads
+  const contactsData = await db
+    .select({
+      leadId: leadContacts.leadId,
+      contactType: leadContacts.contactType,
+      contactValue: leadContacts.contactValue,
+      isPrimary: leadContacts.isPrimary,
+    })
+    .from(leadContacts)
+    .where(inArray(leadContacts.leadId, leadIds))
+    .orderBy(leadContacts.leadId, leadContacts.isPrimary)
+
+  // Get social media for all leads
+  const socialMediaData = await db
+    .select({
+      leadId: leadSocialMedia.leadId,
+      platform: leadSocialMedia.platform,
+      url: leadSocialMedia.url,
+      username: leadSocialMedia.username,
+    })
+    .from(leadSocialMedia)
+    .where(inArray(leadSocialMedia.leadId, leadIds))
+    .orderBy(leadSocialMedia.leadId)
+
+  // Group contacts and social media by lead ID
+  const contactsByLead = contactsData.reduce(
+    (acc, contact) => {
+      if (!acc[contact.leadId]) acc[contact.leadId] = []
+      acc[contact.leadId]?.push(contact)
+      return acc
+    },
+    {} as Record<string, typeof contactsData>,
+  )
+
+  const socialMediaByLead = socialMediaData.reduce(
+    (acc, social) => {
+      if (!acc[social.leadId]) acc[social.leadId] = []
+      acc[social.leadId]?.push(social)
+      return acc
+    },
+    {} as Record<string, typeof socialMediaData>,
+  )
+
+  // Create CSV headers
+  const headers = [
+    "ID",
+    "워크스페이스",
+    "회사명",
+    "발견된 회사명",
+    "웹사이트",
+    "업종",
+    "설명",
+    "국가",
+    "도시",
+    "설립년도",
+    "직원수",
+    "상태",
+    "리드 점수",
+    "메모",
+    "이메일",
+    "전화번호",
+    "Facebook",
+    "Instagram",
+    "Twitter",
+    "LinkedIn",
+    "생성일",
+  ]
+
+  // Create CSV rows
+  const rows = leadsData.map((lead) => {
+    const contacts = contactsByLead[lead.id] || []
+    const socialMedia = socialMediaByLead[lead.id] || []
+
+    const emails = contacts
+      .filter((c) => c.contactType === "email")
+      .map((c) => c.contactValue)
+      .join("; ")
+
+    const phones = contacts
+      .filter((c) => c.contactType === "phone")
+      .map((c) => c.contactValue)
+      .join("; ")
+
+    const facebook = socialMedia
+      .filter((s) => s.platform === "facebook")
+      .map((s) => s.url)
+      .join("; ")
+
+    const instagram = socialMedia
+      .filter((s) => s.platform === "instagram")
+      .map((s) => s.url)
+      .join("; ")
+
+    const twitter = socialMedia
+      .filter((s) => s.platform === "twitter")
+      .map((s) => s.url)
+      .join("; ")
+
+    const linkedin = socialMedia
+      .filter((s) => s.platform === "linkedin")
+      .map((s) => s.url)
+      .join("; ")
+
+    return [
+      lead.id,
+      lead.workspaceName || "",
+      lead.companyName || "",
+      lead.foundCompanyName || "",
+      lead.websiteUrl || "",
+      lead.businessType || "",
+      (lead.description || "").replace(/"/g, '""'), // Escape quotes
+      lead.country || "",
+      lead.city || "",
+      lead.foundedYear || "",
+      lead.employeeCount || "",
+      lead.leadStatus || "",
+      lead.leadScore || "",
+      (lead.notes || "").replace(/"/g, '""'), // Escape quotes
+      emails,
+      phones,
+      facebook,
+      instagram,
+      twitter,
+      linkedin,
+      lead.createdAt ? new Date(lead.createdAt).toLocaleDateString("ko-KR") : "",
+    ]
+  })
+
+  // Convert to CSV format
+  const csvContent = [
+    headers.map((h) => `"${h}"`).join(","),
+    ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+  ].join("\n")
+
+  // Add BOM for proper UTF-8 encoding in Excel
+  return `\uFEFF${csvContent}`
 }

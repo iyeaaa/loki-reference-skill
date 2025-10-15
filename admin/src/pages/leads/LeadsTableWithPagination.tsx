@@ -30,6 +30,7 @@ interface LeadsTableWithPaginationProps {
   onToggleAll: (leadIds: string[]) => void
   onEditLead: (lead: Lead) => void
   onManageGroups: (lead: Lead) => void
+  onLeadsDataChange?: (leads: Lead[]) => void
 }
 
 export function LeadsTableWithPagination({
@@ -44,6 +45,7 @@ export function LeadsTableWithPagination({
   onToggleAll,
   onEditLead,
   onManageGroups,
+  onLeadsDataChange,
 }: LeadsTableWithPaginationProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
@@ -51,7 +53,10 @@ export function LeadsTableWithPagination({
     () => localStorage.getItem("selectedWorkspace") || "all",
   )
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [leadToDelete, setLeadToDelete] = useState<{ id: string; name: string } | null>(null)
+  const [leadToDelete, setLeadToDelete] = useState<{
+    id: string
+    name: string
+  } | null>(null)
 
   const limit = 10
 
@@ -95,6 +100,13 @@ export function LeadsTableWithPagination({
   const deleteLead = useDeleteLead()
 
   console.log("leads", leads)
+
+  // 리드 데이터가 변경될 때마다 부모에게 알림
+  useEffect(() => {
+    if (onLeadsDataChange && leads.length > 0) {
+      onLeadsDataChange(leads)
+    }
+  }, [leads, onLeadsDataChange])
 
   const getStatusText = (status: LeadStatus) => {
     const statusMap: Record<LeadStatus, string> = {
@@ -1150,7 +1162,9 @@ export function LeadsTableWithPagination({
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
         title="리드 삭제"
-        description={`"${leadToDelete?.name || ""}" 리드를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`}
+        description={`"${
+          leadToDelete?.name || ""
+        }" 리드를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`}
         confirmText="삭제"
         cancelText="취소"
         onConfirm={confirmDelete}

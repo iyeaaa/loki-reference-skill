@@ -39,6 +39,7 @@ import {
   useBulkUpdateLeadBusinessType,
   useBulkUpdateLeadStatus,
   useCreateLead,
+  useDownloadSelectedLeadsCSV,
   useUpdateLead,
 } from "@/lib/api/hooks/leads"
 import { customerGroupsApi } from "@/lib/api/services/customer-groups"
@@ -100,6 +101,9 @@ export default function LeadsPage() {
   const [showLeadGroupModal, setShowLeadGroupModal] = useState(false)
   const [leadCurrentGroups, setLeadCurrentGroups] = useState<CustomerGroup[]>([])
 
+  // 현재 로드된 리드 데이터 저장
+  const [currentLeadsData, setCurrentLeadsData] = useState<Lead[]>([])
+
   // 확인 다이얼로그 상태
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false)
   const [groupDeleteConfirmOpen, setGroupDeleteConfirmOpen] = useState(false)
@@ -119,6 +123,7 @@ export default function LeadsPage() {
   const bulkUpdateStatus = useBulkUpdateLeadStatus()
   const bulkUpdateBusinessType = useBulkUpdateLeadBusinessType()
   const bulkDeleteLeads = useBulkDeleteLeads()
+  const downloadSelectedLeadsCSV = useDownloadSelectedLeadsCSV()
   const createCustomerGroup = useCreateCustomerGroup()
   const updateCustomerGroup = useUpdateCustomerGroup()
   const deleteCustomerGroup = useDeleteCustomerGroup()
@@ -269,6 +274,19 @@ export default function LeadsPage() {
   const toggleAllLeads = useCallback((leadIds: string[]) => {
     setSelectedLeads((prev) => (prev.length === leadIds.length ? [] : leadIds))
   }, [])
+
+  // 선택된 리드들 CSV 다운로드 핸들러
+  const handleDownloadSelectedLeadsCSV = () => {
+    if (selectedLeads.length === 0) {
+      toast.error("다운로드할 리드를 선택해주세요.")
+      return
+    }
+
+    downloadSelectedLeadsCSV.mutate({
+      leadIds: selectedLeads,
+      leadsData: currentLeadsData,
+    })
+  }
 
   // CSV 업로드 핸들러
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -640,6 +658,15 @@ export default function LeadsPage() {
                 <span className="font-medium">{selectedLeads.length}개 선택됨</span>
               </div>
               <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadSelectedLeadsCSV}
+                  disabled={downloadSelectedLeadsCSV.isPending}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  {downloadSelectedLeadsCSV.isPending ? "다운로드 중..." : "선택된 리드 다운로드"}
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => openBulkActionModal("status")}>
                   상태 변경
                 </Button>
@@ -675,6 +702,7 @@ export default function LeadsPage() {
             onToggleAll={toggleAllLeads}
             onEditLead={setEditingLead}
             onManageGroups={handleManageLeadGroups}
+            onLeadsDataChange={setCurrentLeadsData}
           />
         </CardContent>
       </Card>
@@ -987,7 +1015,9 @@ export default function LeadsPage() {
         open={groupDeleteConfirmOpen}
         onOpenChange={setGroupDeleteConfirmOpen}
         title="그룹 삭제"
-        description={`"${groupToDelete?.name || ""}" 그룹을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`}
+        description={`"${
+          groupToDelete?.name || ""
+        }" 그룹을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`}
         confirmText="삭제"
         cancelText="취소"
         onConfirm={confirmGroupDelete}

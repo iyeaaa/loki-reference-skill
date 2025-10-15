@@ -283,4 +283,23 @@ export const sequencesApi = {
       }
     }>(`/api/v1/sequences/enrollments/${enrollmentId}/metrics`)
   },
+
+  // AI 이메일 템플릿 생성
+  generateTemplate: (data: {
+    workspaceId: string
+    country: string
+    prompt: string
+    model?: string
+    temperature?: number
+  }) => {
+    return apiFetch<{
+      emailSubject: string
+      emailBodyText: string
+      emailBodyHtml: string
+      detectedLanguage?: string
+    }>("/api/v1/sequences/generate-template", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  },
 }

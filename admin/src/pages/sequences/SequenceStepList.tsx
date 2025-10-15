@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import {
   useCreateSequenceStep,
   useDeleteSequenceStep,
+  useSequence,
   useSequenceSteps,
   useUpdateSequenceStep,
 } from "@/lib/api/hooks/sequences"
@@ -28,6 +29,9 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
 
   // Fetch steps only if we have a sequenceId (edit mode)
   const { data: steps = [], isLoading } = useSequenceSteps(sequenceId || "", !!sequenceId)
+
+  // Fetch sequence to get workspaceId
+  const { data: sequence } = useSequence(sequenceId || "", !!sequenceId)
 
   const createStep = useCreateSequenceStep(sequenceId)
   const updateStep = useUpdateSequenceStep(sequenceId)
@@ -194,12 +198,14 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
 
       {/* Create Step Dialog */}
       <Dialog open={isCreating} onOpenChange={setIsCreating}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>새 스텝 추가</DialogTitle>
           </DialogHeader>
           <SequenceStepForm
             stepOrder={nextStepOrder}
+            workspaceId={sequence?.workspaceId}
+            customerGroupId={sequence?.customerGroupId || undefined}
             onSave={handleCreateStep}
             onCancel={() => setIsCreating(false)}
           />
@@ -208,7 +214,7 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
 
       {/* Edit Step Dialog */}
       <Dialog open={!!editingStep} onOpenChange={() => setEditingStep(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>스텝 수정</DialogTitle>
           </DialogHeader>
@@ -216,6 +222,8 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
             <SequenceStepForm
               step={editingStep}
               stepOrder={editingStep.stepOrder}
+              workspaceId={sequence?.workspaceId}
+              customerGroupId={sequence?.customerGroupId || undefined}
               onSave={handleUpdateStep}
               onCancel={() => setEditingStep(null)}
             />

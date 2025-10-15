@@ -1,17 +1,23 @@
-import { ChevronDown } from "lucide-react"
-import { useId, useState } from "react"
+import { ChevronDown, Sparkles } from "lucide-react"
+import { useEffect, useId, useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { Textarea } from "@/components/ui/textarea"
 import { TimePicker } from "@/components/ui/time-picker"
+import { leadsApi } from "@/lib/api/services/leads"
+import { sequencesApi } from "@/lib/api/services/sequences"
 import type { SequenceStep } from "@/lib/api/types/sequence"
 import { markdownToHtml } from "@/lib/utils/markdown"
 
 interface SequenceStepFormProps {
   step?: SequenceStep
   stepOrder: number
+  workspaceId?: string
+  customerGroupId?: string
   onSave: (stepData: {
     stepOrder: number
     delayDays: number
@@ -25,10 +31,18 @@ interface SequenceStepFormProps {
   onCancel: () => void
 }
 
-export function SequenceStepForm({ step, stepOrder, onSave, onCancel }: SequenceStepFormProps) {
+export function SequenceStepForm({
+  step,
+  stepOrder,
+  workspaceId,
+  customerGroupId,
+  onSave,
+  onCancel,
+}: SequenceStepFormProps) {
   const subjectId = useId()
   const delayDaysId = useId()
   const bodyTextId = useId()
+  const promptId = useId()
 
   const [formData, setFormData] = useState({
     stepOrder: step?.stepOrder ?? stepOrder,
@@ -39,6 +53,36 @@ export function SequenceStepForm({ step, stepOrder, onSave, onCancel }: Sequence
     emailSubject: step?.emailSubject || "",
     emailBodyText: step?.emailBodyText || "",
   })
+
+  const [showAIGenerator, setShowAIGenerator] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState("")
+  const [targetCountry, setTargetCountry] = useState<string>("")
+  const [isLoadingCountry, setIsLoadingCountry] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+
+  // 고객 그룹의 리드에서 country 가져오기
+  useEffect(() => {
+    if (customerGroupId && showAIGenerator) {
+      setIsLoadingCountry(true)
+      leadsApi
+        .list({ customerGroupId, limit: 1 })
+        .then((response) => {
+          if (response.leads.length > 0 && response.leads[0]?.country) {
+            setTargetCountry(response.leads[0].country)
+          } else {
+            setTargetCountry("")
+            toast.info("고객 그룹에 국가 정보가 있는 리드가 없습니다.")
+          }
+        })
+        .catch((error) => {
+          console.error("리드 조회 실패:", error)
+          toast.error("리드 정보를 가져오는데 실패했습니다.")
+        })
+        .finally(() => {
+          setIsLoadingCountry(false)
+        })
+    }
+  }, [customerGroupId, showAIGenerator])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,6 +96,52 @@ export function SequenceStepForm({ step, stepOrder, onSave, onCancel }: Sequence
       ...formData,
       emailBodyHtml,
     })
+  }
+
+  const handleGenerateWithAI = async () => {
+    if (!workspaceId) {
+      toast.error("워크스페이스 정보가 없습니다.")
+      return
+    }
+
+    if (!customerGroupId) {
+      toast.error("시퀀스에 고객 그룹이 설정되어 있지 않습니다.")
+      return
+    }
+
+    if (!targetCountry) {
+      toast.error("고객 그룹에 국가 정보가 있는 리드가 없습니다.")
+      return
+    }
+
+    if (!aiPrompt.trim()) {
+      toast.error("이메일 내용 요청사항을 입력해주세요.")
+      return
+    }
+
+    setIsGenerating(true)
+    try {
+      const result = await sequencesApi.generateTemplate({
+        workspaceId,
+        country: targetCountry,
+        prompt: aiPrompt,
+      })
+
+      // 생성된 템플릿을 폼에 반영
+      setFormData({
+        ...formData,
+        emailSubject: result.emailSubject,
+        emailBodyText: result.emailBodyText,
+      })
+
+      toast.success(`이메일 템플릿이 생성되었습니다! (언어: ${result.detectedLanguage || "auto"})`)
+      setShowAIGenerator(false)
+    } catch (error) {
+      console.error("AI 템플릿 생성 실패:", error)
+      toast.error(error instanceof Error ? error.message : "템플릿 생성에 실패했습니다.")
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   return (
@@ -117,6 +207,75 @@ export function SequenceStepForm({ step, stepOrder, onSave, onCancel }: Sequence
           </p>
         </div>
       </div>
+
+      {/* AI 생성 섹션 */}
+      {workspaceId && customerGroupId && (
+        <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              AI 이메일 템플릿 생성
+            </h3>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAIGenerator(!showAIGenerator)}
+            >
+              {showAIGenerator ? "닫기" : "열기"}
+            </Button>
+          </div>
+
+          {showAIGenerator && (
+            <div className="space-y-3 pt-2 border-t">
+              {/* 타겟 국가 표시 */}
+              <div className="rounded-md bg-primary/5 border border-primary/20 p-3">
+                <p className="text-sm font-medium text-primary">
+                  {isLoadingCountry
+                    ? "🔄 국가 정보 조회 중..."
+                    : targetCountry
+                      ? `🌍 타겟 국가: ${targetCountry}`
+                      : "⚠️ 고객 그룹에 국가 정보가 없습니다."}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  고객 그룹의 리드에서 자동으로 국가를 감지합니다.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={promptId}>
+                  이메일 내용 요청사항 <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id={promptId}
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder="예: K-뷰티 제품의 글로벌 유통 파트너십을 제안하는 이메일을 작성해주세요. 우리 제품의 강점과 파트너십 혜택을 강조해주세요."
+                  className="bg-background min-h-[100px]"
+                />
+              </div>
+
+              <Button
+                type="button"
+                onClick={handleGenerateWithAI}
+                disabled={isGenerating || !aiPrompt.trim() || !targetCountry || isLoadingCountry}
+                className="w-full"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                {isGenerating ? "생성 중..." : "AI로 템플릿 생성"}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {workspaceId && !customerGroupId && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-4">
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            💡 AI 이메일 생성을 사용하려면 시퀀스에 고객 그룹을 먼저 설정해주세요.
+          </p>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor={subjectId}>

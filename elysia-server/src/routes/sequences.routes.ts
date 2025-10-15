@@ -2,8 +2,10 @@ import { eq } from "drizzle-orm"
 import { Elysia, t } from "elysia"
 import { db } from "../db"
 import { userEmailAccounts } from "../db/schema/email-accounts"
+import { getAITemplateGenerationService } from "../services/ai-template-generation.service"
 import * as sequenceService from "../services/sequence.service"
-import { errorResponse, ResponseCode } from "../types/response.types"
+import * as workspaceService from "../services/workspace.service"
+import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
 import logger from "../utils/logger"
 
 const sequenceSchema = t.Object({
@@ -673,6 +675,68 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
     {
       params: t.Object({
         enrollmentId: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
+  // AI 이메일 템플릿 생성
+  .post(
+    "/generate-template",
+    async ({ body, set }) => {
+      try {
+        // 워크스페이스 정보 조회
+        const workspace = await workspaceService.getWorkspace(body.workspaceId)
+        if (!workspace) {
+          set.status = 404
+          return errorResponse("워크스페이스를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+        }
+
+        // AI 템플릿 생성 서비스 호출
+        const aiService = getAITemplateGenerationService()
+        const template = await aiService.generateEmailTemplate({
+          workspaceName: workspace.name,
+          workspaceDescription: workspace.description || undefined,
+          country: body.country,
+          userPrompt: body.prompt,
+          model: body.model,
+          temperature: body.temperature,
+        })
+
+        logger.info(
+          {
+            workspaceId: body.workspaceId,
+            country: body.country,
+            language: template.detectedLanguage,
+          },
+          "Email template generated successfully",
+        )
+
+        return successResponse(
+          {
+            emailSubject: template.subject,
+            emailBodyText: template.bodyText,
+            emailBodyHtml: template.bodyHtml,
+            detectedLanguage: template.detectedLanguage,
+          },
+          "이메일 템플릿이 생성되었습니다.",
+          ResponseCode.CREATED,
+        )
+      } catch (error) {
+        logger.error({ err: error, body }, "Failed to generate email template")
+        set.status = 500
+        return errorResponse(
+          error instanceof Error ? error.message : "이메일 템플릿 생성에 실패했습니다.",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      body: t.Object({
+        workspaceId: t.String({ format: "uuid" }),
+        country: t.String({ minLength: 2, maxLength: 100 }),
+        prompt: t.String({ minLength: 10 }),
+        model: t.Optional(t.String()),
+        temperature: t.Optional(t.Number({ minimum: 0, maximum: 2 })),
       }),
     },
   )

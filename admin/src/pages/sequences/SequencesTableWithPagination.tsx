@@ -1,6 +1,5 @@
-import { ChevronLeft, ChevronRight, Edit, Pause, Play, Workflow } from "lucide-react"
+import { ChevronLeft, ChevronRight, Edit, Pause, Play } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -39,7 +38,6 @@ export function SequencesTableWithPagination({
   onToggleAll,
   onEditSequence,
 }: SequencesTableWithPaginationProps) {
-  const navigate = useNavigate()
   const updateSequence = useUpdateSequence()
   const activateStepBased = useActivateStepBasedSequence()
   const [currentPage, setCurrentPage] = useState(1)
@@ -184,14 +182,6 @@ export function SequencesTableWithPagination({
     }
   }
 
-  const handleRowClick = (sequence: Sequence, e: React.MouseEvent) => {
-    // 버튼이나 체크박스 클릭 시에는 모달을 열지 않음
-    if ((e.target as HTMLElement).closest("button, input[type='checkbox']")) {
-      return
-    }
-    setSelectedSequenceForModal(sequence)
-  }
-
   // 고객 그룹 멤버 조회
   const { data: customerGroupData } = useCustomerGroupMembers(
     selectedSequenceForModal?.customerGroupId || "",
@@ -272,6 +262,12 @@ export function SequencesTableWithPagination({
                   생성일
                 </th>
                 <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  style={{ width: "1%", whiteSpace: "nowrap" }}
+                >
+                  수정일
+                </th>
+                <th
                   className="sticky right-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
@@ -284,7 +280,8 @@ export function SequencesTableWithPagination({
                 <tr
                   key={sequence.id}
                   className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                  onClick={(e) => handleRowClick(sequence, e)}
+                  // onClick={(e) => handleRowClick(sequence, e)}
+                  onClick={() => onEditSequence(sequence)}
                 >
                   <td className="sticky left-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
                     <Checkbox
@@ -354,6 +351,9 @@ export function SequencesTableWithPagination({
                   <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                     {formatRelativeTime(sequence.createdAt)}
                   </td>
+                  <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                    {formatRelativeTime(sequence.updatedAt)}
+                  </td>
                   <td className="sticky right-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800">
                     <div className="flex gap-2">
                       <Button
@@ -374,7 +374,7 @@ export function SequencesTableWithPagination({
                           <Play className="h-3 w-3" />
                         )}
                       </Button>
-                      <Button
+                      {/* <Button
                         variant="outline"
                         size="sm"
                         onClick={() => navigate(`/sequences/${sequence.id}/designer`)}
@@ -382,7 +382,7 @@ export function SequencesTableWithPagination({
                         title="노드 편집"
                       >
                         <Workflow className="h-3 w-3" />
-                      </Button>
+                      </Button> */}
                       <Button
                         variant="outline"
                         size="sm"

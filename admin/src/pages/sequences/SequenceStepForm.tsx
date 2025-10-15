@@ -98,7 +98,6 @@ export function SequenceStepForm({
     })
   }
 
-
   useEffect(() => {
     if (formData.delayDays === 0) {
       return

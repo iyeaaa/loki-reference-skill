@@ -45,7 +45,6 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
     timezone?: string
     emailSubject: string
     emailBodyText?: string
-    emailBodyHtml?: string
   }) => {
     const createData: SequenceStepCreateInput = {
       stepOrder: stepData.stepOrder,
@@ -55,7 +54,6 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
       timezone: stepData.timezone,
       emailSubject: stepData.emailSubject,
       emailBodyText: stepData.emailBodyText || "",
-      emailBodyHtml: stepData.emailBodyHtml,
     }
     createStep.mutate(createData, {
       onSuccess: () => {
@@ -72,7 +70,6 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
     timezone?: string
     emailSubject: string
     emailBodyText?: string
-    emailBodyHtml?: string
   }) => {
     if (!editingStep) return
     const updateData: SequenceStepUpdateInput = {
@@ -83,7 +80,6 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
       timezone: stepData.timezone,
       emailSubject: stepData.emailSubject,
       emailBodyText: stepData.emailBodyText || "",
-      emailBodyHtml: stepData.emailBodyHtml,
     }
     updateStep.mutate(
       { stepId: editingStep.id, data: updateData },

@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/api/client"
+import { apiFetch } from "../client"
 import type {
   BulkUpdateEmailStatusRequest,
   CreateEmailRequest,
@@ -9,6 +9,102 @@ import type {
   SendEmailRequest,
   UpdateEmailStatusRequest,
 } from "../types/email"
+
+export interface TodaySentStatsResponse {
+  success: boolean
+  code: string
+  message: string
+  data: {
+    todaySentCount: number
+    date: string
+  }
+  timestamp: string
+}
+
+export interface TodaySentStatsParams {
+  workspaceId?: string
+}
+
+export interface AvgOpenRateStatsResponse {
+  success: boolean
+  code: string
+  message: string
+  data: {
+    avgOpenRate: number
+    totalSent: number
+    openedCount: number
+  }
+  timestamp: string
+}
+
+export interface AvgOpenRateStatsParams {
+  workspaceId?: string
+}
+
+export interface RecentSequencesResponse {
+  success: boolean
+  code: string
+  message: string
+  data: {
+    sequences: Array<{
+      id: string
+      name: string
+      status: string
+      createdAt: string
+      sent: number
+      opened: number
+      clicked: number
+    }>
+    total: number
+  }
+  timestamp: string
+}
+
+export interface RecentSequencesParams {
+  workspaceId?: string
+  limit?: number
+}
+
+export interface ScheduledFollowupsResponse {
+  success: boolean
+  code: string
+  message: string
+  data: {
+    followups: Array<{
+      delayDays: number
+      scheduledDate: string
+      totalCount: number
+      sequences: Array<{
+        sequenceName: string
+        subject: string
+        count: number
+      }>
+    }>
+    totalScheduled: number
+    date: string
+  }
+  timestamp: string
+}
+
+export interface ScheduledFollowupsParams {
+  workspaceId?: string
+}
+
+export interface BuyerResponseRateResponse {
+  success: boolean
+  code: string
+  message: string
+  data: {
+    responseRate: number
+    totalSent: number
+    repliedCount: number
+  }
+  timestamp: string
+}
+
+export interface BuyerResponseRateParams {
+  workspaceId?: string
+}
 
 export const emailsApi = {
   list: (params?: EmailsParams) => {
@@ -150,5 +246,88 @@ export const emailsApi = {
     return apiFetch<{ data: import("../types/email").ThreadEmail[] }>(
       `/api/v1/emails/thread/${threadId}${query ? `?${query}` : ""}`,
     )
+  },
+
+  // NEW: Get today's sent email count
+  getTodaySentStats: async (
+    params?: TodaySentStatsParams,
+  ): Promise<TodaySentStatsResponse["data"]> => {
+    const searchParams = new URLSearchParams()
+    if (params?.workspaceId) {
+      searchParams.append("workspaceId", params.workspaceId)
+    }
+
+    const response = await apiFetch<TodaySentStatsResponse["data"]>(
+      `/api/v1/emails/stats/today-sent?${searchParams.toString()}`,
+    )
+
+    return response
+  },
+
+  // NEW: Get average open rate
+  getAvgOpenRateStats: async (
+    params?: AvgOpenRateStatsParams,
+  ): Promise<AvgOpenRateStatsResponse["data"]> => {
+    const searchParams = new URLSearchParams()
+    if (params?.workspaceId) {
+      searchParams.append("workspaceId", params.workspaceId)
+    }
+
+    const response = await apiFetch<AvgOpenRateStatsResponse["data"]>(
+      `/api/v1/emails/stats/avg-open-rate?${searchParams.toString()}`,
+    )
+
+    return response
+  },
+
+  // NEW: Get recent sequence performance
+  getRecentSequences: async (
+    params?: RecentSequencesParams,
+  ): Promise<RecentSequencesResponse["data"]> => {
+    const searchParams = new URLSearchParams()
+    if (params?.workspaceId) {
+      searchParams.append("workspaceId", params.workspaceId)
+    }
+    if (params?.limit) {
+      searchParams.append("limit", params.limit.toString())
+    }
+
+    const response = await apiFetch<RecentSequencesResponse["data"]>(
+      `/api/v1/emails/stats/recent-sequences?${searchParams.toString()}`,
+    )
+
+    return response
+  },
+
+  // NEW: Get scheduled follow-up emails
+  getScheduledFollowups: async (
+    params?: ScheduledFollowupsParams,
+  ): Promise<ScheduledFollowupsResponse["data"]> => {
+    const searchParams = new URLSearchParams()
+    if (params?.workspaceId) {
+      searchParams.append("workspaceId", params.workspaceId)
+    }
+
+    const response = await apiFetch<ScheduledFollowupsResponse["data"]>(
+      `/api/v1/emails/stats/scheduled-followups?${searchParams.toString()}`,
+    )
+
+    return response
+  },
+
+  // NEW: Get buyer response rate
+  getBuyerResponseRate: async (
+    params?: BuyerResponseRateParams,
+  ): Promise<BuyerResponseRateResponse["data"]> => {
+    const searchParams = new URLSearchParams()
+    if (params?.workspaceId) {
+      searchParams.append("workspaceId", params.workspaceId)
+    }
+
+    const response = await apiFetch<BuyerResponseRateResponse["data"]>(
+      `/api/v1/emails/stats/buyer-response-rate?${searchParams.toString()}`,
+    )
+
+    return response
   },
 }

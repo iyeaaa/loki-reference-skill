@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import toast from "react-hot-toast"
-import { emailsApi } from "../services/emails"
+import {
+  type AvgOpenRateStatsParams,
+  type BuyerResponseRateParams,
+  emailsApi,
+  type RecentSequencesParams,
+  type ScheduledFollowupsParams,
+  type TodaySentStatsParams,
+} from "../services/emails"
 import type {
   BulkUpdateEmailStatusRequest,
   CreateEmailRequest,
@@ -18,6 +25,17 @@ export const emailKeys = {
   events: (emailId: string) => [...emailKeys.all, "events", emailId] as const,
   replied: (workspaceId?: string, userId?: string) =>
     [...emailKeys.all, "replied", workspaceId, userId] as const,
+  stats: () => [...emailKeys.all, "stats"] as const,
+  todaySent: (params?: TodaySentStatsParams) =>
+    [...emailKeys.stats(), "today-sent", params] as const,
+  avgOpenRate: (params?: AvgOpenRateStatsParams) =>
+    [...emailKeys.stats(), "avg-open-rate", params] as const,
+  recentSequences: (params?: RecentSequencesParams) =>
+    [...emailKeys.stats(), "recent-sequences", params] as const,
+  scheduledFollowups: (params?: ScheduledFollowupsParams) =>
+    [...emailKeys.stats(), "scheduled-followups", params] as const,
+  buyerResponseRate: (params?: BuyerResponseRateParams) =>
+    [...emailKeys.stats(), "buyer-response-rate", params] as const,
 }
 
 // Queries
@@ -47,6 +65,61 @@ export function useEmailEvents(emailId: string, enabled = true) {
     enabled,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
+  })
+}
+
+// NEW: Get today's sent email count
+export function useTodaySentStats(params?: TodaySentStatsParams) {
+  return useQuery({
+    queryKey: emailKeys.todaySent(params),
+    queryFn: () => emailsApi.getTodaySentStats(params),
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 60 * 1000, // Refetch every minute for real-time updates
+  })
+}
+
+// NEW: Get average open rate
+export function useAvgOpenRateStats(params?: AvgOpenRateStatsParams) {
+  return useQuery({
+    queryKey: emailKeys.avgOpenRate(params),
+    queryFn: () => emailsApi.getAvgOpenRateStats(params),
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 60 * 1000, // Refetch every minute for real-time updates
+  })
+}
+
+// NEW: Get recent sequence performance
+export function useRecentSequences(params?: RecentSequencesParams) {
+  return useQuery({
+    queryKey: emailKeys.recentSequences(params),
+    queryFn: () => emailsApi.getRecentSequences(params),
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 60 * 1000, // Refetch every minute for real-time updates
+  })
+}
+
+// NEW: Get scheduled follow-up emails
+export function useScheduledFollowups(params?: ScheduledFollowupsParams) {
+  return useQuery({
+    queryKey: emailKeys.scheduledFollowups(params),
+    queryFn: () => emailsApi.getScheduledFollowups(params),
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 60 * 1000, // Refetch every minute for real-time updates
+  })
+}
+
+// NEW: Get buyer response rate
+export function useBuyerResponseRate(params?: BuyerResponseRateParams) {
+  return useQuery({
+    queryKey: emailKeys.buyerResponseRate(params),
+    queryFn: () => emailsApi.getBuyerResponseRate(params),
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 60 * 1000, // Refetch every minute for real-time updates
   })
 }
 
@@ -88,7 +161,9 @@ export function useUpdateEmailStatus() {
     mutationFn: ({ emailId, data }: { emailId: string; data: UpdateEmailStatusRequest }) =>
       emailsApi.updateStatus(emailId, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: emailKeys.detail(variables.emailId) })
+      queryClient.invalidateQueries({
+        queryKey: emailKeys.detail(variables.emailId),
+      })
       queryClient.invalidateQueries({ queryKey: emailKeys.lists() })
       toast.success("이메일 상태가 업데이트되었습니다")
     },

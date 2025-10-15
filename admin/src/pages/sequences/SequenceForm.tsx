@@ -37,7 +37,7 @@ export function SequenceForm({
     name: sequence?.name || "",
     description: sequence?.description || "",
     workspaceId: sequence?.workspaceId || "",
-    status: (sequence?.status || "paused") as SequenceStatus,
+    status: (sequence?.status || "draft") as SequenceStatus,
     customerGroupId: sequence?.customerGroupId || "",
   })
   const { data: customerGroups } = useCustomerGroupsByWorkspace(

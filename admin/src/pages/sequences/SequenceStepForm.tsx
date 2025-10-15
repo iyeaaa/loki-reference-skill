@@ -47,8 +47,8 @@ export function SequenceStepForm({
   const [formData, setFormData] = useState({
     stepOrder: step?.stepOrder ?? stepOrder,
     delayDays: step?.delayDays ?? 0,
-    scheduledHour: step?.scheduledHour ?? 9,
-    scheduledMinute: step?.scheduledMinute ?? 0,
+    scheduledHour: step?.scheduledHour ?? new Date().getHours(),
+    scheduledMinute: step?.scheduledMinute ?? new Date().getMinutes(),
     timezone: step?.timezone ?? "Asia/Seoul",
     emailSubject: step?.emailSubject || "",
     emailBodyText: step?.emailBodyText || "",
@@ -97,6 +97,18 @@ export function SequenceStepForm({
       emailBodyHtml,
     })
   }
+
+
+  useEffect(() => {
+    if (formData.delayDays === 0) {
+      return
+    }
+    setFormData((prev) => ({
+      ...prev,
+      scheduledHour: 0,
+      scheduledMinute: 0,
+    }))
+  }, [formData.delayDays])
 
   const handleGenerateWithAI = async () => {
     if (!workspaceId) {
@@ -186,14 +198,18 @@ export function SequenceStepForm({
               발송 시각 (KST) <span className="text-red-500">*</span>
             </Label>
             <TimePicker
-              value={{ hour: formData.scheduledHour, minute: formData.scheduledMinute }}
-              onChange={(time) =>
+              value={{
+                hour: Number.isInteger(formData.scheduledHour) ? formData.scheduledHour : 9,
+                minute: Number.isInteger(formData.scheduledMinute) ? formData.scheduledMinute : 0,
+              }}
+              onChange={(time) => {
+                console.log("TimePicker onChange:", time)
                 setFormData({
                   ...formData,
                   scheduledHour: time.hour,
                   scheduledMinute: time.minute,
                 })
-              }
+              }}
             />
           </div>
         </div>

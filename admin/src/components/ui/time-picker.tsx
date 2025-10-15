@@ -18,26 +18,30 @@ export function TimePicker({ value, onChange, className }: TimePickerProps) {
   const hours = Array.from({ length: 24 }, (_, i) => i)
   const minutes = Array.from({ length: 60 }, (_, i) => i)
 
+  // Ensure values are valid numbers
+  const safeHour = Number.isInteger(value.hour) ? value.hour : 9
+  const safeMinute = Number.isInteger(value.minute) ? value.minute : 0
+
   const handleHourChange = (hourStr: string) => {
     const hour = parseInt(hourStr, 10)
-    onChange({ hour, minute: value.minute })
+    onChange({ hour, minute: safeMinute })
   }
 
   const handleMinuteChange = (minuteStr: string) => {
     const minute = parseInt(minuteStr, 10)
-    onChange({ hour: value.hour, minute })
+    onChange({ hour: safeHour, minute })
   }
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
       {/* Hour selector */}
       <div className="flex items-center gap-2 flex-1">
-        <Select value={value.hour.toString()} onValueChange={handleHourChange}>
+        <Select value={safeHour.toString()} onValueChange={handleHourChange}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="시간">
               <span className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
-                {value.hour.toString().padStart(2, "0")}
+                {safeHour.toString().padStart(2, "0")}
               </span>
             </SelectValue>
           </SelectTrigger>
@@ -57,9 +61,9 @@ export function TimePicker({ value, onChange, className }: TimePickerProps) {
 
       {/* Minute selector */}
       <div className="flex items-center gap-2 flex-1">
-        <Select value={value.minute.toString()} onValueChange={handleMinuteChange}>
+        <Select value={safeMinute.toString()} onValueChange={handleMinuteChange}>
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="분">{value.minute.toString().padStart(2, "0")}</SelectValue>
+            <SelectValue placeholder="분">{safeMinute.toString().padStart(2, "0")}</SelectValue>
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
             {minutes.map((minute) => (

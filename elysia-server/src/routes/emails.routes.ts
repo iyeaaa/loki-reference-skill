@@ -2,9 +2,14 @@ import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm"
 import { Elysia, t } from "elysia"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
-import { emailEvents, emails } from "../db/schema/emails"
+import { emailEvents, emailReplies, emails } from "../db/schema/emails"
 import { leads } from "../db/schema/leads"
-import { sequences } from "../db/schema/sequences"
+import {
+  sequenceEnrollments,
+  sequenceStepExecutions,
+  sequenceSteps,
+  sequences,
+} from "../db/schema/sequences"
 import { workspaces } from "../db/schema/workspaces"
 import { emailService } from "../services/email.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
@@ -66,6 +71,437 @@ const sendEmailSchema = t.Object({
 })
 
 export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
+  // Get today's sent email count
+  .get(
+    "/stats/today-sent",
+    async ({ query }) => {
+      try {
+        // Use Korea timezone (UTC+9) - more reliable calculation
+        const now = new Date()
+        const koreaOffset = 9 * 60 // 9 hours in minutes
+        const koreaTime = new Date(now.getTime() + koreaOffset * 60 * 1000)
+
+        // Get start of today in Korea timezone
+        const today = new Date(koreaTime)
+        today.setHours(0, 0, 0, 0)
+
+        // Get start of tomorrow in Korea timezone
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+
+        // Convert back to UTC for database queries
+        const todayUTC = new Date(today.getTime() - koreaOffset * 60 * 1000)
+        const tomorrowUTC = new Date(tomorrow.getTime() - koreaOffset * 60 * 1000)
+
+        const conditions = [
+          eq(emails.direction, "outbound"),
+          sql`${emails.sentAt} >= ${todayUTC}`,
+          sql`${emails.sentAt} < ${tomorrowUTC}`,
+        ]
+
+        // Filter by workspace if provided
+        if (query.workspaceId) {
+          conditions.push(eq(emails.workspaceId, query.workspaceId))
+        }
+
+        const whereClause = and(...conditions)
+
+        const result = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(emails)
+          .where(whereClause)
+
+        const todaySentCount = result[0]?.count ?? 0
+
+        return {
+          success: true,
+          code: "S200",
+          message: "정상 처리되었습니다.",
+          data: {
+            todaySentCount,
+            date: koreaTime.toISOString().split("T")[0], // YYYY-MM-DD format in Korea timezone
+          },
+          timestamp: new Date().toISOString(),
+        }
+      } catch (error) {
+        logger.error(
+          {
+            error,
+            workspaceId: query.workspaceId,
+          },
+          "Failed to get today's sent email count",
+        )
+        return errorResponse(
+          "오늘 발송된 이메일 수 조회에 실패했습니다.",
+          // ResponseCode.INTERNAL_SERVER_ERROR
+        )
+      }
+    },
+    {
+      query: t.Object({
+        workspaceId: t.Optional(t.String({ format: "uuid" })),
+      }),
+    },
+  )
+  // Get average open rate
+  .get(
+    "/stats/avg-open-rate",
+    async ({ query }) => {
+      try {
+        const conditions = [eq(emails.direction, "outbound")]
+
+        // Filter by workspace if provided
+        if (query.workspaceId) {
+          conditions.push(eq(emails.workspaceId, query.workspaceId))
+        }
+
+        const whereClause = and(...conditions)
+
+        // OPTIMIZED: Single query to get both total sent and opened counts (all time)
+        const statsResult = await db
+          .select({
+            totalSent: sql<number>`COUNT(*)::int`,
+            openedCount: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.openedAt} IS NOT NULL THEN ${emails.id} END)::int`,
+          })
+          .from(emails)
+          .where(whereClause)
+
+        const totalSent = statsResult[0]?.totalSent ?? 0
+        const openedCount = statsResult[0]?.openedCount ?? 0
+
+        // Calculate open rate
+        const openRate = totalSent > 0 ? (openedCount / totalSent) * 100 : 0
+
+        return {
+          success: true,
+          code: "S200",
+          message: "정상 처리되었습니다.",
+          data: {
+            avgOpenRate: Math.round(openRate * 10) / 10, // Round to 1 decimal place
+            totalSent,
+            openedCount,
+          },
+          timestamp: new Date().toISOString(),
+        }
+      } catch (error) {
+        logger.error(
+          {
+            error,
+            workspaceId: query.workspaceId,
+          },
+          "Failed to get average open rate",
+        )
+        return errorResponse(
+          "평균 오픈률 조회에 실패했습니다.",
+          // ResponseCode.INTERNAL_SERVER_ERROR
+        )
+      }
+    },
+    {
+      query: t.Object({
+        workspaceId: t.Optional(t.String({ format: "uuid" })),
+      }),
+    },
+  )
+  // Get recent sequence performance
+  .get(
+    "/stats/recent-sequences",
+    async ({ query }) => {
+      try {
+        const limit = parseInt(query.limit || "4", 10)
+
+        // OPTIMIZED: Single query with LEFT JOINs to get all metrics at once
+        const sequencesWithMetrics = await db
+          .select({
+            id: sequences.id,
+            name: sequences.name,
+            status: sequences.status,
+            createdAt: sequences.createdAt,
+            sent: sql<number>`COALESCE(sent_stats.sent_count, 0)::int`,
+            opened: sql<number>`COALESCE(opened_stats.opened_count, 0)::int`,
+            clicked: sql<number>`COALESCE(clicked_stats.clicked_count, 0)::int`,
+          })
+          .from(sequences)
+          .leftJoin(
+            sql`(
+              SELECT 
+                sequence_id,
+                COUNT(*) as sent_count
+              FROM emails 
+              WHERE direction = 'outbound'
+              GROUP BY sequence_id
+            ) as sent_stats`,
+            sql`sent_stats.sequence_id = ${sequences.id}`,
+          )
+          .leftJoin(
+            sql`(
+              SELECT 
+                sequence_id,
+                COUNT(DISTINCT id) as opened_count
+              FROM emails 
+              WHERE direction = 'outbound' AND opened_at IS NOT NULL
+              GROUP BY sequence_id
+            ) as opened_stats`,
+            sql`opened_stats.sequence_id = ${sequences.id}`,
+          )
+          .leftJoin(
+            sql`(
+              SELECT 
+                sequence_id,
+                COUNT(DISTINCT id) as clicked_count
+              FROM emails 
+              WHERE direction = 'outbound' AND clicked_at IS NOT NULL
+              GROUP BY sequence_id
+            ) as clicked_stats`,
+            sql`clicked_stats.sequence_id = ${sequences.id}`,
+          )
+          .where(query.workspaceId ? eq(sequences.workspaceId, query.workspaceId) : undefined)
+          .orderBy(desc(sequences.createdAt))
+          .limit(limit)
+
+        // Transform the results
+        const result = sequencesWithMetrics.map((sequence) => ({
+          id: sequence.id,
+          name: sequence.name,
+          status: sequence.status,
+          createdAt: sequence.createdAt.toISOString(),
+          sent: sequence.sent,
+          opened: sequence.opened,
+          clicked: sequence.clicked,
+        }))
+
+        return {
+          success: true,
+          code: "S200",
+          message: "정상 처리되었습니다.",
+          data: {
+            sequences: result,
+            total: result.length,
+          },
+          timestamp: new Date().toISOString(),
+        }
+      } catch (error) {
+        logger.error({ error }, "Failed to get recent sequence performance")
+        return errorResponse(
+          "최근 시퀀스 성과 조회에 실패했습니다.",
+          // ResponseCode.INTERNAL_SERVER_ERROR
+        )
+      }
+    },
+    {
+      query: t.Object({
+        workspaceId: t.Optional(t.String({ format: "uuid" })),
+        limit: t.Optional(t.String()),
+      }),
+    },
+  )
+  // Get scheduled follow-up emails
+  .get(
+    "/stats/scheduled-followups",
+    async ({ query }) => {
+      try {
+        // Use Korea timezone (UTC+9) - more reliable calculation
+        const now = new Date()
+        const koreaOffset = 9 * 60 // 9 hours in minutes
+        const koreaTime = new Date(now.getTime() + koreaOffset * 60 * 1000)
+
+        // Get start of today in Korea timezone
+        const today = new Date(koreaTime)
+        today.setHours(0, 0, 0, 0)
+
+        // Get start of tomorrow in Korea timezone
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+
+        // Convert back to UTC for database queries
+        const todayUTC = new Date(today.getTime() - koreaOffset * 60 * 1000)
+
+        // Get scheduled follow-ups grouped by delay days (all future scheduled)
+        const scheduledFollowups = await db
+          .select({
+            delayDays: sequenceSteps.delayDays,
+            count: sql<number>`COUNT(*)::int`,
+            sequenceName: sequences.name,
+            stepSubject: sequenceSteps.emailSubject,
+            scheduledDate: sql<string>`DATE(${sequenceStepExecutions.scheduledAt})`,
+          })
+          .from(sequenceStepExecutions)
+          .innerJoin(
+            sequenceEnrollments,
+            eq(sequenceStepExecutions.enrollmentId, sequenceEnrollments.id),
+          )
+          .innerJoin(sequenceSteps, eq(sequenceStepExecutions.stepId, sequenceSteps.id))
+          .innerJoin(sequences, eq(sequenceSteps.sequenceId, sequences.id))
+          .where(
+            and(
+              eq(sequenceStepExecutions.status, "pending"),
+              sql`${sequenceStepExecutions.scheduledAt} >= ${todayUTC}`, // Today or future
+              query.workspaceId ? eq(sequences.workspaceId, query.workspaceId) : undefined,
+            ),
+          )
+          .groupBy(
+            sequenceSteps.delayDays,
+            sequences.name,
+            sequenceSteps.emailSubject,
+            sql`DATE(${sequenceStepExecutions.scheduledAt})`,
+          )
+          .orderBy(
+            asc(sequenceSteps.delayDays),
+            asc(sql`DATE(${sequenceStepExecutions.scheduledAt})`),
+          )
+
+        // Group by delay days and scheduled date for easier display
+        const groupedFollowups = scheduledFollowups.reduce(
+          (acc, item) => {
+            const key = `${item.delayDays}일 후 팔로우업 (${item.scheduledDate})`
+            if (!acc[key]) {
+              acc[key] = {
+                delayDays: item.delayDays,
+                scheduledDate: item.scheduledDate,
+                totalCount: 0,
+                sequences: [],
+              }
+            }
+            acc[key].totalCount += item.count
+            acc[key].sequences.push({
+              sequenceName: item.sequenceName,
+              subject: item.stepSubject,
+              count: item.count,
+            })
+            return acc
+          },
+          {} as Record<
+            string,
+            {
+              delayDays: number
+              scheduledDate: string
+              totalCount: number
+              sequences: Array<{
+                sequenceName: string
+                subject: string
+                count: number
+              }>
+            }
+          >,
+        )
+
+        // Calculate total scheduled (all future)
+        const totalScheduled = scheduledFollowups.reduce((sum, item) => sum + item.count, 0)
+
+        return {
+          success: true,
+          code: "S200",
+          message: "정상 처리되었습니다.",
+          data: {
+            followups: Object.values(groupedFollowups),
+            totalScheduled,
+            date: koreaTime.toISOString().split("T")[0], // YYYY-MM-DD format in Korea timezone
+          },
+          timestamp: new Date().toISOString(),
+        }
+      } catch (error) {
+        logger.error(
+          {
+            error,
+            workspaceId: query.workspaceId,
+          },
+          "Failed to get scheduled follow-up emails",
+        )
+        return errorResponse(
+          "예약된 팔로우업 이메일 조회에 실패했습니다.",
+          // ResponseCode.INTERNAL_SERVER_ERROR
+        )
+      }
+    },
+    {
+      query: t.Object({
+        workspaceId: t.Optional(t.String({ format: "uuid" })),
+      }),
+    },
+  )
+  // Get buyer response rate
+  .get(
+    "/stats/buyer-response-rate",
+    async ({ query }) => {
+      try {
+        const conditions = [eq(emails.direction, "outbound")]
+
+        // Filter by workspace if provided
+        if (query.workspaceId) {
+          conditions.push(eq(emails.workspaceId, query.workspaceId))
+        }
+
+        const whereClause = and(...conditions)
+
+        // Get total sent emails count (all time)
+        const totalSentResult = await db
+          .select({ count: sql<number>`COUNT(*)::int` })
+          .from(emails)
+          .where(whereClause)
+
+        const totalSent = totalSentResult[0]?.count ?? 0
+
+        // Get replied emails count from email_replies table (all time)
+        const repliedCountResult = await db
+          .select({
+            count: sql<number>`COUNT(DISTINCT ${emailReplies.originalEmailId})::int`,
+          })
+          .from(emailReplies)
+          .innerJoin(emails, eq(emailReplies.originalEmailId, emails.id))
+          .where(
+            and(
+              eq(emails.direction, "outbound"),
+              query.workspaceId ? eq(emails.workspaceId, query.workspaceId) : undefined,
+            ),
+          )
+
+        const repliedCount = repliedCountResult[0]?.count ?? 0
+
+        // Calculate response rate
+        const responseRate = totalSent > 0 ? (repliedCount / totalSent) * 100 : 0
+
+        // Debug logging
+        logger.info(
+          {
+            workspaceId: query.workspaceId,
+            totalSent,
+            repliedCount,
+            responseRate,
+          },
+          "Buyer response rate calculation",
+        )
+
+        return {
+          success: true,
+          code: "S200",
+          message: "정상 처리되었습니다.",
+          data: {
+            responseRate: Math.round(responseRate * 10) / 10, // Round to 1 decimal place
+            totalSent,
+            repliedCount,
+          },
+          timestamp: new Date().toISOString(),
+        }
+      } catch (error) {
+        logger.error(
+          {
+            error,
+            workspaceId: query.workspaceId,
+          },
+          "Failed to get buyer response rate",
+        )
+        return errorResponse(
+          "바이어 응답률 조회에 실패했습니다.",
+          // ResponseCode.INTERNAL_SERVER_ERROR
+        )
+      }
+    },
+    {
+      query: t.Object({
+        workspaceId: t.Optional(t.String({ format: "uuid" })),
+      }),
+    },
+  )
   // Send email via SendGrid (using user_email_accounts)
   .post(
     "/send",
@@ -671,7 +1107,10 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       logger.info({
         msg: "✓ [REPLIED-EMAILS] Thread counts fetched",
         threadCountsCount: threadCounts.length,
-        counts: threadCounts.map((tc) => ({ threadId: tc.threadId, count: tc.messageCount })),
+        counts: threadCounts.map((tc) => ({
+          threadId: tc.threadId,
+          count: tc.messageCount,
+        })),
       })
 
       // Combine data

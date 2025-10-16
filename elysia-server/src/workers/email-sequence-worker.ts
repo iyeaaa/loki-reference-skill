@@ -54,33 +54,31 @@ async function sendSequenceEmail(execution: {
     )
 
     // Get lead's primary email and contact name
-    const [leadContact] = await db
-      .select({
-        email: leadContacts.contactValue,
-        contactName: leadContacts.contactName,
-      })
-      .from(leadContacts)
-      .where(
-        and(
-          eq(leadContacts.leadId, execution.leadId),
-          eq(leadContacts.contactType, "email"),
-          eq(leadContacts.isPrimary, true),
-        ),
-      )
-      .limit(1) ||
-      await db // fallback to non-primary email
-      .select({
-        email: leadContacts.contactValue,
-        contactName: leadContacts.contactName,
-      })
-      .from(leadContacts)
-      .where(
-        and(
-          eq(leadContacts.leadId, execution.leadId),
-          eq(leadContacts.contactType, "email"),
-        ),
-      )
-      .limit(1)
+    const [leadContact] =
+      (await db
+        .select({
+          email: leadContacts.contactValue,
+          contactName: leadContacts.contactName,
+        })
+        .from(leadContacts)
+        .where(
+          and(
+            eq(leadContacts.leadId, execution.leadId),
+            eq(leadContacts.contactType, "email"),
+            eq(leadContacts.isPrimary, true),
+          ),
+        )
+        .limit(1)) ||
+      (await db // fallback to non-primary email
+        .select({
+          email: leadContacts.contactValue,
+          contactName: leadContacts.contactName,
+        })
+        .from(leadContacts)
+        .where(
+          and(eq(leadContacts.leadId, execution.leadId), eq(leadContacts.contactType, "email")),
+        )
+        .limit(1))
 
     if (!leadContact) {
       logger.error(

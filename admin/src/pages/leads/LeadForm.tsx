@@ -423,7 +423,9 @@ export function LeadForm({
                 <Input
                   className="h-9"
                   value={(contact as { contactName?: string }).contactName || ""}
-                  onChange={(e) => updateContact(index, "contactName" as keyof LeadContact, e.target.value)}
+                  onChange={(e) =>
+                    updateContact(index, "contactName" as keyof LeadContact, e.target.value)
+                  }
                   placeholder="예: 홍길동"
                 />
               </div>

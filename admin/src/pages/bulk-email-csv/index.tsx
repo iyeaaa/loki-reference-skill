@@ -1,4 +1,14 @@
-import { Building2, Download, FileUp, Mail, Send, Trash2, Upload, User } from "lucide-react"
+import {
+  Building2,
+  Download,
+  FileUp,
+  Loader2,
+  Mail,
+  Send,
+  Trash2,
+  Upload,
+  User,
+} from "lucide-react"
 import { useEffect, useId, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { Badge } from "@/components/ui/badge"
@@ -6,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Progress } from "@/components/ui/progress"
 import {
   Select,
   SelectContent,
@@ -62,6 +73,10 @@ export default function BulkEmailCSVPage() {
   const [isSending, setIsSending] = useState(false)
   const [sendResults, setSendResults] = useState<BulkSendResult[]>([])
 
+  // 진행 상태 관리
+  const [sendingProgress, setSendingProgress] = useState({ current: 0, total: 0 })
+  const [currentSendingEmail, setCurrentSendingEmail] = useState<string>("")
+
   // API hooks
   const {
     data: { workspaces },
@@ -104,7 +119,13 @@ export default function BulkEmailCSVPage() {
 
     // CSV 파일 파싱
     try {
-      const text = await file.text()
+      let text = await file.text()
+
+      // BOM (Byte Order Mark) 제거
+      if (text.charCodeAt(0) === 0xfeff) {
+        text = text.substring(1)
+      }
+
       const lines = text.split("\n").map((line) => line.trim())
 
       // 첫 번째 줄은 헤더로 가정
@@ -167,7 +188,7 @@ export default function BulkEmailCSVPage() {
     }
   }
 
-  // 대량 메일 발송 핸들러
+  // 대량 메일 발송 핸들러 (2초 간격으로 순차 발송)
   const handleBulkSend = async () => {
     if (!selectedSendWorkspace || !selectedSendUser) {
       toast.error("워크스페이스와 사용자를 선택해주세요")
@@ -186,44 +207,97 @@ export default function BulkEmailCSVPage() {
 
     setIsSending(true)
     setSendResults([])
+    setSendingProgress({ current: 0, total: emailsData.length })
+
+    const results: BulkSendResult[] = []
 
     try {
-      // 대량 메일 발송 API 호출
-      const response = await fetch("http://localhost:3001/api/v1/bulk-emails/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          workspaceId: selectedSendWorkspace,
-          userId: selectedSendUser,
-          emails: emailsData.map((email) => ({
-            ...email,
-            fromEmail: email.fromEmail || emailAccountInfo.emailAddress,
-            fromName: fromName || emailAccountInfo.displayName || undefined,
-          })),
-        }),
-      })
+      // 각 이메일을 2초 간격으로 순차 발송
+      for (let i = 0; i < emailsData.length; i++) {
+        const email = emailsData[i]
+        const fromEmailValue = email.fromEmail?.trim() || emailAccountInfo.emailAddress
 
-      if (!response.ok) {
-        throw new Error("대량 메일 발송 API 호출 실패")
+        // 현재 발송 중인 이메일 정보 업데이트
+        setCurrentSendingEmail(email.toEmail)
+        setSendingProgress({ current: i + 1, total: emailsData.length })
+
+        try {
+          // 단일 이메일 발송 API 호출
+          const response = await fetch("http://localhost:3001/api/v1/bulk-emails/send", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              workspaceId: selectedSendWorkspace,
+              userId: selectedSendUser,
+              emails: [
+                {
+                  fromEmail: fromEmailValue,
+                  toEmail: email.toEmail,
+                  subject: email.subject,
+                  bodyText: email.bodyText,
+                  bodyHtml: email.bodyHtml,
+                  fromName: fromName || emailAccountInfo.displayName || undefined,
+                },
+              ],
+            }),
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => null)
+            const errorMessage = errorData?.message || `API 호출 실패 (${response.status})`
+            results.push({
+              toEmail: email.toEmail,
+              subject: email.subject,
+              success: false,
+              error: errorMessage,
+            })
+          } else {
+            const result = await response.json()
+            if (result.success && result.data && result.data.results[0]) {
+              results.push(result.data.results[0])
+            } else {
+              results.push({
+                toEmail: email.toEmail,
+                subject: email.subject,
+                success: false,
+                error: "발송 결과를 확인할 수 없습니다",
+              })
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to send email to ${email.toEmail}:`, error)
+          results.push({
+            toEmail: email.toEmail,
+            subject: email.subject,
+            success: false,
+            error: error instanceof Error ? error.message : "이메일 발송 중 오류가 발생했습니다",
+          })
+        }
+
+        // 실시간으로 결과 업데이트
+        setSendResults([...results])
+
+        // 마지막 이메일이 아니면 2초 대기
+        if (i < emailsData.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 2000))
+        }
       }
 
-      const result = await response.json()
+      const successCount = results.filter((r) => r.success).length
+      const failCount = results.filter((r) => !r.success).length
 
-      if (result.success && result.data) {
-        setSendResults(result.data.results)
-        toast.success(
-          `발송 완료: 성공 ${result.data.successCount}건, 실패 ${result.data.failCount}건`,
-        )
-      } else {
-        toast.error(result.message || "대량 메일 발송에 실패했습니다")
-      }
+      toast.success(`발송 완료: 성공 ${successCount}건, 실패 ${failCount}건`)
     } catch (error) {
       console.error("Failed to send bulk emails:", error)
-      toast.error("대량 메일 발송 중 오류가 발생했습니다")
+      const errorMessage =
+        error instanceof Error ? error.message : "대량 메일 발송 중 오류가 발생했습니다"
+      toast.error(errorMessage)
     } finally {
       setIsSending(false)
+      setCurrentSendingEmail("")
+      setSendingProgress({ current: 0, total: 0 })
     }
   }
 
@@ -496,6 +570,7 @@ export default function BulkEmailCSVPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12">#</TableHead>
+                    <TableHead>발신인</TableHead>
                     <TableHead>수신인</TableHead>
                     <TableHead>제목</TableHead>
                     <TableHead>내용 미리보기</TableHead>
@@ -505,6 +580,9 @@ export default function BulkEmailCSVPage() {
                   {emailsData.slice(0, 10).map((email, index) => (
                     <TableRow key={index}>
                       <TableCell className="font-mono text-xs">{index + 1}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {email.fromEmail?.trim() || emailAccountInfo?.emailAddress || "-"}
+                      </TableCell>
                       <TableCell className="font-mono text-sm">{email.toEmail}</TableCell>
                       <TableCell className="text-sm">{email.subject}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
@@ -538,11 +616,48 @@ export default function BulkEmailCSVPage() {
               className="w-full"
               size="lg"
             >
-              <Send className="mr-2 h-5 w-5" />
-              {isSending
-                ? `발송 중... (${emailsData.length}개)`
-                : `${emailsData.length}개 이메일 발송`}
+              {isSending ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  발송 중... ({sendingProgress.current}/{sendingProgress.total})
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-5 w-5" />
+                  {emailsData.length}개 이메일 발송
+                </>
+              )}
             </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 진행률 표시 */}
+      {isSending && (
+        <Card>
+          <CardHeader>
+            <CardTitle>발송 진행 중</CardTitle>
+            <CardDescription>
+              {sendingProgress.current} / {sendingProgress.total} 완료 (
+              {Math.round((sendingProgress.current / sendingProgress.total) * 100)}%)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Progress
+              value={(sendingProgress.current / sendingProgress.total) * 100}
+              className="h-3"
+            />
+            {currentSendingEmail && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>
+                  현재 발송 중: <span className="font-mono">{currentSendingEmail}</span>
+                </span>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              각 이메일은 2초 간격으로 발송됩니다. 브라우저를 닫지 마세요.
+            </p>
           </CardContent>
         </Card>
       )}
@@ -570,23 +685,35 @@ export default function BulkEmailCSVPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sendResults.map((result, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-mono text-xs">{index + 1}</TableCell>
-                      <TableCell>
-                        {result.success ? (
-                          <Badge className="bg-green-500">성공</Badge>
-                        ) : (
-                          <Badge variant="destructive">실패</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">{result.toEmail}</TableCell>
-                      <TableCell className="text-sm">{result.subject}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {result.error || "발송 완료"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {sendResults.map((result, index) => {
+                    const emailData = emailsData[index]
+                    return (
+                      <TableRow key={index}>
+                        <TableCell className="font-mono text-xs">{index + 1}</TableCell>
+                        <TableCell>
+                          {result.success ? (
+                            <Badge className="bg-green-500">성공</Badge>
+                          ) : (
+                            <Badge variant="destructive">실패</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="font-mono text-sm">{result.toEmail}</div>
+                            {emailData?.fromEmail?.trim() && (
+                              <div className="font-mono text-xs text-muted-foreground">
+                                From: {emailData.fromEmail.trim()}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm">{result.subject}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {result.error || "발송 완료"}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>

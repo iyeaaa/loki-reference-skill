@@ -237,10 +237,9 @@ async function sendSequenceEmail(execution: {
         executionId: execution.executionId,
         from: emailAccount.emailAddress,
         to: leadContact.email,
-        subject: personalizedSubject,
+        subject: execution.emailSubject,
       },
-
-      "📤 [STEP-WORKER] Sending personalized email via SendGrid",
+      "📤 [STEP-WORKER] Sending email via EmailService",
     )
 
     // Send email using EmailService (includes automatic signature)
@@ -248,10 +247,10 @@ async function sendSequenceEmail(execution: {
       fromEmail: emailAccount.emailAddress,
       fromName: emailAccount.displayName || emailAccount.emailAddress,
       toEmail: leadContact.email,
-      subject: execution.emailSubject,
-      bodyText: execution.emailBodyText || undefined,
-      bodyHtml: execution.emailBodyHtml || undefined,
-      includeSignature: true, // 시퀀스 이메일에는 항상 서명 포함
+      subject: personalizedSubject,
+      bodyText: personalizedBodyText || undefined,
+      bodyHtml: personalizedBodyHtml || undefined,
+      includeSignature: false, // 시퀀스 이메일은 프론트엔드에서 이미 서명이 포함됨
       userId: execution.userId || undefined,
       workspaceId: execution.workspaceId,
       apiKey: apiKey,

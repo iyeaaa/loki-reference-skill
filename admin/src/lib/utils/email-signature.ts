@@ -1,14 +1,14 @@
 // 이메일 서명 생성 유틸리티 함수
 
 export interface SignatureOptions {
-  name?: string;
-  title?: string;
+  name?: string
+  title?: string
 }
 
 // HTML 서명 생성
 export function generateSignatureHtml(options: SignatureOptions = {}): string {
-  const name = options.name || "김규동 Gyudong Kim";
-  const title = options.title || "Project Lead";
+  const name = options.name || "김규동 Gyudong Kim"
+  const title = options.title || "Project Lead"
 
   return `
     <div dir="ltr">
@@ -58,13 +58,13 @@ export function generateSignatureHtml(options: SignatureOptions = {}): string {
       </span>
     </font>
   </div>
-</div>`.trim();
+</div>`.trim()
 }
 
 // 텍스트 서명 생성
 export function generateSignatureText(options: SignatureOptions = {}): string {
-  const name = options.name || "김규동 Gyudong Kim";
-  const title = options.title || "Project Lead";
+  const name = options.name || "김규동 Gyudong Kim"
+  const title = options.title || "Project Lead"
 
   return `
 ${name}
@@ -76,12 +76,12 @@ Tel. 010-8351-6129
 Web. www.grinda.ai
 
 본 메일에는 법률상 보호되는 영업비밀이나 비밀유지서약서에 따라 보호되는 비밀정보가 포함되어 있습니다. 이에 포함된 내용은 보안을 유지하여야 하며 본 문서에 포함된 정보의 전부 또는 일부를 무단으로 제3자에게 공개, 배포, 복사 또는 사용하는 것은 엄격히 금지됩니다. 본 메일이 잘못 전송된 경우, 발신인 또는 당사에 알려주시고, 본 메일 및 첨부문서를 즉시 삭제하여 주시기 바랍니다. 또한 본 메일의 법률상 안전성과 바이러스가 없음을 보장하지 않으며, 타인에 의한 본 메일의 변경에 대하여 책임지지 않습니다.
-This email contains confidential information that is protected by law or under the confidentiality agreements. Any information contained herein shall be kept secure and any unauthorized disclosure, distribution, copying or use of any or all of the information contained herein to any third party is strictly prohibited. If this email is sent incorrectly, please notify the sender or us and delete this email and attachments immediately. In addition, the law of this mail does not guarantee safety and virus-free, and we are not responsible for any changes made to this mail by others.`.trim();
+This email contains confidential information that is protected by law or under the confidentiality agreements. Any information contained herein shall be kept secure and any unauthorized disclosure, distribution, copying or use of any or all of the information contained herein to any third party is strictly prohibited. If this email is sent incorrectly, please notify the sender or us and delete this email and attachments immediately. In addition, the law of this mail does not guarantee safety and virus-free, and we are not responsible for any changes made to this mail by others.`.trim()
 }
 
 // HTML을 Markdown으로 변환하는 함수
 export function htmlToMarkdown(html: string): string {
-  if (!html) return "";
+  if (!html) return ""
 
   return (
     html
@@ -98,16 +98,14 @@ export function htmlToMarkdown(html: string): string {
       // 연속된 공백 정리
       .replace(/\s+/g, " ")
       .trim()
-  );
+  )
 }
 
 // 기본 이메일 템플릿에 서명을 포함한 HTML 생성
-export function generateEmailTemplateWithSignature(
-  options: SignatureOptions = {}
-): string {
-  const signatureHtml = generateSignatureHtml(options);
+export function generateEmailTemplateWithSignature(options: SignatureOptions = {}): string {
+  const signatureHtml = generateSignatureHtml(options)
 
   return `
   --
-${signatureHtml}`;
+${signatureHtml}`
 }

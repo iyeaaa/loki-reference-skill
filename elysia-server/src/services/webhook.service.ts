@@ -366,18 +366,47 @@ class WebhookService {
     }
 
     // 2. 수신 이메일 주소로 이메일 계정 찾기
+    // 답장인 경우: 원본 이메일의 워크스페이스에 해당하는 계정을 찾음
+    let targetWorkspaceId: string | undefined
 
-    const emailAccount = await db
+    if (headers.inReplyTo) {
+      // 답장인 경우: 먼저 원본 이메일의 워크스페이스를 찾음
+      const originalEmailForWorkspace = await db
+        .select({ workspaceId: emailsTable.workspaceId })
+        .from(emailsTable)
+        .where(and(eq(emailsTable.messageId, headers.inReplyTo), eq(emailsTable.direction, "outbound")))
+        .limit(1)
+
+      if (originalEmailForWorkspace.length > 0 && originalEmailForWorkspace[0]?.workspaceId) {
+        targetWorkspaceId = originalEmailForWorkspace[0].workspaceId
+        logger.info(
+          { workspaceId: targetWorkspaceId, inReplyTo: headers.inReplyTo },
+          "Found original email's workspace for reply",
+        )
+      }
+    }
+
+    // 이메일 계정 검색 (워크스페이스 필터 적용)
+    const emailAccountQuery = db
       .select({
         id: userEmailAccounts.id,
         workspaceId: userEmailAccounts.workspaceId,
       })
       .from(userEmailAccounts)
-      .where(eq(userEmailAccounts.emailAddress, toEmail))
+      .where(
+        targetWorkspaceId
+          ? and(
+              eq(userEmailAccounts.emailAddress, toEmail),
+              eq(userEmailAccounts.workspaceId, targetWorkspaceId),
+            )
+          : eq(userEmailAccounts.emailAddress, toEmail),
+      )
       .limit(1)
 
+    const emailAccount = await emailAccountQuery
+
     if (emailAccount.length === 0) {
-      logger.warn({ toEmail }, "Email account not found")
+      logger.warn({ toEmail, targetWorkspaceId }, "Email account not found")
       return
     }
 
@@ -479,7 +508,11 @@ class WebhookService {
         })
         .from(emailsTable)
         .where(
-          and(eq(emailsTable.messageId, headers.inReplyTo), eq(emailsTable.direction, "outbound")),
+          and(
+            eq(emailsTable.messageId, headers.inReplyTo),
+            eq(emailsTable.direction, "outbound"),
+            eq(emailsTable.workspaceId, account.workspaceId), // ✅ 워크스페이스 필터 추가
+          ),
         )
         .limit(1)
 

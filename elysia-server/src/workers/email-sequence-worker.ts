@@ -250,7 +250,7 @@ async function sendSequenceEmail(execution: {
       subject: personalizedSubject,
       bodyText: personalizedBodyText || undefined,
       bodyHtml: personalizedBodyHtml || undefined,
-      includeSignature: true, // 시퀀스 이메일에는 항상 서명 포함
+      includeSignature: false, // 시퀀스 이메일은 프론트엔드에서 이미 서명이 포함됨
       userId: execution.userId || undefined,
       workspaceId: execution.workspaceId,
       apiKey: apiKey,

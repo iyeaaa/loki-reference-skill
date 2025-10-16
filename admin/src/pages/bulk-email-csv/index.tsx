@@ -198,8 +198,11 @@ export default function BulkEmailCSVPage() {
           workspaceId: selectedSendWorkspace,
           userId: selectedSendUser,
           emails: emailsData.map((email) => ({
-            ...email,
-            fromEmail: email.fromEmail || emailAccountInfo.emailAddress,
+            fromEmail: (email.fromEmail && email.fromEmail.trim()) || emailAccountInfo.emailAddress,
+            toEmail: email.toEmail,
+            subject: email.subject,
+            bodyText: email.bodyText,
+            bodyHtml: email.bodyHtml,
             fromName: fromName || emailAccountInfo.displayName || undefined,
           })),
         }),

@@ -1,3 +1,5 @@
+// DEPRECATED: This feature is deprecated and only used in old workflows.
+
 import { createOpenAI } from "@ai-sdk/openai"
 import { generateText } from "ai"
 import logger from "../utils/logger"

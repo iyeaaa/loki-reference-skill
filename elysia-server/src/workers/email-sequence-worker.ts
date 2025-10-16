@@ -9,9 +9,9 @@ import { and, eq } from "drizzle-orm"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emails } from "../db/schema/emails"
-import { emailService } from "../services/email.service"
 import { leadContacts, leadIndustryTypes } from "../db/schema/lead-details"
 import { leads } from "../db/schema/leads"
+import { emailService } from "../services/email.service"
 import * as sequenceService from "../services/sequence.service"
 import * as workflowEmailService from "../services/workflow-email.service"
 import logger from "../utils/logger"
@@ -232,34 +232,14 @@ async function sendSequenceEmail(execution: {
       }
     }
 
-    // Set API key for this request
-    sgMail.setApiKey(apiKey)
-
-    // Prepare email message with personalized content
-    const msg = {
-      to: leadContact.email,
-      from: {
-        email: emailAccount.emailAddress,
-        name: emailAccount.displayName || emailAccount.emailAddress,
-      },
-      subject: personalizedSubject,
-      text: personalizedBodyText || undefined,
-      html: personalizedBodyHtml || undefined,
-      tracking_settings: {
-        open_tracking: { enable: true },
-        click_tracking: { enable: true, enable_text: true },
-      },
-    }
-
     logger.info(
       {
         executionId: execution.executionId,
         from: emailAccount.emailAddress,
         to: leadContact.email,
-        subject: personalizedSubject,
+        subject: execution.emailSubject,
       },
-
-      "📤 [STEP-WORKER] Sending personalized email via SendGrid",
+      "📤 [STEP-WORKER] Sending email via EmailService",
     )
 
     // Send email using EmailService (includes automatic signature)
@@ -267,9 +247,9 @@ async function sendSequenceEmail(execution: {
       fromEmail: emailAccount.emailAddress,
       fromName: emailAccount.displayName || emailAccount.emailAddress,
       toEmail: leadContact.email,
-      subject: execution.emailSubject,
-      bodyText: execution.emailBodyText || undefined,
-      bodyHtml: execution.emailBodyHtml || undefined,
+      subject: personalizedSubject,
+      bodyText: personalizedBodyText || undefined,
+      bodyHtml: personalizedBodyHtml || undefined,
       includeSignature: true, // 시퀀스 이메일에는 항상 서명 포함
       userId: execution.userId || undefined,
       workspaceId: execution.workspaceId,

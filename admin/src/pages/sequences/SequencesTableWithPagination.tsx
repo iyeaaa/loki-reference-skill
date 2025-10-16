@@ -287,6 +287,7 @@ export function SequencesTableWithPagination({
                     <Checkbox
                       checked={selectedSequences?.includes(sequence.id) || false}
                       onCheckedChange={() => onToggleSequence(sequence.id)}
+                      onClick={(e) => e.stopPropagation()}
                     />
                   </td>
                   <td
@@ -359,7 +360,10 @@ export function SequencesTableWithPagination({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleToggleStatus(sequence)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleToggleStatus(sequence)
+                        }}
                         className="text-xs h-8 px-3"
                         title={sequence.status === "active" ? "일시정지" : "활성화"}
                         disabled={
@@ -386,7 +390,10 @@ export function SequencesTableWithPagination({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onEditSequence(sequence)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onEditSequence(sequence)
+                        }}
                         className="text-xs h-8 px-3"
                         title="시퀀스 편집"
                       >

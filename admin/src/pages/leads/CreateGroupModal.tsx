@@ -20,7 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { useCreateCustomerGroup } from "@/lib/api/hooks/customer-groups"
+import { useBulkAddGroupMembers, useCreateCustomerGroup } from "@/lib/api/hooks/customer-groups"
+import { customerGroupsApi } from "@/lib/api/services/customer-groups"
 import type { Workspace } from "@/lib/api/types/workspace"
 
 interface CreateGroupModalProps {
@@ -28,6 +29,8 @@ interface CreateGroupModalProps {
   selectedWorkspaceId: string
   onWorkspaceChange?: (workspaceId: string) => void
   onSuccess?: (groupId: string) => void
+  selectedLeadIds?: string[]
+  currentLeadsData?: { id: string; companyName?: string }[]
 }
 
 export function CreateGroupModal({
@@ -35,17 +38,21 @@ export function CreateGroupModal({
   selectedWorkspaceId,
   onWorkspaceChange,
   onSuccess,
+  selectedLeadIds = [],
+  currentLeadsData = [],
 }: CreateGroupModalProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [workspaceId, setWorkspaceId] = useState(selectedWorkspaceId)
   const [groupName, setGroupName] = useState("")
   const [groupDescription, setGroupDescription] = useState("")
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const groupNameId = useId()
   const groupDescriptionId = useId()
   const workspaceSelectId = useId()
 
   const createCustomerGroupMutation = useCreateCustomerGroup()
+  const bulkAddGroupMembersMutation = useBulkAddGroupMembers()
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)
@@ -70,13 +77,80 @@ export function CreateGroupModal({
       return
     }
 
+    setIsProcessing(true)
+
     try {
+      // 1. 선택된 리드들이 그룹에 속해있지 않은지 확인
+      let leadsToAdd: string[] = []
+
+      if (selectedLeadIds.length > 0) {
+        // 각 리드가 속한 그룹들을 확인
+        const leadGroupChecks = await Promise.all(
+          selectedLeadIds.map(async (leadId) => {
+            try {
+              const groups = await customerGroupsApi.getLeadGroups(leadId)
+              return { leadId, hasGroups: groups.length > 0 }
+            } catch (error) {
+              console.error(`Failed to check groups for lead ${leadId}:`, error)
+              return { leadId, hasGroups: false }
+            }
+          }),
+        )
+
+        // 그룹에 속해있지 않은 리드들만 필터링
+        leadsToAdd = leadGroupChecks
+          .filter((check) => !check.hasGroups)
+          .map((check) => check.leadId)
+
+        // 그룹에 속해있는 리드들이 있다면 사용자에게 알림
+        const leadsWithGroups = leadGroupChecks.filter((check) => check.hasGroups)
+        if (leadsWithGroups.length > 0) {
+          const skippedLeadNames = leadsWithGroups
+            .map((check) => {
+              const lead = currentLeadsData.find((l) => l.id === check.leadId)
+              return lead?.companyName || check.leadId
+            })
+            .slice(0, 3)
+            .join(", ")
+
+          const moreCount = Math.max(0, leadsWithGroups.length - 3)
+
+          toast(
+            `${leadsWithGroups.length}개의 리드는 이미 그룹에 속해있어 제외되었습니다.\n(${skippedLeadNames}${
+              moreCount > 0 ? ` 외 ${moreCount}개` : ""
+            })`,
+            { duration: 5000 },
+          )
+        }
+
+        if (leadsToAdd.length === 0) {
+          toast.error(
+            "그룹에 속하지 않은 리드가 없습니다. 모든 선택된 리드가 이미 그룹에 속해있습니다.",
+          )
+          setIsProcessing(false)
+          return
+        }
+      }
+
+      // 2. 그룹 생성
       const newGroup = await createCustomerGroupMutation.mutateAsync({
         workspaceId,
         name: groupName,
         description: groupDescription || undefined,
         isDynamic: false,
       })
+
+      // 3. 선택된 리드들을 새 그룹에 추가 (그룹에 속하지 않은 리드만)
+      if (leadsToAdd.length > 0) {
+        await bulkAddGroupMembersMutation.mutateAsync({
+          groupId: newGroup.id,
+          leadIds: leadsToAdd,
+        })
+
+        toast.success(`고객 그룹이 생성되었고 ${leadsToAdd.length}개의 리드가 추가되었습니다`)
+      } else {
+        toast.success("고객 그룹이 생성되었습니다")
+      }
 
       // 모달 닫기 및 폼 초기화
       setIsOpen(false)
@@ -92,11 +166,11 @@ export function CreateGroupModal({
       if (onSuccess) {
         onSuccess(newGroup.id)
       }
-
-      toast.success("고객 그룹이 생성되었습니다")
     } catch (error) {
       // 에러는 mutation에서 처리됨
       console.error("Failed to create customer group:", error)
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -170,20 +244,15 @@ export function CreateGroupModal({
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCancel}
-              disabled={createCustomerGroupMutation.isPending}
-            >
+            <Button type="button" variant="outline" onClick={handleCancel} disabled={isProcessing}>
               취소
             </Button>
             <Button
               type="button"
               onClick={handleCreateGroup}
-              disabled={createCustomerGroupMutation.isPending || !groupName.trim() || !workspaceId}
+              disabled={isProcessing || !groupName.trim() || !workspaceId}
             >
-              {createCustomerGroupMutation.isPending ? (
+              {isProcessing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   생성 중...

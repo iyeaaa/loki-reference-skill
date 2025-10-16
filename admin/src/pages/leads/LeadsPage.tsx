@@ -580,9 +580,16 @@ export default function LeadsPage() {
                 <CreateGroupModal
                   workspaces={workspaces}
                   selectedWorkspaceId={selectedWorkspaceId}
+                  selectedLeadIds={selectedLeads}
+                  currentLeadsData={currentLeadsData.map((lead: Lead) => ({
+                    id: lead.id,
+                    companyName: lead.companyName || "",
+                  }))}
                   onSuccess={(groupId) => {
                     // 생성된 그룹을 자동으로 선택
                     setSelectedCustomerGroup(groupId)
+                    // 선택된 리드들 초기화
+                    setSelectedLeads([])
                   }}
                 />
               </div>
@@ -924,8 +931,8 @@ export default function LeadsPage() {
                             <div className="space-y-1">
                               <p className="font-medium">다음 오류를 수정해주세요:</p>
                               <ul className="list-disc list-inside space-y-1">
-                                {csvErrors.map((error, index) => (
-                                  <li key={index} className="text-sm">
+                                {csvErrors.map((error) => (
+                                  <li key={error} className="text-sm">
                                     {error}
                                   </li>
                                 ))}

@@ -41,11 +41,10 @@ class AIWorkflowEmailService {
     let result = template
 
     // 영문 변수 치환
+    // undefined도 빈 문자열로 치환
     for (const [key, value] of Object.entries(context)) {
-      if (value) {
-        const regex = new RegExp(`{{${key}}}`, "gi")
-        result = result.replace(regex, value)
-      }
+      const regex = new RegExp(`{{${key}}}`, "gi")
+      result = result.replace(regex, value || "")
     }
 
     // 한글 변수 매핑 (모든 리드 필드)
@@ -77,11 +76,10 @@ class AIWorkflowEmailService {
       리드점수: context.leadScore || "",
     }
 
+    // undefined도 빈 문자열로 치환
     for (const [key, value] of Object.entries(koreanMap)) {
-      if (value) {
-        const regex = new RegExp(`{{${key}}}`, "g")
-        result = result.replace(regex, value)
-      }
+      const regex = new RegExp(`{{${key}}}`, "g")
+      result = result.replace(regex, value)
     }
 
     return result

@@ -426,18 +426,14 @@ export function replaceTemplateVariables(
 
   // 영문 변수 치환 (대소문자 구분 없음)
   for (const [key, value] of Object.entries(englishMap)) {
-    if (value) {
-      const regex = new RegExp(`{{${key}}}`, "gi")
-      result = result.replace(regex, value)
-    }
+    const regex = new RegExp(`{{${key}}}`, "gi")
+    result = result.replace(regex, value)
   }
 
   // 한글 변수 치환 (대소문자 구분)
   for (const [key, value] of Object.entries(koreanMap)) {
-    if (value) {
-      const regex = new RegExp(`{{${key}}}`, "g")
-      result = result.replace(regex, value)
-    }
+    const regex = new RegExp(`{{${key}}}`, "g")
+    result = result.replace(regex, value)
   }
 
   return result

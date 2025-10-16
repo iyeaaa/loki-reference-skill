@@ -88,22 +88,25 @@ export function LeadForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    // 유효한 연락처 필터링 및 첫 번째 연락처에 isPrimary 설정
+    const validContacts = contacts
+      .filter((c) => c.contactValue && c.contactValue.trim() !== "" && c.contactType !== undefined)
+      .map((c, index) => ({
+        ...c,
+        label: c.label && c.label.trim() !== "" ? c.label : undefined,
+        contactName:
+          (c as { contactName?: string }).contactName &&
+          (c as { contactName?: string }).contactName?.trim() !== ""
+            ? (c as { contactName?: string }).contactName
+            : undefined,
+        isPrimary: index === 0 ? true : c.isPrimary || false,
+      })) as LeadContact[]
+
     const submitData: LeadFormData = {
       ...formData,
       leadScore: formData.leadScore ? parseInt(formData.leadScore, 10) : undefined,
-      contacts: contacts
-        .filter(
-          (c) => c.contactValue && c.contactValue.trim() !== "" && c.contactType !== undefined,
-        )
-        .map((c) => ({
-          ...c,
-          label: c.label && c.label.trim() !== "" ? c.label : undefined,
-          contactName:
-            (c as { contactName?: string }).contactName &&
-            (c as { contactName?: string }).contactName?.trim() !== ""
-              ? (c as { contactName?: string }).contactName
-              : undefined,
-        })) as LeadContact[],
+      contacts: validContacts,
       socialMedia: socialMedia
         .filter((s) => s.url && s.url.trim() !== "" && s.platform !== undefined)
         .map((s) => ({

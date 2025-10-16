@@ -32,9 +32,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useBulkEmailSend } from "@/lib/api/hooks/bulk-emails"
 import { useEmailAccountByWorkspaceAndUser } from "@/lib/api/hooks/email-accounts"
 import { useUsers } from "@/lib/api/hooks/users"
 import { useSuspenseWorkspaces } from "@/lib/api/hooks/workspaces"
+import type { BulkEmailResult } from "@/lib/api/types/bulk-email"
 
 interface CSVEmailData {
   fromEmail: string
@@ -43,14 +45,6 @@ interface CSVEmailData {
   bodyText?: string
   bodyHtml?: string
   fromName?: string
-}
-
-interface BulkSendResult {
-  toEmail: string
-  subject: string
-  success: boolean
-  error?: string
-  emailId?: string
 }
 
 export default function BulkEmailCSVPage() {
@@ -71,7 +65,7 @@ export default function BulkEmailCSVPage() {
   const [csvFile, setCSVFile] = useState<File | null>(null)
   const [emailsData, setEmailsData] = useState<CSVEmailData[]>([])
   const [isSending, setIsSending] = useState(false)
-  const [sendResults, setSendResults] = useState<BulkSendResult[]>([])
+  const [sendResults, setSendResults] = useState<BulkEmailResult[]>([])
 
   // 진행 상태 관리
   const [sendingProgress, setSendingProgress] = useState({ current: 0, total: 0 })
@@ -82,6 +76,7 @@ export default function BulkEmailCSVPage() {
     data: { workspaces },
   } = useSuspenseWorkspaces({ limit: 100 })
   const { data: usersData } = useUsers({ limit: 100 })
+  const bulkEmailMutation = useBulkEmailSend()
 
   // 워크스페이스와 유저가 선택되면 이메일 계정 정보 조회
   const {
@@ -209,7 +204,7 @@ export default function BulkEmailCSVPage() {
     setSendResults([])
     setSendingProgress({ current: 0, total: emailsData.length })
 
-    const results: BulkSendResult[] = []
+    const results: BulkEmailResult[] = []
 
     try {
       // 각 이메일을 2초 간격으로 순차 발송
@@ -222,49 +217,32 @@ export default function BulkEmailCSVPage() {
         setSendingProgress({ current: i + 1, total: emailsData.length })
 
         try {
-          // 단일 이메일 발송 API 호출
-          const response = await fetch("http://localhost:3001/api/v1/bulk-emails/send", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              workspaceId: selectedSendWorkspace,
-              userId: selectedSendUser,
-              emails: [
-                {
-                  fromEmail: fromEmailValue,
-                  toEmail: email.toEmail,
-                  subject: email.subject,
-                  bodyText: email.bodyText,
-                  bodyHtml: email.bodyHtml,
-                  fromName: fromName || emailAccountInfo.displayName || undefined,
-                },
-              ],
-            }),
+          // TanStack Query mutation을 사용한 단일 이메일 발송
+          const response = await bulkEmailMutation.mutateAsync({
+            workspaceId: selectedSendWorkspace,
+            userId: selectedSendUser,
+            emails: [
+              {
+                fromEmail: fromEmailValue,
+                toEmail: email.toEmail,
+                subject: email.subject,
+                bodyText: email.bodyText,
+                bodyHtml: email.bodyHtml,
+                fromName: fromName || emailAccountInfo.displayName || undefined,
+              },
+            ],
           })
 
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => null)
-            const errorMessage = errorData?.message || `API 호출 실패 (${response.status})`
+          // 응답에서 첫 번째 결과 가져오기
+          if (response.results?.[0]) {
+            results.push(response.results[0])
+          } else {
             results.push({
               toEmail: email.toEmail,
               subject: email.subject,
               success: false,
-              error: errorMessage,
+              error: "발송 결과를 확인할 수 없습니다",
             })
-          } else {
-            const result = await response.json()
-            if (result.success && result.data && result.data.results[0]) {
-              results.push(result.data.results[0])
-            } else {
-              results.push({
-                toEmail: email.toEmail,
-                subject: email.subject,
-                success: false,
-                error: "발송 결과를 확인할 수 없습니다",
-              })
-            }
           }
         } catch (error) {
           console.error(`Failed to send email to ${email.toEmail}:`, error)

@@ -9,6 +9,7 @@ import {
   Upload,
   User,
 } from "lucide-react"
+import Papa from "papaparse"
 import { useEffect, useId, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { Badge } from "@/components/ui/badge"
@@ -114,72 +115,84 @@ export default function BulkEmailCSVPage() {
 
     // CSV 파일 파싱
     try {
-      let text = await file.text()
+      const text = await file.text()
 
-      // BOM (Byte Order Mark) 제거
-      if (text.charCodeAt(0) === 0xfeff) {
-        text = text.substring(1)
-      }
+      // papaparse를 사용하여 CSV 파싱 (RFC 4180 표준 준수, 따옴표 안의 줄바꿈 처리)
+      Papa.parse(text, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          try {
+            const data = results.data as Record<string, string>[]
 
-      const lines = text.split("\n").map((line) => line.trim())
+            if (data.length === 0) {
+              toast.error("유효한 이메일 데이터가 없습니다")
+              return
+            }
 
-      // 첫 번째 줄은 헤더로 가정
-      const headers = lines[0].split(",").map((h) => h.trim().toLowerCase())
+            // 헤더 이름 정규화 (대소문자 구분 없이, 공백 제거)
+            const normalizedData = data.map((row) => {
+              const normalizedRow: Record<string, string> = {}
+              for (const [key, value] of Object.entries(row)) {
+                normalizedRow[key.trim().toLowerCase()] = value
+              }
+              return normalizedRow
+            })
 
-      // 헤더에서 컬럼 인덱스 찾기
-      const fromEmailIdx = headers.findIndex(
-        (h) => h === "발신인" || h === "fromemail" || h === "from",
-      )
-      const toEmailIdx = headers.findIndex((h) => h === "수신인" || h === "toemail" || h === "to")
-      const subjectIdx = headers.findIndex((h) => h === "제목" || h === "subject")
-      const bodyTextIdx = headers.findIndex(
-        (h) =>
-          h === "이메일 내용" ||
-          h === "내용" ||
-          h === "bodytext" ||
-          h === "body" ||
-          h === "content",
-      )
-      const bodyHtmlIdx = headers.findIndex(
-        (h) => h === "html내용" || h === "bodyhtml" || h === "html",
-      )
+            // 헤더에서 컬럼 이름 찾기
+            const parsedEmails: CSVEmailData[] = []
 
-      if (toEmailIdx === -1 || subjectIdx === -1) {
-        toast.error("필수 컬럼이 없습니다. 수신인(to), 제목(subject)은 필수입니다.")
-        return
-      }
+            for (const row of normalizedData) {
+              // 각 컬럼에 대해 여러 가능한 헤더 이름 확인
+              const fromEmail = row.발신인 || row.fromemail || row.from || row.sender || ""
+              const toEmail = row.수신인 || row.toemail || row.to || row.recipient || ""
+              const subject = row.제목 || row.subject || row.title || ""
+              const bodyText =
+                row["이메일 내용"] ||
+                row.내용 ||
+                row.bodytext ||
+                row.body ||
+                row.content ||
+                row.text ||
+                ""
+              const bodyHtml = row.html내용 || row.bodyhtml || row.html || ""
 
-      const parsedEmails: CSVEmailData[] = []
+              // 수신인과 제목은 필수
+              if (!toEmail || !subject) {
+                continue
+              }
 
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i]) continue
+              const emailData: CSVEmailData = {
+                fromEmail: fromEmail.trim(),
+                toEmail: toEmail.trim(),
+                subject: subject.trim(),
+                bodyText: bodyText ? bodyText.trim() : undefined,
+                bodyHtml: bodyHtml ? bodyHtml.trim() : undefined,
+              }
 
-        const values = lines[i].split(",").map((v) => v.trim())
+              parsedEmails.push(emailData)
+            }
 
-        const emailData: CSVEmailData = {
-          fromEmail: fromEmailIdx !== -1 ? values[fromEmailIdx] || "" : "",
-          toEmail: values[toEmailIdx] || "",
-          subject: values[subjectIdx] || "",
-          bodyText: bodyTextIdx !== -1 ? values[bodyTextIdx] : undefined,
-          bodyHtml: bodyHtmlIdx !== -1 ? values[bodyHtmlIdx] : undefined,
-        }
+            if (parsedEmails.length === 0) {
+              toast.error("필수 컬럼이 없습니다. 수신인(to), 제목(subject)은 필수입니다.")
+              return
+            }
 
-        // 수신인과 제목은 필수
-        if (emailData.toEmail && emailData.subject) {
-          parsedEmails.push(emailData)
-        }
-      }
-
-      if (parsedEmails.length === 0) {
-        toast.error("유효한 이메일 데이터가 없습니다")
-        return
-      }
-
-      setEmailsData(parsedEmails)
-      toast.success(`${parsedEmails.length}개의 이메일 데이터를 불러왔습니다`)
+            setEmailsData(parsedEmails)
+            toast.success(`${parsedEmails.length}개의 이메일 데이터를 불러왔습니다`)
+          } catch (err) {
+            console.error("Failed to process parsed CSV:", err)
+            toast.error("CSV 파일 처리 중 오류가 발생했습니다")
+          }
+        },
+        error: (error: Error) => {
+          console.error("Failed to parse CSV:", error)
+          toast.error("CSV 파일 파싱에 실패했습니다")
+        },
+      })
     } catch (error) {
-      console.error("Failed to parse CSV:", error)
-      toast.error("CSV 파일 파싱에 실패했습니다")
+      console.error("Failed to read CSV file:", error)
+      toast.error("CSV 파일을 읽을 수 없습니다")
     }
   }
 
@@ -563,12 +576,18 @@ export default function BulkEmailCSVPage() {
                       </TableCell>
                       <TableCell className="font-mono text-sm">{email.toEmail}</TableCell>
                       <TableCell className="text-sm">{email.subject}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {email.bodyText
-                          ? `${email.bodyText.substring(0, 50)}...`
-                          : email.bodyHtml
-                            ? "HTML 내용"
-                            : "없음"}
+                      <TableCell className="text-sm text-muted-foreground max-w-md">
+                        {email.bodyText ? (
+                          <div className="whitespace-pre-wrap break-words max-h-32 overflow-y-auto">
+                            {email.bodyText.length > 200
+                              ? `${email.bodyText.substring(0, 200)}...`
+                              : email.bodyText}
+                          </div>
+                        ) : email.bodyHtml ? (
+                          "HTML 내용"
+                        ) : (
+                          "없음"
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

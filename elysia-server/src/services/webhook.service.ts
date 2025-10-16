@@ -374,7 +374,9 @@ class WebhookService {
       const originalEmailForWorkspace = await db
         .select({ workspaceId: emailsTable.workspaceId })
         .from(emailsTable)
-        .where(and(eq(emailsTable.messageId, headers.inReplyTo), eq(emailsTable.direction, "outbound")))
+        .where(
+          and(eq(emailsTable.messageId, headers.inReplyTo), eq(emailsTable.direction, "outbound")),
+        )
         .limit(1)
 
       if (originalEmailForWorkspace.length > 0 && originalEmailForWorkspace[0]?.workspaceId) {

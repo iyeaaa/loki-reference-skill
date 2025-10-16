@@ -9,9 +9,9 @@ import { and, eq } from "drizzle-orm"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emails } from "../db/schema/emails"
-import { emailService } from "../services/email.service"
 import { leadContacts, leadIndustryTypes } from "../db/schema/lead-details"
 import { leads } from "../db/schema/leads"
+import { emailService } from "../services/email.service"
 import * as sequenceService from "../services/sequence.service"
 import * as workflowEmailService from "../services/workflow-email.service"
 import logger from "../utils/logger"
@@ -230,25 +230,6 @@ async function sendSequenceEmail(execution: {
         success: false,
         error: "SendGrid API key not configured",
       }
-    }
-
-    // Set API key for this request
-    sgMail.setApiKey(apiKey)
-
-    // Prepare email message with personalized content
-    const msg = {
-      to: leadContact.email,
-      from: {
-        email: emailAccount.emailAddress,
-        name: emailAccount.displayName || emailAccount.emailAddress,
-      },
-      subject: personalizedSubject,
-      text: personalizedBodyText || undefined,
-      html: personalizedBodyHtml || undefined,
-      tracking_settings: {
-        open_tracking: { enable: true },
-        click_tracking: { enable: true, enable_text: true },
-      },
     }
 
     logger.info(

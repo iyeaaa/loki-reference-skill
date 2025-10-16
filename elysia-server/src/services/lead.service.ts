@@ -100,6 +100,7 @@ export async function createLead(data: {
   contacts?: Array<{
     contactType: "phone" | "email" | "fax" | "other"
     contactValue: string
+    contactName?: string | null
     label?: string | null
     isPrimary?: boolean
   }>
@@ -171,6 +172,7 @@ export async function createLead(data: {
           leadId: newLead.id,
           contactType: contact.contactType,
           contactValue: contact.contactValue,
+          contactName: contact.contactName,
           label: contact.label,
           isPrimary: contact.isPrimary || false,
           isVerified: false,
@@ -241,6 +243,7 @@ export async function updateLead(
     contacts?: Array<{
       contactType: "phone" | "email" | "fax" | "other"
       contactValue: string
+      contactName?: string | null
       label?: string | null
       isPrimary?: boolean
     }>
@@ -295,6 +298,7 @@ export async function updateLead(
             leadId: id,
             contactType: contact.contactType,
             contactValue: contact.contactValue,
+            contactName: contact.contactName,
             label: contact.label,
             isPrimary: contact.isPrimary || false,
             isVerified: false,

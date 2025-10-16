@@ -1,21 +1,27 @@
-import { ChevronDown, Sparkles } from "lucide-react"
-import { useEffect, useId, useState } from "react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { RichTextEditor } from "@/components/ui/rich-text-editor"
-import { Textarea } from "@/components/ui/textarea"
-import { TimePicker } from "@/components/ui/time-picker"
-import { leadsApi } from "@/lib/api/services/leads"
-import { sequencesApi } from "@/lib/api/services/sequences"
-import type { SequenceStep } from "@/lib/api/types/sequence"
-import { markdownToHtml } from "@/lib/utils/markdown"
+import { ChevronDown, Sparkles } from "lucide-react";
+import { useEffect, useId, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { Textarea } from "@/components/ui/textarea";
+import { TimePicker } from "@/components/ui/time-picker";
+import { leadsApi } from "@/lib/api/services/leads";
+import { sequencesApi } from "@/lib/api/services/sequences";
+import type { SequenceStep } from "@/lib/api/types/sequence";
+import { useAuth } from "@/lib/auth-provider";
+import { generateSignatureHtml } from "@/lib/utils/email-signature";
+import { markdownToHtml } from "@/lib/utils/markdown";
 
 // HTML을 Markdown으로 변환하는 유틸리티 함수
 const htmlToMarkdown = (html: string): string => {
-  if (!html) return ""
+  if (!html) return "";
 
   const markdown = html
     // 코드 블록 마커 제거 (```html, ``` 등)
@@ -76,42 +82,42 @@ const htmlToMarkdown = (html: string): string => {
     // 연속된 공백과 줄바꿈 정리 (3개 이상의 연속 줄바꿈만 2개로 줄임)
     .replace(/\n\s*\n\s*\n+/g, "\n\n")
     .replace(/[ \t]+/g, " ")
-    .trim()
+    .trim();
 
   // 추가 정리: 빈 줄과 불필요한 텍스트 제거
-  const lines = markdown.split("\n")
+  const lines = markdown.split("\n");
   const cleanedLines = lines
     .filter((line) => {
-      const trimmed = line.trim()
+      const trimmed = line.trim();
       // 빈 줄이거나 불필요한 메타데이터가 아닌 경우만 유지
       return (
         trimmed !== "" &&
         !trimmed.match(/^(Email\s*Template|Email|Sales\s*Email|\*\*|\*)$/i) &&
         !trimmed.match(/^Feel\s+free\s+to\s+replace/i) &&
         !trimmed.match(/^to\s+personalize\s+your\s+email/i)
-      )
+      );
     })
-    .map((line) => line.trim())
+    .map((line) => line.trim());
 
-  return cleanedLines.join("\n").trim()
-}
+  return cleanedLines.join("\n").trim();
+};
 
 interface SequenceStepFormProps {
-  step?: SequenceStep
-  stepOrder: number
-  workspaceId?: string
-  customerGroupId?: string
+  step?: SequenceStep;
+  stepOrder: number;
+  workspaceId?: string;
+  customerGroupId?: string;
   onSave: (stepData: {
-    stepOrder: number
-    delayDays: number
-    scheduledHour?: number
-    scheduledMinute?: number
-    timezone?: string
-    emailSubject: string
-    emailBodyText?: string
-    emailBodyHtml?: string
-  }) => void
-  onCancel: () => void
+    stepOrder: number;
+    delayDays: number;
+    scheduledHour?: number;
+    scheduledMinute?: number;
+    timezone?: string;
+    emailSubject: string;
+    emailBodyText?: string;
+    emailBodyHtml?: string;
+  }) => void;
+  onCancel: () => void;
 }
 
 export function SequenceStepForm({
@@ -122,10 +128,21 @@ export function SequenceStepForm({
   onSave,
   onCancel,
 }: SequenceStepFormProps) {
-  const subjectId = useId()
-  const delayDaysId = useId()
-  const bodyTextId = useId()
-  const promptId = useId()
+  const { user } = useAuth();
+  const subjectId = useId();
+  const delayDaysId = useId();
+  const bodyTextId = useId();
+  const promptId = useId();
+
+  // 사용자 정보를 기반으로 서명 생성
+  const generateUserSignature = () => {
+    if (user) {
+      const name = user.name || user.username || "사용자";
+      const title = user.department_name || "직원";
+      return generateSignatureHtml({ name, title });
+    }
+    return generateSignatureHtml(); // 기본값 사용
+  };
 
   const [formData, setFormData] = useState({
     stepOrder: step?.stepOrder ?? stepOrder,
@@ -134,119 +151,127 @@ export function SequenceStepForm({
     scheduledMinute: step?.scheduledMinute ?? new Date().getMinutes(),
     timezone: step?.timezone ?? "Asia/Seoul",
     emailSubject: step?.emailSubject || "",
-    emailBodyText: step?.emailBodyText || "",
-  })
+    emailBodyText: step?.emailBodyText || `\n\n${generateUserSignature()}`,
+  });
 
-  const [showAIGenerator, setShowAIGenerator] = useState(false)
-  const [aiPrompt, setAiPrompt] = useState("")
-  const [targetCountry, setTargetCountry] = useState<string>("")
-  const [isLoadingCountry, setIsLoadingCountry] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [targetCountry, setTargetCountry] = useState<string>("");
+  const [isLoadingCountry, setIsLoadingCountry] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // 고객 그룹의 리드에서 country 가져오기
   useEffect(() => {
     if (customerGroupId && showAIGenerator) {
-      setIsLoadingCountry(true)
+      setIsLoadingCountry(true);
       leadsApi
         .list({ customerGroupId, limit: 1 })
         .then((response) => {
           if (response.leads.length > 0 && response.leads[0]?.country) {
-            setTargetCountry(response.leads[0].country)
+            setTargetCountry(response.leads[0].country);
           } else {
-            setTargetCountry("")
-            toast.info("고객 그룹에 국가 정보가 있는 리드가 없습니다.")
+            setTargetCountry("");
+            toast.info("고객 그룹에 국가 정보가 있는 리드가 없습니다.");
           }
         })
         .catch((error) => {
-          console.error("리드 조회 실패:", error)
-          toast.error("리드 정보를 가져오는데 실패했습니다.")
+          console.error("리드 조회 실패:", error);
+          toast.error("리드 정보를 가져오는데 실패했습니다.");
         })
         .finally(() => {
-          setIsLoadingCountry(false)
-        })
+          setIsLoadingCountry(false);
+        });
     }
-  }, [customerGroupId, showAIGenerator])
+  }, [customerGroupId, showAIGenerator]);
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     // Markdown을 HTML로 변환
     const emailBodyHtml = formData.emailBodyText
       ? markdownToHtml(formData.emailBodyText)
-      : undefined
+      : undefined;
 
     onSave({
       ...formData,
       emailBodyHtml,
-    })
-  }
+    });
+  };
 
   useEffect(() => {
     if (formData.delayDays === 0) {
-      return
+      return;
     }
     setFormData((prev) => ({
       ...prev,
       scheduledHour: 0,
       scheduledMinute: 0,
-    }))
-  }, [formData.delayDays])
+    }));
+  }, [formData.delayDays]);
 
   const handleGenerateWithAI = async () => {
     if (!workspaceId) {
-      toast.error("워크스페이스 정보가 없습니다.")
-      return
+      toast.error("워크스페이스 정보가 없습니다.");
+      return;
     }
 
     if (!customerGroupId) {
-      toast.error("시퀀스에 고객 그룹이 설정되어 있지 않습니다.")
-      return
+      toast.error("시퀀스에 고객 그룹이 설정되어 있지 않습니다.");
+      return;
     }
 
     if (!targetCountry) {
-      toast.error("고객 그룹에 국가 정보가 있는 리드가 없습니다.")
-      return
+      toast.error("고객 그룹에 국가 정보가 있는 리드가 없습니다.");
+      return;
     }
 
     if (!aiPrompt.trim()) {
-      toast.error("이메일 내용 요청사항을 입력해주세요.")
-      return
+      toast.error("이메일 내용 요청사항을 입력해주세요.");
+      return;
     }
 
     if (aiPrompt.trim().length < 10) {
-      toast.error("이메일 내용 요청사항을 10자 이상 입력해주세요.")
-      return
+      toast.error("이메일 내용 요청사항을 10자 이상 입력해주세요.");
+      return;
     }
 
-    setIsGenerating(true)
+    setIsGenerating(true);
     try {
       const result = await sequencesApi.generateTemplate({
         workspaceId,
         country: targetCountry,
         prompt: aiPrompt,
-      })
+      });
 
       setFormData({
         ...formData,
         emailSubject: result.emailSubject,
         emailBodyText: htmlToMarkdown(result.emailBodyText),
-      })
+      });
 
-      toast.success(`이메일 템플릿이 생성되었습니다! (언어: ${result.detectedLanguage || "auto"})`)
-      setShowAIGenerator(false)
+      toast.success(
+        `이메일 템플릿이 생성되었습니다! (언어: ${
+          result.detectedLanguage || "auto"
+        })`
+      );
+      setShowAIGenerator(false);
     } catch (error) {
-      console.error("AI 템플릿 생성 실패:", error)
-      toast.error(error instanceof Error ? error.message : "템플릿 생성에 실패했습니다.")
+      console.error("AI 템플릿 생성 실패:", error);
+      toast.error(
+        error instanceof Error ? error.message : "템플릿 생성에 실패했습니다."
+      );
     } finally {
-      setIsGenerating(false)
+      setIsGenerating(false);
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* 스텝 순서 표시 */}
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-muted-foreground">스텝 순서:</span>
+        <span className="text-sm font-medium text-muted-foreground">
+          스텝 순서:
+        </span>
         <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
           {formData.stepOrder}
         </span>
@@ -276,7 +301,9 @@ export function SequenceStepForm({
               placeholder="0"
               className="bg-background"
             />
-            <p className="text-xs text-muted-foreground">이전 이메일 발송 후 며칠 뒤</p>
+            <p className="text-xs text-muted-foreground">
+              이전 이메일 발송 후 며칠 뒤
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -285,16 +312,20 @@ export function SequenceStepForm({
             </Label>
             <TimePicker
               value={{
-                hour: Number.isInteger(formData.scheduledHour) ? formData.scheduledHour : 9,
-                minute: Number.isInteger(formData.scheduledMinute) ? formData.scheduledMinute : 0,
+                hour: Number.isInteger(formData.scheduledHour)
+                  ? formData.scheduledHour
+                  : 9,
+                minute: Number.isInteger(formData.scheduledMinute)
+                  ? formData.scheduledMinute
+                  : 0,
               }}
               onChange={(time) => {
-                console.log("TimePicker onChange:", time)
+                console.log("TimePicker onChange:", time);
                 setFormData({
                   ...formData,
                   scheduledHour: time.hour,
                   scheduledMinute: time.minute,
-                })
+                });
               }}
             />
           </div>
@@ -336,8 +367,8 @@ export function SequenceStepForm({
                   {isLoadingCountry
                     ? "🔄 국가 정보 조회 중..."
                     : targetCountry
-                      ? `🌍 타겟 국가: ${targetCountry}`
-                      : "⚠️ 고객 그룹에 국가 정보가 없습니다."}
+                    ? `🌍 타겟 국가: ${targetCountry}`
+                    : "⚠️ 고객 그룹에 국가 정보가 없습니다."}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   고객 그룹의 리드에서 자동으로 국가를 감지합니다.
@@ -380,7 +411,8 @@ export function SequenceStepForm({
       {workspaceId && !customerGroupId && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-4">
           <p className="text-sm text-amber-800 dark:text-amber-200">
-            💡 AI 이메일 생성을 사용하려면 시퀀스에 고객 그룹을 먼저 설정해주세요.
+            💡 AI 이메일 생성을 사용하려면 시퀀스에 고객 그룹을 먼저
+            설정해주세요.
           </p>
         </div>
       )}
@@ -392,7 +424,9 @@ export function SequenceStepForm({
         <Input
           id={subjectId}
           value={formData.emailSubject}
-          onChange={(e) => setFormData({ ...formData, emailSubject: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, emailSubject: e.target.value })
+          }
           required
           maxLength={500}
           placeholder="예: K-Beauty Partnership Opportunity with {{company_name}}"
@@ -403,24 +437,10 @@ export function SequenceStepForm({
         <Label htmlFor={bodyTextId}>이메일 본문</Label>
         <RichTextEditor
           value={formData.emailBodyText || ""}
-          onChange={(value) => setFormData({ ...formData, emailBodyText: value })}
-          placeholder={`Dear {{company_name}} team,
-
-I hope this email finds you well. I am reaching out from a Korean beauty company specializing in innovative skincare and cosmetics products.
-
-We noticed your business in {{city}}, {{country}} and believe there could be a great partnership opportunity. Our K-Beauty products are currently exported to over 30 countries and have received excellent feedback from international buyers.
-
-Would you be interested in exploring a distribution partnership? We offer:
-• Competitive pricing for wholesale buyers
-• High-quality Korean beauty products with proven results
-• Full marketing and product training support
-• Flexible MOQ (Minimum Order Quantity)
-
-I would love to schedule a brief call to discuss how we can work together.
-
-Best regards,
-[Your Name]
-[Your Company]`}
+          onChange={(value) =>
+            setFormData({ ...formData, emailBodyText: value })
+          }
+          placeholder={`\n\n--\n${generateUserSignature()}`}
           height="300px"
         />
         <Collapsible className="mt-2">
@@ -481,5 +501,5 @@ Best regards,
         </Button>
       </div>
     </form>
-  )
+  );
 }

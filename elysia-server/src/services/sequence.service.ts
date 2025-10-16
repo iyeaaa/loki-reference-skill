@@ -900,6 +900,7 @@ export async function getPendingStepExecutions(limit: number = 100) {
       sequenceId: sequenceEnrollments.sequenceId,
       sequenceName: sequences.name,
       workspaceId: sequences.workspaceId,
+      userId: sequences.createdBy, // 시퀀스 생성자 ID를 userId로 사용
     })
     .from(sequenceStepExecutions)
     .innerJoin(sequenceSteps, eq(sequenceStepExecutions.stepId, sequenceSteps.id))

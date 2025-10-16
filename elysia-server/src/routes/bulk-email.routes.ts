@@ -106,7 +106,7 @@ export const bulkEmailRoutes = new Elysia({ prefix: "/api/v1/bulk-emails" })
               "이메일 발송 중",
             )
 
-            // SendGrid로 이메일 발송
+            // SendGrid로 이메일 발송 (CSV 대량 전송에는 서명 제외)
             const sendResult = await emailService.sendEmail({
               fromEmail: fromEmail,
               fromName: fromName,
@@ -114,6 +114,7 @@ export const bulkEmailRoutes = new Elysia({ prefix: "/api/v1/bulk-emails" })
               subject: emailData.subject,
               bodyText: emailData.bodyText,
               bodyHtml: emailData.bodyHtml,
+              includeSignature: false, // CSV 대량 전송에는 서명 제외
               apiKey: apiKey,
             })
 

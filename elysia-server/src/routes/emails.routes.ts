@@ -65,6 +65,7 @@ const sendEmailSchema = t.Object({
   inReplyTo: t.Optional(t.String()),
   references: t.Optional(t.Array(t.String())),
   scheduledAt: t.Optional(t.String()), // ISO 8601 datetime for scheduled sending
+  includeSignature: t.Optional(t.Boolean()), // 서명 포함 여부 (기본값: true)
   // Required fields for user_email_accounts integration
   workspaceId: t.String({ format: "uuid" }),
   userId: t.String({ format: "uuid" }),
@@ -681,6 +682,9 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           replyTo: body.replyTo,
           inReplyTo: body.inReplyTo,
           references: body.references,
+          includeSignature: body.includeSignature,
+          userId: body.userId,
+          workspaceId: body.workspaceId,
           apiKey: apiKey,
         })
 

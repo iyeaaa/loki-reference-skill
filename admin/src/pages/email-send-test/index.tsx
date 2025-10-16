@@ -222,6 +222,7 @@ export default function EmailSendTestPage() {
       ccEmails: singleCc ? singleCc.split(",").map((e) => e.trim()) : undefined,
       bccEmails: singleBcc ? singleBcc.split(",").map((e) => e.trim()) : undefined,
       fromName: fromName || undefined,
+      includeSignature: true, // 서명 포함
     }
 
     try {
@@ -272,6 +273,7 @@ export default function EmailSendTestPage() {
         bodyText: bulkBodyText || undefined,
         bodyHtml: bulkBodyHtml || undefined,
         fromName: fromName || undefined,
+        includeSignature: true, // 서명 포함
       }
 
       try {
@@ -387,6 +389,7 @@ export default function EmailSendTestPage() {
         bodyHtml: bodyHtmlWithSchedule,
         fromName: fromName || undefined,
         scheduledAt: scheduledDate.toISOString(),
+        includeSignature: true, // 서명 포함
       }
 
       try {
@@ -689,8 +692,8 @@ export default function EmailSendTestPage() {
                 </div>
                 <p className="text-sm pl-10">
                   선택한 워크스페이스(
-                  <strong>{workspaces.find((w) => w.id === selectedSendWorkspace)?.name}</strong>)와
-                  사용자(
+                  <strong>{workspaces.find((w) => w.id === selectedSendWorkspace)?.name}</strong>
+                  )와 사용자(
                   <strong>
                     {usersData?.users?.find((u) => u.id === selectedSendUser)?.username}
                   </strong>
@@ -711,8 +714,8 @@ export default function EmailSendTestPage() {
               disabled={!emailAccountInfo}
             />
             <p className="text-xs text-muted-foreground">
-              비어있으면 이메일 계정의 표시 이름({emailAccountInfo?.displayName || "미설정"})이
-              사용됩니다
+              비어있으면 이메일 계정의 표시 이름(
+              {emailAccountInfo?.displayName || "미설정"})이 사용됩니다
             </p>
           </div>
         </CardContent>

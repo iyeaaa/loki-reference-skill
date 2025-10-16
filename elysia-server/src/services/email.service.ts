@@ -1,5 +1,10 @@
 import sgMail from "@sendgrid/mail"
+import { eq } from "drizzle-orm"
 import { config } from "../config"
+import { db } from "../db/index"
+import { userEmailAccounts } from "../db/schema/email-accounts"
+import { departments, users } from "../db/schema/users"
+import { workspaces } from "../db/schema/workspaces"
 import type { Attachment } from "../models/email.model"
 import logger from "../utils/logger"
 
@@ -47,6 +52,143 @@ class EmailService {
     return ""
   }
 
+  // Generate email signature from user data
+  async generateUserSignature(
+    userId: string,
+    workspaceId: string,
+  ): Promise<{
+    signatureHtml: string
+    signatureText: string
+  }> {
+    try {
+      // Get user info with department and workspace
+      const [userInfo] = await db
+        .select({
+          username: users.username,
+          email: users.email,
+          departmentName: departments.name,
+          workspaceName: workspaces.name,
+          displayName: userEmailAccounts.displayName,
+        })
+        .from(users)
+        .innerJoin(departments, eq(users.departmentId, departments.id))
+        .innerJoin(workspaces, eq(workspaces.id, workspaceId))
+        .leftJoin(
+          userEmailAccounts,
+          eq(userEmailAccounts.userId, users.id) && eq(userEmailAccounts.workspaceId, workspaceId),
+        )
+        .where(eq(users.id, userId))
+        .limit(1)
+
+      if (!userInfo) {
+        logger.warn({ userId, workspaceId }, "User info not found for signature generation")
+        return { signatureHtml: "", signatureText: "" }
+      }
+
+      const { username, departmentName, displayName } = userInfo
+      const name = displayName || username
+      const title = departmentName
+
+      return this.generateGrindaSignature(name, title)
+    } catch (error) {
+      logger.error({ err: error, userId, workspaceId }, "Failed to generate user signature")
+      return { signatureHtml: "", signatureText: "" }
+    }
+  }
+
+  // Generate hardcoded email signature
+  generateGrindaSignature(
+    name: string,
+    title: string,
+  ): {
+    signatureHtml: string
+    signatureText: string
+  } {
+    // HTML signature
+    const signatureHtml = `
+      <div dir="ltr">
+        <font face="tahoma, sans-serif">---</font>
+        <div>
+          <font face="tahoma, sans-serif">
+            <img width="200" height="40" src="https://ci3.googleusercontent.com/mail-sig/AIorK4wmbav037hCfz80GR6E4h7flMNvTFaW2MHfrLwEDxzoBQv47zi5AijTZvapZhWOPSY3lexM6IgALCnW" loading="lazy">
+            <br>
+          </font>
+        </div>
+        <div>
+          <b><font size="4" face="tahoma, sans-serif">${name}</font></b>
+        </div>
+        <div>
+          <b><font face="tahoma, sans-serif">주식회사 그린다에이아이&nbsp; |&nbsp; ${title}</font></b>
+        </div>
+        <div><font face="tahoma, sans-serif"><br></font></div>
+        <div>
+          <font color="#999999" face="tahoma, sans-serif">
+            <b>Add.</b> 대전광역시 유성구 대학로 99 대전 팁스타운 502
+          </font>
+        </div>
+        <div>
+          <font color="#999999" face="tahoma, sans-serif">
+            (99, Daehak-ro, Yuseong-gu, Daejeon, Republic of Korea)
+          </font>
+        </div>
+        <div>
+          <font color="#999999" face="tahoma, sans-serif">
+            <b>Tel.</b> 010-8351-6129
+          </font>
+        </div>
+        <div>
+          <font color="#999999" face="tahoma, sans-serif">
+            <b>Web.</b> <a href="http://www.grinda.ai" target="_blank" rel="noreferrer noopener">www.grinda.ai</a>
+          </font>
+        </div>
+        <div><font face="tahoma, sans-serif"><br></font></div>
+        <div>
+          <font face="tahoma, sans-serif">
+            <span style="color:rgb(140,140,140);font-size:9px">
+              본 메일에는 법률상 보호되는 영업비밀이나 비밀유지서약서에 따라 보호되는 비밀정보가 포함되어 있습니다. 이에 포함된 내용은 보안을 유지하여야 하며 본 문서에 포함된 정보의 전부 또는 일부를 무단으로 제3자에게 공개, 배포, 복사 또는 사용하는 것은 엄격히 금지됩니다. 본 메일이 잘못 전송된 경우, 발신인 또는 당사에 알려주시고, 본 메일 및 첨부문서를 즉시 삭제하여 주시기 바랍니다. 또한 본 메일의 법률상 안전성과 바이러스가 없음을 보장하지 않으며, 타인에 의한 본 메일의 변경에 대하여 책임지지 않습니다.
+            </span>
+            <br style="color:rgb(140,140,140);font-size:9px">
+            <span style="color:rgb(140,140,140);font-size:9px">
+              This email contains confidential information that is protected by law or under the confidentiality agreements. Any information contained herein shall be kept secure and any unauthorized disclosure, distribution, copying or use of any or all of the information contained herein to any third party is strictly prohibited. If this email is sent incorrectly, please notify the sender or us and delete this email and attachments immediately. In addition, the law of this mail does not guarantee safety and virus-free, and we are not responsible for any changes made to this mail by others.
+            </span>
+          </font>
+        </div>
+      </div>
+    `.trim()
+
+    // Text signature
+    const signatureText = `
+${name}
+주식회사 그린다에이아이  |  ${title}
+
+Add. 대전광역시 유성구 대학로 99 대전 팁스타운 502
+(99, Daehak-ro, Yuseong-gu, Daejeon, Republic of Korea)
+Tel. 010-8351-6129
+Web. www.grinda.ai
+
+본 메일에는 법률상 보호되는 영업비밀이나 비밀유지서약서에 따라 보호되는 비밀정보가 포함되어 있습니다. 이에 포함된 내용은 보안을 유지하여야 하며 본 문서에 포함된 정보의 전부 또는 일부를 무단으로 제3자에게 공개, 배포, 복사 또는 사용하는 것은 엄격히 금지됩니다. 본 메일이 잘못 전송된 경우, 발신인 또는 당사에 알려주시고, 본 메일 및 첨부문서를 즉시 삭제하여 주시기 바랍니다. 또한 본 메일의 법률상 안전성과 바이러스가 없음을 보장하지 않으며, 타인에 의한 본 메일의 변경에 대하여 책임지지 않습니다.
+This email contains confidential information that is protected by law or under the confidentiality agreements. Any information contained herein shall be kept secure and any unauthorized disclosure, distribution, copying or use of any or all of the information contained herein to any third party is strictly prohibited. If this email is sent incorrectly, please notify the sender or us and delete this email and attachments immediately. In addition, the law of this mail does not guarantee safety and virus-free, and we are not responsible for any changes made to this mail by others.
+    `.trim()
+
+    return { signatureHtml, signatureText }
+  }
+
+  // Append signature to email content
+  appendSignatureToEmail(
+    emailContent: string,
+    signatureHtml: string,
+    signatureText: string,
+    isHtml: boolean = true,
+  ): string {
+    if (isHtml) {
+      // For HTML emails, append the signature HTML
+      return `${emailContent}\n\n${signatureHtml}`
+    } else {
+      // For text emails, use the text signature
+      return `${emailContent}\n\n---\n${signatureText}`
+    }
+  }
+
   async sendEmail(data: {
     fromEmail: string
     fromName?: string
@@ -60,6 +202,9 @@ class EmailService {
     inReplyTo?: string
     references?: string[]
     apiKey?: string // 특정 계정의 API Key 사용
+    includeSignature?: boolean // 서명 포함 여부 (기본값: true)
+    userId?: string // 서명 생성을 위한 사용자 ID
+    workspaceId?: string // 서명 생성을 위한 워크스페이스 ID
   }): Promise<{
     success: boolean
     messageId?: string
@@ -104,12 +249,59 @@ class EmailService {
       // Message-ID 헤더 추가 (답장 추적용)
       msg.headers["Message-ID"] = generatedMessageId
 
-      // 본문 설정
-      if (data.bodyText) {
-        msg.text = data.bodyText
+      // 서명 추가 (기본값: true)
+      const includeSignature = data.includeSignature !== false
+      let finalBodyText = data.bodyText
+      let finalBodyHtml = data.bodyHtml
+
+      if (includeSignature) {
+        try {
+          let signatureHtml = ""
+          let signatureText = ""
+
+          if (data.userId && data.workspaceId) {
+            // Use user data to generate signature
+            const userSignature = await this.generateUserSignature(data.userId, data.workspaceId)
+            signatureHtml = userSignature.signatureHtml
+            signatureText = userSignature.signatureText
+          } else {
+            // Fallback to default signature
+            const defaultSignature = this.generateGrindaSignature(
+              "김규동 Gyudong Kim",
+              "Project Lead",
+            )
+            signatureHtml = defaultSignature.signatureHtml
+            signatureText = defaultSignature.signatureText
+          }
+
+          if (finalBodyHtml) {
+            finalBodyHtml = this.appendSignatureToEmail(
+              finalBodyHtml,
+              signatureHtml,
+              signatureText,
+              true,
+            )
+          }
+          if (finalBodyText) {
+            finalBodyText = this.appendSignatureToEmail(
+              finalBodyText,
+              signatureHtml,
+              signatureText,
+              false,
+            )
+          }
+        } catch (error) {
+          logger.warn({ err: error }, "Failed to add signature to email")
+          // 서명 추가 실패해도 이메일 전송은 계속 진행
+        }
       }
-      if (data.bodyHtml) {
-        msg.html = data.bodyHtml
+
+      // 본문 설정
+      if (finalBodyText) {
+        msg.text = finalBodyText
+      }
+      if (finalBodyHtml) {
+        msg.html = finalBodyHtml
       }
 
       // CC/BCC 설정

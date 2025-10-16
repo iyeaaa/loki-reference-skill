@@ -5,22 +5,16 @@
  * It fetches pending steps, sends emails via SendGrid, and updates execution status.
  */
 
-import sgMail from "@sendgrid/mail"
 import { and, eq } from "drizzle-orm"
-import { config } from "../config"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emails } from "../db/schema/emails"
+import { emailService } from "../services/email.service"
 import { leadContacts, leadIndustryTypes } from "../db/schema/lead-details"
 import { leads } from "../db/schema/leads"
 import * as sequenceService from "../services/sequence.service"
 import * as workflowEmailService from "../services/workflow-email.service"
 import logger from "../utils/logger"
-
-// Initialize SendGrid
-if (config.sendgrid.apiKey) {
-  sgMail.setApiKey(config.sendgrid.apiKey)
-}
 
 interface EmailSendResult {
   success: boolean
@@ -42,6 +36,7 @@ async function sendSequenceEmail(execution: {
   sequenceId: string
   stepId: string
   workspaceId: string
+  userId: string | null
 }): Promise<EmailSendResult> {
   try {
     logger.debug(
@@ -224,8 +219,8 @@ async function sendSequenceEmail(execution: {
       "✅ [STEP-WORKER] Found email account",
     )
 
-    // Use account-specific API key or default
-    const apiKey = emailAccount.apiKey || config.sendgrid.apiKey
+    // Use account-specific API key
+    const apiKey = emailAccount.apiKey
     if (!apiKey) {
       logger.error(
         { executionId: execution.executionId },
@@ -263,20 +258,46 @@ async function sendSequenceEmail(execution: {
         to: leadContact.email,
         subject: personalizedSubject,
       },
+
       "📤 [STEP-WORKER] Sending personalized email via SendGrid",
     )
 
-    // Send email
-    const [response] = await sgMail.send(msg as never)
+    // Send email using EmailService (includes automatic signature)
+    const sendResult = await emailService.sendEmail({
+      fromEmail: emailAccount.emailAddress,
+      fromName: emailAccount.displayName || emailAccount.emailAddress,
+      toEmail: leadContact.email,
+      subject: execution.emailSubject,
+      bodyText: execution.emailBodyText || undefined,
+      bodyHtml: execution.emailBodyHtml || undefined,
+      includeSignature: true, // 시퀀스 이메일에는 항상 서명 포함
+      userId: execution.userId || undefined,
+      workspaceId: execution.workspaceId,
+      apiKey: apiKey,
+    })
 
-    const sendgridMessageId = response.headers["x-message-id"] as string
+    if (!sendResult.success) {
+      logger.error(
+        {
+          executionId: execution.executionId,
+          error: sendResult.error,
+        },
+        "❌ [STEP-WORKER] Email send failed",
+      )
+      return {
+        success: false,
+        error: sendResult.error || "Failed to send email",
+      }
+    }
+
+    const sendgridMessageId = sendResult.sendgridMessageId
 
     logger.info(
       {
         executionId: execution.executionId,
         messageId: sendgridMessageId,
       },
-      "✅ [STEP-WORKER] SendGrid accepted email",
+      "✅ [STEP-WORKER] Email sent successfully",
     )
 
     // Create email record in database with personalized content

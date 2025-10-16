@@ -85,6 +85,8 @@ export function InlineComposeBox({
       // 스레드 정보 포함
       inReplyTo: originalEmail.messageId ?? undefined,
       references: originalEmail.messageId ? [originalEmail.messageId] : undefined,
+      // 서명 포함 (기본값: true)
+      includeSignature: true,
     }
 
     console.log("📧 Sending email with payload:", {

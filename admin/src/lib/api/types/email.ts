@@ -135,6 +135,7 @@ export interface SendEmailRequest {
   inReplyTo?: string
   references?: string[]
   scheduledAt?: string // ISO 8601 datetime for scheduled sending
+  includeSignature?: boolean // 서명 포함 여부 (기본값: true)
   // Required fields for user_email_accounts integration
   workspaceId: string
   userId: string

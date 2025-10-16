@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Building2,
+  FileSpreadsheet,
   FileText,
   FileUp,
   GitBranch,
@@ -77,6 +78,11 @@ const adminMenuItems = [
     title: "리드 데이터 임포트",
     url: "/lead-import",
     icon: FileUp,
+  },
+  {
+    title: "CSV 대량 메일 발송",
+    url: "/bulk-email-csv",
+    icon: FileSpreadsheet,
   },
 ]
 

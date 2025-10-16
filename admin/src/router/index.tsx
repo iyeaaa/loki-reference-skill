@@ -23,6 +23,7 @@ const UsersPage = lazy(() => import("../pages/users/UsersPage"))
 const WorkspacesPage = lazy(() => import("../pages/workspaces"))
 const TailwindTestPage = lazy(() => import("../pages/tailwind-test/TailwindTestPage"))
 const LeadImportPage = lazy(() => import("../pages/lead-import"))
+const BulkEmailCSVPage = lazy(() => import("../pages/bulk-email-csv"))
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>
@@ -104,6 +105,10 @@ export const router = createBrowserRouter([
           {
             path: "lead-import",
             element: <LeadImportPage />,
+          },
+          {
+            path: "bulk-email-csv",
+            element: <BulkEmailCSVPage />,
           },
           {
             path: "tailwind-test",

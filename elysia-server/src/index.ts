@@ -10,6 +10,7 @@ import { responseTransformer } from "./plugins/response-transformer.plugin"
 import { activityLogRoutes } from "./routes/activity-logs.routes"
 import { aiRoutes } from "./routes/ai.routes"
 import { authRoutes } from "./routes/auth.routes"
+import { bulkEmailRoutes } from "./routes/bulk-email.routes"
 import { adminCustomerGroupRoutes, customerGroupRoutes } from "./routes/customer-groups.routes"
 import { departmentsRoutes } from "./routes/departments.routes"
 import { adminEmailAccountRoutes, emailAccountRoutes } from "./routes/email-accounts.routes"
@@ -142,6 +143,7 @@ const app = new Elysia()
   .use(adminEmailTemplateRoutes)
   .use(emailRoutes)
   .use(adminEmailRoutes)
+  .use(bulkEmailRoutes)
   .use(emailRepliesRoutes)
   .use(leadRoutes)
   .use(adminLeadRoutes)

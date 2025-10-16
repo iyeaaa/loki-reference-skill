@@ -104,7 +104,13 @@ export default function BulkEmailCSVPage() {
 
     // CSV 파일 파싱
     try {
-      const text = await file.text()
+      let text = await file.text()
+
+      // BOM (Byte Order Mark) 제거
+      if (text.charCodeAt(0) === 0xfeff) {
+        text = text.substring(1)
+      }
+
       const lines = text.split("\n").map((line) => line.trim())
 
       // 첫 번째 줄은 헤더로 가정
@@ -198,7 +204,7 @@ export default function BulkEmailCSVPage() {
           workspaceId: selectedSendWorkspace,
           userId: selectedSendUser,
           emails: emailsData.map((email) => ({
-            fromEmail: (email.fromEmail && email.fromEmail.trim()) || emailAccountInfo.emailAddress,
+            fromEmail: email.fromEmail?.trim() || emailAccountInfo.emailAddress,
             toEmail: email.toEmail,
             subject: email.subject,
             bodyText: email.bodyText,
@@ -209,7 +215,10 @@ export default function BulkEmailCSVPage() {
       })
 
       if (!response.ok) {
-        throw new Error("대량 메일 발송 API 호출 실패")
+        const errorData = await response.json().catch(() => null)
+        const errorMessage = errorData?.message || `API 호출 실패 (${response.status})`
+        console.error("API Error:", errorData)
+        throw new Error(errorMessage)
       }
 
       const result = await response.json()
@@ -224,7 +233,9 @@ export default function BulkEmailCSVPage() {
       }
     } catch (error) {
       console.error("Failed to send bulk emails:", error)
-      toast.error("대량 메일 발송 중 오류가 발생했습니다")
+      const errorMessage =
+        error instanceof Error ? error.message : "대량 메일 발송 중 오류가 발생했습니다"
+      toast.error(errorMessage)
     } finally {
       setIsSending(false)
     }

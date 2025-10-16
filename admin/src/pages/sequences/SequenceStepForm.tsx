@@ -242,7 +242,7 @@ export function SequenceStepForm({
       setFormData({
         ...formData,
         emailSubject: result.emailSubject,
-        emailBodyText: htmlToMarkdown(result.emailBodyText),
+        emailBodyText: htmlToMarkdown(result.emailBodyText) + formData.emailBodyText,
       })
 
       toast.success(`이메일 템플릿이 생성되었습니다! (언어: ${result.detectedLanguage || "auto"})`)

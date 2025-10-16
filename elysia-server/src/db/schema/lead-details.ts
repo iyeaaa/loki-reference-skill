@@ -33,6 +33,7 @@ export const leadContacts = pgTable(
       .references(() => leads.id, { onDelete: "cascade" }),
     contactType: contactTypeEnum("contact_type").notNull(),
     contactValue: varchar("contact_value", { length: 255 }).notNull(),
+    contactName: varchar("contact_name", { length: 255 }), // 담당자 이름
     label: varchar("label", { length: 100 }), // e.g., 'main', 'support', 'sales'
     isPrimary: boolean("is_primary").notNull().default(false),
     isVerified: boolean("is_verified").notNull().default(false),

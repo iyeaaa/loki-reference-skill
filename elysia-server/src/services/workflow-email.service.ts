@@ -334,6 +334,10 @@ export async function getSequenceLeads(sequenceId: string) {
 }
 
 // Replace template variables
+/**
+ * 템플릿 변수를 실제 값으로 치환
+ * 영문 변수 ({{company_name}}, {{website}}, ...)와 한글 변수 ({{회사명}}, {{웹사이트}}, ...) 모두 지원
+ */
 export function replaceTemplateVariables(
   template: string,
   context: {
@@ -341,19 +345,58 @@ export function replaceTemplateVariables(
     contactName?: string
     contactEmail?: string
     industry?: string
+    website?: string
+    description?: string
+    address?: string
+    country?: string
+    city?: string
+    state?: string
+    foundedYear?: string
+    employeeCount?: string
+    leadSource?: string
+    leadStatus?: string
+    leadScore?: string
     [key: string]: string | undefined
   },
 ): string {
   let result = template
 
-  for (const [key, value] of Object.entries(context)) {
-    if (value) {
-      const regex = new RegExp(`{{${key}}}`, "gi")
-      result = result.replace(regex, value)
-    }
+  // 영문 변수 매핑 (snake_case)
+  const englishMap: Record<string, string> = {
+    // 회사 정보
+    company_name: context.companyName || "",
+    companyName: context.companyName || "",
+    website: context.website || "",
+    industry: context.industry || "",
+    description: context.description || "",
+    employee_count: context.employeeCount || "",
+    employeeCount: context.employeeCount || "",
+    founded_year: context.foundedYear || "",
+    foundedYear: context.foundedYear || "",
+
+    // 위치 정보
+    country: context.country || "",
+    city: context.city || "",
+    state: context.state || "",
+    address: context.address || "",
+
+    // 연락처
+    contact_name: context.contactName || "",
+    contactName: context.contactName || "",
+    contact_email: context.contactEmail || "",
+    contactEmail: context.contactEmail || "",
+    email: context.contactEmail || "",
+
+    // 리드 관리
+    lead_source: context.leadSource || "",
+    leadSource: context.leadSource || "",
+    lead_status: context.leadStatus || "",
+    leadStatus: context.leadStatus || "",
+    lead_score: context.leadScore || "",
+    leadScore: context.leadScore || "",
   }
 
-  // 한글 변수도 지원 (모든 리드 필드)
+  // 한글 변수 매핑
   const koreanMap: Record<string, string> = {
     // 회사 정보
     회사명: context.companyName || "",
@@ -381,6 +424,15 @@ export function replaceTemplateVariables(
     리드점수: context.leadScore || "",
   }
 
+  // 영문 변수 치환 (대소문자 구분 없음)
+  for (const [key, value] of Object.entries(englishMap)) {
+    if (value) {
+      const regex = new RegExp(`{{${key}}}`, "gi")
+      result = result.replace(regex, value)
+    }
+  }
+
+  // 한글 변수 치환 (대소문자 구분)
   for (const [key, value] of Object.entries(koreanMap)) {
     if (value) {
       const regex = new RegExp(`{{${key}}}`, "g")

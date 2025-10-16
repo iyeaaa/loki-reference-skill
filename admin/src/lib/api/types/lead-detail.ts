@@ -8,6 +8,7 @@ export interface LeadContact {
   leadId: string
   contactType: ContactType
   contactValue: string
+  contactName?: string | null
   label?: string | null
   isPrimary: boolean
   isVerified: boolean

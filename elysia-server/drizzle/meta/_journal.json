@@ -29,6 +29,13 @@
       "when": 1760032108201,
       "tag": "0003_living_viper",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1729058460000,
+      "tag": "0004_add_contact_name_to_contacts",
+      "breakpoints": true
     }
   ]
 }

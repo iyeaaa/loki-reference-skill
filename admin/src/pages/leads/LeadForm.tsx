@@ -98,6 +98,11 @@ export function LeadForm({
         .map((c) => ({
           ...c,
           label: c.label && c.label.trim() !== "" ? c.label : undefined,
+          contactName:
+            (c as { contactName?: string }).contactName &&
+            (c as { contactName?: string }).contactName?.trim() !== ""
+              ? (c as { contactName?: string }).contactName
+              : undefined,
         })) as LeadContact[],
       socialMedia: socialMedia
         .filter((s) => s.url && s.url.trim() !== "" && s.platform !== undefined)
@@ -370,42 +375,56 @@ export function LeadForm({
         </div>
         {contacts.map((contact, index) => (
           <div key={index} className="flex gap-2 items-start p-3 border rounded-md bg-gray-50">
-            <div className="flex-1 grid grid-cols-3 gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs">타입</Label>
-                <Select
-                  value={contact.contactType || "email"}
-                  onValueChange={(value) =>
-                    updateContact(index, "contactType", value as ContactType)
-                  }
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="phone">전화</SelectItem>
-                    <SelectItem value="email">이메일</SelectItem>
-                    <SelectItem value="fax">팩스</SelectItem>
-                    <SelectItem value="other">기타</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="flex-1 space-y-2">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">타입</Label>
+                  <Select
+                    value={contact.contactType || "email"}
+                    onValueChange={(value) =>
+                      updateContact(index, "contactType", value as ContactType)
+                    }
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="phone">전화</SelectItem>
+                      <SelectItem value="email">이메일</SelectItem>
+                      <SelectItem value="fax">팩스</SelectItem>
+                      <SelectItem value="other">기타</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">값</Label>
+                  <Input
+                    className="h-9"
+                    value={contact.contactValue || ""}
+                    onChange={(e) => updateContact(index, "contactValue", e.target.value)}
+                    placeholder="연락처 입력"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">라벨</Label>
+                  <Input
+                    className="h-9"
+                    value={contact.label || ""}
+                    onChange={(e) => updateContact(index, "label", e.target.value)}
+                    placeholder="예: 주연락처"
+                  />
+                </div>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">값</Label>
+                <Label className="text-xs">
+                  담당자명
+                  <span className="ml-1 text-muted-foreground">(선택)</span>
+                </Label>
                 <Input
                   className="h-9"
-                  value={contact.contactValue || ""}
-                  onChange={(e) => updateContact(index, "contactValue", e.target.value)}
-                  placeholder="연락처 입력"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">라벨</Label>
-                <Input
-                  className="h-9"
-                  value={contact.label || ""}
-                  onChange={(e) => updateContact(index, "label", e.target.value)}
-                  placeholder="예: 주연락처"
+                  value={(contact as { contactName?: string }).contactName || ""}
+                  onChange={(e) => updateContact(index, "contactName" as keyof LeadContact, e.target.value)}
+                  placeholder="예: 홍길동"
                 />
               </div>
             </div>

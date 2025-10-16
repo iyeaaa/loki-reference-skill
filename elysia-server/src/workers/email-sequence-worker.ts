@@ -11,8 +11,10 @@ import { config } from "../config"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emails } from "../db/schema/emails"
-import { leadContacts } from "../db/schema/lead-details"
+import { leadContacts, leadIndustryTypes } from "../db/schema/lead-details"
+import { leads } from "../db/schema/leads"
 import * as sequenceService from "../services/sequence.service"
+import * as workflowEmailService from "../services/workflow-email.service"
 import logger from "../utils/logger"
 
 // Initialize SendGrid
@@ -51,15 +53,31 @@ async function sendSequenceEmail(execution: {
       "🔍 [STEP-WORKER] Fetching lead email",
     )
 
-    // Get lead's primary email
+    // Get lead's primary email and contact name
     const [leadContact] = await db
-      .select({ email: leadContacts.contactValue })
+      .select({
+        email: leadContacts.contactValue,
+        contactName: leadContacts.contactName,
+      })
       .from(leadContacts)
       .where(
         and(
           eq(leadContacts.leadId, execution.leadId),
           eq(leadContacts.contactType, "email"),
           eq(leadContacts.isPrimary, true),
+        ),
+      )
+      .limit(1) ||
+      await db // fallback to non-primary email
+      .select({
+        email: leadContacts.contactValue,
+        contactName: leadContacts.contactName,
+      })
+      .from(leadContacts)
+      .where(
+        and(
+          eq(leadContacts.leadId, execution.leadId),
+          eq(leadContacts.contactType, "email"),
         ),
       )
       .limit(1)
@@ -79,8 +97,99 @@ async function sendSequenceEmail(execution: {
       {
         executionId: execution.executionId,
         toEmail: leadContact.email,
+        contactName: leadContact.contactName,
       },
-      "✅ [STEP-WORKER] Found lead email",
+      "✅ [STEP-WORKER] Found lead email and contact",
+    )
+
+    // Get full lead information for variable replacement
+    const [lead] = await db
+      .select({
+        companyName: leads.companyName,
+        websiteUrl: leads.websiteUrl,
+        description: leads.description,
+        address: leads.address,
+        country: leads.country,
+        city: leads.city,
+        state: leads.state,
+        foundedYear: leads.foundedYear,
+        employeeCount: leads.employeeCount,
+        leadSource: leads.leadSource,
+        leadStatus: leads.leadStatus,
+        leadScore: leads.leadScore,
+      })
+      .from(leads)
+      .where(eq(leads.id, execution.leadId))
+      .limit(1)
+
+    if (!lead) {
+      logger.error(
+        { executionId: execution.executionId, leadId: execution.leadId },
+        "❌ [STEP-WORKER] Lead not found",
+      )
+      return {
+        success: false,
+        error: "Lead not found",
+      }
+    }
+
+    // Get industry types for this lead (join with leadIndustryTypes)
+    const industries = await db
+      .select({
+        industryName: leadIndustryTypes.industryName,
+      })
+      .from(leadIndustryTypes)
+      .where(eq(leadIndustryTypes.leadId, execution.leadId))
+
+    const industryString = industries.map((i) => i.industryName).join(", ")
+
+    logger.debug(
+      {
+        executionId: execution.executionId,
+        leadCompanyName: lead.companyName,
+        industries: industryString,
+      },
+      "✅ [STEP-WORKER] Found lead info",
+    )
+
+    // Prepare lead context for variable replacement
+    const leadContext = {
+      companyName: lead.companyName || "",
+      contactName: leadContact.contactName || "", // From leadContacts table
+      contactEmail: leadContact.email || "", // From leadContacts table
+      industry: industryString || "",
+      website: lead.websiteUrl || "",
+      description: lead.description || "",
+      address: lead.address || "",
+      country: lead.country || "",
+      city: lead.city || "",
+      state: lead.state || "",
+      foundedYear: lead.foundedYear?.toString() || "",
+      employeeCount: lead.employeeCount || "",
+      leadSource: lead.leadSource || "",
+      leadStatus: lead.leadStatus || "",
+      leadScore: lead.leadScore?.toString() || "",
+    }
+
+    // Replace template variables with actual values
+    const personalizedSubject = workflowEmailService.replaceTemplateVariables(
+      execution.emailSubject,
+      leadContext,
+    )
+    const personalizedBodyText = execution.emailBodyText
+      ? workflowEmailService.replaceTemplateVariables(execution.emailBodyText, leadContext)
+      : null
+    const personalizedBodyHtml = execution.emailBodyHtml
+      ? workflowEmailService.replaceTemplateVariables(execution.emailBodyHtml, leadContext)
+      : null
+
+    logger.debug(
+      {
+        executionId: execution.executionId,
+        originalSubject: execution.emailSubject,
+        personalizedSubject,
+      },
+      "🔄 [STEP-WORKER] Personalized email content",
     )
 
     // Get email account details
@@ -133,16 +242,16 @@ async function sendSequenceEmail(execution: {
     // Set API key for this request
     sgMail.setApiKey(apiKey)
 
-    // Prepare email message
+    // Prepare email message with personalized content
     const msg = {
       to: leadContact.email,
       from: {
         email: emailAccount.emailAddress,
         name: emailAccount.displayName || emailAccount.emailAddress,
       },
-      subject: execution.emailSubject,
-      text: execution.emailBodyText || undefined,
-      html: execution.emailBodyHtml || undefined,
+      subject: personalizedSubject,
+      text: personalizedBodyText || undefined,
+      html: personalizedBodyHtml || undefined,
       tracking_settings: {
         open_tracking: { enable: true },
         click_tracking: { enable: true, enable_text: true },
@@ -154,9 +263,9 @@ async function sendSequenceEmail(execution: {
         executionId: execution.executionId,
         from: emailAccount.emailAddress,
         to: leadContact.email,
-        subject: execution.emailSubject,
+        subject: personalizedSubject,
       },
-      "📤 [STEP-WORKER] Sending email via SendGrid",
+      "📤 [STEP-WORKER] Sending personalized email via SendGrid",
     )
 
     // Send email
@@ -172,7 +281,7 @@ async function sendSequenceEmail(execution: {
       "✅ [STEP-WORKER] SendGrid accepted email",
     )
 
-    // Create email record in database
+    // Create email record in database with personalized content
     const [emailRecord] = await db
       .insert(emails)
       .values({
@@ -184,14 +293,14 @@ async function sendSequenceEmail(execution: {
         direction: "outbound",
         fromEmail: emailAccount.emailAddress,
         toEmail: leadContact.email,
-        subject: execution.emailSubject,
-        bodyText: execution.emailBodyText || undefined,
-        bodyHtml: execution.emailBodyHtml || undefined,
+        subject: personalizedSubject,
+        bodyText: personalizedBodyText || undefined,
+        bodyHtml: personalizedBodyHtml || undefined,
         status: "sent",
         sendgridMessageId,
         sentAt: new Date(),
         // Denormalized fields for performance
-        leadName: execution.leadCompanyName || undefined,
+        leadName: lead.companyName || undefined,
         leadEmail: leadContact.email,
         sequenceName: execution.sequenceName,
       })

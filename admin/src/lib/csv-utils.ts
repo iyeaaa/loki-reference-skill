@@ -1,3 +1,5 @@
+import * as XLSX from "xlsx"
+
 export interface LeadCSVData {
   companyName: string
   foundCompanyName?: string
@@ -26,6 +28,137 @@ export interface LeadCSVData {
   primaryPhone?: string
   secondaryEmail?: string
   secondaryPhone?: string
+}
+
+export function parseXLSX(file: File): Promise<LeadCSVData[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer)
+        const workbook = XLSX.read(data, { type: "array" })
+
+        // 첫 번째 시트 사용
+        const firstSheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[firstSheetName]
+
+        // JSON으로 변환
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+          header: 1,
+        }) as string[][]
+
+        if (jsonData.length < 2) {
+          resolve([])
+          return
+        }
+
+        const headers = jsonData[0]
+        const leads: LeadCSVData[] = []
+
+        for (let i = 1; i < jsonData.length; i++) {
+          const row = jsonData[i]
+          if (row.length === 0) continue
+
+          const lead: LeadCSVData = {
+            companyName: row[0] || "",
+          }
+
+          // 헤더 매핑 (CSV 파싱과 동일한 로직)
+          headers.forEach((header, index) => {
+            const value = row[index]
+            if (!value) return
+
+            const lowerHeader = header.toLowerCase()
+
+            if (lowerHeader.includes("company") || lowerHeader.includes("회사")) {
+              lead.companyName = value
+            } else if (lowerHeader.includes("business") || lowerHeader.includes("업종")) {
+              lead.businessType = value
+            } else if (lowerHeader.includes("website") || lowerHeader.includes("웹사이트")) {
+              lead.websiteUrl = value
+            } else if (lowerHeader.includes("description") || lowerHeader.includes("설명")) {
+              lead.description = value
+            } else if (lowerHeader.includes("employee") || lowerHeader.includes("직원")) {
+              lead.employeeCount = value
+            } else if (lowerHeader.includes("founded") || lowerHeader.includes("설립")) {
+              lead.foundedYear = parseInt(value, 10) || undefined
+            } else if (lowerHeader.includes("country") || lowerHeader.includes("국가")) {
+              lead.country = value
+            } else if (lowerHeader.includes("city") || lowerHeader.includes("도시")) {
+              lead.city = value
+            } else if (
+              lowerHeader.includes("state") ||
+              lowerHeader.includes("주") ||
+              lowerHeader.includes("도")
+            ) {
+              lead.state = value
+            } else if (lowerHeader.includes("address") || lowerHeader.includes("주소")) {
+              lead.address = value
+            } else if (lowerHeader.includes("source") || lowerHeader.includes("소스")) {
+              lead.leadSource = value
+            } else if (lowerHeader.includes("status") || lowerHeader.includes("상태")) {
+              const validStatuses = [
+                "new",
+                "contacted",
+                "qualified",
+                "unqualified",
+                "converted",
+                "lost",
+                "unsubscribed",
+              ]
+              if (validStatuses.includes(value.toLowerCase())) {
+                lead.leadStatus = value.toLowerCase() as LeadCSVData["leadStatus"]
+              }
+            } else if (lowerHeader.includes("score") || lowerHeader.includes("점수")) {
+              lead.leadScore = parseInt(value, 10) || undefined
+            } else if (
+              lowerHeader.includes("found") ||
+              lowerHeader.includes("발견된") ||
+              lowerHeader.includes("찾은")
+            ) {
+              lead.foundCompanyName = value
+            } else if (
+              lowerHeader.includes("notes") ||
+              lowerHeader.includes("메모") ||
+              lowerHeader.includes("노트")
+            ) {
+              lead.notes = value
+            } else if (lowerHeader === "primaryemail" || lowerHeader === "primary_email") {
+              lead.primaryEmail = value
+            } else if (lowerHeader === "primaryphone" || lowerHeader === "primary_phone") {
+              lead.primaryPhone = value
+            } else if (lowerHeader === "secondaryemail" || lowerHeader === "secondary_email") {
+              lead.secondaryEmail = value
+            } else if (lowerHeader === "secondaryphone" || lowerHeader === "secondary_phone") {
+              lead.secondaryPhone = value
+            }
+          })
+
+          // 회사명이 있는 경우만 추가
+          if (lead.companyName) {
+            leads.push(lead)
+          }
+        }
+
+        resolve(leads)
+      } catch (error) {
+        reject(
+          new Error(
+            `XLSX 파일을 읽는 중 오류가 발생했습니다: ${
+              error instanceof Error ? error.message : "알 수 없는 오류"
+            }`,
+          ),
+        )
+      }
+    }
+
+    reader.onerror = () => {
+      reject(new Error("파일을 읽는 중 오류가 발생했습니다."))
+    }
+
+    reader.readAsArrayBuffer(file)
+  })
 }
 
 export function parseCSV(csvText: string): LeadCSVData[] {
@@ -198,10 +331,20 @@ export function validateCSVData(data: LeadCSVData[]): {
     errors.push(`중복된 회사명이 있습니다: ${[...new Set(duplicates)].join(", ")}`)
   }
 
-  // 회사명이 비어있는 행 체크
+  // 필수 필드 체크
   const emptyCompanyNames = data.filter((lead) => !lead.companyName.trim())
   if (emptyCompanyNames.length > 0) {
     errors.push(`회사명이 비어있는 행이 ${emptyCompanyNames.length}개 있습니다.`)
+  }
+
+  const emptyPrimaryEmails = data.filter((lead) => !lead.primaryEmail?.trim())
+  if (emptyPrimaryEmails.length > 0) {
+    errors.push(`주요 이메일이 비어있는 행이 ${emptyPrimaryEmails.length}개 있습니다.`)
+  }
+
+  const emptyWebsiteUrls = data.filter((lead) => !lead.websiteUrl?.trim())
+  if (emptyWebsiteUrls.length > 0) {
+    errors.push(`웹사이트 URL이 비어있는 행이 ${emptyWebsiteUrls.length}개 있습니다.`)
   }
 
   console.log("Validation errors:", errors)
@@ -213,8 +356,144 @@ export function validateCSVData(data: LeadCSVData[]): {
 }
 
 export function generateCSVTemplate(): string {
-  return `companyName,foundCompanyName,businessType,websiteUrl,description,employeeCount,foundedYear,country,city,state,address,leadSource,leadStatus,leadScore,notes,primaryEmail,primaryPhone,secondaryEmail,secondaryPhone
+  return `# 리드 데이터 CSV 템플릿
+# 필수 필드: companyName (회사명), primaryEmail (주요 이메일), websiteUrl (웹사이트 URL)
+# 선택 필드: 나머지 모든 컬럼
+# 
+# 컬럼 설명:
+# - companyName: 회사명 (필수)
+# - foundCompanyName: 발견된 회사명
+# - businessType: 업종 (예: IT, 제조업, 서비스업)
+# - websiteUrl: 웹사이트 URL (필수)
+# - description: 회사 설명
+# - employeeCount: 직원 수 (예: 1-10명, 11-50명, 51-200명, 200명 이상)
+# - foundedYear: 설립년도
+# - country: 국가
+# - city: 도시
+# - state: 주/도
+# - address: 주소
+# - leadSource: 리드 소스 (예: 웹사이트, 추천, 광고, 전시회)
+# - leadStatus: 리드 상태 (new, contacted, qualified, unqualified, converted, lost, unsubscribed)
+# - leadScore: 리드 점수 (0-100)
+# - notes: 메모
+# - primaryEmail: 주요 이메일 (필수)
+# - primaryPhone: 주요 전화번호
+# - secondaryEmail: 보조 이메일
+# - secondaryPhone: 보조 전화번호
+
+companyName,foundCompanyName,businessType,websiteUrl,description,employeeCount,foundedYear,country,city,state,address,leadSource,leadStatus,leadScore,notes,primaryEmail,primaryPhone,secondaryEmail,secondaryPhone
 "Venus Beauty Supply","Venus Beauty Supply Ltd.","K뷰티 유통","https://venusbeautysupply.com","미국 K뷰티 유통업체","50-100명",2015,"미국","뉴욕","뉴욕주","123 Beauty St, New York","웹사이트","new",73,"K뷰티 제품 유통 가능성 높음","contact@venusbeautysupply.com","+1-555-0123","support@venusbeautysupply.com","+1-555-0124"
 "Beauty World Inc","Beauty World Inc.","화장품 유통","https://beautyworld.com","화장품 전문 유통업체","100-500명",2010,"미국","로스앤젤레스","캘리포니아","456 Cosmetics Ave, LA","추천","contacted",85,"프리미엄 브랜드 선호","info@beautyworld.com","+1-555-0234","sales@beautyworld.com","+1-555-0235"
 "Global Beauty Co","Global Beauty Company","뷰티 유통","https://globalbeauty.co","글로벌 뷰티 유통업체","500명 이상",2005,"미국","시카고","일리노이","789 Global Blvd, Chicago","전시회","qualified",92,"대규모 유통망 보유","hello@globalbeauty.co","+1-555-0345","partnerships@globalbeauty.co","+1-555-0346"`
+}
+
+export function generateXLSXTemplate(): Blob {
+  const headers = [
+    "companyName (필수)",
+    "foundCompanyName",
+    "businessType",
+    "websiteUrl (필수)",
+    "description",
+    "employeeCount",
+    "foundedYear",
+    "country",
+    "city",
+    "state",
+    "address",
+    "leadSource",
+    "leadStatus",
+    "leadScore",
+    "notes",
+    "primaryEmail (필수)",
+    "primaryPhone",
+    "secondaryEmail",
+    "secondaryPhone",
+  ]
+
+  const sampleData = [
+    [
+      "Venus Beauty Supply",
+      "Venus Beauty Supply Ltd.",
+      "K뷰티 유통",
+      "https://venusbeautysupply.com",
+      "미국 K뷰티 유통업체",
+      "50-100명",
+      2015,
+      "미국",
+      "뉴욕",
+      "뉴욕주",
+      "123 Beauty St, New York",
+      "웹사이트",
+      "new",
+      73,
+      "K뷰티 제품 유통 가능성 높음",
+      "contact@venusbeautysupply.com",
+      "+1-555-0123",
+      "support@venusbeautysupply.com",
+      "+1-555-0124",
+    ],
+    [
+      "Beauty World Inc",
+      "Beauty World Inc.",
+      "화장품 유통",
+      "https://beautyworld.com",
+      "화장품 전문 유통업체",
+      "100-500명",
+      2010,
+      "미국",
+      "로스앤젤레스",
+      "캘리포니아",
+      "456 Cosmetics Ave, LA",
+      "추천",
+      "contacted",
+      85,
+      "프리미엄 브랜드 선호",
+      "info@beautyworld.com",
+      "+1-555-0234",
+      "sales@beautyworld.com",
+      "+1-555-0235",
+    ],
+    [
+      "Global Beauty Co",
+      "Global Beauty Company",
+      "뷰티 유통",
+      "https://globalbeauty.co",
+      "글로벌 뷰티 유통업체",
+      "500명 이상",
+      2005,
+      "미국",
+      "시카고",
+      "일리노이",
+      "789 Global Blvd, Chicago",
+      "전시회",
+      "qualified",
+      92,
+      "대규모 유통망 보유",
+      "hello@globalbeauty.co",
+      "+1-555-0345",
+      "partnerships@globalbeauty.co",
+      "+1-555-0346",
+    ],
+  ]
+
+  const worksheet = XLSX.utils.aoa_to_sheet([headers, ...sampleData])
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, "리드 데이터")
+
+  // 워크시트에 스타일 적용 (헤더 행 강조)
+  const range = XLSX.utils.decode_range(worksheet["!ref"] || "A1")
+  for (let col = range.s.c; col <= range.e.c; col++) {
+    const headerCell = XLSX.utils.encode_cell({ r: 0, c: col })
+    if (worksheet[headerCell]) {
+      worksheet[headerCell].s = {
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "366092" } },
+      }
+    }
+  }
+
+  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
+  return new Blob([excelBuffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  })
 }

@@ -48,7 +48,14 @@ import { workspacesApi } from "@/lib/api/services/workspaces"
 import type { CreateCustomerGroupRequest, CustomerGroup } from "@/lib/api/types/customer-group"
 import type { Lead, LeadStatus } from "@/lib/api/types/lead"
 import type { Workspace } from "@/lib/api/types/workspace"
-import { generateCSVTemplate, type LeadCSVData, parseCSV, validateCSVData } from "@/lib/csv-utils"
+import {
+  generateCSVTemplate,
+  generateXLSXTemplate,
+  type LeadCSVData,
+  parseCSV,
+  parseXLSX,
+  validateCSVData,
+} from "@/lib/csv-utils"
 import { BulkActionModal } from "./BulkActionModal"
 import { CreateGroupModal } from "./CreateGroupModal"
 import { GroupEditModal } from "./GroupEditModal"
@@ -288,13 +295,22 @@ export default function LeadsPage() {
     })
   }
 
-  // CSV 업로드 핸들러
+  // 파일 업로드 핸들러 (CSV, XLSX 지원)
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (!file.name.toLowerCase().endsWith(".csv")) {
-      toast.error("CSV 파일만 업로드 가능합니다.")
+    const fileName = file.name.toLowerCase()
+    const isCSV = fileName.endsWith(".csv")
+    const isXLSX = fileName.endsWith(".xlsx") || fileName.endsWith(".xls")
+
+    if (!isCSV && !isXLSX) {
+      toast.error("CSV 또는 XLSX 파일만 업로드 가능합니다.")
+      return
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("파일 크기는 10MB를 초과할 수 없습니다.")
       return
     }
 
@@ -302,13 +318,20 @@ export default function LeadsPage() {
     setCsvErrors([])
 
     try {
-      const text = await file.text()
-      const parsedData = parseCSV(text)
+      let parsedData: LeadCSVData[]
+
+      if (isCSV) {
+        const text = await file.text()
+        parsedData = parseCSV(text)
+      } else {
+        parsedData = await parseXLSX(file)
+      }
+
       const validation = validateCSVData(parsedData)
 
       if (!validation.valid) {
         setCsvErrors(validation.errors)
-        toast.error("CSV 파일에 오류가 있습니다.")
+        toast.error("파일에 오류가 있습니다.")
         return
       }
 
@@ -317,24 +340,38 @@ export default function LeadsPage() {
       setCsvFileSize(file.size)
       toast.success(`${parsedData.length}개의 리드 데이터를 성공적으로 파싱했습니다.`)
     } catch (error) {
-      console.error("CSV 파싱 오류:", error)
-      toast.error("CSV 파일을 읽는 중 오류가 발생했습니다.")
+      console.error("파일 파싱 오류:", error)
+      const errorMessage =
+        error instanceof Error ? error.message : "파일을 읽는 중 오류가 발생했습니다."
+      toast.error(errorMessage)
     } finally {
       setIsProcessingCSV(false)
     }
   }
 
-  const handleDownloadTemplate = () => {
-    const template = generateCSVTemplate()
-    const blob = new Blob([template], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
-    link.setAttribute("download", "leads_template.csv")
-    link.style.visibility = "hidden"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const handleDownloadTemplate = (format: "csv" | "xlsx") => {
+    if (format === "csv") {
+      const template = generateCSVTemplate()
+      const blob = new Blob([template], { type: "text/csv;charset=utf-8;" })
+      const link = document.createElement("a")
+      const url = URL.createObjectURL(blob)
+      link.setAttribute("href", url)
+      link.setAttribute("download", "leads_template.csv")
+      link.style.visibility = "hidden"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } else {
+      const blob = generateXLSXTemplate()
+      const link = document.createElement("a")
+      const url = URL.createObjectURL(blob)
+      link.setAttribute("href", url)
+      link.setAttribute("download", "leads_template.xlsx")
+      link.style.visibility = "hidden"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
   }
 
   const handleCSVUpload = async () => {
@@ -533,7 +570,7 @@ export default function LeadsPage() {
                 }}
               >
                 <Upload className="h-4 w-4 mr-1" />
-                CSV 업로드
+                CSV / XLSX 업로드
               </Button>
               <Button onClick={() => setShowCreateDialog(true)}>
                 <Plus className="h-4 w-4 mr-1" />
@@ -769,7 +806,7 @@ export default function LeadsPage() {
       <Dialog open={showCSVUpload} onOpenChange={setShowCSVUpload}>
         <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader className="pb-4">
-            <DialogTitle className="text-xl font-semibold">CSV 파일로 리드 추가</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">CSV/XLSX 파일로 리드 추가</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] space-y-6">
             {/* 그룹 정보 입력 */}
@@ -851,15 +888,58 @@ export default function LeadsPage() {
               </div>
             </div>
 
-            {/* CSV 업로드 섹션 */}
+            {/* 파일 업로드 섹션 */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">CSV 파일 업로드</h3>
-                <Button type="button" variant="outline" size="sm" onClick={handleDownloadTemplate}>
-                  <Download className="h-4 w-4 mr-2" />
-                  템플릿 다운로드
-                </Button>
+                <h3 className="text-lg font-medium">파일 업로드 (CSV/XLSX)</h3>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownloadTemplate("csv")}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    CSV 템플릿
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownloadTemplate("xlsx")}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    XLSX 템플릿
+                  </Button>
+                </div>
               </div>
+
+              {/* 필수 필드 안내 */}
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                      !
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-blue-900">필수 입력 필드 안내</h4>
+                      <div className="text-sm text-blue-800">
+                        <p className="mb-2">
+                          <strong>필수 필드:</strong> companyName (회사명), primaryEmail (주요
+                          이메일), websiteUrl (웹사이트 URL)
+                        </p>
+                        <p className="mb-2">
+                          <strong>선택 필드:</strong> 나머지 모든 컬럼 (업종, 설명, 전화번호 등)
+                        </p>
+                        <p className="text-xs text-blue-600">
+                          💡 템플릿을 다운로드하여 형식을 확인하고 데이터를 입력하세요. CSV와 XLSX
+                          파일 모두 지원됩니다.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
               {!csvData ? (
                 <Card>
@@ -867,15 +947,16 @@ export default function LeadsPage() {
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                       <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                       <div className="space-y-2">
-                        <h4 className="text-lg font-medium">CSV 파일 업로드</h4>
+                        <h4 className="text-lg font-medium">파일 업로드</h4>
                         <p className="text-sm text-muted-foreground">
-                          리드 데이터가 포함된 CSV 파일을 업로드하여 그룹에 자동으로 추가하세요
+                          리드 데이터가 포함된 CSV 또는 XLSX 파일을 업로드하여 그룹에 자동으로
+                          추가하세요
                         </p>
                         <div className="pt-4">
                           <input
                             ref={fileInputRef}
                             type="file"
-                            accept=".csv"
+                            accept=".csv,.xlsx,.xls"
                             onChange={handleFileUpload}
                             className="hidden"
                           />
@@ -884,7 +965,7 @@ export default function LeadsPage() {
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isProcessingCSV}
                           >
-                            {isProcessingCSV ? "처리 중..." : "CSV 파일 선택"}
+                            {isProcessingCSV ? "처리 중..." : "파일 선택 (CSV/XLSX)"}
                           </Button>
                         </div>
                       </div>
@@ -959,23 +1040,22 @@ export default function LeadsPage() {
                 </Card>
               )}
             </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => setShowCSVUpload(false)}>
-              취소
-            </Button>
-            <Button
-              onClick={handleCSVUpload}
-              disabled={
-                !csvData ||
-                csvErrors.length > 0 ||
-                (!isNewGroup && !groupName) ||
-                (isNewGroup && !newGroupName.trim())
-              }
-            >
-              리드 추가
-            </Button>
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => setShowCSVUpload(false)}>
+                취소
+              </Button>
+              <Button
+                onClick={handleCSVUpload}
+                disabled={
+                  !csvData ||
+                  csvErrors.length > 0 ||
+                  (!isNewGroup && !groupName) ||
+                  (isNewGroup && !newGroupName.trim())
+                }
+              >
+                리드 추가
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

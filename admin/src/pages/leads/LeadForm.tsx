@@ -180,12 +180,16 @@ export function LeadForm({
       <div className="grid grid-cols-2 gap-4">
         {/* Company Name */}
         <div className="space-y-2">
-          <Label htmlFor={companyNameId}>회사명</Label>
+          <Label htmlFor={companyNameId} className="flex items-center gap-1">
+            회사명
+            <span className="text-red-500">*</span>
+          </Label>
           <Input
             id={companyNameId}
             value={formData.companyName}
             onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-            placeholder="회사명 입력"
+            placeholder="회사명 입력 (필수)"
+            required
           />
         </div>
 
@@ -204,13 +208,17 @@ export function LeadForm({
       <div className="grid grid-cols-2 gap-4">
         {/* Website URL */}
         <div className="space-y-2">
-          <Label htmlFor={websiteUrlId}>웹사이트 URL</Label>
+          <Label htmlFor={websiteUrlId} className="flex items-center gap-1">
+            웹사이트 URL
+            <span className="text-red-500">*</span>
+          </Label>
           <Input
             id={websiteUrlId}
             type="url"
             value={formData.websiteUrl}
             onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
-            placeholder="https://example.com"
+            placeholder="https://example.com (필수)"
+            required
           />
         </div>
 
@@ -404,12 +412,22 @@ export function LeadForm({
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">값</Label>
+                  <Label className="text-xs flex items-center gap-1">
+                    값
+                    {index === 0 && contact.contactType === "email" && (
+                      <span className="text-red-500">*</span>
+                    )}
+                  </Label>
                   <Input
                     className="h-9"
                     value={contact.contactValue || ""}
                     onChange={(e) => updateContact(index, "contactValue", e.target.value)}
-                    placeholder="연락처 입력"
+                    placeholder={
+                      index === 0 && contact.contactType === "email"
+                        ? "이메일 입력 (필수)"
+                        : "연락처 입력"
+                    }
+                    required={index === 0 && contact.contactType === "email"}
                   />
                 </div>
                 <div className="space-y-1">

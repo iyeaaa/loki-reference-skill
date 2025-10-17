@@ -17,7 +17,14 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useSuspenseWorkspaces } from "@/lib/api/hooks/workspaces"
 import type { CustomerGroup } from "@/lib/api/types/customer-group"
-import { generateCSVTemplate, type LeadCSVData, parseCSV, validateCSVData } from "@/lib/csv-utils"
+import {
+  generateCSVTemplate,
+  generateXLSXTemplate,
+  type LeadCSVData,
+  parseCSV,
+  parseXLSX,
+  validateCSVData,
+} from "@/lib/csv-utils"
 
 interface CustomerGroupFormProps {
   customerGroup?: CustomerGroup
@@ -67,29 +74,60 @@ export function CustomerGroupForm({
     })
   }
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (!file.name.toLowerCase().endsWith(".csv")) {
-      setCsvErrors(["CSV 파일만 업로드 가능합니다."])
+    const fileName = file.name.toLowerCase()
+    const isCSV = fileName.endsWith(".csv")
+    const isXLSX = fileName.endsWith(".xlsx") || fileName.endsWith(".xls")
+
+    if (!isCSV && !isXLSX) {
+      setCsvErrors(["CSV 또는 XLSX 파일만 업로드 가능합니다."])
       return
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      // 5MB 제한
-      setCsvErrors(["파일 크기는 5MB를 초과할 수 없습니다."])
+    if (file.size > 10 * 1024 * 1024) {
+      setCsvErrors(["파일 크기는 10MB를 초과할 수 없습니다."])
       return
     }
 
     setIsProcessingCSV(true)
     setCsvErrors([])
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      try {
-        const csvText = e.target?.result as string
-        const leads = parseCSV(csvText)
+    try {
+      let leads: LeadCSVData[]
+
+      if (isCSV) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          try {
+            const csvText = e.target?.result as string
+            leads = parseCSV(csvText)
+            console.log("leads", leads)
+            const validation = validateCSVData(leads)
+
+            if (validation.valid) {
+              setCsvData({
+                leads,
+                fileName: file.name,
+                fileSize: file.size,
+              })
+            } else {
+              setCsvErrors(validation.errors)
+            }
+          } catch (error) {
+            console.error("CSV parsing error:", error)
+            const errorMessage =
+              error instanceof Error ? error.message : "CSV 파일을 읽는 중 오류가 발생했습니다."
+            setCsvErrors([errorMessage])
+          } finally {
+            setIsProcessingCSV(false)
+          }
+        }
+        reader.readAsText(file, "UTF-8")
+      } else {
+        leads = await parseXLSX(file)
         console.log("leads", leads)
         const validation = validateCSVData(leads)
 
@@ -102,16 +140,15 @@ export function CustomerGroupForm({
         } else {
           setCsvErrors(validation.errors)
         }
-      } catch (error) {
-        console.error("CSV parsing error:", error)
-        const errorMessage =
-          error instanceof Error ? error.message : "CSV 파일을 읽는 중 오류가 발생했습니다."
-        setCsvErrors([errorMessage])
-      } finally {
         setIsProcessingCSV(false)
       }
+    } catch (error) {
+      console.error("File parsing error:", error)
+      const errorMessage =
+        error instanceof Error ? error.message : "파일을 읽는 중 오류가 발생했습니다."
+      setCsvErrors([errorMessage])
+      setIsProcessingCSV(false)
     }
-    reader.readAsText(file, "UTF-8")
   }
 
   const handleRemoveCSV = () => {
@@ -122,13 +159,21 @@ export function CustomerGroupForm({
     }
   }
 
-  const handleDownloadTemplate = () => {
-    const template = generateCSVTemplate()
-    const blob = new Blob([template], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    link.href = URL.createObjectURL(blob)
-    link.download = "customer_group_template.csv"
-    link.click()
+  const handleDownloadTemplate = (format: "csv" | "xlsx") => {
+    if (format === "csv") {
+      const template = generateCSVTemplate()
+      const blob = new Blob([template], { type: "text/csv;charset=utf-8;" })
+      const link = document.createElement("a")
+      link.href = URL.createObjectURL(blob)
+      link.download = "customer_group_template.csv"
+      link.click()
+    } else {
+      const blob = generateXLSXTemplate()
+      const link = document.createElement("a")
+      link.href = URL.createObjectURL(blob)
+      link.download = "customer_group_template.xlsx"
+      link.click()
+    }
   }
 
   return (
@@ -205,16 +250,59 @@ export function CustomerGroupForm({
         </div>
       </div>
 
-      {/* CSV 업로드 섹션 (생성 시에만) */}
+      {/* 파일 업로드 섹션 (생성 시에만) */}
       {!isEdit && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium">리드 데이터 추가</h3>
-            <Button type="button" variant="outline" size="sm" onClick={handleDownloadTemplate}>
-              <Download className="h-4 w-4 mr-2" />
-              템플릿 다운로드
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleDownloadTemplate("csv")}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                CSV 템플릿
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleDownloadTemplate("xlsx")}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                XLSX 템플릿
+              </Button>
+            </div>
           </div>
+
+          {/* 필수 필드 안내 */}
+          <Card className="bg-blue-50 border-blue-200">
+            <CardContent className="pt-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  !
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-medium text-blue-900">필수 입력 필드 안내</h4>
+                  <div className="text-sm text-blue-800">
+                    <p className="mb-2">
+                      <strong>필수 필드:</strong> companyName (회사명), primaryEmail (주요 이메일),
+                      websiteUrl (웹사이트 URL)
+                    </p>
+                    <p className="mb-2">
+                      <strong>선택 필드:</strong> 나머지 모든 컬럼 (업종, 설명, 전화번호 등)
+                    </p>
+                    <p className="text-xs text-blue-600">
+                      💡 템플릿을 다운로드하여 형식을 확인하고 데이터를 입력하세요. CSV와 XLSX 파일
+                      모두 지원됩니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {!csvData ? (
             <Card>
@@ -222,15 +310,16 @@ export function CustomerGroupForm({
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                   <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                   <div className="space-y-2">
-                    <h4 className="text-lg font-medium">CSV 파일 업로드</h4>
+                    <h4 className="text-lg font-medium">파일 업로드</h4>
                     <p className="text-sm text-muted-foreground">
-                      리드 데이터가 포함된 CSV 파일을 업로드하여 그룹에 자동으로 추가하세요
+                      리드 데이터가 포함된 CSV 또는 XLSX 파일을 업로드하여 그룹에 자동으로
+                      추가하세요
                     </p>
                     <div className="pt-4">
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept=".csv"
+                        accept=".csv,.xlsx,.xls"
                         onChange={handleFileUpload}
                         className="hidden"
                       />
@@ -239,7 +328,7 @@ export function CustomerGroupForm({
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isProcessingCSV}
                       >
-                        {isProcessingCSV ? "처리 중..." : "CSV 파일 선택"}
+                        {isProcessingCSV ? "처리 중..." : "파일 선택 (CSV/XLSX)"}
                       </Button>
                     </div>
                   </div>

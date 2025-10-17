@@ -389,10 +389,10 @@ companyName,foundCompanyName,businessType,websiteUrl,description,employeeCount,f
 
 export function generateXLSXTemplate(): Blob {
   const headers = [
-    "companyName (필수)",
+    "companyName",
     "foundCompanyName",
     "businessType",
-    "websiteUrl (필수)",
+    "websiteUrl",
     "description",
     "employeeCount",
     "foundedYear",
@@ -404,7 +404,7 @@ export function generateXLSXTemplate(): Blob {
     "leadStatus",
     "leadScore",
     "notes",
-    "primaryEmail (필수)",
+    "primaryEmail",
     "primaryPhone",
     "secondaryEmail",
     "secondaryPhone",

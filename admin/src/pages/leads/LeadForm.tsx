@@ -24,6 +24,7 @@ interface LeadFormData extends Omit<Partial<Lead>, "leadScore" | "contacts" | "s
   contacts?: LeadContact[]
   socialMedia?: LeadSocialMedia[]
   workspaceId?: string
+  customerGroupId?: string
 }
 
 interface LeadFormProps {
@@ -115,9 +116,12 @@ export function LeadForm({
         })) as LeadSocialMedia[],
     }
 
-    // Add workspaceId for create mode
+    // Add workspaceId and customerGroupId for create mode
     if (!isEdit && workspaceId) {
       submitData.workspaceId = workspaceId
+      if (selectedGroup) {
+        submitData.customerGroupId = selectedGroup
+      }
     }
 
     onSave(submitData)

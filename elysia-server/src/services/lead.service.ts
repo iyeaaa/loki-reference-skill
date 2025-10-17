@@ -1282,6 +1282,19 @@ export async function exportLeadsToCSV(filters: {
   return `\uFEFF${csvContent}`
 }
 
+// AddLeadToCustomerGroup :exec
+export async function addLeadToCustomerGroup(
+  leadId: string,
+  customerGroupId: string,
+  addedBy?: string,
+) {
+  await db.insert(customerGroupMembers).values({
+    groupId: customerGroupId,
+    leadId: leadId,
+    addedBy: addedBy || undefined,
+  })
+}
+
 export async function exportSelectedLeadsToCSV(leadIds: string[]) {
   if (leadIds.length === 0) {
     return (

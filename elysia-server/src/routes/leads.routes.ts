@@ -61,6 +61,7 @@ const leadSchema = t.Object({
   collectedAt: t.Optional(t.String()),
   errorMessage: t.Optional(t.String()),
   createdBy: t.Optional(t.String({ format: "uuid" })),
+  customerGroupId: t.Optional(t.String({ format: "uuid" })), // 고객 그룹 ID 추가
   contacts: t.Optional(t.Array(contactSchema)),
   socialMedia: t.Optional(t.Array(socialMediaSchema)),
 })
@@ -229,6 +230,17 @@ export const leadRoutes = new Elysia({ prefix: "/api/v1/leads" })
       const lead = await leadService.createLead(
         leadData as Parameters<typeof leadService.createLead>[0],
       )
+
+      // 고객 그룹이 선택된 경우 해당 그룹에 추가
+      if (body.customerGroupId && lead.id) {
+        try {
+          await leadService.addLeadToCustomerGroup(lead.id, body.customerGroupId, body.createdBy)
+        } catch (error) {
+          console.error("Failed to add lead to customer group:", error)
+          // 고객 그룹 추가 실패해도 리드 생성은 성공으로 처리
+        }
+      }
+
       return lead
     },
     {

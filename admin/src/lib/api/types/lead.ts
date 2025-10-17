@@ -92,6 +92,7 @@ export interface CreateLeadRequest {
   collectedAt?: string | null
   errorMessage?: string | null
   createdBy?: string | null
+  customerGroupId?: string | null
   contacts?: Partial<LeadContact>[]
   socialMedia?: Partial<LeadSocialMedia>[]
 }

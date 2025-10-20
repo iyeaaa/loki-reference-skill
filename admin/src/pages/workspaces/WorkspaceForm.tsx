@@ -78,13 +78,14 @@ export function WorkspaceForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={descriptionId}>설명</Label>
+            <Label htmlFor={descriptionId}>설명 <span className="text-red-500">*</span></Label>
             <Textarea
               id={descriptionId}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="워크스페이스에 대한 설명을 입력하세요 (선택사항)"
-              rows={3}
+              required
+              placeholder="워크스페이스에 대한 설명을 입력하세요"
+              rows={15}
             />
           </div>
 

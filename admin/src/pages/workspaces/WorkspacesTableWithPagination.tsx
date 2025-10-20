@@ -29,6 +29,7 @@ export function WorkspacesTableWithPagination({
 }: WorkspacesTableWithPaginationProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({})
   const limit = 10
 
   // Build params for API call
@@ -54,6 +55,13 @@ export function WorkspacesTableWithPagination({
   const handleToggleAll = useCallback(() => {
     onToggleAll(workspaces.map((w) => w.id))
   }, [workspaces, onToggleAll])
+
+  const toggleDescription = (workspaceId: string) => {
+    setExpandedDescriptions((prev) => ({
+      ...prev,
+      [workspaceId]: !prev[workspaceId],
+    }))
+  }
 
   // Pagination handlers
   const handlePageChange = (page: number) => {
@@ -194,17 +202,30 @@ export function WorkspacesTableWithPagination({
                   >
                     {workspace.name}
                   </td>
-                  <td
-                    className="p-2 text-sm text-gray-900 dark:text-gray-100"
-                    title={workspace.description || "-"}
-                    style={{
-                      maxWidth: "300px",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {workspace.description || "-"}
+                  <td className="p-2 text-sm text-gray-900 dark:text-gray-100" style={{ maxWidth: "300px" }}>
+                    {workspace.description ? (
+                      <div className="flex items-start gap-2">
+                        <span className={expandedDescriptions[workspace.id] ? "" : "line-clamp-1"}>
+                          {expandedDescriptions[workspace.id]
+                            ? workspace.description
+                            : workspace.description.length > 30
+                              ? `${workspace.description.slice(0, 30)}...`
+                              : workspace.description}
+                        </span>
+                        {workspace.description.length > 30 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleDescription(workspace.id)}
+                            className="h-auto py-0 px-1 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                          >
+                            {expandedDescriptions[workspace.id] ? "접기" : "더보기"}
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      "-"
+                    )}
                   </td>
                   <td
                     className="p-2 text-sm text-gray-900 dark:text-gray-100"

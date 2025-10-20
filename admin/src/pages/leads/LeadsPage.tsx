@@ -89,6 +89,7 @@ export default function LeadsPage() {
   const [csvFileSize, setCsvFileSize] = useState(0)
   const [isProcessingCSV, setIsProcessingCSV] = useState(false)
   const [csvErrors, setCsvErrors] = useState<string[]>([])
+  const [isUploadingLeads, setIsUploadingLeads] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // CSV 업로드용 그룹 선택 상태
@@ -335,6 +336,13 @@ export default function LeadsPage() {
         return
       }
 
+      // 경고가 있는 경우 표시
+      if (validation.warnings.length > 0) {
+        validation.warnings.forEach((warning) => {
+          console.warn(warning)
+        })
+      }
+
       setCsvData(parsedData)
       setCsvFileName(file.name)
       setCsvFileSize(file.size)
@@ -379,6 +387,9 @@ export default function LeadsPage() {
     if (!isNewGroup && !groupName) return
     if (isNewGroup && !newGroupName.trim()) return
 
+    setIsUploadingLeads(true)
+    toast.success(`${csvData.length}개의 리드를 처리 중입니다. 잠시만 기다려주세요...`)
+
     try {
       const workspaceId =
         selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id || ""
@@ -397,15 +408,71 @@ export default function LeadsPage() {
         targetGroupId = newGroup.id
       }
 
-      // 1. CSV 데이터로 리드 생성
-      const createdLeads = await leadsApi.createFromCSV({
+      // 1. CSV 데이터로 리드 생성 (배치 처리) - 고객 그룹에 직접 추가
+      console.log("🔍 CSV 업로드 디버깅:", {
         workspaceId,
-        leads: csvData,
+        leadsCount: csvData.length,
+        customerGroupId: targetGroupId,
+        isNewGroup: isNewGroup,
+        groupName: groupName,
+        groupDescription: groupDescription,
       })
 
-      // 2. 생성된 리드들을 선택된 그룹에 추가
-      const leadIds = createdLeads.leads.map((lead) => lead.id)
-      await customerGroupsApi.bulkAddMembers(targetGroupId, leadIds)
+      // 대용량 데이터 처리를 위한 배치 처리 (10개씩으로 감소)
+      const BATCH_SIZE = 10
+      const totalBatches = Math.ceil(csvData.length / BATCH_SIZE)
+      const MAX_RETRIES = 2
+
+      console.log(
+        `📦 배치 처리 시작: ${csvData.length}개 리드를 ${totalBatches}개 배치로 나누어 처리`,
+      )
+
+      let successCount = 0
+      let errorCount = 0
+
+      for (let i = 0; i < totalBatches; i++) {
+        const start = i * BATCH_SIZE
+        const end = Math.min(start + BATCH_SIZE, csvData.length)
+        const batch = csvData.slice(start, end)
+
+        console.log(`📦 배치 ${i + 1}/${totalBatches} 처리 중: ${batch.length}개 리드`)
+
+        let batchSuccess = false
+        let retryCount = 0
+
+        // 재시도 로직
+        while (!batchSuccess && retryCount <= MAX_RETRIES) {
+          try {
+            await leadsApi.createFromCSV({
+              workspaceId,
+              leads: batch,
+              customerGroupId: targetGroupId,
+            })
+            successCount += batch.length
+            batchSuccess = true
+            console.log(`✅ 배치 ${i + 1} 성공: ${batch.length}개 리드 추가됨`)
+          } catch (error) {
+            retryCount++
+            console.error(`❌ 배치 ${i + 1} 실패 (시도 ${retryCount}/${MAX_RETRIES + 1}):`, error)
+
+            if (retryCount <= MAX_RETRIES) {
+              console.log(`🔄 배치 ${i + 1} 재시도 중... (${retryCount}/${MAX_RETRIES})`)
+              // 재시도 전 지연 (지수 백오프)
+              await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount))
+            } else {
+              errorCount += batch.length
+              console.error(`❌ 배치 ${i + 1} 최종 실패: ${MAX_RETRIES + 1}회 시도 후 포기`)
+            }
+          }
+        }
+
+        // 배치 간 지연 (서버 부하 방지) - 지연 시간 증가
+        if (i < totalBatches - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 500)) // 200ms → 500ms
+        }
+      }
+
+      console.log(`📊 배치 처리 완료: 성공 ${successCount}개, 실패 ${errorCount}개`)
 
       // Invalidate queries to refresh data
       await queryClient.invalidateQueries({
@@ -428,7 +495,27 @@ export default function LeadsPage() {
       setNewGroupName("")
     } catch (error) {
       console.error("CSV 업로드 오류:", error)
-      toast.error("리드 추가 중 오류가 발생했습니다.")
+
+      // 더 구체적인 오류 메시지 표시
+      let errorMessage = "리드 추가 중 오류가 발생했습니다."
+
+      if (error instanceof Error) {
+        if (error.message.includes("timeout")) {
+          errorMessage =
+            "요청 시간이 초과되었습니다. 리드 개수가 많아서 시간이 오래 걸릴 수 있습니다."
+        } else if (error.message.includes("memory")) {
+          errorMessage =
+            "메모리 부족으로 인해 처리할 수 없습니다. 리드 개수를 줄여서 다시 시도해주세요."
+        } else if (error.message.includes("database")) {
+          errorMessage = "데이터베이스 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+        } else {
+          errorMessage = `오류: ${error.message}`
+        }
+      }
+
+      toast.error(errorMessage)
+    } finally {
+      setIsUploadingLeads(false)
     }
   }
 
@@ -1047,13 +1134,14 @@ export default function LeadsPage() {
               <Button
                 onClick={handleCSVUpload}
                 disabled={
+                  isUploadingLeads ||
                   !csvData ||
                   csvErrors.length > 0 ||
                   (!isNewGroup && !groupName) ||
                   (isNewGroup && !newGroupName.trim())
                 }
               >
-                리드 추가
+                {isUploadingLeads ? "처리 중..." : "리드 추가"}
               </Button>
             </div>
           </div>

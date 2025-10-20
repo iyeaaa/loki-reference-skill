@@ -108,6 +108,13 @@ export function CustomerGroupForm({
             const validation = validateCSVData(leads)
 
             if (validation.valid) {
+              // 경고가 있는 경우 표시
+              if (validation.warnings.length > 0) {
+                validation.warnings.forEach((warning) => {
+                  console.warn(warning)
+                })
+              }
+
               setCsvData({
                 leads,
                 fileName: file.name,
@@ -132,6 +139,13 @@ export function CustomerGroupForm({
         const validation = validateCSVData(leads)
 
         if (validation.valid) {
+          // 경고가 있는 경우 표시
+          if (validation.warnings.length > 0) {
+            validation.warnings.forEach((warning) => {
+              console.warn(warning)
+            })
+          }
+
           setCsvData({
             leads,
             fileName: file.name,

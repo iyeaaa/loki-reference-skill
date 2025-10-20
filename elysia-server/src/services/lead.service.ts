@@ -955,102 +955,173 @@ export async function bulkCreateLeads(data: {
   }>
   createdBy?: string
 }) {
-  const leadValues = data.leads.map((lead) => ({
-    workspaceId: data.workspaceId,
-    companyName: lead.companyName,
-    foundCompanyName: lead.foundCompanyName || null,
-    businessType: lead.businessType || null,
-    websiteUrl: lead.websiteUrl || null,
-    finalUrl: lead.websiteUrl || null,
-    description: lead.description || null,
-    employeeCount: lead.employeeCount || null,
-    foundedYear: lead.foundedYear || null,
-    country: lead.country || null,
-    city: lead.city || null,
-    state: lead.state || null,
-    address: lead.address || null,
-    leadSource: lead.leadSource || null,
-    leadStatus:
-      (lead.leadStatus as
-        | "new"
-        | "contacted"
-        | "qualified"
-        | "unqualified"
-        | "converted"
-        | "lost"
-        | "unsubscribed") || "new",
-    leadScore: lead.leadScore || null,
-    notes: lead.notes || null,
-    createdBy: data.createdBy || null,
-  }))
+  // 대량 데이터 처리를 위한 배치 크기 제한
+  const BATCH_SIZE = 10
+  const totalLeads = data.leads.length
 
-  const createdLeads = await db.insert(leads).values(leadValues).returning({
-    id: leads.id,
-    companyName: leads.companyName,
-    foundCompanyName: leads.foundCompanyName,
-    businessType: leads.businessType,
-    websiteUrl: leads.websiteUrl,
-    description: leads.description,
-    country: leads.country,
-    city: leads.city,
-    leadStatus: leads.leadStatus,
-    leadScore: leads.leadScore,
-    createdBy: leads.createdBy,
-    createdAt: leads.createdAt,
-  })
-
-  // 연락처 정보가 있는 경우 leadContacts 테이블에 추가
-  const contactValues: Array<{
-    leadId: string
-    contactType: "email" | "phone" | "fax" | "other"
-    contactValue: string
-    isPrimary: boolean
-  }> = []
-  for (let i = 0; i < data.leads.length; i++) {
-    const lead = data.leads[i]
-    const createdLead = createdLeads[i]
-
-    if (!lead || !createdLead) continue
-
-    if (lead.primaryEmail) {
-      contactValues.push({
-        leadId: createdLead.id,
-        contactType: "email",
-        contactValue: lead.primaryEmail,
-        isPrimary: true,
-      })
-    }
-    if (lead.primaryPhone) {
-      contactValues.push({
-        leadId: createdLead.id,
-        contactType: "phone",
-        contactValue: lead.primaryPhone,
-        isPrimary: true,
-      })
-    }
-    if (lead.secondaryEmail) {
-      contactValues.push({
-        leadId: createdLead.id,
-        contactType: "email",
-        contactValue: lead.secondaryEmail,
-        isPrimary: false,
-      })
-    }
-    if (lead.secondaryPhone) {
-      contactValues.push({
-        leadId: createdLead.id,
-        contactType: "phone",
-        contactValue: lead.secondaryPhone,
-        isPrimary: false,
-      })
-    }
+  if (totalLeads === 0) {
+    return []
   }
 
-  if (contactValues.length > 0) {
-    await db.insert(leadContacts).values(contactValues)
-  }
+  const allCreatedLeads = []
 
-  return createdLeads
+  try {
+    // 배치 단위로 처리
+    for (let i = 0; i < totalLeads; i += BATCH_SIZE) {
+      const batch = data.leads.slice(i, i + BATCH_SIZE)
+
+      try {
+        const batchResult = await processBatch(batch, data.workspaceId, data.createdBy)
+        allCreatedLeads.push(...batchResult)
+      } catch (error) {
+        console.error(`Error processing batch ${Math.floor(i / BATCH_SIZE) + 1}:`, error)
+        console.error("Batch data:", JSON.stringify(batch, null, 2))
+        throw error
+      }
+    }
+    return allCreatedLeads
+  } catch (error) {
+    console.error("Bulk create failed:", error)
+    console.error("Total leads:", totalLeads)
+    console.error("Workspace ID:", data.workspaceId)
+    throw error
+  }
+}
+
+async function processBatch(
+  batchLeads: Array<{
+    companyName: string
+    foundCompanyName?: string
+    businessType?: string
+    websiteUrl?: string
+    description?: string
+    employeeCount?: string
+    foundedYear?: number
+    country?: string
+    city?: string
+    state?: string
+    address?: string
+    leadSource?: string
+    leadStatus?: string
+    leadScore?: number
+    notes?: string
+    primaryEmail?: string
+    primaryPhone?: string
+    secondaryEmail?: string
+    secondaryPhone?: string
+  }>,
+  workspaceId: string,
+  createdBy?: string,
+) {
+  try {
+    const leadValues = batchLeads.map((lead) => ({
+      workspaceId,
+      companyName: lead.companyName,
+      foundCompanyName: lead.foundCompanyName || null,
+      businessType: lead.businessType || null,
+      websiteUrl: lead.websiteUrl || null,
+      finalUrl: lead.websiteUrl || null,
+      description: lead.description || null,
+      employeeCount: lead.employeeCount || null,
+      foundedYear: lead.foundedYear || null,
+      country: lead.country || null,
+      city: lead.city || null,
+      state: lead.state || null,
+      address: lead.address || null,
+      leadSource: lead.leadSource || null,
+      leadStatus:
+        (lead.leadStatus as
+          | "new"
+          | "contacted"
+          | "qualified"
+          | "unqualified"
+          | "converted"
+          | "lost"
+          | "unsubscribed") || "new",
+      leadScore: lead.leadScore || null,
+      notes: lead.notes || null,
+      createdBy: createdBy || null,
+    }))
+
+    console.log(`Processing ${leadValues.length} leads for workspace ${workspaceId}`)
+
+    const createdLeads = await db.insert(leads).values(leadValues).returning({
+      id: leads.id,
+      companyName: leads.companyName,
+      foundCompanyName: leads.foundCompanyName,
+      businessType: leads.businessType,
+      websiteUrl: leads.websiteUrl,
+      description: leads.description,
+      country: leads.country,
+      city: leads.city,
+      leadStatus: leads.leadStatus,
+      leadScore: leads.leadScore,
+      createdBy: leads.createdBy,
+      createdAt: leads.createdAt,
+    })
+
+    console.log(`Successfully inserted ${createdLeads.length} leads`)
+
+    // 연락처 정보가 있는 경우 leadContacts 테이블에 추가
+    const contactValues: Array<{
+      leadId: string
+      contactType: "email" | "phone" | "fax" | "other"
+      contactValue: string
+      isPrimary: boolean
+    }> = []
+    for (let i = 0; i < batchLeads.length; i++) {
+      const lead = batchLeads[i]
+      const createdLead = createdLeads[i]
+
+      if (!lead || !createdLead) continue
+
+      if (lead.primaryEmail) {
+        contactValues.push({
+          leadId: createdLead.id,
+          contactType: "email",
+          contactValue: lead.primaryEmail,
+          isPrimary: true,
+        })
+      }
+      if (lead.primaryPhone) {
+        contactValues.push({
+          leadId: createdLead.id,
+          contactType: "phone",
+          contactValue: lead.primaryPhone,
+          isPrimary: true,
+        })
+      }
+      if (lead.secondaryEmail) {
+        contactValues.push({
+          leadId: createdLead.id,
+          contactType: "email",
+          contactValue: lead.secondaryEmail,
+          isPrimary: false,
+        })
+      }
+      if (lead.secondaryPhone) {
+        contactValues.push({
+          leadId: createdLead.id,
+          contactType: "phone",
+          contactValue: lead.secondaryPhone,
+          isPrimary: false,
+        })
+      }
+    }
+
+    if (contactValues.length > 0) {
+      await db.insert(leadContacts).values(contactValues)
+      console.log(`Successfully inserted ${contactValues.length} contacts`)
+    }
+
+    return createdLeads
+  } catch (error) {
+    console.error("Error in processBatch:", error)
+    console.error("Workspace ID:", workspaceId)
+    console.error("Batch size:", batchLeads.length)
+    console.error("Sample lead data:", JSON.stringify(batchLeads[0], null, 2))
+    throw error
+  }
 }
 
 // ====================================
@@ -1293,6 +1364,23 @@ export async function addLeadToCustomerGroup(
     leadId: leadId,
     addedBy: addedBy || undefined,
   })
+}
+
+// BulkAddLeadsToCustomerGroup :exec
+export async function bulkAddLeadsToCustomerGroup(
+  leadIds: string[],
+  customerGroupId: string,
+  addedBy?: string,
+) {
+  if (leadIds.length === 0) return
+
+  const memberValues = leadIds.map((leadId) => ({
+    groupId: customerGroupId,
+    leadId: leadId,
+    addedBy: addedBy || undefined,
+  }))
+
+  await db.insert(customerGroupMembers).values(memberValues)
 }
 
 export async function exportSelectedLeadsToCSV(leadIds: string[]) {

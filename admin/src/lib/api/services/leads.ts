@@ -141,6 +141,8 @@ export const leadsApi = {
       secondaryEmail?: string
       secondaryPhone?: string
     }>
+    customerGroupId?: string
+    createdBy?: string
   }) => {
     return apiFetch<{ leads: Lead[] }>("/api/v1/leads/bulk", {
       method: "POST",

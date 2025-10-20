@@ -45,14 +45,19 @@ if (!isDevelopment) {
 
 const app = new Elysia()
   // Core plugins (order matters)
-  .use(requestId) // Add request ID first for tracing
-  .use(httpLogger) // Apply logger second to log request IDs
-  .onError(({ error }) => {
-    logger.error({ err: error }, "Application Error")
-    throw error
-  })
-  .use(errorHandler) // Apply global error handler
-  .use(responseTransformer) // Apply response transformer
+  // Ensure CORS runs first so even error responses include CORS headers
+  .use(
+    cors({
+      origin: isDevelopment ? true : config.cors.allowedOrigins,
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID", "Accept"],
+      exposeHeaders: ["X-Request-ID", "X-RateLimit-Limit", "X-RateLimit-Remaining"],
+      maxAge: 86400, // 24 hours
+    }),
+  )
+  .use(requestId) // Add request ID for tracing
+  .use(httpLogger) // Logger
 
   // Security plugins
   .use(rateLimit) // Apply rate limiting to all routes
@@ -67,21 +72,16 @@ const app = new Elysia()
       set.headers["strict-transport-security"] = "max-age=31536000; includeSubDomains"
     }
   })
-  .use(
-    cors({
-      // In production, restrict to specific origins
-      origin: isDevelopment ? true : config.cors.allowedOrigins,
-      credentials: true,
-      methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID", "Accept"],
-      exposeHeaders: ["X-Request-ID", "X-RateLimit-Limit", "X-RateLimit-Remaining"],
-      maxAge: 86400, // 24 hours
-    }),
-  )
   // Handle OPTIONS requests explicitly
   .options("*", ({ set }) => {
     set.status = 204
     return ""
+  })
+  .use(errorHandler) // Apply global error handler (after CORS so errors include CORS)
+  .use(responseTransformer) // Apply response transformer
+  .onError(({ error }) => {
+    logger.error({ err: error }, "Application Error")
+    throw error
   })
   .use(
     swagger({

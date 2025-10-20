@@ -251,9 +251,55 @@ export const leadRoutes = new Elysia({ prefix: "/api/v1/leads" })
   // Bulk create leads
   .post(
     "/bulk",
-    async ({ body }) => {
-      const leads = await leadService.bulkCreateLeads(body)
-      return { leads }
+    async ({ body, set }) => {
+      try {
+        console.log("🔍 백엔드 bulk create 디버깅:", {
+          workspaceId: body.workspaceId,
+          leadsCount: body.leads?.length || 0,
+          customerGroupId: body.customerGroupId,
+          createdBy: body.createdBy,
+        })
+
+        const leads = await leadService.bulkCreateLeads(body)
+
+        // 고객 그룹이 지정된 경우 리드들을 그룹에 추가
+        if (body.customerGroupId && leads.length > 0) {
+          try {
+            const leadIds = leads.map((lead) => lead.id)
+            console.log("🔍 고객 그룹에 추가 시도:", {
+              leadIds: leadIds,
+              customerGroupId: body.customerGroupId,
+              createdBy: body.createdBy,
+            })
+
+            await leadService.bulkAddLeadsToCustomerGroup(
+              leadIds,
+              body.customerGroupId,
+              body.createdBy,
+            )
+            console.log(
+              `✅ Successfully added ${leadIds.length} leads to group ${body.customerGroupId}`,
+            )
+          } catch (error) {
+            console.error("❌ Failed to add leads to customer group:", error)
+            // 고객 그룹 추가 실패해도 리드 생성은 성공으로 처리
+          }
+        } else {
+          console.log("⚠️ 고객 그룹에 추가하지 않음:", {
+            hasCustomerGroupId: !!body.customerGroupId,
+            leadsLength: leads.length,
+          })
+        }
+
+        return { leads }
+      } catch (error) {
+        console.error("❌ Bulk create leads error:", error)
+        set.status = 500
+        return {
+          error: "Failed to create leads",
+          message: error instanceof Error ? error.message : "Unknown error",
+        }
+      }
     },
     {
       body: t.Object({
@@ -282,6 +328,7 @@ export const leadRoutes = new Elysia({ prefix: "/api/v1/leads" })
           }),
         ),
         createdBy: t.Optional(t.String({ format: "uuid" })),
+        customerGroupId: t.Optional(t.String({ format: "uuid" })),
       }),
     },
   )

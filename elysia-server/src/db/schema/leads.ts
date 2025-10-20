@@ -61,7 +61,10 @@ export const leads = pgTable(
     notes: text("notes"),
 
     // Processing metadata
-    crawlTimeSeconds: decimal("crawl_time_seconds", { precision: 10, scale: 2 }),
+    crawlTimeSeconds: decimal("crawl_time_seconds", {
+      precision: 10,
+      scale: 2,
+    }),
     gptTimeSeconds: decimal("gpt_time_seconds", { precision: 10, scale: 2 }),
     collectedAt: timestamp("collected_at", { withTimezone: true }),
     errorMessage: text("error_message"),

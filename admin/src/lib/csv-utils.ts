@@ -305,17 +305,19 @@ export function parseCSV(csvText: string): LeadCSVData[] {
 export function validateCSVData(data: LeadCSVData[]): {
   valid: boolean
   errors: string[]
+  warnings: string[]
 } {
   const errors: string[] = []
+  const warnings: string[] = []
 
   console.log("Validating CSV data:", data)
 
   if (data.length === 0) {
     errors.push("CSV 파일에 유효한 데이터가 없습니다.")
-    return { valid: false, errors }
+    return { valid: false, errors, warnings }
   }
 
-  // 회사명 중복 체크 (빈 문자열 제외)
+  // 회사명 중복 체크 (빈 문자열 제외) - 경고로 변경
   const companyNames = data
     .map((lead) => lead.companyName.trim())
     .filter((name) => name.length > 0)
@@ -328,7 +330,11 @@ export function validateCSVData(data: LeadCSVData[]): {
   console.log("Found duplicates:", duplicates)
 
   if (duplicates.length > 0) {
-    errors.push(`중복된 회사명이 있습니다: ${[...new Set(duplicates)].join(", ")}`)
+    warnings.push(
+      `파일 내 중복된 회사명이 있습니다: ${[...new Set(duplicates)].join(
+        ", ",
+      )}. 같은 회사명이라도 이메일이 다르면 별도의 리드로 처리됩니다.`,
+    )
   }
 
   // 필수 필드 체크
@@ -348,15 +354,17 @@ export function validateCSVData(data: LeadCSVData[]): {
   }
 
   console.log("Validation errors:", errors)
+  console.log("Validation warnings:", warnings)
 
   return {
     valid: errors.length === 0,
     errors,
+    warnings,
   }
 }
 
 export function generateCSVTemplate(): string {
-  return `# 리드 데이터 CSV 템플릿
+  const csvContent = `# 리드 데이터 CSV 템플릿
 # 필수 필드: companyName (회사명), primaryEmail (주요 이메일), websiteUrl (웹사이트 URL)
 # 선택 필드: 나머지 모든 컬럼
 # 
@@ -385,6 +393,9 @@ companyName,foundCompanyName,businessType,websiteUrl,description,employeeCount,f
 "Venus Beauty Supply","Venus Beauty Supply Ltd.","K뷰티 유통","https://venusbeautysupply.com","미국 K뷰티 유통업체","50-100명",2015,"미국","뉴욕","뉴욕주","123 Beauty St, New York","웹사이트","new",73,"K뷰티 제품 유통 가능성 높음","contact@venusbeautysupply.com","+1-555-0123","support@venusbeautysupply.com","+1-555-0124"
 "Beauty World Inc","Beauty World Inc.","화장품 유통","https://beautyworld.com","화장품 전문 유통업체","100-500명",2010,"미국","로스앤젤레스","캘리포니아","456 Cosmetics Ave, LA","추천","contacted",85,"프리미엄 브랜드 선호","info@beautyworld.com","+1-555-0234","sales@beautyworld.com","+1-555-0235"
 "Global Beauty Co","Global Beauty Company","뷰티 유통","https://globalbeauty.co","글로벌 뷰티 유통업체","500명 이상",2005,"미국","시카고","일리노이","789 Global Blvd, Chicago","전시회","qualified",92,"대규모 유통망 보유","hello@globalbeauty.co","+1-555-0345","partnerships@globalbeauty.co","+1-555-0346"`
+
+  // Add BOM for proper UTF-8 encoding in Excel
+  return `\uFEFF${csvContent}`
 }
 
 export function generateXLSXTemplate(): Blob {
@@ -492,7 +503,13 @@ export function generateXLSXTemplate(): Blob {
     }
   }
 
-  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
+  // UTF-8 인코딩을 위한 옵션 추가
+  const excelBuffer = XLSX.write(workbook, {
+    bookType: "xlsx",
+    type: "array",
+    cellStyles: true,
+    compression: true,
+  })
   return new Blob([excelBuffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   })

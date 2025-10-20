@@ -202,7 +202,10 @@ export function WorkspacesTableWithPagination({
                   >
                     {workspace.name}
                   </td>
-                  <td className="p-2 text-sm text-gray-900 dark:text-gray-100" style={{ maxWidth: "300px" }}>
+                  <td
+                    className="p-2 text-sm text-gray-900 dark:text-gray-100"
+                    style={{ maxWidth: "300px" }}
+                  >
                     {workspace.description ? (
                       <div className="flex items-start gap-2">
                         <span className={expandedDescriptions[workspace.id] ? "" : "line-clamp-1"}>

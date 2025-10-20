@@ -20,7 +20,6 @@ export const workspaceMemberRoleEnum = pgEnum("workspace_member_role_enum", [
 ])
 
 export const workspaceMemberStatusEnum = pgEnum("workspace_member_status_enum", [
-  "invited",
   "active",
   "inactive",
   "removed",
@@ -61,7 +60,7 @@ export const workspaceMembers = pgTable(
     invitedBy: uuid("invited_by").references(() => users.id),
     invitedAt: timestamp("invited_at", { withTimezone: true }).notNull().defaultNow(),
     joinedAt: timestamp("joined_at", { withTimezone: true }),
-    status: workspaceMemberStatusEnum("status").notNull().default("invited"),
+    status: workspaceMemberStatusEnum("status").notNull().default("active"),
   },
   (table) => ({
     workspaceIdx: index("workspace_members_workspace_id_idx").on(table.workspaceId),

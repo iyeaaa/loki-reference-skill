@@ -191,7 +191,10 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
   .post(
     "/:id/members",
     async ({ params: { id }, body }) => {
-      const member = await workspaceService.addWorkspaceMember({ ...body, workspaceId: id })
+      const member = await workspaceService.addWorkspaceMember({
+        ...body,
+        workspaceId: id,
+      })
       return member
     },
     {
@@ -210,12 +213,7 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
         ),
         invitedBy: t.Optional(t.String({ format: "uuid" })),
         status: t.Optional(
-          t.Union([
-            t.Literal("invited"),
-            t.Literal("active"),
-            t.Literal("inactive"),
-            t.Literal("removed"),
-          ]),
+          t.Union([t.Literal("active"), t.Literal("inactive"), t.Literal("removed")]),
         ),
       }),
     },
@@ -265,12 +263,7 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
         memberId: t.String({ format: "uuid" }),
       }),
       body: t.Object({
-        status: t.Union([
-          t.Literal("invited"),
-          t.Literal("active"),
-          t.Literal("inactive"),
-          t.Literal("removed"),
-        ]),
+        status: t.Union([t.Literal("active"), t.Literal("inactive"), t.Literal("removed")]),
       }),
     },
   )
@@ -305,7 +298,9 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
   )
 
 // Admin bulk update routes
-export const adminWorkspaceRoutes = new Elysia({ prefix: "/api/v1/admin/workspaces" })
+export const adminWorkspaceRoutes = new Elysia({
+  prefix: "/api/v1/admin/workspaces",
+})
   // Bulk update status
   .put(
     "/bulk/status",

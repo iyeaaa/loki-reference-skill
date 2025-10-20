@@ -244,7 +244,7 @@ export async function seed() {
       workspaceId: string
       userId: string
       role: "owner" | "admin" | "member" | "viewer"
-      status: "active" | "inactive" | "invited" | "removed"
+      status: "active" | "inactive" | "removed"
       invitedBy?: string
       joinedAt?: Date
     }[] = []

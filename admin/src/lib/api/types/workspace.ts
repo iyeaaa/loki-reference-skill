@@ -15,7 +15,7 @@ export interface WorkspaceMember {
   workspaceId: string
   userId: string
   role: "owner" | "admin" | "member" | "viewer"
-  status: "invited" | "active" | "inactive" | "removed"
+  status: "active" | "inactive" | "removed"
   invitedBy: string | null
   invitedAt: string
   joinedAt: string | null

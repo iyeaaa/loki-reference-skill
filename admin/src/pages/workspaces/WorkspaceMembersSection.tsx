@@ -69,8 +69,6 @@ export function WorkspaceMembersSection({
     switch (status) {
       case "active":
         return "default"
-      case "invited":
-        return "secondary"
       case "inactive":
         return "outline"
       case "removed":
@@ -84,8 +82,6 @@ export function WorkspaceMembersSection({
     switch (status) {
       case "active":
         return "활성"
-      case "invited":
-        return "초대됨"
       case "inactive":
         return "비활성"
       case "removed":
@@ -180,11 +176,6 @@ export function WorkspaceMembersSection({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="invited">
-                          <Badge variant={getStatusBadgeVariant("invited")}>
-                            {getStatusLabel("invited")}
-                          </Badge>
-                        </SelectItem>
                         <SelectItem value="active">
                           <Badge variant={getStatusBadgeVariant("active")}>
                             {getStatusLabel("active")}

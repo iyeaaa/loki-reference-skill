@@ -335,7 +335,7 @@ export async function addWorkspaceMember(data: {
   userId: string
   role?: "owner" | "admin" | "member" | "viewer"
   invitedBy?: string
-  status?: "invited" | "active" | "inactive" | "removed"
+  status?: "active" | "inactive" | "removed"
 }) {
   const [newMember] = await db
     .insert(workspaceMembers)
@@ -344,7 +344,7 @@ export async function addWorkspaceMember(data: {
       userId: data.userId,
       role: data.role || "member",
       invitedBy: data.invitedBy || null,
-      status: data.status || "invited",
+      status: data.status || "active",
     })
     .returning({
       id: workspaceMembers.id,
@@ -384,7 +384,7 @@ export async function updateWorkspaceMemberRole(
 // UpdateWorkspaceMemberStatus :one
 export async function updateWorkspaceMemberStatus(
   memberId: string,
-  status: "invited" | "active" | "inactive" | "removed",
+  status: "active" | "inactive" | "removed",
 ) {
   const [updatedMember] = await db
     .update(workspaceMembers)

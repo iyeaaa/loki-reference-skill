@@ -87,6 +87,10 @@ export const router = createBrowserRouter([
             element: <RepliedEmailsPage />,
           },
           {
+            path: "replied-emails/:emailId",
+            element: <RepliedEmailsPage />,
+          },
+          {
             path: "workspaces",
             element: <WorkspacesPage />,
           },

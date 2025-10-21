@@ -1,14 +1,17 @@
 import { AlertCircle, Search, X } from "lucide-react"
 import { useEffect, useId, useState } from "react"
+import { useParams } from "react-router-dom"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { useEmail } from "@/lib/api/hooks/emails"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { RepliedEmailsTableWithPagination } from "./RepliedEmailsTableWithPagination"
 import { ThreadDetailPanel } from "./ThreadDetailPanel"
 
 export default function EmailRepliesPage() {
   const { selectedWorkspace } = useWorkspace()
+  const { emailId } = useParams<{ emailId?: string }>()
   const containerId = useId()
 
   const [searchInput, setSearchInput] = useState("")
@@ -16,6 +19,16 @@ export default function EmailRepliesPage() {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
   const [leftWidth, setLeftWidth] = useState(50) // percentage
   const [isResizing, setIsResizing] = useState(false)
+
+  // emailId가 있으면 해당 이메일 정보를 가져와서 threadId 설정
+  const { data: emailData } = useEmail(emailId || "", !!emailId)
+
+  // emailData가 로드되면 threadId 설정
+  useEffect(() => {
+    if (emailData?.threadId) {
+      setSelectedThreadId(emailData.threadId)
+    }
+  }, [emailData])
 
   // Debounce search input
   useEffect(() => {

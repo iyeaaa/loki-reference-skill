@@ -2,26 +2,70 @@ import {
   BarChart3,
   Clock,
   Heart,
+  Inbox,
   Mail,
   ShoppingBag,
   Sparkles,
   TrendingUp,
   Users,
 } from "lucide-react"
+import { useMemo, useState } from "react"
+import { Link } from "react-router-dom"
+import { Badge } from "@/components/ui/badge"
+import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   useAvgOpenRateStats,
   useBuyerResponseRate,
   useRecentSequences,
+  useRepliedEmails,
   useScheduledFollowups,
   useTodaySentStats,
 } from "@/lib/api/hooks/emails"
 import { useLeads } from "@/lib/api/hooks/leads"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
+import { cn } from "@/lib/utils"
+
+// 캘린더 DayButton 컴포넌트 팩토리 (외부로 분리하여 nested component 경고 방지)
+function createFollowupDayButton(followupsByDate: Map<string, { totalCount: number }>) {
+  return function FollowupDayButton({
+    day,
+    modifiers,
+    ...props
+  }: {
+    day: { date: Date }
+    modifiers: {
+      selected?: boolean
+      today?: boolean
+      outside?: boolean
+    }
+  }) {
+    const dateStr = day.date.toISOString().split("T")[0]
+    const followup = followupsByDate.get(dateStr)
+
+    return (
+      <button
+        {...props}
+        type="button"
+        className={cn(
+          "relative w-full h-full p-0 text-center flex flex-col items-center justify-center aspect-square select-none",
+          "hover:bg-accent rounded-md transition-colors",
+          modifiers.selected && "bg-primary text-primary-foreground",
+          modifiers.today && "bg-accent",
+          modifiers.outside && "text-muted-foreground opacity-50",
+        )}
+      >
+        <span className="text-sm">{day.date.getDate()}</span>
+        {<span className="text-[10px] font-bold">{followup?.totalCount ?? 0}건</span>}
+      </button>
+    )
+  }
+}
 
 export default function DashboardPage() {
   const { selectedWorkspace } = useWorkspace()
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
 
   // 워크스페이스별 고객 수 조회
   const { data: leadsData, isLoading: leadsLoading } = useLeads({
@@ -64,6 +108,14 @@ export default function DashboardPage() {
     },
   )
 
+  // 최근 답장 이메일 조회 (인박스 미리보기용)
+  const { data: repliedEmailsData, isLoading: repliedEmailsLoading } = useRepliedEmails({
+    workspaceId:
+      selectedWorkspace?.id === "all" || !selectedWorkspace?.id ? "" : selectedWorkspace.id,
+    limit: 5,
+    page: 1,
+  })
+
   const totalCustomers = leadsData?.total || 0
   const todaySentCount = todaySentData?.todaySentCount || 0
   const avgOpenRate = avgOpenRateData?.avgOpenRate || 0
@@ -71,6 +123,27 @@ export default function DashboardPage() {
   const recentSequences = recentSequencesData?.sequences || []
   const scheduledFollowups = scheduledFollowupsData?.followups || []
   const totalScheduled = scheduledFollowupsData?.totalScheduled || 0
+  const recentReplies = repliedEmailsData?.repliedEmails || []
+
+  // 날짜별 발송 예정 건수를 매핑
+  const followupsByDate = useMemo(() => {
+    const map = new Map<string, (typeof scheduledFollowups)[0]>()
+    scheduledFollowups.forEach((followup) => {
+      map.set(followup.scheduledDate, followup)
+    })
+    return map
+  }, [scheduledFollowups])
+
+  // 선택된 날짜의 상세 정보
+  const selectedDateInfo = selectedDate
+    ? followupsByDate.get(selectedDate.toISOString().split("T")[0])
+    : undefined
+
+  // DayButton 컴포넌트를 메모이제이션
+  const DayButtonComponent = useMemo(
+    () => createFollowupDayButton(followupsByDate),
+    [followupsByDate],
+  )
 
   return (
     <div className="p-6">
@@ -150,9 +223,9 @@ export default function DashboardPage() {
             <div className="space-y-4">
               {recentSequencesLoading ? (
                 // Loading skeleton
-                Array.from({ length: 4 }).map((_, index) => (
+                Array.from({ length: 4 }, (_, i) => i).map((skeletonId) => (
                   <div
-                    key={index}
+                    key={`skeleton-${skeletonId}`}
                     className="flex items-center justify-between p-4 border rounded-lg"
                   >
                     <div className="flex items-center space-x-3">
@@ -216,76 +289,175 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>팔로우업 발송 예정</CardTitle>
-            <CardDescription>바이어 자동 팔로우업 발송 현황</CardDescription>
+            <CardDescription>
+              바이어 자동 팔로우업 발송 현황 (총 {totalScheduled}건)
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {scheduledFollowupsLoading ? (
-                // Loading skeleton
-                <div className="space-y-3">
-                  {Array.from({ length: 3 }).map((_, index) => (
-                    <div key={index} className="p-3 border rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-4 w-8" />
-                      </div>
-                      <Skeleton className="h-3 w-32" />
-                    </div>
-                  ))}
-                  <div className="pt-3 mt-3 border-t">
+            {scheduledFollowupsLoading ? (
+              // Loading skeleton
+              <div className="space-y-4">
+                <Skeleton className="h-[300px] w-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-48" />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 flex justify-center items-center flex-col">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  className="rounded-md border w-[50%]"
+                  modifiers={{
+                    scheduled: Array.from(followupsByDate.keys()).map(
+                      (dateStr) => new Date(dateStr),
+                    ),
+                  }}
+                  modifiersClassNames={{
+                    scheduled: "bg-primary/10 font-bold",
+                  }}
+                  components={{
+                    DayButton: DayButtonComponent,
+                  }}
+                />
+
+                {selectedDateInfo ? (
+                  <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
                     <div className="flex items-center justify-between">
-                      <Skeleton className="h-4 w-16" />
-                      <Skeleton className="h-4 w-12" />
+                      <h4 className="font-semibold text-sm">
+                        {selectedDate?.toLocaleDateString("ko-KR", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </h4>
+                      <span className="text-sm font-bold text-primary">
+                        {selectedDateInfo.totalCount}건
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {selectedDateInfo.delayDays}일 후 팔로우업
+                    </div>
+                    <div className="space-y-2">
+                      {selectedDateInfo.sequences.map((seq) => (
+                        <div
+                          key={`${seq.sequenceName}-${seq.subject}`}
+                          className="p-2 bg-background rounded border"
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium">{seq.sequenceName}</span>
+                            <span className="text-xs text-muted-foreground">{seq.count}건</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">{seq.subject}</div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </div>
-              ) : scheduledFollowups.length > 0 ? (
-                <div className="space-y-3">
-                  {scheduledFollowups.map((followup, index) => (
-                    <div key={index} className="p-3 border rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium">
-                          {followup.delayDays}일 후 팔로우업
-                        </span>
-                        <span className="text-sm font-bold">{followup.totalCount}건</span>
-                      </div>
-                      <div className="text-xs text-blue-600 mb-1">
-                        예정일: {followup.scheduledDate}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {followup.sequences.slice(0, 2).map((seq, seqIndex) => (
-                          <span key={seqIndex}>
-                            {seq.sequenceName}: {seq.subject}
-                            {seqIndex < Math.min(followup.sequences.length, 2) - 1 && ", "}
-                          </span>
-                        ))}
-                        {followup.sequences.length > 2 && ` 외 ${followup.sequences.length - 2}개`}
-                      </div>
-                    </div>
-                  ))}
-                  <div className="pt-3 mt-3 border-t">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">전체 예정</span>
-                      <span className="text-sm font-bold">총 {totalScheduled}건</span>
-                    </div>
+                ) : scheduledFollowups.length === 0 ? (
+                  <div className="text-center py-4 text-sm text-muted-foreground">
+                    예약된 팔로우업이 없습니다
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>예약된 팔로우업이 없습니다.</p>
-                </div>
-              )}
-            </div>
+                ) : (
+                  <div className="text-center py-4 text-sm text-muted-foreground">
+                    날짜를 선택하여 상세 정보를 확인하세요
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
       <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>고객 세그먼트별 성과</CardTitle>
-          <CardDescription>뷰티업체 유형별 바이어 반응률</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Inbox className="h-5 w-5" />
+              인박스 미리보기
+            </CardTitle>
+            <CardDescription>최근 받은 답장 이메일</CardDescription>
+          </div>
+          <Link
+            to="/replied-emails"
+            className="text-sm text-primary hover:underline flex items-center gap-1"
+          >
+            전체 보기 →
+          </Link>
         </CardHeader>
-        <CardContent>아직 구현되지 않은 기능입니다.</CardContent>
+        <CardContent>
+          {repliedEmailsLoading ? (
+            // Loading skeleton
+            <div className="space-y-3">
+              {Array.from({ length: 3 }, (_, i) => i).map((skeletonId) => (
+                <div key={`inbox-skeleton-${skeletonId}`} className="p-4 border rounded-lg">
+                  <div className="flex items-start justify-between mb-2">
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <Skeleton className="h-3 w-full mb-2" />
+                  <Skeleton className="h-3 w-3/4" />
+                </div>
+              ))}
+            </div>
+          ) : recentReplies.length > 0 ? (
+            <div className="space-y-3">
+              {recentReplies.map((reply) => {
+                const createdDate = new Date(reply.createdAt)
+                const now = new Date()
+                const diffMs = now.getTime() - createdDate.getTime()
+                const diffMins = Math.floor(diffMs / 60000)
+                const diffHours = Math.floor(diffMins / 60)
+                const diffDays = Math.floor(diffHours / 24)
+
+                let timeAgo = ""
+                if (diffDays > 0) {
+                  timeAgo = `${diffDays}일 전`
+                } else if (diffHours > 0) {
+                  timeAgo = `${diffHours}시간 전`
+                } else if (diffMins > 0) {
+                  timeAgo = `${diffMins}분 전`
+                } else {
+                  timeAgo = "방금 전"
+                }
+
+                return (
+                  <Link
+                    key={reply.id}
+                    to={`/replied-emails/${reply.id}`}
+                    className="block p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="font-medium text-sm truncate">{reply.fromEmail}</span>
+                        {reply.leadName && (
+                          <Badge variant="secondary" className="text-xs">
+                            {reply.leadName}
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                        {timeAgo}
+                      </span>
+                    </div>
+                    <div className="text-sm font-medium mb-1 truncate">
+                      {reply.subject || "(제목 없음)"}
+                    </div>
+                    <div className="text-xs text-muted-foreground line-clamp-2">
+                      {reply.bodyText?.slice(0, 150) || "(내용 없음)"}
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Inbox className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>받은 답장이 없습니다</p>
+            </div>
+          )}
+        </CardContent>
       </Card>
     </div>
   )

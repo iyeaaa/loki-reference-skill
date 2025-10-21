@@ -8,6 +8,8 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react"
+import { useEffect, useState } from "react"
+import { TodoList } from "@/components/TodoList"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -19,9 +21,61 @@ import {
 } from "@/lib/api/hooks/emails"
 import { useLeads } from "@/lib/api/hooks/leads"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
+import type { CreateTodoRequest, Todo, UpdateTodoRequest } from "@/lib/types/todo"
 
 export default function DashboardPage() {
   const { selectedWorkspace } = useWorkspace()
+
+  // 투두리스트 상태 관리
+  const [todos, setTodos] = useState<Todo[]>([])
+  const [filteredTodos, setFilteredTodos] = useState<Todo[]>([])
+
+  // 로컬 스토리지에서 투두리스트 로드
+  useEffect(() => {
+    const savedTodos = localStorage.getItem("todos")
+    if (savedTodos) {
+      setTodos(JSON.parse(savedTodos))
+    }
+  }, [])
+
+  // 워크스페이스별 투두리스트 필터링
+  useEffect(() => {
+    if (selectedWorkspace?.id === "all") {
+      setFilteredTodos(todos)
+    } else {
+      setFilteredTodos(
+        todos.filter((todo) => todo.workspaceId === selectedWorkspace?.id || !todo.workspaceId),
+      )
+    }
+  }, [todos, selectedWorkspace])
+
+  // 투두리스트 CRUD 함수들
+  const handleAddTodo = (newTodo: CreateTodoRequest) => {
+    const todo: Todo = {
+      id: Date.now().toString(),
+      ...newTodo,
+      completed: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    const updatedTodos = [...todos, todo]
+    setTodos(updatedTodos)
+    localStorage.setItem("todos", JSON.stringify(updatedTodos))
+  }
+
+  const handleUpdateTodo = (id: string, updates: UpdateTodoRequest) => {
+    const updatedTodos = todos.map((todo) =>
+      todo.id === id ? { ...todo, ...updates, updatedAt: new Date().toISOString() } : todo,
+    )
+    setTodos(updatedTodos)
+    localStorage.setItem("todos", JSON.stringify(updatedTodos))
+  }
+
+  const handleDeleteTodo = (id: string) => {
+    const updatedTodos = todos.filter((todo) => todo.id !== id)
+    setTodos(updatedTodos)
+    localStorage.setItem("todos", JSON.stringify(updatedTodos))
+  }
 
   // 워크스페이스별 고객 수 조회
   const { data: leadsData, isLoading: leadsLoading } = useLeads({
@@ -280,13 +334,16 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>고객 세그먼트별 성과</CardTitle>
-          <CardDescription>뷰티업체 유형별 바이어 반응률</CardDescription>
-        </CardHeader>
-        <CardContent>아직 구현되지 않은 기능입니다.</CardContent>
-      </Card>
+      {/* 투두리스트 섹션 */}
+      <div className="mt-6">
+        <TodoList
+          todos={filteredTodos}
+          workspaceId={selectedWorkspace?.id === "all" ? undefined : selectedWorkspace?.id}
+          onAddTodo={handleAddTodo}
+          onUpdateTodo={handleUpdateTodo}
+          onDeleteTodo={handleDeleteTodo}
+        />
+      </div>
     </div>
   )
 }

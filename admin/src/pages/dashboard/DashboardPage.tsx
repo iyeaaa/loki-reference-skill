@@ -11,9 +11,9 @@ import {
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
+import { TodoList } from "@/components/TodoList"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
-import { TodoList } from "@/components/TodoList"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -26,8 +26,8 @@ import {
 } from "@/lib/api/hooks/emails"
 import { useLeads } from "@/lib/api/hooks/leads"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
-import { cn } from "@/lib/utils"
 import type { CreateTodoRequest, Todo, UpdateTodoRequest } from "@/lib/types/todo"
+import { cn } from "@/lib/utils"
 
 // 캘린더 DayButton 컴포넌트 팩토리 (외부로 분리하여 nested component 경고 방지)
 function createFollowupDayButton(followupsByDate: Map<string, { totalCount: number }>) {

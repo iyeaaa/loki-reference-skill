@@ -9,10 +9,11 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
+import { TodoList } from "@/components/TodoList"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -26,6 +27,7 @@ import {
 import { useLeads } from "@/lib/api/hooks/leads"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
+import type { CreateTodoRequest, Todo, UpdateTodoRequest } from "@/lib/types/todo"
 
 // 캘린더 DayButton 컴포넌트 팩토리 (외부로 분리하여 nested component 경고 방지)
 function createFollowupDayButton(followupsByDate: Map<string, { totalCount: number }>) {
@@ -66,6 +68,57 @@ function createFollowupDayButton(followupsByDate: Map<string, { totalCount: numb
 export default function DashboardPage() {
   const { selectedWorkspace } = useWorkspace()
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+
+  // 투두리스트 상태 관리
+  const [todos, setTodos] = useState<Todo[]>([])
+  const [filteredTodos, setFilteredTodos] = useState<Todo[]>([])
+
+  // 로컬 스토리지에서 투두리스트 로드
+  useEffect(() => {
+    const savedTodos = localStorage.getItem("todos")
+    if (savedTodos) {
+      setTodos(JSON.parse(savedTodos))
+    }
+  }, [])
+
+  // 워크스페이스별 투두리스트 필터링
+  useEffect(() => {
+    if (selectedWorkspace?.id === "all") {
+      setFilteredTodos(todos)
+    } else {
+      setFilteredTodos(
+        todos.filter((todo) => todo.workspaceId === selectedWorkspace?.id || !todo.workspaceId),
+      )
+    }
+  }, [todos, selectedWorkspace])
+
+  // 투두리스트 CRUD 함수들
+  const handleAddTodo = (newTodo: CreateTodoRequest) => {
+    const todo: Todo = {
+      id: Date.now().toString(),
+      ...newTodo,
+      completed: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    const updatedTodos = [...todos, todo]
+    setTodos(updatedTodos)
+    localStorage.setItem("todos", JSON.stringify(updatedTodos))
+  }
+
+  const handleUpdateTodo = (id: string, updates: UpdateTodoRequest) => {
+    const updatedTodos = todos.map((todo) =>
+      todo.id === id ? { ...todo, ...updates, updatedAt: new Date().toISOString() } : todo,
+    )
+    setTodos(updatedTodos)
+    localStorage.setItem("todos", JSON.stringify(updatedTodos))
+  }
+
+  const handleDeleteTodo = (id: string) => {
+    const updatedTodos = todos.filter((todo) => todo.id !== id)
+    setTodos(updatedTodos)
+    localStorage.setItem("todos", JSON.stringify(updatedTodos))
+  }
 
   // 워크스페이스별 고객 수 조회
   const { data: leadsData, isLoading: leadsLoading } = useLeads({
@@ -459,6 +512,16 @@ export default function DashboardPage() {
           )}
         </CardContent>
       </Card>
+      {/* 투두리스트 섹션 */}
+      <div className="mt-6">
+        <TodoList
+          todos={filteredTodos}
+          workspaceId={selectedWorkspace?.id === "all" ? undefined : selectedWorkspace?.id}
+          onAddTodo={handleAddTodo}
+          onUpdateTodo={handleUpdateTodo}
+          onDeleteTodo={handleDeleteTodo}
+        />
+      </div>
     </div>
   )
 }

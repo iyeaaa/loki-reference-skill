@@ -90,8 +90,34 @@ export const bulkEmailRoutes = new Elysia({ prefix: "/api/v1/bulk-emails" })
           emailId?: string
         }> = []
 
+        // 중복된 이메일 주소 제거
+        const uniqueEmailsMap = new Map<string, (typeof body.emails)[0]>()
+        let duplicateCount = 0
+
+        for (const email of body.emails) {
+          const emailKey = email.toEmail.toLowerCase()
+          if (!uniqueEmailsMap.has(emailKey)) {
+            uniqueEmailsMap.set(emailKey, email)
+          } else {
+            duplicateCount++
+          }
+        }
+
+        const uniqueEmails = Array.from(uniqueEmailsMap.values())
+
+        if (duplicateCount > 0) {
+          logger.warn(
+            {
+              totalEmails: body.emails.length,
+              uniqueEmails: uniqueEmails.length,
+              duplicates: duplicateCount,
+            },
+            "중복된 이메일 주소 발견 및 제거",
+          )
+        }
+
         // 각 이메일을 순차적으로 발송
-        for (const emailData of body.emails) {
+        for (const emailData of uniqueEmails) {
           try {
             const fromEmail = emailData.fromEmail
             const fromName =
@@ -226,18 +252,25 @@ export const bulkEmailRoutes = new Elysia({ prefix: "/api/v1/bulk-emails" })
             total: results.length,
             success: successCount,
             fail: failCount,
+            duplicatesRemoved: duplicateCount,
           },
           "대량 이메일 발송 완료",
         )
 
+        const message =
+          duplicateCount > 0
+            ? `${successCount}개의 이메일이 발송되었습니다. (실패: ${failCount}개, 중복 제거: ${duplicateCount}개)`
+            : `${successCount}개의 이메일이 발송되었습니다. (실패: ${failCount}개)`
+
         return {
           success: true,
           code: "S200",
-          message: `${successCount}개의 이메일이 발송되었습니다. (실패: ${failCount}개)`,
+          message,
           data: {
             total: results.length,
             successCount,
             failCount,
+            duplicatesRemoved: duplicateCount,
             results,
           },
           timestamp: new Date().toISOString(),

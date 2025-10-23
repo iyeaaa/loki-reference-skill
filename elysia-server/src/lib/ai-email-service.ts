@@ -57,6 +57,7 @@ ${context.website ? `- 웹사이트: ${context.website}` : ""}
 3. 명확한 가치 제안
 4. 구체적인 행동 촉구 (CTA)
 5. 간결하고 읽기 쉬운 구조
+6. **중요: 이메일에서 변수나 placeholder를 사용할 때는 반드시 한글 형태 ({{회사명}}, {{담당자명}} 등)로 사용하고, 영어 형태 ({{company_name}}, {{contact_name}} 등)는 절대 사용하지 마세요.**
 
 [이메일 구조]
 제목: [한 줄로 명확한 제목]
@@ -74,7 +75,8 @@ BODY:
 [이메일 본문]`
 
       const userPrompt =
-        context.prompt || "위 고객 정보를 바탕으로 맞춤형 영업 이메일을 작성해주세요."
+        (context.prompt || "위 고객 정보를 바탕으로 맞춤형 영업 이메일을 작성해주세요.") +
+        "\n\n**중요: 변수나 placeholder를 사용할 때는 반드시 한글 형태 ({{회사명}}, {{담당자명}} 등)로 사용하고, 영어 형태 ({{company_name}}, {{contact_name}} 등)는 절대 사용하지 마세요.**"
 
       const { text } = await generateText({
         model: this.openai("gpt-4-turbo-preview"),

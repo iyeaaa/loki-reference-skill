@@ -113,6 +113,7 @@ ${lead.size ? `- 규모: ${lead.size}` : ""}
 3. 명확한 가치 제안
 4. 구체적인 행동 촉구 (CTA)
 5. 간결하고 읽기 쉬운 구조
+6. **중요: 이메일에서 변수나 placeholder를 사용할 때는 반드시 한글 형태 ({{회사명}}, {{담당자명}} 등)로 사용하고, 영어 형태 ({{company_name}}, {{contact_name}} 등)는 절대 사용하지 마세요.**
 
 [이메일 구조]
 제목: [한 줄로 명확한 제목]
@@ -201,7 +202,11 @@ BODY:
     generated: number
     failed: number
   }> {
-    const results: Array<{ leadId?: string; email?: GeneratedEmail; error?: string }> = []
+    const results: Array<{
+      leadId?: string
+      email?: GeneratedEmail
+      error?: string
+    }> = []
     let generated = 0
     let failed = 0
 

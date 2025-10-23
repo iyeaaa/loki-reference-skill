@@ -129,16 +129,16 @@ async function createLeadsFromCSV(
         workspaceId: (await getCustomerGroup(groupId))?.workspaceId || "",
         companyName: leadData.companyName,
         foundCompanyName: leadData.foundCompanyName || null,
-        businessType: leadData.businessType || null,
+        businessType: leadData.businessType ? leadData.businessType.substring(0, 100) : null,
         websiteUrl: leadData.websiteUrl || null,
         description: leadData.description || null,
         employeeCount: leadData.employeeCount || null,
         foundedYear: leadData.foundedYear || null,
-        country: leadData.country || null,
-        city: leadData.city || null,
-        state: leadData.state || null,
+        country: leadData.country ? leadData.country.substring(0, 100) : null,
+        city: leadData.city ? leadData.city.substring(0, 100) : null,
+        state: leadData.state ? leadData.state.substring(0, 100) : null,
         address: leadData.address || null,
-        leadSource: leadData.leadSource || "CSV Import",
+        leadSource: leadData.leadSource ? leadData.leadSource.substring(0, 100) : "CSV Import",
         leadStatus:
           (leadData.leadStatus as
             | "new"

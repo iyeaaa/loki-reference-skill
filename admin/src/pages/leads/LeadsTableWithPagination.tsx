@@ -8,39 +8,47 @@ import {
   Edit,
   Trash2,
   Users,
-} from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
-import toast from "react-hot-toast"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuTrigger,
-} from "@/components/ui/context-menu"
-import { Input } from "@/components/ui/input"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useDeleteLead, useLeads } from "@/lib/api/hooks/leads"
-import type { Lead, LeadStatus, LeadsParams } from "@/lib/api/types/lead"
-import { formatRelativeTime } from "@/lib/date-utils"
+} from "@/components/ui/context-menu";
+import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useDeleteLead, useLeads } from "@/lib/api/hooks/leads";
+import type { Lead, LeadStatus, LeadsParams } from "@/lib/api/types/lead";
+import { formatRelativeTime } from "@/lib/date-utils";
 
 interface LeadsTableWithPaginationProps {
-  searchQuery: string
-  selectedStatuses: string[]
-  selectedBusinessTypes: string[]
-  selectedCountries: string[]
-  selectedCities: string[]
-  selectedCustomerGroup: string
-  selectedLeads: string[]
-  onToggleLead: (leadId: string) => void
-  onToggleAll: (leadIds: string[]) => void
-  onEditLead: (lead: Lead) => void
-  onManageGroups: (lead: Lead) => void
-  onLeadsDataChange?: (leads: Lead[]) => void
+  searchQuery: string;
+  selectedStatuses: string[];
+  selectedBusinessTypes: string[];
+  selectedCountries: string[];
+  selectedCities: string[];
+  selectedCustomerGroup: string;
+  selectedLeads: string[];
+  onToggleLead: (leadId: string) => void;
+  onToggleAll: (leadIds: string[]) => void;
+  onEditLead: (lead: Lead) => void;
+  onManageGroups: (lead: Lead) => void;
+  onLeadsDataChange?: (leads: Lead[]) => void;
+  isSelectAllMode?: boolean;
+  allLeadsSelected?: boolean;
+  onToggleSelectAll?: () => void;
 }
 
 export function LeadsTableWithPagination({
@@ -56,38 +64,42 @@ export function LeadsTableWithPagination({
   onEditLead,
   onManageGroups,
   onLeadsDataChange,
+  isSelectAllMode = false,
+  allLeadsSelected = false,
+  onToggleSelectAll,
 }: LeadsTableWithPaginationProps) {
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageInputValue, setPageInputValue] = useState("1")
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInputValue, setPageInputValue] = useState("1");
   const [currentWorkspace, setCurrentWorkspace] = useState(
-    () => localStorage.getItem("selectedWorkspace") || "all",
-  )
+    () => localStorage.getItem("selectedWorkspace") || "all"
+  );
 
   // 정렬 상태 관리
-  const [sortField, setSortField] = useState<string>("createdAt")
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [sortField, setSortField] = useState<string>("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [leadToDelete, setLeadToDelete] = useState<{
-    id: string
-    name: string
-  } | null>(null)
+    id: string;
+    name: string;
+  } | null>(null);
 
-  const limit = 10
+  const limit = 10;
 
   // localStorage 변경 감지
   useEffect(() => {
     const interval = setInterval(() => {
-      const workspace = localStorage.getItem("selectedWorkspace") || "all"
+      const workspace = localStorage.getItem("selectedWorkspace") || "all";
       if (workspace !== currentWorkspace) {
-        setCurrentWorkspace(workspace)
-        setCurrentPage(1) // 워크스페이스 변경 시 첫 페이지로
+        setCurrentWorkspace(workspace);
+        setCurrentPage(1); // 워크스페이스 변경 시 첫 페이지로
       }
-    }, 100)
+    }, 100);
 
-    return () => clearInterval(interval)
-  }, [currentWorkspace])
+    return () => clearInterval(interval);
+  }, [currentWorkspace]);
 
-  const workspaceFilter = currentWorkspace === "all" ? undefined : [currentWorkspace]
+  const workspaceFilter =
+    currentWorkspace === "all" ? undefined : [currentWorkspace];
 
   // Build params for API call
   const params: LeadsParams = {
@@ -97,190 +109,208 @@ export function LeadsTableWithPagination({
       selectedStatuses.length === 1
         ? (selectedStatuses[0] as LeadStatus)
         : selectedStatuses.length > 0
-          ? "all"
-          : undefined,
+        ? "all"
+        : undefined,
     search: searchQuery || undefined,
     workspaceIds: workspaceFilter,
     customerGroupId: selectedCustomerGroup || undefined,
-  }
+  };
 
   // Use React Query hook for fetching leads
-  const { data: leadsData, isFetching } = useLeads(params)
-  const rawLeads = leadsData?.leads || []
-  const totalPages = leadsData?.totalPages || 1
-  const total = leadsData?.total || 0
+  const { data: leadsData, isFetching } = useLeads(params);
+  const rawLeads = leadsData?.leads || [];
+  const totalPages = leadsData?.totalPages || 1;
+  const total = leadsData?.total || 0;
 
   // 클라이언트 사이드 정렬
   const leads = useMemo(() => {
-    if (!rawLeads.length) return rawLeads
+    if (!rawLeads.length) return rawLeads;
 
     return [...rawLeads].sort((a, b) => {
-      let aValue: string | number
-      let bValue: string | number
+      let aValue: string | number;
+      let bValue: string | number;
 
       switch (sortField) {
         case "companyName":
-          aValue = a.companyName || a.foundCompanyName || ""
-          bValue = b.companyName || b.foundCompanyName || ""
-          break
+          aValue = a.companyName || a.foundCompanyName || "";
+          bValue = b.companyName || b.foundCompanyName || "";
+          break;
         case "websiteUrl":
-          aValue = a.websiteUrl || ""
-          bValue = b.websiteUrl || ""
-          break
+          aValue = a.websiteUrl || "";
+          bValue = b.websiteUrl || "";
+          break;
         case "description":
-          aValue = a.description || ""
-          bValue = b.description || ""
-          break
+          aValue = a.description || "";
+          bValue = b.description || "";
+          break;
         case "leadStatus":
-          aValue = a.leadStatus
-          bValue = b.leadStatus
-          break
+          aValue = a.leadStatus;
+          bValue = b.leadStatus;
+          break;
         case "businessType":
-          aValue = a.businessType || ""
-          bValue = b.businessType || ""
-          break
+          aValue = a.businessType || "";
+          bValue = b.businessType || "";
+          break;
         case "country":
-          aValue = a.country || ""
-          bValue = b.country || ""
-          break
+          aValue = a.country || "";
+          bValue = b.country || "";
+          break;
         case "city":
-          aValue = a.city || ""
-          bValue = b.city || ""
-          break
+          aValue = a.city || "";
+          bValue = b.city || "";
+          break;
         case "foundedYear":
-          aValue = a.foundedYear || 0
-          bValue = b.foundedYear || 0
-          break
+          aValue = a.foundedYear || 0;
+          bValue = b.foundedYear || 0;
+          break;
         case "employeeCount": {
           // 직원수를 숫자로 변환하여 정렬
-          const aEmployeeCount = a.employeeCount || ""
-          const bEmployeeCount = b.employeeCount || ""
-          aValue = parseInt(aEmployeeCount.replace(/\D/g, ""), 10) || 0
-          bValue = parseInt(bEmployeeCount.replace(/\D/g, ""), 10) || 0
-          break
+          const aEmployeeCount = a.employeeCount || "";
+          const bEmployeeCount = b.employeeCount || "";
+          aValue = parseInt(aEmployeeCount.replace(/\D/g, ""), 10) || 0;
+          bValue = parseInt(bEmployeeCount.replace(/\D/g, ""), 10) || 0;
+          break;
         }
         case "phone": {
           // 전화번호 (첫 번째 전화번호로 정렬)
           const aPhone =
-            (a.contacts || []).find((c) => c.contactType === "phone")?.contactValue || ""
+            (a.contacts || []).find((c) => c.contactType === "phone")
+              ?.contactValue || "";
           const bPhone =
-            (b.contacts || []).find((c) => c.contactType === "phone")?.contactValue || ""
-          aValue = aPhone
-          bValue = bPhone
-          break
+            (b.contacts || []).find((c) => c.contactType === "phone")
+              ?.contactValue || "";
+          aValue = aPhone;
+          bValue = bPhone;
+          break;
         }
         case "email": {
           // 이메일 (첫 번째 이메일로 정렬)
           const aEmail =
-            (a.contacts || []).find((c) => c.contactType === "email")?.contactValue || ""
+            (a.contacts || []).find((c) => c.contactType === "email")
+              ?.contactValue || "";
           const bEmail =
-            (b.contacts || []).find((c) => c.contactType === "email")?.contactValue || ""
-          aValue = aEmail
-          bValue = bEmail
-          break
+            (b.contacts || []).find((c) => c.contactType === "email")
+              ?.contactValue || "";
+          aValue = aEmail;
+          bValue = bEmail;
+          break;
         }
         case "facebook": {
           // Facebook URL (첫 번째 Facebook URL로 정렬)
-          const aFacebook = (a.socialMedia || []).find((s) => s.platform === "facebook")?.url || ""
-          const bFacebook = (b.socialMedia || []).find((s) => s.platform === "facebook")?.url || ""
-          aValue = aFacebook
-          bValue = bFacebook
-          break
+          const aFacebook =
+            (a.socialMedia || []).find((s) => s.platform === "facebook")?.url ||
+            "";
+          const bFacebook =
+            (b.socialMedia || []).find((s) => s.platform === "facebook")?.url ||
+            "";
+          aValue = aFacebook;
+          bValue = bFacebook;
+          break;
         }
         case "instagram": {
           // Instagram URL (첫 번째 Instagram URL로 정렬)
           const aInstagram =
-            (a.socialMedia || []).find((s) => s.platform === "instagram")?.url || ""
+            (a.socialMedia || []).find((s) => s.platform === "instagram")
+              ?.url || "";
           const bInstagram =
-            (b.socialMedia || []).find((s) => s.platform === "instagram")?.url || ""
-          aValue = aInstagram
-          bValue = bInstagram
-          break
+            (b.socialMedia || []).find((s) => s.platform === "instagram")
+              ?.url || "";
+          aValue = aInstagram;
+          bValue = bInstagram;
+          break;
         }
         case "twitter": {
           // Twitter URL (첫 번째 Twitter URL로 정렬)
-          const aTwitter = (a.socialMedia || []).find((s) => s.platform === "twitter")?.url || ""
-          const bTwitter = (b.socialMedia || []).find((s) => s.platform === "twitter")?.url || ""
-          aValue = aTwitter
-          bValue = bTwitter
-          break
+          const aTwitter =
+            (a.socialMedia || []).find((s) => s.platform === "twitter")?.url ||
+            "";
+          const bTwitter =
+            (b.socialMedia || []).find((s) => s.platform === "twitter")?.url ||
+            "";
+          aValue = aTwitter;
+          bValue = bTwitter;
+          break;
         }
         case "linkedin": {
           // LinkedIn URL (첫 번째 LinkedIn URL로 정렬)
-          const aLinkedin = (a.socialMedia || []).find((s) => s.platform === "linkedin")?.url || ""
-          const bLinkedin = (b.socialMedia || []).find((s) => s.platform === "linkedin")?.url || ""
-          aValue = aLinkedin
-          bValue = bLinkedin
-          break
+          const aLinkedin =
+            (a.socialMedia || []).find((s) => s.platform === "linkedin")?.url ||
+            "";
+          const bLinkedin =
+            (b.socialMedia || []).find((s) => s.platform === "linkedin")?.url ||
+            "";
+          aValue = aLinkedin;
+          bValue = bLinkedin;
+          break;
         }
         case "products": {
           // 제품 (첫 번째 제품명으로 정렬)
-          const aProduct = (a.products || [])[0]?.productName || ""
-          const bProduct = (b.products || [])[0]?.productName || ""
-          aValue = aProduct
-          bValue = bProduct
-          break
+          const aProduct = (a.products || [])[0]?.productName || "";
+          const bProduct = (b.products || [])[0]?.productName || "";
+          aValue = aProduct;
+          bValue = bProduct;
+          break;
         }
         case "businessSectors": {
           // 산업 부문 (첫 번째 산업 부문으로 정렬)
-          const aSector = (a.businessSectors || [])[0]?.sectorName || ""
-          const bSector = (b.businessSectors || [])[0]?.sectorName || ""
-          aValue = aSector
-          bValue = bSector
-          break
+          const aSector = (a.businessSectors || [])[0]?.sectorName || "";
+          const bSector = (b.businessSectors || [])[0]?.sectorName || "";
+          aValue = aSector;
+          bValue = bSector;
+          break;
         }
         case "productCategories": {
           // 제품 카테고리 (첫 번째 제품 카테고리로 정렬)
-          const aCategory = (a.productCategories || [])[0]?.categoryName || ""
-          const bCategory = (b.productCategories || [])[0]?.categoryName || ""
-          aValue = aCategory
-          bValue = bCategory
-          break
+          const aCategory = (a.productCategories || [])[0]?.categoryName || "";
+          const bCategory = (b.productCategories || [])[0]?.categoryName || "";
+          aValue = aCategory;
+          bValue = bCategory;
+          break;
         }
         case "industryTypes": {
           // 산업 카테고리 (첫 번째 산업 카테고리로 정렬)
-          const aIndustry = (a.industryTypes || [])[0]?.industryName || ""
-          const bIndustry = (b.industryTypes || [])[0]?.industryName || ""
-          aValue = aIndustry
-          bValue = bIndustry
-          break
+          const aIndustry = (a.industryTypes || [])[0]?.industryName || "";
+          const bIndustry = (b.industryTypes || [])[0]?.industryName || "";
+          aValue = aIndustry;
+          bValue = bIndustry;
+          break;
         }
         case "createdAt":
-          aValue = new Date(a.createdAt).getTime()
-          bValue = new Date(b.createdAt).getTime()
-          break
+          aValue = new Date(a.createdAt).getTime();
+          bValue = new Date(b.createdAt).getTime();
+          break;
         default:
-          return 0
+          return 0;
       }
 
       // 문자열 비교
       if (typeof aValue === "string" && typeof bValue === "string") {
         const comparison = aValue.localeCompare(bValue, "ko", {
           numeric: true,
-        })
-        return sortOrder === "asc" ? comparison : -comparison
+        });
+        return sortOrder === "asc" ? comparison : -comparison;
       }
 
       // 숫자 비교
       if (typeof aValue === "number" && typeof bValue === "number") {
-        return sortOrder === "asc" ? aValue - bValue : bValue - aValue
+        return sortOrder === "asc" ? aValue - bValue : bValue - aValue;
       }
 
-      return 0
-    })
-  }, [rawLeads, sortField, sortOrder])
+      return 0;
+    });
+  }, [rawLeads, sortField, sortOrder]);
 
   // Delete mutation
-  const deleteLead = useDeleteLead()
+  const deleteLead = useDeleteLead();
 
-  console.log("leads", leads)
+  console.log("leads", leads);
 
   // 리드 데이터가 변경될 때마다 부모에게 알림
   useEffect(() => {
     if (onLeadsDataChange && leads.length > 0) {
-      onLeadsDataChange(leads)
+      onLeadsDataChange(leads);
     }
-  }, [leads, onLeadsDataChange])
+  }, [leads, onLeadsDataChange]);
 
   const getStatusText = (status: LeadStatus) => {
     const statusMap: Record<LeadStatus, string> = {
@@ -291,124 +321,130 @@ export function LeadsTableWithPagination({
       converted: "전환됨",
       lost: "실패",
       unsubscribed: "구독취소",
-    }
-    return statusMap[status] || status
-  }
+    };
+    return statusMap[status] || status;
+  };
 
   const getStatusBadgeVariant = (status: LeadStatus) => {
     switch (status) {
       case "new":
-        return "default"
+        return "default";
       case "contacted":
-        return "secondary"
+        return "secondary";
       case "qualified":
-        return "outline"
+        return "outline";
       case "converted":
-        return "default"
+        return "default";
       default:
-        return "outline"
+        return "outline";
     }
-  }
+  };
 
   const handleToggleAll = useCallback(() => {
-    onToggleAll(leads.map((l) => l.id))
-  }, [leads, onToggleAll])
+    if (isSelectAllMode && onToggleSelectAll) {
+      // 전체 선택 모드에서는 헤더 체크박스가 전체 선택/해제를 담당
+      onToggleSelectAll();
+    } else {
+      // 일반 모드에서는 현재 페이지의 모든 리드 선택/해제
+      onToggleAll(leads.map((l) => l.id));
+    }
+  }, [leads, onToggleAll, isSelectAllMode, onToggleSelectAll]);
 
   // 정렬 핸들러
   const handleSort = useCallback(
     (field: string) => {
       if (sortField === field) {
         // 같은 필드 클릭 시 정렬 순서 변경
-        setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
       } else {
         // 다른 필드 클릭 시 해당 필드로 정렬 (기본 desc)
-        setSortField(field)
-        setSortOrder("desc")
+        setSortField(field);
+        setSortOrder("desc");
       }
       // 클라이언트 사이드 정렬이므로 페이지 이동 불필요
     },
-    [sortField, sortOrder],
-  )
+    [sortField, sortOrder]
+  );
 
   // 정렬 아이콘 렌더링 함수
   const renderSortIcon = (field: string) => {
     if (sortField !== field) {
-      return <ArrowUpDown className="h-4 w-4 text-gray-400" />
+      return <ArrowUpDown className="h-4 w-4 text-gray-400" />;
     }
     return sortOrder === "asc" ? (
       <ArrowUp className="h-4 w-4 text-blue-500" />
     ) : (
       <ArrowDown className="h-4 w-4 text-blue-500" />
-    )
-  }
+    );
+  };
 
   // Pagination handlers
   const handlePageChange = (page: number) => {
-    setCurrentPage(page)
-    setPageInputValue(page.toString())
-  }
+    setCurrentPage(page);
+    setPageInputValue(page.toString());
+  };
 
   const handlePageInputChange = (value: string) => {
-    setPageInputValue(value)
-  }
+    setPageInputValue(value);
+  };
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const page = parseInt(pageInputValue, 10)
+      const page = parseInt(pageInputValue, 10);
       if (page >= 1 && page <= totalPages) {
-        setCurrentPage(page)
+        setCurrentPage(page);
       } else {
-        setPageInputValue(currentPage.toString())
+        setPageInputValue(currentPage.toString());
       }
     }
-  }
+  };
 
   const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10)
+    const page = parseInt(pageInputValue, 10);
     if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page)
+      setCurrentPage(page);
     } else {
-      setPageInputValue(currentPage.toString())
+      setPageInputValue(currentPage.toString());
     }
-  }
+  };
 
   const getPageNumbers = () => {
-    const maxVisiblePages = 5
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2))
-    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1)
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
     if (endPage - startPage + 1 < maxVisiblePages) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1)
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
 
-    const pages = []
+    const pages = [];
     for (let i = startPage; i <= endPage; i++) {
-      pages.push(i)
+      pages.push(i);
     }
-    return pages
-  }
+    return pages;
+  };
 
   const handleCopyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(text)
-      toast.success("클립보드에 복사되었습니다")
+      await navigator.clipboard.writeText(text);
+      toast.success("클립보드에 복사되었습니다");
     } catch (error) {
-      console.error("Failed to copy:", error)
-      toast.error("복사에 실패했습니다")
+      console.error("Failed to copy:", error);
+      toast.error("복사에 실패했습니다");
     }
-  }
+  };
 
   const handleDeleteLead = (leadId: string, leadName: string) => {
-    setLeadToDelete({ id: leadId, name: leadName })
-    setDeleteConfirmOpen(true)
-  }
+    setLeadToDelete({ id: leadId, name: leadName });
+    setDeleteConfirmOpen(true);
+  };
 
   const confirmDelete = () => {
     if (leadToDelete) {
-      deleteLead.mutate(leadToDelete.id)
-      setLeadToDelete(null)
+      deleteLead.mutate(leadToDelete.id);
+      setLeadToDelete(null);
     }
-  }
+  };
 
   return (
     <>
@@ -429,7 +465,12 @@ export function LeadsTableWithPagination({
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   <Checkbox
-                    checked={leads.length > 0 && selectedLeads.length === leads.length}
+                    checked={
+                      isSelectAllMode
+                        ? allLeadsSelected
+                        : leads.length > 0 &&
+                          selectedLeads.length === leads.length
+                    }
                     onCheckedChange={handleToggleAll}
                   />
                 </th>
@@ -643,7 +684,12 @@ export function LeadsTableWithPagination({
                       {/* 1. Checkbox */}
                       <td className="sticky left-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800 group-hover/row:bg-gray-50 dark:group-hover/row:bg-gray-700">
                         <Checkbox
-                          checked={selectedLeads.includes(lead.id)}
+                          checked={
+                            isSelectAllMode
+                              ? allLeadsSelected ||
+                                selectedLeads.includes(lead.id)
+                              : selectedLeads.includes(lead.id)
+                          }
                           onCheckedChange={() => onToggleLead(lead.id)}
                         />
                       </td>
@@ -679,10 +725,12 @@ export function LeadsTableWithPagination({
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
+                                e.stopPropagation();
                                 handleCopyToClipboard(
-                                  lead.companyName || lead.foundCompanyName || "",
-                                )
+                                  lead.companyName ||
+                                    lead.foundCompanyName ||
+                                    ""
+                                );
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -725,8 +773,8 @@ export function LeadsTableWithPagination({
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
-                                handleCopyToClipboard(lead.websiteUrl || "")
+                                e.stopPropagation();
+                                handleCopyToClipboard(lead.websiteUrl || "");
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -757,7 +805,9 @@ export function LeadsTableWithPagination({
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-md">
-                                  <p className="whitespace-pre-wrap">{lead.description}</p>
+                                  <p className="whitespace-pre-wrap">
+                                    {lead.description}
+                                  </p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -766,8 +816,8 @@ export function LeadsTableWithPagination({
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
-                                handleCopyToClipboard(lead.description || "")
+                                e.stopPropagation();
+                                handleCopyToClipboard(lead.description || "");
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -780,7 +830,10 @@ export function LeadsTableWithPagination({
 
                       {/* 5. 상태 (leadStatus) */}
                       <td className="p-2 whitespace-nowrap text-sm">
-                        <Badge variant={getStatusBadgeVariant(lead.leadStatus)} className="text-xs">
+                        <Badge
+                          variant={getStatusBadgeVariant(lead.leadStatus)}
+                          className="text-xs"
+                        >
                           {getStatusText(lead.leadStatus)}
                         </Badge>
                       </td>
@@ -806,8 +859,8 @@ export function LeadsTableWithPagination({
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
-                                handleCopyToClipboard(lead.businessType || "")
+                                e.stopPropagation();
+                                handleCopyToClipboard(lead.businessType || "");
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -822,7 +875,10 @@ export function LeadsTableWithPagination({
                       <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.country ? (
                           <>
-                            <div className="cursor-default" title={lead.country}>
+                            <div
+                              className="cursor-default"
+                              title={lead.country}
+                            >
                               {lead.country}
                             </div>
                             <Button
@@ -830,8 +886,8 @@ export function LeadsTableWithPagination({
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
-                                handleCopyToClipboard(lead.country || "")
+                                e.stopPropagation();
+                                handleCopyToClipboard(lead.country || "");
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -854,8 +910,8 @@ export function LeadsTableWithPagination({
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
-                                handleCopyToClipboard(lead.city || "")
+                                e.stopPropagation();
+                                handleCopyToClipboard(lead.city || "");
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -875,7 +931,10 @@ export function LeadsTableWithPagination({
                       <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.employeeCount ? (
                           <>
-                            <div className="cursor-default" title={lead.employeeCount}>
+                            <div
+                              className="cursor-default"
+                              title={lead.employeeCount}
+                            >
                               {lead.employeeCount}
                             </div>
                             <Button
@@ -883,8 +942,8 @@ export function LeadsTableWithPagination({
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
-                                handleCopyToClipboard(lead.employeeCount || "")
+                                e.stopPropagation();
+                                handleCopyToClipboard(lead.employeeCount || "");
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -898,7 +957,8 @@ export function LeadsTableWithPagination({
                       {/* 11. 전화번호 (contacts - phone) */}
                       <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.contacts &&
-                        lead.contacts.filter((c) => c.contactType === "phone").length > 0 ? (
+                        lead.contacts.filter((c) => c.contactType === "phone")
+                          .length > 0 ? (
                           <>
                             <div
                               className="cursor-default max-w-[140px]"
@@ -923,13 +983,13 @@ export function LeadsTableWithPagination({
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
+                                e.stopPropagation();
                                 handleCopyToClipboard(
                                   (lead.contacts || [])
                                     .filter((c) => c.contactType === "phone")
                                     .map((c) => c.contactValue)
-                                    .join(", ") || "",
-                                )
+                                    .join(", ") || ""
+                                );
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -943,7 +1003,8 @@ export function LeadsTableWithPagination({
                       {/* 12. 이메일 (contacts - email) */}
                       <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.contacts &&
-                        lead.contacts.filter((c) => c.contactType === "email").length > 0 ? (
+                        lead.contacts.filter((c) => c.contactType === "email")
+                          .length > 0 ? (
                           <>
                             <div
                               className="cursor-default max-w-[180px]"
@@ -968,13 +1029,13 @@ export function LeadsTableWithPagination({
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
+                                e.stopPropagation();
                                 handleCopyToClipboard(
                                   (lead.contacts || [])
                                     .filter((c) => c.contactType === "email")
                                     .map((c) => c.contactValue)
-                                    .join(", ") || "",
-                                )
+                                    .join(", ") || ""
+                                );
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -988,7 +1049,9 @@ export function LeadsTableWithPagination({
                       {/* 13. Facebook */}
                       <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.socialMedia &&
-                        lead.socialMedia.filter((s) => s.platform === "facebook").length > 0 ? (
+                        lead.socialMedia.filter(
+                          (s) => s.platform === "facebook"
+                        ).length > 0 ? (
                           <>
                             <div className="max-w-[150px]">
                               {lead.socialMedia
@@ -1011,13 +1074,13 @@ export function LeadsTableWithPagination({
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
+                                e.stopPropagation();
                                 handleCopyToClipboard(
                                   (lead.socialMedia || [])
                                     .filter((s) => s.platform === "facebook")
                                     .map((s) => s.url)
-                                    .join(", ") || "",
-                                )
+                                    .join(", ") || ""
+                                );
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -1031,7 +1094,9 @@ export function LeadsTableWithPagination({
                       {/* 14. Instagram */}
                       <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.socialMedia &&
-                        lead.socialMedia.filter((s) => s.platform === "instagram").length > 0 ? (
+                        lead.socialMedia.filter(
+                          (s) => s.platform === "instagram"
+                        ).length > 0 ? (
                           <>
                             <div className="max-w-[150px]">
                               {lead.socialMedia
@@ -1054,13 +1119,13 @@ export function LeadsTableWithPagination({
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
+                                e.stopPropagation();
                                 handleCopyToClipboard(
                                   (lead.socialMedia || [])
                                     .filter((s) => s.platform === "instagram")
                                     .map((s) => s.url)
-                                    .join(", ") || "",
-                                )
+                                    .join(", ") || ""
+                                );
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -1074,7 +1139,8 @@ export function LeadsTableWithPagination({
                       {/* 15. Twitter */}
                       <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.socialMedia &&
-                        lead.socialMedia.filter((s) => s.platform === "twitter").length > 0 ? (
+                        lead.socialMedia.filter((s) => s.platform === "twitter")
+                          .length > 0 ? (
                           <>
                             <div className="max-w-[150px]">
                               {lead.socialMedia
@@ -1097,13 +1163,13 @@ export function LeadsTableWithPagination({
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
+                                e.stopPropagation();
                                 handleCopyToClipboard(
                                   (lead.socialMedia || [])
                                     .filter((s) => s.platform === "twitter")
                                     .map((s) => s.url)
-                                    .join(", ") || "",
-                                )
+                                    .join(", ") || ""
+                                );
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -1117,7 +1183,9 @@ export function LeadsTableWithPagination({
                       {/* 16. LinkedIn */}
                       <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.socialMedia &&
-                        lead.socialMedia.filter((s) => s.platform === "linkedin").length > 0 ? (
+                        lead.socialMedia.filter(
+                          (s) => s.platform === "linkedin"
+                        ).length > 0 ? (
                           <>
                             <div className="max-w-[150px]">
                               {lead.socialMedia
@@ -1140,13 +1208,13 @@ export function LeadsTableWithPagination({
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
+                                e.stopPropagation();
                                 handleCopyToClipboard(
                                   (lead.socialMedia || [])
                                     .filter((s) => s.platform === "linkedin")
                                     .map((s) => s.url)
-                                    .join(", ") || "",
-                                )
+                                    .join(", ") || ""
+                                );
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -1169,19 +1237,25 @@ export function LeadsTableWithPagination({
                                 WebkitBoxOrient: "vertical",
                                 overflow: "hidden",
                               }}
-                              title={lead.products.map((p) => p.productName).join(", ")}
+                              title={lead.products
+                                .map((p) => p.productName)
+                                .join(", ")}
                             >
-                              {lead.products.map((p) => p.productName).join(", ")}
+                              {lead.products
+                                .map((p) => p.productName)
+                                .join(", ")}
                             </div>
                             <Button
                               variant="ghost"
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
+                                e.stopPropagation();
                                 handleCopyToClipboard(
-                                  (lead.products || []).map((p) => p.productName).join(", ") || "",
-                                )
+                                  (lead.products || [])
+                                    .map((p) => p.productName)
+                                    .join(", ") || ""
+                                );
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -1194,7 +1268,8 @@ export function LeadsTableWithPagination({
 
                       {/* 18. 산업 부문 (businessSectors) */}
                       <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
-                        {lead.businessSectors && lead.businessSectors.length > 0 ? (
+                        {lead.businessSectors &&
+                        lead.businessSectors.length > 0 ? (
                           <>
                             <div
                               className="cursor-default max-w-[150px]"
@@ -1204,21 +1279,25 @@ export function LeadsTableWithPagination({
                                 WebkitBoxOrient: "vertical",
                                 overflow: "hidden",
                               }}
-                              title={lead.businessSectors.map((s) => s.sectorName).join(", ")}
+                              title={lead.businessSectors
+                                .map((s) => s.sectorName)
+                                .join(", ")}
                             >
-                              {lead.businessSectors.map((s) => s.sectorName).join(", ")}
+                              {lead.businessSectors
+                                .map((s) => s.sectorName)
+                                .join(", ")}
                             </div>
                             <Button
                               variant="ghost"
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
+                                e.stopPropagation();
                                 handleCopyToClipboard(
                                   (lead.businessSectors || [])
                                     .map((s) => s.sectorName)
-                                    .join(", ") || "",
-                                )
+                                    .join(", ") || ""
+                                );
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -1231,7 +1310,8 @@ export function LeadsTableWithPagination({
 
                       {/* 19. 제품 카테고리 (productCategories) */}
                       <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
-                        {lead.productCategories && lead.productCategories.length > 0 ? (
+                        {lead.productCategories &&
+                        lead.productCategories.length > 0 ? (
                           <>
                             <div
                               className="cursor-default max-w-[150px]"
@@ -1241,21 +1321,25 @@ export function LeadsTableWithPagination({
                                 WebkitBoxOrient: "vertical",
                                 overflow: "hidden",
                               }}
-                              title={lead.productCategories.map((c) => c.categoryName).join(", ")}
+                              title={lead.productCategories
+                                .map((c) => c.categoryName)
+                                .join(", ")}
                             >
-                              {lead.productCategories.map((c) => c.categoryName).join(", ")}
+                              {lead.productCategories
+                                .map((c) => c.categoryName)
+                                .join(", ")}
                             </div>
                             <Button
                               variant="ghost"
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
+                                e.stopPropagation();
                                 handleCopyToClipboard(
                                   (lead.productCategories || [])
                                     .map((c) => c.categoryName)
-                                    .join(", ") || "",
-                                )
+                                    .join(", ") || ""
+                                );
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -1278,21 +1362,25 @@ export function LeadsTableWithPagination({
                                 WebkitBoxOrient: "vertical",
                                 overflow: "hidden",
                               }}
-                              title={lead.industryTypes.map((i) => i.industryName).join(", ")}
+                              title={lead.industryTypes
+                                .map((i) => i.industryName)
+                                .join(", ")}
                             >
-                              {lead.industryTypes.map((i) => i.industryName).join(", ")}
+                              {lead.industryTypes
+                                .map((i) => i.industryName)
+                                .join(", ")}
                             </div>
                             <Button
                               variant="ghost"
                               size="sm"
                               className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
                               onClick={(e) => {
-                                e.stopPropagation()
+                                e.stopPropagation();
                                 handleCopyToClipboard(
                                   (lead.industryTypes || [])
                                     .map((i) => i.industryName)
-                                    .join(", ") || "",
-                                )
+                                    .join(", ") || ""
+                                );
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -1310,7 +1398,10 @@ export function LeadsTableWithPagination({
                     </tr>
                   </ContextMenuTrigger>
                   <ContextMenuContent className="w-48">
-                    <ContextMenuItem onClick={() => onEditLead(lead)} className="cursor-pointer">
+                    <ContextMenuItem
+                      onClick={() => onEditLead(lead)}
+                      className="cursor-pointer"
+                    >
                       <Edit className="mr-2 h-4 w-4" />
                       리드 편집
                     </ContextMenuItem>
@@ -1326,7 +1417,9 @@ export function LeadsTableWithPagination({
                       onClick={() =>
                         handleDeleteLead(
                           lead.id,
-                          lead.companyName || lead.foundCompanyName || "이름 없음",
+                          lead.companyName ||
+                            lead.foundCompanyName ||
+                            "이름 없음"
                         )
                       }
                       className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
@@ -1349,7 +1442,8 @@ export function LeadsTableWithPagination({
           <div className="text-sm text-muted-foreground">
             {total > 0 ? (
               <>
-                {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
+                {(currentPage - 1) * limit + 1}-
+                {Math.min(currentPage * limit, total)} /{" "}
                 {total.toLocaleString()}개 표시
               </>
             ) : (
@@ -1399,7 +1493,9 @@ export function LeadsTableWithPagination({
 
           {/* Next Page */}
           <Button
-            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+            onClick={() =>
+              handlePageChange(Math.min(totalPages, currentPage + 1))
+            }
             disabled={currentPage >= totalPages || isFetching}
             variant="outline"
             size="sm"
@@ -1435,7 +1531,9 @@ export function LeadsTableWithPagination({
             className="w-20 h-8 text-sm text-center"
             disabled={isFetching}
           />
-          <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
+          <span className="text-sm text-muted-foreground">
+            / {totalPages || 1}
+          </span>
         </div>
       </div>
 
@@ -1453,5 +1551,5 @@ export function LeadsTableWithPagination({
         variant="destructive"
       />
     </>
-  )
+  );
 }

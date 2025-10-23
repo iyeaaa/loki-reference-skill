@@ -973,10 +973,28 @@ export async function bulkCreateLeads(data: {
       try {
         const batchResult = await processBatch(batch, data.workspaceId, data.createdBy)
         allCreatedLeads.push(...batchResult)
+        console.log(
+          `Successfully processed batch ${
+            Math.floor(i / BATCH_SIZE) + 1
+          }/${Math.ceil(totalLeads / BATCH_SIZE)}`,
+        )
       } catch (error) {
         console.error(`Error processing batch ${Math.floor(i / BATCH_SIZE) + 1}:`, error)
-        console.error("Batch data:", JSON.stringify(batch, null, 2))
-        throw error
+        console.error("Batch data sample:", JSON.stringify(batch[0], null, 2))
+
+        // 개별 리드로 재시도
+        console.log(`Retrying batch ${Math.floor(i / BATCH_SIZE) + 1} as individual leads...`)
+        for (const lead of batch) {
+          try {
+            const individualResult = await processBatch([lead], data.workspaceId, data.createdBy)
+            allCreatedLeads.push(...individualResult)
+            console.log(`Successfully processed individual lead: ${lead.companyName}`)
+          } catch (individualError) {
+            console.error(`Failed to process individual lead ${lead.companyName}:`, individualError)
+            // 개별 리드도 실패하면 스킵하고 계속 진행
+            console.log(`Skipping lead: ${lead.companyName}`)
+          }
+        }
       }
     }
     return allCreatedLeads
@@ -1018,17 +1036,17 @@ async function processBatch(
       workspaceId,
       companyName: lead.companyName,
       foundCompanyName: lead.foundCompanyName || null,
-      businessType: lead.businessType || null,
+      businessType: lead.businessType ? lead.businessType.substring(0, 100) : null,
       websiteUrl: lead.websiteUrl || null,
       finalUrl: lead.websiteUrl || null,
       description: lead.description || null,
       employeeCount: lead.employeeCount || null,
       foundedYear: lead.foundedYear || null,
-      country: lead.country || null,
-      city: lead.city || null,
-      state: lead.state || null,
+      country: lead.country ? lead.country.substring(0, 100) : null,
+      city: lead.city ? lead.city.substring(0, 100) : null,
+      state: lead.state ? lead.state.substring(0, 100) : null,
       address: lead.address || null,
-      leadSource: lead.leadSource || null,
+      leadSource: lead.leadSource ? lead.leadSource.substring(0, 100) : null,
       leadStatus:
         (lead.leadStatus as
           | "new"

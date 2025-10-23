@@ -428,10 +428,15 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
             {
               sequenceId: id,
               enrolledCount: result.enrolledCount,
+              updatedCount: result.updatedCount,
               totalSteps: result.totalSteps,
               scheduledExecutions: result.scheduledExecutions,
             },
-            "🎉 [STEP-BASED] Successfully enrolled leads to step-based sequence",
+            "🎉 [STEP-BASED] Successfully processed enrollments (new: " +
+              result.enrolledCount +
+              ", existing: " +
+              result.updatedCount +
+              ")",
           )
         } catch (error) {
           logger.error(

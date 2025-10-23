@@ -680,6 +680,7 @@ export async function bulkEnrollWithScheduling(data: {
     logger.warn({ sequenceId: data.sequenceId }, "⚠️ [STEP-BASED] No lead IDs provided")
     return {
       enrolledCount: 0,
+      updatedCount: 0,
       totalSteps: steps.length,
       scheduledExecutions: 0,
     }
@@ -715,47 +716,190 @@ export async function bulkEnrollWithScheduling(data: {
 
   const validLeadIds = leadsWithEmails.map((l) => l.leadId)
 
-  // Create enrollments
-  const enrollmentValues = validLeadIds.map((leadId) => ({
-    sequenceId: data.sequenceId,
-    leadId,
-    userEmailAccountId: data.userEmailAccountId,
-    enrolledBy: data.enrolledBy || null,
-    currentStepOrder: 0,
-    status: "active" as const,
-  }))
+  // Check for existing active enrollments
+  const existingEnrollments = await db
+    .select({
+      id: sequenceEnrollments.id,
+      leadId: sequenceEnrollments.leadId,
+      currentStepOrder: sequenceEnrollments.currentStepOrder,
+    })
+    .from(sequenceEnrollments)
+    .where(
+      and(
+        eq(sequenceEnrollments.sequenceId, data.sequenceId),
+        or(...validLeadIds.map((id) => eq(sequenceEnrollments.leadId, id))),
+        eq(sequenceEnrollments.status, "active"),
+      ),
+    )
 
-  const enrollments = await db.insert(sequenceEnrollments).values(enrollmentValues).returning({
-    id: sequenceEnrollments.id,
-    leadId: sequenceEnrollments.leadId,
-    enrolledAt: sequenceEnrollments.enrolledAt,
-  })
+  const existingLeadIds = new Set(existingEnrollments.map((e) => e.leadId))
+  const newLeadIds = validLeadIds.filter((id) => !existingLeadIds.has(id))
 
   logger.info(
     {
       sequenceId: data.sequenceId,
-      enrollmentsCreated: enrollments.length,
+      totalValidLeads: validLeadIds.length,
+      existingEnrollments: existingEnrollments.length,
+      newLeadsToEnroll: newLeadIds.length,
+    },
+    "📊 [STEP-BASED] Checked existing enrollments",
+  )
+
+  // Create enrollments only for new leads
+  let newEnrollments: Array<{ id: string; leadId: string; enrolledAt: Date }> = []
+  if (newLeadIds.length > 0) {
+    const enrollmentValues = newLeadIds.map((leadId) => ({
+      sequenceId: data.sequenceId,
+      leadId,
+      userEmailAccountId: data.userEmailAccountId,
+      enrolledBy: data.enrolledBy || null,
+      currentStepOrder: 0,
+      status: "active" as const,
+    }))
+
+    newEnrollments = await db.insert(sequenceEnrollments).values(enrollmentValues).returning({
+      id: sequenceEnrollments.id,
+      leadId: sequenceEnrollments.leadId,
+      enrolledAt: sequenceEnrollments.enrolledAt,
+    })
+
+    logger.info(
+      {
+        sequenceId: data.sequenceId,
+        enrollmentsCreated: newEnrollments.length,
+        enrollmentIds: newEnrollments.map((e) => e.id),
+      },
+      "✅ [STEP-BASED] Created new enrollments",
+    )
+  }
+
+  // Combine existing and new enrollments for processing
+  const enrollments = [
+    ...existingEnrollments.map((e) => ({
+      id: e.id,
+      leadId: e.leadId,
+      enrolledAt: new Date(),
+      isExisting: true,
+      currentStepOrder: e.currentStepOrder,
+    })),
+    ...newEnrollments.map((e) => ({
+      id: e.id,
+      leadId: e.leadId,
+      enrolledAt: e.enrolledAt,
+      isExisting: false,
+      currentStepOrder: 0,
+    })),
+  ]
+
+  logger.info(
+    {
+      sequenceId: data.sequenceId,
+      totalEnrollments: enrollments.length,
+      newEnrollments: newEnrollments.length,
+      existingEnrollments: existingEnrollments.length,
       enrollmentIds: enrollments.map((e) => e.id),
     },
-    "✅ [STEP-BASED] Created enrollments",
+    "✅ [STEP-BASED] Processing enrollments",
+  )
+
+  // For existing enrollments, get their existing step executions
+  let existingStepExecutions: Array<{
+    enrollmentId: string
+    stepId: string
+    stepOrder: number
+    scheduledAt: Date
+  }> = []
+
+  if (existingEnrollments.length > 0) {
+    existingStepExecutions = await db
+      .select({
+        enrollmentId: sequenceStepExecutions.enrollmentId,
+        stepId: sequenceStepExecutions.stepId,
+        stepOrder: sequenceStepExecutions.stepOrder,
+        scheduledAt: sequenceStepExecutions.scheduledAt,
+      })
+      .from(sequenceStepExecutions)
+      .where(or(...existingEnrollments.map((e) => eq(sequenceStepExecutions.enrollmentId, e.id))))
+  }
+
+  // Create maps for quick lookup
+  // enrollmentId -> Set of existing stepIds
+  const existingStepExecutionsMap = new Map<string, Set<string>>()
+  // (enrollmentId + stepId) -> scheduledAt
+  const existingStepScheduleMap = new Map<string, Date>()
+
+  for (const exec of existingStepExecutions) {
+    if (!existingStepExecutionsMap.has(exec.enrollmentId)) {
+      existingStepExecutionsMap.set(exec.enrollmentId, new Set())
+    }
+    const existingSet = existingStepExecutionsMap.get(exec.enrollmentId)
+    if (existingSet) {
+      existingSet.add(exec.stepId)
+    }
+    // Store scheduledAt with compound key
+    existingStepScheduleMap.set(`${exec.enrollmentId}:${exec.stepId}`, exec.scheduledAt)
+  }
+
+  logger.info(
+    {
+      sequenceId: data.sequenceId,
+      existingExecutionsCount: existingStepExecutions.length,
+    },
+    "📊 [STEP-BASED] Loaded existing step executions",
   )
 
   // Create step executions for each enrollment with KST scheduling
   const stepExecutionValues = []
 
   for (const enrollment of enrollments) {
+    const existingStepIds = existingStepExecutionsMap.get(enrollment.id) || new Set()
+
+    // Always start from enrolledAt, then update baseDate as we traverse steps
     let baseDate = new Date(enrollment.enrolledAt)
 
     logger.debug(
       {
         enrollmentId: enrollment.id,
         leadId: enrollment.leadId,
-        enrolledAt: enrollment.enrolledAt,
+        isExisting: enrollment.isExisting,
+        existingStepsCount: existingStepIds.size,
+        initialBaseDate: baseDate.toISOString(),
       },
-      "📅 [STEP-BASED] Calculating schedules for enrollment",
+      enrollment.isExisting
+        ? "📅 [STEP-BASED] Processing existing enrollment - will only add new steps"
+        : "📅 [STEP-BASED] Processing new enrollment - will add all steps",
     )
 
     for (const step of steps) {
+      // Skip if this step already has an execution for this enrollment
+      if (existingStepIds.has(step.id)) {
+        // Get the scheduled time of this existing step to use as base for next step
+        const existingScheduledAt = existingStepScheduleMap.get(`${enrollment.id}:${step.id}`)
+
+        if (existingScheduledAt) {
+          baseDate = existingScheduledAt
+          logger.debug(
+            {
+              enrollmentId: enrollment.id,
+              stepId: step.id,
+              stepOrder: step.stepOrder,
+              scheduledAt: baseDate.toISOString(),
+            },
+            "⏭️ [STEP-BASED] Skipping existing step, updated baseDate",
+          )
+        } else {
+          logger.debug(
+            {
+              enrollmentId: enrollment.id,
+              stepId: step.id,
+              stepOrder: step.stepOrder,
+            },
+            "⏭️ [STEP-BASED] Skipping existing step (no execution found)",
+          )
+        }
+        continue
+      }
+
       // Calculate scheduled time in KST
       const scheduledAt = calculateScheduledTime(
         baseDate,
@@ -833,7 +977,8 @@ export async function bulkEnrollWithScheduling(data: {
   }
 
   const result = {
-    enrolledCount: enrollments.length,
+    enrolledCount: newEnrollments.length,
+    updatedCount: existingEnrollments.length,
     totalSteps: steps.length,
     scheduledExecutions: stepExecutionValues.length,
   }

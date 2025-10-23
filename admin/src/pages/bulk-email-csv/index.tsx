@@ -178,8 +178,27 @@ export default function BulkEmailCSVPage() {
               return
             }
 
-            setEmailsData(parsedEmails)
-            toast.success(`${parsedEmails.length}개의 이메일 데이터를 불러왔습니다`)
+            // 중복된 이메일 주소 제거
+            const emailMap = new Map<string, CSVEmailData>()
+            const duplicates: string[] = []
+
+            for (const email of parsedEmails) {
+              const emailKey = email.toEmail.toLowerCase()
+              if (emailMap.has(emailKey)) {
+                duplicates.push(email.toEmail)
+              } else {
+                emailMap.set(emailKey, email)
+              }
+            }
+
+            const uniqueEmails = Array.from(emailMap.values())
+
+            setEmailsData(uniqueEmails)
+            toast.success(
+              `${uniqueEmails.length}개의 이메일 데이터를 불러왔습니다${
+                duplicates.length > 0 ? ` (중복 ${duplicates.length}개 제거됨)` : ""
+              }`,
+            )
           } catch (err) {
             console.error("Failed to process parsed CSV:", err)
             toast.error("CSV 파일 처리 중 오류가 발생했습니다")

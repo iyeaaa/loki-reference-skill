@@ -20,6 +20,7 @@ export interface Sequence {
   description?: string | null
   status: SequenceStatus
   workflowData?: string | null
+  selectedLeadIds?: string | null // JSON string array of lead IDs
   createdBy?: string | null
   createdAt: string
   updatedAt: string
@@ -85,6 +86,8 @@ export interface CreateSequenceRequest {
   name: string
   description?: string
   status?: SequenceStatus
+  customerGroupId?: string
+  selectedLeadIds?: string[]
   createdBy?: string
 }
 
@@ -93,6 +96,8 @@ export interface UpdateSequenceRequest {
   description?: string
   status?: SequenceStatus
   workflowData?: string
+  customerGroupId?: string
+  selectedLeadIds?: string[]
 }
 
 export interface CreateSequenceStepRequest {

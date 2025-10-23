@@ -18,6 +18,7 @@ const sequenceSchema = t.Object({
   workflowData: t.Optional(t.String()),
   createdBy: t.Optional(t.String({ format: "uuid" })),
   customerGroupId: t.Optional(t.String({ format: "uuid" })),
+  selectedLeadIds: t.Optional(t.Array(t.String({ format: "uuid" }))),
 })
 
 const updateSequenceSchema = t.Object({
@@ -28,6 +29,7 @@ const updateSequenceSchema = t.Object({
   ),
   workflowData: t.Optional(t.String()),
   customerGroupId: t.Optional(t.String({ format: "uuid" })),
+  selectedLeadIds: t.Optional(t.Array(t.String({ format: "uuid" }))),
 })
 
 const sequenceStepSchema = t.Object({
@@ -395,28 +397,47 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
             {
               sequenceId: id,
               customerGroupId: currentSequence.customerGroupId,
+              hasSelectedLeads: !!currentSequence.selectedLeadIds,
             },
             "🔄 [STEP-BASED] Starting background enrollment",
           )
 
-          if (!currentSequence.customerGroupId) {
-            logger.warn({ sequenceId: id }, "⚠️ [STEP-BASED] No customer group ID")
-            return
+          let leadIds: string[] = []
+
+          // 선택된 리드가 있으면 그것을 사용, 없으면 전체 고객 그룹 사용
+          if (currentSequence.selectedLeadIds) {
+            try {
+              leadIds = JSON.parse(currentSequence.selectedLeadIds) as string[]
+              logger.info(
+                { sequenceId: id, selectedLeadCount: leadIds.length },
+                "📋 [STEP-BASED] Using selected leads",
+              )
+            } catch (parseError) {
+              logger.error(
+                { err: parseError, sequenceId: id },
+                "❌ [STEP-BASED] Failed to parse selectedLeadIds",
+              )
+            }
           }
 
-          const { getCustomerGroupLeads } = await import("../services/customer-group.service")
-          const leads = await getCustomerGroupLeads(currentSequence.customerGroupId)
-          const leadIds = leads.map((lead: { id: string }) => lead.id)
+          // 선택된 리드가 없거나 파싱 실패 시 전체 고객 그룹 사용
+          if (leadIds.length === 0 && currentSequence.customerGroupId) {
+            const { getCustomerGroupLeads } = await import("../services/customer-group.service")
+            const leads = await getCustomerGroupLeads(currentSequence.customerGroupId)
+            leadIds = leads.map((lead: { id: string }) => lead.id)
+            logger.info(
+              { sequenceId: id, leadCount: leadIds.length },
+              "📋 [STEP-BASED] Using all leads from customer group",
+            )
+          }
 
           if (leadIds.length === 0) {
-            logger.warn({ sequenceId: id }, "⚠️ [STEP-BASED] No leads in customer group")
+            logger.warn(
+              { sequenceId: id },
+              "⚠️ [STEP-BASED] No leads to enroll (no selected leads and no customer group)",
+            )
             return
           }
-
-          logger.info(
-            { sequenceId: id, leadCount: leadIds.length },
-            "📋 [STEP-BASED] Found leads in customer group",
-          )
 
           const result = await sequenceService.bulkEnrollWithScheduling({
             sequenceId: id,

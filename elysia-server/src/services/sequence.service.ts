@@ -30,6 +30,7 @@ export async function getSequence(id: string) {
       description: sequences.description,
       status: sequences.status,
       workflowData: sequences.workflowData,
+      selectedLeadIds: sequences.selectedLeadIds,
       createdBy: sequences.createdBy,
       createdAt: sequences.createdAt,
       updatedAt: sequences.updatedAt,
@@ -56,6 +57,7 @@ export async function createSequence(data: {
   description?: string
   status?: "draft" | "active" | "paused" | "archived"
   workflowData?: string
+  selectedLeadIds?: string[] // Array of lead IDs to target
   createdBy?: string
 }) {
   const [newSequence] = await db
@@ -67,6 +69,7 @@ export async function createSequence(data: {
       description: data.description || null,
       status: data.status || "draft",
       workflowData: data.workflowData || null,
+      selectedLeadIds: data.selectedLeadIds ? JSON.stringify(data.selectedLeadIds) : null,
       createdBy: data.createdBy || null,
     })
     .returning({
@@ -77,6 +80,7 @@ export async function createSequence(data: {
       description: sequences.description,
       status: sequences.status,
       workflowData: sequences.workflowData,
+      selectedLeadIds: sequences.selectedLeadIds,
       createdBy: sequences.createdBy,
       createdAt: sequences.createdAt,
       updatedAt: sequences.updatedAt,
@@ -94,6 +98,7 @@ export async function updateSequence(
     status?: "draft" | "active" | "paused" | "archived"
     workflowData?: string
     customerGroupId?: string
+    selectedLeadIds?: string[] // Array of lead IDs to target
   },
 ) {
   const updateData: Record<string, unknown> = {
@@ -105,6 +110,8 @@ export async function updateSequence(
   if (data.status !== undefined) updateData.status = data.status
   if (data.workflowData !== undefined) updateData.workflowData = data.workflowData
   if (data.customerGroupId !== undefined) updateData.customerGroupId = data.customerGroupId
+  if (data.selectedLeadIds !== undefined)
+    updateData.selectedLeadIds = data.selectedLeadIds ? JSON.stringify(data.selectedLeadIds) : null
 
   const [updatedSequence] = await db
     .update(sequences)
@@ -118,6 +125,7 @@ export async function updateSequence(
       description: sequences.description,
       status: sequences.status,
       workflowData: sequences.workflowData,
+      selectedLeadIds: sequences.selectedLeadIds,
       createdAt: sequences.createdAt,
       updatedAt: sequences.updatedAt,
     })
@@ -144,6 +152,7 @@ export async function listSequences(limit: number, offset: number) {
       name: sequences.name,
       description: sequences.description,
       status: sequences.status,
+      selectedLeadIds: sequences.selectedLeadIds,
       createdBy: sequences.createdBy,
       createdAt: sequences.createdAt,
       updatedAt: sequences.updatedAt,
@@ -232,6 +241,7 @@ export async function listSequencesWithFilters(
       )`,
       customerGroupId: sequences.customerGroupId,
       customerGroupName: customerGroups.name,
+      selectedLeadIds: sequences.selectedLeadIds,
     })
     .from(sequences)
     .innerJoin(workspaces, eq(sequences.workspaceId, workspaces.id))
@@ -254,6 +264,7 @@ export async function getSequencesByWorkspace(workspaceId: string) {
       name: sequences.name,
       description: sequences.description,
       status: sequences.status,
+      selectedLeadIds: sequences.selectedLeadIds,
       createdAt: sequences.createdAt,
       customerGroupName: customerGroups.name,
     })

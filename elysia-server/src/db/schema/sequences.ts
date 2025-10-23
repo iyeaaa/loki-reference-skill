@@ -55,6 +55,7 @@ export const sequences = pgTable(
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     workflowData: text("workflow_data"), // JSON data for React Flow workflow
+    selectedLeadIds: text("selected_lead_ids"), // JSON array of lead IDs to target (null = all leads in group)
     status: sequenceStatusEnum("status").notNull().default("draft"),
     createdBy: uuid("created_by").references(() => users.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

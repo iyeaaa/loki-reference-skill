@@ -320,6 +320,7 @@ export const leadRoutes = new Elysia({ prefix: "/api/v1/leads" })
           t.Object({
             companyName: t.String(),
             foundCompanyName: t.Optional(t.String()),
+            contactName: t.Optional(t.String()),
             businessType: t.Optional(t.String()),
             websiteUrl: t.Optional(t.String()),
             description: t.Optional(t.String()),

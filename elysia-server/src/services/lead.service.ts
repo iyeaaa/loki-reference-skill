@@ -26,6 +26,7 @@ export async function getLead(id: string) {
       workspaceName: workspaces.name,
       companyName: leads.companyName,
       foundCompanyName: leads.foundCompanyName,
+      contactName: leads.contactName,
       websiteUrl: leads.websiteUrl,
       finalUrl: leads.finalUrl,
       httpStatus: leads.httpStatus,
@@ -355,6 +356,7 @@ export async function listLeads(limit: number, offset: number) {
       workspaceName: workspaces.name,
       companyName: leads.companyName,
       foundCompanyName: leads.foundCompanyName,
+      contactName: leads.contactName,
       websiteUrl: leads.websiteUrl,
       businessType: leads.businessType,
       country: leads.country,
@@ -487,6 +489,7 @@ export async function listLeadsWithFilters(
       workspaceName: workspaces.name,
       companyName: leads.companyName,
       foundCompanyName: leads.foundCompanyName,
+      contactName: leads.contactName,
       websiteUrl: leads.websiteUrl,
       finalUrl: leads.finalUrl,
       httpStatus: leads.httpStatus,
@@ -660,6 +663,7 @@ export async function getLeadsByWorkspace(workspaceId: string, limit: number, of
       workspaceId: leads.workspaceId,
       companyName: leads.companyName,
       foundCompanyName: leads.foundCompanyName,
+      contactName: leads.contactName,
       websiteUrl: leads.websiteUrl,
       businessType: leads.businessType,
       country: leads.country,
@@ -702,6 +706,7 @@ export async function getLeadsByStatus(
       workspaceName: workspaces.name,
       companyName: leads.companyName,
       foundCompanyName: leads.foundCompanyName,
+      contactName: leads.contactName,
       websiteUrl: leads.websiteUrl,
       businessType: leads.businessType,
       country: leads.country,
@@ -1005,6 +1010,7 @@ export async function bulkCreateLeads(data: {
   leads: Array<{
     companyName: string
     foundCompanyName?: string
+    contactName?: string
     businessType?: string
     websiteUrl?: string
     description?: string
@@ -1080,6 +1086,7 @@ async function processBatch(
   batchLeads: Array<{
     companyName: string
     foundCompanyName?: string
+    contactName?: string
     businessType?: string
     websiteUrl?: string
     description?: string
@@ -1106,6 +1113,7 @@ async function processBatch(
       workspaceId,
       companyName: lead.companyName,
       foundCompanyName: lead.foundCompanyName || null,
+      contactName: lead.contactName || null,
       businessType: lead.businessType ? lead.businessType.substring(0, 100) : null,
       websiteUrl: lead.websiteUrl || null,
       finalUrl: lead.websiteUrl || null,
@@ -1279,6 +1287,7 @@ export async function exportLeadsToCSV(filters: {
       workspaceName: workspaces.name,
       companyName: leads.companyName,
       foundCompanyName: leads.foundCompanyName,
+      contactName: leads.contactName,
       websiteUrl: leads.websiteUrl,
       businessType: leads.businessType,
       description: leads.description,
@@ -1486,6 +1495,7 @@ export async function exportSelectedLeadsToCSV(leadIds: string[]) {
       workspaceName: workspaces.name,
       companyName: leads.companyName,
       foundCompanyName: leads.foundCompanyName,
+      contactName: leads.contactName,
       websiteUrl: leads.websiteUrl,
       businessType: leads.businessType,
       description: leads.description,

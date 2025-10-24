@@ -123,6 +123,7 @@ export const leadsApi = {
     leads: Array<{
       companyName: string
       foundCompanyName?: string
+      contactName?: string
       businessType?: string
       websiteUrl?: string
       description?: string

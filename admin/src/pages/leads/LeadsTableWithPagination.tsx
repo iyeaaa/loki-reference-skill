@@ -464,6 +464,16 @@ export function LeadsTableWithPagination({
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
+                  style={{ minWidth: "120px" }}
+                  onClick={() => handleSort("contactName")}
+                >
+                  <div className="flex items-center gap-1">
+                    담당자명
+                    {renderSortIcon("contactName")}
+                  </div>
+                </th>
+                <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "220px" }}
                   onClick={() => handleSort("websiteUrl")}
                 >
@@ -716,7 +726,48 @@ export function LeadsTableWithPagination({
                         )}
                       </td>
 
-                      {/* 3. 웹사이트 (websiteUrl) */}
+                      {/* 3. 담당자명 (contactName) */}
+                      <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.contactName ? (
+                          <>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className="cursor-default line-clamp-2 max-w-[120px]"
+                                    style={{
+                                      display: "-webkit-box",
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: "vertical",
+                                      overflow: "hidden",
+                                    }}
+                                  >
+                                    {lead.contactName}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-md">
+                                  <p className="whitespace-pre-wrap">{lead.contactName}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(lead.contactName || "")
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+
+                      {/* 4. 웹사이트 (websiteUrl) */}
                       <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.websiteUrl ? (
                           <>

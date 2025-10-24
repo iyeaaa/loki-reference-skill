@@ -50,6 +50,7 @@ export function LeadForm({
 }: LeadFormProps) {
   const companyNameId = useId()
   const foundCompanyNameId = useId()
+  const contactNameId = useId()
   const websiteUrlId = useId()
   const businessTypeId = useId()
   const countryId = useId()
@@ -62,6 +63,7 @@ export function LeadForm({
   const [formData, setFormData] = useState({
     companyName: lead?.companyName || "",
     foundCompanyName: lead?.foundCompanyName || "",
+    contactName: lead?.contactName || "",
     websiteUrl: lead?.websiteUrl || "",
     finalUrl: lead?.finalUrl || "",
     businessType: lead?.businessType || "",
@@ -201,6 +203,19 @@ export function LeadForm({
             value={formData.foundCompanyName}
             onChange={(e) => setFormData({ ...formData, foundCompanyName: e.target.value })}
             placeholder="발견된 회사명"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        {/* Contact Name */}
+        <div className="space-y-2">
+          <Label htmlFor={contactNameId}>담당자명</Label>
+          <Input
+            id={contactNameId}
+            value={formData.contactName}
+            onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
+            placeholder="담당자명 (선택사항)"
           />
         </div>
       </div>

@@ -25,6 +25,7 @@ export interface Lead {
   // Company information
   companyName?: string | null
   foundCompanyName?: string | null
+  contactName?: string | null
   websiteUrl?: string | null
   finalUrl?: string | null
   httpStatus?: number | null
@@ -70,6 +71,7 @@ export interface CreateLeadRequest {
   workspaceId: string
   companyName?: string | null
   foundCompanyName?: string | null
+  contactName?: string | null
   websiteUrl?: string | null
   finalUrl?: string | null
   httpStatus?: number | null
@@ -100,6 +102,7 @@ export interface CreateLeadRequest {
 export interface UpdateLeadRequest {
   companyName?: string | null
   foundCompanyName?: string | null
+  contactName?: string | null
   websiteUrl?: string | null
   finalUrl?: string | null
   httpStatus?: number | null

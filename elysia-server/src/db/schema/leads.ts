@@ -36,6 +36,7 @@ export const leads = pgTable(
     // Company information
     companyName: varchar("company_name", { length: 255 }),
     foundCompanyName: varchar("found_company_name", { length: 255 }),
+    contactName: varchar("contact_name", { length: 255 }),
     websiteUrl: varchar("website_url", { length: 500 }),
     finalUrl: varchar("final_url", { length: 500 }),
     httpStatus: integer("http_status"),

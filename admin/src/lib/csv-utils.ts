@@ -3,6 +3,7 @@ import * as XLSX from "xlsx"
 export interface LeadCSVData {
   companyName: string
   foundCompanyName?: string
+  contactName?: string
   businessType?: string
   websiteUrl?: string
   description?: string
@@ -112,6 +113,12 @@ export function parseXLSX(file: File): Promise<LeadCSVData[]> {
               }
             } else if (lowerHeader.includes("score") || lowerHeader.includes("점수")) {
               lead.leadScore = parseInt(value, 10) || undefined
+            } else if (
+              lowerHeader.includes("contact") ||
+              lowerHeader.includes("담당자") ||
+              lowerHeader.includes("contactname")
+            ) {
+              lead.contactName = value
             } else if (
               lowerHeader.includes("found") ||
               lowerHeader.includes("발견된") ||
@@ -271,6 +278,12 @@ export function parseCSV(csvText: string): LeadCSVData[] {
       } else if (lowerHeader.includes("score") || lowerHeader.includes("점수")) {
         lead.leadScore = parseInt(value, 10) || undefined
       } else if (
+        lowerHeader.includes("contact") ||
+        lowerHeader.includes("담당자") ||
+        lowerHeader.includes("contactname")
+      ) {
+        lead.contactName = value
+      } else if (
         lowerHeader.includes("found") ||
         lowerHeader.includes("발견된") ||
         lowerHeader.includes("찾은")
@@ -371,6 +384,7 @@ export function generateCSVTemplate(): string {
 # 컬럼 설명:
 # - companyName: 회사명 (필수)
 # - foundCompanyName: 발견된 회사명
+# - contactName: 담당자명
 # - businessType: 업종 (예: IT, 제조업, 서비스업)
 # - websiteUrl: 웹사이트 URL (필수)
 # - description: 회사 설명
@@ -389,10 +403,10 @@ export function generateCSVTemplate(): string {
 # - secondaryEmail: 보조 이메일
 # - secondaryPhone: 보조 전화번호
 
-companyName,foundCompanyName,businessType,websiteUrl,description,employeeCount,foundedYear,country,city,state,address,leadSource,leadStatus,leadScore,notes,primaryEmail,primaryPhone,secondaryEmail,secondaryPhone
-"Venus Beauty Supply","Venus Beauty Supply Ltd.","K뷰티 유통","https://venusbeautysupply.com","미국 K뷰티 유통업체","50-100명",2015,"미국","뉴욕","뉴욕주","123 Beauty St, New York","웹사이트","new",73,"K뷰티 제품 유통 가능성 높음","contact@venusbeautysupply.com","+1-555-0123","support@venusbeautysupply.com","+1-555-0124"
-"Beauty World Inc","Beauty World Inc.","화장품 유통","https://beautyworld.com","화장품 전문 유통업체","100-500명",2010,"미국","로스앤젤레스","캘리포니아","456 Cosmetics Ave, LA","추천","contacted",85,"프리미엄 브랜드 선호","info@beautyworld.com","+1-555-0234","sales@beautyworld.com","+1-555-0235"
-"Global Beauty Co","Global Beauty Company","뷰티 유통","https://globalbeauty.co","글로벌 뷰티 유통업체","500명 이상",2005,"미국","시카고","일리노이","789 Global Blvd, Chicago","전시회","qualified",92,"대규모 유통망 보유","hello@globalbeauty.co","+1-555-0345","partnerships@globalbeauty.co","+1-555-0346"`
+companyName,foundCompanyName,contactName,businessType,websiteUrl,description,employeeCount,foundedYear,country,city,state,address,leadSource,leadStatus,leadScore,notes,primaryEmail,primaryPhone,secondaryEmail,secondaryPhone
+"Venus Beauty Supply","Venus Beauty Supply Ltd.","김영희","K뷰티 유통","https://venusbeautysupply.com","미국 K뷰티 유통업체","50-100명",2015,"미국","뉴욕","뉴욕주","123 Beauty St, New York","웹사이트","new",73,"K뷰티 제품 유통 가능성 높음","contact@venusbeautysupply.com","+1-555-0123","support@venusbeautysupply.com","+1-555-0124"
+"Beauty World Inc","Beauty World Inc.","Sarah Johnson","화장품 유통","https://beautyworld.com","화장품 전문 유통업체","100-500명",2010,"미국","로스앤젤레스","캘리포니아","456 Cosmetics Ave, LA","추천","contacted",85,"프리미엄 브랜드 선호","info@beautyworld.com","+1-555-0234","sales@beautyworld.com","+1-555-0235"
+"Global Beauty Co","Global Beauty Company","Michael Chen","뷰티 유통","https://globalbeauty.co","글로벌 뷰티 유통업체","500명 이상",2005,"미국","시카고","일리노이","789 Global Blvd, Chicago","전시회","qualified",92,"대규모 유통망 보유","hello@globalbeauty.co","+1-555-0345","partnerships@globalbeauty.co","+1-555-0346"`
 
   // Add BOM for proper UTF-8 encoding in Excel
   return `\uFEFF${csvContent}`
@@ -402,6 +416,7 @@ export function generateXLSXTemplate(): Blob {
   const headers = [
     "companyName",
     "foundCompanyName",
+    "contactName",
     "businessType",
     "websiteUrl",
     "description",
@@ -425,6 +440,7 @@ export function generateXLSXTemplate(): Blob {
     [
       "Venus Beauty Supply",
       "Venus Beauty Supply Ltd.",
+      "김영희",
       "K뷰티 유통",
       "https://venusbeautysupply.com",
       "미국 K뷰티 유통업체",
@@ -446,6 +462,7 @@ export function generateXLSXTemplate(): Blob {
     [
       "Beauty World Inc",
       "Beauty World Inc.",
+      "Sarah Johnson",
       "화장품 유통",
       "https://beautyworld.com",
       "화장품 전문 유통업체",
@@ -467,6 +484,7 @@ export function generateXLSXTemplate(): Blob {
     [
       "Global Beauty Co",
       "Global Beauty Company",
+      "Michael Chen",
       "뷰티 유통",
       "https://globalbeauty.co",
       "글로벌 뷰티 유통업체",

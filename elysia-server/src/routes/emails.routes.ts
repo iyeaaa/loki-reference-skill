@@ -12,6 +12,7 @@ import {
 } from "../db/schema/sequences"
 import { workspaces } from "../db/schema/workspaces"
 import { emailService } from "../services/email.service"
+import * as leadService from "../services/lead.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
 import logger from "../utils/logger"
 
@@ -781,6 +782,31 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             },
             "Email saved successfully",
           )
+
+          // Update lead status to 'contacted' if leadId is provided
+          if (body.leadId) {
+            try {
+              await leadService.updateLead(body.leadId, {
+                leadStatus: "contacted",
+                lastContactedAt: new Date(),
+              })
+              logger.info(
+                {
+                  leadId: body.leadId,
+                  emailId: savedEmail.id,
+                },
+                "Lead status updated to contacted",
+              )
+            } catch (leadUpdateError) {
+              logger.error(
+                {
+                  leadId: body.leadId,
+                  error: leadUpdateError,
+                },
+                "Failed to update lead status",
+              )
+            }
+          }
 
           return {
             success: true,

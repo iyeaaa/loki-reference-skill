@@ -9,6 +9,7 @@ import { workflowGeneratedEmails } from "../db/schema/workflow-emails"
 import { workflowEnrollments, workflowExecutionLogs } from "../db/schema/workflow-executions"
 import logger from "../utils/logger"
 import { emailService } from "./email.service"
+import * as leadService from "./lead.service"
 
 // ====================================
 // WORKFLOW DATA TYPES
@@ -344,6 +345,29 @@ async function executeEmailDraftNode(data: {
       })
       .where(eq(workflowEnrollments.id, enrollment.id))
 
+    // Update lead status to 'contacted' and lastContactedAt
+    try {
+      await leadService.updateLead(enrollment.leadId, {
+        leadStatus: "contacted",
+        lastContactedAt: new Date(),
+      })
+      logger.info(
+        {
+          leadId: enrollment.leadId,
+          emailId: sentEmail.id,
+        },
+        "Lead status updated to contacted",
+      )
+    } catch (leadUpdateError) {
+      logger.error(
+        {
+          leadId: enrollment.leadId,
+          error: leadUpdateError,
+        },
+        "Failed to update lead status",
+      )
+    }
+
     logger.info({ emailId: sentEmail.id, messageId }, "Email sent successfully")
 
     return { success: true, emailId: sentEmail.id }
@@ -365,7 +389,10 @@ async function executeEmailDraftNode(data: {
       completedAt: new Date(),
     })
 
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
   }
 }
 
@@ -376,7 +403,12 @@ async function executeTimerNode(data: {
   enrollment: EnrollmentWithRelations
   node: WorkflowNode
   workflowData: WorkflowData
-}): Promise<{ success: boolean; scheduledFor?: Date; nextNodeId?: string; completed?: boolean }> {
+}): Promise<{
+  success: boolean
+  scheduledFor?: Date
+  nextNodeId?: string
+  completed?: boolean
+}> {
   const { enrollment, node } = data
   const delayDays = node.data.delayDays || 1
 

@@ -30,6 +30,7 @@ import { formatRelativeTime } from "@/lib/date-utils"
 
 interface LeadsTableWithPaginationProps {
   searchQuery: string
+  searchType?: "all" | "company" | "country" | "email" | "website" | "industry" | "category"
   selectedStatuses: string[]
   selectedBusinessTypes: string[]
   selectedCountries: string[]
@@ -48,6 +49,7 @@ interface LeadsTableWithPaginationProps {
 
 export function LeadsTableWithPagination({
   searchQuery,
+  searchType = "all",
   selectedStatuses,
   // selectedBusinessTypes,
   // selectedCountries,
@@ -106,6 +108,7 @@ export function LeadsTableWithPagination({
           ? "all"
           : undefined,
     search: searchQuery || undefined,
+    searchType: searchType,
     workspaceIds: workspaceFilter,
     customerGroupId: selectedCustomerGroup || undefined,
   }

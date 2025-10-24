@@ -136,6 +136,7 @@ export interface LeadsParams {
   country?: string
   city?: string
   search?: string
+  searchType?: "all" | "company" | "country" | "email" | "website" | "industry" | "category"
   workspaceIds?: string[]
   createdByIds?: string[]
   customerGroupId?: string

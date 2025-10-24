@@ -1,6 +1,6 @@
-import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
-import { db } from "../db/index";
-import { customerGroupMembers } from "../db/schema/customer-groups";
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm"
+import { db } from "../db/index"
+import { customerGroupMembers } from "../db/schema/customer-groups"
 import {
   leadBusinessSectors,
   leadContacts,
@@ -8,10 +8,10 @@ import {
   leadProductCategories,
   leadProducts,
   leadSocialMedia,
-} from "../db/schema/lead-details";
-import { type leadStatusEnum, leads } from "../db/schema/leads";
-import { users } from "../db/schema/users";
-import { workspaces } from "../db/schema/workspaces";
+} from "../db/schema/lead-details"
+import { type leadStatusEnum, leads } from "../db/schema/leads"
+import { users } from "../db/schema/users"
+import { workspaces } from "../db/schema/workspaces"
 
 // ====================================
 // LEAD CRUD OPERATIONS
@@ -58,30 +58,30 @@ export async function getLead(id: string) {
     .innerJoin(workspaces, eq(leads.workspaceId, workspaces.id))
     .leftJoin(users, eq(leads.createdBy, users.id))
     .where(eq(leads.id, id))
-    .limit(1);
+    .limit(1)
 
-  return result[0];
+  return result[0]
 }
 
 // CreateLead :one
 export async function createLead(data: {
-  workspaceId: string;
-  companyName?: string;
-  foundCompanyName?: string;
-  websiteUrl?: string;
-  finalUrl?: string;
-  httpStatus?: number;
-  nameUrlMatch?: boolean;
-  businessType?: string;
-  isBusinessTypeMatched?: boolean;
-  description?: string;
-  address?: string;
-  country?: string;
-  city?: string;
-  state?: string;
-  foundedYear?: number;
-  employeeCount?: string;
-  leadSource?: string;
+  workspaceId: string
+  companyName?: string
+  foundCompanyName?: string
+  websiteUrl?: string
+  finalUrl?: string
+  httpStatus?: number
+  nameUrlMatch?: boolean
+  businessType?: string
+  isBusinessTypeMatched?: boolean
+  description?: string
+  address?: string
+  country?: string
+  city?: string
+  state?: string
+  foundedYear?: number
+  employeeCount?: string
+  leadSource?: string
   leadStatus?:
     | "new"
     | "contacted"
@@ -89,26 +89,26 @@ export async function createLead(data: {
     | "unqualified"
     | "converted"
     | "lost"
-    | "unsubscribed";
-  leadScore?: number;
-  notes?: string;
-  crawlTimeSeconds?: string;
-  gptTimeSeconds?: string;
-  collectedAt?: Date;
-  errorMessage?: string;
-  createdBy?: string;
+    | "unsubscribed"
+  leadScore?: number
+  notes?: string
+  crawlTimeSeconds?: string
+  gptTimeSeconds?: string
+  collectedAt?: Date
+  errorMessage?: string
+  createdBy?: string
   contacts?: Array<{
-    contactType: "phone" | "email" | "fax" | "other";
-    contactValue: string;
-    contactName?: string | null;
-    label?: string | null;
-    isPrimary?: boolean;
-  }>;
+    contactType: "phone" | "email" | "fax" | "other"
+    contactValue: string
+    contactName?: string | null
+    label?: string | null
+    isPrimary?: boolean
+  }>
   socialMedia?: Array<{
-    platform: "facebook" | "instagram" | "twitter" | "linkedin";
-    url: string;
-    username?: string | null;
-  }>;
+    platform: "facebook" | "instagram" | "twitter" | "linkedin"
+    url: string
+    username?: string | null
+  }>
 }) {
   const [newLead] = await db
     .insert(leads)
@@ -152,10 +152,10 @@ export async function createLead(data: {
       createdBy: leads.createdBy,
       createdAt: leads.createdAt,
       updatedAt: leads.updatedAt,
-    });
+    })
 
   if (!newLead) {
-    throw new Error("Failed to create lead");
+    throw new Error("Failed to create lead")
   }
 
   // Insert contacts if provided
@@ -163,10 +163,8 @@ export async function createLead(data: {
     // Validate that all required fields are present
     const validContacts = data.contacts.filter(
       (contact) =>
-        contact.contactType &&
-        contact.contactValue &&
-        contact.contactValue.trim() !== ""
-    );
+        contact.contactType && contact.contactValue && contact.contactValue.trim() !== "",
+    )
 
     if (validContacts.length > 0) {
       await db.insert(leadContacts).values(
@@ -178,8 +176,8 @@ export async function createLead(data: {
           label: contact.label,
           isPrimary: contact.isPrimary || false,
           isVerified: false,
-        }))
-      );
+        })),
+      )
     }
   }
 
@@ -187,8 +185,8 @@ export async function createLead(data: {
   if (data.socialMedia && data.socialMedia.length > 0) {
     // Validate that all required fields are present
     const validSocialMedia = data.socialMedia.filter(
-      (social) => social.platform && social.url && social.url.trim() !== ""
-    );
+      (social) => social.platform && social.url && social.url.trim() !== "",
+    )
 
     if (validSocialMedia.length > 0) {
       await db.insert(leadSocialMedia).values(
@@ -198,35 +196,35 @@ export async function createLead(data: {
           url: social.url,
           username: social.username,
           isVerified: false,
-        }))
-      );
+        })),
+      )
     }
   }
 
-  return newLead;
+  return newLead
 }
 
 // UpdateLead :one
 export async function updateLead(
   id: string,
   data: {
-    workspaceId?: string;
-    companyName?: string;
-    foundCompanyName?: string;
-    websiteUrl?: string;
-    finalUrl?: string;
-    httpStatus?: number;
-    nameUrlMatch?: boolean;
-    businessType?: string;
-    isBusinessTypeMatched?: boolean;
-    description?: string;
-    address?: string;
-    country?: string;
-    city?: string;
-    state?: string;
-    foundedYear?: number;
-    employeeCount?: string;
-    leadSource?: string;
+    workspaceId?: string
+    companyName?: string
+    foundCompanyName?: string
+    websiteUrl?: string
+    finalUrl?: string
+    httpStatus?: number
+    nameUrlMatch?: boolean
+    businessType?: string
+    isBusinessTypeMatched?: boolean
+    description?: string
+    address?: string
+    country?: string
+    city?: string
+    state?: string
+    foundedYear?: number
+    employeeCount?: string
+    leadSource?: string
     leadStatus?:
       | "new"
       | "contacted"
@@ -234,30 +232,30 @@ export async function updateLead(
       | "unqualified"
       | "converted"
       | "lost"
-      | "unsubscribed";
-    leadScore?: number;
-    notes?: string;
-    crawlTimeSeconds?: string;
-    gptTimeSeconds?: string;
-    collectedAt?: Date;
-    errorMessage?: string;
-    lastContactedAt?: Date;
+      | "unsubscribed"
+    leadScore?: number
+    notes?: string
+    crawlTimeSeconds?: string
+    gptTimeSeconds?: string
+    collectedAt?: Date
+    errorMessage?: string
+    lastContactedAt?: Date
     contacts?: Array<{
-      contactType: "phone" | "email" | "fax" | "other";
-      contactValue: string;
-      contactName?: string | null;
-      label?: string | null;
-      isPrimary?: boolean;
-    }>;
+      contactType: "phone" | "email" | "fax" | "other"
+      contactValue: string
+      contactName?: string | null
+      label?: string | null
+      isPrimary?: boolean
+    }>
     socialMedia?: Array<{
-      platform: "facebook" | "instagram" | "twitter" | "linkedin";
-      url: string;
-      username?: string | null;
-    }>;
-  }
+      platform: "facebook" | "instagram" | "twitter" | "linkedin"
+      url: string
+      username?: string | null
+    }>
+  },
 ) {
   // Extract contacts and socialMedia from data
-  const { contacts, socialMedia, ...leadData } = data;
+  const { contacts, socialMedia, ...leadData } = data
   const [updatedLead] = await db
     .update(leads)
     .set({
@@ -279,22 +277,20 @@ export async function updateLead(
       createdAt: leads.createdAt,
       updatedAt: leads.updatedAt,
       lastContactedAt: leads.lastContactedAt,
-    });
+    })
 
   // Update contacts if provided
   if (contacts !== undefined) {
     // Delete existing contacts
-    await db.delete(leadContacts).where(eq(leadContacts.leadId, id));
+    await db.delete(leadContacts).where(eq(leadContacts.leadId, id))
 
     // Insert new contacts
     if (contacts.length > 0) {
       // Validate that all required fields are present
       const validContacts = contacts.filter(
         (contact) =>
-          contact.contactType &&
-          contact.contactValue &&
-          contact.contactValue.trim() !== ""
-      );
+          contact.contactType && contact.contactValue && contact.contactValue.trim() !== "",
+      )
 
       if (validContacts.length > 0) {
         await db.insert(leadContacts).values(
@@ -306,8 +302,8 @@ export async function updateLead(
             label: contact.label,
             isPrimary: contact.isPrimary || false,
             isVerified: false,
-          }))
-        );
+          })),
+        )
       }
     }
   }
@@ -315,14 +311,14 @@ export async function updateLead(
   // Update social media if provided
   if (socialMedia !== undefined) {
     // Delete existing social media
-    await db.delete(leadSocialMedia).where(eq(leadSocialMedia.leadId, id));
+    await db.delete(leadSocialMedia).where(eq(leadSocialMedia.leadId, id))
 
     // Insert new social media
     if (socialMedia.length > 0) {
       // Validate that all required fields are present
       const validSocialMedia = socialMedia.filter(
-        (social) => social.platform && social.url && social.url.trim() !== ""
-      );
+        (social) => social.platform && social.url && social.url.trim() !== "",
+      )
 
       if (validSocialMedia.length > 0) {
         await db.insert(leadSocialMedia).values(
@@ -332,18 +328,18 @@ export async function updateLead(
             url: social.url,
             username: social.username,
             isVerified: false,
-          }))
-        );
+          })),
+        )
       }
     }
   }
 
-  return updatedLead;
+  return updatedLead
 }
 
 // DeleteLead :exec
 export async function deleteLead(id: string) {
-  await db.delete(leads).where(eq(leads.id, id));
+  await db.delete(leads).where(eq(leads.id, id))
 }
 
 // ====================================
@@ -376,9 +372,9 @@ export async function listLeads(limit: number, offset: number) {
     .leftJoin(users, eq(leads.createdBy, users.id))
     .orderBy(desc(leads.createdAt))
     .limit(limit)
-    .offset(offset);
+    .offset(offset)
 
-  return result;
+  return result
 }
 
 // ListLeadsWithFilters :many
@@ -393,106 +389,95 @@ export async function listLeadsWithFilters(
       | "unqualified"
       | "converted"
       | "lost"
-      | "unsubscribed";
-    businessType?: string;
-    country?: string;
-    city?: string;
-    search?: string;
-    searchType?:
-      | "all"
-      | "company"
-      | "country"
-      | "email"
-      | "website"
-      | "industry"
-      | "category";
-    workspaceIds?: string[];
-    createdByIds?: string[];
-    customerGroupId?: string;
-  }
+      | "unsubscribed"
+    businessType?: string
+    country?: string
+    city?: string
+    search?: string
+    searchType?: "all" | "company" | "country" | "email" | "website" | "industry" | "category"
+    workspaceIds?: string[]
+    createdByIds?: string[]
+    customerGroupId?: string
+  },
 ) {
-  const conditions = [];
+  const conditions = []
 
   if (filters?.leadStatus) {
-    conditions.push(eq(leads.leadStatus, filters.leadStatus));
+    conditions.push(eq(leads.leadStatus, filters.leadStatus))
   }
 
   if (filters?.businessType) {
-    conditions.push(ilike(leads.businessType, `%${filters.businessType}%`));
+    conditions.push(ilike(leads.businessType, `%${filters.businessType}%`))
   }
 
   if (filters?.country) {
-    conditions.push(ilike(leads.country, `%${filters.country}%`));
+    conditions.push(ilike(leads.country, `%${filters.country}%`))
   }
 
   if (filters?.city) {
-    conditions.push(ilike(leads.city, `%${filters.city}%`));
+    conditions.push(ilike(leads.city, `%${filters.city}%`))
   }
 
   if (filters?.search) {
-    let searchCondition: any;
+    let searchCondition: any
 
     switch (filters.searchType) {
       case "company":
         searchCondition = or(
           ilike(leads.companyName, `%${filters.search}%`),
-          ilike(leads.foundCompanyName, `%${filters.search}%`)
-        );
-        break;
+          ilike(leads.foundCompanyName, `%${filters.search}%`),
+        )
+        break
       case "country":
-        searchCondition = ilike(leads.country, `%${filters.search}%`);
-        break;
+        searchCondition = ilike(leads.country, `%${filters.search}%`)
+        break
       case "email":
         // 이메일은 contacts 테이블에서 검색해야 하므로 별도 처리 필요
-        searchCondition = ilike(leads.companyName, `%${filters.search}%`); // 임시로 회사명으로 검색
-        break;
+        searchCondition = ilike(leads.companyName, `%${filters.search}%`) // 임시로 회사명으로 검색
+        break
       case "website":
         searchCondition = or(
           ilike(leads.websiteUrl, `%${filters.search}%`),
-          ilike(leads.finalUrl, `%${filters.search}%`)
-        );
-        break;
+          ilike(leads.finalUrl, `%${filters.search}%`),
+        )
+        break
       case "industry":
-        searchCondition = ilike(leads.businessType, `%${filters.search}%`);
-        break;
+        searchCondition = ilike(leads.businessType, `%${filters.search}%`)
+        break
       case "category":
         // 제품 카테고리는 별도 테이블에서 검색해야 하므로 임시로 설명으로 검색
-        searchCondition = ilike(leads.description, `%${filters.search}%`);
-        break;
+        searchCondition = ilike(leads.description, `%${filters.search}%`)
+        break
       default: // "all" 또는 undefined
         searchCondition = or(
           ilike(leads.companyName, `%${filters.search}%`),
           ilike(leads.foundCompanyName, `%${filters.search}%`),
           ilike(leads.websiteUrl, `%${filters.search}%`),
           ilike(leads.country, `%${filters.search}%`),
-          ilike(leads.businessType, `%${filters.search}%`)
-        );
+          ilike(leads.businessType, `%${filters.search}%`),
+        )
     }
 
     if (searchCondition) {
-      conditions.push(searchCondition);
+      conditions.push(searchCondition)
     }
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
-    const workspaceCondition = or(
-      ...filters.workspaceIds.map((id) => eq(leads.workspaceId, id))
-    );
+    const workspaceCondition = or(...filters.workspaceIds.map((id) => eq(leads.workspaceId, id)))
     if (workspaceCondition) {
-      conditions.push(workspaceCondition);
+      conditions.push(workspaceCondition)
     }
   }
 
   if (filters?.createdByIds && filters.createdByIds.length > 0) {
-    const createdByCondition = or(
-      ...filters.createdByIds.map((id) => eq(leads.createdBy, id))
-    );
+    const createdByCondition = or(...filters.createdByIds.map((id) => eq(leads.createdBy, id)))
     if (createdByCondition) {
-      conditions.push(createdByCondition);
+      conditions.push(createdByCondition)
     }
   }
 
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
   // Get basic lead data
   const baseQuery = db
@@ -532,67 +517,50 @@ export async function listLeadsWithFilters(
     })
     .from(leads)
     .innerJoin(workspaces, eq(leads.workspaceId, workspaces.id))
-    .leftJoin(users, eq(leads.createdBy, users.id));
+    .leftJoin(users, eq(leads.createdBy, users.id))
 
   // If customerGroupId is specified, join with customerGroupMembers table
-  let result: Awaited<ReturnType<typeof baseQuery.orderBy>>;
+  let result: Awaited<ReturnType<typeof baseQuery.orderBy>>
   if (filters?.customerGroupId) {
     result = await baseQuery
-      .innerJoin(
-        customerGroupMembers,
-        eq(leads.id, customerGroupMembers.leadId)
-      )
-      .where(
-        and(
-          eq(customerGroupMembers.groupId, filters.customerGroupId),
-          whereClause
-        )
-      )
+      .innerJoin(customerGroupMembers, eq(leads.id, customerGroupMembers.leadId))
+      .where(and(eq(customerGroupMembers.groupId, filters.customerGroupId), whereClause))
       .orderBy(desc(leads.createdAt))
       .limit(limit)
-      .offset(offset);
+      .offset(offset)
   } else if (whereClause) {
     result = await baseQuery
       .where(whereClause)
       .orderBy(desc(leads.createdAt))
       .limit(limit)
-      .offset(offset);
+      .offset(offset)
   } else {
-    result = await baseQuery
-      .orderBy(desc(leads.createdAt))
-      .limit(limit)
-      .offset(offset);
+    result = await baseQuery.orderBy(desc(leads.createdAt)).limit(limit).offset(offset)
   }
 
   // Get all related data for each lead
-  const leadIds = result.map((lead) => lead.id);
+  const leadIds = result.map((lead) => lead.id)
 
-  const contactsMap = new Map();
-  const socialMediaMap = new Map();
-  const productsMap = new Map();
-  const businessSectorsMap = new Map();
-  const productCategoriesMap = new Map();
-  const industryTypesMap = new Map();
+  const contactsMap = new Map()
+  const socialMediaMap = new Map()
+  const productsMap = new Map()
+  const businessSectorsMap = new Map()
+  const productCategoriesMap = new Map()
+  const industryTypesMap = new Map()
 
   if (leadIds.length > 0) {
-    const leadIdCondition = or(
-      ...leadIds.map((id) => eq(leadContacts.leadId, id))
-    );
-    const leadIdSocialCondition = or(
-      ...leadIds.map((id) => eq(leadSocialMedia.leadId, id))
-    );
-    const leadIdProductsCondition = or(
-      ...leadIds.map((id) => eq(leadProducts.leadId, id))
-    );
+    const leadIdCondition = or(...leadIds.map((id) => eq(leadContacts.leadId, id)))
+    const leadIdSocialCondition = or(...leadIds.map((id) => eq(leadSocialMedia.leadId, id)))
+    const leadIdProductsCondition = or(...leadIds.map((id) => eq(leadProducts.leadId, id)))
     const leadIdBusinessSectorsCondition = or(
-      ...leadIds.map((id) => eq(leadBusinessSectors.leadId, id))
-    );
+      ...leadIds.map((id) => eq(leadBusinessSectors.leadId, id)),
+    )
     const leadIdProductCategoriesCondition = or(
-      ...leadIds.map((id) => eq(leadProductCategories.leadId, id))
-    );
+      ...leadIds.map((id) => eq(leadProductCategories.leadId, id)),
+    )
     const leadIdIndustryTypesCondition = or(
-      ...leadIds.map((id) => eq(leadIndustryTypes.leadId, id))
-    );
+      ...leadIds.map((id) => eq(leadIndustryTypes.leadId, id)),
+    )
 
     // Get contacts for all leads
     const allContacts = leadIdCondition
@@ -601,84 +569,75 @@ export async function listLeadsWithFilters(
           .from(leadContacts)
           .where(leadIdCondition)
           .orderBy(desc(leadContacts.isPrimary))
-      : [];
+      : []
 
     // Get social media for all leads
     const allSocialMedia = leadIdSocialCondition
       ? await db.select().from(leadSocialMedia).where(leadIdSocialCondition)
-      : [];
+      : []
 
     // Get products for all leads
     const allProducts = leadIdProductsCondition
       ? await db.select().from(leadProducts).where(leadIdProductsCondition)
-      : [];
+      : []
 
     // Get business sectors for all leads
     const allBusinessSectors = leadIdBusinessSectorsCondition
-      ? await db
-          .select()
-          .from(leadBusinessSectors)
-          .where(leadIdBusinessSectorsCondition)
-      : [];
+      ? await db.select().from(leadBusinessSectors).where(leadIdBusinessSectorsCondition)
+      : []
 
     // Get product categories for all leads
     const allProductCategories = leadIdProductCategoriesCondition
-      ? await db
-          .select()
-          .from(leadProductCategories)
-          .where(leadIdProductCategoriesCondition)
-      : [];
+      ? await db.select().from(leadProductCategories).where(leadIdProductCategoriesCondition)
+      : []
 
     // Get industry types for all leads
     const allIndustryTypes = leadIdIndustryTypesCondition
-      ? await db
-          .select()
-          .from(leadIndustryTypes)
-          .where(leadIdIndustryTypesCondition)
-      : [];
+      ? await db.select().from(leadIndustryTypes).where(leadIdIndustryTypesCondition)
+      : []
 
     // Group by leadId
     allContacts.forEach((contact) => {
       if (!contactsMap.has(contact.leadId)) {
-        contactsMap.set(contact.leadId, []);
+        contactsMap.set(contact.leadId, [])
       }
-      contactsMap.get(contact.leadId)?.push(contact);
-    });
+      contactsMap.get(contact.leadId)?.push(contact)
+    })
 
     allSocialMedia.forEach((social) => {
       if (!socialMediaMap.has(social.leadId)) {
-        socialMediaMap.set(social.leadId, []);
+        socialMediaMap.set(social.leadId, [])
       }
-      socialMediaMap.get(social.leadId)?.push(social);
-    });
+      socialMediaMap.get(social.leadId)?.push(social)
+    })
 
     allProducts.forEach((product) => {
       if (!productsMap.has(product.leadId)) {
-        productsMap.set(product.leadId, []);
+        productsMap.set(product.leadId, [])
       }
-      productsMap.get(product.leadId)?.push(product);
-    });
+      productsMap.get(product.leadId)?.push(product)
+    })
 
     allBusinessSectors.forEach((sector) => {
       if (!businessSectorsMap.has(sector.leadId)) {
-        businessSectorsMap.set(sector.leadId, []);
+        businessSectorsMap.set(sector.leadId, [])
       }
-      businessSectorsMap.get(sector.leadId)?.push(sector);
-    });
+      businessSectorsMap.get(sector.leadId)?.push(sector)
+    })
 
     allProductCategories.forEach((category) => {
       if (!productCategoriesMap.has(category.leadId)) {
-        productCategoriesMap.set(category.leadId, []);
+        productCategoriesMap.set(category.leadId, [])
       }
-      productCategoriesMap.get(category.leadId)?.push(category);
-    });
+      productCategoriesMap.get(category.leadId)?.push(category)
+    })
 
     allIndustryTypes.forEach((industry) => {
       if (!industryTypesMap.has(industry.leadId)) {
-        industryTypesMap.set(industry.leadId, []);
+        industryTypesMap.set(industry.leadId, [])
       }
-      industryTypesMap.get(industry.leadId)?.push(industry);
-    });
+      industryTypesMap.get(industry.leadId)?.push(industry)
+    })
   }
 
   // Combine data
@@ -690,15 +649,11 @@ export async function listLeadsWithFilters(
     businessSectors: businessSectorsMap.get(lead.id) || [],
     productCategories: productCategoriesMap.get(lead.id) || [],
     industryTypes: industryTypesMap.get(lead.id) || [],
-  }));
+  }))
 }
 
 // GetLeadsByWorkspace :many
-export async function getLeadsByWorkspace(
-  workspaceId: string,
-  limit: number,
-  offset: number
-) {
+export async function getLeadsByWorkspace(workspaceId: string, limit: number, offset: number) {
   const result = await db
     .select({
       id: leads.id,
@@ -722,9 +677,9 @@ export async function getLeadsByWorkspace(
     .where(eq(leads.workspaceId, workspaceId))
     .orderBy(desc(leads.createdAt))
     .limit(limit)
-    .offset(offset);
+    .offset(offset)
 
-  return result;
+  return result
 }
 
 // GetLeadsByStatus :many
@@ -738,7 +693,7 @@ export async function getLeadsByStatus(
     | "lost"
     | "unsubscribed",
   limit: number,
-  offset: number
+  offset: number,
 ) {
   const result = await db
     .select({
@@ -765,9 +720,9 @@ export async function getLeadsByStatus(
     .where(eq(leads.leadStatus, leadStatus))
     .orderBy(desc(leads.createdAt))
     .limit(limit)
-    .offset(offset);
+    .offset(offset)
 
-  return result;
+  return result
 }
 
 // ====================================
@@ -776,11 +731,9 @@ export async function getLeadsByStatus(
 
 // CountLeads :one
 export async function countLeads() {
-  const result = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(leads);
+  const result = await db.select({ count: sql<number>`count(*)::int` }).from(leads)
 
-  return result[0]?.count ?? 0;
+  return result[0]?.count ?? 0
 }
 
 // CountLeadsWithFilters :one
@@ -792,132 +745,110 @@ export async function countLeadsWithFilters(filters?: {
     | "unqualified"
     | "converted"
     | "lost"
-    | "unsubscribed";
-  businessType?: string;
-  country?: string;
-  city?: string;
-  search?: string;
-  searchType?:
-    | "all"
-    | "company"
-    | "country"
-    | "email"
-    | "website"
-    | "industry"
-    | "category";
-  workspaceIds?: string[];
-  createdByIds?: string[];
-  customerGroupId?: string;
+    | "unsubscribed"
+  businessType?: string
+  country?: string
+  city?: string
+  search?: string
+  searchType?: "all" | "company" | "country" | "email" | "website" | "industry" | "category"
+  workspaceIds?: string[]
+  createdByIds?: string[]
+  customerGroupId?: string
 }) {
-  const conditions = [];
+  const conditions = []
 
   if (filters?.leadStatus) {
-    conditions.push(eq(leads.leadStatus, filters.leadStatus));
+    conditions.push(eq(leads.leadStatus, filters.leadStatus))
   }
 
   if (filters?.businessType) {
-    conditions.push(ilike(leads.businessType, `%${filters.businessType}%`));
+    conditions.push(ilike(leads.businessType, `%${filters.businessType}%`))
   }
 
   if (filters?.country) {
-    conditions.push(ilike(leads.country, `%${filters.country}%`));
+    conditions.push(ilike(leads.country, `%${filters.country}%`))
   }
 
   if (filters?.city) {
-    conditions.push(ilike(leads.city, `%${filters.city}%`));
+    conditions.push(ilike(leads.city, `%${filters.city}%`))
   }
 
   if (filters?.search) {
-    let searchCondition: any;
+    let searchCondition: any
 
     switch (filters.searchType) {
       case "company":
         searchCondition = or(
           ilike(leads.companyName, `%${filters.search}%`),
-          ilike(leads.foundCompanyName, `%${filters.search}%`)
-        );
-        break;
+          ilike(leads.foundCompanyName, `%${filters.search}%`),
+        )
+        break
       case "country":
-        searchCondition = ilike(leads.country, `%${filters.search}%`);
-        break;
+        searchCondition = ilike(leads.country, `%${filters.search}%`)
+        break
       case "email":
         // 이메일은 contacts 테이블에서 검색해야 하므로 별도 처리 필요
-        searchCondition = ilike(leads.companyName, `%${filters.search}%`); // 임시로 회사명으로 검색
-        break;
+        searchCondition = ilike(leads.companyName, `%${filters.search}%`) // 임시로 회사명으로 검색
+        break
       case "website":
         searchCondition = or(
           ilike(leads.websiteUrl, `%${filters.search}%`),
-          ilike(leads.finalUrl, `%${filters.search}%`)
-        );
-        break;
+          ilike(leads.finalUrl, `%${filters.search}%`),
+        )
+        break
       case "industry":
-        searchCondition = ilike(leads.businessType, `%${filters.search}%`);
-        break;
+        searchCondition = ilike(leads.businessType, `%${filters.search}%`)
+        break
       case "category":
         // 제품 카테고리는 별도 테이블에서 검색해야 하므로 임시로 설명으로 검색
-        searchCondition = ilike(leads.description, `%${filters.search}%`);
-        break;
+        searchCondition = ilike(leads.description, `%${filters.search}%`)
+        break
       default: // "all" 또는 undefined
         searchCondition = or(
           ilike(leads.companyName, `%${filters.search}%`),
           ilike(leads.foundCompanyName, `%${filters.search}%`),
           ilike(leads.websiteUrl, `%${filters.search}%`),
           ilike(leads.country, `%${filters.search}%`),
-          ilike(leads.businessType, `%${filters.search}%`)
-        );
+          ilike(leads.businessType, `%${filters.search}%`),
+        )
     }
 
     if (searchCondition) {
-      conditions.push(searchCondition);
+      conditions.push(searchCondition)
     }
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
-    const workspaceCondition = or(
-      ...filters.workspaceIds.map((id) => eq(leads.workspaceId, id))
-    );
+    const workspaceCondition = or(...filters.workspaceIds.map((id) => eq(leads.workspaceId, id)))
     if (workspaceCondition) {
-      conditions.push(workspaceCondition);
+      conditions.push(workspaceCondition)
     }
   }
 
   if (filters?.createdByIds && filters.createdByIds.length > 0) {
-    const createdByCondition = or(
-      ...filters.createdByIds.map((id) => eq(leads.createdBy, id))
-    );
+    const createdByCondition = or(...filters.createdByIds.map((id) => eq(leads.createdBy, id)))
     if (createdByCondition) {
-      conditions.push(createdByCondition);
+      conditions.push(createdByCondition)
     }
   }
 
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
   // If customerGroupId is specified, join with customerGroupMembers table
-  let result: { count: number }[];
+  let result: { count: number }[]
   if (filters?.customerGroupId) {
     result = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(leads)
-      .innerJoin(
-        customerGroupMembers,
-        eq(leads.id, customerGroupMembers.leadId)
-      )
-      .where(
-        and(
-          eq(customerGroupMembers.groupId, filters.customerGroupId),
-          whereClause
-        )
-      );
+      .innerJoin(customerGroupMembers, eq(leads.id, customerGroupMembers.leadId))
+      .where(and(eq(customerGroupMembers.groupId, filters.customerGroupId), whereClause))
   } else if (whereClause) {
-    result = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(leads)
-      .where(whereClause);
+    result = await db.select({ count: sql<number>`count(*)::int` }).from(leads).where(whereClause)
   } else {
-    result = await db.select({ count: sql<number>`count(*)::int` }).from(leads);
+    result = await db.select({ count: sql<number>`count(*)::int` }).from(leads)
   }
 
-  return result[0]?.count ?? 0;
+  return result[0]?.count ?? 0
 }
 
 // CountLeadsByWorkspace :one
@@ -925,9 +856,9 @@ export async function countLeadsByWorkspace(workspaceId: string) {
   const result = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(leads)
-    .where(eq(leads.workspaceId, workspaceId));
+    .where(eq(leads.workspaceId, workspaceId))
 
-  return result[0]?.count ?? 0;
+  return result[0]?.count ?? 0
 }
 
 // ====================================
@@ -944,11 +875,11 @@ export async function bulkUpdateStatus(
     | "unqualified"
     | "converted"
     | "lost"
-    | "unsubscribed"
+    | "unsubscribed",
 ) {
-  const leadCondition = or(...leadIds.map((id) => eq(leads.id, id)));
+  const leadCondition = or(...leadIds.map((id) => eq(leads.id, id)))
   if (!leadCondition) {
-    return 0;
+    return 0
   }
 
   const result = await db
@@ -958,34 +889,28 @@ export async function bulkUpdateStatus(
       updatedAt: new Date(),
     })
     .where(leadCondition)
-    .returning({ id: leads.id });
+    .returning({ id: leads.id })
 
-  return result.length;
+  return result.length
 }
 
 // BulkDelete :exec
 export async function bulkDelete(leadIds: string[]) {
-  const leadCondition = or(...leadIds.map((id) => eq(leads.id, id)));
+  const leadCondition = or(...leadIds.map((id) => eq(leads.id, id)))
   if (!leadCondition) {
-    return 0;
+    return 0
   }
 
-  const result = await db
-    .delete(leads)
-    .where(leadCondition)
-    .returning({ id: leads.id });
+  const result = await db.delete(leads).where(leadCondition).returning({ id: leads.id })
 
-  return result.length;
+  return result.length
 }
 
 // BulkUpdateBusinessType :exec
-export async function bulkUpdateBusinessType(
-  leadIds: string[],
-  businessType: string
-) {
-  const leadCondition = or(...leadIds.map((id) => eq(leads.id, id)));
+export async function bulkUpdateBusinessType(leadIds: string[], businessType: string) {
+  const leadCondition = or(...leadIds.map((id) => eq(leads.id, id)))
   if (!leadCondition) {
-    return 0;
+    return 0
   }
 
   const result = await db
@@ -995,9 +920,9 @@ export async function bulkUpdateBusinessType(
       updatedAt: new Date(),
     })
     .where(leadCondition)
-    .returning({ id: leads.id });
+    .returning({ id: leads.id })
 
-  return result.length;
+  return result.length
 }
 
 // ====================================
@@ -1010,9 +935,9 @@ export async function getLeadContacts(leadId: string) {
     .select()
     .from(leadContacts)
     .where(eq(leadContacts.leadId, leadId))
-    .orderBy(desc(leadContacts.isPrimary), desc(leadContacts.createdAt));
+    .orderBy(desc(leadContacts.isPrimary), desc(leadContacts.createdAt))
 
-  return result;
+  return result
 }
 
 // GetLeadSocialMedia :many
@@ -1021,9 +946,9 @@ export async function getLeadSocialMedia(leadId: string) {
     .select()
     .from(leadSocialMedia)
     .where(eq(leadSocialMedia.leadId, leadId))
-    .orderBy(desc(leadSocialMedia.createdAt));
+    .orderBy(desc(leadSocialMedia.createdAt))
 
-  return result;
+  return result
 }
 
 // GetLeadProducts :many
@@ -1032,9 +957,9 @@ export async function getLeadProducts(leadId: string) {
     .select()
     .from(leadProducts)
     .where(eq(leadProducts.leadId, leadId))
-    .orderBy(desc(leadProducts.createdAt));
+    .orderBy(desc(leadProducts.createdAt))
 
-  return result;
+  return result
 }
 
 // GetLeadBusinessSectors :many
@@ -1043,9 +968,9 @@ export async function getLeadBusinessSectors(leadId: string) {
     .select()
     .from(leadBusinessSectors)
     .where(eq(leadBusinessSectors.leadId, leadId))
-    .orderBy(desc(leadBusinessSectors.createdAt));
+    .orderBy(desc(leadBusinessSectors.createdAt))
 
-  return result;
+  return result
 }
 
 // GetLeadProductCategories :many
@@ -1054,9 +979,9 @@ export async function getLeadProductCategories(leadId: string) {
     .select()
     .from(leadProductCategories)
     .where(eq(leadProductCategories.leadId, leadId))
-    .orderBy(desc(leadProductCategories.createdAt));
+    .orderBy(desc(leadProductCategories.createdAt))
 
-  return result;
+  return result
 }
 
 // GetLeadIndustryTypes :many
@@ -1065,9 +990,9 @@ export async function getLeadIndustryTypes(leadId: string) {
     .select()
     .from(leadIndustryTypes)
     .where(eq(leadIndustryTypes.leadId, leadId))
-    .orderBy(desc(leadIndustryTypes.createdAt));
+    .orderBy(desc(leadIndustryTypes.createdAt))
 
-  return result;
+  return result
 }
 
 // ====================================
@@ -1076,134 +1001,112 @@ export async function getLeadIndustryTypes(leadId: string) {
 
 // BulkCreateLeads :many
 export async function bulkCreateLeads(data: {
-  workspaceId: string;
+  workspaceId: string
   leads: Array<{
-    companyName: string;
-    foundCompanyName?: string;
-    businessType?: string;
-    websiteUrl?: string;
-    description?: string;
-    employeeCount?: string;
-    foundedYear?: number;
-    country?: string;
-    city?: string;
-    state?: string;
-    address?: string;
-    leadSource?: string;
-    leadStatus?: string;
-    leadScore?: number;
-    notes?: string;
-    primaryEmail?: string;
-    primaryPhone?: string;
-    secondaryEmail?: string;
-    secondaryPhone?: string;
-  }>;
-  createdBy?: string;
+    companyName: string
+    foundCompanyName?: string
+    businessType?: string
+    websiteUrl?: string
+    description?: string
+    employeeCount?: string
+    foundedYear?: number
+    country?: string
+    city?: string
+    state?: string
+    address?: string
+    leadSource?: string
+    leadStatus?: string
+    leadScore?: number
+    notes?: string
+    primaryEmail?: string
+    primaryPhone?: string
+    secondaryEmail?: string
+    secondaryPhone?: string
+  }>
+  createdBy?: string
 }) {
   // 대량 데이터 처리를 위한 배치 크기 제한
-  const BATCH_SIZE = 10;
-  const totalLeads = data.leads.length;
+  const BATCH_SIZE = 10
+  const totalLeads = data.leads.length
 
   if (totalLeads === 0) {
-    return [];
+    return []
   }
 
-  const allCreatedLeads = [];
+  const allCreatedLeads = []
 
   try {
     // 배치 단위로 처리
     for (let i = 0; i < totalLeads; i += BATCH_SIZE) {
-      const batch = data.leads.slice(i, i + BATCH_SIZE);
+      const batch = data.leads.slice(i, i + BATCH_SIZE)
 
       try {
-        const batchResult = await processBatch(
-          batch,
-          data.workspaceId,
-          data.createdBy
-        );
-        allCreatedLeads.push(...batchResult);
+        const batchResult = await processBatch(batch, data.workspaceId, data.createdBy)
+        allCreatedLeads.push(...batchResult)
         console.log(
           `Successfully processed batch ${
             Math.floor(i / BATCH_SIZE) + 1
-          }/${Math.ceil(totalLeads / BATCH_SIZE)}`
-        );
+          }/${Math.ceil(totalLeads / BATCH_SIZE)}`,
+        )
       } catch (error) {
-        console.error(
-          `Error processing batch ${Math.floor(i / BATCH_SIZE) + 1}:`,
-          error
-        );
-        console.error("Batch data sample:", JSON.stringify(batch[0], null, 2));
+        console.error(`Error processing batch ${Math.floor(i / BATCH_SIZE) + 1}:`, error)
+        console.error("Batch data sample:", JSON.stringify(batch[0], null, 2))
 
         // 개별 리드로 재시도
-        console.log(
-          `Retrying batch ${
-            Math.floor(i / BATCH_SIZE) + 1
-          } as individual leads...`
-        );
+        console.log(`Retrying batch ${Math.floor(i / BATCH_SIZE) + 1} as individual leads...`)
         for (const lead of batch) {
           try {
-            const individualResult = await processBatch(
-              [lead],
-              data.workspaceId,
-              data.createdBy
-            );
-            allCreatedLeads.push(...individualResult);
-            console.log(
-              `Successfully processed individual lead: ${lead.companyName}`
-            );
+            const individualResult = await processBatch([lead], data.workspaceId, data.createdBy)
+            allCreatedLeads.push(...individualResult)
+            console.log(`Successfully processed individual lead: ${lead.companyName}`)
           } catch (individualError) {
-            console.error(
-              `Failed to process individual lead ${lead.companyName}:`,
-              individualError
-            );
+            console.error(`Failed to process individual lead ${lead.companyName}:`, individualError)
             // 개별 리드도 실패하면 스킵하고 계속 진행
-            console.log(`Skipping lead: ${lead.companyName}`);
+            console.log(`Skipping lead: ${lead.companyName}`)
           }
         }
       }
     }
-    return allCreatedLeads;
+    return allCreatedLeads
   } catch (error) {
-    console.error("Bulk create failed:", error);
-    console.error("Total leads:", totalLeads);
-    console.error("Workspace ID:", data.workspaceId);
-    throw error;
+    console.error("Bulk create failed:", error)
+    console.error("Total leads:", totalLeads)
+    console.error("Workspace ID:", data.workspaceId)
+    throw error
   }
 }
 
 async function processBatch(
   batchLeads: Array<{
-    companyName: string;
-    foundCompanyName?: string;
-    businessType?: string;
-    websiteUrl?: string;
-    description?: string;
-    employeeCount?: string;
-    foundedYear?: number;
-    country?: string;
-    city?: string;
-    state?: string;
-    address?: string;
-    leadSource?: string;
-    leadStatus?: string;
-    leadScore?: number;
-    notes?: string;
-    primaryEmail?: string;
-    primaryPhone?: string;
-    secondaryEmail?: string;
-    secondaryPhone?: string;
+    companyName: string
+    foundCompanyName?: string
+    businessType?: string
+    websiteUrl?: string
+    description?: string
+    employeeCount?: string
+    foundedYear?: number
+    country?: string
+    city?: string
+    state?: string
+    address?: string
+    leadSource?: string
+    leadStatus?: string
+    leadScore?: number
+    notes?: string
+    primaryEmail?: string
+    primaryPhone?: string
+    secondaryEmail?: string
+    secondaryPhone?: string
   }>,
   workspaceId: string,
-  createdBy?: string
+  createdBy?: string,
 ) {
   try {
     const leadValues = batchLeads.map((lead) => ({
       workspaceId,
       companyName: lead.companyName,
       foundCompanyName: lead.foundCompanyName || null,
-      businessType: lead.businessType
-        ? lead.businessType.substring(0, 100)
-        : null,
+      businessType: lead.businessType ? lead.businessType.substring(0, 100) : null,
       websiteUrl: lead.websiteUrl || null,
       finalUrl: lead.websiteUrl || null,
       description: lead.description || null,
@@ -1226,11 +1129,9 @@ async function processBatch(
       leadScore: lead.leadScore || null,
       notes: lead.notes || null,
       createdBy: createdBy || null,
-    }));
+    }))
 
-    console.log(
-      `Processing ${leadValues.length} leads for workspace ${workspaceId}`
-    );
+    console.log(`Processing ${leadValues.length} leads for workspace ${workspaceId}`)
 
     const createdLeads = await db.insert(leads).values(leadValues).returning({
       id: leads.id,
@@ -1245,22 +1146,22 @@ async function processBatch(
       leadScore: leads.leadScore,
       createdBy: leads.createdBy,
       createdAt: leads.createdAt,
-    });
+    })
 
-    console.log(`Successfully inserted ${createdLeads.length} leads`);
+    console.log(`Successfully inserted ${createdLeads.length} leads`)
 
     // 연락처 정보가 있는 경우 leadContacts 테이블에 추가
     const contactValues: Array<{
-      leadId: string;
-      contactType: "email" | "phone" | "fax" | "other";
-      contactValue: string;
-      isPrimary: boolean;
-    }> = [];
+      leadId: string
+      contactType: "email" | "phone" | "fax" | "other"
+      contactValue: string
+      isPrimary: boolean
+    }> = []
     for (let i = 0; i < batchLeads.length; i++) {
-      const lead = batchLeads[i];
-      const createdLead = createdLeads[i];
+      const lead = batchLeads[i]
+      const createdLead = createdLeads[i]
 
-      if (!lead || !createdLead) continue;
+      if (!lead || !createdLead) continue
 
       if (lead.primaryEmail) {
         contactValues.push({
@@ -1268,7 +1169,7 @@ async function processBatch(
           contactType: "email",
           contactValue: lead.primaryEmail,
           isPrimary: true,
-        });
+        })
       }
       if (lead.primaryPhone) {
         contactValues.push({
@@ -1276,7 +1177,7 @@ async function processBatch(
           contactType: "phone",
           contactValue: lead.primaryPhone,
           isPrimary: true,
-        });
+        })
       }
       if (lead.secondaryEmail) {
         contactValues.push({
@@ -1284,7 +1185,7 @@ async function processBatch(
           contactType: "email",
           contactValue: lead.secondaryEmail,
           isPrimary: false,
-        });
+        })
       }
       if (lead.secondaryPhone) {
         contactValues.push({
@@ -1292,22 +1193,22 @@ async function processBatch(
           contactType: "phone",
           contactValue: lead.secondaryPhone,
           isPrimary: false,
-        });
+        })
       }
     }
 
     if (contactValues.length > 0) {
-      await db.insert(leadContacts).values(contactValues);
-      console.log(`Successfully inserted ${contactValues.length} contacts`);
+      await db.insert(leadContacts).values(contactValues)
+      console.log(`Successfully inserted ${contactValues.length} contacts`)
     }
 
-    return createdLeads;
+    return createdLeads
   } catch (error) {
-    console.error("Error in processBatch:", error);
-    console.error("Workspace ID:", workspaceId);
-    console.error("Batch size:", batchLeads.length);
-    console.error("Sample lead data:", JSON.stringify(batchLeads[0], null, 2));
-    throw error;
+    console.error("Error in processBatch:", error)
+    console.error("Workspace ID:", workspaceId)
+    console.error("Batch size:", batchLeads.length)
+    console.error("Sample lead data:", JSON.stringify(batchLeads[0], null, 2))
+    throw error
   }
 }
 
@@ -1316,36 +1217,33 @@ async function processBatch(
 // ====================================
 
 export async function exportLeadsToCSV(filters: {
-  leadStatus?: string;
-  businessType?: string;
-  country?: string;
-  city?: string;
-  search?: string;
-  workspaceIds?: string[];
-  customerGroupId?: string;
+  leadStatus?: string
+  businessType?: string
+  country?: string
+  city?: string
+  search?: string
+  workspaceIds?: string[]
+  customerGroupId?: string
 }) {
   // Build where conditions
-  const conditions = [];
+  const conditions = []
 
   if (filters.leadStatus && filters.leadStatus !== "all") {
     conditions.push(
-      eq(
-        leads.leadStatus,
-        filters.leadStatus as (typeof leadStatusEnum.enumValues)[number]
-      )
-    );
+      eq(leads.leadStatus, filters.leadStatus as (typeof leadStatusEnum.enumValues)[number]),
+    )
   }
 
   if (filters.businessType) {
-    conditions.push(ilike(leads.businessType, `%${filters.businessType}%`));
+    conditions.push(ilike(leads.businessType, `%${filters.businessType}%`))
   }
 
   if (filters.country) {
-    conditions.push(ilike(leads.country, `%${filters.country}%`));
+    conditions.push(ilike(leads.country, `%${filters.country}%`))
   }
 
   if (filters.city) {
-    conditions.push(ilike(leads.city, `%${filters.city}%`));
+    conditions.push(ilike(leads.city, `%${filters.city}%`))
   }
 
   if (filters.search) {
@@ -1354,13 +1252,13 @@ export async function exportLeadsToCSV(filters: {
         ilike(leads.companyName, `%${filters.search}%`),
         ilike(leads.foundCompanyName, `%${filters.search}%`),
         ilike(leads.websiteUrl, `%${filters.search}%`),
-        ilike(leads.description, `%${filters.search}%`)
-      )
-    );
+        ilike(leads.description, `%${filters.search}%`),
+      ),
+    )
   }
 
   if (filters.workspaceIds && filters.workspaceIds.length > 0) {
-    conditions.push(inArray(leads.workspaceId, filters.workspaceIds));
+    conditions.push(inArray(leads.workspaceId, filters.workspaceIds))
   }
 
   if (filters.customerGroupId) {
@@ -1368,11 +1266,11 @@ export async function exportLeadsToCSV(filters: {
       sql`${leads.id} IN (
         SELECT lead_id FROM customer_group_members 
         WHERE customer_group_id = ${filters.customerGroupId}
-      )`
-    );
+      )`,
+    )
   }
 
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
   // Get all leads with related data
   const leadsData = await db
@@ -1396,10 +1294,10 @@ export async function exportLeadsToCSV(filters: {
     .from(leads)
     .leftJoin(workspaces, eq(leads.workspaceId, workspaces.id))
     .where(whereClause)
-    .orderBy(desc(leads.createdAt));
+    .orderBy(desc(leads.createdAt))
 
   // Get contacts for all leads
-  const leadIds = leadsData.map((lead) => lead.id);
+  const leadIds = leadsData.map((lead) => lead.id)
   const contactsData =
     leadIds.length > 0
       ? await db
@@ -1412,7 +1310,7 @@ export async function exportLeadsToCSV(filters: {
           .from(leadContacts)
           .where(inArray(leadContacts.leadId, leadIds))
           .orderBy(leadContacts.leadId, leadContacts.isPrimary)
-      : [];
+      : []
 
   // Get social media for all leads
   const socialMediaData =
@@ -1427,20 +1325,26 @@ export async function exportLeadsToCSV(filters: {
           .from(leadSocialMedia)
           .where(inArray(leadSocialMedia.leadId, leadIds))
           .orderBy(leadSocialMedia.leadId)
-      : [];
+      : []
 
   // Group contacts and social media by lead ID
-  const contactsByLead = contactsData.reduce((acc, contact) => {
-    if (!acc[contact.leadId]) acc[contact.leadId] = [];
-    acc[contact.leadId]?.push(contact);
-    return acc;
-  }, {} as Record<string, typeof contactsData>);
+  const contactsByLead = contactsData.reduce(
+    (acc, contact) => {
+      if (!acc[contact.leadId]) acc[contact.leadId] = []
+      acc[contact.leadId]?.push(contact)
+      return acc
+    },
+    {} as Record<string, typeof contactsData>,
+  )
 
-  const socialMediaByLead = socialMediaData.reduce((acc, social) => {
-    if (!acc[social.leadId]) acc[social.leadId] = [];
-    acc[social.leadId]?.push(social);
-    return acc;
-  }, {} as Record<string, typeof socialMediaData>);
+  const socialMediaByLead = socialMediaData.reduce(
+    (acc, social) => {
+      if (!acc[social.leadId]) acc[social.leadId] = []
+      acc[social.leadId]?.push(social)
+      return acc
+    },
+    {} as Record<string, typeof socialMediaData>,
+  )
 
   // Create CSV headers
   const headers = [
@@ -1465,42 +1369,42 @@ export async function exportLeadsToCSV(filters: {
     "Twitter",
     "LinkedIn",
     "생성일",
-  ];
+  ]
 
   // Create CSV rows
   const rows = leadsData.map((lead) => {
-    const contacts = contactsByLead[lead.id] || [];
-    const socialMedia = socialMediaByLead[lead.id] || [];
+    const contacts = contactsByLead[lead.id] || []
+    const socialMedia = socialMediaByLead[lead.id] || []
 
     const emails = contacts
       .filter((c) => c.contactType === "email")
       .map((c) => c.contactValue)
-      .join("; ");
+      .join("; ")
 
     const phones = contacts
       .filter((c) => c.contactType === "phone")
       .map((c) => c.contactValue)
-      .join("; ");
+      .join("; ")
 
     const facebook = socialMedia
       .filter((s) => s.platform === "facebook")
       .map((s) => s.url)
-      .join("; ");
+      .join("; ")
 
     const instagram = socialMedia
       .filter((s) => s.platform === "instagram")
       .map((s) => s.url)
-      .join("; ");
+      .join("; ")
 
     const twitter = socialMedia
       .filter((s) => s.platform === "twitter")
       .map((s) => s.url)
-      .join("; ");
+      .join("; ")
 
     const linkedin = socialMedia
       .filter((s) => s.platform === "linkedin")
       .map((s) => s.url)
-      .join("; ");
+      .join("; ")
 
     return [
       lead.id,
@@ -1523,50 +1427,48 @@ export async function exportLeadsToCSV(filters: {
       instagram,
       twitter,
       linkedin,
-      lead.createdAt
-        ? new Date(lead.createdAt).toLocaleDateString("ko-KR")
-        : "",
-    ];
-  });
+      lead.createdAt ? new Date(lead.createdAt).toLocaleDateString("ko-KR") : "",
+    ]
+  })
 
   // Convert to CSV format
   const csvContent = [
     headers.map((h) => `"${h}"`).join(","),
     ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
-  ].join("\n");
+  ].join("\n")
 
   // Add BOM for proper UTF-8 encoding in Excel
-  return `\uFEFF${csvContent}`;
+  return `\uFEFF${csvContent}`
 }
 
 // AddLeadToCustomerGroup :exec
 export async function addLeadToCustomerGroup(
   leadId: string,
   customerGroupId: string,
-  addedBy?: string
+  addedBy?: string,
 ) {
   await db.insert(customerGroupMembers).values({
     groupId: customerGroupId,
     leadId: leadId,
     addedBy: addedBy || undefined,
-  });
+  })
 }
 
 // BulkAddLeadsToCustomerGroup :exec
 export async function bulkAddLeadsToCustomerGroup(
   leadIds: string[],
   customerGroupId: string,
-  addedBy?: string
+  addedBy?: string,
 ) {
-  if (leadIds.length === 0) return;
+  if (leadIds.length === 0) return
 
   const memberValues = leadIds.map((leadId) => ({
     groupId: customerGroupId,
     leadId: leadId,
     addedBy: addedBy || undefined,
-  }));
+  }))
 
-  await db.insert(customerGroupMembers).values(memberValues);
+  await db.insert(customerGroupMembers).values(memberValues)
 }
 
 export async function exportSelectedLeadsToCSV(leadIds: string[]) {
@@ -1574,7 +1476,7 @@ export async function exportSelectedLeadsToCSV(leadIds: string[]) {
     return (
       "\uFEFF" +
       '"ID","워크스페이스","회사명","발견된 회사명","웹사이트","업종","설명","국가","도시","설립년도","직원수","상태","리드 점수","메모","이메일","전화번호","Facebook","Instagram","Twitter","LinkedIn","생성일"\n'
-    );
+    )
   }
 
   // Get all leads with related data by IDs
@@ -1599,7 +1501,7 @@ export async function exportSelectedLeadsToCSV(leadIds: string[]) {
     .from(leads)
     .leftJoin(workspaces, eq(leads.workspaceId, workspaces.id))
     .where(inArray(leads.id, leadIds))
-    .orderBy(desc(leads.createdAt));
+    .orderBy(desc(leads.createdAt))
 
   // Get contacts for all leads
   const contactsData = await db
@@ -1611,7 +1513,7 @@ export async function exportSelectedLeadsToCSV(leadIds: string[]) {
     })
     .from(leadContacts)
     .where(inArray(leadContacts.leadId, leadIds))
-    .orderBy(leadContacts.leadId, leadContacts.isPrimary);
+    .orderBy(leadContacts.leadId, leadContacts.isPrimary)
 
   // Get social media for all leads
   const socialMediaData = await db
@@ -1623,20 +1525,26 @@ export async function exportSelectedLeadsToCSV(leadIds: string[]) {
     })
     .from(leadSocialMedia)
     .where(inArray(leadSocialMedia.leadId, leadIds))
-    .orderBy(leadSocialMedia.leadId);
+    .orderBy(leadSocialMedia.leadId)
 
   // Group contacts and social media by lead ID
-  const contactsByLead = contactsData.reduce((acc, contact) => {
-    if (!acc[contact.leadId]) acc[contact.leadId] = [];
-    acc[contact.leadId]?.push(contact);
-    return acc;
-  }, {} as Record<string, typeof contactsData>);
+  const contactsByLead = contactsData.reduce(
+    (acc, contact) => {
+      if (!acc[contact.leadId]) acc[contact.leadId] = []
+      acc[contact.leadId]?.push(contact)
+      return acc
+    },
+    {} as Record<string, typeof contactsData>,
+  )
 
-  const socialMediaByLead = socialMediaData.reduce((acc, social) => {
-    if (!acc[social.leadId]) acc[social.leadId] = [];
-    acc[social.leadId]?.push(social);
-    return acc;
-  }, {} as Record<string, typeof socialMediaData>);
+  const socialMediaByLead = socialMediaData.reduce(
+    (acc, social) => {
+      if (!acc[social.leadId]) acc[social.leadId] = []
+      acc[social.leadId]?.push(social)
+      return acc
+    },
+    {} as Record<string, typeof socialMediaData>,
+  )
 
   // Create CSV headers
   const headers = [
@@ -1661,42 +1569,42 @@ export async function exportSelectedLeadsToCSV(leadIds: string[]) {
     "Twitter",
     "LinkedIn",
     "생성일",
-  ];
+  ]
 
   // Create CSV rows
   const rows = leadsData.map((lead) => {
-    const contacts = contactsByLead[lead.id] || [];
-    const socialMedia = socialMediaByLead[lead.id] || [];
+    const contacts = contactsByLead[lead.id] || []
+    const socialMedia = socialMediaByLead[lead.id] || []
 
     const emails = contacts
       .filter((c) => c.contactType === "email")
       .map((c) => c.contactValue)
-      .join("; ");
+      .join("; ")
 
     const phones = contacts
       .filter((c) => c.contactType === "phone")
       .map((c) => c.contactValue)
-      .join("; ");
+      .join("; ")
 
     const facebook = socialMedia
       .filter((s) => s.platform === "facebook")
       .map((s) => s.url)
-      .join("; ");
+      .join("; ")
 
     const instagram = socialMedia
       .filter((s) => s.platform === "instagram")
       .map((s) => s.url)
-      .join("; ");
+      .join("; ")
 
     const twitter = socialMedia
       .filter((s) => s.platform === "twitter")
       .map((s) => s.url)
-      .join("; ");
+      .join("; ")
 
     const linkedin = socialMedia
       .filter((s) => s.platform === "linkedin")
       .map((s) => s.url)
-      .join("; ");
+      .join("; ")
 
     return [
       lead.id,
@@ -1719,18 +1627,16 @@ export async function exportSelectedLeadsToCSV(leadIds: string[]) {
       instagram,
       twitter,
       linkedin,
-      lead.createdAt
-        ? new Date(lead.createdAt).toLocaleDateString("ko-KR")
-        : "",
-    ];
-  });
+      lead.createdAt ? new Date(lead.createdAt).toLocaleDateString("ko-KR") : "",
+    ]
+  })
 
   // Convert to CSV format
   const csvContent = [
     headers.map((h) => `"${h}"`).join(","),
     ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
-  ].join("\n");
+  ].join("\n")
 
   // Add BOM for proper UTF-8 encoding in Excel
-  return `\uFEFF${csvContent}`;
+  return `\uFEFF${csvContent}`
 }

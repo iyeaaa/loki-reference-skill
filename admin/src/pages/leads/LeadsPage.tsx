@@ -1,44 +1,29 @@
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  Download,
-  Edit2,
-  FileText,
-  Plus,
-  Search,
-  Trash2,
-  Upload,
-  Users,
-  X,
-} from "lucide-react";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
-import toast from "react-hot-toast";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useQueryClient } from "@tanstack/react-query"
+import { Download, Edit2, FileText, Plus, Search, Trash2, Upload, Users, X } from "lucide-react"
+import { useCallback, useEffect, useId, useRef, useState } from "react"
+import toast from "react-hot-toast"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/components/ui/context-menu"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/select"
 import {
   customerGroupKeys,
   useBulkAddGroupMembers,
@@ -47,7 +32,7 @@ import {
   useCustomerGroupsByWorkspace,
   useDeleteCustomerGroup,
   useUpdateCustomerGroup,
-} from "@/lib/api/hooks/customer-groups";
+} from "@/lib/api/hooks/customer-groups"
 import {
   leadKeys,
   useBulkDeleteLeads,
@@ -56,16 +41,13 @@ import {
   useCreateLead,
   useDownloadSelectedLeadsCSV,
   useUpdateLead,
-} from "@/lib/api/hooks/leads";
-import { customerGroupsApi } from "@/lib/api/services/customer-groups";
-import { leadsApi } from "@/lib/api/services/leads";
-import { workspacesApi } from "@/lib/api/services/workspaces";
-import type {
-  CreateCustomerGroupRequest,
-  CustomerGroup,
-} from "@/lib/api/types/customer-group";
-import type { Lead, LeadStatus } from "@/lib/api/types/lead";
-import type { Workspace } from "@/lib/api/types/workspace";
+} from "@/lib/api/hooks/leads"
+import { customerGroupsApi } from "@/lib/api/services/customer-groups"
+import { leadsApi } from "@/lib/api/services/leads"
+import { workspacesApi } from "@/lib/api/services/workspaces"
+import type { CreateCustomerGroupRequest, CustomerGroup } from "@/lib/api/types/customer-group"
+import type { Lead, LeadStatus } from "@/lib/api/types/lead"
+import type { Workspace } from "@/lib/api/types/workspace"
 import {
   generateCSVTemplate,
   generateXLSXTemplate,
@@ -73,177 +55,159 @@ import {
   parseCSV,
   parseXLSX,
   validateCSVData,
-} from "@/lib/csv-utils";
-import { BulkActionModal } from "./BulkActionModal";
-import { CreateGroupModal } from "./CreateGroupModal";
-import { GroupEditModal } from "./GroupEditModal";
-import { LeadForm } from "./LeadForm";
-import { LeadGroupManagementModal } from "./LeadGroupManagementModal";
-import { LeadsTableWithPagination } from "./LeadsTableWithPagination";
+} from "@/lib/csv-utils"
+import { BulkActionModal } from "./BulkActionModal"
+import { CreateGroupModal } from "./CreateGroupModal"
+import { GroupEditModal } from "./GroupEditModal"
+import { LeadForm } from "./LeadForm"
+import { LeadGroupManagementModal } from "./LeadGroupManagementModal"
+import { LeadsTableWithPagination } from "./LeadsTableWithPagination"
 
 export default function LeadsPage() {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>(() => {
-    return localStorage.getItem("selectedWorkspace") || "all";
-  });
-  const [searchInput, setSearchInput] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+    return localStorage.getItem("selectedWorkspace") || "all"
+  })
+  const [searchInput, setSearchInput] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
   const [searchType, setSearchType] = useState<
-    | "all"
-    | "company"
-    | "country"
-    | "email"
-    | "website"
-    | "industry"
-    | "category"
-  >("all");
-  const [selectedStatuses, _setSelectedStatuses] = useState<string[]>([]);
-  const [selectedBusinessTypes, _setSelectedBusinessTypes] = useState<string[]>(
-    []
-  );
-  const [selectedCountries, _setSelectedCountries] = useState<string[]>([]);
-  const [selectedCities, _setSelectedCities] = useState<string[]>([]);
-  const [selectedCustomerGroup, setSelectedCustomerGroup] =
-    useState<string>("");
+    "all" | "company" | "country" | "email" | "website" | "industry" | "category"
+  >("all")
+  const [selectedStatuses, _setSelectedStatuses] = useState<string[]>([])
+  const [selectedBusinessTypes, _setSelectedBusinessTypes] = useState<string[]>([])
+  const [selectedCountries, _setSelectedCountries] = useState<string[]>([])
+  const [selectedCities, _setSelectedCities] = useState<string[]>([])
+  const [selectedCustomerGroup, setSelectedCustomerGroup] = useState<string>("")
 
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [editingLead, setEditingLead] = useState<Lead | null>(null);
-  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
-  const [showBulkActionModal, setShowBulkActionModal] = useState(false);
-  const [bulkActionType, setBulkActionType] = useState<
-    "status" | "businessType" | null
-  >(null);
-  const [isSelectAllMode, setIsSelectAllMode] = useState(false);
-  const [allLeadsSelected, setAllLeadsSelected] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [editingLead, setEditingLead] = useState<Lead | null>(null)
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([])
+  const [showBulkActionModal, setShowBulkActionModal] = useState(false)
+  const [bulkActionType, setBulkActionType] = useState<"status" | "businessType" | null>(null)
+  const [isSelectAllMode, setIsSelectAllMode] = useState(false)
+  const [allLeadsSelected, setAllLeadsSelected] = useState(false)
 
   // CSV 업로드 관련 상태
-  const [showCSVUpload, setShowCSVUpload] = useState(false);
-  const [csvData, setCsvData] = useState<LeadCSVData[] | null>(null);
-  const [csvFileName, setCsvFileName] = useState("");
-  const [csvFileSize, setCsvFileSize] = useState(0);
-  const [isProcessingCSV, setIsProcessingCSV] = useState(false);
-  const [csvErrors, setCsvErrors] = useState<string[]>([]);
-  const [isUploadingLeads, setIsUploadingLeads] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showCSVUpload, setShowCSVUpload] = useState(false)
+  const [csvData, setCsvData] = useState<LeadCSVData[] | null>(null)
+  const [csvFileName, setCsvFileName] = useState("")
+  const [csvFileSize, setCsvFileSize] = useState(0)
+  const [isProcessingCSV, setIsProcessingCSV] = useState(false)
+  const [csvErrors, setCsvErrors] = useState<string[]>([])
+  const [isUploadingLeads, setIsUploadingLeads] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // CSV 업로드용 그룹 선택 상태
-  const [groupName, setGroupName] = useState("");
-  const [groupDescription, setGroupDescription] = useState("");
-  const [isNewGroup, setIsNewGroup] = useState(false);
-  const [newGroupName, setNewGroupName] = useState("");
+  const [groupName, setGroupName] = useState("")
+  const [groupDescription, setGroupDescription] = useState("")
+  const [isNewGroup, setIsNewGroup] = useState(false)
+  const [newGroupName, setNewGroupName] = useState("")
 
-  const [selectedGroupForNewLead, setSelectedGroupForNewLead] = useState("");
+  const [selectedGroupForNewLead, setSelectedGroupForNewLead] = useState("")
 
   // 그룹 편집/삭제 관련 상태
-  const [editingGroup, setEditingGroup] = useState<CustomerGroup | null>(null);
-  const [showGroupEditModal, setShowGroupEditModal] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<CustomerGroup | null>(null)
+  const [showGroupEditModal, setShowGroupEditModal] = useState(false)
 
   // 리드 그룹 관리 관련 상태
-  const [managingLeadGroups, setManagingLeadGroups] = useState<Lead | null>(
-    null
-  );
-  const [showLeadGroupModal, setShowLeadGroupModal] = useState(false);
-  const [leadCurrentGroups, setLeadCurrentGroups] = useState<CustomerGroup[]>(
-    []
-  );
+  const [managingLeadGroups, setManagingLeadGroups] = useState<Lead | null>(null)
+  const [showLeadGroupModal, setShowLeadGroupModal] = useState(false)
+  const [leadCurrentGroups, setLeadCurrentGroups] = useState<CustomerGroup[]>([])
 
   // 현재 로드된 리드 데이터 저장
-  const [currentLeadsData, setCurrentLeadsData] = useState<Lead[]>([]);
+  const [currentLeadsData, setCurrentLeadsData] = useState<Lead[]>([])
 
   // 확인 다이얼로그 상태
-  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
-  const [groupDeleteConfirmOpen, setGroupDeleteConfirmOpen] = useState(false);
-  const [groupToDelete, setGroupToDelete] = useState<CustomerGroup | null>(
-    null
-  );
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false)
+  const [groupDeleteConfirmOpen, setGroupDeleteConfirmOpen] = useState(false)
+  const [groupToDelete, setGroupToDelete] = useState<CustomerGroup | null>(null)
 
   // Generate unique IDs for form elements
-  const existingGroupId = useId();
-  const newGroupId = useId();
-  const groupSelectId = useId();
-  const newGroupNameId = useId();
-  const groupDescriptionId = useId();
-  const searchTypeId = useId();
-  const searchInputId = useId();
+  const existingGroupId = useId()
+  const newGroupId = useId()
+  const groupSelectId = useId()
+  const newGroupNameId = useId()
+  const groupDescriptionId = useId()
+  const searchTypeId = useId()
+  const searchInputId = useId()
 
-  const queryClient = useQueryClient();
-  const createLead = useCreateLead();
-  const updateLead = useUpdateLead();
+  const queryClient = useQueryClient()
+  const createLead = useCreateLead()
+  const updateLead = useUpdateLead()
   // const _deleteLead = useDeleteLead()
-  const bulkUpdateStatus = useBulkUpdateLeadStatus();
-  const bulkUpdateBusinessType = useBulkUpdateLeadBusinessType();
-  const bulkDeleteLeads = useBulkDeleteLeads();
-  const downloadSelectedLeadsCSV = useDownloadSelectedLeadsCSV();
-  const createCustomerGroup = useCreateCustomerGroup();
-  const updateCustomerGroup = useUpdateCustomerGroup();
-  const deleteCustomerGroup = useDeleteCustomerGroup();
-  const bulkAddGroupMembers = useBulkAddGroupMembers();
-  const bulkRemoveGroupMembers = useBulkRemoveGroupMembers();
+  const bulkUpdateStatus = useBulkUpdateLeadStatus()
+  const bulkUpdateBusinessType = useBulkUpdateLeadBusinessType()
+  const bulkDeleteLeads = useBulkDeleteLeads()
+  const downloadSelectedLeadsCSV = useDownloadSelectedLeadsCSV()
+  const createCustomerGroup = useCreateCustomerGroup()
+  const updateCustomerGroup = useUpdateCustomerGroup()
+  const deleteCustomerGroup = useDeleteCustomerGroup()
+  const bulkAddGroupMembers = useBulkAddGroupMembers()
+  const bulkRemoveGroupMembers = useBulkRemoveGroupMembers()
 
   // 고객 그룹 데이터 가져오기
   const { data: customerGroups } = useCustomerGroupsByWorkspace(
     selectedWorkspaceId !== "all" ? selectedWorkspaceId : "",
-    selectedWorkspaceId !== "all"
-  );
+    selectedWorkspaceId !== "all",
+  )
 
   const loadWorkspaces = useCallback(async () => {
     try {
-      const response = await workspacesApi.list({ limit: 100 });
-      setWorkspaces(response.workspaces || []);
+      const response = await workspacesApi.list({ limit: 100 })
+      setWorkspaces(response.workspaces || [])
     } catch (error) {
-      console.error("Failed to load workspaces:", error);
+      console.error("Failed to load workspaces:", error)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    loadWorkspaces();
-  }, [loadWorkspaces]);
+    loadWorkspaces()
+  }, [loadWorkspaces])
 
   // localStorage의 selectedWorkspace 변경 감지
   useEffect(() => {
     const handleStorageChange = () => {
-      const newWorkspaceId = localStorage.getItem("selectedWorkspace") || "all";
-      setSelectedWorkspaceId(newWorkspaceId);
-    };
+      const newWorkspaceId = localStorage.getItem("selectedWorkspace") || "all"
+      setSelectedWorkspaceId(newWorkspaceId)
+    }
 
     // storage 이벤트 리스너 추가
-    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("storage", handleStorageChange)
 
     // 컴포넌트가 포커스를 받을 때마다 확인
     const intervalId = setInterval(() => {
-      const currentWorkspaceId =
-        localStorage.getItem("selectedWorkspace") || "all";
+      const currentWorkspaceId = localStorage.getItem("selectedWorkspace") || "all"
       if (currentWorkspaceId !== selectedWorkspaceId) {
-        setSelectedWorkspaceId(currentWorkspaceId);
+        setSelectedWorkspaceId(currentWorkspaceId)
       }
-    }, 500);
+    }, 500)
 
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      clearInterval(intervalId);
-    };
-  }, [selectedWorkspaceId]);
+      window.removeEventListener("storage", handleStorageChange)
+      clearInterval(intervalId)
+    }
+  }, [selectedWorkspaceId])
 
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
-      setSearchQuery(searchInput);
-    }, 300);
+      setSearchQuery(searchInput)
+    }, 300)
 
-    return () => clearTimeout(timer);
-  }, [searchInput]);
+    return () => clearTimeout(timer)
+  }, [searchInput])
 
   const handleCreateLead = async (leadData: unknown) => {
     createLead.mutate(leadData as Lead, {
       onSuccess: () => {
         // Hooks already handle cache invalidation
-        setShowCreateDialog(false);
+        setShowCreateDialog(false)
       },
-    });
-  };
+    })
+  }
 
   const handleUpdateLead = async (leadData: unknown) => {
-    if (!editingLead) return;
+    if (!editingLead) return
     updateLead.mutate(
       {
         leadId: editingLead.id,
@@ -252,28 +216,25 @@ export default function LeadsPage() {
       {
         onSuccess: () => {
           // Hooks already handle cache invalidation
-          setEditingLead(null);
+          setEditingLead(null)
         },
-      }
-    );
-  };
+      },
+    )
+  }
 
   const handleBulkDelete = async () => {
-    if (selectedLeads.length === 0 && !allLeadsSelected) return;
-    setBulkDeleteConfirmOpen(true);
-  };
+    if (selectedLeads.length === 0 && !allLeadsSelected) return
+    setBulkDeleteConfirmOpen(true)
+  }
 
   const confirmBulkDelete = async () => {
     if (allLeadsSelected) {
       // 전체 선택된 경우 - 서버에서 모든 리드를 가져와서 삭제
       try {
-        const workspaceId =
-          selectedWorkspaceId !== "all"
-            ? selectedWorkspaceId
-            : workspaces[0]?.id;
+        const workspaceId = selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id
         if (!workspaceId) {
-          toast.error("워크스페이스를 선택해주세요.");
-          return;
+          toast.error("워크스페이스를 선택해주세요.")
+          return
         }
 
         // 모든 리드를 가져오기 위해 큰 limit 값 사용
@@ -284,53 +245,46 @@ export default function LeadsPage() {
           customerGroupId: selectedCustomerGroup || undefined,
           search: searchQuery || undefined,
           leadStatus:
-            selectedStatuses.length === 1
-              ? (selectedStatuses[0] as LeadStatus)
-              : undefined,
-        });
+            selectedStatuses.length === 1 ? (selectedStatuses[0] as LeadStatus) : undefined,
+        })
 
         if (allLeadsResponse.leads.length === 0) {
-          toast.error("삭제할 리드 데이터가 없습니다.");
-          return;
+          toast.error("삭제할 리드 데이터가 없습니다.")
+          return
         }
 
         // 모든 리드 삭제
-        const allLeadIds = allLeadsResponse.leads.map((lead) => lead.id);
+        const allLeadIds = allLeadsResponse.leads.map((lead) => lead.id)
         bulkDeleteLeads.mutate(allLeadIds, {
           onSuccess: () => {
             // Hooks already handle cache invalidation
-            setSelectedLeads([]);
-            setAllLeadsSelected(false);
-            setIsSelectAllMode(false);
-            toast.success(
-              `전체 ${allLeadIds.length}개의 리드가 삭제되었습니다.`
-            );
+            setSelectedLeads([])
+            setAllLeadsSelected(false)
+            setIsSelectAllMode(false)
+            toast.success(`전체 ${allLeadIds.length}개의 리드가 삭제되었습니다.`)
           },
-        });
+        })
       } catch (error) {
-        console.error("전체 리드 삭제 오류:", error);
-        toast.error("전체 리드 삭제 중 오류가 발생했습니다.");
+        console.error("전체 리드 삭제 오류:", error)
+        toast.error("전체 리드 삭제 중 오류가 발생했습니다.")
       }
     } else {
       // 개별 선택된 경우
       bulkDeleteLeads.mutate(selectedLeads, {
         onSuccess: () => {
           // Hooks already handle cache invalidation
-          setSelectedLeads([]);
-          setAllLeadsSelected(false);
-          setIsSelectAllMode(false);
+          setSelectedLeads([])
+          setAllLeadsSelected(false)
+          setIsSelectAllMode(false)
         },
-      });
+      })
     }
-  };
+  }
 
-  const handleBulkAction = async (
-    actionType: string,
-    value: string | string[]
-  ) => {
+  const handleBulkAction = async (actionType: string, value: string | string[]) => {
     if (selectedLeads.length === 0 && !allLeadsSelected) {
-      toast.error("선택된 리드가 없습니다.");
-      return;
+      toast.error("선택된 리드가 없습니다.")
+      return
     }
 
     if (actionType === "status") {
@@ -339,94 +293,89 @@ export default function LeadsPage() {
         {
           onSuccess: () => {
             // Hooks already handle cache invalidation
-            setSelectedLeads([]);
+            setSelectedLeads([])
           },
-        }
-      );
+        },
+      )
     } else if (actionType === "businessType") {
       bulkUpdateBusinessType.mutate(
         { leadIds: selectedLeads, businessType: value as string },
         {
           onSuccess: () => {
             // Hooks already handle cache invalidation
-            setSelectedLeads([]);
+            setSelectedLeads([])
           },
-        }
-      );
+        },
+      )
     }
-  };
+  }
 
   const openBulkActionModal = (type: "status" | "businessType") => {
     if (selectedLeads.length === 0 && !allLeadsSelected) {
-      toast.error("선택된 리드가 없습니다.");
-      return;
+      toast.error("선택된 리드가 없습니다.")
+      return
     }
-    setBulkActionType(type);
-    setShowBulkActionModal(true);
-  };
+    setBulkActionType(type)
+    setShowBulkActionModal(true)
+  }
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      setSearchQuery(searchInput);
+      setSearchQuery(searchInput)
     }
-  };
+  }
 
   const toggleLeadSelection = useCallback((leadId: string) => {
     setSelectedLeads((prev) =>
-      prev.includes(leadId)
-        ? prev.filter((id) => id !== leadId)
-        : [...prev, leadId]
-    );
-  }, []);
+      prev.includes(leadId) ? prev.filter((id) => id !== leadId) : [...prev, leadId],
+    )
+  }, [])
 
   const toggleAllLeads = useCallback((leadIds: string[]) => {
-    setSelectedLeads((prev) => (prev.length === leadIds.length ? [] : leadIds));
-  }, []);
+    setSelectedLeads((prev) => (prev.length === leadIds.length ? [] : leadIds))
+  }, [])
 
   // 전체 선택 모드 토글
   const toggleSelectAllMode = useCallback(() => {
     if (isSelectAllMode) {
       // 전체 선택 모드 해제
-      setIsSelectAllMode(false);
-      setAllLeadsSelected(false);
-      setSelectedLeads([]);
+      setIsSelectAllMode(false)
+      setAllLeadsSelected(false)
+      setSelectedLeads([])
     } else {
       // 전체 선택 모드 활성화
-      setIsSelectAllMode(true);
-      setAllLeadsSelected(true);
+      setIsSelectAllMode(true)
+      setAllLeadsSelected(true)
     }
-  }, [isSelectAllMode]);
+  }, [isSelectAllMode])
 
   // 전체 리드 선택/해제
   const handleSelectAllLeads = useCallback(() => {
     if (allLeadsSelected) {
-      setAllLeadsSelected(false);
-      setSelectedLeads([]);
+      setAllLeadsSelected(false)
+      setSelectedLeads([])
     } else {
-      setAllLeadsSelected(true);
+      setAllLeadsSelected(true)
       // 전체 선택 모드에서는 실제로는 모든 리드를 선택하는 것이므로
       // selectedLeads는 빈 배열로 두고, allLeadsSelected 상태로 관리
-      setSelectedLeads([]);
+      setSelectedLeads([])
     }
-  }, [allLeadsSelected]);
+  }, [allLeadsSelected])
 
   // 선택된 리드들 CSV 다운로드 핸들러
   const handleDownloadSelectedLeadsCSV = async () => {
     if (selectedLeads.length === 0 && !allLeadsSelected) {
-      toast.error("다운로드할 리드를 선택해주세요.");
-      return;
+      toast.error("다운로드할 리드를 선택해주세요.")
+      return
     }
 
     if (allLeadsSelected) {
       // 전체 선택된 경우 - 서버에서 모든 리드를 가져와서 다운로드
       try {
-        const workspaceId =
-          selectedWorkspaceId !== "all"
-            ? selectedWorkspaceId
-            : workspaces[0]?.id;
+        const workspaceId = selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id
         if (!workspaceId) {
-          toast.error("워크스페이스를 선택해주세요.");
-          return;
+          toast.error("워크스페이스를 선택해주세요.")
+          return
         }
 
         // 모든 리드를 가져오기 위해 큰 limit 값 사용
@@ -437,155 +386,142 @@ export default function LeadsPage() {
           customerGroupId: selectedCustomerGroup || undefined,
           search: searchQuery || undefined,
           leadStatus:
-            selectedStatuses.length === 1
-              ? (selectedStatuses[0] as LeadStatus)
-              : undefined,
-        });
+            selectedStatuses.length === 1 ? (selectedStatuses[0] as LeadStatus) : undefined,
+        })
 
         if (allLeadsResponse.leads.length === 0) {
-          toast.error("다운로드할 리드 데이터가 없습니다.");
-          return;
+          toast.error("다운로드할 리드 데이터가 없습니다.")
+          return
         }
 
         // 모든 리드 데이터로 CSV 다운로드
         downloadSelectedLeadsCSV.mutate({
           leadIds: allLeadsResponse.leads.map((lead) => lead.id),
           leadsData: allLeadsResponse.leads,
-        });
+        })
       } catch (error) {
-        console.error("전체 리드 다운로드 오류:", error);
-        toast.error("전체 리드 다운로드 중 오류가 발생했습니다.");
+        console.error("전체 리드 다운로드 오류:", error)
+        toast.error("전체 리드 다운로드 중 오류가 발생했습니다.")
       }
     } else {
       // 개별 선택된 경우
       downloadSelectedLeadsCSV.mutate({
         leadIds: selectedLeads,
         leadsData: currentLeadsData,
-      });
+      })
     }
-  };
+  }
 
   // 파일 업로드 핸들러 (CSV, XLSX 지원)
-  const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
 
-    const fileName = file.name.toLowerCase();
-    const isCSV = fileName.endsWith(".csv");
-    const isXLSX = fileName.endsWith(".xlsx") || fileName.endsWith(".xls");
+    const fileName = file.name.toLowerCase()
+    const isCSV = fileName.endsWith(".csv")
+    const isXLSX = fileName.endsWith(".xlsx") || fileName.endsWith(".xls")
 
     if (!isCSV && !isXLSX) {
-      toast.error("CSV 또는 XLSX 파일만 업로드 가능합니다.");
-      return;
+      toast.error("CSV 또는 XLSX 파일만 업로드 가능합니다.")
+      return
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("파일 크기는 10MB를 초과할 수 없습니다.");
-      return;
+      toast.error("파일 크기는 10MB를 초과할 수 없습니다.")
+      return
     }
 
-    setIsProcessingCSV(true);
-    setCsvErrors([]);
+    setIsProcessingCSV(true)
+    setCsvErrors([])
 
     try {
-      let parsedData: LeadCSVData[];
+      let parsedData: LeadCSVData[]
 
       if (isCSV) {
-        const text = await file.text();
-        parsedData = parseCSV(text);
+        const text = await file.text()
+        parsedData = parseCSV(text)
       } else {
-        parsedData = await parseXLSX(file);
+        parsedData = await parseXLSX(file)
       }
 
-      const validation = validateCSVData(parsedData);
+      const validation = validateCSVData(parsedData)
 
       if (!validation.valid) {
-        setCsvErrors(validation.errors);
-        toast.error("파일에 오류가 있습니다.");
-        return;
+        setCsvErrors(validation.errors)
+        toast.error("파일에 오류가 있습니다.")
+        return
       }
 
       // 경고가 있는 경우 표시
       if (validation.warnings.length > 0) {
         validation.warnings.forEach((warning) => {
-          console.warn(warning);
-        });
+          console.warn(warning)
+        })
       }
 
-      setCsvData(parsedData);
-      setCsvFileName(file.name);
-      setCsvFileSize(file.size);
-      toast.success(
-        `${parsedData.length}개의 리드 데이터를 성공적으로 파싱했습니다.`
-      );
+      setCsvData(parsedData)
+      setCsvFileName(file.name)
+      setCsvFileSize(file.size)
+      toast.success(`${parsedData.length}개의 리드 데이터를 성공적으로 파싱했습니다.`)
     } catch (error) {
-      console.error("파일 파싱 오류:", error);
+      console.error("파일 파싱 오류:", error)
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "파일을 읽는 중 오류가 발생했습니다.";
-      toast.error(errorMessage);
+        error instanceof Error ? error.message : "파일을 읽는 중 오류가 발생했습니다."
+      toast.error(errorMessage)
     } finally {
-      setIsProcessingCSV(false);
+      setIsProcessingCSV(false)
     }
-  };
+  }
 
   const handleDownloadTemplate = (format: "csv" | "xlsx") => {
     if (format === "csv") {
-      const template = generateCSVTemplate();
-      const blob = new Blob([template], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", "leads_template.csv");
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const template = generateCSVTemplate()
+      const blob = new Blob([template], { type: "text/csv;charset=utf-8;" })
+      const link = document.createElement("a")
+      const url = URL.createObjectURL(blob)
+      link.setAttribute("href", url)
+      link.setAttribute("download", "leads_template.csv")
+      link.style.visibility = "hidden"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
     } else {
-      const blob = generateXLSXTemplate();
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", "leads_template.xlsx");
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const blob = generateXLSXTemplate()
+      const link = document.createElement("a")
+      const url = URL.createObjectURL(blob)
+      link.setAttribute("href", url)
+      link.setAttribute("download", "leads_template.xlsx")
+      link.style.visibility = "hidden"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
     }
-  };
+  }
 
   const handleCSVUpload = async () => {
-    if (!csvData || csvData.length === 0) return;
-    if (!isNewGroup && !groupName) return;
-    if (isNewGroup && !newGroupName.trim()) return;
+    if (!csvData || csvData.length === 0) return
+    if (!isNewGroup && !groupName) return
+    if (isNewGroup && !newGroupName.trim()) return
 
-    setIsUploadingLeads(true);
-    toast.success(
-      `${csvData.length}개의 리드를 처리 중입니다. 잠시만 기다려주세요...`
-    );
+    setIsUploadingLeads(true)
+    toast.success(`${csvData.length}개의 리드를 처리 중입니다. 잠시만 기다려주세요...`)
 
     try {
       const workspaceId =
-        selectedWorkspaceId !== "all"
-          ? selectedWorkspaceId
-          : workspaces[0]?.id || "";
+        selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id || ""
 
-      let targetGroupId = groupName;
+      let targetGroupId = groupName
 
       // 새 그룹 생성인 경우
       if (isNewGroup) {
         const groupData: CreateCustomerGroupRequest = {
           workspaceId,
           name: newGroupName,
-          description:
-            groupDescription || `CSV에서 가져온 ${csvData.length}개의 리드`,
+          description: groupDescription || `CSV에서 가져온 ${csvData.length}개의 리드`,
           isDynamic: false,
-        };
-        const newGroup = await createCustomerGroup.mutateAsync(groupData);
-        targetGroupId = newGroup.id;
+        }
+        const newGroup = await createCustomerGroup.mutateAsync(groupData)
+        targetGroupId = newGroup.id
       }
 
       // 1. CSV 데이터로 리드 생성 (배치 처리) - 고객 그룹에 직접 추가
@@ -596,31 +532,29 @@ export default function LeadsPage() {
         isNewGroup: isNewGroup,
         groupName: groupName,
         groupDescription: groupDescription,
-      });
+      })
 
       // 대용량 데이터 처리를 위한 배치 처리 (10개씩으로 감소)
-      const BATCH_SIZE = 10;
-      const totalBatches = Math.ceil(csvData.length / BATCH_SIZE);
-      const MAX_RETRIES = 2;
+      const BATCH_SIZE = 10
+      const totalBatches = Math.ceil(csvData.length / BATCH_SIZE)
+      const MAX_RETRIES = 2
 
       console.log(
-        `📦 배치 처리 시작: ${csvData.length}개 리드를 ${totalBatches}개 배치로 나누어 처리`
-      );
+        `📦 배치 처리 시작: ${csvData.length}개 리드를 ${totalBatches}개 배치로 나누어 처리`,
+      )
 
-      let successCount = 0;
-      let errorCount = 0;
+      let successCount = 0
+      let errorCount = 0
 
       for (let i = 0; i < totalBatches; i++) {
-        const start = i * BATCH_SIZE;
-        const end = Math.min(start + BATCH_SIZE, csvData.length);
-        const batch = csvData.slice(start, end);
+        const start = i * BATCH_SIZE
+        const end = Math.min(start + BATCH_SIZE, csvData.length)
+        const batch = csvData.slice(start, end)
 
-        console.log(
-          `📦 배치 ${i + 1}/${totalBatches} 처리 중: ${batch.length}개 리드`
-        );
+        console.log(`📦 배치 ${i + 1}/${totalBatches} 처리 중: ${batch.length}개 리드`)
 
-        let batchSuccess = false;
-        let retryCount = 0;
+        let batchSuccess = false
+        let retryCount = 0
 
         // 재시도 로직
         while (!batchSuccess && retryCount <= MAX_RETRIES) {
@@ -629,101 +563,85 @@ export default function LeadsPage() {
               workspaceId,
               leads: batch,
               customerGroupId: targetGroupId,
-            });
-            successCount += batch.length;
-            batchSuccess = true;
-            console.log(`✅ 배치 ${i + 1} 성공: ${batch.length}개 리드 추가됨`);
+            })
+            successCount += batch.length
+            batchSuccess = true
+            console.log(`✅ 배치 ${i + 1} 성공: ${batch.length}개 리드 추가됨`)
           } catch (error) {
-            retryCount++;
-            console.error(
-              `❌ 배치 ${i + 1} 실패 (시도 ${retryCount}/${MAX_RETRIES + 1}):`,
-              error
-            );
+            retryCount++
+            console.error(`❌ 배치 ${i + 1} 실패 (시도 ${retryCount}/${MAX_RETRIES + 1}):`, error)
 
             if (retryCount <= MAX_RETRIES) {
-              console.log(
-                `🔄 배치 ${i + 1} 재시도 중... (${retryCount}/${MAX_RETRIES})`
-              );
+              console.log(`🔄 배치 ${i + 1} 재시도 중... (${retryCount}/${MAX_RETRIES})`)
               // 재시도 전 지연 (지수 백오프)
-              await new Promise((resolve) =>
-                setTimeout(resolve, 1000 * retryCount)
-              );
+              await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount))
             } else {
-              errorCount += batch.length;
-              console.error(
-                `❌ 배치 ${i + 1} 최종 실패: ${MAX_RETRIES + 1}회 시도 후 포기`
-              );
+              errorCount += batch.length
+              console.error(`❌ 배치 ${i + 1} 최종 실패: ${MAX_RETRIES + 1}회 시도 후 포기`)
             }
           }
         }
 
         // 배치 간 지연 (서버 부하 방지) - 지연 시간 증가
         if (i < totalBatches - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 500)); // 200ms → 500ms
+          await new Promise((resolve) => setTimeout(resolve, 500)) // 200ms → 500ms
         }
       }
 
-      console.log(
-        `📊 배치 처리 완료: 성공 ${successCount}개, 실패 ${errorCount}개`
-      );
+      console.log(`📊 배치 처리 완료: 성공 ${successCount}개, 실패 ${errorCount}개`)
 
       // Invalidate queries to refresh data
       await queryClient.invalidateQueries({
         queryKey: leadKeys.lists(),
-      });
+      })
       await queryClient.invalidateQueries({
         queryKey: customerGroupKeys.all,
-      });
+      })
 
       toast.success(
         `${csvData.length}개의 리드가 ${
           isNewGroup ? "새로 생성된 그룹" : "선택된 그룹"
-        }에 성공적으로 추가되었습니다.`
-      );
-      setShowCSVUpload(false);
-      setCsvData(null);
-      setGroupName("");
-      setGroupDescription("");
-      setIsNewGroup(false);
-      setNewGroupName("");
+        }에 성공적으로 추가되었습니다.`,
+      )
+      setShowCSVUpload(false)
+      setCsvData(null)
+      setGroupName("")
+      setGroupDescription("")
+      setIsNewGroup(false)
+      setNewGroupName("")
     } catch (error) {
-      console.error("CSV 업로드 오류:", error);
+      console.error("CSV 업로드 오류:", error)
 
       // 더 구체적인 오류 메시지 표시
-      let errorMessage = "리드 추가 중 오류가 발생했습니다.";
+      let errorMessage = "리드 추가 중 오류가 발생했습니다."
 
       if (error instanceof Error) {
         if (error.message.includes("timeout")) {
           errorMessage =
-            "요청 시간이 초과되었습니다. 리드 개수가 많아서 시간이 오래 걸릴 수 있습니다.";
+            "요청 시간이 초과되었습니다. 리드 개수가 많아서 시간이 오래 걸릴 수 있습니다."
         } else if (error.message.includes("memory")) {
           errorMessage =
-            "메모리 부족으로 인해 처리할 수 없습니다. 리드 개수를 줄여서 다시 시도해주세요.";
+            "메모리 부족으로 인해 처리할 수 없습니다. 리드 개수를 줄여서 다시 시도해주세요."
         } else if (error.message.includes("database")) {
-          errorMessage =
-            "데이터베이스 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+          errorMessage = "데이터베이스 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
         } else {
-          errorMessage = `오류: ${error.message}`;
+          errorMessage = `오류: ${error.message}`
         }
       }
 
-      toast.error(errorMessage);
+      toast.error(errorMessage)
     } finally {
-      setIsUploadingLeads(false);
+      setIsUploadingLeads(false)
     }
-  };
+  }
 
   // 그룹 편집 핸들러
   const handleEditGroup = (group: CustomerGroup) => {
-    setEditingGroup(group);
-    setShowGroupEditModal(true);
-  };
+    setEditingGroup(group)
+    setShowGroupEditModal(true)
+  }
 
-  const handleSaveGroupEdit = async (
-    groupId: string,
-    name: string,
-    description: string
-  ) => {
+  const handleSaveGroupEdit = async (groupId: string, name: string, description: string) => {
     updateCustomerGroup.mutate(
       {
         groupId,
@@ -738,56 +656,56 @@ export default function LeadsPage() {
           // 그룹 목록 및 상세 정보 쿼리 갱신
           queryClient.invalidateQueries({
             queryKey: customerGroupKeys.all,
-          });
-          setShowGroupEditModal(false);
-          setEditingGroup(null);
+          })
+          setShowGroupEditModal(false)
+          setEditingGroup(null)
         },
-      }
-    );
-  };
+      },
+    )
+  }
 
   // 그룹 삭제 핸들러
   const handleDeleteGroup = async (group: CustomerGroup) => {
-    setGroupToDelete(group);
-    setGroupDeleteConfirmOpen(true);
-  };
+    setGroupToDelete(group)
+    setGroupDeleteConfirmOpen(true)
+  }
 
   const confirmGroupDelete = () => {
-    if (!groupToDelete) return;
+    if (!groupToDelete) return
 
     deleteCustomerGroup.mutate(groupToDelete.id, {
       onSuccess: () => {
         // 그룹 목록 쿼리 갱신
         queryClient.invalidateQueries({
           queryKey: customerGroupKeys.all,
-        });
+        })
         // 삭제된 그룹이 선택되어 있었다면 선택 해제
         if (selectedCustomerGroup === groupToDelete.id) {
-          setSelectedCustomerGroup("");
+          setSelectedCustomerGroup("")
         }
-        setGroupToDelete(null);
+        setGroupToDelete(null)
       },
-    });
-  };
+    })
+  }
 
   // 리드 그룹 관리 핸들러
   const handleManageLeadGroups = async (lead: Lead) => {
     try {
       // 현재 리드가 속한 그룹들을 가져옴
-      const groups = await customerGroupsApi.getLeadGroups(lead.id);
-      setLeadCurrentGroups(groups);
-      setManagingLeadGroups(lead);
-      setShowLeadGroupModal(true);
+      const groups = await customerGroupsApi.getLeadGroups(lead.id)
+      setLeadCurrentGroups(groups)
+      setManagingLeadGroups(lead)
+      setShowLeadGroupModal(true)
     } catch (error) {
-      console.error("Failed to fetch lead groups:", error);
-      toast.error("리드 그룹 정보를 가져오는데 실패했습니다.");
+      console.error("Failed to fetch lead groups:", error)
+      toast.error("리드 그룹 정보를 가져오는데 실패했습니다.")
     }
-  };
+  }
 
   const handleSaveLeadGroups = async (
     leadId: string,
     groupsToAdd: string[],
-    groupsToRemove: string[]
+    groupsToRemove: string[],
   ) => {
     try {
       // 그룹에서 제거
@@ -795,7 +713,7 @@ export default function LeadsPage() {
         await bulkRemoveGroupMembers.mutateAsync({
           groupId,
           leadIds: [leadId],
-        });
+        })
       }
 
       // 그룹에 추가
@@ -803,21 +721,21 @@ export default function LeadsPage() {
         await bulkAddGroupMembers.mutateAsync({
           groupId,
           leadIds: [leadId],
-        });
+        })
       }
 
       // Refresh data
       await queryClient.invalidateQueries({
         queryKey: customerGroupKeys.all,
-      });
+      })
 
-      toast.success("리드 그룹이 업데이트되었습니다.");
+      toast.success("리드 그룹이 업데이트되었습니다.")
     } catch (error) {
-      console.error("Failed to update lead groups:", error);
-      toast.error("리드 그룹 업데이트에 실패했습니다.");
-      throw error;
+      console.error("Failed to update lead groups:", error)
+      toast.error("리드 그룹 업데이트에 실패했습니다.")
+      throw error
     }
-  };
+  }
 
   return (
     <div className="space-y-6 h-full overflow-y-auto">
@@ -844,14 +762,14 @@ export default function LeadsPage() {
                 onClick={() => {
                   // 선택된 고객 그룹이 있다면 기본값으로 설정
                   if (selectedCustomerGroup) {
-                    setGroupName(selectedCustomerGroup);
-                    setIsNewGroup(false);
+                    setGroupName(selectedCustomerGroup)
+                    setIsNewGroup(false)
                   } else {
-                    setIsNewGroup(true);
+                    setIsNewGroup(true)
                   }
-                  setNewGroupName("");
-                  setGroupDescription("");
-                  setShowCSVUpload(true);
+                  setNewGroupName("")
+                  setGroupDescription("")
+                  setShowCSVUpload(true)
                 }}
               >
                 <Upload className="h-4 w-4 mr-1" />
@@ -871,9 +789,7 @@ export default function LeadsPage() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-700">
-                    고객 그룹 필터
-                  </span>
+                  <span className="text-sm font-medium text-gray-700">고객 그룹 필터</span>
                 </div>
                 <CreateGroupModal
                   workspaces={workspaces}
@@ -885,9 +801,9 @@ export default function LeadsPage() {
                   }))}
                   onSuccess={(groupId) => {
                     // 생성된 그룹을 자동으로 선택
-                    setSelectedCustomerGroup(groupId);
+                    setSelectedCustomerGroup(groupId)
                     // 선택된 리드들 초기화
-                    setSelectedLeads([]);
+                    setSelectedLeads([])
                   }}
                 />
               </div>
@@ -920,16 +836,12 @@ export default function LeadsPage() {
                         >
                           <Users
                             className={`h-3 w-3 mr-1 ${
-                              selectedCustomerGroup === group.id
-                                ? "text-violet-500"
-                                : ""
+                              selectedCustomerGroup === group.id ? "text-violet-500" : ""
                             }`}
                           />
                           {group.name}
                           {group.leadCount !== undefined && (
-                            <span className="ml-1.5 text-xs opacity-70">
-                              ({group.leadCount})
-                            </span>
+                            <span className="ml-1.5 text-xs opacity-70">({group.leadCount})</span>
                           )}
                         </Button>
                       </ContextMenuTrigger>
@@ -955,8 +867,7 @@ export default function LeadsPage() {
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground text-center py-4 bg-gray-50 rounded-md">
-                  이 워크스페이스에는 아직 그룹이 없습니다. 위 버튼을 클릭하여
-                  첫 그룹을 생성하세요.
+                  이 워크스페이스에는 아직 그룹이 없습니다. 위 버튼을 클릭하여 첫 그룹을 생성하세요.
                 </div>
               )}
             </div>
@@ -966,9 +877,7 @@ export default function LeadsPage() {
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
               <Search className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">
-                고급 검색
-              </span>
+              <span className="text-sm font-medium text-gray-700">고급 검색</span>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -985,7 +894,7 @@ export default function LeadsPage() {
                       | "email"
                       | "website"
                       | "industry"
-                      | "category"
+                      | "category",
                   ) => setSearchType(value)}
                 >
                   <SelectTrigger id={searchTypeId}>
@@ -1014,16 +923,16 @@ export default function LeadsPage() {
                       searchType === "all"
                         ? "회사명, 이메일, 웹사이트로 검색..."
                         : searchType === "company"
-                        ? "회사명으로 검색..."
-                        : searchType === "country"
-                        ? "국가로 검색..."
-                        : searchType === "email"
-                        ? "이메일로 검색..."
-                        : searchType === "website"
-                        ? "웹사이트로 검색..."
-                        : searchType === "industry"
-                        ? "산업부문으로 검색..."
-                        : "제품카테고리로 검색..."
+                          ? "회사명으로 검색..."
+                          : searchType === "country"
+                            ? "국가로 검색..."
+                            : searchType === "email"
+                              ? "이메일로 검색..."
+                              : searchType === "website"
+                                ? "웹사이트로 검색..."
+                                : searchType === "industry"
+                                  ? "산업부문으로 검색..."
+                                  : "제품카테고리로 검색..."
                     }
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
@@ -1034,8 +943,8 @@ export default function LeadsPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        setSearchInput("");
-                        setSearchQuery("");
+                        setSearchInput("")
+                        setSearchQuery("")
                       }}
                       className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
                     >
@@ -1049,19 +958,16 @@ export default function LeadsPage() {
               <div className="space-y-2">
                 <Label>&nbsp;</Label>
                 <div className="flex gap-2">
-                  <Button
-                    onClick={() => setSearchQuery(searchInput)}
-                    className="flex-1"
-                  >
+                  <Button onClick={() => setSearchQuery(searchInput)} className="flex-1">
                     <Search className="h-4 w-4 mr-2" />
                     검색
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => {
-                      setSearchInput("");
-                      setSearchQuery("");
-                      setSearchType("all");
+                      setSearchInput("")
+                      setSearchQuery("")
+                      setSearchType("all")
                     }}
                   >
                     <X className="h-4 w-4" />
@@ -1080,16 +986,16 @@ export default function LeadsPage() {
                       {searchType === "all"
                         ? "통합검색"
                         : searchType === "company"
-                        ? "회사명"
-                        : searchType === "country"
-                        ? "국가"
-                        : searchType === "email"
-                        ? "이메일"
-                        : searchType === "website"
-                        ? "웹사이트"
-                        : searchType === "industry"
-                        ? "산업부문"
-                        : "제품카테고리"}
+                          ? "회사명"
+                          : searchType === "country"
+                            ? "국가"
+                            : searchType === "email"
+                              ? "이메일"
+                              : searchType === "website"
+                                ? "웹사이트"
+                                : searchType === "industry"
+                                  ? "산업부문"
+                                  : "제품카테고리"}
                     </strong>
                     에서 "<strong>{searchQuery}</strong>" 검색 중
                   </span>
@@ -1105,9 +1011,7 @@ export default function LeadsPage() {
                 variant={isSelectAllMode ? "default" : "outline"}
                 size="sm"
                 onClick={toggleSelectAllMode}
-                className={
-                  isSelectAllMode ? "bg-violet-600 hover:bg-violet-700" : ""
-                }
+                className={isSelectAllMode ? "bg-violet-600 hover:bg-violet-700" : ""}
               >
                 {isSelectAllMode ? "전체 선택 모드 해제" : "전체 선택 모드"}
               </Button>
@@ -1115,9 +1019,7 @@ export default function LeadsPage() {
               {/* 전체 선택 상태 표시 */}
               {isSelectAllMode && (
                 <span className="text-sm text-muted-foreground">
-                  {allLeadsSelected
-                    ? "모든 리드가 선택됨"
-                    : "모든 리드를 선택하려면 클릭하세요"}
+                  {allLeadsSelected ? "모든 리드가 선택됨" : "모든 리드를 선택하려면 클릭하세요"}
                 </span>
               )}
             </div>
@@ -1127,9 +1029,7 @@ export default function LeadsPage() {
               <div className="flex items-center gap-4">
                 <div className="text-sm text-muted-foreground">
                   <span className="font-medium">
-                    {allLeadsSelected
-                      ? "전체 리드 선택됨"
-                      : `${selectedLeads.length}개 선택됨`}
+                    {allLeadsSelected ? "전체 리드 선택됨" : `${selectedLeads.length}개 선택됨`}
                   </span>
                 </div>
                 <div className="flex gap-2">
@@ -1143,14 +1043,10 @@ export default function LeadsPage() {
                     {downloadSelectedLeadsCSV.isPending
                       ? "다운로드 중..."
                       : allLeadsSelected
-                      ? "전체 리드 다운로드"
-                      : "선택된 리드 다운로드"}
+                        ? "전체 리드 다운로드"
+                        : "선택된 리드 다운로드"}
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openBulkActionModal("status")}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => openBulkActionModal("status")}>
                     상태 변경
                   </Button>
                   <Button
@@ -1199,23 +1095,15 @@ export default function LeadsPage() {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">
-              리드 생성
-            </DialogTitle>
+            <DialogTitle className="text-xl font-semibold">리드 생성</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
             <LeadForm
               isEdit={false}
-              workspaceId={
-                selectedWorkspaceId !== "all"
-                  ? selectedWorkspaceId
-                  : workspaces[0]?.id
-              }
+              workspaceId={selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id}
               customerGroups={customerGroups || []}
               selectedGroup={selectedGroupForNewLead}
-              onGroupChange={(value) =>
-                setSelectedGroupForNewLead(value === "none" ? "" : value)
-              }
+              onGroupChange={(value) => setSelectedGroupForNewLead(value === "none" ? "" : value)}
               onSave={handleCreateLead}
               onCancel={() => setShowCreateDialog(false)}
             />
@@ -1227,9 +1115,7 @@ export default function LeadsPage() {
       <Dialog open={!!editingLead} onOpenChange={() => setEditingLead(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">
-              리드 정보 수정
-            </DialogTitle>
+            <DialogTitle className="text-xl font-semibold">리드 정보 수정</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
             {editingLead && (
@@ -1248,8 +1134,8 @@ export default function LeadsPage() {
       <BulkActionModal
         isOpen={showBulkActionModal}
         onClose={() => {
-          setShowBulkActionModal(false);
-          setBulkActionType(null);
+          setShowBulkActionModal(false)
+          setBulkActionType(null)
         }}
         onConfirm={handleBulkAction}
         leadCount={selectedLeads.length}
@@ -1260,9 +1146,7 @@ export default function LeadsPage() {
       <Dialog open={showCSVUpload} onOpenChange={setShowCSVUpload}>
         <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader className="pb-4">
-            <DialogTitle className="text-xl font-semibold">
-              CSV/XLSX 파일로 리드 추가
-            </DialogTitle>
+            <DialogTitle className="text-xl font-semibold">CSV/XLSX 파일로 리드 추가</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] space-y-6">
             {/* 그룹 정보 입력 */}
@@ -1281,10 +1165,7 @@ export default function LeadsPage() {
                       onChange={() => setIsNewGroup(false)}
                       className="h-4 w-4 text-violet-600"
                     />
-                    <Label
-                      htmlFor={existingGroupId}
-                      className="text-sm font-medium"
-                    >
+                    <Label htmlFor={existingGroupId} className="text-sm font-medium">
                       기존 그룹에 추가
                     </Label>
                   </div>
@@ -1381,21 +1262,18 @@ export default function LeadsPage() {
                       !
                     </div>
                     <div className="space-y-2">
-                      <h4 className="font-medium text-blue-900">
-                        필수 입력 필드 안내
-                      </h4>
+                      <h4 className="font-medium text-blue-900">필수 입력 필드 안내</h4>
                       <div className="text-sm text-blue-800">
                         <p className="mb-2">
-                          <strong>필수 필드:</strong> companyName (회사명),
-                          primaryEmail (주요 이메일), websiteUrl (웹사이트 URL)
+                          <strong>필수 필드:</strong> companyName (회사명), primaryEmail (주요
+                          이메일), websiteUrl (웹사이트 URL)
                         </p>
                         <p className="mb-2">
-                          <strong>선택 필드:</strong> 나머지 모든 컬럼 (업종,
-                          설명, 전화번호 등)
+                          <strong>선택 필드:</strong> 나머지 모든 컬럼 (업종, 설명, 전화번호 등)
                         </p>
                         <p className="text-xs text-blue-600">
-                          💡 템플릿을 다운로드하여 형식을 확인하고 데이터를
-                          입력하세요. CSV와 XLSX 파일 모두 지원됩니다.
+                          💡 템플릿을 다운로드하여 형식을 확인하고 데이터를 입력하세요. CSV와 XLSX
+                          파일 모두 지원됩니다.
                         </p>
                       </div>
                     </div>
@@ -1411,8 +1289,8 @@ export default function LeadsPage() {
                       <div className="space-y-2">
                         <h4 className="text-lg font-medium">파일 업로드</h4>
                         <p className="text-sm text-muted-foreground">
-                          리드 데이터가 포함된 CSV 또는 XLSX 파일을 업로드하여
-                          그룹에 자동으로 추가하세요
+                          리드 데이터가 포함된 CSV 또는 XLSX 파일을 업로드하여 그룹에 자동으로
+                          추가하세요
                         </p>
                         <div className="pt-4">
                           <input
@@ -1427,9 +1305,7 @@ export default function LeadsPage() {
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isProcessingCSV}
                           >
-                            {isProcessingCSV
-                              ? "처리 중..."
-                              : "파일 선택 (CSV/XLSX)"}
+                            {isProcessingCSV ? "처리 중..." : "파일 선택 (CSV/XLSX)"}
                           </Button>
                         </div>
                       </div>
@@ -1453,10 +1329,10 @@ export default function LeadsPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          setCsvData(null);
-                          setCsvFileName("");
-                          setCsvFileSize(0);
-                          setCsvErrors([]);
+                          setCsvData(null)
+                          setCsvFileName("")
+                          setCsvFileSize(0)
+                          setCsvErrors([])
                         }}
                       >
                         <X className="h-4 w-4" />
@@ -1466,21 +1342,15 @@ export default function LeadsPage() {
                   <CardContent>
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary">
-                          {csvData.length}개 리드
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          파싱 완료
-                        </span>
+                        <Badge variant="secondary">{csvData.length}개 리드</Badge>
+                        <span className="text-sm text-muted-foreground">파싱 완료</span>
                       </div>
 
                       {csvErrors.length > 0 && (
                         <Alert>
                           <AlertDescription>
                             <div className="space-y-1">
-                              <p className="font-medium">
-                                다음 오류를 수정해주세요:
-                              </p>
+                              <p className="font-medium">다음 오류를 수정해주세요:</p>
                               <ul className="list-disc list-inside space-y-1">
                                 {csvErrors.map((error) => (
                                   <li key={error} className="text-sm">
@@ -1495,17 +1365,11 @@ export default function LeadsPage() {
 
                       <div className="max-h-40 overflow-y-auto">
                         <div className="text-sm text-muted-foreground">
-                          <p className="font-medium mb-2">
-                            미리보기 (처음 5개):
-                          </p>
+                          <p className="font-medium mb-2">미리보기 (처음 5개):</p>
                           <div className="space-y-1">
                             {csvData.slice(0, 5).map((lead, index) => (
-                              <div
-                                key={index}
-                                className="p-2 bg-gray-50 rounded text-xs"
-                              >
-                                {lead.companyName} -{" "}
-                                {lead.primaryEmail || "이메일 없음"}
+                              <div key={index} className="p-2 bg-gray-50 rounded text-xs">
+                                {lead.companyName} - {lead.primaryEmail || "이메일 없음"}
                               </div>
                             ))}
                           </div>
@@ -1542,8 +1406,8 @@ export default function LeadsPage() {
         group={editingGroup}
         isOpen={showGroupEditModal}
         onClose={() => {
-          setShowGroupEditModal(false);
-          setEditingGroup(null);
+          setShowGroupEditModal(false)
+          setEditingGroup(null)
         }}
         onSave={handleSaveGroupEdit}
       />
@@ -1553,9 +1417,9 @@ export default function LeadsPage() {
         lead={managingLeadGroups}
         isOpen={showLeadGroupModal}
         onClose={() => {
-          setShowLeadGroupModal(false);
-          setManagingLeadGroups(null);
-          setLeadCurrentGroups([]);
+          setShowLeadGroupModal(false)
+          setManagingLeadGroups(null)
+          setLeadCurrentGroups([])
         }}
         availableGroups={customerGroups || []}
         currentGroups={leadCurrentGroups}
@@ -1592,5 +1456,5 @@ export default function LeadsPage() {
         variant="destructive"
       />
     </div>
-  );
+  )
 }

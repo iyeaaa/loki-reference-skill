@@ -12,6 +12,7 @@ import { emails } from "../db/schema/emails"
 import { leadContacts, leadIndustryTypes } from "../db/schema/lead-details"
 import { leads } from "../db/schema/leads"
 import { emailService } from "../services/email.service"
+import * as leadService from "../services/lead.service"
 import * as sequenceService from "../services/sequence.service"
 import * as workflowEmailService from "../services/workflow-email.service"
 import logger from "../utils/logger"
@@ -413,6 +414,29 @@ async function processSequenceEmails() {
 
         // Update enrollment progress
         await sequenceService.updateEnrollmentProgress(execution.enrollmentId, execution.stepOrder)
+
+        // Update lead status to 'contacted' and lastContactedAt
+        try {
+          await leadService.updateLead(execution.leadId, {
+            leadStatus: "contacted",
+            lastContactedAt: new Date(),
+          })
+          logger.info(
+            {
+              leadId: execution.leadId,
+              leadCompanyName: execution.leadCompanyName,
+            },
+            "✅ [STEP-WORKER] Lead status updated to contacted",
+          )
+        } catch (leadUpdateError) {
+          logger.error(
+            {
+              leadId: execution.leadId,
+              error: leadUpdateError,
+            },
+            "❌ [STEP-WORKER] Failed to update lead status",
+          )
+        }
 
         successCount++
         logger.info(

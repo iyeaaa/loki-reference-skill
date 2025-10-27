@@ -178,6 +178,10 @@ export function useAddWorkspaceMember() {
       queryClient.invalidateQueries({
         queryKey: workspaceKeys.members(variables.workspaceId),
       })
+      // Invalidate all workspace queries to update sidebar
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.all,
+      })
       toast.success("멤버가 추가되었습니다")
     },
     onError: (error: Error) => {
@@ -202,6 +206,10 @@ export function useUpdateMemberRole() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: workspaceKeys.members(variables.workspaceId),
+      })
+      // Invalidate all workspace queries to update sidebar
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.all,
       })
       toast.success("멤버 역할이 업데이트되었습니다")
     },
@@ -228,6 +236,10 @@ export function useUpdateMemberStatus() {
       queryClient.invalidateQueries({
         queryKey: workspaceKeys.members(variables.workspaceId),
       })
+      // Invalidate all workspace queries to update sidebar
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.all,
+      })
       toast.success("멤버 상태가 업데이트되었습니다")
     },
     onError: (error: Error) => {
@@ -245,6 +257,10 @@ export function useRemoveWorkspaceMember() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: workspaceKeys.members(variables.workspaceId),
+      })
+      // Invalidate all workspace queries to update sidebar
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.all,
       })
       toast.success("멤버가 제거되었습니다")
     },

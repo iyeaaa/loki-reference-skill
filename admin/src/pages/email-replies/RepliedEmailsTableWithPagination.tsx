@@ -14,9 +14,9 @@ interface RepliedEmailsTableWithPaginationProps {
   selectedStatuses: string[]
   selectedThreadId?: string | null
   onThreadSelect: (threadId: string) => void
-  selectedEmails: string[]
-  onToggleEmail: (emailId: string) => void
-  onToggleAll: (emailIds: string[]) => void
+  selectedThreads: string[]
+  onToggleThread: (threadId: string) => void
+  onToggleAll: (threadIds: string[]) => void
 }
 
 export function RepliedEmailsTableWithPagination({
@@ -25,8 +25,8 @@ export function RepliedEmailsTableWithPagination({
   selectedStatuses,
   selectedThreadId,
   onThreadSelect,
-  selectedEmails,
-  onToggleEmail,
+  selectedThreads,
+  onToggleThread,
   onToggleAll,
 }: RepliedEmailsTableWithPaginationProps) {
   const [currentPage, setCurrentPage] = useState(1)
@@ -162,9 +162,17 @@ export function RepliedEmailsTableWithPagination({
                   <Checkbox
                     checked={
                       repliedEmails.length > 0 &&
-                      repliedEmails.every((email) => selectedEmails.includes(email.id))
+                      repliedEmails.every((email) =>
+                        email.threadId && selectedThreads.includes(email.threadId)
+                      )
                     }
-                    onCheckedChange={() => onToggleAll(repliedEmails.map((e) => e.id))}
+                    onCheckedChange={() =>
+                      onToggleAll(
+                        repliedEmails
+                          .map((e) => e.threadId)
+                          .filter((id): id is string => !!id)
+                      )
+                    }
                   />
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -210,8 +218,8 @@ export function RepliedEmailsTableWithPagination({
                     >
                       <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
-                          checked={selectedEmails.includes(email.id)}
-                          onCheckedChange={() => onToggleEmail(email.id)}
+                          checked={email.threadId ? selectedThreads.includes(email.threadId) : false}
+                          onCheckedChange={() => email.threadId && onToggleThread(email.threadId)}
                         />
                       </td>
                       <td

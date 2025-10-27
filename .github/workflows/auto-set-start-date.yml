@@ -145,8 +145,8 @@ jobs:
                   console.log(`  Status: ${status}`);
                   console.log(`  Current Start Date: ${startDate || 'not set'}`);
 
-                  // "작업중(In progress)"로 이동했고, Start Date가 없는 경우
-                  if (status === '작업중(In progress)' && !startDate) {
+                  // "오늘 할 일(To Do)"로 이동했고, Start Date가 없는 경우
+                  if (status === '오늘 할 일(To Do)' && !startDate) {
                     // Start Date 필드 ID 찾기
                     const startDateField = item.project.fields.nodes.find(
                       field => field.name === 'Start date'
@@ -182,8 +182,8 @@ jobs:
                     } else {
                       console.log(`  ⚠️ Start date field not found in project "${projectTitle}"`);
                     }
-                  } else if (status !== '작업중(In progress)') {
-                    console.log(`  ⏭️  Skipping - status is not "작업중(In progress)"`);
+                  } else if (status !== '오늘 할 일(To Do)') {
+                    console.log(`  ⏭️  Skipping - status is not "오늘 할 일(To Do)"`);
                   } else {
                     console.log(`  ⏭️  Skipping - Start Date already set`);
                   }

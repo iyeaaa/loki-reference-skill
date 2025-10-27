@@ -630,6 +630,8 @@ class WebhookService {
       case "delivered":
         updates.status = "delivered"
         updates.deliveredAt = new Date(event.timestamp * 1000)
+        // Update sequence step execution status to delivered
+        await this.updateSequenceStepExecutionStatus(emailId, "delivered")
         break
       case "open":
         updates.status = "opened"
@@ -668,6 +670,33 @@ class WebhookService {
       await db.update(emailsTable).set(updates).where(eq(emailsTable.id, emailId))
 
       logger.info({ emailId, status: updates.status, event: event.event }, "Email status updated")
+    }
+  }
+
+  private async updateSequenceStepExecutionStatus(emailId: string, status: "delivered") {
+    try {
+      // Find sequence step execution by email ID
+      const { sequenceStepExecutions } = await import("../db/schema/sequences")
+      const { updateStepExecutionStatus } = await import("../services/sequence.service")
+
+      const executionResults = await db
+        .select({ id: sequenceStepExecutions.id })
+        .from(sequenceStepExecutions)
+        .where(eq(sequenceStepExecutions.emailId, emailId))
+        .limit(1)
+
+      if (executionResults.length > 0) {
+        const execution = executionResults[0]
+        if (execution) {
+          await updateStepExecutionStatus(execution.id, status)
+          logger.info(
+            { emailId, executionId: execution.id, status },
+            "Sequence step execution status updated",
+          )
+        }
+      }
+    } catch (error) {
+      logger.error({ error, emailId, status }, "Failed to update sequence step execution status")
     }
   }
 }

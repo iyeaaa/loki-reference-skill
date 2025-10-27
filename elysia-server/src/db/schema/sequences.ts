@@ -38,6 +38,7 @@ export const stepExecutionStatusEnum = pgEnum("step_execution_status_enum", [
   "pending",
   "scheduled",
   "sent",
+  "delivered",
   "failed",
   "skipped",
 ])

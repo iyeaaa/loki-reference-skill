@@ -10,7 +10,13 @@ export type EnrollmentStatus =
   | "bounced"
   | "unsubscribed"
 
-export type StepExecutionStatus = "pending" | "scheduled" | "sent" | "failed" | "skipped"
+export type StepExecutionStatus =
+  | "pending"
+  | "scheduled"
+  | "sent"
+  | "delivered"
+  | "failed"
+  | "skipped"
 
 export interface Sequence {
   id: string
@@ -31,6 +37,7 @@ export interface Sequence {
   createdByEmail?: string
   stepsCount?: number
   enrollmentsCount?: number
+  completedEnrollmentsCount?: number
 }
 
 export interface SequenceStep {

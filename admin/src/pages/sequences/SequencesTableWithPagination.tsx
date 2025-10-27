@@ -369,7 +369,9 @@ export function SequencesTableWithPagination({
                         disabled={
                           sequence.status === "archived" ||
                           (sequence.status === "draft" &&
-                            (!sequence.stepsCount || sequence.stepsCount === 0))
+                            (!sequence.stepsCount || sequence.stepsCount === 0)) ||
+                          (sequence.completedEnrollmentsCount != null &&
+                            sequence.completedEnrollmentsCount > 0)
                         }
                       >
                         {sequence.status === "active" ? (

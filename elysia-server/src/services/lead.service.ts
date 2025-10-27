@@ -424,7 +424,7 @@ export async function listLeadsWithFilters(
   }
 
   if (filters?.search) {
-    let searchCondition: any
+    let searchCondition: ReturnType<typeof or> | undefined
 
     switch (filters.searchType) {
       case "company":
@@ -786,7 +786,7 @@ export async function countLeadsWithFilters(filters?: {
   }
 
   if (filters?.search) {
-    let searchCondition: any
+    let searchCondition: ReturnType<typeof or> | undefined
 
     switch (filters.searchType) {
       case "company":

@@ -227,7 +227,14 @@ export interface RepliedEmail {
   messageCount?: number
   // Sequence enrollment fields
   enrollmentId?: string | null
-  enrollmentStatus?: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed" | null
+  enrollmentStatus?:
+    | "active"
+    | "paused"
+    | "completed"
+    | "stopped"
+    | "bounced"
+    | "unsubscribed"
+    | null
   enrollmentCurrentStepOrder?: number | null
   enrollmentEnrolledAt?: string | null
   enrollmentFirstEmailSentAt?: string | null

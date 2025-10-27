@@ -643,8 +643,8 @@ export function LeadsTableWithPagination({
                         />
                       </td>
 
-                    {/* 2. 담당자명 (contactName) */}
-                    <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
+                      {/* 2. 담당자명 (contactName) */}
+                      <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.contactName ? (
                           <>
                             <TooltipProvider>
@@ -773,8 +773,6 @@ export function LeadsTableWithPagination({
                           "-"
                         )}
                       </td>
-
-
 
                       {/* 5. 웹사이트 (websiteUrl) */}
                       <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">

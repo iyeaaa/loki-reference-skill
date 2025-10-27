@@ -1,37 +1,37 @@
-import { useEffect, useId, useState } from "react";
-import toast from "react-hot-toast";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useEffect, useId, useState } from "react"
+import toast from "react-hot-toast"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import {
   useCustomerGroupMembers,
   useCustomerGroupsByWorkspace,
-} from "@/lib/api/hooks/customer-groups";
-import { useSuspenseWorkspaces } from "@/lib/api/hooks/workspaces";
-import type { CustomerGroupMember } from "@/lib/api/types/customer-group";
-import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence";
+} from "@/lib/api/hooks/customer-groups"
+import { useSuspenseWorkspaces } from "@/lib/api/hooks/workspaces"
+import type { CustomerGroupMember } from "@/lib/api/types/customer-group"
+import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence"
 
 // Extended type to include joined lead data
 interface CustomerGroupMemberWithLead extends CustomerGroupMember {
-  leadCompanyName?: string;
-  leadBusinessType?: string;
+  leadCompanyName?: string
+  leadBusinessType?: string
 }
 
 interface SequenceFormProps {
-  sequence?: Sequence;
-  isEdit?: boolean;
-  onSave: (sequenceData: unknown) => Promise<void> | void;
-  onCancel: () => void;
-  stepsCount?: number;
+  sequence?: Sequence
+  isEdit?: boolean
+  onSave: (sequenceData: unknown) => Promise<void> | void
+  onCancel: () => void
+  stepsCount?: number
 }
 
 export function SequenceForm({
@@ -43,18 +43,18 @@ export function SequenceForm({
 }: SequenceFormProps) {
   const {
     data: { workspaces },
-  } = useSuspenseWorkspaces({ limit: 100 });
+  } = useSuspenseWorkspaces({ limit: 100 })
   // Parse selectedLeadIds from JSON string with error handling
   const initialSelectedLeadIds = (() => {
-    if (!sequence?.selectedLeadIds) return [];
+    if (!sequence?.selectedLeadIds) return []
     try {
-      const parsed = JSON.parse(sequence.selectedLeadIds);
-      return Array.isArray(parsed) ? parsed : [];
+      const parsed = JSON.parse(sequence.selectedLeadIds)
+      return Array.isArray(parsed) ? parsed : []
     } catch (error) {
-      console.error("Failed to parse selectedLeadIds:", error);
-      return [];
+      console.error("Failed to parse selectedLeadIds:", error)
+      return []
     }
-  })();
+  })()
 
   const [formData, setFormData] = useState({
     name: sequence?.name || "",
@@ -62,72 +62,68 @@ export function SequenceForm({
     workspaceId: sequence?.workspaceId || "",
     status: (sequence?.status || "draft") as SequenceStatus,
     customerGroupId: sequence?.customerGroupId || "",
-  });
+  })
 
-  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>(
-    initialSelectedLeadIds
-  );
-  const [showLeadSelection, setShowLeadSelection] = useState(false);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>(initialSelectedLeadIds)
+  const [showLeadSelection, setShowLeadSelection] = useState(false)
 
   const { data: customerGroups } = useCustomerGroupsByWorkspace(
     formData.workspaceId,
-    Boolean(formData.workspaceId)
-  );
+    Boolean(formData.workspaceId),
+  )
 
   // Fetch customer group members when group is selected and lead selection is shown
   const { data: membersData } = useCustomerGroupMembers(
     formData.customerGroupId || "",
     1,
     1000,
-    Boolean(formData.customerGroupId) && showLeadSelection
-  );
+    Boolean(formData.customerGroupId) && showLeadSelection,
+  )
 
-  const members = (membersData?.members || []) as CustomerGroupMemberWithLead[];
+  const members = (membersData?.members || []) as CustomerGroupMemberWithLead[]
 
-  const nameId = useId();
-  const descriptionId = useId();
-  const selectAllId = useId();
+  const nameId = useId()
+  const descriptionId = useId()
+  const selectAllId = useId()
 
-  const customerGroupId = formData.customerGroupId;
+  const customerGroupId = formData.customerGroupId
 
   // Reset selectedLeadIds when customer group changes (only in create mode)
   // biome-ignore lint/correctness/useExhaustiveDependencies: isEdit doesn't change during component lifecycle
   useEffect(() => {
     if (!isEdit) {
-      setSelectedLeadIds([]);
+      setSelectedLeadIds([])
     }
-  }, [customerGroupId]);
+  }, [customerGroupId])
 
   const handleToggleAllLeads = () => {
     if (selectedLeadIds.length === members.length) {
-      setSelectedLeadIds([]);
+      setSelectedLeadIds([])
     } else {
-      setSelectedLeadIds(members.map((m) => m.leadId));
+      setSelectedLeadIds(members.map((m) => m.leadId))
     }
-  };
+  }
 
   const handleToggleLead = (leadId: string) => {
     setSelectedLeadIds((prev) =>
-      prev.includes(leadId)
-        ? prev.filter((id) => id !== leadId)
-        : [...prev, leadId]
-    );
-  };
+      prev.includes(leadId) ? prev.filter((id) => id !== leadId) : [...prev, leadId],
+    )
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
     // 고객그룹 필수 검증
     if (!formData.customerGroupId) {
-      toast.error("워크플로우 실행을 위해 고객그룹을 선택해주세요");
-      return;
+      toast.error("워크플로우 실행을 위해 고객그룹을 선택해주세요")
+      return
     }
 
     onSave({
       ...formData,
       selectedLeadIds: selectedLeadIds.length > 0 ? selectedLeadIds : undefined,
-    });
-  };
+    })
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -147,9 +143,7 @@ export function SequenceForm({
         <Textarea
           id={descriptionId}
           value={formData.description}
-          onChange={(e) =>
-            setFormData({ ...formData, description: e.target.value })
-          }
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           placeholder="시퀀스에 대한 설명을 입력하세요..."
           rows={4}
         />
@@ -159,9 +153,7 @@ export function SequenceForm({
         <Label htmlFor="customerGroup">워크스페이스</Label>
         <Select
           value={formData.workspaceId}
-          onValueChange={(value) =>
-            setFormData({ ...formData, workspaceId: value })
-          }
+          onValueChange={(value) => setFormData({ ...formData, workspaceId: value })}
         >
           <SelectTrigger>
             <SelectValue placeholder="워크스페이스 선택" />
@@ -192,18 +184,14 @@ export function SequenceForm({
         </Label>
         <Select
           value={formData.customerGroupId}
-          onValueChange={(value) =>
-            setFormData({ ...formData, customerGroupId: value })
-          }
+          onValueChange={(value) => setFormData({ ...formData, customerGroupId: value })}
           disabled={!formData.workspaceId}
           required
         >
           <SelectTrigger>
             <SelectValue
               placeholder={
-                formData.workspaceId
-                  ? "고객그룹 선택 (필수)"
-                  : "먼저 워크스페이스를 선택하세요"
+                formData.workspaceId ? "고객그룹 선택 (필수)" : "먼저 워크스페이스를 선택하세요"
               }
             />
           </SelectTrigger>
@@ -233,9 +221,7 @@ export function SequenceForm({
       {formData.customerGroupId && (
         <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
           <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">
-              이메일 대상 선택 (선택사항)
-            </Label>
+            <Label className="text-sm font-medium">이메일 대상 선택 (선택사항)</Label>
             <Button
               type="button"
               variant="ghost"
@@ -249,8 +235,7 @@ export function SequenceForm({
           {!showLeadSelection && (
             <p className="text-xs text-muted-foreground">
               기본값: 고객 그룹의 모든 리드에게 이메일 발송
-              {selectedLeadIds.length > 0 &&
-                ` (현재 ${selectedLeadIds.length}명 선택됨)`}
+              {selectedLeadIds.length > 0 && ` (현재 ${selectedLeadIds.length}명 선택됨)`}
             </p>
           )}
 
@@ -260,16 +245,10 @@ export function SequenceForm({
                 <div className="flex items-center gap-2">
                   <Checkbox
                     id={selectAllId}
-                    checked={
-                      members.length > 0 &&
-                      selectedLeadIds.length === members.length
-                    }
+                    checked={members.length > 0 && selectedLeadIds.length === members.length}
                     onCheckedChange={handleToggleAllLeads}
                   />
-                  <Label
-                    htmlFor={selectAllId}
-                    className="text-sm font-medium cursor-pointer"
-                  >
+                  <Label htmlFor={selectAllId} className="text-sm font-medium cursor-pointer">
                     전체 선택 ({selectedLeadIds.length}/{members.length})
                   </Label>
                 </div>
@@ -301,13 +280,8 @@ export function SequenceForm({
                         checked={selectedLeadIds.includes(member.leadId)}
                         onCheckedChange={() => handleToggleLead(member.leadId)}
                       />
-                      <Label
-                        htmlFor={member.leadId}
-                        className="flex-1 text-sm cursor-pointer"
-                      >
-                        <span className="font-medium">
-                          {member.leadCompanyName}
-                        </span>
+                      <Label htmlFor={member.leadId} className="flex-1 text-sm cursor-pointer">
+                        <span className="font-medium">{member.leadCompanyName}</span>
                         {member.leadBusinessType && (
                           <span className="ml-2 text-xs text-muted-foreground">
                             ({member.leadBusinessType})
@@ -371,5 +345,5 @@ export function SequenceForm({
         </Button>
       </div>
     </form>
-  );
+  )
 }

@@ -3,8 +3,6 @@ name: Auto-assign to Gyudong Kim
 on:
   issues:
     types: [opened]
-  pull_request:
-    types: [opened]
   project_card:
     types: [created]
 
@@ -37,17 +35,6 @@ jobs:
                 assignees: assignees
               });
               console.log(`Assigned issue #${context.issue.number} to ${assignees.join(', ')}`);
-            }
-
-            // PR인 경우
-            if (context.eventName === 'pull_request') {
-              await github.rest.issues.addAssignees({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.pull_request.number,
-                assignees: assignees
-              });
-              console.log(`Assigned PR #${context.payload.pull_request.number} to ${assignees.join(', ')}`);
             }
 
             // 프로젝트 카드인 경우

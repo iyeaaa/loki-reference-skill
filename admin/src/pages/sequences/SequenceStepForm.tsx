@@ -382,7 +382,9 @@ export function SequenceStepForm({
               <Button
                 type="button"
                 onClick={handleGenerateWithAI}
-                disabled={isGenerating || !aiPrompt.trim() || aiPrompt.trim().length < 10}
+                disabled={
+                  isGenerating || !aiPrompt.trim() || aiPrompt.trim().length < 10 || !targetCountry
+                }
                 className="w-full"
               >
                 <Sparkles className="h-4 w-4 mr-2" />

@@ -29,6 +29,7 @@ const leadSchema = t.Object({
   workspaceId: t.String({ format: "uuid" }),
   companyName: t.Optional(t.String({ maxLength: 255 })),
   foundCompanyName: t.Optional(t.String({ maxLength: 255 })),
+  contactName: t.Optional(t.String({ maxLength: 255 })),
   websiteUrl: t.Optional(t.String({ maxLength: 500 })),
   finalUrl: t.Optional(t.String({ maxLength: 500 })),
   httpStatus: t.Optional(t.Number()),
@@ -69,6 +70,7 @@ const leadSchema = t.Object({
 const updateLeadSchema = t.Object({
   companyName: t.Optional(t.String({ maxLength: 255 })),
   foundCompanyName: t.Optional(t.String({ maxLength: 255 })),
+  contactName: t.Optional(t.String({ maxLength: 255 })),
   websiteUrl: t.Optional(t.String({ maxLength: 500 })),
   finalUrl: t.Optional(t.String({ maxLength: 500 })),
   httpStatus: t.Optional(t.Number()),

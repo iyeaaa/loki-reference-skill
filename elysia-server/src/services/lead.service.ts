@@ -69,6 +69,7 @@ export async function createLead(data: {
   workspaceId: string
   companyName?: string
   foundCompanyName?: string
+  contactName?: string
   websiteUrl?: string
   finalUrl?: string
   httpStatus?: number
@@ -117,6 +118,7 @@ export async function createLead(data: {
       workspaceId: data.workspaceId,
       companyName: data.companyName,
       foundCompanyName: data.foundCompanyName,
+      contactName: data.contactName,
       websiteUrl: data.websiteUrl,
       finalUrl: data.finalUrl,
       httpStatus: data.httpStatus,
@@ -212,6 +214,7 @@ export async function updateLead(
     workspaceId?: string
     companyName?: string
     foundCompanyName?: string
+    contactName?: string
     websiteUrl?: string
     finalUrl?: string
     httpStatus?: number
@@ -435,7 +438,10 @@ export async function listLeadsWithFilters(
         break
       case "email":
         // 이메일은 contacts 테이블에서 검색해야 하므로 별도 처리 필요
-        searchCondition = ilike(leads.companyName, `%${filters.search}%`) // 임시로 회사명으로 검색
+        searchCondition = or(
+          ilike(leads.companyName, `%${filters.search}%`),
+          ilike(leads.contactName, `%${filters.search}%`),
+        )
         break
       case "website":
         searchCondition = or(
@@ -454,6 +460,7 @@ export async function listLeadsWithFilters(
         searchCondition = or(
           ilike(leads.companyName, `%${filters.search}%`),
           ilike(leads.foundCompanyName, `%${filters.search}%`),
+          ilike(leads.contactName, `%${filters.search}%`),
           ilike(leads.websiteUrl, `%${filters.search}%`),
           ilike(leads.country, `%${filters.search}%`),
           ilike(leads.businessType, `%${filters.search}%`),
@@ -793,7 +800,10 @@ export async function countLeadsWithFilters(filters?: {
         break
       case "email":
         // 이메일은 contacts 테이블에서 검색해야 하므로 별도 처리 필요
-        searchCondition = ilike(leads.companyName, `%${filters.search}%`) // 임시로 회사명으로 검색
+        searchCondition = or(
+          ilike(leads.companyName, `%${filters.search}%`),
+          ilike(leads.contactName, `%${filters.search}%`),
+        )
         break
       case "website":
         searchCondition = or(
@@ -812,6 +822,7 @@ export async function countLeadsWithFilters(filters?: {
         searchCondition = or(
           ilike(leads.companyName, `%${filters.search}%`),
           ilike(leads.foundCompanyName, `%${filters.search}%`),
+          ilike(leads.contactName, `%${filters.search}%`),
           ilike(leads.websiteUrl, `%${filters.search}%`),
           ilike(leads.country, `%${filters.search}%`),
           ilike(leads.businessType, `%${filters.search}%`),
@@ -1361,6 +1372,7 @@ export async function exportLeadsToCSV(filters: {
     "워크스페이스",
     "회사명",
     "발견된 회사명",
+    "담당자명",
     "웹사이트",
     "업종",
     "설명",
@@ -1420,6 +1432,7 @@ export async function exportLeadsToCSV(filters: {
       lead.workspaceName || "",
       lead.companyName || "",
       lead.foundCompanyName || "",
+      lead.contactName || "",
       lead.websiteUrl || "",
       lead.businessType || "",
       (lead.description || "").replace(/"/g, '""'), // Escape quotes
@@ -1484,7 +1497,7 @@ export async function exportSelectedLeadsToCSV(leadIds: string[]) {
   if (leadIds.length === 0) {
     return (
       "\uFEFF" +
-      '"ID","워크스페이스","회사명","발견된 회사명","웹사이트","업종","설명","국가","도시","설립년도","직원수","상태","리드 점수","메모","이메일","전화번호","Facebook","Instagram","Twitter","LinkedIn","생성일"\n'
+      '"ID","워크스페이스","회사명","발견된 회사명","담당자명","웹사이트","업종","설명","국가","도시","설립년도","직원수","상태","리드 점수","메모","이메일","전화번호","Facebook","Instagram","Twitter","LinkedIn","생성일"\n'
     )
   }
 
@@ -1562,6 +1575,7 @@ export async function exportSelectedLeadsToCSV(leadIds: string[]) {
     "워크스페이스",
     "회사명",
     "발견된 회사명",
+    "담당자명",
     "웹사이트",
     "업종",
     "설명",
@@ -1621,6 +1635,7 @@ export async function exportSelectedLeadsToCSV(leadIds: string[]) {
       lead.workspaceName || "",
       lead.companyName || "",
       lead.foundCompanyName || "",
+      lead.contactName || "",
       lead.websiteUrl || "",
       lead.businessType || "",
       (lead.description || "").replace(/"/g, '""'), // Escape quotes

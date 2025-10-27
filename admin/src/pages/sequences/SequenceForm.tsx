@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react"
 import toast from "react-hot-toast"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Combobox } from "@/components/ui/combobox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -16,9 +17,11 @@ import {
   useCustomerGroupMembers,
   useCustomerGroupsByWorkspace,
 } from "@/lib/api/hooks/customer-groups"
-import { useSuspenseWorkspaces } from "@/lib/api/hooks/workspaces"
+import { useSuspenseUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import type { CustomerGroupMember } from "@/lib/api/types/customer-group"
 import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence"
+import { useAuth } from "@/lib/auth-provider"
+import { useWorkspace } from "@/lib/hooks/useWorkspace"
 
 // Extended type to include joined lead data
 interface CustomerGroupMemberWithLead extends CustomerGroupMember {
@@ -41,9 +44,18 @@ export function SequenceForm({
   onCancel,
   stepsCount = 0,
 }: SequenceFormProps) {
-  const {
-    data: { workspaces },
-  } = useSuspenseWorkspaces({ limit: 100 })
+  const { user } = useAuth()
+  const { selectedWorkspace } = useWorkspace()
+
+  // Fetch user's workspaces only (owned or member)
+  // Use a dummy UUID if user is not available to satisfy the hook call rules
+  const { data: allWorkspaces = [] } = useSuspenseUserWorkspaces(
+    user?.id || "00000000-0000-0000-0000-000000000000",
+  )
+
+  // Only use workspaces if user exists
+  const workspaces = user?.id ? allWorkspaces : []
+
   // Parse selectedLeadIds from JSON string with error handling
   const initialSelectedLeadIds = (() => {
     if (!sequence?.selectedLeadIds) return []
@@ -56,10 +68,15 @@ export function SequenceForm({
     }
   })()
 
+  // Get initial workspace ID - use selected workspace if not editing and not "all"
+  const initialWorkspaceId =
+    sequence?.workspaceId ||
+    (!isEdit && selectedWorkspace?.id && selectedWorkspace.id !== "all" ? selectedWorkspace.id : "")
+
   const [formData, setFormData] = useState({
     name: sequence?.name || "",
     description: sequence?.description || "",
-    workspaceId: sequence?.workspaceId || "",
+    workspaceId: initialWorkspaceId,
     status: (sequence?.status || "draft") as SequenceStatus,
     customerGroupId: sequence?.customerGroupId || "",
   })
@@ -151,30 +168,18 @@ export function SequenceForm({
 
       <div className="space-y-2">
         <Label htmlFor="customerGroup">워크스페이스</Label>
-        <Select
+        <Combobox
+          options={workspaces.map((workspace) => ({
+            value: workspace.id,
+            label: workspace.name,
+            sublabel: workspace.description || undefined,
+          }))}
           value={formData.workspaceId}
           onValueChange={(value) => setFormData({ ...formData, workspaceId: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="워크스페이스 선택" />
-          </SelectTrigger>
-          {workspaces && workspaces.length === 0 && (
-            <SelectContent>
-              <SelectItem disabled value="none">
-                워크스페이스가 없습니다.
-              </SelectItem>
-            </SelectContent>
-          )}
-          {workspaces && workspaces.length > 0 && (
-            <SelectContent className="mt-2 max-h-64 overflow-y-auto">
-              {workspaces.map((workspace) => (
-                <SelectItem key={workspace.id} value={workspace.id}>
-                  {workspace.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          )}
-        </Select>
+          placeholder="워크스페이스 선택"
+          searchPlaceholder="워크스페이스 검색..."
+          emptyText="워크스페이스가 없습니다."
+        />
       </div>
 
       <div className="space-y-2">

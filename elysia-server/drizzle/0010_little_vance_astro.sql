@@ -1,0 +1,1 @@
+ALTER TABLE "sequence_enrollments" ADD COLUMN "first_thread_id" varchar(255);

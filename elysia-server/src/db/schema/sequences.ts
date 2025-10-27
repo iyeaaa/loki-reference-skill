@@ -123,6 +123,7 @@ export const sequenceEnrollments = pgTable(
     nextStepScheduledAt: timestamp("next_step_scheduled_at", {
       withTimezone: true,
     }),
+    firstThreadId: varchar("first_thread_id", { length: 255 }), // Message-ID of first email (used for threading)
   },
   (table) => ({
     sequenceIdx: index("sequence_enrollments_sequence_id_idx").on(table.sequenceId),

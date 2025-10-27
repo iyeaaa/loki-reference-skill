@@ -71,6 +71,13 @@
       "when": 1761544804022,
       "tag": "0009_spicy_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1761559396046,
+      "tag": "0010_little_vance_astro",
+      "breakpoints": true
     }
   ]
 }

@@ -198,7 +198,9 @@ export function RepliedEmailsTableWithPagination({
                             {email.direction === "outbound" ? (
                               <>
                                 <div className="flex items-center gap-1">
-                                  <span className="text-xs text-blue-600 dark:text-blue-400">→</span>
+                                  <span className="text-xs text-blue-600 dark:text-blue-400">
+                                    →
+                                  </span>
                                   <span className="font-medium break-words">{email.toEmail}</span>
                                 </div>
                                 <div className="text-xs text-gray-500 break-words mt-0.5">
@@ -208,7 +210,9 @@ export function RepliedEmailsTableWithPagination({
                             ) : (
                               <>
                                 <div className="flex items-center gap-1">
-                                  <span className="text-xs text-green-600 dark:text-green-400">←</span>
+                                  <span className="text-xs text-green-600 dark:text-green-400">
+                                    ←
+                                  </span>
                                   <span className="font-medium break-words">{email.fromEmail}</span>
                                 </div>
                                 <div className="text-xs text-gray-500 break-words mt-0.5">

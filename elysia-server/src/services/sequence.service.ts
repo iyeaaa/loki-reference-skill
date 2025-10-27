@@ -1350,6 +1350,7 @@ async function checkAndUpdateSequenceCompletion(sequenceId: string) {
     .select({
       id: sequenceEnrollments.id,
       status: sequenceEnrollments.status,
+      currentStepOrder: sequenceEnrollments.currentStepOrder,
     })
     .from(sequenceEnrollments)
     .where(eq(sequenceEnrollments.sequenceId, sequenceId))
@@ -1361,7 +1362,7 @@ async function checkAndUpdateSequenceCompletion(sequenceId: string) {
 
   // Check if all enrollments are completed
   const allCompleted = enrollments.every((enrollment) => enrollment.status === "completed")
-  const partiallyCompleted = enrollments.some((enrollment) => enrollment.status === "completed")
+  const partiallyCompleted = enrollments.every((enrollment) => enrollment.status === "active")
 
   logger.info(
     {

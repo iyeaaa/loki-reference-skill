@@ -9,6 +9,7 @@ import type {
   LeadsParams,
   UpdateLeadRequest,
 } from "../types/lead"
+import { customerGroupKeys } from "./customer-groups"
 
 // Query Keys
 export const leadKeys = {
@@ -46,6 +47,7 @@ export function useCreateLead() {
     mutationFn: (data: CreateLeadRequest) => leadsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: customerGroupKeys.all })
       toast.success("리드가 생성되었습니다")
     },
     onError: (error: Error) => {
@@ -65,6 +67,7 @@ export function useUpdateLead() {
         queryKey: leadKeys.detail(variables.leadId),
       })
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: customerGroupKeys.lists() })
       toast.success("리드 정보가 업데이트되었습니다")
     },
     onError: (error: Error) => {
@@ -80,6 +83,7 @@ export function useDeleteLead() {
     mutationFn: (leadId: string) => leadsApi.delete(leadId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: customerGroupKeys.lists() })
       toast.success("리드가 삭제되었습니다")
     },
     onError: (error: Error) => {
@@ -95,6 +99,7 @@ export function useBulkUpdateLeadStatus() {
     mutationFn: (data: BulkUpdateLeadStatusRequest) => leadsApi.bulkUpdateStatus(data),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: customerGroupKeys.lists() })
       toast.success(`${response.updatedCount || 0}개의 리드 상태가 업데이트되었습니다`)
     },
     onError: (error: Error) => {
@@ -110,6 +115,7 @@ export function useBulkUpdateLeadBusinessType() {
     mutationFn: (data: BulkUpdateBusinessTypeRequest) => leadsApi.bulkUpdateBusinessType(data),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: customerGroupKeys.lists() })
       toast.success(`${response.updatedCount || 0}개의 리드 업종이 업데이트되었습니다`)
     },
     onError: (error: Error) => {
@@ -125,6 +131,7 @@ export function useBulkDeleteLeads() {
     mutationFn: (leadIds: string[]) => leadsApi.bulkDelete(leadIds),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: customerGroupKeys.lists() })
       toast.success(`${response.deletedCount || 0}개의 리드가 삭제되었습니다`)
     },
     onError: (error: Error) => {

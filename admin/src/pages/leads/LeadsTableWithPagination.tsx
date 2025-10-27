@@ -11,7 +11,6 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -291,34 +290,6 @@ export function LeadsTableWithPagination({
     }
   }, [leads, onLeadsDataChange])
 
-  const getStatusText = (status: LeadStatus) => {
-    const statusMap: Record<LeadStatus, string> = {
-      new: "신규",
-      contacted: "연락됨",
-      qualified: "적격",
-      unqualified: "부적격",
-      converted: "전환됨",
-      lost: "실패",
-      unsubscribed: "구독취소",
-    }
-    return statusMap[status] || status
-  }
-
-  const getStatusBadgeVariant = (status: LeadStatus) => {
-    switch (status) {
-      case "new":
-        return "default"
-      case "contacted":
-        return "secondary"
-      case "qualified":
-        return "outline"
-      case "converted":
-        return "default"
-      default:
-        return "outline"
-    }
-  }
-
   const handleToggleAll = useCallback(() => {
     if (isSelectAllMode && onToggleSelectAll) {
       // 전체 선택 모드에서는 헤더 체크박스가 전체 선택/해제를 담당
@@ -492,16 +463,7 @@ export function LeadsTableWithPagination({
                     {renderSortIcon("description")}
                   </div>
                 </th>
-                <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
-                  style={{ minWidth: "100px" }}
-                  onClick={() => handleSort("leadStatus")}
-                >
-                  <div className="flex items-center gap-1">
-                    상태
-                    {renderSortIcon("leadStatus")}
-                  </div>
-                </th>
+
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "120px" }}
@@ -851,14 +813,6 @@ export function LeadsTableWithPagination({
                           "-"
                         )}
                       </td>
-
-                      {/* 5. 상태 (leadStatus) */}
-                      <td className="p-2 whitespace-nowrap text-sm">
-                        <Badge variant={getStatusBadgeVariant(lead.leadStatus)} className="text-xs">
-                          {getStatusText(lead.leadStatus)}
-                        </Badge>
-                      </td>
-
                       {/* 6. 업종 (businessType) */}
                       <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.businessType ? (

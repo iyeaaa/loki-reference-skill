@@ -80,7 +80,8 @@ export function useCreateWorkspace() {
   return useMutation({
     mutationFn: (data: CreateWorkspaceData) => workspacesApi.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() })
+      // Invalidate all workspace queries to update sidebar
+      queryClient.invalidateQueries({ queryKey: workspaceKeys.all })
       toast.success("워크스페이스가 생성되었습니다")
     },
     onError: (error: Error) => {
@@ -99,7 +100,8 @@ export function useUpdateWorkspace() {
       queryClient.invalidateQueries({
         queryKey: workspaceKeys.detail(variables.workspaceId),
       })
-      queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() })
+      // Invalidate all workspace queries to update sidebar
+      queryClient.invalidateQueries({ queryKey: workspaceKeys.all })
       toast.success("워크스페이스 정보가 업데이트되었습니다")
     },
     onError: (error: Error) => {
@@ -114,7 +116,8 @@ export function useDeleteWorkspace() {
   return useMutation({
     mutationFn: (workspaceId: string) => workspacesApi.delete(workspaceId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() })
+      // Invalidate all workspace queries to update sidebar
+      queryClient.invalidateQueries({ queryKey: workspaceKeys.all })
       toast.success("워크스페이스가 삭제되었습니다")
     },
     onError: (error: Error) => {
@@ -130,7 +133,8 @@ export function useBulkUpdateWorkspaceStatus() {
     mutationFn: (data: { workspaceIds: string[]; isActive: boolean }) =>
       workspacesApi.bulkUpdateStatus(data.workspaceIds, data.isActive),
     onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() })
+      // Invalidate all workspace queries to update sidebar
+      queryClient.invalidateQueries({ queryKey: workspaceKeys.all })
       toast.success(`${response.updatedCount || 0}개의 워크스페이스 상태가 업데이트되었습니다`)
     },
     onError: (error: Error) => {
@@ -149,7 +153,8 @@ export function useTransferOwnership() {
       queryClient.invalidateQueries({
         queryKey: workspaceKeys.detail(variables.workspaceId),
       })
-      queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() })
+      // Invalidate all workspace queries to update sidebar
+      queryClient.invalidateQueries({ queryKey: workspaceKeys.all })
       toast.success("워크스페이스 소유권이 이전되었습니다")
     },
     onError: (error: Error) => {

@@ -208,6 +208,21 @@ export interface RepliedEmail {
   leadName?: string | null
   leadEmail?: string | null
   sequenceName?: string | null
+  companyName?: string | null
+  // Lead detailed fields
+  foundCompanyName?: string | null
+  contactName?: string | null
+  websiteUrl?: string | null
+  finalUrl?: string | null
+  businessType?: string | null
+  address?: string | null
+  country?: string | null
+  city?: string | null
+  state?: string | null
+  employeeCount?: string | null
+  leadStatus?: string | null
+  leadScore?: number | null
+  leadSource?: string | null
   // Thread info (스레드 기반 조회 시 추가됨)
   messageCount?: number
 }

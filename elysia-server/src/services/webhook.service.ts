@@ -418,36 +418,74 @@ class WebhookService {
       return
     }
 
-    // 3. 발신자 이메일로 리드 찾기
-    const leadContactResults = await db
-      .select({ leadId: leadContacts.leadId })
-      .from(leadContacts)
-      .where(and(eq(leadContacts.contactType, "email"), eq(leadContacts.contactValue, fromEmail)))
-      .limit(1)
-
-    const leadId = leadContactResults.length > 0 ? leadContactResults[0]?.leadId : null
-
-    // 4. threadId 결정: 답장이면 원본의 threadId 사용, 아니면 messageId를 threadId로 사용
-    // (이메일 발송 로직과 동일하게 유지하여 일관성 보장)
+    // 3. 답장인 경우: 원본 이메일에서 leadId, sequenceId, threadId를 가져옴
+    let leadId: string | null = null
+    let sequenceId: string | null = null
+    let leadName: string | null = null
+    let sequenceName: string | null = null
     let threadId = headers.messageId // First email: messageId becomes threadId
 
     if (headers.inReplyTo) {
-      // 답장인 경우: 원본 이메일의 threadId 찾기
-      const originalEmailForThread = await db
-        .select({ threadId: emailsTable.threadId })
+      // 답장인 경우: 원본 이메일 찾기 (모든 필요한 정보 한번에 조회)
+      const originalEmailResults = await db
+        .select({
+          id: emailsTable.id,
+          workspaceId: emailsTable.workspaceId,
+          threadId: emailsTable.threadId,
+          leadId: emailsTable.leadId,
+          sequenceId: emailsTable.sequenceId,
+          leadName: emailsTable.leadName,
+          sequenceName: emailsTable.sequenceName,
+        })
         .from(emailsTable)
         .where(eq(emailsTable.messageId, headers.inReplyTo))
         .limit(1)
 
-      if (originalEmailForThread.length > 0 && originalEmailForThread[0]?.threadId) {
-        threadId = originalEmailForThread[0].threadId // Inherit threadId from original
-        logger.info(
-          {
-            threadId,
-            inReplyTo: headers.inReplyTo,
-          },
-          "Thread ID inherited from original email",
-        )
+      if (originalEmailResults.length > 0 && originalEmailResults[0]) {
+        const originalEmail = originalEmailResults[0]
+
+        // threadId 상속
+        if (originalEmail.threadId) {
+          threadId = originalEmail.threadId
+          logger.info(
+            { threadId, inReplyTo: headers.inReplyTo },
+            "Thread ID inherited from original email",
+          )
+        }
+
+        // leadId와 sequenceId 상속
+        if (originalEmail.leadId) {
+          leadId = originalEmail.leadId
+          leadName = originalEmail.leadName
+          logger.info(
+            { leadId, leadName, inReplyTo: headers.inReplyTo },
+            "Lead info inherited from original email",
+          )
+        }
+
+        if (originalEmail.sequenceId) {
+          sequenceId = originalEmail.sequenceId
+          sequenceName = originalEmail.sequenceName
+          logger.info(
+            { sequenceId, sequenceName, inReplyTo: headers.inReplyTo },
+            "Sequence info inherited from original email",
+          )
+        }
+      }
+    }
+
+    // 4. leadId가 없으면 발신자 이메일로 리드 찾기 (fallback)
+    if (!leadId) {
+      const leadContactResults = await db
+        .select({ leadId: leadContacts.leadId })
+        .from(leadContacts)
+        .where(and(eq(leadContacts.contactType, "email"), eq(leadContacts.contactValue, fromEmail)))
+        .limit(1)
+
+      leadId = leadContactResults.length > 0 ? leadContactResults[0]?.leadId || null : null
+
+      if (leadId) {
+        logger.info({ leadId, fromEmail }, "Lead found by sender email")
       }
     }
 
@@ -472,6 +510,7 @@ class WebhookService {
         workspaceId: account.workspaceId,
         userEmailAccountId: account.id,
         leadId,
+        sequenceId, // ← 원본 이메일에서 상속
         direction: "inbound",
         fromEmail,
         toEmail,
@@ -484,7 +523,9 @@ class WebhookService {
         deliveredAt: new Date(), // Set delivered time
         messageId: headers.messageId,
         inReplyTo: headers.inReplyTo,
-        threadId, // threadId 추가!
+        threadId,
+        leadName, // ← Denormalized field 추가
+        sequenceName, // ← Denormalized field 추가
       })
       .returning()
 
@@ -494,26 +535,33 @@ class WebhookService {
       return
     }
 
-    logger.info({ emailId: inboundEmail.id }, "Inbound email saved successfully")
+    logger.info(
+      {
+        emailId: inboundEmail.id,
+        leadId: inboundEmail.leadId,
+        sequenceId: inboundEmail.sequenceId,
+        leadName: inboundEmail.leadName,
+        sequenceName: inboundEmail.sequenceName,
+      },
+      "Inbound email saved successfully with inherited info",
+    )
 
     // 6. 답장인지 확인 (In-Reply-To 헤더가 있는 경우)
     if (headers.inReplyTo) {
       logger.info({ inReplyTo: headers.inReplyTo }, "Reply detected")
 
-      // 원본 이메일 찾기 (messageId로 검색)
+      // 원본 이메일 ID 찾기 (이미 위에서 정보를 가져왔지만, ID가 필요함)
       const originalEmailResults = await db
         .select({
           id: emailsTable.id,
           workspaceId: emailsTable.workspaceId,
-          sequenceId: emailsTable.sequenceId,
-          leadId: emailsTable.leadId,
         })
         .from(emailsTable)
         .where(
           and(
             eq(emailsTable.messageId, headers.inReplyTo),
             eq(emailsTable.direction, "outbound"),
-            eq(emailsTable.workspaceId, account.workspaceId), // ✅ 워크스페이스 필터 추가
+            eq(emailsTable.workspaceId, account.workspaceId),
           ),
         )
         .limit(1)

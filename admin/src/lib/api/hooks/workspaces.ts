@@ -63,6 +63,15 @@ export function useUserWorkspaces(userId: string, enabled = true) {
   })
 }
 
+export function useSuspenseUserWorkspaces(userId: string) {
+  return useSuspenseQuery({
+    queryKey: workspaceKeys.byUser(userId),
+    queryFn: () => workspacesApi.getUserWorkspaces(userId),
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
+}
+
 export function useWorkspaceMembers(workspaceId: string, enabled = true) {
   return useQuery({
     queryKey: workspaceKeys.members(workspaceId),

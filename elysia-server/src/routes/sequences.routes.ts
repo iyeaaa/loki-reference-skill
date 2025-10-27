@@ -305,6 +305,21 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
         return errorResponse("시퀀스를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
       }
 
+      // 이미 활성화된 시퀀스는 재활성화하지 않음 (중복 발송 방지)
+      if (currentSequence.status === "active") {
+        logger.info(
+          { sequenceId: id, sequenceName: currentSequence.name },
+          "✅ [STEP-BASED] Sequence is already active, skipping re-activation",
+        )
+        const steps = await sequenceService.getSequenceSteps(id)
+        return {
+          success: true,
+          message: "시퀀스가 이미 활성화되어 있습니다.",
+          stepsCount: steps.length,
+          alreadyActive: true,
+        }
+      }
+
       logger.info(
         {
           sequenceId: id,

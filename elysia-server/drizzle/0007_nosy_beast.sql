@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "sequence_step_executions_enrollment_step_unique" ON "sequence_step_executions" USING btree ("enrollment_id","step_id");

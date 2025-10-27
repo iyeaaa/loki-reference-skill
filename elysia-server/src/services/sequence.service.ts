@@ -727,21 +727,27 @@ export async function bulkEnrollWithScheduling(data: {
 
   const validLeadIds = leadsWithEmails.map((l) => l.leadId)
 
-  // Check for existing active enrollments
+  // Check for existing enrollments
   const existingEnrollments = await db
     .select({
       id: sequenceEnrollments.id,
       leadId: sequenceEnrollments.leadId,
       currentStepOrder: sequenceEnrollments.currentStepOrder,
+      status: sequenceEnrollments.status,
     })
     .from(sequenceEnrollments)
     .where(
       and(
         eq(sequenceEnrollments.sequenceId, data.sequenceId),
         or(...validLeadIds.map((id) => eq(sequenceEnrollments.leadId, id))),
-        eq(sequenceEnrollments.status, "active"),
       ),
     )
+
+  // Separate active and completed enrollments
+  const activeEnrollments = existingEnrollments.filter((e) => e.status === "active")
+  const completedLeadIds = new Set(
+    existingEnrollments.filter((e) => e.status === "completed").map((e) => e.leadId),
+  )
 
   const existingLeadIds = new Set(existingEnrollments.map((e) => e.leadId))
   const newLeadIds = validLeadIds.filter((id) => !existingLeadIds.has(id))
@@ -751,6 +757,8 @@ export async function bulkEnrollWithScheduling(data: {
       sequenceId: data.sequenceId,
       totalValidLeads: validLeadIds.length,
       existingEnrollments: existingEnrollments.length,
+      activeEnrollments: activeEnrollments.length,
+      completedEnrollments: completedLeadIds.size,
       newLeadsToEnroll: newLeadIds.length,
     },
     "📊 [STEP-BASED] Checked existing enrollments",
@@ -784,9 +792,10 @@ export async function bulkEnrollWithScheduling(data: {
     )
   }
 
-  // Combine existing and new enrollments for processing
+  // Combine active enrollments and new enrollments for processing
+  // (Skip completed enrollments to prevent re-sending)
   const enrollments = [
-    ...existingEnrollments.map((e) => ({
+    ...activeEnrollments.map((e) => ({
       id: e.id,
       leadId: e.leadId,
       enrolledAt: new Date(),
@@ -807,13 +816,14 @@ export async function bulkEnrollWithScheduling(data: {
       sequenceId: data.sequenceId,
       totalEnrollments: enrollments.length,
       newEnrollments: newEnrollments.length,
-      existingEnrollments: existingEnrollments.length,
+      activeEnrollments: activeEnrollments.length,
+      skippedCompleted: completedLeadIds.size,
       enrollmentIds: enrollments.map((e) => e.id),
     },
-    "✅ [STEP-BASED] Processing enrollments",
+    "✅ [STEP-BASED] Processing enrollments (skipped completed to prevent duplicates)",
   )
 
-  // For existing enrollments, get their existing step executions
+  // For active enrollments, get their existing step executions
   let existingStepExecutions: Array<{
     enrollmentId: string
     stepId: string
@@ -821,7 +831,7 @@ export async function bulkEnrollWithScheduling(data: {
     scheduledAt: Date
   }> = []
 
-  if (existingEnrollments.length > 0) {
+  if (activeEnrollments.length > 0) {
     existingStepExecutions = await db
       .select({
         enrollmentId: sequenceStepExecutions.enrollmentId,
@@ -830,7 +840,7 @@ export async function bulkEnrollWithScheduling(data: {
         scheduledAt: sequenceStepExecutions.scheduledAt,
       })
       .from(sequenceStepExecutions)
-      .where(or(...existingEnrollments.map((e) => eq(sequenceStepExecutions.enrollmentId, e.id))))
+      .where(or(...activeEnrollments.map((e) => eq(sequenceStepExecutions.enrollmentId, e.id))))
   }
 
   // Create maps for quick lookup
@@ -989,7 +999,8 @@ export async function bulkEnrollWithScheduling(data: {
 
   const result = {
     enrolledCount: newEnrollments.length,
-    updatedCount: existingEnrollments.length,
+    updatedCount: activeEnrollments.length,
+    skippedCompleted: completedLeadIds.size,
     totalSteps: steps.length,
     scheduledExecutions: stepExecutionValues.length,
   }

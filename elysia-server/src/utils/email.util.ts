@@ -93,7 +93,7 @@ export function removeQuotedReply(text: string): string {
       // Korean quote header: "2025년 10월 27일 오후 09:43에...님이 작성:"
       /^\d{4}년\s+\d{1,2}월\s+\d{1,2}일.+에\s+.+님이\s+작성:/.test(trimmedLine) ||
       // Separator line (multiple dashes or underscores)
-      /^[─_\-]{10,}$/.test(trimmedLine) ||
+      /^[─_-]{10,}$/.test(trimmedLine) ||
       // Empty line after quote header (helps catch the quote start)
       (inQuote && trimmedLine === "")
     ) {

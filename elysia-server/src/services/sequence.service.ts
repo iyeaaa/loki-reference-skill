@@ -787,9 +787,7 @@ export async function bulkEnrollWithScheduling(data: {
     )
 
     // 새로 등록하려는 lead들의 이메일과 비교
-    const leadEmailMap = new Map(
-      leadsWithEmails.map((l) => [l.leadId, l.email.toLowerCase()]),
-    )
+    const leadEmailMap = new Map(leadsWithEmails.map((l) => [l.leadId, l.email.toLowerCase()]))
 
     const duplicateEmailLeads: Array<{ leadId: string; email: string }> = []
     const filteredNewLeadIds = newLeadIds.filter((leadId) => {
@@ -819,7 +817,8 @@ export async function bulkEnrollWithScheduling(data: {
   }
 
   // Count duplicates for logging
-  const duplicateEmailCount = validLeadIds.filter((id) => !existingLeadIds.has(id)).length - newLeadIds.length
+  const duplicateEmailCount =
+    validLeadIds.filter((id) => !existingLeadIds.has(id)).length - newLeadIds.length
 
   logger.info(
     {

@@ -544,7 +544,9 @@ export function RepliedEmailsTableWithPagination({
                                             등록 상태:
                                           </span>
                                           <span className="text-gray-600 dark:text-gray-400 break-words">
-                                            {getEnrollmentStatusText(email.enrollmentStatus || null)}
+                                            {getEnrollmentStatusText(
+                                              email.enrollmentStatus || null,
+                                            )}
                                           </span>
                                         </div>
                                         {email.enrollmentCurrentStepOrder !== null &&

@@ -1081,9 +1081,10 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       const threadsQuery = db
         .select({
           threadId: emails.threadId,
-          firstOutboundCreatedAt: sql<Date>`MIN(CASE WHEN ${emails.direction} = 'outbound' THEN ${emails.createdAt} END)`.as(
-            "first_outbound_created_at",
-          ),
+          firstOutboundCreatedAt:
+            sql<Date>`MIN(CASE WHEN ${emails.direction} = 'outbound' THEN ${emails.createdAt} END)`.as(
+              "first_outbound_created_at",
+            ),
           latestCreatedAt: sql<Date>`MAX(${emails.createdAt})`.as("latest_created_at"), // For sorting by latest activity
         })
         .from(emails)

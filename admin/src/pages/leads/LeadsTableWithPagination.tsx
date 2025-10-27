@@ -425,22 +425,32 @@ export function LeadsTableWithPagination({
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
-                  style={{ minWidth: "180px" }}
-                  onClick={() => handleSort("companyName")}
-                >
-                  <div className="flex items-center gap-1">
-                    회사명
-                    {renderSortIcon("companyName")}
-                  </div>
-                </th>
-                <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
                   style={{ minWidth: "120px" }}
                   onClick={() => handleSort("contactName")}
                 >
                   <div className="flex items-center gap-1">
                     담당자명
                     {renderSortIcon("contactName")}
+                  </div>
+                </th>
+                <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
+                  style={{ minWidth: "180px" }}
+                  onClick={() => handleSort("email")}
+                >
+                  <div className="flex items-center gap-1">
+                    이메일
+                    {renderSortIcon("email")}
+                  </div>
+                </th>
+                <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
+                  style={{ minWidth: "180px" }}
+                  onClick={() => handleSort("companyName")}
+                >
+                  <div className="flex items-center gap-1">
+                    회사명
+                    {renderSortIcon("companyName")}
                   </div>
                 </th>
                 <th
@@ -522,16 +532,6 @@ export function LeadsTableWithPagination({
                   <div className="flex items-center gap-1">
                     전화번호
                     {renderSortIcon("phone")}
-                  </div>
-                </th>
-                <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
-                  style={{ minWidth: "180px" }}
-                  onClick={() => handleSort("email")}
-                >
-                  <div className="flex items-center gap-1">
-                    이메일
-                    {renderSortIcon("email")}
                   </div>
                 </th>
                 <th
@@ -643,7 +643,93 @@ export function LeadsTableWithPagination({
                         />
                       </td>
 
-                      {/* 2. 회사명 (companyName) */}
+                      {/* 2. 담당자명 (contactName) */}
+                      <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.contactName ? (
+                          <>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className="cursor-default line-clamp-2 max-w-[120px]"
+                                    style={{
+                                      display: "-webkit-box",
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: "vertical",
+                                      overflow: "hidden",
+                                    }}
+                                  >
+                                    {lead.contactName}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-md">
+                                  <p className="whitespace-pre-wrap">{lead.contactName}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(lead.contactName || "")
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+
+                      {/* 3. 이메일 (contacts - email) */}
+                      <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
+                        {lead.contacts &&
+                        lead.contacts.filter((c) => c.contactType === "email").length > 0 ? (
+                          <>
+                            <div
+                              className="cursor-default max-w-[180px]"
+                              style={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                              title={lead.contacts
+                                .filter((c) => c.contactType === "email")
+                                .map((c) => c.contactValue)
+                                .join(", ")}
+                            >
+                              {lead.contacts
+                                .filter((c) => c.contactType === "email")
+                                .map((c) => c.contactValue)
+                                .join(", ")}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCopyToClipboard(
+                                  (lead.contacts || [])
+                                    .filter((c) => c.contactType === "email")
+                                    .map((c) => c.contactValue)
+                                    .join(", ") || "",
+                                )
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          <span>-</span>
+                        )}
+                      </td>
+
+                      {/* 4. 회사명 (companyName) */}
                       <td className="p-2 text-sm font-medium text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.companyName || lead.foundCompanyName ? (
                           <>
@@ -688,48 +774,7 @@ export function LeadsTableWithPagination({
                         )}
                       </td>
 
-                      {/* 3. 담당자명 (contactName) */}
-                      <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
-                        {lead.contactName ? (
-                          <>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div
-                                    className="cursor-default line-clamp-2 max-w-[120px]"
-                                    style={{
-                                      display: "-webkit-box",
-                                      WebkitLineClamp: 2,
-                                      WebkitBoxOrient: "vertical",
-                                      overflow: "hidden",
-                                    }}
-                                  >
-                                    {lead.contactName}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-md">
-                                  <p className="whitespace-pre-wrap">{lead.contactName}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleCopyToClipboard(lead.contactName || "")
-                              }}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-
-                      {/* 4. 웹사이트 (websiteUrl) */}
+                      {/* 5. 웹사이트 (websiteUrl) */}
                       <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.websiteUrl ? (
                           <>
@@ -773,7 +818,7 @@ export function LeadsTableWithPagination({
                         )}
                       </td>
 
-                      {/* 4. 회사 설명 (description) */}
+                      {/* 6. 회사 설명 (description) */}
                       <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.description ? (
                           <>
@@ -813,7 +858,7 @@ export function LeadsTableWithPagination({
                           "-"
                         )}
                       </td>
-                      {/* 6. 업종 (businessType) */}
+                      {/* 7. 업종 (businessType) */}
                       <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.businessType ? (
                           <>
@@ -846,7 +891,7 @@ export function LeadsTableWithPagination({
                         )}
                       </td>
 
-                      {/* 7. 국가 (country) */}
+                      {/* 8. 국가 (country) */}
                       <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.country ? (
                           <>
@@ -870,7 +915,7 @@ export function LeadsTableWithPagination({
                         )}
                       </td>
 
-                      {/* 8. 도시 (city) */}
+                      {/* 9. 도시 (city) */}
                       <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.city ? (
                           <>
@@ -894,12 +939,12 @@ export function LeadsTableWithPagination({
                         )}
                       </td>
 
-                      {/* 9. 설립년도 (foundedYear) */}
+                      {/* 10. 설립년도 (foundedYear) */}
                       <td className="p-2 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100">
                         {lead.foundedYear || "-"}
                       </td>
 
-                      {/* 10. 직원수 (employeeCount) */}
+                      {/* 11. 직원수 (employeeCount) */}
                       <td className="p-2 text-sm text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.employeeCount ? (
                           <>
@@ -923,7 +968,7 @@ export function LeadsTableWithPagination({
                         )}
                       </td>
 
-                      {/* 11. 전화번호 (contacts - phone) */}
+                      {/* 12. 전화번호 (contacts - phone) */}
                       <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
                         {lead.contacts &&
                         lead.contacts.filter((c) => c.contactType === "phone").length > 0 ? (
@@ -955,51 +1000,6 @@ export function LeadsTableWithPagination({
                                 handleCopyToClipboard(
                                   (lead.contacts || [])
                                     .filter((c) => c.contactType === "phone")
-                                    .map((c) => c.contactValue)
-                                    .join(", ") || "",
-                                )
-                              }}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </>
-                        ) : (
-                          <span>-</span>
-                        )}
-                      </td>
-
-                      {/* 12. 이메일 (contacts - email) */}
-                      <td className="p-2 text-xs text-gray-900 dark:text-gray-100 group/cell relative">
-                        {lead.contacts &&
-                        lead.contacts.filter((c) => c.contactType === "email").length > 0 ? (
-                          <>
-                            <div
-                              className="cursor-default max-w-[180px]"
-                              style={{
-                                display: "-webkit-box",
-                                WebkitLineClamp: 3,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                              }}
-                              title={lead.contacts
-                                .filter((c) => c.contactType === "email")
-                                .map((c) => c.contactValue)
-                                .join(", ")}
-                            >
-                              {lead.contacts
-                                .filter((c) => c.contactType === "email")
-                                .map((c) => c.contactValue)
-                                .join(", ")}
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleCopyToClipboard(
-                                  (lead.contacts || [])
-                                    .filter((c) => c.contactType === "email")
                                     .map((c) => c.contactValue)
                                     .join(", ") || "",
                                 )

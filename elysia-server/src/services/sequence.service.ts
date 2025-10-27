@@ -750,7 +750,75 @@ export async function bulkEnrollWithScheduling(data: {
   )
 
   const existingLeadIds = new Set(existingEnrollments.map((e) => e.leadId))
-  const newLeadIds = validLeadIds.filter((id) => !existingLeadIds.has(id))
+  let newLeadIds = validLeadIds.filter((id) => !existingLeadIds.has(id))
+
+  // ====================================
+  // 🔍 이메일 중복 체크 (같은 시퀀스 내)
+  // ====================================
+  if (newLeadIds.length > 0) {
+    // 이 시퀀스에 이미 등록된 모든 enrollment의 이메일 주소 조회
+    const existingEnrollmentsWithEmails = await db
+      .select({
+        enrollmentId: sequenceEnrollments.id,
+        leadId: sequenceEnrollments.leadId,
+        email: leadContacts.contactValue,
+      })
+      .from(sequenceEnrollments)
+      .innerJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
+      .innerJoin(
+        leadContacts,
+        and(
+          eq(leadContacts.leadId, leads.id),
+          eq(leadContacts.contactType, "email"),
+          eq(leadContacts.isPrimary, true),
+        ),
+      )
+      .where(eq(sequenceEnrollments.sequenceId, data.sequenceId))
+
+    // 이미 등록된 이메일 주소 Set
+    const enrolledEmails = new Set(existingEnrollmentsWithEmails.map((e) => e.email.toLowerCase()))
+
+    logger.info(
+      {
+        sequenceId: data.sequenceId,
+        enrolledEmailsCount: enrolledEmails.size,
+      },
+      "📧 [STEP-BASED] Found existing enrolled emails in this sequence",
+    )
+
+    // 새로 등록하려는 lead들의 이메일과 비교
+    const leadEmailMap = new Map(leadsWithEmails.map((l) => [l.leadId, l.email.toLowerCase()]))
+
+    const duplicateEmailLeads: Array<{ leadId: string; email: string }> = []
+    const filteredNewLeadIds = newLeadIds.filter((leadId) => {
+      const email = leadEmailMap.get(leadId)
+      if (email && enrolledEmails.has(email)) {
+        duplicateEmailLeads.push({ leadId, email })
+        return false // 중복 이메일이므로 제외
+      }
+      return true // 중복되지 않으므로 등록 가능
+    })
+
+    if (duplicateEmailLeads.length > 0) {
+      logger.warn(
+        {
+          sequenceId: data.sequenceId,
+          duplicateCount: duplicateEmailLeads.length,
+          duplicates: duplicateEmailLeads.map((d) => ({
+            leadId: d.leadId,
+            email: d.email,
+          })),
+        },
+        "⚠️ [STEP-BASED] Skipping leads with duplicate emails already enrolled in this sequence",
+      )
+    }
+
+    newLeadIds = filteredNewLeadIds
+  }
+
+  // Count duplicates for logging
+  const duplicateEmailCount =
+    validLeadIds.filter((id) => !existingLeadIds.has(id)).length - newLeadIds.length
 
   logger.info(
     {
@@ -759,9 +827,10 @@ export async function bulkEnrollWithScheduling(data: {
       existingEnrollments: existingEnrollments.length,
       activeEnrollments: activeEnrollments.length,
       completedEnrollments: completedLeadIds.size,
+      duplicateEmailsSkipped: duplicateEmailCount,
       newLeadsToEnroll: newLeadIds.length,
     },
-    "📊 [STEP-BASED] Checked existing enrollments",
+    "📊 [STEP-BASED] Checked existing enrollments and duplicate emails",
   )
 
   // Create enrollments only for new leads

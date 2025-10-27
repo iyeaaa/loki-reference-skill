@@ -29,14 +29,14 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
     email.bodyText || (email.bodyHtml ? email.bodyHtml.replace(/<[^>]*>/g, "").trim() : "")
 
   return (
-    <button
-      type="button"
-      className="w-full cursor-pointer rounded-lg border-t pt-4 pb-2 px-2 text-left bg-transparent hover:bg-transparent border-0"
-      onClick={onToggle}
-    >
+    <div className="w-full rounded-lg border-t pt-4 pb-2 px-2">
       <div>
-        {/* Sender header */}
-        <div className="flex items-start gap-3 mb-2">
+        {/* Sender header - 클릭 가능 */}
+        <button
+          type="button"
+          className="w-full flex items-start gap-3 mb-2 cursor-pointer text-left bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800 rounded p-2 -m-2 transition-colors"
+          onClick={onToggle}
+        >
           {/* Profile Circle */}
           <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
             <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
@@ -132,11 +132,11 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
               </div>
             </div>
           </div>
-        </div>
+        </button>
 
-        {/* Email body - only show when expanded */}
+        {/* Email body - only show when expanded, 선택 가능 */}
         {isExpanded && (
-          <div className="ml-13 text-sm text-gray-700 dark:text-gray-300 mt-3">
+          <div className="ml-13 text-sm text-gray-700 dark:text-gray-300 mt-3 select-text cursor-text">
             <EmailBody
               bodyText={email.bodyText ?? undefined}
               bodyHtml={email.bodyHtml ?? undefined}
@@ -144,6 +144,6 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
           </div>
         )}
       </div>
-    </button>
+    </div>
   )
 }

@@ -123,6 +123,12 @@ ${ex.content}
           : ""
 
       // 2. 시스템 프롬프트 구성
+      // 국가가 여러 개인 경우 (comma로 구분) 영어로 고정
+      const isMultipleCountries = country.includes(",")
+      const targetLanguageInstruction = isMultipleCountries
+        ? "여러 국가를 대상으로 하므로 이메일을 영어로 작성하세요"
+        : `"${country}" 국가에서 사용하는 주요 언어로 이메일을 작성하세요`
+
       const systemPrompt = `당신은 전문적인 세일즈 이메일 템플릿 작성 전문가입니다.
 다음 조건에 맞춰 이메일 템플릿을 작성해주세요:
 
@@ -134,7 +140,7 @@ ${workspaceDescription ? `- 설명: ${workspaceDescription}` : ""}
 - 국가: ${country}
 
 [중요 지침]
-1. "${country}" 국가에서 사용하는 주요 언어로 이메일을 작성하세요
+1. ${targetLanguageInstruction}
 2. 이메일에는 반드시 다음 한글 placeholder들을 적절히 활용하세요 (모든 placeholder를 사용할 필요는 없음):
    - {{회사명}}, {{웹사이트}}, {{업종}}, {{설명}}
    - {{국가}}, {{도시}}, {{주/도}}, {{주소}}

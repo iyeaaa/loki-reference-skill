@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core"
@@ -154,6 +155,11 @@ export const sequenceStepExecutions = pgTable(
     stepIdx: index("sequence_step_executions_step_id_idx").on(table.stepId),
     statusIdx: index("sequence_step_executions_status_idx").on(table.status),
     scheduledIdx: index("sequence_step_executions_scheduled_idx").on(table.scheduledAt),
+    // Prevent duplicate step executions for the same enrollment and step
+    uniqueEnrollmentStep: uniqueIndex("sequence_step_executions_enrollment_step_unique").on(
+      table.enrollmentId,
+      table.stepId,
+    ),
   }),
 )
 

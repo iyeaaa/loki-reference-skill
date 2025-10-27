@@ -161,10 +161,19 @@ export function SequenceStepForm({
     if (customerGroupId && showAIGenerator) {
       setIsLoadingCountry(true)
       leadsApi
-        .list({ customerGroupId, limit: 1 })
+        .list({ customerGroupId, limit: 1000 })
         .then((response) => {
-          if (response.leads.length > 0 && response.leads[0]?.country) {
-            setTargetCountry(response.leads[0].country)
+          // 모든 리드에서 country 수집 (중복 제거)
+          const countries = new Set<string>()
+          for (const lead of response.leads) {
+            if (lead.country?.trim()) {
+              countries.add(lead.country.trim())
+            }
+          }
+
+          if (countries.size > 0) {
+            // comma로 구분하여 저장
+            setTargetCountry(Array.from(countries).join(","))
           } else {
             setTargetCountry("")
             toast.info("고객 그룹에 국가 정보가 있는 리드가 없습니다.")

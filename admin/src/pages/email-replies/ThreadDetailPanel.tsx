@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query"
-import { ChevronDown, Reply, X } from "lucide-react"
+import { Reply, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -28,14 +28,10 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
   // 각 이메일의 펼침/접힘 상태 (기본값: 모두 펼침)
   const [expandedEmails, setExpandedEmails] = useState<Record<string, boolean>>({})
 
-  // 중간 메일들을 숨길지 여부
-  const [showMiddleEmails, setShowMiddleEmails] = useState(false)
-
   // threadId가 변경되면 상태 초기화
   // biome-ignore lint/correctness/useExhaustiveDependencies: threadId 변경 시에만 초기화 필요
   useEffect(() => {
     setExpandedEmails({})
-    setShowMiddleEmails(false)
     setShowReply(false)
     setComposeExpanded(false)
     setComposeFullscreen(false)
@@ -108,84 +104,14 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
       <TooltipProvider>
         <ScrollArea className="flex-1 px-4 pb-4">
           <div className="pb-4">
-            {emails.length >= 4 ? (
-              <>
-                {/* 첫 번째 메일 */}
-                <EmailItem
-                  key={emails[0].id}
-                  email={emails[0]}
-                  isExpanded={isExpanded(emails[0].id)}
-                  onToggle={() => toggleEmail(emails[0].id)}
-                />
-
-                {/* 중간 메일 압축/해제 버튼 */}
-                {!showMiddleEmails ? (
-                  <div className="relative flex items-center justify-center py-3">
-                    <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-gray-300 dark:border-gray-600" />
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        console.log("펼치기 버튼 클릭:", emails.length - 2, "개 메일")
-                        setShowMiddleEmails(true)
-                      }}
-                      className="relative z-10 bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-2 cursor-pointer"
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                      <span>{emails.length - 2}</span>
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    {/* 중간 메일들 */}
-                    {emails.slice(1, -1).map((email) => (
-                      <EmailItem
-                        key={email.id}
-                        email={email}
-                        isExpanded={isExpanded(email.id)}
-                        onToggle={() => toggleEmail(email.id)}
-                      />
-                    ))}
-
-                    {/* 중간 메일 접기 버튼 */}
-                    <div className="relative flex items-center justify-center py-3">
-                      <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-gray-300 dark:border-gray-600" />
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          console.log("접기 버튼 클릭")
-                          setShowMiddleEmails(false)
-                        }}
-                        className="relative z-10 bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-2 cursor-pointer"
-                      >
-                        <ChevronDown className="h-4 w-4 rotate-180" />
-                        <span>접기</span>
-                      </button>
-                    </div>
-                  </>
-                )}
-
-                {/* 마지막 메일 */}
-                <EmailItem
-                  key={emails[emails.length - 1].id}
-                  email={emails[emails.length - 1]}
-                  isExpanded={isExpanded(emails[emails.length - 1].id)}
-                  onToggle={() => toggleEmail(emails[emails.length - 1].id)}
-                />
-              </>
-            ) : (
-              emails.map((email) => (
-                <EmailItem
-                  key={email.id}
-                  email={email}
-                  isExpanded={isExpanded(email.id)}
-                  onToggle={() => toggleEmail(email.id)}
-                />
-              ))
-            )}
+            {emails.map((email) => (
+              <EmailItem
+                key={email.id}
+                email={email}
+                isExpanded={isExpanded(email.id)}
+                onToggle={() => toggleEmail(email.id)}
+              />
+            ))}
 
             {/* 인라인 작성 영역 */}
             {showReply && emails.length > 0 && (

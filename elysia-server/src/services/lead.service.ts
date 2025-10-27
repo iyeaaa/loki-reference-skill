@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm"
+import { and, desc, eq, ilike, inArray, or, type SQL, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { customerGroupMembers } from "../db/schema/customer-groups"
 import {
@@ -424,7 +424,7 @@ export async function listLeadsWithFilters(
   }
 
   if (filters?.search) {
-    let searchCondition: ReturnType<typeof or> | undefined
+    let searchCondition: SQL | undefined
 
     switch (filters.searchType) {
       case "company":
@@ -786,7 +786,7 @@ export async function countLeadsWithFilters(filters?: {
   }
 
   if (filters?.search) {
-    let searchCondition: ReturnType<typeof or> | undefined
+    let searchCondition: SQL | undefined
 
     switch (filters.searchType) {
       case "company":

@@ -1110,18 +1110,47 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           updatedAt: emails.updatedAt,
           leadName: emails.leadName,
           leadEmail: emails.leadEmail,
-          sequenceName: emails.sequenceName,
+          sequenceName: sequences.name,
           leadId: emails.leadId,
           sequenceId: emails.sequenceId,
+          // Lead fields
+          companyName: leads.companyName,
+          foundCompanyName: leads.foundCompanyName,
+          contactName: leads.contactName,
+          websiteUrl: leads.websiteUrl,
+          finalUrl: leads.finalUrl,
+          businessType: leads.businessType,
+          address: leads.address,
+          country: leads.country,
+          city: leads.city,
+          state: leads.state,
+          employeeCount: leads.employeeCount,
+          leadStatus: leads.leadStatus,
+          leadScore: leads.leadScore,
+          leadSource: leads.leadSource,
         })
         .from(emails)
         .innerJoin(threadsQuery, eq(emails.threadId, threadsQuery.threadId))
+        .leftJoin(leads, eq(emails.leadId, leads.id))
+        .leftJoin(sequences, eq(emails.sequenceId, sequences.id))
         .where(eq(emails.createdAt, threadsQuery.latestCreatedAt))
 
       logger.info({
         msg: "✓ [REPLIED-EMAILS] Thread emails fetched",
         threadEmailsCount: threadEmails.length,
         threadIds: threadEmails.map((e) => e.threadId),
+        sequenceInfo: threadEmails.map((e) => ({
+          threadId: e.threadId,
+          sequenceId: e.sequenceId,
+          sequenceName: e.sequenceName,
+        })),
+        leadInfo: threadEmails.map((e) => ({
+          threadId: e.threadId,
+          leadId: e.leadId,
+          leadName: e.leadName,
+          companyName: e.companyName,
+          contactName: e.contactName,
+        })),
       })
 
       // Get message count for each thread
@@ -1234,12 +1263,13 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           messageId: emails.messageId,
           leadName: emails.leadName,
           leadEmail: emails.leadEmail,
-          sequenceName: emails.sequenceName,
+          sequenceName: sequences.name,
           leadId: emails.leadId,
           sequenceId: emails.sequenceId,
           workspaceId: emails.workspaceId,
         })
         .from(emails)
+        .leftJoin(sequences, eq(emails.sequenceId, sequences.id))
         .where(and(...conditions))
         .orderBy(asc(emails.createdAt))
 

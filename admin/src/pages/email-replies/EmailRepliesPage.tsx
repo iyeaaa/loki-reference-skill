@@ -97,7 +97,10 @@ export default function EmailRepliesPage() {
       {/* Gmail-style Split View */}
       <div id={containerId} className="flex-1 flex relative min-h-0">
         {/* Left: Thread List */}
-        <div style={{ width: `${leftWidth}%` }} className="flex flex-col h-full">
+        <div
+          style={{ width: selectedThreadId ? `${leftWidth}%` : "100%" }}
+          className="flex flex-col h-full"
+        >
           <Card className="h-full flex flex-col overflow-hidden">
             <CardHeader className="pb-3 pt-3 flex-shrink-0">
               <CardTitle className="text-base">
@@ -157,32 +160,28 @@ export default function EmailRepliesPage() {
           </Card>
         </div>
 
-        {/* Resizer */}
-        <button
-          type="button"
-          aria-label="Resize panels"
-          className={`w-1 bg-gray-200 hover:bg-blue-400 cursor-col-resize flex-shrink-0 h-full border-0 p-0 ${
-            isResizing ? "bg-blue-400" : ""
-          }`}
-          onMouseDown={handleMouseDown}
-        />
+        {/* Resizer - only show when thread is selected */}
+        {selectedThreadId && (
+          <button
+            type="button"
+            aria-label="Resize panels"
+            className={`w-px bg-gray-300 hover:bg-blue-400 cursor-col-resize flex-shrink-0 h-full border-0 p-0 ${
+              isResizing ? "bg-blue-400" : ""
+            }`}
+            onMouseDown={handleMouseDown}
+          />
+        )}
 
-        {/* Right: Thread Detail Panel */}
-        <div style={{ width: `${100 - leftWidth}%` }} className="flex flex-col h-full">
-          {selectedThreadId ? (
+        {/* Right: Thread Detail Panel - only show when thread is selected */}
+        {selectedThreadId && (
+          <div style={{ width: `${100 - leftWidth}%` }} className="flex flex-col h-full">
             <ThreadDetailPanel
               threadId={selectedThreadId}
               workspaceId={selectedWorkspace?.id}
               onClose={() => setSelectedThreadId(null)}
             />
-          ) : (
-            <Card className="h-full flex items-center justify-center">
-              <div className="text-center text-muted-foreground">
-                <div className="text-sm">선택한 대화가 없습니다.</div>
-              </div>
-            </Card>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )

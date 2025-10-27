@@ -190,6 +190,7 @@ export interface RepliedEmail {
   id: string
   threadId?: string | null
   workspaceId: string
+  direction: EmailDirection
   fromEmail: string
   toEmail: string
   subject?: string | null

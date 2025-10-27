@@ -1076,31 +1076,29 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         hasSearchFilter: !!searchFilter,
       })
 
-      // Step 3: Get threads with their first outbound message (스레드별 첫 번째 발송 메시지)
-      // Use subquery to get first outbound email per thread
+      // Step 3: Get threads with their first email (스레드별 첫 번째 이메일 - threadId 최신순 정렬)
+      // Use subquery to get first email per thread, sorted by latest activity
       const threadsQuery = db
         .select({
           threadId: emails.threadId,
-          firstOutboundCreatedAt:
-            sql<Date>`MIN(CASE WHEN ${emails.direction} = 'outbound' THEN ${emails.createdAt} END)`.as(
-              "first_outbound_created_at",
-            ),
-          latestCreatedAt: sql<Date>`MAX(${emails.createdAt})`.as("latest_created_at"), // For sorting by latest activity
+          firstCreatedAt: sql<Date>`MIN(${emails.createdAt})`.as("first_created_at"),
+          latestCreatedAt: sql<Date>`MAX(${emails.createdAt})`.as("latest_created_at"),
         })
         .from(emails)
         .where(whereClause)
         .groupBy(emails.threadId)
-        .orderBy(desc(sql`MAX(${emails.createdAt})`)) // Sort by latest activity
+        .orderBy(desc(sql`MAX(${emails.createdAt})`)) // Sort by latest activity in thread
         .limit(limit)
         .offset(offset)
         .as("threads")
 
-      // Get full email details for first outbound message in each thread
+      // Get full email details for first email in each thread
       const threadEmails = await db
         .select({
           id: emails.id,
           threadId: emails.threadId,
           workspaceId: emails.workspaceId,
+          direction: emails.direction,
           fromEmail: emails.fromEmail,
           toEmail: emails.toEmail,
           subject: emails.subject,
@@ -1154,12 +1152,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             eq(sequenceEnrollments.leadId, emails.leadId),
           ),
         )
-        .where(
-          and(
-            eq(emails.createdAt, threadsQuery.firstOutboundCreatedAt),
-            eq(emails.direction, "outbound"),
-          ),
-        )
+        .where(eq(emails.createdAt, threadsQuery.firstCreatedAt))
 
       logger.info({
         msg: "✓ [REPLIED-EMAILS] Thread emails fetched",
@@ -1259,8 +1252,41 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         workspaceId,
       })
 
-      // Build where conditions
-      const conditions = [eq(emails.threadId, threadId)]
+      // Step 1: Find all messageIds in this thread (including the threadId itself)
+      const initialConditions = [eq(emails.threadId, threadId)]
+      if (workspaceId && workspaceId !== "all") {
+        initialConditions.push(eq(emails.workspaceId, workspaceId))
+      }
+
+      const threadMessageIds = await db
+        .select({ messageId: emails.messageId })
+        .from(emails)
+        .where(and(...initialConditions))
+
+      const messageIdSet = new Set(threadMessageIds.map((e) => e.messageId).filter(Boolean))
+      messageIdSet.add(threadId) // Include threadId as it might be a messageId
+
+      logger.info({
+        msg: "✓ Found messageIds in thread",
+        threadId,
+        messageIdCount: messageIdSet.size,
+      })
+
+      // Step 2: Find ALL emails that reference these messageIds OR have this threadId
+      // This includes emails where:
+      // - threadId matches
+      // - messageId is in our set (the email itself is referenced)
+      // - inReplyTo is in our set (replying to an email in thread)
+      const messageIdArray = Array.from(messageIdSet).filter(Boolean) as string[]
+
+      const orConditions = [eq(emails.threadId, threadId)]
+
+      if (messageIdArray.length > 0) {
+        orConditions.push(inArray(emails.messageId, messageIdArray))
+        orConditions.push(inArray(emails.inReplyTo, messageIdArray))
+      }
+
+      const conditions = [or(...orConditions)]
 
       // If workspaceId is provided and not "all", filter by workspace
       if (workspaceId && workspaceId !== "all") {
@@ -1298,6 +1324,12 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         .leftJoin(sequences, eq(emails.sequenceId, sequences.id))
         .where(and(...conditions))
         .orderBy(asc(emails.createdAt))
+
+      logger.info({
+        msg: "✓ Thread emails fetched",
+        threadId,
+        emailCount: threadEmails.length,
+      })
 
       return { data: threadEmails }
     },

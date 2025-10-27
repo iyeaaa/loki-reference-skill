@@ -251,11 +251,13 @@ export async function bulkMarkAsUnread(replyIds: string[]): Promise<number> {
 
 /**
  * Delete email reply and its associated emails (cascade delete)
+ * Accepts email_reply ID (UUID), email ID (UUID), or threadId (string)
  */
 export async function deleteEmailReply(id: string): Promise<void> {
-  // First, get the reply to find associated email IDs
-  const reply = await db
+  // Strategy 1: Try to get the reply by its ID
+  let reply = await db
     .select({
+      id: emailReplies.id,
       originalEmailId: emailReplies.originalEmailId,
       replyEmailId: emailReplies.replyEmailId,
     })
@@ -263,9 +265,58 @@ export async function deleteEmailReply(id: string): Promise<void> {
     .where(eq(emailReplies.id, id))
     .limit(1)
 
+  // Strategy 2: If no reply found, the ID might be an email ID
+  if (!reply[0]) {
+    reply = await db
+      .select({
+        id: emailReplies.id,
+        originalEmailId: emailReplies.originalEmailId,
+        replyEmailId: emailReplies.replyEmailId,
+      })
+      .from(emailReplies)
+      .where(or(eq(emailReplies.originalEmailId, id), eq(emailReplies.replyEmailId, id)))
+      .limit(1)
+  }
+
+  // Strategy 3: If still no reply found, the ID might be a threadId
+  if (!reply[0]) {
+    const threadsEmails = await db
+      .select({
+        id: emails.id,
+        threadId: emails.threadId,
+      })
+      .from(emails)
+      .where(eq(emails.threadId, id))
+
+    const emailIds = threadsEmails.map((e) => e.id)
+
+    if (emailIds.length > 0) {
+      const replies = await db
+        .select({
+          id: emailReplies.id,
+          originalEmailId: emailReplies.originalEmailId,
+          replyEmailId: emailReplies.replyEmailId,
+        })
+        .from(emailReplies)
+        .where(
+          or(inArray(emailReplies.originalEmailId, emailIds), inArray(emailReplies.replyEmailId, emailIds)),
+        )
+
+      // Delete all email_replies in this thread
+      if (replies.length > 0) {
+        const replyIdsToDelete = replies.map((r) => r.id)
+        await db.delete(emailReplies).where(inArray(emailReplies.id, replyIdsToDelete))
+      }
+
+      // Delete ALL emails in this thread
+      await db.delete(emails).where(eq(emails.threadId, id))
+      return
+    }
+  }
+
   if (reply[0]) {
     // Delete the reply record
-    await db.delete(emailReplies).where(eq(emailReplies.id, id))
+    await db.delete(emailReplies).where(eq(emailReplies.id, reply[0].id))
 
     // Cascade delete: Delete associated emails
     const emailIdsToDelete = [reply[0].originalEmailId, reply[0].replyEmailId]
@@ -275,24 +326,89 @@ export async function deleteEmailReply(id: string): Promise<void> {
 
 /**
  * Bulk delete email replies and their associated emails (cascade delete)
+ * Accepts email_replies IDs, emails IDs, or threadIds
  */
-export async function bulkDeleteEmailReplies(replyIds: string[]): Promise<number> {
-  if (replyIds.length === 0) return 0
+export async function bulkDeleteEmailReplies(ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0
 
-  // First, get all replies to find associated email IDs
-  const replies = await db
+  // Strategy 1: Try to find replies by their ID
+  let replies = await db
     .select({
       id: emailReplies.id,
       originalEmailId: emailReplies.originalEmailId,
       replyEmailId: emailReplies.replyEmailId,
     })
     .from(emailReplies)
-    .where(inArray(emailReplies.id, replyIds))
+    .where(inArray(emailReplies.id, ids))
+
+  // Strategy 2: If no replies found, the IDs might be email IDs
+  if (replies.length === 0) {
+    replies = await db
+      .select({
+        id: emailReplies.id,
+        originalEmailId: emailReplies.originalEmailId,
+        replyEmailId: emailReplies.replyEmailId,
+      })
+      .from(emailReplies)
+      .where(
+        or(
+          inArray(emailReplies.originalEmailId, ids),
+          inArray(emailReplies.replyEmailId, ids),
+        ),
+      )
+  }
+
+  // Strategy 3: If still no replies found, the IDs might be threadIds
+  // Find all emails in these threads, then find their associated email_replies
+  if (replies.length === 0) {
+    const threadsEmails = await db
+      .select({
+        id: emails.id,
+        threadId: emails.threadId,
+      })
+      .from(emails)
+      .where(inArray(emails.threadId, ids))
+
+    const emailIds = threadsEmails.map((e) => e.id)
+
+    if (emailIds.length > 0) {
+      replies = await db
+        .select({
+          id: emailReplies.id,
+          originalEmailId: emailReplies.originalEmailId,
+          replyEmailId: emailReplies.replyEmailId,
+        })
+        .from(emailReplies)
+        .where(
+          or(
+            inArray(emailReplies.originalEmailId, emailIds),
+            inArray(emailReplies.replyEmailId, emailIds),
+          ),
+        )
+
+      // If we found replies via threadId, we need to delete ALL emails in the threads
+      // not just the ones associated with email_replies
+      const replyIdsToDelete = replies.map((r) => r.id)
+
+      // Delete all email_replies in these threads
+      if (replyIdsToDelete.length > 0) {
+        await db.delete(emailReplies).where(inArray(emailReplies.id, replyIdsToDelete))
+      }
+
+      // Delete ALL emails in these threads (this is the key difference)
+      await db.delete(emails).where(inArray(emails.threadId, ids))
+
+      return ids.length // Return number of threads deleted
+    }
+  }
 
   if (replies.length === 0) return 0
 
+  // Extract reply IDs for deletion
+  const replyIdsToDelete = replies.map((r) => r.id)
+
   // Delete the reply records
-  await db.delete(emailReplies).where(inArray(emailReplies.id, replyIds))
+  await db.delete(emailReplies).where(inArray(emailReplies.id, replyIdsToDelete))
 
   // Cascade delete: Collect all associated email IDs and delete them
   const emailIdsToDelete: string[] = []

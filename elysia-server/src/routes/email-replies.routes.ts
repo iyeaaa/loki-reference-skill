@@ -124,6 +124,7 @@ export const emailRepliesRoutes = new Elysia({ prefix: "/api/v1/email-replies" }
   )
 
   // Bulk delete (must come before /:id route)
+  // Accepts email_replies IDs (UUID), email IDs (UUID), or threadIds (string)
   .delete(
     "/bulk",
     async ({ body }) => {
@@ -132,12 +133,13 @@ export const emailRepliesRoutes = new Elysia({ prefix: "/api/v1/email-replies" }
     },
     {
       body: t.Object({
-        replyIds: t.Array(t.String({ format: "uuid" })),
+        replyIds: t.Array(t.String()),
       }),
     },
   )
 
   // Delete email reply
+  // Accepts email_reply ID (UUID), email ID (UUID), or threadId (string)
   .delete(
     "/:id",
     async ({ params: { id } }) => {
@@ -146,7 +148,7 @@ export const emailRepliesRoutes = new Elysia({ prefix: "/api/v1/email-replies" }
     },
     {
       params: t.Object({
-        id: t.String({ format: "uuid" }),
+        id: t.String(),
       }),
     },
   )

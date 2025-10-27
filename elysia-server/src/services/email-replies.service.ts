@@ -250,24 +250,63 @@ export async function bulkMarkAsUnread(replyIds: string[]): Promise<number> {
 }
 
 /**
- * Delete email reply
+ * Delete email reply and its associated emails (cascade delete)
  */
 export async function deleteEmailReply(id: string): Promise<void> {
-  await db.delete(emailReplies).where(eq(emailReplies.id, id))
+  // First, get the reply to find associated email IDs
+  const reply = await db
+    .select({
+      originalEmailId: emailReplies.originalEmailId,
+      replyEmailId: emailReplies.replyEmailId,
+    })
+    .from(emailReplies)
+    .where(eq(emailReplies.id, id))
+    .limit(1)
+
+  if (reply[0]) {
+    // Delete the reply record
+    await db.delete(emailReplies).where(eq(emailReplies.id, id))
+
+    // Cascade delete: Delete associated emails
+    const emailIdsToDelete = [reply[0].originalEmailId, reply[0].replyEmailId]
+    await db.delete(emails).where(inArray(emails.id, emailIdsToDelete))
+  }
 }
 
 /**
- * Bulk delete email replies
+ * Bulk delete email replies and their associated emails (cascade delete)
  */
 export async function bulkDeleteEmailReplies(replyIds: string[]): Promise<number> {
   if (replyIds.length === 0) return 0
 
-  const result = await db
-    .delete(emailReplies)
+  // First, get all replies to find associated email IDs
+  const replies = await db
+    .select({
+      id: emailReplies.id,
+      originalEmailId: emailReplies.originalEmailId,
+      replyEmailId: emailReplies.replyEmailId,
+    })
+    .from(emailReplies)
     .where(inArray(emailReplies.id, replyIds))
-    .returning({ id: emailReplies.id })
 
-  return result.length
+  if (replies.length === 0) return 0
+
+  // Delete the reply records
+  await db.delete(emailReplies).where(inArray(emailReplies.id, replyIds))
+
+  // Cascade delete: Collect all associated email IDs and delete them
+  const emailIdsToDelete: string[] = []
+  for (const reply of replies) {
+    emailIdsToDelete.push(reply.originalEmailId, reply.replyEmailId)
+  }
+
+  // Remove duplicates and delete
+  const uniqueEmailIds = [...new Set(emailIdsToDelete)]
+  if (uniqueEmailIds.length > 0) {
+    await db.delete(emails).where(inArray(emails.id, uniqueEmailIds))
+  }
+
+  return replies.length
 }
 
 /**

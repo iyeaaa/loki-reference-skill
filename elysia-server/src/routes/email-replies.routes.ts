@@ -123,6 +123,20 @@ export const emailRepliesRoutes = new Elysia({ prefix: "/api/v1/email-replies" }
     },
   )
 
+  // Bulk delete (must come before /:id route)
+  .delete(
+    "/bulk",
+    async ({ body }) => {
+      const deletedCount = await emailRepliesService.bulkDeleteEmailReplies(body.replyIds)
+      return { deletedCount }
+    },
+    {
+      body: t.Object({
+        replyIds: t.Array(t.String({ format: "uuid" })),
+      }),
+    },
+  )
+
   // Delete email reply
   .delete(
     "/:id",
@@ -133,20 +147,6 @@ export const emailRepliesRoutes = new Elysia({ prefix: "/api/v1/email-replies" }
     {
       params: t.Object({
         id: t.String({ format: "uuid" }),
-      }),
-    },
-  )
-
-  // Bulk delete
-  .delete(
-    "/bulk",
-    async ({ body }) => {
-      const deletedCount = await emailRepliesService.bulkDeleteEmailReplies(body.replyIds)
-      return { deletedCount }
-    },
-    {
-      body: t.Object({
-        replyIds: t.Array(t.String({ format: "uuid" })),
       }),
     },
   )

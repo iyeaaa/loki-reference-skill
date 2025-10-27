@@ -162,15 +162,13 @@ export function RepliedEmailsTableWithPagination({
                   <Checkbox
                     checked={
                       repliedEmails.length > 0 &&
-                      repliedEmails.every((email) =>
-                        email.threadId && selectedThreads.includes(email.threadId)
+                      repliedEmails.every(
+                        (email) => email.threadId && selectedThreads.includes(email.threadId),
                       )
                     }
                     onCheckedChange={() =>
                       onToggleAll(
-                        repliedEmails
-                          .map((e) => e.threadId)
-                          .filter((id): id is string => !!id)
+                        repliedEmails.map((e) => e.threadId).filter((id): id is string => !!id),
                       )
                     }
                   />
@@ -218,7 +216,9 @@ export function RepliedEmailsTableWithPagination({
                     >
                       <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
-                          checked={email.threadId ? selectedThreads.includes(email.threadId) : false}
+                          checked={
+                            email.threadId ? selectedThreads.includes(email.threadId) : false
+                          }
                           onCheckedChange={() => email.threadId && onToggleThread(email.threadId)}
                         />
                       </td>
@@ -719,8 +719,6 @@ export function RepliedEmailsTableWithPagination({
           </table>
         </div>
       </div>
-
-      {/* Pagination */}
       <div className="mt-6 space-y-4">
         {/* Pagination Info */}
         <div className="flex items-center justify-center">

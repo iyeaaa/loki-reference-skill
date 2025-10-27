@@ -299,7 +299,10 @@ export async function deleteEmailReply(id: string): Promise<void> {
         })
         .from(emailReplies)
         .where(
-          or(inArray(emailReplies.originalEmailId, emailIds), inArray(emailReplies.replyEmailId, emailIds)),
+          or(
+            inArray(emailReplies.originalEmailId, emailIds),
+            inArray(emailReplies.replyEmailId, emailIds),
+          ),
         )
 
       // Delete all email_replies in this thread
@@ -351,10 +354,7 @@ export async function bulkDeleteEmailReplies(ids: string[]): Promise<number> {
       })
       .from(emailReplies)
       .where(
-        or(
-          inArray(emailReplies.originalEmailId, ids),
-          inArray(emailReplies.replyEmailId, ids),
-        ),
+        or(inArray(emailReplies.originalEmailId, ids), inArray(emailReplies.replyEmailId, ids)),
       )
   }
 

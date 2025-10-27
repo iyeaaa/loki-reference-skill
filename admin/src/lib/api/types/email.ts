@@ -225,6 +225,16 @@ export interface RepliedEmail {
   leadSource?: string | null
   // Thread info (스레드 기반 조회 시 추가됨)
   messageCount?: number
+  // Sequence enrollment fields
+  enrollmentId?: string | null
+  enrollmentStatus?: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed" | null
+  enrollmentCurrentStepOrder?: number | null
+  enrollmentEnrolledAt?: string | null
+  enrollmentFirstEmailSentAt?: string | null
+  enrollmentLastEmailSentAt?: string | null
+  enrollmentCompletedAt?: string | null
+  enrollmentStoppedAt?: string | null
+  enrollmentNextStepScheduledAt?: string | null
 }
 
 // Thread email for conversation history (스레드 대화 이력)

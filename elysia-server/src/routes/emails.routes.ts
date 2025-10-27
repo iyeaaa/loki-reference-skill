@@ -1076,22 +1076,25 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         hasSearchFilter: !!searchFilter,
       })
 
-      // Step 3: Get threads with their latest message (스레드별 최신 메시지 - any direction)
-      // Use subquery to get latest email per thread
+      // Step 3: Get threads with their first outbound message (스레드별 첫 번째 발송 메시지)
+      // Use subquery to get first outbound email per thread
       const threadsQuery = db
         .select({
           threadId: emails.threadId,
-          latestCreatedAt: sql<Date>`MAX(${emails.createdAt})`.as("latest_created_at"),
+          firstOutboundCreatedAt: sql<Date>`MIN(CASE WHEN ${emails.direction} = 'outbound' THEN ${emails.createdAt} END)`.as(
+            "first_outbound_created_at",
+          ),
+          latestCreatedAt: sql<Date>`MAX(${emails.createdAt})`.as("latest_created_at"), // For sorting by latest activity
         })
         .from(emails)
         .where(whereClause)
         .groupBy(emails.threadId)
-        .orderBy(desc(sql`MAX(${emails.createdAt})`))
+        .orderBy(desc(sql`MAX(${emails.createdAt})`)) // Sort by latest activity
         .limit(limit)
         .offset(offset)
         .as("threads")
 
-      // Get full email details for latest message in each thread
+      // Get full email details for first outbound message in each thread
       const threadEmails = await db
         .select({
           id: emails.id,
@@ -1128,12 +1131,34 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           leadStatus: leads.leadStatus,
           leadScore: leads.leadScore,
           leadSource: leads.leadSource,
+          // Sequence enrollment fields
+          enrollmentId: sequenceEnrollments.id,
+          enrollmentStatus: sequenceEnrollments.status,
+          enrollmentCurrentStepOrder: sequenceEnrollments.currentStepOrder,
+          enrollmentEnrolledAt: sequenceEnrollments.enrolledAt,
+          enrollmentFirstEmailSentAt: sequenceEnrollments.firstEmailSentAt,
+          enrollmentLastEmailSentAt: sequenceEnrollments.lastEmailSentAt,
+          enrollmentCompletedAt: sequenceEnrollments.completedAt,
+          enrollmentStoppedAt: sequenceEnrollments.stoppedAt,
+          enrollmentNextStepScheduledAt: sequenceEnrollments.nextStepScheduledAt,
         })
         .from(emails)
         .innerJoin(threadsQuery, eq(emails.threadId, threadsQuery.threadId))
         .leftJoin(leads, eq(emails.leadId, leads.id))
         .leftJoin(sequences, eq(emails.sequenceId, sequences.id))
-        .where(eq(emails.createdAt, threadsQuery.latestCreatedAt))
+        .leftJoin(
+          sequenceEnrollments,
+          and(
+            eq(sequenceEnrollments.sequenceId, emails.sequenceId),
+            eq(sequenceEnrollments.leadId, emails.leadId),
+          ),
+        )
+        .where(
+          and(
+            eq(emails.createdAt, threadsQuery.firstOutboundCreatedAt),
+            eq(emails.direction, "outbound"),
+          ),
+        )
 
       logger.info({
         msg: "✓ [REPLIED-EMAILS] Thread emails fetched",

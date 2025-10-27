@@ -124,8 +124,13 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
                     <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-gray-300 dark:border-gray-600" />
                     <button
                       type="button"
-                      onClick={() => setShowMiddleEmails(true)}
-                      className="relative bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-2"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        console.log('펼치기 버튼 클릭:', emails.length - 2, '개 메일')
+                        setShowMiddleEmails(true)
+                      }}
+                      className="relative z-10 bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-2 cursor-pointer"
                     >
                       <ChevronDown className="h-4 w-4" />
                       <span>{emails.length - 2}</span>
@@ -142,6 +147,24 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
                         onToggle={() => toggleEmail(email.id)}
                       />
                     ))}
+
+                    {/* 중간 메일 접기 버튼 */}
+                    <div className="relative flex items-center justify-center py-3">
+                      <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-gray-300 dark:border-gray-600" />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          console.log('접기 버튼 클릭')
+                          setShowMiddleEmails(false)
+                        }}
+                        className="relative z-10 bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-2 cursor-pointer"
+                      >
+                        <ChevronDown className="h-4 w-4 rotate-180" />
+                        <span>접기</span>
+                      </button>
+                    </div>
                   </>
                 )}
 

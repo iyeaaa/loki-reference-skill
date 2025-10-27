@@ -1,19 +1,19 @@
-import { and, desc, eq, ilike, lte, or, sql } from "drizzle-orm"
-import { db } from "../db/index"
-import { customerGroups } from "../db/schema/customer-groups"
-import { userEmailAccounts } from "../db/schema/email-accounts"
-import { emailEvents, emails as emailsTable } from "../db/schema/emails"
-import { leadContacts } from "../db/schema/lead-details"
-import { leads } from "../db/schema/leads"
+import { and, desc, eq, ilike, lte, or, sql } from "drizzle-orm";
+import { db } from "../db/index";
+import { customerGroups } from "../db/schema/customer-groups";
+import { userEmailAccounts } from "../db/schema/email-accounts";
+import { emailEvents, emails as emailsTable } from "../db/schema/emails";
+import { leadContacts } from "../db/schema/lead-details";
+import { leads } from "../db/schema/leads";
 import {
   sequenceEnrollments,
   sequenceStepExecutions,
   sequenceSteps,
   sequences,
-} from "../db/schema/sequences"
-import { users } from "../db/schema/users"
-import { workspaces } from "../db/schema/workspaces"
-import { calculateScheduledTime } from "../utils/timezone"
+} from "../db/schema/sequences";
+import { users } from "../db/schema/users";
+import { workspaces } from "../db/schema/workspaces";
+import { calculateScheduledTime } from "../utils/timezone";
 
 // ====================================
 // SEQUENCE CRUD OPERATIONS
@@ -44,21 +44,21 @@ export async function getSequence(id: string) {
     .leftJoin(customerGroups, eq(sequences.customerGroupId, customerGroups.id))
     .leftJoin(users, eq(sequences.createdBy, users.id))
     .where(eq(sequences.id, id))
-    .limit(1)
+    .limit(1);
 
-  return result[0]
+  return result[0];
 }
 
 // CreateSequence :one
 export async function createSequence(data: {
-  workspaceId: string
-  customerGroupId?: string
-  name: string
-  description?: string
-  status?: "draft" | "active" | "paused" | "archived"
-  workflowData?: string
-  selectedLeadIds?: string[] // Array of lead IDs to target
-  createdBy?: string
+  workspaceId: string;
+  customerGroupId?: string;
+  name: string;
+  description?: string;
+  status?: "draft" | "active" | "paused" | "archived";
+  workflowData?: string;
+  selectedLeadIds?: string[]; // Array of lead IDs to target
+  createdBy?: string;
 }) {
   const [newSequence] = await db
     .insert(sequences)
@@ -69,7 +69,9 @@ export async function createSequence(data: {
       description: data.description || null,
       status: data.status || "draft",
       workflowData: data.workflowData || null,
-      selectedLeadIds: data.selectedLeadIds ? JSON.stringify(data.selectedLeadIds) : null,
+      selectedLeadIds: data.selectedLeadIds
+        ? JSON.stringify(data.selectedLeadIds)
+        : null,
       createdBy: data.createdBy || null,
     })
     .returning({
@@ -84,34 +86,38 @@ export async function createSequence(data: {
       createdBy: sequences.createdBy,
       createdAt: sequences.createdAt,
       updatedAt: sequences.updatedAt,
-    })
+    });
 
-  return newSequence
+  return newSequence;
 }
 
 // UpdateSequence :one
 export async function updateSequence(
   id: string,
   data: {
-    name?: string
-    description?: string
-    status?: "draft" | "active" | "paused" | "archived"
-    workflowData?: string
-    customerGroupId?: string
-    selectedLeadIds?: string[] // Array of lead IDs to target
-  },
+    name?: string;
+    description?: string;
+    status?: "draft" | "active" | "paused" | "archived";
+    workflowData?: string;
+    customerGroupId?: string;
+    selectedLeadIds?: string[]; // Array of lead IDs to target
+  }
 ) {
   const updateData: Record<string, unknown> = {
     updatedAt: new Date(),
-  }
+  };
 
-  if (data.name !== undefined) updateData.name = data.name
-  if (data.description !== undefined) updateData.description = data.description
-  if (data.status !== undefined) updateData.status = data.status
-  if (data.workflowData !== undefined) updateData.workflowData = data.workflowData
-  if (data.customerGroupId !== undefined) updateData.customerGroupId = data.customerGroupId
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.status !== undefined) updateData.status = data.status;
+  if (data.workflowData !== undefined)
+    updateData.workflowData = data.workflowData;
+  if (data.customerGroupId !== undefined)
+    updateData.customerGroupId = data.customerGroupId;
   if (data.selectedLeadIds !== undefined)
-    updateData.selectedLeadIds = data.selectedLeadIds ? JSON.stringify(data.selectedLeadIds) : null
+    updateData.selectedLeadIds = data.selectedLeadIds
+      ? JSON.stringify(data.selectedLeadIds)
+      : null;
 
   const [updatedSequence] = await db
     .update(sequences)
@@ -128,14 +134,14 @@ export async function updateSequence(
       selectedLeadIds: sequences.selectedLeadIds,
       createdAt: sequences.createdAt,
       updatedAt: sequences.updatedAt,
-    })
+    });
 
-  return updatedSequence
+  return updatedSequence;
 }
 
 // DeleteSequence :exec
 export async function deleteSequence(id: string) {
-  await db.delete(sequences).where(eq(sequences.id, id))
+  await db.delete(sequences).where(eq(sequences.id, id));
 }
 
 // ====================================
@@ -166,9 +172,9 @@ export async function listSequences(limit: number, offset: number) {
     .leftJoin(users, eq(sequences.createdBy, users.id))
     .orderBy(desc(sequences.createdAt))
     .limit(limit)
-    .offset(offset)
+    .offset(offset);
 
-  return result
+  return result;
 }
 
 // ListSequencesWithFilters :many
@@ -176,45 +182,47 @@ export async function listSequencesWithFilters(
   limit: number,
   offset: number,
   filters?: {
-    status?: "draft" | "active" | "paused" | "archived"
-    search?: string
-    workspaceIds?: string[]
-    createdByIds?: string[]
-  },
+    status?: "draft" | "active" | "paused" | "archived";
+    search?: string;
+    workspaceIds?: string[];
+    createdByIds?: string[];
+  }
 ) {
-  const conditions = []
+  const conditions = [];
 
   if (filters?.status) {
-    conditions.push(eq(sequences.status, filters.status))
+    conditions.push(eq(sequences.status, filters.status));
   }
 
   if (filters?.search) {
     const searchCondition = or(
       ilike(sequences.name, `%${filters.search}%`),
-      ilike(sequences.description, `%${filters.search}%`),
-    )
+      ilike(sequences.description, `%${filters.search}%`)
+    );
     if (searchCondition) {
-      conditions.push(searchCondition)
+      conditions.push(searchCondition);
     }
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
     const workspaceCondition = or(
-      ...filters.workspaceIds.map((id) => eq(sequences.workspaceId, id)),
-    )
+      ...filters.workspaceIds.map((id) => eq(sequences.workspaceId, id))
+    );
     if (workspaceCondition) {
-      conditions.push(workspaceCondition)
+      conditions.push(workspaceCondition);
     }
   }
 
   if (filters?.createdByIds && filters.createdByIds.length > 0) {
-    const createdByCondition = or(...filters.createdByIds.map((id) => eq(sequences.createdBy, id)))
+    const createdByCondition = or(
+      ...filters.createdByIds.map((id) => eq(sequences.createdBy, id))
+    );
     if (createdByCondition) {
-      conditions.push(createdByCondition)
+      conditions.push(createdByCondition);
     }
   }
 
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
   const result = await db
     .select({
@@ -256,9 +264,9 @@ export async function listSequencesWithFilters(
     .where(whereClause)
     .orderBy(desc(sequences.createdAt))
     .limit(limit)
-    .offset(offset)
+    .offset(offset);
 
-  return result
+  return result;
 }
 
 // GetSequencesByWorkspace :many
@@ -277,9 +285,9 @@ export async function getSequencesByWorkspace(workspaceId: string) {
     .from(sequences)
     .leftJoin(customerGroups, eq(sequences.customerGroupId, customerGroups.id))
     .where(eq(sequences.workspaceId, workspaceId))
-    .orderBy(desc(sequences.createdAt))
+    .orderBy(desc(sequences.createdAt));
 
-  return result
+  return result;
 }
 
 // ====================================
@@ -306,28 +314,29 @@ export async function getSequenceSteps(sequenceId: string) {
     })
     .from(sequenceSteps)
     .where(eq(sequenceSteps.sequenceId, sequenceId))
-    .orderBy(sequenceSteps.stepOrder)
+    .orderBy(sequenceSteps.stepOrder);
 
-  return result
+  return result;
 }
 
 // CreateSequenceStep :one
 export async function createSequenceStep(data: {
-  sequenceId: string
-  stepOrder: number
-  delayDays: number
-  scheduledHour?: number
-  scheduledMinute?: number
-  timezone?: string
-  emailSubject: string
-  emailBodyText?: string
-  emailBodyHtml?: string
-  emailTemplateId?: string
+  sequenceId: string;
+  stepOrder: number;
+  delayDays: number;
+  scheduledHour?: number;
+  scheduledMinute?: number;
+  timezone?: string;
+  emailSubject: string;
+  emailBodyText?: string;
+  emailBodyHtml?: string;
+  emailTemplateId?: string;
 }) {
   // Markdown을 HTML로 변환
-  const { markdownToHtml } = await import("../utils/markdown")
+  const { markdownToHtml } = await import("../utils/markdown");
   const emailBodyHtml =
-    data.emailBodyHtml || (data.emailBodyText ? markdownToHtml(data.emailBodyText) : null)
+    data.emailBodyHtml ||
+    (data.emailBodyText ? markdownToHtml(data.emailBodyText) : null);
 
   const [newStep] = await db
     .insert(sequenceSteps)
@@ -354,30 +363,31 @@ export async function createSequenceStep(data: {
       emailSubject: sequenceSteps.emailSubject,
       createdAt: sequenceSteps.createdAt,
       updatedAt: sequenceSteps.updatedAt,
-    })
+    });
 
-  return newStep
+  return newStep;
 }
 
 // UpdateSequenceStep :one
 export async function updateSequenceStep(
   id: string,
   data: {
-    stepOrder: number
-    delayDays: number
-    scheduledHour?: number
-    scheduledMinute?: number
-    timezone?: string
-    emailSubject: string
-    emailBodyText?: string
-    emailBodyHtml?: string
-    emailTemplateId?: string
-  },
+    stepOrder: number;
+    delayDays: number;
+    scheduledHour?: number;
+    scheduledMinute?: number;
+    timezone?: string;
+    emailSubject: string;
+    emailBodyText?: string;
+    emailBodyHtml?: string;
+    emailTemplateId?: string;
+  }
 ) {
   // Markdown을 HTML로 변환
-  const { markdownToHtml } = await import("../utils/markdown")
+  const { markdownToHtml } = await import("../utils/markdown");
   const emailBodyHtml =
-    data.emailBodyHtml || (data.emailBodyText ? markdownToHtml(data.emailBodyText) : null)
+    data.emailBodyHtml ||
+    (data.emailBodyText ? markdownToHtml(data.emailBodyText) : null);
   const [updatedStep] = await db
     .update(sequenceSteps)
     .set({
@@ -399,14 +409,14 @@ export async function updateSequenceStep(
       timezone: sequenceSteps.timezone,
       emailSubject: sequenceSteps.emailSubject,
       updatedAt: sequenceSteps.updatedAt,
-    })
+    });
 
-  return updatedStep
+  return updatedStep;
 }
 
 // DeleteSequenceStep :exec
 export async function deleteSequenceStep(id: string) {
-  await db.delete(sequenceSteps).where(eq(sequenceSteps.id, id))
+  await db.delete(sequenceSteps).where(eq(sequenceSteps.id, id));
 }
 
 // ====================================
@@ -414,7 +424,11 @@ export async function deleteSequenceStep(id: string) {
 // ====================================
 
 // GetSequenceEnrollments :many
-export async function getSequenceEnrollments(sequenceId: string, limit: number, offset: number) {
+export async function getSequenceEnrollments(
+  sequenceId: string,
+  limit: number,
+  offset: number
+) {
   const result = await db
     .select({
       id: sequenceEnrollments.id,
@@ -436,22 +450,31 @@ export async function getSequenceEnrollments(sequenceId: string, limit: number, 
     })
     .from(sequenceEnrollments)
     .leftJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
-    .leftJoin(userEmailAccounts, eq(sequenceEnrollments.userEmailAccountId, userEmailAccounts.id))
+    .leftJoin(
+      userEmailAccounts,
+      eq(sequenceEnrollments.userEmailAccountId, userEmailAccounts.id)
+    )
     .where(eq(sequenceEnrollments.sequenceId, sequenceId))
     .orderBy(desc(sequenceEnrollments.enrolledAt))
     .limit(limit)
-    .offset(offset)
+    .offset(offset);
 
-  return result
+  return result;
 }
 
 // CreateSequenceEnrollment :one
 export async function createSequenceEnrollment(data: {
-  sequenceId: string
-  leadId: string
-  userEmailAccountId: string
-  enrolledBy?: string
-  status?: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed"
+  sequenceId: string;
+  leadId: string;
+  userEmailAccountId: string;
+  enrolledBy?: string;
+  status?:
+    | "active"
+    | "paused"
+    | "completed"
+    | "stopped"
+    | "bounced"
+    | "unsubscribed";
 }) {
   const [newEnrollment] = await db
     .insert(sequenceEnrollments)
@@ -469,15 +492,21 @@ export async function createSequenceEnrollment(data: {
       userEmailAccountId: sequenceEnrollments.userEmailAccountId,
       status: sequenceEnrollments.status,
       enrolledAt: sequenceEnrollments.enrolledAt,
-    })
+    });
 
-  return newEnrollment
+  return newEnrollment;
 }
 
 // UpdateEnrollmentStatus :one
 export async function updateEnrollmentStatus(
   id: string,
-  status: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed",
+  status:
+    | "active"
+    | "paused"
+    | "completed"
+    | "stopped"
+    | "bounced"
+    | "unsubscribed"
 ) {
   const [updatedEnrollment] = await db
     .update(sequenceEnrollments)
@@ -492,9 +521,9 @@ export async function updateEnrollmentStatus(
       status: sequenceEnrollments.status,
       completedAt: sequenceEnrollments.completedAt,
       stoppedAt: sequenceEnrollments.stoppedAt,
-    })
+    });
 
-  return updatedEnrollment
+  return updatedEnrollment;
 }
 
 // ====================================
@@ -503,58 +532,62 @@ export async function updateEnrollmentStatus(
 
 // CountSequences :one
 export async function countSequences() {
-  const result = await db.select({ count: sql<number>`count(*)::int` }).from(sequences)
+  const result = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(sequences);
 
-  return result[0]?.count ?? 0
+  return result[0]?.count ?? 0;
 }
 
 // CountSequencesWithFilters :one
 export async function countSequencesWithFilters(filters?: {
-  status?: "draft" | "active" | "paused" | "archived"
-  search?: string
-  workspaceIds?: string[]
-  createdByIds?: string[]
+  status?: "draft" | "active" | "paused" | "archived";
+  search?: string;
+  workspaceIds?: string[];
+  createdByIds?: string[];
 }) {
-  const conditions = []
+  const conditions = [];
 
   if (filters?.status) {
-    conditions.push(eq(sequences.status, filters.status))
+    conditions.push(eq(sequences.status, filters.status));
   }
 
   if (filters?.search) {
     const searchCondition = or(
       ilike(sequences.name, `%${filters.search}%`),
-      ilike(sequences.description, `%${filters.search}%`),
-    )
+      ilike(sequences.description, `%${filters.search}%`)
+    );
     if (searchCondition) {
-      conditions.push(searchCondition)
+      conditions.push(searchCondition);
     }
   }
 
   if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
     const workspaceCondition = or(
-      ...filters.workspaceIds.map((id) => eq(sequences.workspaceId, id)),
-    )
+      ...filters.workspaceIds.map((id) => eq(sequences.workspaceId, id))
+    );
     if (workspaceCondition) {
-      conditions.push(workspaceCondition)
+      conditions.push(workspaceCondition);
     }
   }
 
   if (filters?.createdByIds && filters.createdByIds.length > 0) {
-    const createdByCondition = or(...filters.createdByIds.map((id) => eq(sequences.createdBy, id)))
+    const createdByCondition = or(
+      ...filters.createdByIds.map((id) => eq(sequences.createdBy, id))
+    );
     if (createdByCondition) {
-      conditions.push(createdByCondition)
+      conditions.push(createdByCondition);
     }
   }
 
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
   const result = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(sequences)
-    .where(whereClause)
+    .where(whereClause);
 
-  return result[0]?.count ?? 0
+  return result[0]?.count ?? 0;
 }
 
 // CountEnrollments :one
@@ -562,9 +595,9 @@ export async function countEnrollments(sequenceId: string) {
   const result = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(sequenceEnrollments)
-    .where(eq(sequenceEnrollments.sequenceId, sequenceId))
+    .where(eq(sequenceEnrollments.sequenceId, sequenceId));
 
-  return result[0]?.count ?? 0
+  return result[0]?.count ?? 0;
 }
 
 // ====================================
@@ -574,11 +607,13 @@ export async function countEnrollments(sequenceId: string) {
 // BulkUpdateStatus :exec
 export async function bulkUpdateStatus(
   sequenceIds: string[],
-  status: "draft" | "active" | "paused" | "archived",
+  status: "draft" | "active" | "paused" | "archived"
 ) {
-  const sequenceCondition = or(...sequenceIds.map((id) => eq(sequences.id, id)))
+  const sequenceCondition = or(
+    ...sequenceIds.map((id) => eq(sequences.id, id))
+  );
   if (!sequenceCondition) {
-    return 0
+    return 0;
   }
 
   const result = await db
@@ -588,50 +623,57 @@ export async function bulkUpdateStatus(
       updatedAt: new Date(),
     })
     .where(sequenceCondition)
-    .returning({ id: sequences.id })
+    .returning({ id: sequences.id });
 
-  return result.length
+  return result.length;
 }
 
 // BulkDelete :exec
 export async function bulkDelete(sequenceIds: string[]) {
-  const sequenceCondition = or(...sequenceIds.map((id) => eq(sequences.id, id)))
+  const sequenceCondition = or(
+    ...sequenceIds.map((id) => eq(sequences.id, id))
+  );
   if (!sequenceCondition) {
-    return 0
+    return 0;
   }
 
-  const result = await db.delete(sequences).where(sequenceCondition).returning({ id: sequences.id })
+  const result = await db
+    .delete(sequences)
+    .where(sequenceCondition)
+    .returning({ id: sequences.id });
 
-  return result.length
+  return result.length;
 }
 
 // BulkEnroll :exec
 export async function bulkEnroll(data: {
-  sequenceId: string
-  leadIds: string[]
-  userEmailAccountId: string
-  enrolledBy?: string
+  sequenceId: string;
+  leadIds: string[];
+  userEmailAccountId: string;
+  enrolledBy?: string;
 }) {
   const values = data.leadIds.map((leadId) => ({
     sequenceId: data.sequenceId,
     leadId,
     userEmailAccountId: data.userEmailAccountId,
     enrolledBy: data.enrolledBy || null,
-  }))
+  }));
 
   const result = await db
     .insert(sequenceEnrollments)
     .values(values)
-    .returning({ id: sequenceEnrollments.id })
+    .returning({ id: sequenceEnrollments.id });
 
-  return result.length
+  return result.length;
 }
 
 // BulkUnenroll :exec
 export async function bulkUnenroll(enrollmentIds: string[]) {
-  const enrollmentCondition = or(...enrollmentIds.map((id) => eq(sequenceEnrollments.id, id)))
+  const enrollmentCondition = or(
+    ...enrollmentIds.map((id) => eq(sequenceEnrollments.id, id))
+  );
   if (!enrollmentCondition) {
-    return 0
+    return 0;
   }
 
   const result = await db
@@ -641,9 +683,9 @@ export async function bulkUnenroll(enrollmentIds: string[]) {
       stoppedAt: new Date(),
     })
     .where(enrollmentCondition)
-    .returning({ id: sequenceEnrollments.id })
+    .returning({ id: sequenceEnrollments.id });
 
-  return result.length
+  return result.length;
 }
 
 // ====================================
@@ -652,12 +694,12 @@ export async function bulkUnenroll(enrollmentIds: string[]) {
 
 // BulkEnrollWithScheduling - Enroll leads and create step executions with scheduling
 export async function bulkEnrollWithScheduling(data: {
-  sequenceId: string
-  leadIds: string[]
-  userEmailAccountId: string
-  enrolledBy?: string
+  sequenceId: string;
+  leadIds: string[];
+  userEmailAccountId: string;
+  enrolledBy?: string;
 }) {
-  const { default: logger } = await import("../utils/logger")
+  const { default: logger } = await import("../utils/logger");
 
   logger.info(
     {
@@ -665,15 +707,18 @@ export async function bulkEnrollWithScheduling(data: {
       leadCount: data.leadIds.length,
       userEmailAccountId: data.userEmailAccountId,
     },
-    "🔄 [STEP-BASED] Starting bulk enrollment with scheduling",
-  )
+    "🔄 [STEP-BASED] Starting bulk enrollment with scheduling"
+  );
 
   // Get sequence steps to create schedules
-  const steps = await getSequenceSteps(data.sequenceId)
+  const steps = await getSequenceSteps(data.sequenceId);
 
   if (steps.length === 0) {
-    logger.error({ sequenceId: data.sequenceId }, "❌ [STEP-BASED] No steps found in sequence")
-    throw new Error("시퀀스에 스텝이 없습니다.")
+    logger.error(
+      { sequenceId: data.sequenceId },
+      "❌ [STEP-BASED] No steps found in sequence"
+    );
+    throw new Error("시퀀스에 스텝이 없습니다.");
   }
 
   logger.info(
@@ -688,19 +733,22 @@ export async function bulkEnrollWithScheduling(data: {
         timezone: s.timezone,
       })),
     },
-    "📋 [STEP-BASED] Found sequence steps",
-  )
+    "📋 [STEP-BASED] Found sequence steps"
+  );
 
   // Filter leads with valid email contacts
-  const leadCondition = or(...data.leadIds.map((id) => eq(leads.id, id)))
+  const leadCondition = or(...data.leadIds.map((id) => eq(leads.id, id)));
   if (!leadCondition) {
-    logger.warn({ sequenceId: data.sequenceId }, "⚠️ [STEP-BASED] No lead IDs provided")
+    logger.warn(
+      { sequenceId: data.sequenceId },
+      "⚠️ [STEP-BASED] No lead IDs provided"
+    );
     return {
       enrolledCount: 0,
       updatedCount: 0,
       totalSteps: steps.length,
       scheduledExecutions: 0,
-    }
+    };
   }
 
   const leadsWithEmails = await db
@@ -711,15 +759,19 @@ export async function bulkEnrollWithScheduling(data: {
     .from(leads)
     .innerJoin(leadContacts, eq(leads.id, leadContacts.leadId))
     .where(
-      and(leadCondition, eq(leadContacts.contactType, "email"), eq(leadContacts.isPrimary, true)),
-    )
+      and(
+        leadCondition,
+        eq(leadContacts.contactType, "email"),
+        eq(leadContacts.isPrimary, true)
+      )
+    );
 
   if (leadsWithEmails.length === 0) {
     logger.error(
       { sequenceId: data.sequenceId, requestedLeadCount: data.leadIds.length },
-      "❌ [STEP-BASED] No leads with valid email found",
-    )
-    throw new Error("이메일이 있는 리드가 없습니다.")
+      "❌ [STEP-BASED] No leads with valid email found"
+    );
+    throw new Error("이메일이 있는 리드가 없습니다.");
   }
 
   logger.info(
@@ -728,10 +780,10 @@ export async function bulkEnrollWithScheduling(data: {
       totalLeads: data.leadIds.length,
       leadsWithEmail: leadsWithEmails.length,
     },
-    "✅ [STEP-BASED] Found leads with valid email",
-  )
+    "✅ [STEP-BASED] Found leads with valid email"
+  );
 
-  const validLeadIds = leadsWithEmails.map((l) => l.leadId)
+  const validLeadIds = leadsWithEmails.map((l) => l.leadId);
 
   // Check for existing enrollments
   const existingEnrollments = await db
@@ -745,14 +797,18 @@ export async function bulkEnrollWithScheduling(data: {
     .where(
       and(
         eq(sequenceEnrollments.sequenceId, data.sequenceId),
-        or(...validLeadIds.map((id) => eq(sequenceEnrollments.leadId, id))),
-      ),
-    )
+        or(...validLeadIds.map((id) => eq(sequenceEnrollments.leadId, id)))
+      )
+    );
 
   // Separate active and completed enrollments
-  const activeEnrollments = existingEnrollments.filter((e) => e.status === "active")
-  const completedEnrollments = existingEnrollments.filter((e) => e.status === "completed")
-  const completedLeadIds = new Set(completedEnrollments.map((e) => e.leadId))
+  const activeEnrollments = existingEnrollments.filter(
+    (e) => e.status === "active"
+  );
+  const completedEnrollments = existingEnrollments.filter(
+    (e) => e.status === "completed"
+  );
+  const completedLeadIds = new Set(completedEnrollments.map((e) => e.leadId));
 
   // Check if all leads are already completed
   if (completedLeadIds.size === validLeadIds.length) {
@@ -762,13 +818,15 @@ export async function bulkEnrollWithScheduling(data: {
         completedCount: completedLeadIds.size,
         totalRequested: validLeadIds.length,
       },
-      "⚠️ [STEP-BASED] All leads are already completed in this sequence",
-    )
-    throw new Error("모든 리드가 이미 완료된 시퀀스입니다. 중복 실행을 방지합니다.")
+      "⚠️ [STEP-BASED] All leads are already completed in this sequence"
+    );
+    throw new Error(
+      "모든 리드가 이미 완료된 시퀀스입니다. 중복 실행을 방지합니다."
+    );
   }
 
-  const existingLeadIds = new Set(existingEnrollments.map((e) => e.leadId))
-  let newLeadIds = validLeadIds.filter((id) => !existingLeadIds.has(id))
+  const existingLeadIds = new Set(existingEnrollments.map((e) => e.leadId));
+  let newLeadIds = validLeadIds.filter((id) => !existingLeadIds.has(id));
 
   // ====================================
   // 🔍 이메일 중복 체크 (같은 시퀀스 내)
@@ -788,34 +846,38 @@ export async function bulkEnrollWithScheduling(data: {
         and(
           eq(leadContacts.leadId, leads.id),
           eq(leadContacts.contactType, "email"),
-          eq(leadContacts.isPrimary, true),
-        ),
+          eq(leadContacts.isPrimary, true)
+        )
       )
-      .where(eq(sequenceEnrollments.sequenceId, data.sequenceId))
+      .where(eq(sequenceEnrollments.sequenceId, data.sequenceId));
 
     // 이미 등록된 이메일 주소 Set
-    const enrolledEmails = new Set(existingEnrollmentsWithEmails.map((e) => e.email.toLowerCase()))
+    const enrolledEmails = new Set(
+      existingEnrollmentsWithEmails.map((e) => e.email.toLowerCase())
+    );
 
     logger.info(
       {
         sequenceId: data.sequenceId,
         enrolledEmailsCount: enrolledEmails.size,
       },
-      "📧 [STEP-BASED] Found existing enrolled emails in this sequence",
-    )
+      "📧 [STEP-BASED] Found existing enrolled emails in this sequence"
+    );
 
     // 새로 등록하려는 lead들의 이메일과 비교
-    const leadEmailMap = new Map(leadsWithEmails.map((l) => [l.leadId, l.email.toLowerCase()]))
+    const leadEmailMap = new Map(
+      leadsWithEmails.map((l) => [l.leadId, l.email.toLowerCase()])
+    );
 
-    const duplicateEmailLeads: Array<{ leadId: string; email: string }> = []
+    const duplicateEmailLeads: Array<{ leadId: string; email: string }> = [];
     const filteredNewLeadIds = newLeadIds.filter((leadId) => {
-      const email = leadEmailMap.get(leadId)
+      const email = leadEmailMap.get(leadId);
       if (email && enrolledEmails.has(email)) {
-        duplicateEmailLeads.push({ leadId, email })
-        return false // 중복 이메일이므로 제외
+        duplicateEmailLeads.push({ leadId, email });
+        return false; // 중복 이메일이므로 제외
       }
-      return true // 중복되지 않으므로 등록 가능
-    })
+      return true; // 중복되지 않으므로 등록 가능
+    });
 
     if (duplicateEmailLeads.length > 0) {
       logger.warn(
@@ -827,16 +889,17 @@ export async function bulkEnrollWithScheduling(data: {
             email: d.email,
           })),
         },
-        "⚠️ [STEP-BASED] Skipping leads with duplicate emails already enrolled in this sequence",
-      )
+        "⚠️ [STEP-BASED] Skipping leads with duplicate emails already enrolled in this sequence"
+      );
     }
 
-    newLeadIds = filteredNewLeadIds
+    newLeadIds = filteredNewLeadIds;
   }
 
   // Count duplicates for logging
   const duplicateEmailCount =
-    validLeadIds.filter((id) => !existingLeadIds.has(id)).length - newLeadIds.length
+    validLeadIds.filter((id) => !existingLeadIds.has(id)).length -
+    newLeadIds.length;
 
   logger.info(
     {
@@ -848,11 +911,12 @@ export async function bulkEnrollWithScheduling(data: {
       duplicateEmailsSkipped: duplicateEmailCount,
       newLeadsToEnroll: newLeadIds.length,
     },
-    "📊 [STEP-BASED] Checked existing enrollments and duplicate emails",
-  )
+    "📊 [STEP-BASED] Checked existing enrollments and duplicate emails"
+  );
 
   // Create enrollments only for new leads
-  let newEnrollments: Array<{ id: string; leadId: string; enrolledAt: Date }> = []
+  let newEnrollments: Array<{ id: string; leadId: string; enrolledAt: Date }> =
+    [];
   if (newLeadIds.length > 0) {
     const enrollmentValues = newLeadIds.map((leadId) => ({
       sequenceId: data.sequenceId,
@@ -861,13 +925,16 @@ export async function bulkEnrollWithScheduling(data: {
       enrolledBy: data.enrolledBy || null,
       currentStepOrder: 0,
       status: "active" as const,
-    }))
+    }));
 
-    newEnrollments = await db.insert(sequenceEnrollments).values(enrollmentValues).returning({
-      id: sequenceEnrollments.id,
-      leadId: sequenceEnrollments.leadId,
-      enrolledAt: sequenceEnrollments.enrolledAt,
-    })
+    newEnrollments = await db
+      .insert(sequenceEnrollments)
+      .values(enrollmentValues)
+      .returning({
+        id: sequenceEnrollments.id,
+        leadId: sequenceEnrollments.leadId,
+        enrolledAt: sequenceEnrollments.enrolledAt,
+      });
 
     logger.info(
       {
@@ -875,8 +942,8 @@ export async function bulkEnrollWithScheduling(data: {
         enrollmentsCreated: newEnrollments.length,
         enrollmentIds: newEnrollments.map((e) => e.id),
       },
-      "✅ [STEP-BASED] Created new enrollments",
-    )
+      "✅ [STEP-BASED] Created new enrollments"
+    );
   }
 
   // Combine active enrollments and new enrollments for processing
@@ -896,7 +963,7 @@ export async function bulkEnrollWithScheduling(data: {
       isExisting: false,
       currentStepOrder: 0,
     })),
-  ]
+  ];
 
   logger.info(
     {
@@ -907,16 +974,16 @@ export async function bulkEnrollWithScheduling(data: {
       skippedCompleted: completedLeadIds.size,
       enrollmentIds: enrollments.map((e) => e.id),
     },
-    "✅ [STEP-BASED] Processing enrollments (skipped completed to prevent duplicates)",
-  )
+    "✅ [STEP-BASED] Processing enrollments (skipped completed to prevent duplicates)"
+  );
 
   // For active enrollments, get their existing step executions
   let existingStepExecutions: Array<{
-    enrollmentId: string
-    stepId: string
-    stepOrder: number
-    scheduledAt: Date
-  }> = []
+    enrollmentId: string;
+    stepId: string;
+    stepOrder: number;
+    scheduledAt: Date;
+  }> = [];
 
   if (activeEnrollments.length > 0) {
     existingStepExecutions = await db
@@ -927,25 +994,34 @@ export async function bulkEnrollWithScheduling(data: {
         scheduledAt: sequenceStepExecutions.scheduledAt,
       })
       .from(sequenceStepExecutions)
-      .where(or(...activeEnrollments.map((e) => eq(sequenceStepExecutions.enrollmentId, e.id))))
+      .where(
+        or(
+          ...activeEnrollments.map((e) =>
+            eq(sequenceStepExecutions.enrollmentId, e.id)
+          )
+        )
+      );
   }
 
   // Create maps for quick lookup
   // enrollmentId -> Set of existing stepIds
-  const existingStepExecutionsMap = new Map<string, Set<string>>()
+  const existingStepExecutionsMap = new Map<string, Set<string>>();
   // (enrollmentId + stepId) -> scheduledAt
-  const existingStepScheduleMap = new Map<string, Date>()
+  const existingStepScheduleMap = new Map<string, Date>();
 
   for (const exec of existingStepExecutions) {
     if (!existingStepExecutionsMap.has(exec.enrollmentId)) {
-      existingStepExecutionsMap.set(exec.enrollmentId, new Set())
+      existingStepExecutionsMap.set(exec.enrollmentId, new Set());
     }
-    const existingSet = existingStepExecutionsMap.get(exec.enrollmentId)
+    const existingSet = existingStepExecutionsMap.get(exec.enrollmentId);
     if (existingSet) {
-      existingSet.add(exec.stepId)
+      existingSet.add(exec.stepId);
     }
     // Store scheduledAt with compound key
-    existingStepScheduleMap.set(`${exec.enrollmentId}:${exec.stepId}`, exec.scheduledAt)
+    existingStepScheduleMap.set(
+      `${exec.enrollmentId}:${exec.stepId}`,
+      exec.scheduledAt
+    );
   }
 
   logger.info(
@@ -953,17 +1029,18 @@ export async function bulkEnrollWithScheduling(data: {
       sequenceId: data.sequenceId,
       existingExecutionsCount: existingStepExecutions.length,
     },
-    "📊 [STEP-BASED] Loaded existing step executions",
-  )
+    "📊 [STEP-BASED] Loaded existing step executions"
+  );
 
   // Create step executions for each enrollment with KST scheduling
-  const stepExecutionValues = []
+  const stepExecutionValues = [];
 
   for (const enrollment of enrollments) {
-    const existingStepIds = existingStepExecutionsMap.get(enrollment.id) || new Set()
+    const existingStepIds =
+      existingStepExecutionsMap.get(enrollment.id) || new Set();
 
     // Always start from enrolledAt, then update baseDate as we traverse steps
-    let baseDate = new Date(enrollment.enrolledAt)
+    let baseDate = new Date(enrollment.enrolledAt);
 
     logger.debug(
       {
@@ -975,17 +1052,19 @@ export async function bulkEnrollWithScheduling(data: {
       },
       enrollment.isExisting
         ? "📅 [STEP-BASED] Processing existing enrollment - will only add new steps"
-        : "📅 [STEP-BASED] Processing new enrollment - will add all steps",
-    )
+        : "📅 [STEP-BASED] Processing new enrollment - will add all steps"
+    );
 
     for (const step of steps) {
       // Skip if this step already has an execution for this enrollment
       if (existingStepIds.has(step.id)) {
         // Get the scheduled time of this existing step to use as base for next step
-        const existingScheduledAt = existingStepScheduleMap.get(`${enrollment.id}:${step.id}`)
+        const existingScheduledAt = existingStepScheduleMap.get(
+          `${enrollment.id}:${step.id}`
+        );
 
         if (existingScheduledAt) {
-          baseDate = existingScheduledAt
+          baseDate = existingScheduledAt;
           logger.debug(
             {
               enrollmentId: enrollment.id,
@@ -993,8 +1072,8 @@ export async function bulkEnrollWithScheduling(data: {
               stepOrder: step.stepOrder,
               scheduledAt: baseDate.toISOString(),
             },
-            "⏭️ [STEP-BASED] Skipping existing step, updated baseDate",
-          )
+            "⏭️ [STEP-BASED] Skipping existing step, updated baseDate"
+          );
         } else {
           logger.debug(
             {
@@ -1002,10 +1081,10 @@ export async function bulkEnrollWithScheduling(data: {
               stepId: step.id,
               stepOrder: step.stepOrder,
             },
-            "⏭️ [STEP-BASED] Skipping existing step (no execution found)",
-          )
+            "⏭️ [STEP-BASED] Skipping existing step (no execution found)"
+          );
         }
-        continue
+        continue;
       }
 
       // Calculate scheduled time in KST
@@ -1014,8 +1093,8 @@ export async function bulkEnrollWithScheduling(data: {
         step.delayDays,
         step.scheduledHour ?? 9,
         step.scheduledMinute ?? 0,
-        step.timezone ?? "Asia/Seoul",
-      )
+        step.timezone ?? "Asia/Seoul"
+      );
 
       logger.debug(
         {
@@ -1028,8 +1107,8 @@ export async function bulkEnrollWithScheduling(data: {
           baseDate: baseDate.toISOString(),
           scheduledAt: scheduledAt.toISOString(),
         },
-        "⏰ [STEP-BASED] Scheduled step execution",
-      )
+        "⏰ [STEP-BASED] Scheduled step execution"
+      );
 
       stepExecutionValues.push({
         enrollmentId: enrollment.id,
@@ -1037,29 +1116,29 @@ export async function bulkEnrollWithScheduling(data: {
         stepOrder: step.stepOrder,
         status: "pending" as const,
         scheduledAt,
-      })
+      });
 
       // Use this step's scheduled time as the base for the next step
-      baseDate = scheduledAt
+      baseDate = scheduledAt;
     }
   }
 
   if (stepExecutionValues.length > 0) {
-    await db.insert(sequenceStepExecutions).values(stepExecutionValues)
+    await db.insert(sequenceStepExecutions).values(stepExecutionValues);
     logger.info(
       {
         sequenceId: data.sequenceId,
         totalExecutions: stepExecutionValues.length,
         executionsPerEnrollment: steps.length,
       },
-      "✅ [STEP-BASED] Created step executions",
-    )
+      "✅ [STEP-BASED] Created step executions"
+    );
   }
 
   // Update nextStepScheduledAt for enrollments
   for (const enrollment of enrollments) {
-    const firstStep = steps[0]
-    if (!firstStep) continue
+    const firstStep = steps[0];
+    if (!firstStep) continue;
 
     // Calculate first step scheduled time in KST
     const nextScheduledAt = calculateScheduledTime(
@@ -1067,21 +1146,21 @@ export async function bulkEnrollWithScheduling(data: {
       firstStep.delayDays,
       firstStep.scheduledHour ?? 9,
       firstStep.scheduledMinute ?? 0,
-      firstStep.timezone ?? "Asia/Seoul",
-    )
+      firstStep.timezone ?? "Asia/Seoul"
+    );
 
     await db
       .update(sequenceEnrollments)
       .set({ nextStepScheduledAt: nextScheduledAt })
-      .where(eq(sequenceEnrollments.id, enrollment.id))
+      .where(eq(sequenceEnrollments.id, enrollment.id));
 
     logger.debug(
       {
         enrollmentId: enrollment.id,
         nextStepScheduledAt: nextScheduledAt.toISOString(),
       },
-      "📅 [STEP-BASED] Updated enrollment next step schedule",
-    )
+      "📅 [STEP-BASED] Updated enrollment next step schedule"
+    );
   }
 
   const result = {
@@ -1090,24 +1169,24 @@ export async function bulkEnrollWithScheduling(data: {
     skippedCompleted: completedLeadIds.size,
     totalSteps: steps.length,
     scheduledExecutions: stepExecutionValues.length,
-  }
+  };
 
   logger.info(
     {
       sequenceId: data.sequenceId,
       ...result,
     },
-    "🎉 [STEP-BASED] Bulk enrollment with scheduling completed successfully",
-  )
+    "🎉 [STEP-BASED] Bulk enrollment with scheduling completed successfully"
+  );
 
-  return result
+  return result;
 }
 
 // GetLeadsWithEmails - Get leads from a list that have email contacts
 export async function getLeadsWithEmails(leadIds: string[]) {
-  const leadCondition = or(...leadIds.map((id) => eq(leads.id, id)))
+  const leadCondition = or(...leadIds.map((id) => eq(leads.id, id)));
   if (!leadCondition) {
-    return []
+    return [];
   }
 
   const result = await db
@@ -1120,23 +1199,23 @@ export async function getLeadsWithEmails(leadIds: string[]) {
     .from(leads)
     .innerJoin(leadContacts, eq(leads.id, leadContacts.leadId))
     .where(and(leadCondition, eq(leadContacts.contactType, "email")))
-    .orderBy(leads.companyName, desc(leadContacts.isPrimary))
+    .orderBy(leads.companyName, desc(leadContacts.isPrimary));
 
-  return result
+  return result;
 }
 
 // GetPendingStepExecutions - Get step executions that need to be sent
 export async function getPendingStepExecutions(limit: number = 100) {
-  const { default: logger } = await import("../utils/logger")
-  const now = new Date()
+  const { default: logger } = await import("../utils/logger");
+  const now = new Date();
 
   logger.debug(
     {
       currentTime: now.toISOString(),
       limit,
     },
-    "🔍 [STEP-BASED] Querying pending step executions",
-  )
+    "🔍 [STEP-BASED] Querying pending step executions"
+  );
 
   const result = await db
     .select({
@@ -1157,8 +1236,14 @@ export async function getPendingStepExecutions(limit: number = 100) {
       userId: sequences.createdBy, // 시퀀스 생성자 ID를 userId로 사용
     })
     .from(sequenceStepExecutions)
-    .innerJoin(sequenceSteps, eq(sequenceStepExecutions.stepId, sequenceSteps.id))
-    .innerJoin(sequenceEnrollments, eq(sequenceStepExecutions.enrollmentId, sequenceEnrollments.id))
+    .innerJoin(
+      sequenceSteps,
+      eq(sequenceStepExecutions.stepId, sequenceSteps.id)
+    )
+    .innerJoin(
+      sequenceEnrollments,
+      eq(sequenceStepExecutions.enrollmentId, sequenceEnrollments.id)
+    )
     .innerJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
     .innerJoin(sequences, eq(sequenceEnrollments.sequenceId, sequences.id))
     .where(
@@ -1166,11 +1251,11 @@ export async function getPendingStepExecutions(limit: number = 100) {
         eq(sequenceStepExecutions.status, "pending"),
         lte(sequenceStepExecutions.scheduledAt, now),
         eq(sequenceEnrollments.status, "active"),
-        eq(sequences.status, "active"),
-      ),
+        eq(sequences.status, "active")
+      )
     )
     .orderBy(sequenceStepExecutions.scheduledAt)
-    .limit(limit)
+    .limit(limit);
 
   if (result.length > 0) {
     logger.info(
@@ -1179,11 +1264,11 @@ export async function getPendingStepExecutions(limit: number = 100) {
         sequences: [...new Set(result.map((r) => r.sequenceName))],
         earliestSchedule: result[0]?.scheduledAt,
       },
-      "📬 [STEP-BASED] Found pending step executions",
-    )
+      "📬 [STEP-BASED] Found pending step executions"
+    );
   }
 
-  return result
+  return result;
 }
 
 // UpdateStepExecutionStatus - Update step execution status after sending
@@ -1191,7 +1276,7 @@ export async function updateStepExecutionStatus(
   executionId: string,
   status: "sent" | "delivered" | "failed" | "skipped",
   errorMessage?: string,
-  emailId?: string,
+  emailId?: string
 ) {
   const [updated] = await db
     .update(sequenceStepExecutions)
@@ -1206,22 +1291,25 @@ export async function updateStepExecutionStatus(
       id: sequenceStepExecutions.id,
       enrollmentId: sequenceStepExecutions.enrollmentId,
       stepOrder: sequenceStepExecutions.stepOrder,
-    })
+    });
 
-  return updated
+  return updated;
 }
 
 // UpdateEnrollmentProgress - Update enrollment progress after step execution
-export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: number) {
-  const { default: logger } = await import("../utils/logger")
+export async function updateEnrollmentProgress(
+  enrollmentId: string,
+  stepOrder: number
+) {
+  const { default: logger } = await import("../utils/logger");
 
   logger.debug(
     {
       enrollmentId,
       stepOrder,
     },
-    "📊 [STEP-BASED] Updating enrollment progress",
-  )
+    "📊 [STEP-BASED] Updating enrollment progress"
+  );
 
   // Get total steps for this enrollment
   const enrollment = await db
@@ -1231,15 +1319,15 @@ export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: 
     })
     .from(sequenceEnrollments)
     .where(eq(sequenceEnrollments.id, enrollmentId))
-    .limit(1)
+    .limit(1);
 
   if (!enrollment[0]) {
-    logger.error({ enrollmentId }, "❌ [STEP-BASED] Enrollment not found")
-    return null
+    logger.error({ enrollmentId }, "❌ [STEP-BASED] Enrollment not found");
+    return null;
   }
 
-  const steps = await getSequenceSteps(enrollment[0].sequenceId)
-  const isLastStep = stepOrder >= steps.length
+  const steps = await getSequenceSteps(enrollment[0].sequenceId);
+  const isLastStep = stepOrder >= steps.length;
 
   logger.info(
     {
@@ -1249,55 +1337,58 @@ export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: 
       totalSteps: steps.length,
       isLastStep,
     },
-    "📈 [STEP-BASED] Enrollment progress check",
-  )
+    "📈 [STEP-BASED] Enrollment progress check"
+  );
 
   const updateData: {
-    currentStepOrder: number
-    lastEmailSentAt: Date
-    firstEmailSentAt?: Date
-    status?: "active" | "paused" | "completed" | "stopped"
-    completedAt?: Date
-    nextStepScheduledAt?: Date | null
+    currentStepOrder: number;
+    lastEmailSentAt: Date;
+    firstEmailSentAt?: Date;
+    status?: "active" | "paused" | "completed" | "stopped";
+    completedAt?: Date;
+    nextStepScheduledAt?: Date | null;
   } = {
     currentStepOrder: stepOrder,
     lastEmailSentAt: new Date(),
-  }
+  };
 
   // If first email
   const enr = await db
     .select({ firstEmailSentAt: sequenceEnrollments.firstEmailSentAt })
     .from(sequenceEnrollments)
     .where(eq(sequenceEnrollments.id, enrollmentId))
-    .limit(1)
+    .limit(1);
 
   if (!enr[0]?.firstEmailSentAt) {
-    updateData.firstEmailSentAt = new Date()
-    logger.info({ enrollmentId }, "🎉 [STEP-BASED] First email sent for this enrollment")
+    updateData.firstEmailSentAt = new Date();
+    logger.info(
+      { enrollmentId },
+      "🎉 [STEP-BASED] First email sent for this enrollment"
+    );
   }
 
   // If last step, mark as completed
   if (isLastStep) {
-    updateData.status = "completed"
-    updateData.completedAt = new Date()
-    updateData.nextStepScheduledAt = null
+    updateData.status = "completed";
+    updateData.completedAt = new Date();
+    updateData.nextStepScheduledAt = null;
     logger.info(
       { enrollmentId, sequenceId: enrollment[0].sequenceId },
-      "🏁 [STEP-BASED] Enrollment completed - all steps sent",
-    )
+      "🏁 [STEP-BASED] Enrollment completed - all steps sent"
+    );
   } else {
     // Schedule next step with KST timezone
-    const nextStep = steps.find((s) => s.stepOrder === stepOrder + 1)
+    const nextStep = steps.find((s) => s.stepOrder === stepOrder + 1);
     if (nextStep) {
-      const baseDate = new Date()
+      const baseDate = new Date();
       const nextScheduledAt = calculateScheduledTime(
         baseDate,
         nextStep.delayDays,
         nextStep.scheduledHour ?? 9,
         nextStep.scheduledMinute ?? 0,
-        nextStep.timezone ?? "Asia/Seoul",
-      )
-      updateData.nextStepScheduledAt = nextScheduledAt
+        nextStep.timezone ?? "Asia/Seoul"
+      );
+      updateData.nextStepScheduledAt = nextScheduledAt;
       logger.info(
         {
           enrollmentId,
@@ -1305,8 +1396,8 @@ export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: 
           nextStepDelayDays: nextStep.delayDays,
           nextScheduledAt: nextScheduledAt.toISOString(),
         },
-        "⏭️ [STEP-BASED] Scheduled next step",
-      )
+        "⏭️ [STEP-BASED] Scheduled next step"
+      );
     }
   }
 
@@ -1318,7 +1409,7 @@ export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: 
       id: sequenceEnrollments.id,
       status: sequenceEnrollments.status,
       currentStepOrder: sequenceEnrollments.currentStepOrder,
-    })
+    });
 
   if (updated) {
     logger.info(
@@ -1327,11 +1418,75 @@ export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: 
         status: updated.status,
         currentStepOrder: updated.currentStepOrder,
       },
-      "✅ [STEP-BASED] Enrollment progress updated",
-    )
+      "✅ [STEP-BASED] Enrollment progress updated"
+    );
+
+    // If enrollment is completed, check if all enrollments are completed
+    if (updated.status === "completed") {
+      await checkAndUpdateSequenceCompletion(enrollment[0].sequenceId);
+    }
   }
 
-  return updated
+  return updated;
+}
+
+// CheckAndUpdateSequenceCompletion - Check if all enrollments are completed and update sequence status
+async function checkAndUpdateSequenceCompletion(sequenceId: string) {
+  const { default: logger } = await import("../utils/logger");
+
+  logger.debug(
+    { sequenceId },
+    "🔍 [SEQUENCE-COMPLETION] Checking sequence completion"
+  );
+
+  // Get all enrollments for this sequence
+  const enrollments = await db
+    .select({
+      id: sequenceEnrollments.id,
+      status: sequenceEnrollments.status,
+    })
+    .from(sequenceEnrollments)
+    .where(eq(sequenceEnrollments.sequenceId, sequenceId));
+
+  if (enrollments.length === 0) {
+    logger.warn(
+      { sequenceId },
+      "⚠️ [SEQUENCE-COMPLETION] No enrollments found"
+    );
+    return;
+  }
+
+  // Check if all enrollments are completed
+  const allCompleted = enrollments.every(
+    (enrollment) => enrollment.status === "completed"
+  );
+
+  logger.info(
+    {
+      sequenceId,
+      totalEnrollments: enrollments.length,
+      completedEnrollments: enrollments.filter((e) => e.status === "completed")
+        .length,
+      allCompleted,
+    },
+    "📊 [SEQUENCE-COMPLETION] Completion status check"
+  );
+
+  if (allCompleted) {
+    // Update sequence status to completed
+    await db
+      .update(sequences)
+      .set({
+        status: "completed",
+        updatedAt: new Date(),
+      })
+      .where(eq(sequences.id, sequenceId));
+
+    logger.info(
+      { sequenceId },
+      "🎉 [SEQUENCE-COMPLETION] Sequence marked as completed - all enrollments finished"
+    );
+  }
 }
 
 // ====================================
@@ -1340,9 +1495,9 @@ export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: 
 
 // GetSequenceMetrics - Get comprehensive metrics for a sequence
 export async function getSequenceMetrics(sequenceId: string) {
-  const { default: logger } = await import("../utils/logger")
+  const { default: logger } = await import("../utils/logger");
 
-  logger.debug({ sequenceId }, "📊 [METRICS] Getting sequence metrics")
+  logger.debug({ sequenceId }, "📊 [METRICS] Getting sequence metrics");
 
   // 1. Get enrollment statistics
   const enrollmentStats = await db
@@ -1352,7 +1507,7 @@ export async function getSequenceMetrics(sequenceId: string) {
     })
     .from(sequenceEnrollments)
     .where(eq(sequenceEnrollments.sequenceId, sequenceId))
-    .groupBy(sequenceEnrollments.status)
+    .groupBy(sequenceEnrollments.status);
 
   // 2. Get email statistics from email_events
   // For open and click events, count unique emails (not total events)
@@ -1370,13 +1525,13 @@ export async function getSequenceMetrics(sequenceId: string) {
     .from(emailEvents)
     .innerJoin(emailsTable, eq(emailEvents.emailId, emailsTable.id))
     .where(eq(emailsTable.sequenceId, sequenceId))
-    .groupBy(emailEvents.eventType)
+    .groupBy(emailEvents.eventType);
 
   // 3. Get total sent emails count
   const totalSentResult = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(emailsTable)
-    .where(eq(emailsTable.sequenceId, sequenceId))
+    .where(eq(emailsTable.sequenceId, sequenceId));
 
   // 4. Get last sent email timestamp
   const lastSentResult = await db
@@ -1384,7 +1539,7 @@ export async function getSequenceMetrics(sequenceId: string) {
     .from(emailsTable)
     .where(eq(emailsTable.sequenceId, sequenceId))
     .orderBy(desc(emailsTable.sentAt))
-    .limit(1)
+    .limit(1);
 
   // Process enrollment statistics
   const enrollmentCounts = {
@@ -1395,12 +1550,12 @@ export async function getSequenceMetrics(sequenceId: string) {
     stopped: 0,
     bounced: 0,
     unsubscribed: 0,
-  }
+  };
 
   enrollmentStats.forEach((stat) => {
-    enrollmentCounts.total += stat.count
-    enrollmentCounts[stat.status as keyof typeof enrollmentCounts] = stat.count
-  })
+    enrollmentCounts.total += stat.count;
+    enrollmentCounts[stat.status as keyof typeof enrollmentCounts] = stat.count;
+  });
 
   // Process email statistics
   const emailCounts = {
@@ -1411,38 +1566,43 @@ export async function getSequenceMetrics(sequenceId: string) {
     bounced: 0,
     dropped: 0,
     unsubscribed: 0,
-  }
+  };
 
   emailStats.forEach((stat) => {
     switch (stat.eventType) {
       case "delivered":
-        emailCounts.delivered = stat.count
-        break
+        emailCounts.delivered = stat.count;
+        break;
       case "open":
-        emailCounts.opened = stat.count
-        break
+        emailCounts.opened = stat.count;
+        break;
       case "click":
-        emailCounts.clicked = stat.count
-        break
+        emailCounts.clicked = stat.count;
+        break;
       case "bounce":
-        emailCounts.bounced = stat.count
-        break
+        emailCounts.bounced = stat.count;
+        break;
       case "dropped":
-        emailCounts.dropped = stat.count
-        break
+        emailCounts.dropped = stat.count;
+        break;
       case "unsubscribe":
-        emailCounts.unsubscribed = stat.count
-        break
+        emailCounts.unsubscribed = stat.count;
+        break;
     }
-  })
+  });
 
   // Calculate rates
   // delivered 이벤트가 없을 경우 totalSent를 기준으로 계산
-  const deliveredCount = emailCounts.delivered > 0 ? emailCounts.delivered : emailCounts.totalSent
-  const openRate = deliveredCount > 0 ? (emailCounts.opened / deliveredCount) * 100 : 0
-  const clickRate = deliveredCount > 0 ? (emailCounts.clicked / deliveredCount) * 100 : 0
+  const deliveredCount =
+    emailCounts.delivered > 0 ? emailCounts.delivered : emailCounts.totalSent;
+  const openRate =
+    deliveredCount > 0 ? (emailCounts.opened / deliveredCount) * 100 : 0;
+  const clickRate =
+    deliveredCount > 0 ? (emailCounts.clicked / deliveredCount) * 100 : 0;
   const bounceRate =
-    emailCounts.totalSent > 0 ? (emailCounts.bounced / emailCounts.totalSent) * 100 : 0
+    emailCounts.totalSent > 0
+      ? (emailCounts.bounced / emailCounts.totalSent) * 100
+      : 0;
 
   // 디버깅: 이메일 카운트 로깅
   logger.info(
@@ -1465,8 +1625,8 @@ export async function getSequenceMetrics(sequenceId: string) {
         usingDeliveredEvent: emailCounts.delivered > 0,
       },
     },
-    "🔍 [DEBUG] Email counts and calculated rates",
-  )
+    "🔍 [DEBUG] Email counts and calculated rates"
+  );
 
   const metrics = {
     // 발송 통계
@@ -1495,7 +1655,7 @@ export async function getSequenceMetrics(sequenceId: string) {
 
     // 시간별 통계
     lastSentAt: lastSentResult[0]?.lastSentAt?.toISOString(),
-  }
+  };
 
   logger.info(
     {
@@ -1508,17 +1668,17 @@ export async function getSequenceMetrics(sequenceId: string) {
         totalEnrollments: metrics.totalEnrollments,
       },
     },
-    "📊 [METRICS] Sequence metrics calculated",
-  )
+    "📊 [METRICS] Sequence metrics calculated"
+  );
 
-  return metrics
+  return metrics;
 }
 
 // GetEnrollmentMetrics - Get detailed metrics for a specific enrollment
 export async function getEnrollmentMetrics(enrollmentId: string) {
-  const { default: logger } = await import("../utils/logger")
+  const { default: logger } = await import("../utils/logger");
 
-  logger.debug({ enrollmentId }, "📊 [METRICS] Getting enrollment metrics")
+  logger.debug({ enrollmentId }, "📊 [METRICS] Getting enrollment metrics");
 
   // 1. Get enrollment details
   const enrollmentResult = await db
@@ -1534,36 +1694,42 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
     })
     .from(sequenceEnrollments)
     .innerJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
-    .innerJoin(userEmailAccounts, eq(sequenceEnrollments.userEmailAccountId, userEmailAccounts.id))
+    .innerJoin(
+      userEmailAccounts,
+      eq(sequenceEnrollments.userEmailAccountId, userEmailAccounts.id)
+    )
     .where(eq(sequenceEnrollments.id, enrollmentId))
-    .limit(1)
+    .limit(1);
 
   if (enrollmentResult.length === 0) {
-    throw new Error("Enrollment not found")
+    throw new Error("Enrollment not found");
   }
 
-  const enrollment = enrollmentResult[0]
+  const enrollment = enrollmentResult[0];
   if (!enrollment) {
-    throw new Error("Enrollment not found")
+    throw new Error("Enrollment not found");
   }
 
   // 2. Get total steps for this sequence
   const stepsResult = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(sequenceSteps)
-    .innerJoin(sequenceEnrollments, eq(sequenceSteps.sequenceId, sequenceEnrollments.sequenceId))
-    .where(eq(sequenceEnrollments.id, enrollmentId))
+    .innerJoin(
+      sequenceEnrollments,
+      eq(sequenceSteps.sequenceId, sequenceEnrollments.sequenceId)
+    )
+    .where(eq(sequenceEnrollments.id, enrollmentId));
 
-  const totalSteps = stepsResult[0]?.count || 0
+  const totalSteps = stepsResult[0]?.count || 0;
 
   // 3. Get total emails sent for this enrollment (from sequence_step_executions)
   const emailsSentResult = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(sequenceStepExecutions)
     .innerJoin(emailsTable, eq(sequenceStepExecutions.emailId, emailsTable.id))
-    .where(eq(sequenceStepExecutions.enrollmentId, enrollmentId))
+    .where(eq(sequenceStepExecutions.enrollmentId, enrollmentId));
 
-  const emailsSent = emailsSentResult[0]?.count || 0
+  const emailsSent = emailsSentResult[0]?.count || 0;
 
   // 4. Get email event statistics for this enrollment
   // For open and click events, count unique emails (not total events)
@@ -1580,9 +1746,12 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
     })
     .from(emailEvents)
     .innerJoin(emailsTable, eq(emailEvents.emailId, emailsTable.id))
-    .innerJoin(sequenceStepExecutions, eq(emailsTable.id, sequenceStepExecutions.emailId))
+    .innerJoin(
+      sequenceStepExecutions,
+      eq(emailsTable.id, sequenceStepExecutions.emailId)
+    )
     .where(eq(sequenceStepExecutions.enrollmentId, enrollmentId))
-    .groupBy(emailEvents.eventType)
+    .groupBy(emailEvents.eventType);
 
   // Process email statistics
   const emailCounts = {
@@ -1592,33 +1761,39 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
     emailsClicked: 0,
     emailsReplied: 0,
     emailsBounced: 0,
-  }
+  };
 
   emailStats.forEach((stat) => {
     switch (stat.eventType) {
       case "delivered":
-        emailCounts.emailsDelivered = stat.count
-        break
+        emailCounts.emailsDelivered = stat.count;
+        break;
       case "open":
-        emailCounts.emailsOpened = stat.count
-        break
+        emailCounts.emailsOpened = stat.count;
+        break;
       case "click":
-        emailCounts.emailsClicked = stat.count
-        break
+        emailCounts.emailsClicked = stat.count;
+        break;
       case "bounce":
-        emailCounts.emailsBounced = stat.count
-        break
+        emailCounts.emailsBounced = stat.count;
+        break;
     }
-  })
+  });
 
   // Calculate rates
   // delivered 이벤트가 없을 경우 emailsSent를 기준으로 계산
   const deliveredCount =
-    emailCounts.emailsDelivered > 0 ? emailCounts.emailsDelivered : emailCounts.emailsSent
-  const openRate = deliveredCount > 0 ? (emailCounts.emailsOpened / deliveredCount) * 100 : 0
-  const clickRate = deliveredCount > 0 ? (emailCounts.emailsClicked / deliveredCount) * 100 : 0
+    emailCounts.emailsDelivered > 0
+      ? emailCounts.emailsDelivered
+      : emailCounts.emailsSent;
+  const openRate =
+    deliveredCount > 0 ? (emailCounts.emailsOpened / deliveredCount) * 100 : 0;
+  const clickRate =
+    deliveredCount > 0 ? (emailCounts.emailsClicked / deliveredCount) * 100 : 0;
   const bounceRate =
-    emailCounts.emailsSent > 0 ? (emailCounts.emailsBounced / emailCounts.emailsSent) * 100 : 0
+    emailCounts.emailsSent > 0
+      ? (emailCounts.emailsBounced / emailCounts.emailsSent) * 100
+      : 0;
 
   const metrics = {
     companyName: enrollment.companyName || "알 수 없음",
@@ -1649,7 +1824,7 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
 
     // 상세 이메일 이력
     emailHistory: await getEmailHistoryForEnrollment(enrollmentId),
-  }
+  };
 
   logger.info(
     {
@@ -1659,17 +1834,20 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
       openRate: metrics.openRate,
       clickRate: metrics.clickRate,
     },
-    "📊 [METRICS] Enrollment metrics calculated",
-  )
+    "📊 [METRICS] Enrollment metrics calculated"
+  );
 
-  return metrics
+  return metrics;
 }
 
 // GetEmailHistoryForEnrollment - Get detailed email history for an enrollment
 async function getEmailHistoryForEnrollment(enrollmentId: string) {
-  const { default: logger } = await import("../utils/logger")
+  const { default: logger } = await import("../utils/logger");
 
-  logger.debug({ enrollmentId }, "📧 [HISTORY] Getting email history for enrollment")
+  logger.debug(
+    { enrollmentId },
+    "📧 [HISTORY] Getting email history for enrollment"
+  );
 
   // Get emails through sequence_step_executions
   const emailHistory = await db
@@ -1688,7 +1866,7 @@ async function getEmailHistoryForEnrollment(enrollmentId: string) {
     .from(sequenceStepExecutions)
     .innerJoin(emailsTable, eq(sequenceStepExecutions.emailId, emailsTable.id))
     .where(eq(sequenceStepExecutions.enrollmentId, enrollmentId))
-    .orderBy(sequenceStepExecutions.stepOrder)
+    .orderBy(sequenceStepExecutions.stepOrder);
 
   return emailHistory.map((email) => ({
     stepOrder: email.stepOrder,
@@ -1701,5 +1879,5 @@ async function getEmailHistoryForEnrollment(enrollmentId: string) {
     openedAt: email.openedAt?.toISOString(),
     clickedAt: email.clickedAt?.toISOString(),
     repliedAt: email.repliedAt?.toISOString(),
-  }))
+  }));
 }

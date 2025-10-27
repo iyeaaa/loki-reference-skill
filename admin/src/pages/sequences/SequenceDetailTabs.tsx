@@ -1,27 +1,29 @@
-import { Play } from "lucide-react"
-import { useState } from "react"
-import { SequenceMetrics } from "@/components/SequenceMetrics"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useSequence, useSequenceMetrics } from "@/lib/api/hooks/sequences"
-import { EnrollLeadsDialog } from "./EnrollLeadsDialog"
-import { SequenceEnrollmentsTable } from "./SequenceEnrollmentsTable"
-import { SequenceStepsList } from "./SequenceStepList"
+import { Play } from "lucide-react";
+import { useState } from "react";
+import { SequenceMetrics } from "@/components/SequenceMetrics";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSequence, useSequenceMetrics } from "@/lib/api/hooks/sequences";
+import { EnrollLeadsDialog } from "./EnrollLeadsDialog";
+import { SequenceEnrollmentsTable } from "./SequenceEnrollmentsTable";
+import { SequenceStepsList } from "./SequenceStepList";
 
 interface SequenceDetailTabsProps {
-  sequenceId: string
+  sequenceId: string;
 }
 
 export function SequenceDetailTabs({ sequenceId }: SequenceDetailTabsProps) {
-  const [activeTab, setActiveTab] = useState("steps")
-  const [showEnrollDialog, setShowEnrollDialog] = useState(false)
+  const [activeTab, setActiveTab] = useState("steps");
+  const [showEnrollDialog, setShowEnrollDialog] = useState(false);
 
-  const { data: sequence } = useSequence(sequenceId)
-  const { data: metricsData, isLoading: metricsLoading } = useSequenceMetrics(sequenceId)
+  const { data: sequence } = useSequence(sequenceId);
+  const { data: metricsData, isLoading: metricsLoading } =
+    useSequenceMetrics(sequenceId);
 
   // 완료된 등록이 있는지 확인
-  const hasCompletedEnrollments = (metricsData?.data?.completedEnrollments ?? 0) > 0
+  const hasCompletedEnrollments =
+    (metricsData?.data?.completedEnrollments ?? 0) > 0;
 
   return (
     <>
@@ -31,7 +33,11 @@ export function SequenceDetailTabs({ sequenceId }: SequenceDetailTabsProps) {
             <h3 className="text-lg font-semibold">시퀀스 상세</h3>
             <Button
               onClick={() => setShowEnrollDialog(true)}
-              disabled={!sequence || sequence.status !== "active" || hasCompletedEnrollments}
+              disabled={
+                !sequence ||
+                sequence.status !== "active" ||
+                hasCompletedEnrollments
+              }
               size="sm"
             >
               <Play className="h-4 w-4 mr-2" />
@@ -41,8 +47,8 @@ export function SequenceDetailTabs({ sequenceId }: SequenceDetailTabsProps) {
           {hasCompletedEnrollments && (
             <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-md">
               <p className="text-sm text-amber-800">
-                ⚠️ 이 시퀀스에는 이미 완료된 등록이 있습니다. 중복 실행을 방지하기 위해 실행 버튼이
-                비활성화되었습니다.
+                ⚠️ 이 시퀀스에는 이미 완료된 등록이 있습니다. 중복 실행을
+                방지하기 위해 실행 버튼이 비활성화되었습니다.
               </p>
             </div>
           )}
@@ -84,5 +90,5 @@ export function SequenceDetailTabs({ sequenceId }: SequenceDetailTabsProps) {
         />
       )}
     </>
-  )
+  );
 }

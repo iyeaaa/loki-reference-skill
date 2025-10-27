@@ -239,6 +239,12 @@ export async function listSequencesWithFilters(
         FROM ${sequenceEnrollments}
         WHERE ${sequenceEnrollments.sequenceId} = ${sequences.id}
       )`,
+      completedEnrollmentsCount: sql<number>`(
+        SELECT COUNT(*)::int
+        FROM ${sequenceEnrollments}
+        WHERE ${sequenceEnrollments.sequenceId} = ${sequences.id}
+        AND ${sequenceEnrollments.status} = 'completed'
+      )`,
       customerGroupId: sequences.customerGroupId,
       customerGroupName: customerGroups.name,
       selectedLeadIds: sequences.selectedLeadIds,
@@ -745,9 +751,21 @@ export async function bulkEnrollWithScheduling(data: {
 
   // Separate active and completed enrollments
   const activeEnrollments = existingEnrollments.filter((e) => e.status === "active")
-  const completedLeadIds = new Set(
-    existingEnrollments.filter((e) => e.status === "completed").map((e) => e.leadId),
-  )
+  const completedEnrollments = existingEnrollments.filter((e) => e.status === "completed")
+  const completedLeadIds = new Set(completedEnrollments.map((e) => e.leadId))
+
+  // Check if all leads are already completed
+  if (completedLeadIds.size === validLeadIds.length) {
+    logger.warn(
+      {
+        sequenceId: data.sequenceId,
+        completedCount: completedLeadIds.size,
+        totalRequested: validLeadIds.length,
+      },
+      "⚠️ [STEP-BASED] All leads are already completed in this sequence",
+    )
+    throw new Error("모든 리드가 이미 완료된 시퀀스입니다. 중복 실행을 방지합니다.")
+  }
 
   const existingLeadIds = new Set(existingEnrollments.map((e) => e.leadId))
   let newLeadIds = validLeadIds.filter((id) => !existingLeadIds.has(id))
@@ -1171,7 +1189,7 @@ export async function getPendingStepExecutions(limit: number = 100) {
 // UpdateStepExecutionStatus - Update step execution status after sending
 export async function updateStepExecutionStatus(
   executionId: string,
-  status: "sent" | "failed" | "skipped",
+  status: "sent" | "delivered" | "failed" | "skipped",
   errorMessage?: string,
   emailId?: string,
 ) {
@@ -1311,9 +1329,64 @@ export async function updateEnrollmentProgress(enrollmentId: string, stepOrder: 
       },
       "✅ [STEP-BASED] Enrollment progress updated",
     )
+
+    // If enrollment is completed, check if all enrollments are completed
+    if (updated.status === "completed") {
+      await checkAndUpdateSequenceCompletion(enrollment[0].sequenceId)
+    }
   }
 
   return updated
+}
+
+// CheckAndUpdateSequenceCompletion - Check if all enrollments are completed and update sequence status
+async function checkAndUpdateSequenceCompletion(sequenceId: string) {
+  const { default: logger } = await import("../utils/logger")
+
+  logger.debug({ sequenceId }, "🔍 [SEQUENCE-COMPLETION] Checking sequence completion")
+
+  // Get all enrollments for this sequence
+  const enrollments = await db
+    .select({
+      id: sequenceEnrollments.id,
+      status: sequenceEnrollments.status,
+    })
+    .from(sequenceEnrollments)
+    .where(eq(sequenceEnrollments.sequenceId, sequenceId))
+
+  if (enrollments.length === 0) {
+    logger.warn({ sequenceId }, "⚠️ [SEQUENCE-COMPLETION] No enrollments found")
+    return
+  }
+
+  // Check if all enrollments are completed
+  const allCompleted = enrollments.every((enrollment) => enrollment.status === "completed")
+
+  logger.info(
+    {
+      sequenceId,
+      totalEnrollments: enrollments.length,
+      completedEnrollments: enrollments.filter((e) => e.status === "completed").length,
+      allCompleted,
+    },
+    "📊 [SEQUENCE-COMPLETION] Completion status check",
+  )
+
+  if (allCompleted) {
+    // Update sequence status to completed
+    await db
+      .update(sequences)
+      .set({
+        status: "completed",
+        updatedAt: new Date(),
+      })
+      .where(eq(sequences.id, sequenceId))
+
+    logger.info(
+      { sequenceId },
+      "🎉 [SEQUENCE-COMPLETION] Sequence marked as completed - all enrollments finished",
+    )
+  }
 }
 
 // ====================================

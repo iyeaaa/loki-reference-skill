@@ -325,6 +325,7 @@ export function SequenceForm({
               </SelectItem>
               <SelectItem value="paused">일시정지</SelectItem>
               <SelectItem value="archived">보관됨</SelectItem>
+              <SelectItem value="completed">발송완료</SelectItem>
             </SelectContent>
           </Select>
           {stepsCount > 0 && formData.status !== "active" && (

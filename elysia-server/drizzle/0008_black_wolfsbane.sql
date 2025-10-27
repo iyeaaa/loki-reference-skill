@@ -1,0 +1,1 @@
+ALTER TYPE "public"."step_execution_status_enum" ADD VALUE 'delivered' BEFORE 'failed';

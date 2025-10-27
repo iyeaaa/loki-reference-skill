@@ -1,0 +1,1 @@
+ALTER TYPE "public"."sequence_status_enum" ADD VALUE 'completed';

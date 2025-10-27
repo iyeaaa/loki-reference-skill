@@ -23,6 +23,7 @@ export const sequenceStatusEnum = pgEnum("sequence_status_enum", [
   "active",
   "paused",
   "archived",
+  "completed",
 ])
 
 export const enrollmentStatusEnum = pgEnum("enrollment_status_enum", [
@@ -38,6 +39,7 @@ export const stepExecutionStatusEnum = pgEnum("step_execution_status_enum", [
   "pending",
   "scheduled",
   "sent",
+  "delivered",
   "failed",
   "skipped",
 ])

@@ -497,6 +497,7 @@ class WebhookService {
           sequenceId: sequenceEnrollments.sequenceId,
           sequenceName: sequences.name,
           lastEmailSentAt: sequenceEnrollments.lastEmailSentAt,
+          enrollmentStatus: sequenceEnrollments.status,
         })
         .from(sequenceEnrollments)
         .innerJoin(sequences, eq(sequences.id, sequenceEnrollments.sequenceId))
@@ -504,8 +505,7 @@ class WebhookService {
           and(
             eq(sequenceEnrollments.leadId, leadId),
             eq(sequenceEnrollments.userEmailAccountId, account.id),
-            // 활성 상태만 (완료/중단된 sequence 제외)
-            sql`${sequenceEnrollments.status} IN ('active', 'paused')`,
+            // 상태 필터 없음 - 모든 상태의 enrollment에서 가장 최근 것을 찾음
           ),
         )
         .orderBy(desc(sequenceEnrollments.lastEmailSentAt))
@@ -520,8 +520,9 @@ class WebhookService {
             sequenceName,
             leadId,
             lastEmailSentAt: enrollmentResults[0].lastEmailSentAt,
+            enrollmentStatus: enrollmentResults[0].enrollmentStatus,
           },
-          "Sequence found via active enrollment (fallback)",
+          "Sequence found via enrollment (fallback, all statuses)",
         )
       }
     }

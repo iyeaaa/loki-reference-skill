@@ -27,6 +27,9 @@ export interface EmailReplyWithDetails extends EmailReply {
     bodyText: string | null
     bodyHtml: string | null
     sentAt: string | null
+    leadName: string | null
+    companyName: string | null
+    contactName: string | null
   } | null
   emailAccount: {
     id: string

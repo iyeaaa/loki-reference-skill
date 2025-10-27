@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, Layers, User } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -13,6 +14,9 @@ interface RepliedEmailsTableWithPaginationProps {
   selectedStatuses: string[]
   selectedThreadId?: string | null
   onThreadSelect: (threadId: string) => void
+  selectedEmails: string[]
+  onToggleEmail: (emailId: string) => void
+  onToggleAll: (emailIds: string[]) => void
 }
 
 export function RepliedEmailsTableWithPagination({
@@ -21,6 +25,9 @@ export function RepliedEmailsTableWithPagination({
   selectedStatuses,
   selectedThreadId,
   onThreadSelect,
+  selectedEmails,
+  onToggleEmail,
+  onToggleAll,
 }: RepliedEmailsTableWithPaginationProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
@@ -140,18 +147,28 @@ export function RepliedEmailsTableWithPagination({
         <div className="overflow-x-auto">
           <table className="w-full table-fixed">
             <colgroup>
-              <col className="w-[20%] min-w-[180px]" />
-              <col className="w-[22%] min-w-[180px]" />
+              <col className="w-[40px]" />
+              <col className="w-[16%] min-w-[140px]" />
+              <col className="w-[22%] min-w-[170px]" />
               <col className="w-[8%] min-w-[80px]" />
-              <col className="w-[18%] min-w-[120px]" />
-              <col className="w-[18%] min-w-[120px]" />
+              <col className="w-[16%] min-w-[110px]" />
+              <col className="w-[16%] min-w-[110px]" />
               <col className="w-[10%] min-w-[90px]" />
               <col className="w-[10%] min-w-[100px]" />
             </colgroup>
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
+                <th className="px-3 py-2 text-center">
+                  <Checkbox
+                    checked={
+                      repliedEmails.length > 0 &&
+                      repliedEmails.every((email) => selectedEmails.includes(email.id))
+                    }
+                    onCheckedChange={() => onToggleAll(repliedEmails.map((e) => e.id))}
+                  />
+                </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  발신/수신
+                  회사명
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   제목
@@ -176,7 +193,7 @@ export function RepliedEmailsTableWithPagination({
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {repliedEmails.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-2 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={8} className="px-2 py-4 text-center text-sm text-gray-500">
                     {isFetching ? "로딩 중..." : "답장 이메일이 없습니다"}
                   </td>
                 </tr>
@@ -185,45 +202,36 @@ export function RepliedEmailsTableWithPagination({
                   return (
                     <tr
                       key={email.id}
-                      onClick={() => email.threadId && onThreadSelect(email.threadId)}
-                      className={`cursor-pointer transition-colors ${
+                      className={`transition-colors ${
                         selectedThreadId === email.threadId
                           ? "bg-gray-100 dark:bg-gray-700"
                           : "hover:bg-gray-50 dark:hover:bg-gray-750"
                       }`}
                     >
-                      <td className="px-3 py-2 text-sm">
-                        <div className="flex items-start gap-1.5 min-w-0">
-                          <div className="min-w-0 flex-1">
-                            {email.direction === "outbound" ? (
-                              <>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs text-blue-600 dark:text-blue-400">
-                                    →
-                                  </span>
-                                  <span className="font-medium break-words">{email.toEmail}</span>
-                                </div>
-                                <div className="text-xs text-gray-500 break-words mt-0.5">
-                                  발신: {email.fromEmail}
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs text-green-600 dark:text-green-400">
-                                    ←
-                                  </span>
-                                  <span className="font-medium break-words">{email.fromEmail}</span>
-                                </div>
-                                <div className="text-xs text-gray-500 break-words mt-0.5">
-                                  수신: {email.toEmail}
-                                </div>
-                              </>
-                            )}
-                          </div>
+                      <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedEmails.includes(email.id)}
+                          onCheckedChange={() => onToggleEmail(email.id)}
+                        />
+                      </td>
+                      <td
+                        className="px-3 py-2 text-sm cursor-pointer"
+                        onClick={() => email.threadId && onThreadSelect(email.threadId)}
+                      >
+                        <div className="min-w-0">
+                          {email.companyName || email.contactName ? (
+                            <div className="font-medium break-words">
+                              {email.companyName || email.contactName}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-sm">
+                      <td
+                        className="px-3 py-2 text-sm cursor-pointer"
+                        onClick={() => email.threadId && onThreadSelect(email.threadId)}
+                      >
                         <div
                           className="font-medium line-clamp-3 break-words"
                           title={email.subject || ""}
@@ -231,10 +239,16 @@ export function RepliedEmailsTableWithPagination({
                           {email.subject || "(제목 없음)"}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-center text-xs text-gray-600 dark:text-gray-400">
+                      <td
+                        className="px-3 py-2 text-center text-xs text-gray-600 dark:text-gray-400 cursor-pointer"
+                        onClick={() => email.threadId && onThreadSelect(email.threadId)}
+                      >
                         {email.messageCount && email.messageCount > 1 ? email.messageCount : "-"}
                       </td>
-                      <td className="px-3 py-2 text-xs">
+                      <td
+                        className="px-3 py-2 text-xs cursor-pointer"
+                        onClick={() => email.threadId && onThreadSelect(email.threadId)}
+                      >
                         {email.companyName || email.leadName ? (
                           <Popover>
                             <Tooltip>
@@ -677,10 +691,16 @@ export function RepliedEmailsTableWithPagination({
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-xs whitespace-nowrap">
+                      <td
+                        className="px-3 py-2 text-xs whitespace-nowrap cursor-pointer"
+                        onClick={() => email.threadId && onThreadSelect(email.threadId)}
+                      >
                         <span className="text-gray-600">{getStatusText(email.status)}</span>
                       </td>
-                      <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">
+                      <td
+                        className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap cursor-pointer"
+                        onClick={() => email.threadId && onThreadSelect(email.threadId)}
+                      >
                         {formatRelativeTime(email.createdAt)}
                       </td>
                     </tr>

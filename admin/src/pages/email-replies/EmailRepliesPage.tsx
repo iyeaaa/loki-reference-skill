@@ -1,11 +1,20 @@
-import { AlertCircle, Search, X } from "lucide-react"
-import { useEffect, useId, useState } from "react"
+import { AlertCircle, Check, Search, Trash2, X } from "lucide-react"
+import { useCallback, useEffect, useId, useState } from "react"
+import toast from "react-hot-toast"
 import { useParams } from "react-router-dom"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import {
+  useBulkDeleteEmailReplies,
+  useBulkMarkAsRead,
+  useBulkMarkAsUnread,
+} from "@/lib/api/hooks/email-replies"
 import { useEmail } from "@/lib/api/hooks/emails"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
+import { ConfirmDialog } from "./ConfirmDialog"
+import { EmailRepliesBulkActionModal } from "./EmailRepliesBulkActionModal"
 import { RepliedEmailsTableWithPagination } from "./RepliedEmailsTableWithPagination"
 import { ThreadDetailPanel } from "./ThreadDetailPanel"
 
@@ -19,9 +28,18 @@ export default function EmailRepliesPage() {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
   const [leftWidth, setLeftWidth] = useState(50) // percentage
   const [isResizing, setIsResizing] = useState(false)
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([])
+  const [showBulkActionModal, setShowBulkActionModal] = useState(false)
+  const [bulkActionType, setBulkActionType] = useState<"read_status" | null>(null)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
   // emailId가 있으면 해당 이메일 정보를 가져와서 threadId 설정
   const { data: emailData } = useEmail(emailId || "", !!emailId)
+
+  // Bulk action hooks
+  const bulkMarkAsRead = useBulkMarkAsRead()
+  const bulkMarkAsUnread = useBulkMarkAsUnread()
+  const bulkDeleteEmails = useBulkDeleteEmailReplies()
 
   // emailData가 로드되면 threadId 설정
   useEffect(() => {
@@ -43,6 +61,63 @@ export default function EmailRepliesPage() {
     if (e.key === "Enter") {
       setSearchQuery(searchInput)
     }
+  }
+
+  // Email selection handlers
+  const toggleEmailSelection = useCallback((emailId: string) => {
+    setSelectedEmails((prev) =>
+      prev.includes(emailId) ? prev.filter((id) => id !== emailId) : [...prev, emailId],
+    )
+  }, [])
+
+  const toggleAllEmails = useCallback((emailIds: string[]) => {
+    setSelectedEmails((prev) => (prev.length === emailIds.length ? [] : emailIds))
+  }, [])
+
+  // Bulk action handlers
+  const handleBulkAction = async (actionType: string, value: string) => {
+    if (selectedEmails.length === 0) {
+      toast.error("선택된 이메일이 없습니다.")
+      return
+    }
+
+    if (actionType === "read_status") {
+      if (value === "read") {
+        bulkMarkAsRead.mutate(selectedEmails, {
+          onSuccess: () => {
+            setSelectedEmails([])
+          },
+        })
+      } else if (value === "unread") {
+        bulkMarkAsUnread.mutate(selectedEmails, {
+          onSuccess: () => {
+            setSelectedEmails([])
+          },
+        })
+      }
+    }
+  }
+
+  const handleBulkDelete = () => {
+    if (selectedEmails.length === 0) return
+    setShowConfirmDialog(true)
+  }
+
+  const confirmBulkDelete = () => {
+    bulkDeleteEmails.mutate(selectedEmails, {
+      onSuccess: () => {
+        setSelectedEmails([])
+      },
+    })
+  }
+
+  const openBulkActionModal = (type: "read_status") => {
+    if (selectedEmails.length === 0) {
+      toast.error("선택된 이메일이 없습니다.")
+      return
+    }
+    setBulkActionType(type)
+    setShowBulkActionModal(true)
   }
 
   // Resizer handlers
@@ -140,6 +215,34 @@ export default function EmailRepliesPage() {
                 </div>
               </div>
 
+              {/* Bulk Actions */}
+              {selectedEmails.length > 0 && (
+                <div className="flex items-center gap-4 mb-3 flex-shrink-0">
+                  <div className="text-sm text-muted-foreground">
+                    <span className="font-medium">{selectedEmails.length}개 선택됨</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openBulkActionModal("read_status")}
+                    >
+                      <Check className="h-4 w-4 mr-1" />
+                      읽음 상태 변경
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleBulkDelete}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      선택 삭제
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Thread List Table */}
               <div className="flex-1 overflow-auto">
                 {selectedWorkspace ? (
@@ -149,6 +252,9 @@ export default function EmailRepliesPage() {
                     selectedStatuses={[]}
                     selectedThreadId={selectedThreadId}
                     onThreadSelect={setSelectedThreadId}
+                    selectedEmails={selectedEmails}
+                    onToggleEmail={toggleEmailSelection}
+                    onToggleAll={toggleAllEmails}
                   />
                 ) : (
                   <div className="py-12 text-center text-muted-foreground">
@@ -183,6 +289,30 @@ export default function EmailRepliesPage() {
           </div>
         )}
       </div>
+
+      {/* Bulk Action Modal */}
+      <EmailRepliesBulkActionModal
+        isOpen={showBulkActionModal}
+        onClose={() => {
+          setShowBulkActionModal(false)
+          setBulkActionType(null)
+        }}
+        onConfirm={handleBulkAction}
+        emailCount={selectedEmails.length}
+        actionType={bulkActionType}
+      />
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={confirmBulkDelete}
+        title="이메일 삭제 확인"
+        description={`선택한 ${selectedEmails.length}개의 이메일을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`}
+        confirmText="삭제"
+        cancelText="취소"
+        variant="destructive"
+      />
     </div>
   )
 }

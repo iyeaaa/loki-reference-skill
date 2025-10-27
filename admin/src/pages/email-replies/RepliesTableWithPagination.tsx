@@ -141,7 +141,7 @@ export function RepliesTableWithPagination({
                 />
               </TableHead>
               <TableHead className="w-16">상태</TableHead>
-              <TableHead>발신자</TableHead>
+              <TableHead>회사명</TableHead>
               <TableHead>제목</TableHead>
               <TableHead>이메일 계정</TableHead>
               <TableHead>감정</TableHead>
@@ -175,7 +175,10 @@ export function RepliesTableWithPagination({
                   <TableCell>
                     <div className="max-w-[200px]">
                       <div className="font-medium truncate">
-                        {reply.replyEmail?.fromEmail || "-"}
+                        {reply.replyEmail?.companyName ||
+                          reply.replyEmail?.contactName ||
+                          reply.replyEmail?.leadName ||
+                          "-"}
                       </div>
                     </div>
                   </TableCell>

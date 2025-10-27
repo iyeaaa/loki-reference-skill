@@ -3,6 +3,8 @@ import { alias } from "drizzle-orm/pg-core"
 import { db } from "../db"
 import { emailReplies, emails, userEmailAccounts } from "../db/schema"
 import type { EmailReply } from "../db/schema/emails"
+import { leadContacts } from "../db/schema/lead-details"
+import { leads } from "../db/schema/leads"
 
 // Create table aliases for joining emails table twice
 const originalEmail = alias(emails, "original_email")
@@ -32,6 +34,9 @@ interface EmailReplyWithDetails extends EmailReply {
     bodyText: string | null
     bodyHtml: string | null
     sentAt: Date | null
+    leadName: string | null
+    companyName: string | null
+    contactName: string | null
   } | null
   emailAccount: {
     id: string
@@ -67,16 +72,28 @@ export async function listEmailReplies(
         bodyText: replyEmail.bodyText,
         bodyHtml: replyEmail.bodyHtml,
         sentAt: replyEmail.sentAt,
+        leadName: replyEmail.leadName,
       },
       emailAccount: {
         id: userEmailAccounts.id,
         emailAddress: userEmailAccounts.emailAddress,
+      },
+      lead: {
+        companyName: leads.companyName,
+      },
+      leadContact: {
+        contactName: leadContacts.contactName,
       },
     })
     .from(emailReplies)
     .leftJoin(originalEmail, eq(emailReplies.originalEmailId, originalEmail.id))
     .leftJoin(replyEmail, eq(emailReplies.replyEmailId, replyEmail.id))
     .leftJoin(userEmailAccounts, eq(replyEmail.userEmailAccountId, userEmailAccounts.id))
+    .leftJoin(leads, eq(replyEmail.leadId, leads.id))
+    .leftJoin(
+      leadContacts,
+      and(eq(leadContacts.leadId, leads.id), eq(leadContacts.isPrimary, true)),
+    )
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(emailReplies.createdAt))
     .limit(limit)
@@ -85,7 +102,13 @@ export async function listEmailReplies(
   return results.map((r) => ({
     ...r.reply,
     originalEmail: r.originalEmail,
-    replyEmail: r.replyEmail,
+    replyEmail: r.replyEmail
+      ? {
+          ...r.replyEmail,
+          companyName: r.lead?.companyName || null,
+          contactName: r.leadContact?.contactName || null,
+        }
+      : null,
     emailAccount: r.emailAccount,
   }))
 }
@@ -128,16 +151,28 @@ export async function getEmailReplyById(id: string): Promise<EmailReplyWithDetai
         bodyText: replyEmail.bodyText,
         bodyHtml: replyEmail.bodyHtml,
         sentAt: replyEmail.sentAt,
+        leadName: replyEmail.leadName,
       },
       emailAccount: {
         id: userEmailAccounts.id,
         emailAddress: userEmailAccounts.emailAddress,
+      },
+      lead: {
+        companyName: leads.companyName,
+      },
+      leadContact: {
+        contactName: leadContacts.contactName,
       },
     })
     .from(emailReplies)
     .leftJoin(originalEmail, eq(emailReplies.originalEmailId, originalEmail.id))
     .leftJoin(replyEmail, eq(emailReplies.replyEmailId, replyEmail.id))
     .leftJoin(userEmailAccounts, eq(replyEmail.userEmailAccountId, userEmailAccounts.id))
+    .leftJoin(leads, eq(replyEmail.leadId, leads.id))
+    .leftJoin(
+      leadContacts,
+      and(eq(leadContacts.leadId, leads.id), eq(leadContacts.isPrimary, true)),
+    )
     .where(eq(emailReplies.id, id))
     .limit(1)
 
@@ -147,7 +182,13 @@ export async function getEmailReplyById(id: string): Promise<EmailReplyWithDetai
   return {
     ...r.reply,
     originalEmail: r.originalEmail,
-    replyEmail: r.replyEmail,
+    replyEmail: r.replyEmail
+      ? {
+          ...r.replyEmail,
+          companyName: r.lead?.companyName || null,
+          contactName: r.leadContact?.contactName || null,
+        }
+      : null,
     emailAccount: r.emailAccount,
   }
 }

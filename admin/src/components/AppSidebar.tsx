@@ -1,12 +1,10 @@
 import {
   BarChart3,
   Building2,
-  FileSpreadsheet,
   FileText,
   FileUp,
   GitBranch,
   Mail,
-  SendHorizontal,
   Settings,
   UserCheck,
   Users,
@@ -69,21 +67,21 @@ const adminMenuItems = [
     url: "/users",
     icon: Users,
   },
-  {
-    title: "메일 발송 테스트",
-    url: "/email-send-test",
-    icon: SendHorizontal,
-  },
+  // {
+  //   title: "메일 발송 테스트",
+  //   url: "/email-send-test",
+  //   icon: SendHorizontal,
+  // },
   {
     title: "리드 데이터 임포트",
     url: "/lead-import",
     icon: FileUp,
   },
-  {
-    title: "CSV 대량 메일 발송",
-    url: "/bulk-email-csv",
-    icon: FileSpreadsheet,
-  },
+  // {
+  //   title: "CSV 대량 메일 발송",
+  //   url: "/bulk-email-csv",
+  //   icon: FileSpreadsheet,
+  // },
 ]
 
 interface AppSidebarProps {

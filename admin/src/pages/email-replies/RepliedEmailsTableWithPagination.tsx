@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, User } from "lucide-react"
+import { ChevronLeft, ChevronRight, Layers, User } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -60,6 +60,28 @@ export function RepliedEmailsTableWithPagination({
         return "반송됨"
       case "failed":
         return "실패"
+      default:
+        return status
+    }
+  }
+
+  const getEnrollmentStatusText = (
+    status: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed" | null,
+  ) => {
+    if (!status) return "-"
+    switch (status) {
+      case "active":
+        return "진행 중"
+      case "paused":
+        return "일시중지"
+      case "completed":
+        return "완료"
+      case "stopped":
+        return "중단됨"
+      case "bounced":
+        return "반송됨"
+      case "unsubscribed":
+        return "구독취소"
       default:
         return status
     }
@@ -129,7 +151,7 @@ export function RepliedEmailsTableWithPagination({
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  발신자
+                  수신자
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   제목
@@ -147,7 +169,7 @@ export function RepliedEmailsTableWithPagination({
                   상태
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  수신일
+                  발송일
                 </th>
               </tr>
             </thead>
@@ -173,7 +195,7 @@ export function RepliedEmailsTableWithPagination({
                       <td className="px-3 py-2 text-sm">
                         <div className="flex items-start gap-1.5 min-w-0">
                           <div className="min-w-0 flex-1">
-                            <div className="font-medium break-words">{email.fromEmail}</div>
+                            <div className="font-medium break-words">{email.toEmail}</div>
                             {email.leadName && (
                               <div className="text-xs text-gray-500 break-words mt-0.5">
                                 {email.leadName}
@@ -459,13 +481,180 @@ export function RepliedEmailsTableWithPagination({
                         )}
                       </td>
                       <td className="px-3 py-2 text-xs">
-                        <div className="line-clamp-3 break-words">
-                          {email.sequenceName ? (
-                            <span className="text-gray-600">{email.sequenceName}</span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </div>
+                        {email.sequenceName ? (
+                          <Popover>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <PopoverTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="flex items-start gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-1.5 py-1 -mx-1.5 transition-colors text-left w-full min-w-0"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Layers className="h-3 w-3 text-gray-400 flex-shrink-0 mt-0.5" />
+                                    <span className="text-gray-600 dark:text-gray-300 line-clamp-3 break-words">
+                                      {email.sequenceName}
+                                    </span>
+                                  </button>
+                                </PopoverTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>시퀀스 정보 보기</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <PopoverContent
+                              className="w-96 max-h-[600px] overflow-y-auto"
+                              align="start"
+                            >
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2 pb-2 border-b">
+                                  <Layers className="h-4 w-4 text-gray-500" />
+                                  <h4 className="font-semibold text-sm">시퀀스 정보</h4>
+                                </div>
+                                <div className="space-y-3 text-xs">
+                                  {/* 기본 정보 */}
+                                  <div className="space-y-1.5">
+                                    <div className="flex">
+                                      <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                        시퀀스명:
+                                      </span>
+                                      <span className="text-gray-600 dark:text-gray-400 break-words">
+                                        {email.sequenceName}
+                                      </span>
+                                    </div>
+                                    {email.sequenceId && (
+                                      <div className="flex">
+                                        <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                          시퀀스 ID:
+                                        </span>
+                                        <span className="text-gray-600 dark:text-gray-400 font-mono break-all text-[10px]">
+                                          {email.sequenceId}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Enrollment 정보 */}
+                                  {email.enrollmentId && (
+                                    <>
+                                      <div className="border-t pt-2" />
+                                      <div className="space-y-1.5">
+                                        <div className="flex">
+                                          <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            등록 상태:
+                                          </span>
+                                          <span className="text-gray-600 dark:text-gray-400 break-words">
+                                            {getEnrollmentStatusText(email.enrollmentStatus || null)}
+                                          </span>
+                                        </div>
+                                        {email.enrollmentCurrentStepOrder !== null &&
+                                          email.enrollmentCurrentStepOrder !== undefined && (
+                                            <div className="flex">
+                                              <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                                현재 스텝:
+                                              </span>
+                                              <span className="text-gray-600 dark:text-gray-400 break-words">
+                                                {email.enrollmentCurrentStepOrder + 1}번째 스텝
+                                              </span>
+                                            </div>
+                                          )}
+                                        {email.enrollmentEnrolledAt && (
+                                          <div className="flex">
+                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              등록일:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {new Date(email.enrollmentEnrolledAt).toLocaleString(
+                                                "ko-KR",
+                                              )}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {email.enrollmentFirstEmailSentAt && (
+                                          <div className="flex">
+                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              첫 이메일 전송:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {new Date(
+                                                email.enrollmentFirstEmailSentAt,
+                                              ).toLocaleString("ko-KR")}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {email.enrollmentLastEmailSentAt && (
+                                          <div className="flex">
+                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              마지막 이메일 전송:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {new Date(
+                                                email.enrollmentLastEmailSentAt,
+                                              ).toLocaleString("ko-KR")}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {email.enrollmentNextStepScheduledAt && (
+                                          <div className="flex">
+                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              다음 스텝 예정:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {new Date(
+                                                email.enrollmentNextStepScheduledAt,
+                                              ).toLocaleString("ko-KR")}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {email.enrollmentCompletedAt && (
+                                          <div className="flex">
+                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              완료일:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {new Date(email.enrollmentCompletedAt).toLocaleString(
+                                                "ko-KR",
+                                              )}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {email.enrollmentStoppedAt && (
+                                          <div className="flex">
+                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              중단일:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {new Date(email.enrollmentStoppedAt).toLocaleString(
+                                                "ko-KR",
+                                              )}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {/* Enrollment ID */}
+                                  {email.enrollmentId && (
+                                    <>
+                                      <div className="border-t pt-2" />
+                                      <div className="flex">
+                                        <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                          Enrollment ID:
+                                        </span>
+                                        <span className="text-gray-600 dark:text-gray-400 font-mono break-all text-[10px]">
+                                          {email.enrollmentId}
+                                        </span>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-xs whitespace-nowrap">
                         <span className="text-gray-600">{getStatusText(email.status)}</span>

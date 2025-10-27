@@ -1,8 +1,9 @@
-import { and, eq, sql } from "drizzle-orm"
+import { and, desc, eq, sql } from "drizzle-orm"
 import { db } from "../db"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emailEvents, emailReplies, emails as emailsTable } from "../db/schema/emails"
 import { leadContacts } from "../db/schema/lead-details"
+import { sequenceEnrollments, sequences } from "../db/schema/sequences"
 import type {
   Email,
   FileData,
@@ -486,6 +487,42 @@ class WebhookService {
 
       if (leadId) {
         logger.info({ leadId, fromEmail }, "Lead found by sender email")
+      }
+    }
+
+    // 5. sequenceId가 없고 leadId가 있으면 enrollment에서 조회 (fallback)
+    if (leadId && !sequenceId) {
+      const enrollmentResults = await db
+        .select({
+          sequenceId: sequenceEnrollments.sequenceId,
+          sequenceName: sequences.name,
+          lastEmailSentAt: sequenceEnrollments.lastEmailSentAt,
+        })
+        .from(sequenceEnrollments)
+        .innerJoin(sequences, eq(sequences.id, sequenceEnrollments.sequenceId))
+        .where(
+          and(
+            eq(sequenceEnrollments.leadId, leadId),
+            eq(sequenceEnrollments.userEmailAccountId, account.id),
+            // 활성 상태만 (완료/중단된 sequence 제외)
+            sql`${sequenceEnrollments.status} IN ('active', 'paused')`,
+          ),
+        )
+        .orderBy(desc(sequenceEnrollments.lastEmailSentAt))
+        .limit(1)
+
+      if (enrollmentResults.length > 0 && enrollmentResults[0]) {
+        sequenceId = enrollmentResults[0].sequenceId
+        sequenceName = enrollmentResults[0].sequenceName
+        logger.info(
+          {
+            sequenceId,
+            sequenceName,
+            leadId,
+            lastEmailSentAt: enrollmentResults[0].lastEmailSentAt,
+          },
+          "Sequence found via active enrollment (fallback)",
+        )
       }
     }
 

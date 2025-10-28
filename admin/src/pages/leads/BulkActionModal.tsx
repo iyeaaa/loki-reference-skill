@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import type { CustomerGroup } from "@/lib/api/types/customer-group"
 import type { LeadStatus } from "@/lib/api/types/lead"
 
 interface BulkActionModalProps {
@@ -24,7 +25,8 @@ interface BulkActionModalProps {
   onClose: () => void
   onConfirm: (actionType: string, value: string | string[]) => void
   leadCount: number
-  actionType: "status" | "businessType" | null
+  actionType: "status" | "businessType" | "copyToGroup" | null
+  customerGroups?: CustomerGroup[]
 }
 
 export function BulkActionModal({
@@ -33,10 +35,12 @@ export function BulkActionModal({
   onConfirm,
   leadCount,
   actionType,
+  customerGroups = [],
 }: BulkActionModalProps) {
   const [selectedValue, setSelectedValue] = useState<string>("")
   const statusSelectId = useId()
   const businessTypeInputId = useId()
+  const groupSelectId = useId()
 
   const handleConfirm = () => {
     if (!actionType || !selectedValue) return
@@ -67,13 +71,20 @@ export function BulkActionModal({
         return "리드 상태 일괄 변경"
       case "businessType":
         return "업종 일괄 변경"
+      case "copyToGroup":
+        return "고객 그룹에 복사"
       default:
         return "일괄 작업"
     }
   }
 
   const getDescription = () => {
-    return `선택한 ${leadCount}개의 리드에 대해 작업을 수행합니다.`
+    switch (actionType) {
+      case "copyToGroup":
+        return `선택한 ${leadCount}개의 리드를 다른 고객 그룹에 복사합니다. 기존 그룹 소속은 유지됩니다.`
+      default:
+        return `선택한 ${leadCount}개의 리드에 대해 작업을 수행합니다.`
+    }
   }
 
   return (
@@ -112,6 +123,33 @@ export function BulkActionModal({
                 onChange={(e) => setSelectedValue(e.target.value)}
                 placeholder="업종을 입력하세요 (예: IT, 제조업, 서비스업)"
               />
+            </div>
+          )}
+
+          {actionType === "copyToGroup" && (
+            <div className="space-y-2">
+              <Label htmlFor={groupSelectId}>대상 고객 그룹</Label>
+              <Select value={selectedValue} onValueChange={setSelectedValue}>
+                <SelectTrigger id={groupSelectId}>
+                  <SelectValue placeholder="그룹을 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customerGroups.length === 0 ? (
+                    <SelectItem disabled value="none">
+                      사용 가능한 그룹이 없습니다
+                    </SelectItem>
+                  ) : (
+                    customerGroups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name} ({group.leadCount || 0}개 리드)
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                💡 선택한 리드들이 해당 그룹에 추가됩니다 (기존 그룹 소속 유지)
+              </p>
             </div>
           )}
         </div>

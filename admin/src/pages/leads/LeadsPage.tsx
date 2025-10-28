@@ -83,7 +83,9 @@ export default function LeadsPage() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
   const [selectedLeads, setSelectedLeads] = useState<string[]>([])
   const [showBulkActionModal, setShowBulkActionModal] = useState(false)
-  const [bulkActionType, setBulkActionType] = useState<"status" | "businessType" | null>(null)
+  const [bulkActionType, setBulkActionType] = useState<
+    "status" | "businessType" | "copyToGroup" | null
+  >(null)
   const [isSelectAllMode, setIsSelectAllMode] = useState(false)
   const [allLeadsSelected, setAllLeadsSelected] = useState(false)
 
@@ -287,30 +289,80 @@ export default function LeadsPage() {
       return
     }
 
+    let leadIdsToProcess = selectedLeads
+
+    // 전체 선택 모드인 경우 서버에서 모든 리드 가져오기
+    if (allLeadsSelected) {
+      try {
+        const workspaceId = selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id
+        if (!workspaceId) {
+          toast.error("워크스페이스를 선택해주세요.")
+          return
+        }
+
+        const allLeadsResponse = await leadsApi.list({
+          page: 1,
+          limit: 10000,
+          workspaceIds: [workspaceId],
+          customerGroupId: selectedCustomerGroup || undefined,
+          search: searchQuery || undefined,
+          leadStatus:
+            selectedStatuses.length === 1 ? (selectedStatuses[0] as LeadStatus) : undefined,
+        })
+
+        if (allLeadsResponse.leads.length === 0) {
+          toast.error("처리할 리드 데이터가 없습니다.")
+          return
+        }
+
+        leadIdsToProcess = allLeadsResponse.leads.map((lead) => lead.id)
+      } catch (error) {
+        console.error("전체 리드 조회 오류:", error)
+        toast.error("전체 리드 조회 중 오류가 발생했습니다.")
+        return
+      }
+    }
+
     if (actionType === "status") {
       bulkUpdateStatus.mutate(
-        { leadIds: selectedLeads, leadStatus: value as LeadStatus },
+        { leadIds: leadIdsToProcess, leadStatus: value as LeadStatus },
         {
           onSuccess: () => {
             // Hooks already handle cache invalidation
             setSelectedLeads([])
+            setAllLeadsSelected(false)
+            setIsSelectAllMode(false)
           },
         },
       )
     } else if (actionType === "businessType") {
       bulkUpdateBusinessType.mutate(
-        { leadIds: selectedLeads, businessType: value as string },
+        { leadIds: leadIdsToProcess, businessType: value as string },
         {
           onSuccess: () => {
             // Hooks already handle cache invalidation
             setSelectedLeads([])
+            setAllLeadsSelected(false)
+            setIsSelectAllMode(false)
+          },
+        },
+      )
+    } else if (actionType === "copyToGroup") {
+      bulkAddGroupMembers.mutate(
+        { groupId: value as string, leadIds: leadIdsToProcess },
+        {
+          onSuccess: () => {
+            toast.success(`${leadIdsToProcess.length}개의 리드가 그룹에 추가되었습니다.`)
+            setSelectedLeads([])
+            setAllLeadsSelected(false)
+            setIsSelectAllMode(false)
           },
         },
       )
     }
   }
 
-  const openBulkActionModal = (type: "status" | "businessType") => {
+  const openBulkActionModal = (type: "status" | "businessType" | "copyToGroup") => {
     if (selectedLeads.length === 0 && !allLeadsSelected) {
       toast.error("선택된 리드가 없습니다.")
       return
@@ -1059,6 +1111,14 @@ export default function LeadsPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => openBulkActionModal("copyToGroup")}
+                  >
+                    <Users className="h-4 w-4 mr-1" />
+                    그룹에 복사
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={handleBulkDelete}
                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
                   >
@@ -1140,6 +1200,7 @@ export default function LeadsPage() {
         onConfirm={handleBulkAction}
         leadCount={selectedLeads.length}
         actionType={bulkActionType}
+        customerGroups={customerGroups}
       />
 
       {/* CSV Upload Dialog */}
@@ -1368,7 +1429,10 @@ export default function LeadsPage() {
                           <p className="font-medium mb-2">미리보기 (처음 5개):</p>
                           <div className="space-y-1">
                             {csvData.slice(0, 5).map((lead, index) => (
-                              <div key={index} className="p-2 bg-gray-50 rounded text-xs">
+                              <div
+                                key={`${lead.companyName}-${lead.primaryEmail}-${index}`}
+                                className="p-2 bg-gray-50 rounded text-xs"
+                              >
                                 {lead.companyName} - {lead.primaryEmail || "이메일 없음"}
                               </div>
                             ))}

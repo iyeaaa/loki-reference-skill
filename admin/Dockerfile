@@ -22,8 +22,8 @@ COPY .yarn ./.yarn
 # Set environment variable to skip SWC binary check
 ENV SKIP_SWCPACK_POSTINSTALL=true
 
-# Install dependencies with retry logic
-RUN yarn install --immutable || yarn install --mode=skip-build
+# Install dependencies
+RUN yarn install
 
 # Copy source code including .env file
 COPY . .

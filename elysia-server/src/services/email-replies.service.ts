@@ -361,10 +361,7 @@ export async function bulkDeleteEmailReplies(ids: string[]): Promise<number> {
   }
 
   // Strategy 3: Try as email IDs
-  const emailsFound = await db
-    .select({ id: emails.id })
-    .from(emails)
-    .where(inArray(emails.id, ids))
+  const emailsFound = await db.select({ id: emails.id }).from(emails).where(inArray(emails.id, ids))
 
   if (emailsFound.length > 0) {
     // Delete emails → CASCADE handles email_replies & email_events

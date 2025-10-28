@@ -111,7 +111,11 @@ export function useDeleteEmailReply() {
   return useMutation({
     mutationFn: (id: string) => emailRepliesApi.delete(id),
     onSuccess: () => {
+      // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: [EMAIL_REPLIES_QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
+      queryClient.invalidateQueries({ queryKey: ["thread-emails"] })
+      queryClient.invalidateQueries({ queryKey: ["emails"] })
       toast.success("답장이 삭제되었습니다.")
     },
     onError: () => {
@@ -122,6 +126,7 @@ export function useDeleteEmailReply() {
 
 /**
  * Hook to bulk delete email replies
+ * Invalidates all related caches: email-replies, replied-emails, thread-emails, emails
  */
 export function useBulkDeleteEmailReplies() {
   const queryClient = useQueryClient()
@@ -129,7 +134,12 @@ export function useBulkDeleteEmailReplies() {
   return useMutation({
     mutationFn: (replyIds: string[]) => emailRepliesApi.bulkDelete(replyIds),
     onSuccess: (data) => {
+      // Invalidate all related queries after bulk delete
+      // This ensures the UI reflects the deletion across all views
       queryClient.invalidateQueries({ queryKey: [EMAIL_REPLIES_QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
+      queryClient.invalidateQueries({ queryKey: ["thread-emails"] })
+      queryClient.invalidateQueries({ queryKey: ["emails"] })
       toast.success(`${data.deletedCount}개의 답장이 삭제되었습니다.`)
     },
     onError: () => {

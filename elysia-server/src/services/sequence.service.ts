@@ -546,10 +546,7 @@ export async function deleteSequenceStep(id: string) {
     await db
       .delete(sequenceStepExecutions)
       .where(
-        and(
-          eq(sequenceStepExecutions.stepId, id),
-          eq(sequenceStepExecutions.status, "pending"),
-        ),
+        and(eq(sequenceStepExecutions.stepId, id), eq(sequenceStepExecutions.status, "pending")),
       )
 
     logger.info(

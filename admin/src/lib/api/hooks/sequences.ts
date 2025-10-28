@@ -178,7 +178,20 @@ export function useUpdateSequenceStep(sequenceId?: string) {
       toast.success("시퀀스 스텝이 업데이트되었습니다")
     },
     onError: (error: Error) => {
-      toast.error(error.message || "시퀀스 스텝 업데이트에 실패했습니다")
+      const errorMessage = error.message || "시퀀스 스텝 업데이트에 실패했습니다"
+
+      // 발송된 스텝 수정 시도 시 더 명확한 메시지 표시
+      if (errorMessage.includes("발송되었습니다") || errorMessage.includes("발송된")) {
+        toast.error(errorMessage, {
+          duration: 8000,
+          style: {
+            maxWidth: "500px",
+            whiteSpace: "pre-line",
+          },
+        })
+      } else {
+        toast.error(errorMessage)
+      }
     },
   })
 }
@@ -202,7 +215,20 @@ export function useDeleteSequenceStep(sequenceId?: string) {
       toast.success("시퀀스 스텝이 삭제되었습니다")
     },
     onError: (error: Error) => {
-      toast.error(error.message || "시퀀스 스텝 삭제에 실패했습니다")
+      const errorMessage = error.message || "시퀀스 스텝 삭제에 실패했습니다"
+
+      // 발송된 스텝 삭제 시도 시 더 명확한 메시지 표시
+      if (errorMessage.includes("발송되었습니다") || errorMessage.includes("발송된")) {
+        toast.error(errorMessage, {
+          duration: 8000,
+          style: {
+            maxWidth: "500px",
+            whiteSpace: "pre-line",
+          },
+        })
+      } else {
+        toast.error(errorMessage)
+      }
     },
   })
 }

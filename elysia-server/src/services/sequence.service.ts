@@ -374,10 +374,76 @@ export async function updateSequenceStep(
     emailTemplateId?: string
   },
 ) {
-  // Markdown을 HTML로 변환
+  const { default: logger } = await import("../utils/logger")
+
+  // 1. 현재 스텝 정보 조회
+  const [currentStep] = await db
+    .select({
+      id: sequenceSteps.id,
+      sequenceId: sequenceSteps.sequenceId,
+      stepOrder: sequenceSteps.stepOrder,
+    })
+    .from(sequenceSteps)
+    .where(eq(sequenceSteps.id, id))
+    .limit(1)
+
+  if (!currentStep) {
+    logger.error({ stepId: id }, "❌ Step not found")
+    throw new Error("스텝을 찾을 수 없습니다.")
+  }
+
+  // 2. 이 스텝의 execution 상태 확인
+  const executionStats = await db
+    .select({
+      sent: sql<number>`count(*) filter (where status = 'sent')`.as("sent"),
+      pending: sql<number>`count(*) filter (where status = 'pending')`.as("pending"),
+      failed: sql<number>`count(*) filter (where status = 'failed')`.as("failed"),
+    })
+    .from(sequenceStepExecutions)
+    .where(eq(sequenceStepExecutions.stepId, id))
+
+  const stats = executionStats[0] || { sent: 0, pending: 0, failed: 0 }
+
+  // 3. 발송 이력이 있으면 수정 금지
+  if (Number(stats.sent) > 0) {
+    logger.warn(
+      {
+        stepId: id,
+        stepOrder: currentStep.stepOrder,
+        sentCount: stats.sent,
+        pendingCount: stats.pending,
+      },
+      "❌ Cannot update step - already sent to customers",
+    )
+
+    throw new Error(
+      `이 스텝은 이미 ${stats.sent}명의 고객에게 발송되었습니다.\n` +
+        `발송된 스텝은 수정할 수 없습니다.\n` +
+        (Number(stats.pending) > 0
+          ? `(${stats.pending}명이 아직 대기 중이지만, 일관성을 위해 수정이 제한됩니다)\n`
+          : "") +
+        `\n해결 방법:\n` +
+        `1. 새로운 스텝을 추가하거나\n` +
+        `2. 시퀀스를 복제하여 새로 만들어주세요.`,
+    )
+  }
+
+  // 4. 발송 이력이 없으면 수정 허용
+  logger.info(
+    {
+      stepId: id,
+      pendingCount: stats.pending,
+      failedCount: stats.failed,
+    },
+    "✅ Step can be updated - no sent executions",
+  )
+
+  // 5. Markdown을 HTML로 변환
   const { markdownToHtml } = await import("../utils/markdown")
   const emailBodyHtml =
     data.emailBodyHtml || (data.emailBodyText ? markdownToHtml(data.emailBodyText) : null)
+
+  // 6. 스텝 정보 업데이트
   const [updatedStep] = await db
     .update(sequenceSteps)
     .set({
@@ -401,12 +467,104 @@ export async function updateSequenceStep(
       updatedAt: sequenceSteps.updatedAt,
     })
 
+  // 7. pending execution은 스텝 정보를 참조하므로 별도 업데이트 불필요
+  // Worker가 실행 시 최신 스텝 정보를 조회하여 사용함
+  if (Number(stats.pending) > 0) {
+    logger.info(
+      {
+        stepId: id,
+        pendingExecutionsCount: stats.pending,
+      },
+      "✅ Pending executions will use updated step content when executed",
+    )
+  }
+
   return updatedStep
 }
 
 // DeleteSequenceStep :exec
 export async function deleteSequenceStep(id: string) {
+  const { default: logger } = await import("../utils/logger")
+
+  // 1. 현재 스텝 정보 조회
+  const [currentStep] = await db
+    .select({
+      id: sequenceSteps.id,
+      sequenceId: sequenceSteps.sequenceId,
+      stepOrder: sequenceSteps.stepOrder,
+    })
+    .from(sequenceSteps)
+    .where(eq(sequenceSteps.id, id))
+    .limit(1)
+
+  if (!currentStep) {
+    logger.error({ stepId: id }, "❌ Step not found")
+    throw new Error("스텝을 찾을 수 없습니다.")
+  }
+
+  // 2. 이 스텝의 execution 상태 확인
+  const executionStats = await db
+    .select({
+      sent: sql<number>`count(*) filter (where status = 'sent')`.as("sent"),
+      pending: sql<number>`count(*) filter (where status = 'pending')`.as("pending"),
+    })
+    .from(sequenceStepExecutions)
+    .where(eq(sequenceStepExecutions.stepId, id))
+
+  const stats = executionStats[0] || { sent: 0, pending: 0 }
+
+  // 3. 발송 이력이 있으면 삭제 금지
+  if (Number(stats.sent) > 0) {
+    logger.warn(
+      {
+        stepId: id,
+        stepOrder: currentStep.stepOrder,
+        sentCount: stats.sent,
+        pendingCount: stats.pending,
+      },
+      "❌ Cannot delete step - already sent to customers",
+    )
+
+    throw new Error(
+      `이 스텝은 이미 ${stats.sent}명의 고객에게 발송되었습니다.\n` +
+        `발송된 스텝은 삭제할 수 없습니다.\n` +
+        `\n시퀀스의 무결성을 위해 발송된 스텝은 보존되어야 합니다.`,
+    )
+  }
+
+  // 4. 발송 이력이 없으면 삭제 허용
+  logger.info(
+    {
+      stepId: id,
+      pendingCount: stats.pending,
+    },
+    "✅ Step can be deleted - no sent executions",
+  )
+
+  // 5. pending execution도 함께 삭제
+  if (Number(stats.pending) > 0) {
+    await db
+      .delete(sequenceStepExecutions)
+      .where(
+        and(
+          eq(sequenceStepExecutions.stepId, id),
+          eq(sequenceStepExecutions.status, "pending"),
+        ),
+      )
+
+    logger.info(
+      {
+        stepId: id,
+        deletedExecutionsCount: stats.pending,
+      },
+      "✅ Deleted pending executions",
+    )
+  }
+
+  // 6. 스텝 삭제
   await db.delete(sequenceSteps).where(eq(sequenceSteps.id, id))
+
+  logger.info({ stepId: id }, "✅ Step deleted successfully")
 }
 
 // ====================================

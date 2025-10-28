@@ -82,3 +82,6 @@ table.modal.noCustomers,등록된 고객이 없습니다.,No registered customer
 filter.status,상태,Status
 filter.statusLabel,상태,Status
 filter.clearFilters,필터 초기화,Clear Filters
+confirm.deleteSequences_other,[NO TRANSLATION] sequences.confirm.deleteSequences_other,[NO TRANSLATION] sequences.confirm.deleteSequences_other
+table.modal.totalCustomers_other,[NO TRANSLATION] sequences.table.modal.totalCustomers_other,[NO TRANSLATION] sequences.table.modal.totalCustomers_other
+table.pagination.displaying_other,[NO TRANSLATION] sequences.table.pagination.displaying_other,[NO TRANSLATION] sequences.table.pagination.displaying_other

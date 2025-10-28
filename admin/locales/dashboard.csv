@@ -19,8 +19,8 @@ sequences.opened,오픈,Opened
 sequences.clicked,클릭,Clicked
 sequences.noRecent,최근 시퀀스가 없습니다,No recent sequences
 followup.title,팔로우업 발송 예정,Scheduled Follow-up
-followup.description,바이어 자동 팔로우업 발송 현황 (총 {total}건),Automated Buyer Follow-up Status (Total {total} emails)
-followup.delayDays,{days}일 후 팔로우업,Follow-up in {days} days
+followup.description,바이어 자동 팔로우업 발송 현황 (총 {{total}}건),Automated Buyer Follow-up Status (Total {{total}} emails)
+followup.delayDays,{{days}}일 후 팔로우업,Follow-up in {{days}} days
 followup.noScheduled,예약된 팔로우업이 없습니다,No scheduled follow-ups
 followup.selectDate,날짜를 선택하여 상세 정보를 확인하세요,Select a date to view details
 inbox.title,인박스 미리보기,Inbox Preview
@@ -30,6 +30,8 @@ inbox.noSubject,(제목 없음),(No Subject)
 inbox.noContent,(내용 없음),(No Content)
 inbox.noReplies,받은 답장이 없습니다,No replies received
 time.ago.justNow,방금 전,Just now
-time.ago.minutesAgo,{minutes}분 전,{minutes} minutes ago
-time.ago.hoursAgo,{hours}시간 전,{hours} hours ago
-time.ago.daysAgo,{days}일 전,{days} days ago
+time.ago.minutesAgo,{{minutes}}분 전,{{minutes}} minutes ago
+time.ago.hoursAgo,{{hours}}시간 전,{{hours}} hours ago
+time.ago.daysAgo,{{days}}일 전,{{days}} days ago
+unit.count,건,items
+stats.defaultWorkspace,중소 뷰티업체,SME Beauty Company

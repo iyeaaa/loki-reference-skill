@@ -10,7 +10,7 @@ import RootLayout from "../layouts/RootLayout"
 // Pages - Lazy Loading
 const LoginPage = lazy(() => import("../pages/LoginPage"))
 const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"))
-const CampaignsPage = lazy(() => import("../pages/campaigns"))
+// const CampaignsPage = lazy(() => import("../pages/campaigns"))
 const CustomerGroupsPage = lazy(() => import("../pages/customer-groups"))
 const EmailSendTestPage = lazy(() => import("../pages/email-send-test"))
 const EmailTemplatesPage = lazy(() => import("../pages/email-templates"))
@@ -58,10 +58,10 @@ export const router = createBrowserRouter([
             path: "dashboard",
             element: <DashboardPage />,
           },
-          {
-            path: "campaigns",
-            element: <CampaignsPage />,
-          },
+          // {
+          //   path: "campaigns",
+          //   element: <CampaignsPage />,
+          // },
           {
             path: "leads",
             element: <LeadsPage />,

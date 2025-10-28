@@ -15,25 +15,23 @@ import { useCurrentUser, useDepartments, useVerifyToken } from "@/lib/api"
 import { useLoginMutation, useSignupMutation } from "@/lib/api/hooks/auth"
 import { useAuth } from "@/lib/auth-provider"
 
+// Validation schemas will use i18n keys - messages will be translated in form errors
 const loginSchema = z.object({
-  email: z.string().email("올바른 이메일 주소를 입력해주세요"),
-  password: z.string().min(6, "비밀번호는 최소 6자 이상이어야 합니다"),
+  email: z.string().email(),
+  password: z.string().min(6),
 })
 
 const signupSchema = z
   .object({
-    username: z
-      .string()
-      .min(3, "사용자명은 최소 3자 이상이어야 합니다")
-      .max(50, "사용자명은 최대 50자까지 가능합니다"),
-    email: z.string().email("올바른 이메일 주소를 입력해주세요"),
-    password: z.string().min(6, "비밀번호는 최소 6자 이상이어야 합니다"),
+    username: z.string().min(3).max(50),
+    email: z.string().email(),
+    password: z.string().min(6),
     confirmPassword: z.string(),
-    employeeId: z.string().min(1, "사번을 입력해주세요").max(20, "사번은 최대 20자까지 가능합니다"),
-    departmentId: z.string().min(1, "부서를 선택해주세요"),
+    employeeId: z.string().min(1).max(20),
+    departmentId: z.string().min(1),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "비밀번호가 일치하지 않습니다",
+    message: "passwordMismatch",
     path: ["confirmPassword"],
   })
 
@@ -157,13 +155,13 @@ export default function AdminLoginPage() {
                 value="login"
                 className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium"
               >
-                로그인
+                {t("login.tab.login")}
               </TabsTrigger>
               <TabsTrigger
                 value="signup"
                 className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium"
               >
-                회원가입
+                {t("login.tab.signup")}
               </TabsTrigger>
             </TabsList>
 
@@ -171,36 +169,34 @@ export default function AdminLoginPage() {
               <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                    이메일
+                    {t("login.field.email")}
                   </Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id={loginEmailId}
                       type="email"
-                      placeholder="admin@rinda.ai"
+                      placeholder={t("login.placeholder.email")}
                       className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...loginForm.register("email")}
                       disabled={isLoading}
                     />
                   </div>
                   {loginForm.formState.errors.email && (
-                    <p className="text-sm text-red-600">
-                      {loginForm.formState.errors.email.message}
-                    </p>
+                    <p className="text-sm text-red-600">{t("login.error.emailInvalid")}</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-                    비밀번호
+                    {t("login.field.password")}
                   </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id={loginPasswordId}
                       type={showPassword ? "text" : "password"}
-                      placeholder="비밀번호를 입력하세요"
+                      placeholder={t("login.placeholder.password")}
                       className="pl-10 pr-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...loginForm.register("password")}
                       disabled={isLoading}
@@ -214,9 +210,7 @@ export default function AdminLoginPage() {
                     </button>
                   </div>
                   {loginForm.formState.errors.password && (
-                    <p className="text-sm text-red-600">
-                      {loginForm.formState.errors.password.message}
-                    </p>
+                    <p className="text-sm text-red-600">{t("login.error.passwordMin")}</p>
                   )}
                 </div>
 
@@ -229,10 +223,10 @@ export default function AdminLoginPage() {
                   {isLoading ? (
                     <div className="flex items-center gap-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      로그인 중...
+                      {t("login.loading.login")}
                     </div>
                   ) : (
-                    "관리자 로그인"
+                    t("login.button.login")
                   )}
                 </Button>
               </form>
@@ -280,14 +274,14 @@ export default function AdminLoginPage() {
               <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-username" className="text-sm font-medium text-gray-700">
-                    사용자명
+                    {t("login.field.username")}
                   </Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id={signupUsernameId}
                       type="text"
-                      placeholder="사용자명을 입력하세요"
+                      placeholder={t("login.placeholder.username")}
                       className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...signupForm.register("username")}
                       disabled={isLoading}
@@ -295,43 +289,44 @@ export default function AdminLoginPage() {
                   </div>
                   {signupForm.formState.errors.username && (
                     <p className="text-sm text-red-600">
-                      {signupForm.formState.errors.username.message}
+                      {signupForm.formState.errors.username.message ===
+                      "String must contain at least 3 character(s)"
+                        ? t("login.error.usernameMin")
+                        : t("login.error.usernameMax")}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="signup-email" className="text-sm font-medium text-gray-700">
-                    이메일
+                    {t("login.field.email")}
                   </Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id={signupEmailId}
                       type="email"
-                      placeholder="이메일을 입력하세요"
+                      placeholder={t("login.placeholder.emailInput")}
                       className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...signupForm.register("email")}
                       disabled={isLoading}
                     />
                   </div>
                   {signupForm.formState.errors.email && (
-                    <p className="text-sm text-red-600">
-                      {signupForm.formState.errors.email.message}
-                    </p>
+                    <p className="text-sm text-red-600">{t("login.error.emailInvalid")}</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="signup-employee-id" className="text-sm font-medium text-gray-700">
-                    사번
+                    {t("login.field.employeeId")}
                   </Label>
                   <div className="relative">
                     <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id={signupEmployeeId}
                       type="text"
-                      placeholder="사번을 입력하세요"
+                      placeholder={t("login.placeholder.employeeId")}
                       className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...signupForm.register("employeeId")}
                       disabled={isLoading}
@@ -339,14 +334,17 @@ export default function AdminLoginPage() {
                   </div>
                   {signupForm.formState.errors.employeeId && (
                     <p className="text-sm text-red-600">
-                      {signupForm.formState.errors.employeeId.message}
+                      {signupForm.formState.errors.employeeId.message ===
+                      "String must contain at least 1 character(s)"
+                        ? t("login.error.employeeIdRequired")
+                        : t("login.error.employeeIdMax")}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="signup-department" className="text-sm font-medium text-gray-700">
-                    부서
+                    {t("login.field.department")}
                   </Label>
                   <Combobox
                     options={filteredDepartments.map((dept) => ({
@@ -360,28 +358,28 @@ export default function AdminLoginPage() {
                       signupForm.clearErrors("departmentId")
                     }}
                     onSearchChange={setDepartmentSearch}
-                    placeholder="부서를 선택하세요"
-                    searchPlaceholder="부서명 또는 코드로 검색..."
-                    emptyText={searchLoading ? "검색 중..." : "일치하는 부서가 없습니다"}
+                    placeholder={t("login.placeholder.department")}
+                    searchPlaceholder={t("login.placeholder.departmentSearch")}
+                    emptyText={
+                      searchLoading ? t("login.loading.search") : t("login.empty.department")
+                    }
                     disabled={isLoading}
                   />
                   {signupForm.formState.errors.departmentId && (
-                    <p className="text-sm text-red-600">
-                      {signupForm.formState.errors.departmentId.message}
-                    </p>
+                    <p className="text-sm text-red-600">{t("login.error.departmentRequired")}</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="signup-password" className="text-sm font-medium text-gray-700">
-                    비밀번호
+                    {t("login.field.password")}
                   </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id={signupPasswordId}
                       type={showSignupPassword ? "text" : "password"}
-                      placeholder="비밀번호를 입력하세요"
+                      placeholder={t("login.placeholder.password")}
                       className="pl-10 pr-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...signupForm.register("password")}
                       disabled={isLoading}
@@ -399,9 +397,7 @@ export default function AdminLoginPage() {
                     </button>
                   </div>
                   {signupForm.formState.errors.password && (
-                    <p className="text-sm text-red-600">
-                      {signupForm.formState.errors.password.message}
-                    </p>
+                    <p className="text-sm text-red-600">{t("login.error.passwordMin")}</p>
                   )}
                 </div>
 
@@ -410,14 +406,14 @@ export default function AdminLoginPage() {
                     htmlFor="signup-confirm-password"
                     className="text-sm font-medium text-gray-700"
                   >
-                    비밀번호 확인
+                    {t("login.field.confirmPassword")}
                   </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       id={signupConfirmPasswordId}
                       type={showConfirmPassword ? "text" : "password"}
-                      placeholder="비밀번호를 다시 입력하세요"
+                      placeholder={t("login.placeholder.confirmPassword")}
                       className="pl-10 pr-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                       {...signupForm.register("confirmPassword")}
                       disabled={isLoading}
@@ -435,9 +431,7 @@ export default function AdminLoginPage() {
                     </button>
                   </div>
                   {signupForm.formState.errors.confirmPassword && (
-                    <p className="text-sm text-red-600">
-                      {signupForm.formState.errors.confirmPassword.message}
-                    </p>
+                    <p className="text-sm text-red-600">{t("login.error.passwordMismatch")}</p>
                   )}
                 </div>
 
@@ -450,10 +444,10 @@ export default function AdminLoginPage() {
                   {isLoading ? (
                     <div className="flex items-center gap-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      회원가입 중...
+                      {t("login.loading.signup")}
                     </div>
                   ) : (
-                    "회원가입"
+                    t("login.button.signup")
                   )}
                 </Button>
               </form>

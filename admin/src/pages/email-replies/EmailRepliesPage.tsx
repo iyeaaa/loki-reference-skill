@@ -1,6 +1,7 @@
 import { AlertCircle, Check, Search, Trash2, X } from "lucide-react"
 import { useCallback, useEffect, useId, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import { useParams } from "react-router-dom"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -19,6 +20,7 @@ import { RepliedEmailsTableWithPagination } from "./RepliedEmailsTableWithPagina
 import { ThreadDetailPanel } from "./ThreadDetailPanel"
 
 export default function EmailRepliesPage() {
+  const { t } = useTranslation()
   const { selectedWorkspace } = useWorkspace()
   const { emailId } = useParams<{ emailId?: string }>()
   const containerId = useId()
@@ -77,7 +79,7 @@ export default function EmailRepliesPage() {
   // Bulk action handlers
   const handleBulkAction = async (actionType: string, value: string) => {
     if (selectedThreads.length === 0) {
-      toast.error("선택된 스레드가 없습니다.")
+      toast.error(t("email-replies.bulk.noSelection"))
       return
     }
 
@@ -113,7 +115,7 @@ export default function EmailRepliesPage() {
 
   const openBulkActionModal = (type: "read_status") => {
     if (selectedThreads.length === 0) {
-      toast.error("선택된 스레드가 없습니다.")
+      toast.error(t("email-replies.bulk.noSelection"))
       return
     }
     setBulkActionType(type)
@@ -162,9 +164,9 @@ export default function EmailRepliesPage() {
       {!selectedWorkspace && (
         <Alert className="mb-4">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>워크스페이스를 선택해주세요</AlertTitle>
+          <AlertTitle>{t("email-replies.alert.selectWorkspace.title")}</AlertTitle>
           <AlertDescription>
-            답장 이메일을 조회하려면 사이드바에서 워크스페이스를 선택해주세요.
+            {t("email-replies.alert.selectWorkspace.description")}
           </AlertDescription>
         </Alert>
       )}
@@ -179,7 +181,7 @@ export default function EmailRepliesPage() {
           <Card className="h-full flex flex-col overflow-hidden">
             <CardHeader className="pb-3 pt-3 flex-shrink-0">
               <CardTitle className="text-base">
-                답장 이메일 관리
+                {t("email-replies.title")}
                 {selectedWorkspace && (
                   <span className="ml-2 text-sm font-normal text-muted-foreground">
                     ({selectedWorkspace.name})
@@ -193,7 +195,7 @@ export default function EmailRepliesPage() {
                 <div className="relative w-full">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="제목, 발신자 이메일로 검색..."
+                    placeholder={t("email-replies.search.placeholder")}
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
@@ -219,7 +221,9 @@ export default function EmailRepliesPage() {
               {selectedThreads.length > 0 && (
                 <div className="flex items-center gap-4 mb-3 flex-shrink-0">
                   <div className="text-sm text-muted-foreground">
-                    <span className="font-medium">{selectedThreads.length}개 스레드 선택됨</span>
+                    <span className="font-medium">
+                      {t("email-replies.bulk.selected", { count: selectedThreads.length })}
+                    </span>
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -228,7 +232,7 @@ export default function EmailRepliesPage() {
                       onClick={() => openBulkActionModal("read_status")}
                     >
                       <Check className="h-4 w-4 mr-1" />
-                      읽음 상태 변경
+                      {t("email-replies.bulk.changeReadStatus")}
                     </Button>
                     <Button
                       variant="outline"
@@ -237,7 +241,7 @@ export default function EmailRepliesPage() {
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
                       <Trash2 className="h-4 w-4 mr-1" />
-                      선택 삭제
+                      {t("email-replies.bulk.delete")}
                     </Button>
                   </div>
                 </div>
@@ -258,7 +262,7 @@ export default function EmailRepliesPage() {
                   />
                 ) : (
                   <div className="py-12 text-center text-muted-foreground">
-                    워크스페이스를 선택하면 답장 이메일 목록이 표시됩니다.
+                    {t("email-replies.empty.selectWorkspace")}
                   </div>
                 )}
               </div>
@@ -307,10 +311,12 @@ export default function EmailRepliesPage() {
         isOpen={showConfirmDialog}
         onClose={() => setShowConfirmDialog(false)}
         onConfirm={confirmBulkDelete}
-        title="스레드 삭제 확인"
-        description={`선택한 ${selectedThreads.length}개의 스레드와 관련된 모든 이메일을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`}
-        confirmText="삭제"
-        cancelText="취소"
+        title={t("email-replies.confirm.delete.title")}
+        description={t("email-replies.confirm.delete.description", {
+          count: selectedThreads.length,
+        })}
+        confirmText={t("email-replies.confirm.delete.button")}
+        cancelText={t("email-replies.confirm.cancel.button")}
         variant="destructive"
       />
     </div>

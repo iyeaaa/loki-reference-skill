@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query"
 import { Reply, X } from "lucide-react"
 import { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -16,6 +17,7 @@ interface ThreadDetailPanelProps {
 }
 
 export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDetailPanelProps) {
+  const { t } = useTranslation()
   const { data, isLoading, error } = useThreadEmails(threadId, workspaceId)
   const emails = data?.data || []
   const queryClient = useQueryClient()
@@ -60,7 +62,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
       <Card className="h-full flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
-          <div className="text-sm text-muted-foreground">스레드 로딩 중...</div>
+          <div className="text-sm text-muted-foreground">{t("email-replies.thread.loading")}</div>
         </div>
       </Card>
     )
@@ -70,7 +72,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
     return (
       <Card className="h-full flex items-center justify-center">
         <div className="text-center text-red-600">
-          <div className="text-sm">스레드 로드 실패</div>
+          <div className="text-sm">{t("email-replies.thread.loadError")}</div>
         </div>
       </Card>
     )
@@ -80,7 +82,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
     return (
       <Card className="h-full flex items-center justify-center">
         <div className="text-center text-muted-foreground">
-          <div className="text-sm">메시지가 없습니다</div>
+          <div className="text-sm">{t("email-replies.thread.noMessages")}</div>
         </div>
       </Card>
     )
@@ -92,7 +94,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">
           <h3 className="font-medium text-base truncate flex-1">
-            {emails[0]?.subject || "(제목 없음)"}
+            {emails[0]?.subject || t("email-replies.thread.noSubject")}
           </h3>
           <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0 ml-2">
             <X className="h-4 w-4" />
@@ -150,7 +152,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
             variant="default"
           >
             <Reply className="h-4 w-4 mr-2" />
-            답장
+            {t("email-replies.thread.replyButton")}
           </Button>
         </div>
       )}

@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, Layers, User } from "lucide-react"
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -29,6 +30,7 @@ export function RepliedEmailsTableWithPagination({
   onToggleThread,
   onToggleAll,
 }: RepliedEmailsTableWithPaginationProps) {
+  const { t } = useTranslation()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
   const limit = 20
@@ -56,17 +58,17 @@ export function RepliedEmailsTableWithPagination({
   const getStatusText = (status: string) => {
     switch (status) {
       case "delivered":
-        return "전달됨"
+        return t("email-replies.status.delivered")
       case "opened":
-        return "열림"
+        return t("email-replies.status.opened")
       case "clicked":
-        return "클릭됨"
+        return t("email-replies.status.clicked")
       case "replied":
-        return "답장됨"
+        return t("email-replies.status.replied")
       case "bounced":
-        return "반송됨"
+        return t("email-replies.status.bounced")
       case "failed":
-        return "실패"
+        return t("email-replies.status.failed")
       default:
         return status
     }
@@ -78,17 +80,17 @@ export function RepliedEmailsTableWithPagination({
     if (!status) return "-"
     switch (status) {
       case "active":
-        return "진행 중"
+        return t("email-replies.enrollment.status.active")
       case "paused":
-        return "일시중지"
+        return t("email-replies.enrollment.status.paused")
       case "completed":
-        return "완료"
+        return t("email-replies.enrollment.status.completed")
       case "stopped":
-        return "중단됨"
+        return t("email-replies.enrollment.status.stopped")
       case "bounced":
-        return "반송됨"
+        return t("email-replies.enrollment.status.bounced")
       case "unsubscribed":
-        return "구독취소"
+        return t("email-replies.enrollment.status.unsubscribed")
       default:
         return status
     }
@@ -174,25 +176,25 @@ export function RepliedEmailsTableWithPagination({
                   />
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  회사명
+                  {t("email-replies.table.header.company")}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  제목
+                  {t("email-replies.table.header.subject")}
                 </th>
                 <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  메시지
+                  {t("email-replies.table.header.messages")}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  리드
+                  {t("email-replies.table.header.lead")}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  시퀀스
+                  {t("email-replies.table.header.sequence")}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  상태
+                  {t("email-replies.table.header.status")}
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  날짜
+                  {t("email-replies.table.header.date")}
                 </th>
               </tr>
             </thead>
@@ -200,7 +202,9 @@ export function RepliedEmailsTableWithPagination({
               {repliedEmails.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-2 py-4 text-center text-sm text-gray-500">
-                    {isFetching ? "로딩 중..." : "답장 이메일이 없습니다"}
+                    {isFetching
+                      ? t("email-replies.table.empty.loading")
+                      : t("email-replies.table.empty.noReplies")}
                   </td>
                 </tr>
               ) : (
@@ -244,7 +248,7 @@ export function RepliedEmailsTableWithPagination({
                           className="font-medium line-clamp-3 break-words"
                           title={email.subject || ""}
                         >
-                          {email.subject || "(제목 없음)"}
+                          {email.subject || t("email-replies.thread.noSubject")}
                         </div>
                       </td>
                       <td
@@ -275,7 +279,7 @@ export function RepliedEmailsTableWithPagination({
                                 </PopoverTrigger>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>리드 정보 보기</p>
+                                <p>{t("email-replies.tooltip.viewLead")}</p>
                               </TooltipContent>
                             </Tooltip>
                             <PopoverContent
@@ -285,7 +289,9 @@ export function RepliedEmailsTableWithPagination({
                               <div className="space-y-3">
                                 <div className="flex items-center gap-2 pb-2 border-b">
                                   <User className="h-4 w-4 text-gray-500" />
-                                  <h4 className="font-semibold text-sm">리드 정보</h4>
+                                  <h4 className="font-semibold text-sm">
+                                    {t("email-replies.leadInfo.title")}
+                                  </h4>
                                 </div>
                                 <div className="space-y-3 text-xs">
                                   {/* 기본 정보 */}
@@ -540,7 +546,7 @@ export function RepliedEmailsTableWithPagination({
                                 </PopoverTrigger>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>시퀀스 정보 보기</p>
+                                <p>{t("email-replies.tooltip.viewSequence")}</p>
                               </TooltipContent>
                             </Tooltip>
                             <PopoverContent
@@ -550,7 +556,9 @@ export function RepliedEmailsTableWithPagination({
                               <div className="space-y-3">
                                 <div className="flex items-center gap-2 pb-2 border-b">
                                   <Layers className="h-4 w-4 text-gray-500" />
-                                  <h4 className="font-semibold text-sm">시퀀스 정보</h4>
+                                  <h4 className="font-semibold text-sm">
+                                    {t("email-replies.sequenceInfo.title")}
+                                  </h4>
                                 </div>
                                 <div className="space-y-3 text-xs">
                                   {/* 기본 정보 */}
@@ -594,10 +602,12 @@ export function RepliedEmailsTableWithPagination({
                                           email.enrollmentCurrentStepOrder !== undefined && (
                                             <div className="flex">
                                               <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
-                                                현재 스텝:
+                                                {t("email-replies.sequenceInfo.currentStep")}:
                                               </span>
                                               <span className="text-gray-600 dark:text-gray-400 break-words">
-                                                {email.enrollmentCurrentStepOrder + 1}번째 스텝
+                                                {t("email-replies.sequenceInfo.currentStepValue", {
+                                                  step: email.enrollmentCurrentStepOrder + 1,
+                                                })}
                                               </span>
                                             </div>
                                           )}
@@ -723,14 +733,13 @@ export function RepliedEmailsTableWithPagination({
         {/* Pagination Info */}
         <div className="flex items-center justify-center">
           <div className="text-sm text-muted-foreground">
-            {total > 0 ? (
-              <>
-                {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
-                {total.toLocaleString()}개 표시
-              </>
-            ) : (
-              "0개 표시"
-            )}
+            {total > 0
+              ? t("email-replies.pagination.showing", {
+                  start: (currentPage - 1) * limit + 1,
+                  end: Math.min(currentPage * limit, total),
+                  total: total.toLocaleString(),
+                })
+              : t("email-replies.pagination.showingZero")}
           </div>
         </div>
 
@@ -743,7 +752,7 @@ export function RepliedEmailsTableWithPagination({
             size="sm"
             className="px-3"
           >
-            처음
+            {t("email-replies.pagination.first")}
           </Button>
 
           <Button
@@ -754,7 +763,7 @@ export function RepliedEmailsTableWithPagination({
             className="px-3"
           >
             <ChevronLeft className="h-4 w-4" />
-            이전
+            {t("email-replies.pagination.previous")}
           </Button>
 
           {getPageNumbers().map((page) => (
@@ -777,7 +786,7 @@ export function RepliedEmailsTableWithPagination({
             size="sm"
             className="px-3"
           >
-            다음
+            {t("email-replies.pagination.next")}
             <ChevronRight className="h-4 w-4" />
           </Button>
 
@@ -788,13 +797,15 @@ export function RepliedEmailsTableWithPagination({
             size="sm"
             className="px-3"
           >
-            마지막
+            {t("email-replies.pagination.last")}
           </Button>
         </div>
 
         {/* Page Jump */}
         <div className="flex items-center justify-center gap-2">
-          <span className="text-sm text-muted-foreground">페이지:</span>
+          <span className="text-sm text-muted-foreground">
+            {t("email-replies.pagination.page")}:
+          </span>
           <Input
             type="number"
             min="1"

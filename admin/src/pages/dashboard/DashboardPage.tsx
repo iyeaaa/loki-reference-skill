@@ -60,7 +60,7 @@ function createFollowupDayButton(followupsByDate: Map<string, { totalCount: numb
         )}
       >
         <span className="text-sm">{day.date.getDate()}</span>
-        {<span className="text-[10px] font-bold">{followup?.totalCount ?? 0}건</span>}
+        {<span className="text-[10px] font-bold">{followup?.totalCount ?? 0}</span>}
       </button>
     )
   }
@@ -217,7 +217,7 @@ export default function DashboardPage() {
               {leadsLoading ? <Skeleton className="h-8 w-16" /> : totalCustomers.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
-              {selectedWorkspace?.name || "중소 뷰티업체"}
+              {selectedWorkspace?.name || t("dashboard.stats.defaultWorkspace")}
             </p>
           </CardContent>
         </Card>
@@ -404,7 +404,7 @@ export default function DashboardPage() {
                         })}
                       </h4>
                       <span className="text-sm font-bold text-primary">
-                        {selectedDateInfo.totalCount}건
+                        {selectedDateInfo.totalCount} {t("dashboard.unit.count")}
                       </span>
                     </div>
                     <div className="text-xs text-muted-foreground">
@@ -420,7 +420,9 @@ export default function DashboardPage() {
                         >
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-medium">{seq.sequenceName}</span>
-                            <span className="text-xs text-muted-foreground">{seq.count}건</span>
+                            <span className="text-xs text-muted-foreground">
+                              {seq.count} {t("dashboard.unit.count")}
+                            </span>
                           </div>
                           <div className="text-xs text-muted-foreground">{seq.subject}</div>
                         </div>

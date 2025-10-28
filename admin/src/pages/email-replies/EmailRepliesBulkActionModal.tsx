@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -32,6 +33,7 @@ export function EmailRepliesBulkActionModal({
   emailCount,
   actionType,
 }: EmailRepliesBulkActionModalProps) {
+  const { t } = useTranslation()
   const [selectedValue, setSelectedValue] = useState<string>("")
 
   const handleConfirm = () => {
@@ -45,16 +47,16 @@ export function EmailRepliesBulkActionModal({
   const getTitle = () => {
     switch (actionType) {
       case "read_status":
-        return "읽음 상태 일괄 변경"
+        return t("email-replies.bulkModal.title.readStatus")
       default:
-        return "일괄 작업"
+        return t("email-replies.bulkModal.title.default")
     }
   }
 
   const getDescription = () => {
     switch (actionType) {
       case "read_status":
-        return `선택된 ${emailCount}개의 이메일 읽음 상태를 변경합니다.`
+        return t("email-replies.bulkModal.description.readStatus", { count: emailCount })
       default:
         return ""
     }
@@ -71,14 +73,18 @@ export function EmailRepliesBulkActionModal({
         <div className="py-4 space-y-4">
           {actionType === "read_status" && (
             <div className="space-y-2">
-              <Label>변경할 상태</Label>
+              <Label>{t("email-replies.bulkModal.label.status")}</Label>
               <Select value={selectedValue} onValueChange={setSelectedValue}>
                 <SelectTrigger>
-                  <SelectValue placeholder="상태 선택" />
+                  <SelectValue
+                    placeholder={t("email-replies.bulkModal.placeholder.selectStatus")}
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="read">읽음</SelectItem>
-                  <SelectItem value="unread">읽지 않음</SelectItem>
+                  <SelectItem value="read">{t("email-replies.bulkModal.option.read")}</SelectItem>
+                  <SelectItem value="unread">
+                    {t("email-replies.bulkModal.option.unread")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -87,10 +93,10 @@ export function EmailRepliesBulkActionModal({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            취소
+            {t("email-replies.bulkModal.button.cancel")}
           </Button>
           <Button onClick={handleConfirm} disabled={!selectedValue}>
-            변경
+            {t("email-replies.bulkModal.button.change")}
           </Button>
         </DialogFooter>
       </DialogContent>

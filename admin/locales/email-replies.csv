@@ -1,0 +1,88 @@
+key,ko,en
+title,답장 이메일 관리,Email Replies Management
+alert.selectWorkspace.title,워크스페이스를 선택해주세요,Please select a workspace
+alert.selectWorkspace.description,답장 이메일을 조회하려면 사이드바에서 워크스페이스를 선택해주세요.,Please select a workspace from the sidebar to view email replies.
+search.placeholder,제목 발신자 이메일로 검색...,Search by subject sender email...
+bulk.selected,{{count}}개 스레드 선택됨,{{count}} threads selected
+bulk.noSelection,선택된 스레드가 없습니다.,No threads selected.
+bulk.changeReadStatus,읽음 상태 변경,Change read status
+bulk.delete,선택 삭제,Delete selected
+empty.selectWorkspace,워크스페이스를 선택하면 답장 이메일 목록이 표시됩니다.,Select a workspace to view email replies.
+confirm.delete.title,스레드 삭제 확인,Confirm thread deletion
+confirm.delete.description,선택한 {{count}}개의 스레드와 관련된 모든 이메일을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.,Do you want to delete all emails related to {{count}} selected threads? This action cannot be undone.
+confirm.delete.button,삭제,Delete
+confirm.cancel.button,취소,Cancel
+thread.loading,스레드 로딩 중...,Loading thread...
+thread.loadError,스레드 로드 실패,Failed to load thread
+thread.noMessages,메시지가 없습니다,No messages
+thread.noSubject,(제목 없음),(No Subject)
+thread.replyButton,답장,Reply
+table.header.company,회사명,Company
+table.header.subject,제목,Subject
+table.header.messages,메시지,Messages
+table.header.lead,리드,Lead
+table.header.sequence,시퀀스,Sequence
+table.header.status,상태,Status
+table.header.date,날짜,Date
+table.empty.loading,로딩 중...,Loading...
+table.empty.noReplies,답장 이메일이 없습니다,No reply emails
+status.delivered,전달됨,Delivered
+status.opened,열림,Opened
+status.clicked,클릭됨,Clicked
+status.replied,답장됨,Replied
+status.bounced,반송됨,Bounced
+status.failed,실패,Failed
+enrollment.status.active,진행 중,Active
+enrollment.status.paused,일시중지,Paused
+enrollment.status.completed,완료,Completed
+enrollment.status.stopped,중단됨,Stopped
+enrollment.status.bounced,반송됨,Bounced
+enrollment.status.unsubscribed,구독취소,Unsubscribed
+tooltip.viewLead,리드 정보 보기,View lead info
+tooltip.viewSequence,시퀀스 정보 보기,View sequence info
+leadInfo.title,리드 정보,Lead Information
+leadInfo.company,회사명,Company
+leadInfo.foundCompany,발견된 회사명,Found Company
+leadInfo.contactName,담당자명,Contact Name
+leadInfo.leadName,리드명,Lead Name
+leadInfo.email,이메일,Email
+leadInfo.businessType,업종,Business Type
+leadInfo.employeeCount,직원 수,Employee Count
+leadInfo.leadStatus,리드 상태,Lead Status
+leadInfo.leadScore,리드 점수,Lead Score
+leadInfo.source,출처,Source
+leadInfo.country,국가,Country
+leadInfo.state,주/도,State
+leadInfo.city,도시,City
+leadInfo.address,주소,Address
+leadInfo.website,웹사이트,Website
+leadInfo.finalUrl,최종 URL,Final URL
+leadInfo.id,ID,ID
+sequenceInfo.title,시퀀스 정보,Sequence Information
+sequenceInfo.name,시퀀스명,Sequence Name
+sequenceInfo.id,시퀀스 ID,Sequence ID
+sequenceInfo.enrollmentStatus,등록 상태,Enrollment Status
+sequenceInfo.currentStep,현재 스텝,Current Step
+sequenceInfo.currentStepValue,{{step}}번째 스텝,Step {{step}}
+sequenceInfo.enrolledAt,등록일,Enrolled At
+sequenceInfo.firstEmailSent,첫 이메일 전송,First Email Sent
+sequenceInfo.lastEmailSent,마지막 이메일 전송,Last Email Sent
+sequenceInfo.nextStepScheduled,다음 스텝 예정,Next Step Scheduled
+sequenceInfo.completedAt,완료일,Completed At
+sequenceInfo.stoppedAt,중단일,Stopped At
+pagination.showing,{{start}}-{{end}} / {{total}}개 표시,Showing {{start}}-{{end}} of {{total}}
+pagination.showingZero,0개 표시,Showing 0
+pagination.first,처음,First
+pagination.previous,이전,Previous
+pagination.next,다음,Next
+pagination.last,마지막,Last
+pagination.page,페이지,Page
+bulkModal.title.readStatus,읽음 상태 일괄 변경,Change Read Status in Bulk
+bulkModal.title.default,일괄 작업,Bulk Action
+bulkModal.description.readStatus,선택된 {{count}}개의 이메일 읽음 상태를 변경합니다.,Change the read status of {{count}} selected emails.
+bulkModal.label.status,변경할 상태,Status to Change
+bulkModal.placeholder.selectStatus,상태 선택,Select Status
+bulkModal.option.read,읽음,Read
+bulkModal.option.unread,읽지 않음,Unread
+bulkModal.button.cancel,취소,Cancel
+bulkModal.button.change,변경,Change

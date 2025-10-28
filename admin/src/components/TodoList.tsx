@@ -1,5 +1,6 @@
 import { Calendar, Check, Edit2, Plus, Trash2 } from "lucide-react"
 import { useId, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,12 +37,6 @@ const priorityColors = {
   high: "bg-red-100 text-red-800",
 }
 
-const priorityLabels = {
-  low: "낮음",
-  medium: "보통",
-  high: "높음",
-}
-
 export function TodoList({
   todos,
   workspaceId,
@@ -49,6 +44,14 @@ export function TodoList({
   onUpdateTodo,
   onDeleteTodo,
 }: TodoListProps) {
+  const { t } = useTranslation()
+
+  const priorityLabels = {
+    low: t("todo.priority.low"),
+    medium: t("todo.priority.medium"),
+    high: t("todo.priority.high"),
+  }
+
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
   const [newTodo, setNewTodo] = useState<CreateTodoRequest>({
@@ -118,40 +121,41 @@ export function TodoList({
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>세일즈 투두리스트</CardTitle>
+          <CardTitle>{t("todo.title")}</CardTitle>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />할 일 추가
+                <Plus className="h-4 w-4 mr-2" />
+                {t("todo.addTodo")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>새 할 일 추가</DialogTitle>
+                <DialogTitle>{t("todo.addNewTodo")}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor={titleId}>제목 *</Label>
+                  <Label htmlFor={titleId}>{t("todo.titleRequired")}</Label>
                   <Input
                     id={titleId}
                     value={newTodo.title}
                     onChange={(e) => setNewTodo({ ...newTodo, title: e.target.value })}
-                    placeholder="할 일을 입력하세요"
+                    placeholder={t("todo.titlePlaceholder")}
                   />
                 </div>
                 <div>
-                  <Label htmlFor={descriptionId}>설명</Label>
+                  <Label htmlFor={descriptionId}>{t("todo.descriptionLabel")}</Label>
                   <Textarea
                     id={descriptionId}
                     value={newTodo.description}
                     onChange={(e) => setNewTodo({ ...newTodo, description: e.target.value })}
-                    placeholder="상세 설명을 입력하세요"
+                    placeholder={t("todo.descriptionPlaceholder")}
                     rows={3}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="priority">우선순위</Label>
+                    <Label htmlFor="priority">{t("todo.priorityLabel")}</Label>
                     <Select
                       value={newTodo.priority}
                       onValueChange={(value: "low" | "medium" | "high") =>
@@ -162,14 +166,14 @@ export function TodoList({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="low">낮음</SelectItem>
-                        <SelectItem value="medium">보통</SelectItem>
-                        <SelectItem value="high">높음</SelectItem>
+                        <SelectItem value="low">{t("todo.priority.low")}</SelectItem>
+                        <SelectItem value="medium">{t("todo.priority.medium")}</SelectItem>
+                        <SelectItem value="high">{t("todo.priority.high")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor={dueDateId}>마감일</Label>
+                    <Label htmlFor={dueDateId}>{t("todo.dueDateLabel")}</Label>
                     <Input
                       id={dueDateId}
                       type="date"
@@ -180,9 +184,9 @@ export function TodoList({
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                    취소
+                    {t("todo.cancel")}
                   </Button>
-                  <Button onClick={handleAddTodo}>추가</Button>
+                  <Button onClick={handleAddTodo}>{t("todo.add")}</Button>
                 </div>
               </div>
             </DialogContent>
@@ -193,8 +197,8 @@ export function TodoList({
         <div className="space-y-3">
           {todos.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <p>아직 할 일이 없습니다.</p>
-              <p className="text-sm">새 할 일을 추가해보세요!</p>
+              <p>{t("todo.noTodos")}</p>
+              <p className="text-sm">{t("todo.noTodosSubtext")}</p>
             </div>
           ) : (
             todos.map((todo) => (
@@ -278,12 +282,12 @@ export function TodoList({
       <Dialog open={!!editingTodo} onOpenChange={() => setEditingTodo(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>할 일 편집</DialogTitle>
+            <DialogTitle>{t("todo.editTodo")}</DialogTitle>
           </DialogHeader>
           {editingTodo && (
             <div className="space-y-4">
               <div>
-                <Label htmlFor={editTitleId}>제목 *</Label>
+                <Label htmlFor={editTitleId}>{t("todo.titleRequired")}</Label>
                 <Input
                   id={editTitleId}
                   value={editingTodo.title}
@@ -291,7 +295,7 @@ export function TodoList({
                 />
               </div>
               <div>
-                <Label htmlFor={editDescriptionId}>설명</Label>
+                <Label htmlFor={editDescriptionId}>{t("todo.descriptionLabel")}</Label>
                 <Textarea
                   id={editDescriptionId}
                   value={editingTodo.description || ""}
@@ -306,7 +310,7 @@ export function TodoList({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit-priority">우선순위</Label>
+                  <Label htmlFor="edit-priority">{t("todo.priorityLabel")}</Label>
                   <Select
                     value={editingTodo.priority}
                     onValueChange={(value: "low" | "medium" | "high") =>
@@ -317,14 +321,14 @@ export function TodoList({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="low">낮음</SelectItem>
-                      <SelectItem value="medium">보통</SelectItem>
-                      <SelectItem value="high">높음</SelectItem>
+                      <SelectItem value="low">{t("todo.priority.low")}</SelectItem>
+                      <SelectItem value="medium">{t("todo.priority.medium")}</SelectItem>
+                      <SelectItem value="high">{t("todo.priority.high")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor={editDueDateId}>마감일</Label>
+                  <Label htmlFor={editDueDateId}>{t("todo.dueDateLabel")}</Label>
                   <Input
                     id={editDueDateId}
                     type="date"
@@ -340,9 +344,9 @@ export function TodoList({
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setEditingTodo(null)}>
-                  취소
+                  {t("todo.cancel")}
                 </Button>
-                <Button onClick={handleSaveEdit}>저장</Button>
+                <Button onClick={handleSaveEdit}>{t("todo.save")}</Button>
               </div>
             </div>
           )}

@@ -11,6 +11,7 @@ import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emails } from "../db/schema/emails"
 import { leadContacts, leadIndustryTypes } from "../db/schema/lead-details"
 import { leads } from "../db/schema/leads"
+import { sequenceEnrollments } from "../db/schema/sequences"
 import { emailService } from "../services/email.service"
 import * as leadService from "../services/lead.service"
 import * as sequenceService from "../services/sequence.service"
@@ -27,6 +28,7 @@ interface EmailSendResult {
 async function sendSequenceEmail(execution: {
   executionId: string
   enrollmentId: string
+  stepOrder: number
   leadId: string
   leadCompanyName: string | null
   emailAccountId: string
@@ -235,12 +237,73 @@ async function sendSequenceEmail(execution: {
       }
     }
 
+    // Get enrollment to check for firstThreadId (for email threading)
+    const [enrollment] = await db
+      .select({
+        firstThreadId: sequenceEnrollments.firstThreadId,
+      })
+      .from(sequenceEnrollments)
+      .where(eq(sequenceEnrollments.id, execution.enrollmentId))
+      .limit(1)
+
+    if (!enrollment) {
+      logger.error(
+        { executionId: execution.executionId, enrollmentId: execution.enrollmentId },
+        "❌ [STEP-WORKER] Enrollment not found",
+      )
+      return {
+        success: false,
+        error: "Enrollment not found",
+      }
+    }
+
+    // Determine if this is the first email in the sequence
+    const isFirstEmail = execution.stepOrder === 1
+    let inReplyTo: string | undefined
+    let references: string[] | undefined
+
+    if (isFirstEmail) {
+      // First email: no In-Reply-To or References
+      logger.info(
+        {
+          executionId: execution.executionId,
+          stepOrder: execution.stepOrder,
+        },
+        "📧 [STEP-WORKER] First email in sequence - no threading headers",
+      )
+    } else {
+      // Follow-up email: use firstThreadId for threading
+      if (enrollment.firstThreadId) {
+        inReplyTo = enrollment.firstThreadId
+        references = [enrollment.firstThreadId]
+        logger.info(
+          {
+            executionId: execution.executionId,
+            stepOrder: execution.stepOrder,
+            firstThreadId: enrollment.firstThreadId,
+          },
+          "🧵 [STEP-WORKER] Follow-up email - using thread headers",
+        )
+      } else {
+        logger.warn(
+          {
+            executionId: execution.executionId,
+            stepOrder: execution.stepOrder,
+          },
+          "⚠️ [STEP-WORKER] Follow-up email but no firstThreadId found",
+        )
+      }
+    }
+
     logger.info(
       {
         executionId: execution.executionId,
         from: emailAccount.emailAddress,
         to: leadContact.email,
         subject: execution.emailSubject,
+        stepOrder: execution.stepOrder,
+        isFirstEmail,
+        hasThreading: !!inReplyTo,
       },
       "📤 [STEP-WORKER] Sending email via EmailService",
     )
@@ -253,6 +316,8 @@ async function sendSequenceEmail(execution: {
       subject: personalizedSubject,
       bodyText: personalizedBodyText || undefined,
       bodyHtml: personalizedBodyHtml || undefined,
+      inReplyTo,
+      references,
       includeSignature: false, // 시퀀스 이메일은 프론트엔드에서 이미 서명이 포함됨
       userId: execution.userId || undefined,
       workspaceId: execution.workspaceId,
@@ -274,14 +339,38 @@ async function sendSequenceEmail(execution: {
     }
 
     const sendgridMessageId = sendResult.sendgridMessageId
+    const messageId = sendResult.messageId // RFC 2822 Message-ID
 
     logger.info(
       {
         executionId: execution.executionId,
-        messageId: sendgridMessageId,
+        messageId,
+        sendgridMessageId,
       },
       "✅ [STEP-WORKER] Email sent successfully",
     )
+
+    // If this is the first email, save the Message-ID as firstThreadId
+    if (isFirstEmail && messageId) {
+      await db
+        .update(sequenceEnrollments)
+        .set({ firstThreadId: messageId })
+        .where(eq(sequenceEnrollments.id, execution.enrollmentId))
+
+      logger.info(
+        {
+          executionId: execution.executionId,
+          enrollmentId: execution.enrollmentId,
+          firstThreadId: messageId,
+        },
+        "🧵 [STEP-WORKER] Saved firstThreadId for enrollment",
+      )
+    }
+
+    // Determine threadId for this email record
+    // - First email: messageId becomes threadId
+    // - Follow-up emails: use firstThreadId from enrollment
+    const threadId = isFirstEmail ? messageId : enrollment.firstThreadId
 
     // Create email record in database with personalized content
     const [emailRecord] = await db
@@ -300,6 +389,9 @@ async function sendSequenceEmail(execution: {
         bodyHtml: personalizedBodyHtml || undefined,
         status: "sent",
         sendgridMessageId,
+        messageId, // RFC 2822 Message-ID
+        threadId, // Thread ID for grouping
+        inReplyTo: inReplyTo || undefined,
         sentAt: new Date(),
         // Denormalized fields for performance
         leadName: lead.companyName || undefined,
@@ -309,6 +401,7 @@ async function sendSequenceEmail(execution: {
       .returning({
         id: emails.id,
         sendgridMessageId: emails.sendgridMessageId,
+        threadId: emails.threadId,
       })
 
     if (!emailRecord) {
@@ -328,8 +421,10 @@ async function sendSequenceEmail(execution: {
         emailId: emailRecord.id,
         sendgridMessageId,
         storedMessageId: emailRecord.sendgridMessageId,
+        threadId: emailRecord.threadId,
+        isFirstEmail,
       },
-      "✅ [STEP-WORKER] Created email record in database",
+      "✅ [STEP-WORKER] Created email record in database with thread info",
     )
 
     return {

@@ -1,11 +1,20 @@
-import { AlertCircle, Search, X } from "lucide-react"
-import { useEffect, useId, useState } from "react"
+import { AlertCircle, Check, Search, Trash2, X } from "lucide-react"
+import { useCallback, useEffect, useId, useState } from "react"
+import toast from "react-hot-toast"
 import { useParams } from "react-router-dom"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import {
+  useBulkDeleteEmailReplies,
+  useBulkMarkAsRead,
+  useBulkMarkAsUnread,
+} from "@/lib/api/hooks/email-replies"
 import { useEmail } from "@/lib/api/hooks/emails"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
+import { ConfirmDialog } from "./ConfirmDialog"
+import { EmailRepliesBulkActionModal } from "./EmailRepliesBulkActionModal"
 import { RepliedEmailsTableWithPagination } from "./RepliedEmailsTableWithPagination"
 import { ThreadDetailPanel } from "./ThreadDetailPanel"
 
@@ -19,9 +28,18 @@ export default function EmailRepliesPage() {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
   const [leftWidth, setLeftWidth] = useState(50) // percentage
   const [isResizing, setIsResizing] = useState(false)
+  const [selectedThreads, setSelectedThreads] = useState<string[]>([])
+  const [showBulkActionModal, setShowBulkActionModal] = useState(false)
+  const [bulkActionType, setBulkActionType] = useState<"read_status" | null>(null)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
   // emailId가 있으면 해당 이메일 정보를 가져와서 threadId 설정
   const { data: emailData } = useEmail(emailId || "", !!emailId)
+
+  // Bulk action hooks
+  const bulkMarkAsRead = useBulkMarkAsRead()
+  const bulkMarkAsUnread = useBulkMarkAsUnread()
+  const bulkDeleteEmails = useBulkDeleteEmailReplies()
 
   // emailData가 로드되면 threadId 설정
   useEffect(() => {
@@ -43,6 +61,63 @@ export default function EmailRepliesPage() {
     if (e.key === "Enter") {
       setSearchQuery(searchInput)
     }
+  }
+
+  // Thread selection handlers
+  const toggleThreadSelection = useCallback((threadId: string) => {
+    setSelectedThreads((prev) =>
+      prev.includes(threadId) ? prev.filter((id) => id !== threadId) : [...prev, threadId],
+    )
+  }, [])
+
+  const toggleAllThreads = useCallback((threadIds: string[]) => {
+    setSelectedThreads((prev) => (prev.length === threadIds.length ? [] : threadIds))
+  }, [])
+
+  // Bulk action handlers
+  const handleBulkAction = async (actionType: string, value: string) => {
+    if (selectedThreads.length === 0) {
+      toast.error("선택된 스레드가 없습니다.")
+      return
+    }
+
+    if (actionType === "read_status") {
+      if (value === "read") {
+        bulkMarkAsRead.mutate(selectedThreads, {
+          onSuccess: () => {
+            setSelectedThreads([])
+          },
+        })
+      } else if (value === "unread") {
+        bulkMarkAsUnread.mutate(selectedThreads, {
+          onSuccess: () => {
+            setSelectedThreads([])
+          },
+        })
+      }
+    }
+  }
+
+  const handleBulkDelete = () => {
+    if (selectedThreads.length === 0) return
+    setShowConfirmDialog(true)
+  }
+
+  const confirmBulkDelete = () => {
+    bulkDeleteEmails.mutate(selectedThreads, {
+      onSuccess: () => {
+        setSelectedThreads([])
+      },
+    })
+  }
+
+  const openBulkActionModal = (type: "read_status") => {
+    if (selectedThreads.length === 0) {
+      toast.error("선택된 스레드가 없습니다.")
+      return
+    }
+    setBulkActionType(type)
+    setShowBulkActionModal(true)
   }
 
   // Resizer handlers
@@ -97,7 +172,10 @@ export default function EmailRepliesPage() {
       {/* Gmail-style Split View */}
       <div id={containerId} className="flex-1 flex relative min-h-0">
         {/* Left: Thread List */}
-        <div style={{ width: `${leftWidth}%` }} className="flex flex-col h-full">
+        <div
+          style={{ width: selectedThreadId ? `${leftWidth}%` : "100%" }}
+          className="flex flex-col h-full"
+        >
           <Card className="h-full flex flex-col overflow-hidden">
             <CardHeader className="pb-3 pt-3 flex-shrink-0">
               <CardTitle className="text-base">
@@ -137,6 +215,34 @@ export default function EmailRepliesPage() {
                 </div>
               </div>
 
+              {/* Bulk Actions */}
+              {selectedThreads.length > 0 && (
+                <div className="flex items-center gap-4 mb-3 flex-shrink-0">
+                  <div className="text-sm text-muted-foreground">
+                    <span className="font-medium">{selectedThreads.length}개 스레드 선택됨</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openBulkActionModal("read_status")}
+                    >
+                      <Check className="h-4 w-4 mr-1" />
+                      읽음 상태 변경
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleBulkDelete}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      선택 삭제
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Thread List Table */}
               <div className="flex-1 overflow-auto">
                 {selectedWorkspace ? (
@@ -146,6 +252,9 @@ export default function EmailRepliesPage() {
                     selectedStatuses={[]}
                     selectedThreadId={selectedThreadId}
                     onThreadSelect={setSelectedThreadId}
+                    selectedThreads={selectedThreads}
+                    onToggleThread={toggleThreadSelection}
+                    onToggleAll={toggleAllThreads}
                   />
                 ) : (
                   <div className="py-12 text-center text-muted-foreground">
@@ -157,33 +266,53 @@ export default function EmailRepliesPage() {
           </Card>
         </div>
 
-        {/* Resizer */}
-        <button
-          type="button"
-          aria-label="Resize panels"
-          className={`w-1 bg-gray-200 hover:bg-blue-400 cursor-col-resize flex-shrink-0 h-full border-0 p-0 ${
-            isResizing ? "bg-blue-400" : ""
-          }`}
-          onMouseDown={handleMouseDown}
-        />
+        {/* Resizer - only show when thread is selected */}
+        {selectedThreadId && (
+          <button
+            type="button"
+            aria-label="Resize panels"
+            className={`w-px bg-gray-300 hover:bg-blue-400 cursor-col-resize flex-shrink-0 h-full border-0 p-0 ${
+              isResizing ? "bg-blue-400" : ""
+            }`}
+            onMouseDown={handleMouseDown}
+          />
+        )}
 
-        {/* Right: Thread Detail Panel */}
-        <div style={{ width: `${100 - leftWidth}%` }} className="flex flex-col h-full">
-          {selectedThreadId ? (
+        {/* Right: Thread Detail Panel - only show when thread is selected */}
+        {selectedThreadId && (
+          <div style={{ width: `${100 - leftWidth}%` }} className="flex flex-col h-full">
             <ThreadDetailPanel
               threadId={selectedThreadId}
               workspaceId={selectedWorkspace?.id}
               onClose={() => setSelectedThreadId(null)}
             />
-          ) : (
-            <Card className="h-full flex items-center justify-center">
-              <div className="text-center text-muted-foreground">
-                <div className="text-sm">선택한 대화가 없습니다.</div>
-              </div>
-            </Card>
-          )}
-        </div>
+          </div>
+        )}
       </div>
+
+      {/* Bulk Action Modal */}
+      <EmailRepliesBulkActionModal
+        isOpen={showBulkActionModal}
+        onClose={() => {
+          setShowBulkActionModal(false)
+          setBulkActionType(null)
+        }}
+        onConfirm={handleBulkAction}
+        emailCount={selectedThreads.length}
+        actionType={bulkActionType}
+      />
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={confirmBulkDelete}
+        title="스레드 삭제 확인"
+        description={`선택한 ${selectedThreads.length}개의 스레드와 관련된 모든 이메일을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`}
+        confirmText="삭제"
+        cancelText="취소"
+        variant="destructive"
+      />
     </div>
   )
 }

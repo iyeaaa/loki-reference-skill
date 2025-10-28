@@ -93,6 +93,8 @@ export function SequencesTableWithPagination({
         return "일시정지"
       case "archived":
         return "보관됨"
+      case "completed":
+        return "발송완료"
       default:
         return status
     }
@@ -108,6 +110,8 @@ export function SequencesTableWithPagination({
         return "outline" as const
       case "archived":
         return "outline" as const
+      case "completed":
+        return "default" as const
       default:
         return "outline" as const
     }
@@ -368,8 +372,11 @@ export function SequencesTableWithPagination({
                         title={sequence.status === "active" ? "일시정지" : "활성화"}
                         disabled={
                           sequence.status === "archived" ||
+                          sequence.status === "completed" ||
                           (sequence.status === "draft" &&
-                            (!sequence.stepsCount || sequence.stepsCount === 0))
+                            (!sequence.stepsCount || sequence.stepsCount === 0)) ||
+                          (sequence.completedEnrollmentsCount != null &&
+                            sequence.completedEnrollmentsCount > 0)
                         }
                       >
                         {sequence.status === "active" ? (

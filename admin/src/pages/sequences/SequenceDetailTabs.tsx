@@ -20,6 +20,9 @@ export function SequenceDetailTabs({ sequenceId }: SequenceDetailTabsProps) {
   const { data: sequence } = useSequence(sequenceId)
   const { data: metricsData, isLoading: metricsLoading } = useSequenceMetrics(sequenceId)
 
+  // 완료된 등록이 있는지 확인
+  const hasCompletedEnrollments = (metricsData?.data?.completedEnrollments ?? 0) > 0
+
   return (
     <>
       <Card>
@@ -28,13 +31,21 @@ export function SequenceDetailTabs({ sequenceId }: SequenceDetailTabsProps) {
             <h3 className="text-lg font-semibold">시퀀스 상세</h3>
             <Button
               onClick={() => setShowEnrollDialog(true)}
-              disabled={!sequence || sequence.status !== "active"}
+              disabled={!sequence || sequence.status !== "active" || hasCompletedEnrollments}
               size="sm"
             >
               <Play className="h-4 w-4 mr-2" />
               시퀀스 실행
             </Button>
           </div>
+          {hasCompletedEnrollments && (
+            <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-md">
+              <p className="text-sm text-amber-800">
+                ⚠️ 이 시퀀스에는 이미 완료된 등록이 있습니다. 중복 실행을 방지하기 위해 실행 버튼이
+                비활성화되었습니다.
+              </p>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="pt-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>

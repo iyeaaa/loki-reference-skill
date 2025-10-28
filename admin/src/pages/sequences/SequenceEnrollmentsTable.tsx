@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react"
 import {
   Calendar,
+  CheckCircle,
   CheckCircle2,
   Clock,
   Eye,
@@ -62,6 +63,41 @@ function EnrollmentOpenStatus({ enrollmentId }: { enrollmentId: string }) {
     <div className="flex items-center gap-1 text-sm text-gray-600">
       <Eye className="w-3 h-3" />
       <span className="font-medium">미오픈</span>
+    </div>
+  )
+}
+
+// EnrollmentDeliveryStatus - 발송완료 상태를 표시하는 컴포넌트
+function EnrollmentDeliveryStatus({ enrollmentId }: { enrollmentId: string }) {
+  const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId)
+
+  if (isLoading) {
+    return <span className="text-sm text-muted-foreground">로딩중...</span>
+  }
+
+  if (!metricsData?.data) {
+    return <span className="text-sm text-muted-foreground">-</span>
+  }
+
+  const { emailsSent, emailsDelivered } = metricsData.data
+
+  if (emailsSent === 0) {
+    return <span className="text-sm text-muted-foreground">-</span>
+  }
+
+  if (emailsDelivered > 0) {
+    return (
+      <div className="flex items-center gap-1 text-sm text-green-600">
+        <CheckCircle className="w-3 h-3" />
+        <span className="font-medium">발송완료</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1 text-sm text-blue-600">
+      <Mail className="w-3 h-3" />
+      <span className="font-medium">발송중</span>
     </div>
   )
 }
@@ -234,6 +270,7 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                       <TableHead>상태</TableHead>
                       <TableHead>진행도</TableHead>
                       <TableHead>발송</TableHead>
+                      <TableHead>발송완료</TableHead>
                       <TableHead>오픈</TableHead>
                       <TableHead>클릭</TableHead>
                       <TableHead>등록일</TableHead>
@@ -293,6 +330,9 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                             ) : (
                               <span className="text-sm text-muted-foreground">대기중</span>
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <EnrollmentDeliveryStatus enrollmentId={enrollment.id} />
                           </TableCell>
                           <TableCell>
                             <EnrollmentOpenStatus enrollmentId={enrollment.id} />

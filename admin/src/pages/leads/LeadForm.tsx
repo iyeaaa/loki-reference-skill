@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query"
 import { Plus, Trash2 } from "lucide-react"
 import { useId, useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -11,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { customerGroupKeys } from "@/lib/api/hooks/customer-groups"
 import type { Lead, LeadStatus } from "@/lib/api/types/lead"
 import type {
   ContactType,
@@ -59,6 +61,8 @@ export function LeadForm({
   const descriptionId = useId()
   const notesId = useId()
   const leadScoreId = useId()
+
+  const queryClient = useQueryClient()
 
   const [formData, setFormData] = useState({
     companyName: lead?.companyName || "",
@@ -125,6 +129,9 @@ export function LeadForm({
         submitData.customerGroupId = selectedGroup
       }
     }
+    queryClient.invalidateQueries({
+      queryKey: customerGroupKeys.workspace(workspaceId || ""),
+    })
 
     onSave(submitData)
   }

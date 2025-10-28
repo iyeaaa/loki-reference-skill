@@ -62,6 +62,60 @@ function decodeContent(content: string, encoding?: string): string {
 }
 
 /**
+ * Remove quoted reply content from email body
+ * Handles various quote formats:
+ * - Lines starting with >
+ * - Gmail-style "On ... wrote:" headers
+ * - Korean "...님이 작성:" headers
+ * - Separator lines (────────)
+ *
+ * @param text - Plain text email content
+ * @returns Text with quoted content removed
+ */
+export function removeQuotedReply(text: string): string {
+  if (!text) return ""
+
+  const lines = text.split(/\r?\n/)
+  const cleanedLines: string[] = []
+  let inQuote = false
+
+  for (const line of lines) {
+    const trimmedLine = line.trim()
+
+    // Check for quote indicators
+    if (
+      // Standard quote prefix (> or multiple >)
+      /^>+\s*/.test(trimmedLine) ||
+      // English quote header: "On ... wrote:" or "On ... <email> wrote:"
+      /^On\s+.+\s+wrote:$/i.test(trimmedLine) ||
+      // Korean quote header: "2025년 10월 27일...님이 작성:"
+      /^\d{4}년\s+\d{1,2}월\s+\d{1,2}일.+님이\s+작성:/.test(trimmedLine) ||
+      // Korean quote header: "2025년 10월 27일 오후 09:43에...님이 작성:"
+      /^\d{4}년\s+\d{1,2}월\s+\d{1,2}일.+에\s+.+님이\s+작성:/.test(trimmedLine) ||
+      // Separator line (multiple dashes or underscores)
+      /^[─_-]{10,}$/.test(trimmedLine) ||
+      // Empty line after quote header (helps catch the quote start)
+      (inQuote && trimmedLine === "")
+    ) {
+      inQuote = true
+      continue
+    }
+
+    // If we're not in a quote block, add the line
+    if (!inQuote) {
+      cleanedLines.push(line)
+    }
+  }
+
+  // Remove trailing empty lines
+  while (cleanedLines.length > 0 && cleanedLines[cleanedLines.length - 1]?.trim() === "") {
+    cleanedLines.pop()
+  }
+
+  return cleanedLines.join("\n").trim()
+}
+
+/**
  * Parse RFC 822 email content to extract text and HTML parts
  *
  * @param emailContent - Full RFC 822 email content
@@ -145,6 +199,11 @@ export function parseEmailBody(emailContent: string): {
     } else {
       text = decodedBody
     }
+  }
+
+  // Remove quoted reply content from text
+  if (text) {
+    text = removeQuotedReply(text)
   }
 
   return { text, html }

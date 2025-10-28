@@ -123,21 +123,8 @@ export const emailRepliesRoutes = new Elysia({ prefix: "/api/v1/email-replies" }
     },
   )
 
-  // Delete email reply
-  .delete(
-    "/:id",
-    async ({ params: { id } }) => {
-      await emailRepliesService.deleteEmailReply(id)
-      return { success: true, message: "답장이 삭제되었습니다." }
-    },
-    {
-      params: t.Object({
-        id: t.String({ format: "uuid" }),
-      }),
-    },
-  )
-
-  // Bulk delete
+  // Bulk delete (must come before /:id route)
+  // Accepts email_replies IDs (UUID), email IDs (UUID), or threadIds (string)
   .delete(
     "/bulk",
     async ({ body }) => {
@@ -146,7 +133,22 @@ export const emailRepliesRoutes = new Elysia({ prefix: "/api/v1/email-replies" }
     },
     {
       body: t.Object({
-        replyIds: t.Array(t.String({ format: "uuid" })),
+        replyIds: t.Array(t.String()),
+      }),
+    },
+  )
+
+  // Delete email reply
+  // Accepts email_reply ID (UUID), email ID (UUID), or threadId (string)
+  .delete(
+    "/:id",
+    async ({ params: { id } }) => {
+      await emailRepliesService.deleteEmailReply(id)
+      return { success: true, message: "답장이 삭제되었습니다." }
+    },
+    {
+      params: t.Object({
+        id: t.String(),
       }),
     },
   )

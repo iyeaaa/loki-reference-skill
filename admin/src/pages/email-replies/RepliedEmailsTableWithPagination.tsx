@@ -1,6 +1,7 @@
-import { ChevronLeft, ChevronRight, User } from "lucide-react"
+import { ChevronLeft, ChevronRight, Layers, User } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -13,6 +14,9 @@ interface RepliedEmailsTableWithPaginationProps {
   selectedStatuses: string[]
   selectedThreadId?: string | null
   onThreadSelect: (threadId: string) => void
+  selectedThreads: string[]
+  onToggleThread: (threadId: string) => void
+  onToggleAll: (threadIds: string[]) => void
 }
 
 export function RepliedEmailsTableWithPagination({
@@ -21,6 +25,9 @@ export function RepliedEmailsTableWithPagination({
   selectedStatuses,
   selectedThreadId,
   onThreadSelect,
+  selectedThreads,
+  onToggleThread,
+  onToggleAll,
 }: RepliedEmailsTableWithPaginationProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
@@ -60,6 +67,28 @@ export function RepliedEmailsTableWithPagination({
         return "반송됨"
       case "failed":
         return "실패"
+      default:
+        return status
+    }
+  }
+
+  const getEnrollmentStatusText = (
+    status: "active" | "paused" | "completed" | "stopped" | "bounced" | "unsubscribed" | null,
+  ) => {
+    if (!status) return "-"
+    switch (status) {
+      case "active":
+        return "진행 중"
+      case "paused":
+        return "일시중지"
+      case "completed":
+        return "완료"
+      case "stopped":
+        return "중단됨"
+      case "bounced":
+        return "반송됨"
+      case "unsubscribed":
+        return "구독취소"
       default:
         return status
     }
@@ -118,28 +147,40 @@ export function RepliedEmailsTableWithPagination({
         <div className="overflow-x-auto">
           <table className="w-full table-fixed">
             <colgroup>
-              <col className="w-[15%] min-w-[150px]" />
-              <col className="w-[17%] min-w-[160px]" />
-              <col className="w-[8%] min-w-[70px]" />
-              <col className="w-[20%] min-w-[100px]" />
-              <col className="w-[12%] min-w-[100px]" />
-              <col className="w-[12%] min-w-[100px]" />
+              <col className="w-[40px]" />
+              <col className="w-[16%] min-w-[140px]" />
+              <col className="w-[22%] min-w-[170px]" />
               <col className="w-[8%] min-w-[80px]" />
-              <col className="w-[8%] min-w-[90px]" />
+              <col className="w-[16%] min-w-[110px]" />
+              <col className="w-[16%] min-w-[110px]" />
+              <col className="w-[10%] min-w-[90px]" />
+              <col className="w-[10%] min-w-[100px]" />
             </colgroup>
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
+                <th className="px-3 py-2 text-center">
+                  <Checkbox
+                    checked={
+                      repliedEmails.length > 0 &&
+                      repliedEmails.every(
+                        (email) => email.threadId && selectedThreads.includes(email.threadId),
+                      )
+                    }
+                    onCheckedChange={() =>
+                      onToggleAll(
+                        repliedEmails.map((e) => e.threadId).filter((id): id is string => !!id),
+                      )
+                    }
+                  />
+                </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  발신자
+                  회사명
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   제목
                 </th>
                 <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   메시지
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  본문
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   리드
@@ -151,7 +192,7 @@ export function RepliedEmailsTableWithPagination({
                   상태
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  수신일
+                  날짜
                 </th>
               </tr>
             </thead>
@@ -164,63 +205,71 @@ export function RepliedEmailsTableWithPagination({
                 </tr>
               ) : (
                 repliedEmails.map((email) => {
-                  const bodyPreview = email.bodyText
-                    ? email.bodyText.replace(/\s+/g, " ").trim().slice(0, 60)
-                    : email.bodyHtml
-                      ? email.bodyHtml
-                          .replace(/<[^>]*>/g, "")
-                          .replace(/\s+/g, " ")
-                          .trim()
-                          .slice(0, 60)
-                      : ""
-
                   return (
                     <tr
                       key={email.id}
-                      onClick={() => email.threadId && onThreadSelect(email.threadId)}
-                      className={`cursor-pointer transition-colors ${
+                      className={`transition-colors ${
                         selectedThreadId === email.threadId
                           ? "bg-gray-100 dark:bg-gray-700"
                           : "hover:bg-gray-50 dark:hover:bg-gray-750"
                       }`}
                     >
-                      <td className="px-3 py-2 text-sm">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium truncate">{email.fromEmail}</div>
-                            {email.leadName && (
-                              <div className="text-xs text-gray-500 truncate">{email.leadName}</div>
-                            )}
-                          </div>
+                      <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={
+                            email.threadId ? selectedThreads.includes(email.threadId) : false
+                          }
+                          onCheckedChange={() => email.threadId && onToggleThread(email.threadId)}
+                        />
+                      </td>
+                      <td
+                        className="px-3 py-2 text-sm cursor-pointer"
+                        onClick={() => email.threadId && onThreadSelect(email.threadId)}
+                      >
+                        <div className="min-w-0">
+                          {email.companyName || email.contactName ? (
+                            <div className="font-medium break-words">
+                              {email.companyName || email.contactName}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-sm">
-                        <div className="truncate font-medium" title={email.subject || ""}>
+                      <td
+                        className="px-3 py-2 text-sm cursor-pointer"
+                        onClick={() => email.threadId && onThreadSelect(email.threadId)}
+                      >
+                        <div
+                          className="font-medium line-clamp-3 break-words"
+                          title={email.subject || ""}
+                        >
                           {email.subject || "(제목 없음)"}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-center text-xs text-gray-600 dark:text-gray-400">
+                      <td
+                        className="px-3 py-2 text-center text-xs text-gray-600 dark:text-gray-400 cursor-pointer"
+                        onClick={() => email.threadId && onThreadSelect(email.threadId)}
+                      >
                         {email.messageCount && email.messageCount > 1 ? email.messageCount : "-"}
                       </td>
-                      <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-400">
-                        <div className="truncate" title={bodyPreview}>
-                          {bodyPreview || "-"}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-xs">
-                        {email.leadName ? (
+                      <td
+                        className="px-3 py-2 text-xs cursor-pointer"
+                        onClick={() => email.threadId && onThreadSelect(email.threadId)}
+                      >
+                        {email.companyName || email.leadName ? (
                           <Popover>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <PopoverTrigger asChild>
                                   <button
                                     type="button"
-                                    className="flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-1.5 py-1 -mx-1.5 transition-colors text-left w-full min-w-0"
+                                    className="flex items-start gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-1.5 py-1 -mx-1.5 transition-colors text-left w-full min-w-0"
                                     onClick={(e) => e.stopPropagation()}
                                   >
-                                    <User className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                                    <span className="text-gray-600 dark:text-gray-300 truncate">
-                                      {email.leadName}
+                                    <User className="h-3 w-3 text-gray-400 flex-shrink-0 mt-0.5" />
+                                    <span className="text-gray-600 dark:text-gray-300 line-clamp-3 break-words">
+                                      {email.companyName || email.leadName}
                                     </span>
                                   </button>
                                 </PopoverTrigger>
@@ -229,40 +278,240 @@ export function RepliedEmailsTableWithPagination({
                                 <p>리드 정보 보기</p>
                               </TooltipContent>
                             </Tooltip>
-                            <PopoverContent className="w-80" align="start">
+                            <PopoverContent
+                              className="w-96 max-h-[600px] overflow-y-auto"
+                              align="start"
+                            >
                               <div className="space-y-3">
                                 <div className="flex items-center gap-2 pb-2 border-b">
                                   <User className="h-4 w-4 text-gray-500" />
                                   <h4 className="font-semibold text-sm">리드 정보</h4>
                                 </div>
-                                <div className="space-y-2 text-xs">
-                                  <div className="flex">
-                                    <span className="font-medium w-20 text-gray-700 dark:text-gray-300">
-                                      이름:
-                                    </span>
-                                    <span className="text-gray-600 dark:text-gray-400">
-                                      {email.leadName}
-                                    </span>
+                                <div className="space-y-3 text-xs">
+                                  {/* 기본 정보 */}
+                                  <div className="space-y-1.5">
+                                    {email.companyName && (
+                                      <div className="flex">
+                                        <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                          회사명:
+                                        </span>
+                                        <span className="text-gray-600 dark:text-gray-400 break-words">
+                                          {email.companyName}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {email.foundCompanyName && (
+                                      <div className="flex">
+                                        <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                          발견된 회사명:
+                                        </span>
+                                        <span className="text-gray-600 dark:text-gray-400 break-words">
+                                          {email.foundCompanyName}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {email.contactName && (
+                                      <div className="flex">
+                                        <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                          담당자명:
+                                        </span>
+                                        <span className="text-gray-600 dark:text-gray-400 break-words">
+                                          {email.contactName}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {email.leadName && (
+                                      <div className="flex">
+                                        <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                          리드명:
+                                        </span>
+                                        <span className="text-gray-600 dark:text-gray-400 break-words">
+                                          {email.leadName}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {email.leadEmail && (
+                                      <div className="flex">
+                                        <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                          이메일:
+                                        </span>
+                                        <span className="text-gray-600 dark:text-gray-400 break-words">
+                                          {email.leadEmail}
+                                        </span>
+                                      </div>
+                                    )}
                                   </div>
-                                  {email.leadEmail && (
-                                    <div className="flex">
-                                      <span className="font-medium w-20 text-gray-700 dark:text-gray-300">
-                                        이메일:
-                                      </span>
-                                      <span className="text-gray-600 dark:text-gray-400">
-                                        {email.leadEmail}
-                                      </span>
-                                    </div>
+
+                                  {/* 비즈니스 정보 */}
+                                  {(email.businessType ||
+                                    email.employeeCount ||
+                                    email.leadStatus ||
+                                    email.leadScore !== null ||
+                                    email.leadSource) && (
+                                    <>
+                                      <div className="border-t pt-2" />
+                                      <div className="space-y-1.5">
+                                        {email.businessType && (
+                                          <div className="flex">
+                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              업종:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {email.businessType}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {email.employeeCount && (
+                                          <div className="flex">
+                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              직원 수:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {email.employeeCount}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {email.leadStatus && (
+                                          <div className="flex">
+                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              리드 상태:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {email.leadStatus}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {email.leadScore !== null &&
+                                          email.leadScore !== undefined && (
+                                            <div className="flex">
+                                              <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                                리드 점수:
+                                              </span>
+                                              <span className="text-gray-600 dark:text-gray-400 break-words">
+                                                {email.leadScore}
+                                              </span>
+                                            </div>
+                                          )}
+                                        {email.leadSource && (
+                                          <div className="flex">
+                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              출처:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {email.leadSource}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </>
                                   )}
+
+                                  {/* 위치 정보 */}
+                                  {(email.address ||
+                                    email.country ||
+                                    email.city ||
+                                    email.state) && (
+                                    <>
+                                      <div className="border-t pt-2" />
+                                      <div className="space-y-1.5">
+                                        {email.country && (
+                                          <div className="flex">
+                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              국가:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {email.country}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {email.state && (
+                                          <div className="flex">
+                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              주/도:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {email.state}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {email.city && (
+                                          <div className="flex">
+                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              도시:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {email.city}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {email.address && (
+                                          <div className="flex">
+                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              주소:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {email.address}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {/* 웹사이트 정보 */}
+                                  {(email.websiteUrl || email.finalUrl) && (
+                                    <>
+                                      <div className="border-t pt-2" />
+                                      <div className="space-y-1.5">
+                                        {email.websiteUrl && (
+                                          <div className="flex">
+                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              웹사이트:
+                                            </span>
+                                            <a
+                                              href={email.websiteUrl}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+                                              onClick={(e) => e.stopPropagation()}
+                                            >
+                                              {email.websiteUrl}
+                                            </a>
+                                          </div>
+                                        )}
+                                        {email.finalUrl && email.finalUrl !== email.websiteUrl && (
+                                          <div className="flex">
+                                            <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              최종 URL:
+                                            </span>
+                                            <a
+                                              href={email.finalUrl}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+                                              onClick={(e) => e.stopPropagation()}
+                                            >
+                                              {email.finalUrl}
+                                            </a>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {/* ID */}
                                   {email.leadId && (
-                                    <div className="flex">
-                                      <span className="font-medium w-20 text-gray-700 dark:text-gray-300">
-                                        ID:
-                                      </span>
-                                      <span className="text-gray-600 dark:text-gray-400 font-mono text-xs">
-                                        {email.leadId}
-                                      </span>
-                                    </div>
+                                    <>
+                                      <div className="border-t pt-2" />
+                                      <div className="flex">
+                                        <span className="font-medium w-24 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                          ID:
+                                        </span>
+                                        <span className="text-gray-600 dark:text-gray-400 font-mono break-all">
+                                          {email.leadId}
+                                        </span>
+                                      </div>
+                                    </>
                                   )}
                                 </div>
                               </div>
@@ -273,18 +522,193 @@ export function RepliedEmailsTableWithPagination({
                         )}
                       </td>
                       <td className="px-3 py-2 text-xs">
-                        <div className="truncate">
-                          {email.sequenceName ? (
-                            <span className="text-gray-600">{email.sequenceName}</span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </div>
+                        {email.sequenceName ? (
+                          <Popover>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <PopoverTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="flex items-start gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-1.5 py-1 -mx-1.5 transition-colors text-left w-full min-w-0"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Layers className="h-3 w-3 text-gray-400 flex-shrink-0 mt-0.5" />
+                                    <span className="text-gray-600 dark:text-gray-300 line-clamp-3 break-words">
+                                      {email.sequenceName}
+                                    </span>
+                                  </button>
+                                </PopoverTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>시퀀스 정보 보기</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <PopoverContent
+                              className="w-96 max-h-[600px] overflow-y-auto"
+                              align="start"
+                            >
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2 pb-2 border-b">
+                                  <Layers className="h-4 w-4 text-gray-500" />
+                                  <h4 className="font-semibold text-sm">시퀀스 정보</h4>
+                                </div>
+                                <div className="space-y-3 text-xs">
+                                  {/* 기본 정보 */}
+                                  <div className="space-y-1.5">
+                                    <div className="flex">
+                                      <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                        시퀀스명:
+                                      </span>
+                                      <span className="text-gray-600 dark:text-gray-400 break-words">
+                                        {email.sequenceName}
+                                      </span>
+                                    </div>
+                                    {email.sequenceId && (
+                                      <div className="flex">
+                                        <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                          시퀀스 ID:
+                                        </span>
+                                        <span className="text-gray-600 dark:text-gray-400 font-mono break-all text-[10px]">
+                                          {email.sequenceId}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Enrollment 정보 */}
+                                  {email.enrollmentId && (
+                                    <>
+                                      <div className="border-t pt-2" />
+                                      <div className="space-y-1.5">
+                                        <div className="flex">
+                                          <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            등록 상태:
+                                          </span>
+                                          <span className="text-gray-600 dark:text-gray-400 break-words">
+                                            {getEnrollmentStatusText(
+                                              email.enrollmentStatus || null,
+                                            )}
+                                          </span>
+                                        </div>
+                                        {email.enrollmentCurrentStepOrder !== null &&
+                                          email.enrollmentCurrentStepOrder !== undefined && (
+                                            <div className="flex">
+                                              <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                                현재 스텝:
+                                              </span>
+                                              <span className="text-gray-600 dark:text-gray-400 break-words">
+                                                {email.enrollmentCurrentStepOrder + 1}번째 스텝
+                                              </span>
+                                            </div>
+                                          )}
+                                        {email.enrollmentEnrolledAt && (
+                                          <div className="flex">
+                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              등록일:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {new Date(email.enrollmentEnrolledAt).toLocaleString(
+                                                "ko-KR",
+                                              )}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {email.enrollmentFirstEmailSentAt && (
+                                          <div className="flex">
+                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              첫 이메일 전송:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {new Date(
+                                                email.enrollmentFirstEmailSentAt,
+                                              ).toLocaleString("ko-KR")}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {email.enrollmentLastEmailSentAt && (
+                                          <div className="flex">
+                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              마지막 이메일 전송:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {new Date(
+                                                email.enrollmentLastEmailSentAt,
+                                              ).toLocaleString("ko-KR")}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {email.enrollmentNextStepScheduledAt && (
+                                          <div className="flex">
+                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              다음 스텝 예정:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {new Date(
+                                                email.enrollmentNextStepScheduledAt,
+                                              ).toLocaleString("ko-KR")}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {email.enrollmentCompletedAt && (
+                                          <div className="flex">
+                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              완료일:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {new Date(email.enrollmentCompletedAt).toLocaleString(
+                                                "ko-KR",
+                                              )}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {email.enrollmentStoppedAt && (
+                                          <div className="flex">
+                                            <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                              중단일:
+                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-400 break-words">
+                                              {new Date(email.enrollmentStoppedAt).toLocaleString(
+                                                "ko-KR",
+                                              )}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {/* Enrollment ID */}
+                                  {email.enrollmentId && (
+                                    <>
+                                      <div className="border-t pt-2" />
+                                      <div className="flex">
+                                        <span className="font-medium w-32 text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                          Enrollment ID:
+                                        </span>
+                                        <span className="text-gray-600 dark:text-gray-400 font-mono break-all text-[10px]">
+                                          {email.enrollmentId}
+                                        </span>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </td>
-                      <td className="px-3 py-2 text-xs whitespace-nowrap">
+                      <td
+                        className="px-3 py-2 text-xs whitespace-nowrap cursor-pointer"
+                        onClick={() => email.threadId && onThreadSelect(email.threadId)}
+                      >
                         <span className="text-gray-600">{getStatusText(email.status)}</span>
                       </td>
-                      <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">
+                      <td
+                        className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap cursor-pointer"
+                        onClick={() => email.threadId && onThreadSelect(email.threadId)}
+                      >
                         {formatRelativeTime(email.createdAt)}
                       </td>
                     </tr>
@@ -295,8 +719,6 @@ export function RepliedEmailsTableWithPagination({
           </table>
         </div>
       </div>
-
-      {/* Pagination */}
       <div className="mt-6 space-y-4">
         {/* Pagination Info */}
         <div className="flex items-center justify-center">

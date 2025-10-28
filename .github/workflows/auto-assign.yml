@@ -1,0 +1,55 @@
+name: Auto-assign to Gyudong Kim
+
+on:
+  issues:
+    types: [opened]
+  project_card:
+    types: [created]
+
+jobs:
+  auto-assign:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Assign to Gyudong Kim and Creator
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const defaultAssignee = 'classygoody';
+            const creator = context.actor;
+
+            // assignees 배열 생성 (중복 제거)
+            const assignees = [...new Set([defaultAssignee, creator])];
+
+            // 이슈인 경우
+            if (context.eventName === 'issues') {
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                assignees: assignees
+              });
+              console.log(`Assigned issue #${context.issue.number} to ${assignees.join(', ')}`);
+            }
+
+            // 프로젝트 카드인 경우
+            if (context.eventName === 'project_card') {
+              const card = context.payload.project_card;
+              if (card.content_url) {
+                const urlParts = card.content_url.split('/');
+                const issueNumber = parseInt(urlParts[urlParts.length - 1]);
+
+                await github.rest.issues.addAssignees({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  assignees: assignees
+                });
+                console.log(`Assigned project card item #${issueNumber} to ${assignees.join(', ')}`);
+              }
+            }

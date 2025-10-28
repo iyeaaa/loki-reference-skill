@@ -1,21 +1,15 @@
-import { AlertCircle, Check, Search, Trash2, X } from "lucide-react"
+import { AlertCircle, Search, Trash2, X } from "lucide-react"
 import { useCallback, useEffect, useId, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import { useParams } from "react-router-dom"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import {
-  useBulkDeleteEmailReplies,
-  useBulkMarkAsRead,
-  useBulkMarkAsUnread,
-} from "@/lib/api/hooks/email-replies"
+import { useBulkDeleteEmailReplies } from "@/lib/api/hooks/email-replies"
 import { useEmail } from "@/lib/api/hooks/emails"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { ConfirmDialog } from "./ConfirmDialog"
-import { EmailRepliesBulkActionModal } from "./EmailRepliesBulkActionModal"
 import { RepliedEmailsTableWithPagination } from "./RepliedEmailsTableWithPagination"
 import { ThreadDetailPanel } from "./ThreadDetailPanel"
 
@@ -31,16 +25,12 @@ export default function EmailRepliesPage() {
   const [leftWidth, setLeftWidth] = useState(50) // percentage
   const [isResizing, setIsResizing] = useState(false)
   const [selectedThreads, setSelectedThreads] = useState<string[]>([])
-  const [showBulkActionModal, setShowBulkActionModal] = useState(false)
-  const [bulkActionType, setBulkActionType] = useState<"read_status" | null>(null)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
   // emailId가 있으면 해당 이메일 정보를 가져와서 threadId 설정
   const { data: emailData } = useEmail(emailId || "", !!emailId)
 
   // Bulk action hooks
-  const bulkMarkAsRead = useBulkMarkAsRead()
-  const bulkMarkAsUnread = useBulkMarkAsUnread()
   const bulkDeleteEmails = useBulkDeleteEmailReplies()
 
   // emailData가 로드되면 threadId 설정
@@ -77,29 +67,6 @@ export default function EmailRepliesPage() {
   }, [])
 
   // Bulk action handlers
-  const handleBulkAction = async (actionType: string, value: string) => {
-    if (selectedThreads.length === 0) {
-      toast.error(t("email-replies.bulk.noSelection"))
-      return
-    }
-
-    if (actionType === "read_status") {
-      if (value === "read") {
-        bulkMarkAsRead.mutate(selectedThreads, {
-          onSuccess: () => {
-            setSelectedThreads([])
-          },
-        })
-      } else if (value === "unread") {
-        bulkMarkAsUnread.mutate(selectedThreads, {
-          onSuccess: () => {
-            setSelectedThreads([])
-          },
-        })
-      }
-    }
-  }
-
   const handleBulkDelete = () => {
     if (selectedThreads.length === 0) return
     setShowConfirmDialog(true)
@@ -111,15 +78,6 @@ export default function EmailRepliesPage() {
         setSelectedThreads([])
       },
     })
-  }
-
-  const openBulkActionModal = (type: "read_status") => {
-    if (selectedThreads.length === 0) {
-      toast.error(t("email-replies.bulk.noSelection"))
-      return
-    }
-    setBulkActionType(type)
-    setShowBulkActionModal(true)
   }
 
   // Resizer handlers
@@ -229,14 +187,6 @@ export default function EmailRepliesPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => openBulkActionModal("read_status")}
-                    >
-                      <Check className="h-4 w-4 mr-1" />
-                      {t("email-replies.bulk.changeReadStatus")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
                       onClick={handleBulkDelete}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
@@ -293,18 +243,6 @@ export default function EmailRepliesPage() {
           </div>
         )}
       </div>
-
-      {/* Bulk Action Modal */}
-      <EmailRepliesBulkActionModal
-        isOpen={showBulkActionModal}
-        onClose={() => {
-          setShowBulkActionModal(false)
-          setBulkActionType(null)
-        }}
-        onConfirm={handleBulkAction}
-        emailCount={selectedThreads.length}
-        actionType={bulkActionType}
-      />
 
       {/* Confirm Delete Dialog */}
       <ConfirmDialog

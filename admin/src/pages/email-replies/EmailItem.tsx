@@ -25,8 +25,11 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
   )
   const senderDomain = getDomain(senderEmail)
 
-  const content =
-    email.bodyText || (email.bodyHtml ? email.bodyHtml.replace(/<[^>]*>/g, "").trim() : "")
+  // 미리보기 content는 접힌 상태일 때만 계산 (최적화)
+  const getPreviewContent = () => {
+    if (isExpanded) return ""
+    return email.bodyText || (email.bodyHtml ? email.bodyHtml.replace(/<[^>]*>/g, "").trim() : "")
+  }
 
   return (
     <div className="w-full rounded-lg border-t pt-4 pb-2 px-2">
@@ -122,7 +125,7 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
                 </div>
               ) : (
                 <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
-                  {content || "(내용 없음)"}
+                  {getPreviewContent() || "(내용 없음)"}
                 </div>
               )}
             </div>

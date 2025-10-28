@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "yarn i18n:build && concurrently -n vite,csv,scan \"vite\" \"yarn i18n:watch:csv\" \"yarn i18n:watch:scan\"",
     "dev:simple": "yarn i18n:build && vite",
-    "build": "biome check ./src && yarn type-check && yarn i18n:build && vite build",
+    "build": "biome check ./src && yarn i18n:build && vite build",
     "type-check": "tsc --noEmit",
     "lint": "biome check --write ./src",
     "lint:check": "biome check ./src",

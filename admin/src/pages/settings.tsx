@@ -1,43 +1,44 @@
 import { Building2, FileUp, Settings as SettingsIcon, User, Users } from "lucide-react"
 import { useEffect, useId, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
+import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useCurrentUser, useUpdateProfileMutation } from "@/lib/api/hooks/auth"
 
-
-
 export default function SettingsPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const nameId = useId()
   const emailId = useId()
   const employeeIdInput = useId()
 
+  const { data: currentUser, isLoading } = useCurrentUser()
+  const updateProfileMutation = useUpdateProfileMutation()
+
   const systemManagementItems = [
     {
-      title: "워크스페이스 관리",
-      description: "워크스페이스를 생성하고 관리합니다",
+      title: t("settings.system.workspaces.title"),
+      description: t("settings.system.workspaces.desc"),
       url: "/workspaces",
       icon: Building2,
     },
     {
-      title: "유저 관리",
-      description: "사용자 계정을 관리합니다",
+      title: t("settings.system.users.title"),
+      description: t("settings.system.users.desc"),
       url: "/users",
       icon: Users,
     },
     {
-      title: "리드 데이터 임포트",
-      description: "CSV 파일로 리드 데이터를 일괄 등록합니다",
+      title: t("settings.system.import.title"),
+      description: t("settings.system.import.desc"),
       url: "/lead-import",
       icon: FileUp,
     },
   ]
-
-  const { data: currentUser, isLoading } = useCurrentUser()
-  const updateProfileMutation = useUpdateProfileMutation()
 
   const [formData, setFormData] = useState({
     username: "",
@@ -71,7 +72,7 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="p-6">
-        <div className="text-center">로딩 중...</div>
+        <div className="text-center">{t("common.loading")}</div>
       </div>
     )
   }
@@ -79,11 +80,14 @@ export default function SettingsPage() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <div className="flex items-center gap-2 mb-2">
-          <SettingsIcon className="h-6 w-6" />
-          <h1 className="text-2xl font-bold">설정 및 시스템 관리</h1>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <SettingsIcon className="h-6 w-6" />
+            <h1 className="text-2xl font-bold">{t("settings.title")}</h1>
+          </div>
+          <LanguageSwitcher />
         </div>
-        <p className="text-muted-foreground">계정 정보와 시스템을 관리합니다</p>
+        <p className="text-muted-foreground">{t("settings.subtitle")}</p>
       </div>
 
       <div className="space-y-6">
@@ -92,14 +96,14 @@ export default function SettingsPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              <CardTitle>프로필 설정</CardTitle>
+              <CardTitle>{t("settings.profile.title")}</CardTitle>
             </div>
-            <CardDescription>계정 정보를 관리합니다</CardDescription>
+            <CardDescription>{t("settings.profile.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor={nameId}>이름</Label>
+                <Label htmlFor={nameId}>{t("settings.profile.name")}</Label>
                 <Input
                   id={nameId}
                   name="username"
@@ -110,7 +114,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor={emailId}>이메일</Label>
+                <Label htmlFor={emailId}>{t("settings.profile.email")}</Label>
                 <Input
                   id={emailId}
                   name="email"
@@ -122,7 +126,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor={employeeIdInput}>사원번호</Label>
+                <Label htmlFor={employeeIdInput}>{t("settings.profile.employeeId")}</Label>
                 <Input
                   id={employeeIdInput}
                   name="employeeId"
@@ -133,7 +137,9 @@ export default function SettingsPage() {
                 />
               </div>
               <Button type="submit" disabled={updateProfileMutation.isPending}>
-                {updateProfileMutation.isPending ? "저장 중..." : "변경사항 저장"}
+                {updateProfileMutation.isPending
+                  ? t("settings.profile.saving")
+                  : t("settings.profile.saveChanges")}
               </Button>
             </form>
           </CardContent>
@@ -142,8 +148,8 @@ export default function SettingsPage() {
         {/* 시스템 관리 */}
         <Card>
           <CardHeader>
-            <CardTitle>시스템 관리</CardTitle>
-            <CardDescription>워크스페이스, 사용자 및 데이터를 관리합니다</CardDescription>
+            <CardTitle>{t("settings.system.title")}</CardTitle>
+            <CardDescription>{t("settings.system.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

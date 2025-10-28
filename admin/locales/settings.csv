@@ -1,0 +1,19 @@
+key,ko,en
+title,설정 및 시스템 관리,Settings & System Management
+subtitle,계정 정보와 시스템을 관리합니다,Manage your account and system
+profile.title,프로필 설정,Profile Settings
+profile.description,계정 정보를 관리합니다,Manage your account information
+profile.name,이름,Name
+profile.email,이메일,Email
+profile.employeeId,사원번호,Employee ID
+profile.saving,저장 중...,Saving...
+profile.saveChanges,변경사항 저장,Save Changes
+system.title,시스템 관리,System Management
+system.description,워크스페이스 사용자 및 데이터를 관리합니다,Manage workspaces users and data
+system.workspaces.title,워크스페이스 관리,Workspace Management
+system.workspaces.desc,워크스페이스를 생성하고 관리합니다,Create and manage workspaces
+system.users.title,유저 관리,User Management
+system.users.desc,사용자 계정을 관리합니다,Manage user accounts
+system.import.title,리드 데이터 임포트,Lead Data Import
+system.import.desc,CSV 파일로 리드 데이터를 일괄 등록합니다,Import lead data in bulk via CSV
+

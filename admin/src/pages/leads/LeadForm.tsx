@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query"
 import { Plus, Trash2 } from "lucide-react"
 import { useId, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -50,6 +51,7 @@ export function LeadForm({
   onSave,
   onCancel,
 }: LeadFormProps) {
+  const { t } = useTranslation()
   const companyNameId = useId()
   const foundCompanyNameId = useId()
   const contactNameId = useId()
@@ -175,13 +177,13 @@ export function LeadForm({
   }
 
   const statusOptions: { value: LeadStatus; label: string }[] = [
-    { value: "new", label: "신규" },
-    { value: "contacted", label: "연락됨" },
-    { value: "qualified", label: "적격" },
-    { value: "unqualified", label: "부적격" },
-    { value: "converted", label: "전환됨" },
-    { value: "lost", label: "실패" },
-    { value: "unsubscribed", label: "구독취소" },
+    { value: "new", label: t("leads.form.status.new") },
+    { value: "contacted", label: t("leads.form.status.contacted") },
+    { value: "qualified", label: t("leads.form.status.qualified") },
+    { value: "unqualified", label: t("leads.form.status.unqualified") },
+    { value: "converted", label: t("leads.form.status.converted") },
+    { value: "lost", label: t("leads.form.status.lost") },
+    { value: "unsubscribed", label: t("leads.form.status.unsubscribed") },
   ]
 
   return (
@@ -190,26 +192,26 @@ export function LeadForm({
         {/* Company Name */}
         <div className="space-y-2">
           <Label htmlFor={companyNameId} className="flex items-center gap-1">
-            회사명
+            {t("leads.form.companyName")}
             <span className="text-red-500">*</span>
           </Label>
           <Input
             id={companyNameId}
             value={formData.companyName}
             onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-            placeholder="회사명 입력 (필수)"
+            placeholder={t("leads.form.companyNameRequired")}
             required
           />
         </div>
 
         {/* Found Company Name */}
         <div className="space-y-2">
-          <Label htmlFor={foundCompanyNameId}>발견된 회사명</Label>
+          <Label htmlFor={foundCompanyNameId}>{t("leads.form.foundCompanyName")}</Label>
           <Input
             id={foundCompanyNameId}
             value={formData.foundCompanyName}
             onChange={(e) => setFormData({ ...formData, foundCompanyName: e.target.value })}
-            placeholder="발견된 회사명"
+            placeholder={t("leads.form.foundCompanyNamePlaceholder")}
           />
         </div>
       </div>
@@ -217,12 +219,12 @@ export function LeadForm({
       <div className="grid grid-cols-2 gap-4">
         {/* Contact Name */}
         <div className="space-y-2">
-          <Label htmlFor={contactNameId}>담당자명</Label>
+          <Label htmlFor={contactNameId}>{t("leads.form.contactName")}</Label>
           <Input
             id={contactNameId}
             value={formData.contactName}
             onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
-            placeholder="담당자명 (선택사항)"
+            placeholder={t("leads.form.contactNamePlaceholder")}
           />
         </div>
       </div>
@@ -231,7 +233,7 @@ export function LeadForm({
         {/* Website URL */}
         <div className="space-y-2">
           <Label htmlFor={websiteUrlId} className="flex items-center gap-1">
-            웹사이트 URL
+            {t("leads.form.websiteUrl")}
             <span className="text-red-500">*</span>
           </Label>
           <Input
@@ -239,20 +241,20 @@ export function LeadForm({
             type="url"
             value={formData.websiteUrl}
             onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
-            placeholder="https://example.com (필수)"
+            placeholder={t("leads.form.websiteUrlPlaceholder")}
             required
           />
         </div>
 
         {/* Final URL */}
         <div className="space-y-2">
-          <Label htmlFor={finalUrlId}>최종 URL</Label>
+          <Label htmlFor={finalUrlId}>{t("leads.form.finalUrl")}</Label>
           <Input
             id={finalUrlId}
             type="url"
             value={formData.finalUrl}
             onChange={(e) => setFormData({ ...formData, finalUrl: e.target.value })}
-            placeholder="https://example.com"
+            placeholder={t("leads.form.finalUrlPlaceholder")}
           />
         </div>
       </div>
@@ -260,18 +262,18 @@ export function LeadForm({
       <div className="grid grid-cols-2 gap-4">
         {/* Business Type */}
         <div className="space-y-2">
-          <Label htmlFor={businessTypeId}>업종</Label>
+          <Label htmlFor={businessTypeId}>{t("leads.form.businessType")}</Label>
           <Input
             id={businessTypeId}
             value={formData.businessType}
             onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
-            placeholder="예: IT, 제조업, 서비스업"
+            placeholder={t("leads.form.businessTypePlaceholder")}
           />
         </div>
 
         {/* Lead Status */}
         <div className="space-y-2">
-          <Label htmlFor="leadStatus">리드 상태</Label>
+          <Label htmlFor="leadStatus">{t("leads.form.leadStatus")}</Label>
           <Select
             value={formData.leadStatus}
             onValueChange={(value) =>
@@ -298,42 +300,42 @@ export function LeadForm({
       <div className="grid grid-cols-2 gap-4">
         {/* Country */}
         <div className="space-y-2">
-          <Label htmlFor={countryId}>국가</Label>
+          <Label htmlFor={countryId}>{t("leads.form.country")}</Label>
           <Input
             id={countryId}
             value={formData.country}
             onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-            placeholder="예: 대한민국"
+            placeholder={t("leads.form.countryPlaceholder")}
           />
         </div>
 
         {/* City */}
         <div className="space-y-2">
-          <Label htmlFor={cityId}>도시</Label>
+          <Label htmlFor={cityId}>{t("leads.form.city")}</Label>
           <Input
             id={cityId}
             value={formData.city}
             onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-            placeholder="예: 서울"
+            placeholder={t("leads.form.cityPlaceholder")}
           />
         </div>
       </div>
 
       {/* Address */}
       <div className="space-y-2">
-        <Label htmlFor={addressId}>주소</Label>
+        <Label htmlFor={addressId}>{t("leads.form.address")}</Label>
         <Input
           id={addressId}
           value={formData.address}
           onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-          placeholder="상세 주소 입력"
+          placeholder={t("leads.form.addressPlaceholder")}
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         {/* Lead Score */}
         <div className="space-y-2">
-          <Label htmlFor={leadScoreId}>리드 점수</Label>
+          <Label htmlFor={leadScoreId}>{t("leads.form.leadScore")}</Label>
           <Input
             id={leadScoreId}
             type="number"
@@ -341,18 +343,18 @@ export function LeadForm({
             max="100"
             value={formData.leadScore}
             onChange={(e) => setFormData({ ...formData, leadScore: e.target.value })}
-            placeholder="0-100"
+            placeholder={t("leads.form.leadScorePlaceholder")}
           />
         </div>
 
         {/* Lead Source */}
         <div className="space-y-2">
-          <Label htmlFor={leadSourceId}>리드 소스</Label>
+          <Label htmlFor={leadSourceId}>{t("leads.form.leadSource")}</Label>
           <Input
             id={leadSourceId}
             value={formData.leadSource}
             onChange={(e) => setFormData({ ...formData, leadSource: e.target.value })}
-            placeholder="예: 웹사이트, 추천, 광고"
+            placeholder={t("leads.form.leadSourcePlaceholder")}
           />
         </div>
       </div>
@@ -360,13 +362,13 @@ export function LeadForm({
       {/* Customer Group Selection (only for create mode) */}
       {!isEdit && customerGroups.length > 0 && (
         <div className="space-y-2">
-          <Label htmlFor={customerGroupId}>고객 그룹 (선택사항)</Label>
+          <Label htmlFor={customerGroupId}>{t("leads.form.customerGroup")}</Label>
           <Select value={selectedGroup || undefined} onValueChange={onGroupChange}>
             <SelectTrigger id={customerGroupId}>
-              <SelectValue placeholder="그룹을 선택하세요" />
+              <SelectValue placeholder={t("leads.form.customerGroupPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">그룹 없음</SelectItem>
+              <SelectItem value="none">{t("leads.form.noGroup")}</SelectItem>
               {customerGroups.map((group) => (
                 <SelectItem key={group.id} value={group.id}>
                   {group.name}
@@ -379,24 +381,24 @@ export function LeadForm({
 
       {/* Description */}
       <div className="space-y-2">
-        <Label htmlFor={descriptionId}>설명</Label>
+        <Label htmlFor={descriptionId}>{t("leads.form.description")}</Label>
         <Textarea
           id={descriptionId}
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="회사 설명 입력..."
+          placeholder={t("leads.form.descriptionPlaceholder")}
           rows={3}
         />
       </div>
 
       {/* Notes */}
       <div className="space-y-2">
-        <Label htmlFor={notesId}>노트</Label>
+        <Label htmlFor={notesId}>{t("leads.form.notes")}</Label>
         <Textarea
           id={notesId}
           value={formData.notes}
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          placeholder="추가 메모 입력..."
+          placeholder={t("leads.form.notesPlaceholder")}
           rows={3}
         />
       </div>
@@ -404,10 +406,10 @@ export function LeadForm({
       {/* Contacts Section */}
       <div className="space-y-3 pt-4 border-t">
         <div className="flex items-center justify-between">
-          <Label className="text-base font-semibold">연락처</Label>
+          <Label className="text-base font-semibold">{t("leads.form.contacts")}</Label>
           <Button type="button" size="sm" variant="outline" onClick={addContact}>
             <Plus className="h-4 w-4 mr-1" />
-            연락처 추가
+            {t("leads.form.addContact")}
           </Button>
         </div>
         {contacts.map((contact, index) => (
@@ -415,7 +417,7 @@ export function LeadForm({
             <div className="flex-1 space-y-2">
               <div className="grid grid-cols-3 gap-2">
                 <div className="space-y-1">
-                  <Label className="text-xs">타입</Label>
+                  <Label className="text-xs">{t("leads.form.contactTypeLabel")}</Label>
                   <Select
                     value={contact.contactType || "email"}
                     onValueChange={(value) =>
@@ -426,16 +428,16 @@ export function LeadForm({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="phone">전화</SelectItem>
-                      <SelectItem value="email">이메일</SelectItem>
-                      <SelectItem value="fax">팩스</SelectItem>
-                      <SelectItem value="other">기타</SelectItem>
+                      <SelectItem value="phone">{t("leads.form.contactType.phone")}</SelectItem>
+                      <SelectItem value="email">{t("leads.form.contactType.email")}</SelectItem>
+                      <SelectItem value="fax">{t("leads.form.contactType.fax")}</SelectItem>
+                      <SelectItem value="other">{t("leads.form.contactType.other")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs flex items-center gap-1">
-                    값
+                    {t("leads.form.contactValue")}
                     {index === 0 && contact.contactType === "email" && (
                       <span className="text-red-500">*</span>
                     )}
@@ -446,26 +448,28 @@ export function LeadForm({
                     onChange={(e) => updateContact(index, "contactValue", e.target.value)}
                     placeholder={
                       index === 0 && contact.contactType === "email"
-                        ? "이메일 입력 (필수)"
-                        : "연락처 입력"
+                        ? t("leads.form.contactValueRequired")
+                        : t("leads.form.contactValuePlaceholder")
                     }
                     required={index === 0 && contact.contactType === "email"}
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">라벨</Label>
+                  <Label className="text-xs">{t("leads.form.contactLabel")}</Label>
                   <Input
                     className="h-9"
                     value={contact.label || ""}
                     onChange={(e) => updateContact(index, "label", e.target.value)}
-                    placeholder="예: 주연락처"
+                    placeholder={t("leads.form.contactLabelPlaceholder")}
                   />
                 </div>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">
-                  담당자명
-                  <span className="ml-1 text-muted-foreground">(선택)</span>
+                  {t("leads.form.contactName")}
+                  <span className="ml-1 text-muted-foreground">
+                    {t("leads.form.contactNameOptional")}
+                  </span>
                 </Label>
                 <Input
                   className="h-9"
@@ -473,7 +477,7 @@ export function LeadForm({
                   onChange={(e) =>
                     updateContact(index, "contactName" as keyof LeadContact, e.target.value)
                   }
-                  placeholder="예: 홍길동"
+                  placeholder={t("leads.form.contactNamePlaceholder")}
                 />
               </div>
             </div>
@@ -493,17 +497,17 @@ export function LeadForm({
       {/* Social Media Section */}
       <div className="space-y-3 pt-4 border-t">
         <div className="flex items-center justify-between">
-          <Label className="text-base font-semibold">소셜 미디어</Label>
+          <Label className="text-base font-semibold">{t("leads.form.socialMedia")}</Label>
           <Button type="button" size="sm" variant="outline" onClick={addSocialMedia}>
             <Plus className="h-4 w-4 mr-1" />
-            SNS 추가
+            {t("leads.form.addSocialMedia")}
           </Button>
         </div>
         {socialMedia.map((social, index) => (
           <div key={index} className="flex gap-2 items-start p-3 border rounded-md bg-gray-50">
             <div className="flex-1 grid grid-cols-3 gap-2">
               <div className="space-y-1">
-                <Label className="text-xs">플랫폼</Label>
+                <Label className="text-xs">{t("leads.form.platform")}</Label>
                 <Select
                   value={social.platform || "facebook"}
                   onValueChange={(value) =>
@@ -514,29 +518,37 @@ export function LeadForm({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="facebook">Facebook</SelectItem>
-                    <SelectItem value="instagram">Instagram</SelectItem>
-                    <SelectItem value="twitter">Twitter</SelectItem>
-                    <SelectItem value="linkedin">LinkedIn</SelectItem>
+                    <SelectItem value="facebook">
+                      {t("leads.form.socialPlatform.facebook")}
+                    </SelectItem>
+                    <SelectItem value="instagram">
+                      {t("leads.form.socialPlatform.instagram")}
+                    </SelectItem>
+                    <SelectItem value="twitter">
+                      {t("leads.form.socialPlatform.twitter")}
+                    </SelectItem>
+                    <SelectItem value="linkedin">
+                      {t("leads.form.socialPlatform.linkedin")}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">URL</Label>
+                <Label className="text-xs">{t("leads.form.url")}</Label>
                 <Input
                   className="h-9"
                   value={social.url || ""}
                   onChange={(e) => updateSocialMedia(index, "url", e.target.value)}
-                  placeholder="https://..."
+                  placeholder={t("leads.form.urlPlaceholder")}
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">사용자명</Label>
+                <Label className="text-xs">{t("leads.form.username")}</Label>
                 <Input
                   className="h-9"
                   value={social.username || ""}
                   onChange={(e) => updateSocialMedia(index, "username", e.target.value)}
-                  placeholder="@username"
+                  placeholder={t("leads.form.usernamePlaceholder")}
                 />
               </div>
             </div>
@@ -555,10 +567,10 @@ export function LeadForm({
 
       <div className="flex justify-end gap-3 pt-4 border-t">
         <Button type="button" variant="outline" onClick={onCancel}>
-          취소
+          {t("leads.form.cancel")}
         </Button>
         <Button type="submit" className="min-w-[100px]">
-          {isEdit ? "수정 완료" : "생성"}
+          {isEdit ? t("leads.form.update") : t("leads.form.save")}
         </Button>
       </div>
     </form>

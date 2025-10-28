@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -64,6 +65,7 @@ export function LeadsTableWithPagination({
   allLeadsSelected = false,
   onToggleSelectAll,
 }: LeadsTableWithPaginationProps) {
+  const { t } = useTranslation()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
   const [currentWorkspace, setCurrentWorkspace] = useState(
@@ -377,10 +379,10 @@ export function LeadsTableWithPagination({
   const handleCopyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      toast.success("클립보드에 복사되었습니다")
+      toast.success(t("leads.table.toast.copySuccess"))
     } catch (error) {
       console.error("Failed to copy:", error)
-      toast.error("복사에 실패했습니다")
+      toast.error(t("leads.table.toast.copyError"))
     }
   }
 
@@ -429,7 +431,7 @@ export function LeadsTableWithPagination({
                   onClick={() => handleSort("contactName")}
                 >
                   <div className="flex items-center gap-1">
-                    담당자명
+                    {t("leads.table.column.contactName")}
                     {renderSortIcon("contactName")}
                   </div>
                 </th>
@@ -439,7 +441,7 @@ export function LeadsTableWithPagination({
                   onClick={() => handleSort("email")}
                 >
                   <div className="flex items-center gap-1">
-                    이메일
+                    {t("leads.table.column.email")}
                     {renderSortIcon("email")}
                   </div>
                 </th>
@@ -449,7 +451,7 @@ export function LeadsTableWithPagination({
                   onClick={() => handleSort("companyName")}
                 >
                   <div className="flex items-center gap-1">
-                    회사명
+                    {t("leads.table.column.companyName")}
                     {renderSortIcon("companyName")}
                   </div>
                 </th>
@@ -459,7 +461,7 @@ export function LeadsTableWithPagination({
                   onClick={() => handleSort("websiteUrl")}
                 >
                   <div className="flex items-center gap-1">
-                    웹사이트
+                    {t("leads.table.column.website")}
                     {renderSortIcon("websiteUrl")}
                   </div>
                 </th>
@@ -469,7 +471,7 @@ export function LeadsTableWithPagination({
                   onClick={() => handleSort("description")}
                 >
                   <div className="flex items-center gap-1">
-                    회사 설명
+                    {t("leads.table.column.description")}
                     {renderSortIcon("description")}
                   </div>
                 </th>
@@ -480,7 +482,7 @@ export function LeadsTableWithPagination({
                   onClick={() => handleSort("businessType")}
                 >
                   <div className="flex items-center gap-1">
-                    업종
+                    {t("leads.table.column.businessType")}
                     {renderSortIcon("businessType")}
                   </div>
                 </th>
@@ -490,7 +492,7 @@ export function LeadsTableWithPagination({
                   onClick={() => handleSort("country")}
                 >
                   <div className="flex items-center gap-1">
-                    국가
+                    {t("leads.table.column.country")}
                     {renderSortIcon("country")}
                   </div>
                 </th>
@@ -500,7 +502,7 @@ export function LeadsTableWithPagination({
                   onClick={() => handleSort("city")}
                 >
                   <div className="flex items-center gap-1">
-                    도시
+                    {t("leads.table.column.city")}
                     {renderSortIcon("city")}
                   </div>
                 </th>
@@ -510,7 +512,7 @@ export function LeadsTableWithPagination({
                   onClick={() => handleSort("foundedYear")}
                 >
                   <div className="flex items-center gap-1">
-                    설립년도
+                    {t("leads.table.column.foundedYear")}
                     {renderSortIcon("foundedYear")}
                   </div>
                 </th>
@@ -520,7 +522,7 @@ export function LeadsTableWithPagination({
                   onClick={() => handleSort("employeeCount")}
                 >
                   <div className="flex items-center gap-1">
-                    직원수
+                    {t("leads.table.column.employeeCount")}
                     {renderSortIcon("employeeCount")}
                   </div>
                 </th>
@@ -530,7 +532,7 @@ export function LeadsTableWithPagination({
                   onClick={() => handleSort("phone")}
                 >
                   <div className="flex items-center gap-1">
-                    전화번호
+                    {t("leads.table.column.phone")}
                     {renderSortIcon("phone")}
                   </div>
                 </th>
@@ -580,7 +582,7 @@ export function LeadsTableWithPagination({
                   onClick={() => handleSort("products")}
                 >
                   <div className="flex items-center gap-1">
-                    제품
+                    {t("leads.table.column.products")}
                     {renderSortIcon("products")}
                   </div>
                 </th>
@@ -590,7 +592,7 @@ export function LeadsTableWithPagination({
                   onClick={() => handleSort("businessSectors")}
                 >
                   <div className="flex items-center gap-1">
-                    산업 부문
+                    {t("leads.table.column.businessSectors")}
                     {renderSortIcon("businessSectors")}
                   </div>
                 </th>
@@ -600,7 +602,7 @@ export function LeadsTableWithPagination({
                   onClick={() => handleSort("productCategories")}
                 >
                   <div className="flex items-center gap-1">
-                    제품 카테고리
+                    {t("leads.table.column.productCategories")}
                     {renderSortIcon("productCategories")}
                   </div>
                 </th>
@@ -610,7 +612,7 @@ export function LeadsTableWithPagination({
                   onClick={() => handleSort("industryTypes")}
                 >
                   <div className="flex items-center gap-1">
-                    산업 카테고리
+                    {t("leads.table.column.industryTypes")}
                     {renderSortIcon("industryTypes")}
                   </div>
                 </th>
@@ -620,7 +622,7 @@ export function LeadsTableWithPagination({
                   onClick={() => handleSort("createdAt")}
                 >
                   <div className="flex items-center gap-1">
-                    생성일
+                    {t("leads.table.column.createdAt")}
                     {renderSortIcon("createdAt")}
                   </div>
                 </th>

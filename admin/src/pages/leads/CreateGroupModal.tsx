@@ -1,6 +1,7 @@
 import { Loader2, Plus } from "lucide-react"
 import { useId, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -41,6 +42,7 @@ export function CreateGroupModal({
   selectedLeadIds = [],
   currentLeadsData = [],
 }: CreateGroupModalProps) {
+  const { t } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
   const [workspaceId, setWorkspaceId] = useState(selectedWorkspaceId)
   const [groupName, setGroupName] = useState("")
@@ -68,12 +70,12 @@ export function CreateGroupModal({
 
   const handleCreateGroup = async () => {
     if (!workspaceId) {
-      toast.error("워크스페이스를 선택해주세요")
+      toast.error(t("leads.group.error.selectWorkspace"))
       return
     }
 
     if (!groupName.trim()) {
-      toast.error("그룹명을 입력해주세요")
+      toast.error(t("leads.group.error.enterGroupName"))
       return
     }
 
@@ -116,17 +118,15 @@ export function CreateGroupModal({
           const moreCount = Math.max(0, leadsWithGroups.length - 3)
 
           toast(
-            `${leadsWithGroups.length}개의 리드는 이미 그룹에 속해있어 제외되었습니다.\n(${skippedLeadNames}${
-              moreCount > 0 ? ` 외 ${moreCount}개` : ""
-            })`,
+            `${leadsWithGroups.length}${t(
+              "leads.group.warning.leadsAlreadyInGroup",
+            )}\n(${skippedLeadNames}${moreCount > 0 ? ` 외 ${moreCount}개` : ""})`,
             { duration: 5000 },
           )
         }
 
         if (leadsToAdd.length === 0) {
-          toast.error(
-            "그룹에 속하지 않은 리드가 없습니다. 모든 선택된 리드가 이미 그룹에 속해있습니다.",
-          )
+          toast.error(t("leads.group.warning.noLeadsAvailable"))
           setIsProcessing(false)
           return
         }
@@ -147,9 +147,9 @@ export function CreateGroupModal({
           leadIds: leadsToAdd,
         })
 
-        toast.success(`고객 그룹이 생성되었고 ${leadsToAdd.length}개의 리드가 추가되었습니다`)
+        toast.success(`${t("leads.group.success.createdWithLeads")} ${leadsToAdd.length}개`)
       } else {
-        toast.success("고객 그룹이 생성되었습니다")
+        toast.success(t("leads.group.success.created"))
       }
 
       // 모달 닫기 및 폼 초기화
@@ -183,25 +183,24 @@ export function CreateGroupModal({
   return (
     <>
       <Button variant="outline" size="sm" onClick={() => handleOpenChange(true)}>
-        <Plus className="h-4 w-4 mr-1" />새 그룹 생성
+        <Plus className="h-4 w-4 mr-1" />
+        {t("leads.group.createNewGroup")}
       </Button>
 
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>새 고객 그룹 생성</DialogTitle>
-            <DialogDescription>
-              새로운 고객 그룹을 생성합니다. 워크스페이스를 선택하고 그룹 정보를 입력하세요.
-            </DialogDescription>
+            <DialogTitle>{t("leads.group.createGroupTitle")}</DialogTitle>
+            <DialogDescription>{t("leads.group.createGroupDescription")}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             {/* 워크스페이스 선택 */}
             <div className="space-y-2">
-              <Label htmlFor={workspaceSelectId}>워크스페이스 *</Label>
+              <Label htmlFor={workspaceSelectId}>{t("leads.group.workspaceRequired")}</Label>
               <Select value={workspaceId} onValueChange={setWorkspaceId}>
                 <SelectTrigger id={workspaceSelectId}>
-                  <SelectValue placeholder="워크스페이스 선택" />
+                  <SelectValue placeholder={t("leads.group.workspacePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {workspaces.map((workspace) => (
@@ -215,10 +214,10 @@ export function CreateGroupModal({
 
             {/* 그룹명 입력 */}
             <div className="space-y-2">
-              <Label htmlFor={groupNameId}>그룹명 *</Label>
+              <Label htmlFor={groupNameId}>{t("leads.group.groupNameRequired")}</Label>
               <Input
                 id={groupNameId}
-                placeholder="고객 그룹명을 입력하세요"
+                placeholder={t("leads.group.groupNamePlaceholder")}
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
                 onKeyDown={(e) => {
@@ -232,10 +231,10 @@ export function CreateGroupModal({
 
             {/* 설명 입력 */}
             <div className="space-y-2">
-              <Label htmlFor={groupDescriptionId}>설명 (선택사항)</Label>
+              <Label htmlFor={groupDescriptionId}>{t("leads.group.descriptionOptional")}</Label>
               <Textarea
                 id={groupDescriptionId}
-                placeholder="그룹 설명을 입력하세요"
+                placeholder={t("leads.group.descriptionPlaceholder")}
                 value={groupDescription}
                 onChange={(e) => setGroupDescription(e.target.value)}
                 rows={3}
@@ -245,7 +244,7 @@ export function CreateGroupModal({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleCancel} disabled={isProcessing}>
-              취소
+              {t("leads.form.cancel")}
             </Button>
             <Button
               type="button"
@@ -255,10 +254,10 @@ export function CreateGroupModal({
               {isProcessing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  생성 중...
+                  {t("leads.group.creating")}
                 </>
               ) : (
-                "생성"
+                t("leads.group.create")
               )}
             </Button>
           </DialogFooter>

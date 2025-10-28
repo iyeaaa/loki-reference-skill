@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Download, Edit2, FileText, Plus, Search, Trash2, Upload, Users, X } from "lucide-react"
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -64,6 +65,7 @@ import { LeadGroupManagementModal } from "./LeadGroupManagementModal"
 import { LeadsTableWithPagination } from "./LeadsTableWithPagination"
 
 export default function LeadsPage() {
+  const { t } = useTranslation()
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>(() => {
     return localStorage.getItem("selectedWorkspace") || "all"
@@ -807,7 +809,7 @@ export default function LeadsPage() {
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">리드 관리</CardTitle>
+            <CardTitle className="text-lg">{t("leads.title.leadManagement")}</CardTitle>
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -825,11 +827,11 @@ export default function LeadsPage() {
                 }}
               >
                 <Upload className="h-4 w-4 mr-1" />
-                CSV / XLSX 업로드
+                {t("leads.button.csvUpload")}
               </Button>
               <Button onClick={() => setShowCreateDialog(true)}>
                 <Plus className="h-4 w-4 mr-1" />
-                리드 생성
+                {t("leads.button.createLead")}
               </Button>
             </div>
           </div>
@@ -841,7 +843,9 @@ export default function LeadsPage() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-700">고객 그룹 필터</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    {t("leads.filter.customerGroup")}
+                  </span>
                 </div>
                 <CreateGroupModal
                   workspaces={workspaces}
@@ -871,7 +875,7 @@ export default function LeadsPage() {
                         : "hover:bg-violet-500/5 hover:border-violet-500/50"
                     }`}
                   >
-                    전체
+                    {t("leads.group.all")}
                   </Button>
                   {customerGroups.map((group) => (
                     <ContextMenu key={group.id}>
@@ -903,7 +907,7 @@ export default function LeadsPage() {
                           className="cursor-pointer"
                         >
                           <Edit2 className="mr-2 h-4 w-4" />
-                          그룹 편집
+                          {t("leads.button.editGroup")}
                         </ContextMenuItem>
                         <ContextMenuSeparator />
                         <ContextMenuItem
@@ -911,7 +915,7 @@ export default function LeadsPage() {
                           className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          그룹 삭제
+                          {t("leads.button.deleteGroup")}
                         </ContextMenuItem>
                       </ContextMenuContent>
                     </ContextMenu>
@@ -919,7 +923,7 @@ export default function LeadsPage() {
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground text-center py-4 bg-gray-50 rounded-md">
-                  이 워크스페이스에는 아직 그룹이 없습니다. 위 버튼을 클릭하여 첫 그룹을 생성하세요.
+                  {t("leads.group.noGroups")}
                 </div>
               )}
             </div>
@@ -929,13 +933,15 @@ export default function LeadsPage() {
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
               <Search className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">고급 검색</span>
+              <span className="text-sm font-medium text-gray-700">
+                {t("leads.filter.advancedSearch")}
+              </span>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* 검색 타입 선택 */}
               <div className="space-y-2">
-                <Label htmlFor={searchTypeId}>검색 범위</Label>
+                <Label htmlFor={searchTypeId}>{t("leads.filter.searchScope")}</Label>
                 <Select
                   value={searchType}
                   onValueChange={(
@@ -950,41 +956,41 @@ export default function LeadsPage() {
                   ) => setSearchType(value)}
                 >
                   <SelectTrigger id={searchTypeId}>
-                    <SelectValue placeholder="검색 범위를 선택하세요" />
+                    <SelectValue placeholder={t("leads.filter.selectScope")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">통합검색</SelectItem>
-                    <SelectItem value="company">회사명</SelectItem>
-                    <SelectItem value="country">국가</SelectItem>
-                    <SelectItem value="email">이메일</SelectItem>
-                    <SelectItem value="website">웹사이트</SelectItem>
-                    <SelectItem value="industry">산업부문</SelectItem>
-                    <SelectItem value="category">제품카테고리</SelectItem>
+                    <SelectItem value="all">{t("leads.filter.unifiedSearch")}</SelectItem>
+                    <SelectItem value="company">{t("leads.filter.companyName")}</SelectItem>
+                    <SelectItem value="country">{t("leads.filter.country")}</SelectItem>
+                    <SelectItem value="email">{t("leads.filter.email")}</SelectItem>
+                    <SelectItem value="website">{t("leads.filter.website")}</SelectItem>
+                    <SelectItem value="industry">{t("leads.filter.industry")}</SelectItem>
+                    <SelectItem value="category">{t("leads.filter.category")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* 검색어 입력 */}
               <div className="space-y-2">
-                <Label htmlFor={searchInputId}>검색어</Label>
+                <Label htmlFor={searchInputId}>{t("leads.filter.searchTerm")}</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     id={searchInputId}
                     placeholder={
                       searchType === "all"
-                        ? "회사명, 이메일, 웹사이트로 검색..."
+                        ? t("leads.filter.searchPlaceholder.all")
                         : searchType === "company"
-                          ? "회사명으로 검색..."
+                          ? t("leads.filter.searchPlaceholder.company")
                           : searchType === "country"
-                            ? "국가로 검색..."
+                            ? t("leads.filter.searchPlaceholder.country")
                             : searchType === "email"
-                              ? "이메일로 검색..."
+                              ? t("leads.filter.searchPlaceholder.email")
                               : searchType === "website"
-                                ? "웹사이트로 검색..."
+                                ? t("leads.filter.searchPlaceholder.website")
                                 : searchType === "industry"
-                                  ? "산업부문으로 검색..."
-                                  : "제품카테고리로 검색..."
+                                  ? t("leads.filter.searchPlaceholder.industry")
+                                  : t("leads.filter.searchPlaceholder.category")
                     }
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
@@ -1012,7 +1018,7 @@ export default function LeadsPage() {
                 <div className="flex gap-2">
                   <Button onClick={() => setSearchQuery(searchInput)} className="flex-1">
                     <Search className="h-4 w-4 mr-2" />
-                    검색
+                    {t("leads.button.search")}
                   </Button>
                   <Button
                     variant="outline"
@@ -1036,20 +1042,21 @@ export default function LeadsPage() {
                   <span>
                     <strong>
                       {searchType === "all"
-                        ? "통합검색"
+                        ? t("leads.filter.unifiedSearch")
                         : searchType === "company"
-                          ? "회사명"
+                          ? t("leads.filter.companyName")
                           : searchType === "country"
-                            ? "국가"
+                            ? t("leads.filter.country")
                             : searchType === "email"
-                              ? "이메일"
+                              ? t("leads.filter.email")
                               : searchType === "website"
-                                ? "웹사이트"
+                                ? t("leads.filter.website")
                                 : searchType === "industry"
-                                  ? "산업부문"
-                                  : "제품카테고리"}
+                                  ? t("leads.filter.industry")
+                                  : t("leads.filter.category")}
                     </strong>
-                    에서 "<strong>{searchQuery}</strong>" 검색 중
+                    {t("leads.filter.searchResult.in")} "<strong>{searchQuery}</strong>"{" "}
+                    {t("leads.filter.searchResult.searching")}
                   </span>
                 </div>
               </div>
@@ -1065,13 +1072,17 @@ export default function LeadsPage() {
                 onClick={toggleSelectAllMode}
                 className={isSelectAllMode ? "bg-violet-600 hover:bg-violet-700" : ""}
               >
-                {isSelectAllMode ? "전체 선택 모드 해제" : "전체 선택 모드"}
+                {isSelectAllMode
+                  ? t("leads.button.exitSelectAllMode")
+                  : t("leads.button.selectAllMode")}
               </Button>
 
               {/* 전체 선택 상태 표시 */}
               {isSelectAllMode && (
                 <span className="text-sm text-muted-foreground">
-                  {allLeadsSelected ? "모든 리드가 선택됨" : "모든 리드를 선택하려면 클릭하세요"}
+                  {allLeadsSelected
+                    ? t("leads.status.allLeadsSelected")
+                    : t("leads.status.clickToSelectAll")}
                 </span>
               )}
             </div>
@@ -1081,7 +1092,9 @@ export default function LeadsPage() {
               <div className="flex items-center gap-4">
                 <div className="text-sm text-muted-foreground">
                   <span className="font-medium">
-                    {allLeadsSelected ? "전체 리드 선택됨" : `${selectedLeads.length}개 선택됨`}
+                    {allLeadsSelected
+                      ? t("leads.status.allSelected")
+                      : `${selectedLeads.length}${t("leads.status.selectedCount")}`}
                   </span>
                 </div>
                 <div className="flex gap-2">
@@ -1093,20 +1106,20 @@ export default function LeadsPage() {
                   >
                     <Download className="h-4 w-4 mr-1" />
                     {downloadSelectedLeadsCSV.isPending
-                      ? "다운로드 중..."
+                      ? t("leads.button.downloading")
                       : allLeadsSelected
-                        ? "전체 리드 다운로드"
-                        : "선택된 리드 다운로드"}
+                        ? t("leads.button.downloadAll")
+                        : t("leads.button.downloadSelected")}
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => openBulkActionModal("status")}>
-                    상태 변경
+                    {t("leads.button.changeStatus")}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => openBulkActionModal("businessType")}
                   >
-                    업종 변경
+                    {t("leads.button.changeBusinessType")}
                   </Button>
                   <Button
                     variant="outline"
@@ -1114,7 +1127,7 @@ export default function LeadsPage() {
                     onClick={() => openBulkActionModal("copyToGroup")}
                   >
                     <Users className="h-4 w-4 mr-1" />
-                    그룹에 복사
+                    {t("leads.button.copyToGroup")}
                   </Button>
                   <Button
                     variant="outline"
@@ -1123,7 +1136,7 @@ export default function LeadsPage() {
                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
                   >
                     <Trash2 className="h-4 w-4 mr-1" />
-                    삭제
+                    {t("leads.button.delete")}
                   </Button>
                 </div>
               </div>
@@ -1155,7 +1168,9 @@ export default function LeadsPage() {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">리드 생성</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">
+              {t("leads.dialog.createLead")}
+            </DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
             <LeadForm
@@ -1175,7 +1190,9 @@ export default function LeadsPage() {
       <Dialog open={!!editingLead} onOpenChange={() => setEditingLead(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">리드 정보 수정</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">
+              {t("leads.dialog.editLead")}
+            </DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
             {editingLead && (
@@ -1207,12 +1224,14 @@ export default function LeadsPage() {
       <Dialog open={showCSVUpload} onOpenChange={setShowCSVUpload}>
         <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader className="pb-4">
-            <DialogTitle className="text-xl font-semibold">CSV/XLSX 파일로 리드 추가</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">
+              {t("leads.dialog.csvUpload")}
+            </DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] space-y-6">
             {/* 그룹 정보 입력 */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">고객 그룹 정보</h3>
+              <h3 className="text-lg font-medium">{t("leads.group.groupInfo")}</h3>
 
               {/* 그룹 생성 방식 선택 */}
               <div className="space-y-3">
@@ -1227,7 +1246,7 @@ export default function LeadsPage() {
                       className="h-4 w-4 text-violet-600"
                     />
                     <Label htmlFor={existingGroupId} className="text-sm font-medium">
-                      기존 그룹에 추가
+                      {t("leads.group.addToExisting")}
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -1240,7 +1259,7 @@ export default function LeadsPage() {
                       className="h-4 w-4 text-violet-600"
                     />
                     <Label htmlFor={newGroupId} className="text-sm font-medium">
-                      새 그룹 생성
+                      {t("leads.group.createNew")}
                     </Label>
                   </div>
                 </div>
@@ -1250,10 +1269,10 @@ export default function LeadsPage() {
                 {!isNewGroup ? (
                   // 기존 그룹 선택
                   <div className="space-y-2">
-                    <Label htmlFor={groupSelectId}>그룹 선택 *</Label>
+                    <Label htmlFor={groupSelectId}>{t("leads.group.selectGroup")}</Label>
                     <Select value={groupName} onValueChange={setGroupName}>
                       <SelectTrigger id={groupSelectId}>
-                        <SelectValue placeholder="그룹을 선택하세요" />
+                        <SelectValue placeholder={t("leads.group.selectGroupPlaceholder")} />
                       </SelectTrigger>
                       <SelectContent>
                         {customerGroups?.map((group) => (
@@ -1267,23 +1286,23 @@ export default function LeadsPage() {
                 ) : (
                   // 새 그룹 이름 입력
                   <div className="space-y-2">
-                    <Label htmlFor={newGroupNameId}>새 그룹 이름 *</Label>
+                    <Label htmlFor={newGroupNameId}>{t("leads.group.newGroupName")}</Label>
                     <Input
                       id={newGroupNameId}
                       value={newGroupName}
                       onChange={(e) => setNewGroupName(e.target.value)}
-                      placeholder="새 그룹 이름을 입력하세요"
+                      placeholder={t("leads.group.newGroupNamePlaceholder")}
                     />
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor={groupDescriptionId}>그룹 설명</Label>
+                  <Label htmlFor={groupDescriptionId}>{t("leads.group.groupDescription")}</Label>
                   <Input
                     id={groupDescriptionId}
                     value={groupDescription}
                     onChange={(e) => setGroupDescription(e.target.value)}
-                    placeholder="그룹에 대한 설명"
+                    placeholder={t("leads.group.groupDescriptionPlaceholder")}
                   />
                 </div>
               </div>
@@ -1292,7 +1311,7 @@ export default function LeadsPage() {
             {/* 파일 업로드 섹션 */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">파일 업로드 (CSV/XLSX)</h3>
+                <h3 className="text-lg font-medium">{t("leads.file.upload")} (CSV/XLSX)</h3>
                 <div className="flex gap-2">
                   <Button
                     type="button"
@@ -1301,7 +1320,7 @@ export default function LeadsPage() {
                     onClick={() => handleDownloadTemplate("csv")}
                   >
                     <Download className="h-4 w-4 mr-2" />
-                    CSV 템플릿
+                    {t("leads.button.csvTemplate")}
                   </Button>
                   <Button
                     type="button"
@@ -1310,7 +1329,7 @@ export default function LeadsPage() {
                     onClick={() => handleDownloadTemplate("xlsx")}
                   >
                     <Download className="h-4 w-4 mr-2" />
-                    XLSX 템플릿
+                    {t("leads.button.xlsxTemplate")}
                   </Button>
                 </div>
               </div>
@@ -1323,19 +1342,17 @@ export default function LeadsPage() {
                       !
                     </div>
                     <div className="space-y-2">
-                      <h4 className="font-medium text-blue-900">필수 입력 필드 안내</h4>
+                      <h4 className="font-medium text-blue-900">
+                        {t("leads.file.requiredFields")}
+                      </h4>
                       <div className="text-sm text-blue-800">
                         <p className="mb-2">
-                          <strong>필수 필드:</strong> companyName (회사명), primaryEmail (주요
-                          이메일), websiteUrl (웹사이트 URL)
+                          <strong>{t("leads.file.requiredFieldsDescription")}</strong>
                         </p>
                         <p className="mb-2">
-                          <strong>선택 필드:</strong> 나머지 모든 컬럼 (업종, 설명, 전화번호 등)
+                          <strong>{t("leads.file.optionalFields")}</strong>
                         </p>
-                        <p className="text-xs text-blue-600">
-                          💡 템플릿을 다운로드하여 형식을 확인하고 데이터를 입력하세요. CSV와 XLSX
-                          파일 모두 지원됩니다.
-                        </p>
+                        <p className="text-xs text-blue-600">💡 {t("leads.file.templateTip")}</p>
                       </div>
                     </div>
                   </div>
@@ -1348,10 +1365,9 @@ export default function LeadsPage() {
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                       <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                       <div className="space-y-2">
-                        <h4 className="text-lg font-medium">파일 업로드</h4>
+                        <h4 className="text-lg font-medium">{t("leads.file.upload")}</h4>
                         <p className="text-sm text-muted-foreground">
-                          리드 데이터가 포함된 CSV 또는 XLSX 파일을 업로드하여 그룹에 자동으로
-                          추가하세요
+                          {t("leads.file.uploadDescription")}
                         </p>
                         <div className="pt-4">
                           <input
@@ -1366,7 +1382,9 @@ export default function LeadsPage() {
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isProcessingCSV}
                           >
-                            {isProcessingCSV ? "처리 중..." : "파일 선택 (CSV/XLSX)"}
+                            {isProcessingCSV
+                              ? t("leads.button.processing")
+                              : t("leads.button.selectFile")}
                           </Button>
                         </div>
                       </div>
@@ -1403,15 +1421,20 @@ export default function LeadsPage() {
                   <CardContent>
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary">{csvData.length}개 리드</Badge>
-                        <span className="text-sm text-muted-foreground">파싱 완료</span>
+                        <Badge variant="secondary">
+                          {csvData.length}
+                          {t("leads.file.leadsCount")}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          {t("leads.file.parsingComplete")}
+                        </span>
                       </div>
 
                       {csvErrors.length > 0 && (
                         <Alert>
                           <AlertDescription>
                             <div className="space-y-1">
-                              <p className="font-medium">다음 오류를 수정해주세요:</p>
+                              <p className="font-medium">{t("leads.error.fixErrors")}</p>
                               <ul className="list-disc list-inside space-y-1">
                                 {csvErrors.map((error) => (
                                   <li key={error} className="text-sm">
@@ -1426,14 +1449,14 @@ export default function LeadsPage() {
 
                       <div className="max-h-40 overflow-y-auto">
                         <div className="text-sm text-muted-foreground">
-                          <p className="font-medium mb-2">미리보기 (처음 5개):</p>
+                          <p className="font-medium mb-2">{t("leads.file.preview")}</p>
                           <div className="space-y-1">
                             {csvData.slice(0, 5).map((lead, index) => (
                               <div
                                 key={`${lead.companyName}-${lead.primaryEmail}-${index}`}
                                 className="p-2 bg-gray-50 rounded text-xs"
                               >
-                                {lead.companyName} - {lead.primaryEmail || "이메일 없음"}
+                                {lead.companyName} - {lead.primaryEmail || t("leads.file.noEmail")}
                               </div>
                             ))}
                           </div>
@@ -1446,7 +1469,7 @@ export default function LeadsPage() {
             </div>
             <div className="flex justify-end gap-2 pt-4 border-t">
               <Button variant="outline" onClick={() => setShowCSVUpload(false)}>
-                취소
+                {t("leads.button.cancel")}
               </Button>
               <Button
                 onClick={handleCSVUpload}
@@ -1458,7 +1481,7 @@ export default function LeadsPage() {
                   (isNewGroup && !newGroupName.trim())
                 }
               >
-                {isUploadingLeads ? "처리 중..." : "리드 추가"}
+                {isUploadingLeads ? t("leads.button.processing") : t("leads.button.addLead")}
               </Button>
             </div>
           </div>
@@ -1494,14 +1517,16 @@ export default function LeadsPage() {
       <ConfirmDialog
         open={bulkDeleteConfirmOpen}
         onOpenChange={setBulkDeleteConfirmOpen}
-        title="리드 대량 삭제"
+        title={t("leads.dialog.bulkDelete")}
         description={
           allLeadsSelected
-            ? "전체 리드를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다."
-            : `선택한 ${selectedLeads.length}개의 리드를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`
+            ? t("leads.dialog.bulkDeleteDescription.all")
+            : t("leads.dialog.bulkDeleteDescription.selected", {
+                count: selectedLeads.length,
+              })
         }
-        confirmText="삭제"
-        cancelText="취소"
+        confirmText={t("leads.button.delete")}
+        cancelText={t("leads.button.cancel")}
         onConfirm={confirmBulkDelete}
         variant="destructive"
       />
@@ -1510,12 +1535,12 @@ export default function LeadsPage() {
       <ConfirmDialog
         open={groupDeleteConfirmOpen}
         onOpenChange={setGroupDeleteConfirmOpen}
-        title="그룹 삭제"
-        description={`"${
-          groupToDelete?.name || ""
-        }" 그룹을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`}
-        confirmText="삭제"
-        cancelText="취소"
+        title={t("leads.dialog.deleteGroup")}
+        description={t("leads.dialog.deleteGroupDescription", {
+          groupName: groupToDelete?.name || "",
+        })}
+        confirmText={t("leads.button.delete")}
+        cancelText={t("leads.button.cancel")}
         onConfirm={confirmGroupDelete}
         variant="destructive"
       />

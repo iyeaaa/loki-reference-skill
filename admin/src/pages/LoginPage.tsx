@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 import * as z from "zod"
+import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Combobox } from "@/components/ui/combobox"
@@ -132,7 +133,10 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50 via-white to-blue-50">
-      <Card className="w-full max-w-md shadow-2xl border-0">
+      <Card className="w-full max-w-md shadow-2xl border-0 relative">
+        <div className="absolute top-4 right-4 z-10">
+          <LanguageSwitcher />
+        </div>
         <CardHeader className="text-center pb-0">
           <div className="flex justify-center mb-6">
             <div className="relative w-32 h-32">

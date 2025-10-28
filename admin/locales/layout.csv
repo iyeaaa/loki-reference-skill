@@ -1,0 +1,11 @@
+key,ko,en
+page.customerMonitoring,고객 모니터링,Customer Monitoring
+page.leadManagement,전체 고객 관리,Lead Management
+page.customerGroupManagement,고객 그룹 관리,Customer Group Management
+page.sequenceManagement,팔로우업 시퀀스 관리,Follow-up Sequence Management
+page.emailTemplateManagement,메일 템플릿 관리,Email Template Management
+page.replyManagement,고객 답장 관리,Reply Management
+page.workspaceManagement,워크스페이스 관리,Workspace Management
+page.userManagement,유저 관리,User Management
+page.emailSendTest,메일 발송 테스트,Email Send Test
+page.settings,설정,Settings

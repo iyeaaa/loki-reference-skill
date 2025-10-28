@@ -371,7 +371,11 @@ export function SequencesTableWithPagination({
                           handleToggleStatus(sequence)
                         }}
                         className="text-xs h-8 px-3"
-                        title={sequence.status === "active" ? t("sequences.table.button.pause") : t("sequences.table.button.activate")}
+                        title={
+                          sequence.status === "active"
+                            ? t("sequences.table.button.pause")
+                            : t("sequences.table.button.activate")
+                        }
                         disabled={
                           sequence.status === "archived" ||
                           sequence.status === "completed" ||
@@ -498,7 +502,9 @@ export function SequencesTableWithPagination({
 
         {/* Page Jump */}
         <div className="flex items-center justify-center gap-2">
-          <span className="text-sm text-muted-foreground">{t("sequences.table.pagination.page")}</span>
+          <span className="text-sm text-muted-foreground">
+            {t("sequences.table.pagination.page")}
+          </span>
           <Input
             type="number"
             min="1"
@@ -521,7 +527,9 @@ export function SequencesTableWithPagination({
       >
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t("sequences.table.modal.title", { sequenceName: selectedSequenceForModal?.name })}</DialogTitle>
+            <DialogTitle>
+              {t("sequences.table.modal.title", { sequenceName: selectedSequenceForModal?.name })}
+            </DialogTitle>
           </DialogHeader>
           <div className="mt-4">
             {customerGroupData && customerGroupData.members.length > 0 ? (
@@ -569,7 +577,9 @@ export function SequencesTableWithPagination({
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">{t("sequences.table.modal.noCustomers")}</div>
+              <div className="text-center py-8 text-gray-500">
+                {t("sequences.table.modal.noCustomers")}
+              </div>
             )}
           </div>
         </DialogContent>

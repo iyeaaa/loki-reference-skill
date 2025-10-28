@@ -1,5 +1,6 @@
 import { X } from "lucide-react"
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -32,18 +33,19 @@ export function EmailTemplateFilters({
   onWorkspaceChange,
   onClearFilters,
 }: EmailTemplateFiltersProps) {
+  const { t } = useTranslation()
   const sharedStatuses = [
-    { value: "shared", label: "공유됨" },
-    { value: "private", label: "비공개" },
+    { value: "shared", label: t("emailTemplates.filter.shared") },
+    { value: "private", label: t("emailTemplates.filter.private") },
   ]
 
   // Common categories (can be customized)
   const categoryOptions = [
-    { value: "welcome", label: "환영" },
-    { value: "promotion", label: "프로모션" },
-    { value: "transaction", label: "거래" },
-    { value: "notification", label: "알림" },
-    { value: "newsletter", label: "뉴스레터" },
+    { value: "welcome", label: t("emailTemplates.filter.category.welcome") },
+    { value: "promotion", label: t("emailTemplates.filter.category.promotion") },
+    { value: "transaction", label: t("emailTemplates.filter.category.transaction") },
+    { value: "notification", label: t("emailTemplates.filter.category.notification") },
+    { value: "newsletter", label: t("emailTemplates.filter.category.newsletter") },
   ]
 
   const [customCategory, setCustomCategory] = useState("")
@@ -83,7 +85,7 @@ export function EmailTemplateFilters({
           {/* Shared Status Filter */}
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-24">
-              공유 상태
+              {t("emailTemplates.filter.sharedStatus")}
             </span>
             <div className="flex flex-wrap gap-3">
               {sharedStatuses.map((status) => (
@@ -107,7 +109,7 @@ export function EmailTemplateFilters({
           {/* Category Filter */}
           <div className="flex items-start gap-4">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-24 pt-2">
-              카테고리
+              {t("emailTemplates.filter.categoryLabel")}
             </span>
             <div className="flex-1 space-y-3">
               <div className="flex flex-wrap gap-3">
@@ -129,7 +131,7 @@ export function EmailTemplateFilters({
               </div>
               <div className="flex gap-2 max-w-md">
                 <Input
-                  placeholder="커스텀 카테고리 추가..."
+                  placeholder={t("emailTemplates.filter.customCategoryPlaceholder")}
                   value={customCategory}
                   onChange={(e) => setCustomCategory(e.target.value)}
                   onKeyDown={(e) => {
@@ -147,7 +149,7 @@ export function EmailTemplateFilters({
                   onClick={addCustomCategory}
                   disabled={!customCategory}
                 >
-                  추가
+                  {t("emailTemplates.filter.add")}
                 </Button>
               </div>
             </div>
@@ -156,7 +158,7 @@ export function EmailTemplateFilters({
           {/* Workspace Filter */}
           <div className="flex items-start gap-4">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-24 pt-2">
-              워크스페이스
+              {t("emailTemplates.filter.workspace")}
             </span>
             <div className="flex-1 max-w-md">
               <MultiSelectCombobox
@@ -166,9 +168,9 @@ export function EmailTemplateFilters({
                 }))}
                 value={selectedWorkspaces}
                 onValueChange={onWorkspaceChange}
-                placeholder="워크스페이스를 선택하세요..."
-                searchPlaceholder="워크스페이스 검색..."
-                emptyText="검색 결과가 없습니다."
+                placeholder={t("emailTemplates.filter.workspacePlaceholder")}
+                searchPlaceholder={t("emailTemplates.filter.workspaceSearchPlaceholder")}
+                emptyText={t("emailTemplates.filter.noResults")}
               />
             </div>
           </div>
@@ -185,7 +187,7 @@ export function EmailTemplateFilters({
                     key={status}
                     className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs rounded-full"
                   >
-                    공유: {statusLabel}
+                    {t("emailTemplates.filter.sharedLabel")}: {statusLabel}
                     <button
                       type="button"
                       onClick={() => toggleSharedStatus(status)}
@@ -204,7 +206,7 @@ export function EmailTemplateFilters({
                     key={category}
                     className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs rounded-full"
                   >
-                    카테고리: {categoryLabel}
+                    {t("emailTemplates.filter.categoryLabel")}: {categoryLabel}
                     <button
                       type="button"
                       onClick={() => toggleCategory(category)}
@@ -222,7 +224,7 @@ export function EmailTemplateFilters({
                     key={wsId}
                     className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-xs rounded-full"
                   >
-                    워크스페이스: {ws?.name || wsId}
+                    {t("emailTemplates.filter.workspaceLabel")}: {ws?.name || wsId}
                     <button
                       type="button"
                       onClick={() =>
@@ -244,7 +246,7 @@ export function EmailTemplateFilters({
           <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
             <Button variant="ghost" size="sm" onClick={onClearFilters} className="text-xs">
               <X className="w-3 h-3 mr-1" />
-              필터 초기화
+              {t("emailTemplates.filter.clearFilters")}
             </Button>
           </div>
         )}

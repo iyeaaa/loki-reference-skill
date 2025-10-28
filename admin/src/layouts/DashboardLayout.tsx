@@ -1,5 +1,6 @@
 import { User } from "lucide-react"
 import { Suspense, useEffect, useMemo, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Outlet, useLocation } from "react-router-dom"
 import { AppSidebar } from "@/components/AppSidebar"
 import { ProfileCard } from "@/components/ProfileCard"
@@ -16,9 +17,10 @@ import { WorkspaceSelector } from "@/components/ui/workspace-selector"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 
 function DashboardContent() {
+  const { t } = useTranslation()
   const location = useLocation()
   const pathname = location.pathname
-  const pageName = getPageName(pathname)
+  const pageName = getPageName(pathname, t)
   const [showProfileCard, setShowProfileCard] = useState(false)
   const [selectedWorkspace, setSelectedWorkspace] = useState<string>(() => {
     return localStorage.getItem("selectedWorkspace") || "all"
@@ -47,8 +49,15 @@ function DashboardContent() {
 
   // "전체" 옵션을 포함한 워크스페이스 목록 생성 (useMemo로 메모이제이션)
   const workspaceOptions: WorkspaceOption[] = useMemo(
-    () => [{ value: "all", label: "전체", sublabel: "모든 워크스페이스 보기" }, ...workspaces],
-    [workspaces],
+    () => [
+      {
+        value: "all",
+        label: t("sidebar.workspace.all"),
+        sublabel: t("sidebar.workspace.allSublabel"),
+      },
+      ...workspaces,
+    ],
+    [workspaces, t],
   )
 
   // 디버깅: 워크스페이스 정보 확인
@@ -68,14 +77,14 @@ function DashboardContent() {
 
     // 워크스페이스 이름도 함께 저장
     if (selectedWorkspace === "all") {
-      localStorage.setItem("selectedWorkspaceName", "전체")
+      localStorage.setItem("selectedWorkspaceName", t("sidebar.workspace.all"))
     } else {
       const workspace = workspaces.find((ws) => ws.value === selectedWorkspace)
       if (workspace) {
         localStorage.setItem("selectedWorkspaceName", workspace.label)
       }
     }
-  }, [selectedWorkspace, workspaces])
+  }, [selectedWorkspace, workspaces, t])
 
   // 워크스페이스 목록이 로드되었을 때, 선택된 워크스페이스가 유효한지 확인
   useEffect(() => {
@@ -171,28 +180,28 @@ function DashboardContent() {
   )
 }
 
-const getPageName = (pathname: string) => {
+const getPageName = (pathname: string, t: (key: string) => string) => {
   switch (pathname) {
     case "/dashboard":
-      return "고객 모니터링"
+      return t("layout.page.customerMonitoring")
     case "/leads":
-      return "전체 고객 관리"
+      return t("layout.page.leadManagement")
     case "/customer-groups":
-      return "고객 그룹 관리"
+      return t("layout.page.customerGroupManagement")
     case "/sequences":
-      return "팔로우업 시퀀스 관리"
+      return t("layout.page.sequenceManagement")
     case "/email-templates":
-      return "메일 템플릿 관리"
+      return t("layout.page.emailTemplateManagement")
     case "/replied-emails":
-      return "고객 답장 관리"
+      return t("layout.page.replyManagement")
     case "/workspaces":
-      return "워크스페이스 관리"
+      return t("layout.page.workspaceManagement")
     case "/users":
-      return "유저 관리"
+      return t("layout.page.userManagement")
     case "/email-send-test":
-      return "메일 발송 테스트"
+      return t("layout.page.emailSendTest")
     case "/settings":
-      return "설정"
+      return t("layout.page.settings")
     default:
       return "Overview"
   }

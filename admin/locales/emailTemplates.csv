@@ -1,0 +1,46 @@
+key,ko,en
+title.templateManagement,이메일 템플릿 관리,Email Template Management
+search.placeholder,"템플릿명, 제목으로 검색...","Search by template name, subject..."
+status.selectedCount,개 선택됨,selected
+button.changeCategory,카테고리 변경,Change Category
+button.changeSharedStatus,공유 상태 변경,Change Shared Status
+button.deleteSelected,선택 삭제,Delete Selected
+dialog.editTemplate,템플릿 정보 수정,Edit Template Information
+toast.noTemplatesSelected,선택된 템플릿이 없습니다.,No templates selected
+confirm.deleteTemplates,선택한 {{count}}개의 템플릿을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.,Are you sure you want to delete the selected {{count}} templates? This action cannot be undone.
+filter.sharedStatus,공유 상태,Shared Status
+filter.shared,공유됨,Shared
+filter.private,비공개,Private
+filter.categoryLabel,카테고리,Category
+filter.category.welcome,환영,Welcome
+filter.category.promotion,프로모션,Promotion
+filter.category.transaction,거래,Transaction
+filter.category.notification,알림,Notification
+filter.category.newsletter,뉴스레터,Newsletter
+filter.workspace,워크스페이스,Workspace
+filter.customCategoryPlaceholder,커스텀 카테고리 추가...,Add custom category...
+filter.add,추가,Add
+filter.workspacePlaceholder,워크스페이스를 선택하세요...,Select workspace...
+filter.workspaceSearchPlaceholder,워크스페이스 검색...,Search workspace...
+filter.noResults,검색 결과가 없습니다.,No results found
+filter.sharedLabel,공유,Shared
+filter.categoryLabel,카테고리,Category
+filter.workspaceLabel,워크스페이스,Workspace
+filter.clearFilters,필터 초기화,Clear Filters
+table.uncategorized,미분류,Uncategorized
+table.column.templateName,템플릿명,Template Name
+table.column.subject,제목,Subject
+table.column.category,카테고리,Category
+table.column.sharedStatus,공유상태,Shared Status
+table.column.createdAt,생성일,Created Date
+table.column.updatedAt,수정일,Updated Date
+table.column.edit,편집,Edit
+table.pagination.displaying,{{count}}개 표시,{{count}} displayed
+table.pagination.displayingZero,0개 표시,0 displayed
+table.pagination.first,처음,First
+table.pagination.previous,이전,Previous
+table.pagination.next,다음,Next
+table.pagination.last,마지막,Last
+table.pagination.page,페이지:,Page:
+confirm.deleteTemplates_other,[NO TRANSLATION] emailTemplates.confirm.deleteTemplates_other,[NO TRANSLATION] emailTemplates.confirm.deleteTemplates_other
+table.pagination.displaying_other,[NO TRANSLATION] emailTemplates.table.pagination.displaying_other,[NO TRANSLATION] emailTemplates.table.pagination.displaying_other

@@ -1,6 +1,7 @@
 import { Search, Share2, Tag, Trash2, X } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -21,6 +22,7 @@ import { EmailTemplateForm } from "./EmailTemplateForm"
 import { EmailTemplatesTableWithPagination } from "./EmailTemplatesTableWithPagination"
 
 export default function EmailTemplatesPage() {
+  const { t } = useTranslation()
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
 
   const [searchInput, setSearchInput] = useState("")
@@ -118,11 +120,7 @@ export default function EmailTemplatesPage() {
   const handleBulkDelete = async () => {
     if (selectedTemplates.length === 0) return
 
-    if (
-      !confirm(
-        `선택한 ${selectedTemplates.length}개의 템플릿을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`,
-      )
-    )
+    if (!confirm(t("emailTemplates.confirm.deleteTemplates", { count: selectedTemplates.length })))
       return
 
     bulkDelete.mutate(selectedTemplates, {
@@ -134,7 +132,7 @@ export default function EmailTemplatesPage() {
 
   const handleBulkAction = async (actionType: string, value: string | string[]) => {
     if (selectedTemplates.length === 0) {
-      toast.error("선택된 템플릿이 없습니다.")
+      toast.error(t("emailTemplates.toast.noTemplatesSelected"))
       return
     }
 
@@ -162,7 +160,7 @@ export default function EmailTemplatesPage() {
 
   const openBulkActionModal = (type: "category" | "shared") => {
     if (selectedTemplates.length === 0) {
-      toast.error("선택된 템플릿이 없습니다.")
+      toast.error(t("emailTemplates.toast.noTemplatesSelected"))
       return
     }
     setBulkActionType(type)
@@ -210,7 +208,7 @@ export default function EmailTemplatesPage() {
       {/* Email Templates Table */}
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg">이메일 템플릿 관리</CardTitle>
+          <CardTitle className="text-lg">{t("emailTemplates.title.templateManagement")}</CardTitle>
         </CardHeader>
         <CardContent>
           {/* Search input - positioned below title */}
@@ -218,7 +216,7 @@ export default function EmailTemplatesPage() {
             <div className="relative w-full md:w-[400px]">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="템플릿명, 제목으로 검색..."
+                placeholder={t("emailTemplates.search.placeholder")}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
@@ -243,16 +241,19 @@ export default function EmailTemplatesPage() {
           {selectedTemplates.length > 0 && (
             <div className="flex items-center gap-4 mb-6">
               <div className="text-sm text-muted-foreground">
-                <span className="font-medium">{selectedTemplates.length}개 선택됨</span>
+                <span className="font-medium">
+                  {selectedTemplates.length}
+                  {t("emailTemplates.status.selectedCount")}
+                </span>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => openBulkActionModal("category")}>
                   <Tag className="h-4 w-4 mr-1" />
-                  카테고리 변경
+                  {t("emailTemplates.button.changeCategory")}
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => openBulkActionModal("shared")}>
                   <Share2 className="h-4 w-4 mr-1" />
-                  공유 상태 변경
+                  {t("emailTemplates.button.changeSharedStatus")}
                 </Button>
                 <Button
                   variant="outline"
@@ -261,7 +262,7 @@ export default function EmailTemplatesPage() {
                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                 >
                   <Trash2 className="h-4 w-4 mr-1" />
-                  선택 삭제
+                  {t("emailTemplates.button.deleteSelected")}
                 </Button>
               </div>
             </div>
@@ -285,7 +286,9 @@ export default function EmailTemplatesPage() {
       <Dialog open={!!editingTemplate} onOpenChange={() => setEditingTemplate(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">템플릿 정보 수정</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">
+              {t("emailTemplates.dialog.editTemplate")}
+            </DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
             {editingTemplate && (

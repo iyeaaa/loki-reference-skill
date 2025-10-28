@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, Edit } from "lucide-react"
 import { useCallback, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -29,6 +30,7 @@ export function EmailTemplatesTableWithPagination({
   onToggleAll,
   onEditTemplate,
 }: EmailTemplatesTableWithPaginationProps) {
+  const { t } = useTranslation()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
   const limit = 10
@@ -60,13 +62,15 @@ export function EmailTemplatesTableWithPagination({
   const total = templatesData?.total || 0
 
   const getCategoryBadge = (category: string | null | undefined) => {
-    if (!category) return <Badge variant="outline">미분류</Badge>
+    if (!category) return <Badge variant="outline">{t("emailTemplates.table.uncategorized")}</Badge>
     return <Badge variant="outline">{category}</Badge>
   }
 
   const getSharedBadge = (isShared: boolean) => {
     return (
-      <Badge variant={isShared ? "default" : "outline"}>{isShared ? "공유됨" : "비공개"}</Badge>
+      <Badge variant={isShared ? "default" : "outline"}>
+        {isShared ? t("emailTemplates.filter.shared") : t("emailTemplates.filter.private")}
+      </Badge>
     )
   }
 
@@ -147,44 +151,44 @@ export function EmailTemplatesTableWithPagination({
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ minWidth: "150px" }}
                 >
-                  템플릿명
+                  {t("emailTemplates.table.column.templateName")}
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ minWidth: "200px" }}
                 >
-                  제목
+                  {t("emailTemplates.table.column.subject")}
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
-                  카테고리
+                  {t("emailTemplates.table.column.category")}
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
-                  공유상태
+                  {t("emailTemplates.table.column.sharedStatus")}
                 </th>
 
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
-                  생성일
+                  {t("emailTemplates.table.column.createdAt")}
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
-                  수정일
+                  {t("emailTemplates.table.column.updatedAt")}
                 </th>
                 <th
                   className="sticky right-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
-                  편집
+                  {t("emailTemplates.table.column.edit")}
                 </th>
               </tr>
             </thead>
@@ -262,10 +266,10 @@ export function EmailTemplatesTableWithPagination({
             {total > 0 ? (
               <>
                 {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
-                {total.toLocaleString()}개 표시
+                {t("emailTemplates.table.pagination.displaying", { count: total })}
               </>
             ) : (
-              "0개 표시"
+              t("emailTemplates.table.pagination.displayingZero")
             )}
           </div>
         </div>
@@ -280,7 +284,7 @@ export function EmailTemplatesTableWithPagination({
             size="sm"
             className="px-3"
           >
-            처음
+            {t("emailTemplates.table.pagination.first")}
           </Button>
 
           {/* Previous Page */}
@@ -292,7 +296,7 @@ export function EmailTemplatesTableWithPagination({
             className="px-3"
           >
             <ChevronLeft className="h-4 w-4" />
-            이전
+            {t("emailTemplates.table.pagination.previous")}
           </Button>
 
           {/* Page Numbers */}
@@ -317,7 +321,7 @@ export function EmailTemplatesTableWithPagination({
             size="sm"
             className="px-3"
           >
-            다음
+            {t("emailTemplates.table.pagination.next")}
             <ChevronRight className="h-4 w-4" />
           </Button>
 
@@ -329,13 +333,15 @@ export function EmailTemplatesTableWithPagination({
             size="sm"
             className="px-3"
           >
-            마지막
+            {t("emailTemplates.table.pagination.last")}
           </Button>
         </div>
 
         {/* Page Jump */}
         <div className="flex items-center justify-center gap-2">
-          <span className="text-sm text-muted-foreground">페이지:</span>
+          <span className="text-sm text-muted-foreground">
+            {t("emailTemplates.table.pagination.page")}
+          </span>
           <Input
             type="number"
             min="1"

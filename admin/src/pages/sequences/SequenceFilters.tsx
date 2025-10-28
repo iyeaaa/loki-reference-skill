@@ -39,7 +39,9 @@ export function SequenceFilters({
         <div className="space-y-4">
           {/* Status Filter */}
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-24">{t("sequences.filter.status")}</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-24">
+              {t("sequences.filter.status")}
+            </span>
             <div className="flex flex-wrap gap-3">
               {statuses.map((status) => (
                 <div key={status.value} className="flex items-center space-x-2">

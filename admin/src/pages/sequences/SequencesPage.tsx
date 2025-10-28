@@ -83,11 +83,7 @@ export default function SequencesPage() {
   const handleBulkDelete = async () => {
     if (selectedSequences.length === 0) return
 
-    if (
-      !confirm(
-        t("sequences.confirm.deleteSequences", { count: selectedSequences.length }),
-      )
-    )
+    if (!confirm(t("sequences.confirm.deleteSequences", { count: selectedSequences.length })))
       return
 
     bulkDeleteSequences.mutate(selectedSequences, {
@@ -160,7 +156,8 @@ export default function SequencesPage() {
         <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-lg">{t("sequences.title.sequenceManagement")}</CardTitle>
           <Button onClick={() => setIsCreating(true)} size="sm">
-            <Plus className="h-4 w-4 mr-1" />{t("sequences.button.newSequence")}
+            <Plus className="h-4 w-4 mr-1" />
+            {t("sequences.button.newSequence")}
           </Button>
         </CardHeader>
         <CardContent>
@@ -194,7 +191,10 @@ export default function SequencesPage() {
           {selectedSequences.length > 0 && (
             <div className="flex items-center gap-4 mb-6">
               <div className="text-sm text-muted-foreground">
-                <span className="font-medium">{selectedSequences.length}{t("sequences.status.selectedCount")}</span>
+                <span className="font-medium">
+                  {selectedSequences.length}
+                  {t("sequences.status.selectedCount")}
+                </span>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => openBulkActionModal("status")}>
@@ -230,7 +230,9 @@ export default function SequencesPage() {
       <Dialog open={isCreating} onOpenChange={setIsCreating}>
         <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">{t("sequences.dialog.createSequence")}</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">
+              {t("sequences.dialog.createSequence")}
+            </DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
             <SequenceForm
@@ -246,7 +248,9 @@ export default function SequencesPage() {
       <Dialog open={!!editingSequence} onOpenChange={() => setEditingSequence(null)}>
         <DialogContent className="max-w-5xl max-h-[90vh]">
           <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">{t("sequences.dialog.sequenceManagement")}</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">
+              {t("sequences.dialog.sequenceManagement")}
+            </DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
             {editingSequence && (

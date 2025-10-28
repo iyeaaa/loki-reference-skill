@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
+import { LanguageToggle } from "@/components/LanguageToggle"
 import {
   Sidebar,
   SidebarContent,
@@ -223,6 +224,11 @@ export function AppSidebar({
                 <span>설정</span>
               </Link>
             </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <div className="px-2 py-1">
+              <LanguageToggle />
+            </div>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

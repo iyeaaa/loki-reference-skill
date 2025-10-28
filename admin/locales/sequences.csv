@@ -1,0 +1,84 @@
+key,ko,en
+title.sequenceManagement,시퀀스 관리,Sequence Management
+button.newSequence,새 시퀀스,New Sequence
+search.placeholder,시퀀스명으로 검색...,Search by sequence name...
+status.selectedCount,개 선택됨,selected
+button.changeStatus,상태 변경,Change Status
+button.deleteSelected,선택 삭제,Delete Selected
+dialog.createSequence,새 시퀀스 생성,Create New Sequence
+dialog.sequenceManagement,시퀀스 관리,Sequence Management
+toast.noSequencesSelected,선택된 시퀀스가 없습니다.,No sequences selected
+confirm.deleteSequences,선택한 {{count}}개의 시퀀스를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.,Are you sure you want to delete the selected {{count}} sequences? This action cannot be undone.
+form.sequenceName,시퀀스명,Sequence Name
+form.sequenceNamePlaceholder,예: 신규 고객 온보딩 시퀀스,Ex: New Customer Onboarding Sequence
+form.description,설명,Description
+form.descriptionPlaceholder,시퀀스에 대한 설명을 입력하세요...,Enter description for the sequence...
+form.workspace,워크스페이스,Workspace
+form.workspacePlaceholder,워크스페이스 선택,Select workspace
+form.workspaceSearchPlaceholder,워크스페이스 검색...,Search workspace...
+form.workspaceEmptyText,워크스페이스가 없습니다.,No workspaces available
+form.customerGroup,고객그룹,Customer Group
+form.customerGroupPlaceholder,고객그룹 선택 (필수),Select customer group (required)
+form.customerGroupEmptyText,고객그룹이 없습니다.,No customer groups available
+form.customerGroupRequired,먼저 워크스페이스를 선택하세요,Please select workspace first
+form.leadCount,개 리드,leads
+form.cannotChangeGroup,이미 실행 이력이 있는 시퀀스는 고객그룹을 변경할 수 없습니다,Sequences with execution history cannot change customer group
+form.groupRequired,워크플로우 실행을 위해 고객그룹을 반드시 선택해야 합니다,Customer group must be selected for workflow execution
+form.emailTarget,이메일 대상 선택 (선택사항),Email Target Selection (Optional)
+form.specificCustomers,특정 고객 선택,Select Specific Customers
+form.collapse,접기,Collapse
+form.defaultAllLeads,기본값: 고객 그룹의 모든 리드에게 이메일 발송,Default: Send emails to all leads in customer group
+form.currentlySelected,현재 {{count}}명 선택됨,Currently {{count}} selected
+form.selectAll,전체 선택 ({{selected}}/{{total}}),Select All ({{selected}}/{{total}})
+form.deselectAll,선택 해제,Deselect All
+form.noLeadsInGroup,고객 그룹에 리드가 없습니다.,No leads in customer group
+form.selectedCustomersOnly,선택된 {{count}}명의 고객에게만 이메일이 발송됩니다.,Emails will be sent only to the selected {{count}} customers
+form.allLeadsIfNotSelected,고객을 선택하지 않으면 고객 그룹의 모든 리드에게 발송됩니다.,If no customers are selected emails will be sent to all leads in customer group
+form.status,상태,Status
+form.statusDraft,초안,Draft
+form.statusActive,활성,Active
+form.statusActiveWithSteps,활성 (스텝 기반은 토글 버튼 사용),Active (use toggle button for step-based)
+form.statusPaused,일시정지,Paused
+form.statusArchived,보관됨,Archived
+form.statusCompleted,발송완료,Completed
+form.stepBasedToggle,스텝 기반 시퀀스는 목록의 활성화 토글 버튼을 사용하세요,Use the activation toggle button in the list for step-based sequences
+form.cancel,취소,Cancel
+form.save,생성,Create
+form.update,수정 완료,Update Complete
+toast.selectCustomerGroup,워크플로우 실행을 위해 고객그룹을 선택해주세요,Please select a customer group for workflow execution
+table.column.sequenceName,시퀀스명,Sequence Name
+table.column.description,설명,Description
+table.column.status,상태,Status
+table.column.workspace,워크스페이스,Workspace
+table.column.creator,생성자,Creator
+table.column.stepCount,스텝 수,Step Count
+table.column.enrollmentCount,등록 수,Enrollment Count
+table.column.createdAt,생성일,Created Date
+table.column.updatedAt,수정일,Updated Date
+table.column.actions,작업,Actions
+table.status.draft,초안,Draft
+table.status.active,활성,Active
+table.status.paused,일시정지,Paused
+table.status.archived,보관됨,Archived
+table.status.completed,발송완료,Completed
+table.button.pause,일시정지,Pause
+table.button.activate,활성화,Activate
+table.button.editNodes,노드 편집,Edit Nodes
+table.button.editSequence,시퀀스 편집,Edit Sequence
+table.pagination.displaying,{{count}}개 표시,{{count}} displayed
+table.pagination.displayingZero,0개 표시,0 displayed
+table.pagination.first,처음,First
+table.pagination.previous,이전,Previous
+table.pagination.next,다음,Next
+table.pagination.last,마지막,Last
+table.pagination.page,페이지:,Page:
+table.modal.title,등록된 고객 정보 - {{sequenceName}},Registered Customer Information - {{sequenceName}}
+table.modal.totalCustomers,총 {{count}}명의 고객이 등록되어 있습니다.,Total {{count}} customers are registered
+table.modal.column.companyName,회사명,Company Name
+table.modal.column.website,웹사이트,Website
+table.modal.column.status,상태,Status
+table.modal.column.addedAt,추가일,Added Date
+table.modal.noCustomers,등록된 고객이 없습니다.,No registered customers
+filter.status,상태,Status
+filter.statusLabel,상태,Status
+filter.clearFilters,필터 초기화,Clear Filters

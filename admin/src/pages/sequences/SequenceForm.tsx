@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Combobox } from "@/components/ui/combobox"
@@ -45,6 +46,7 @@ export function SequenceForm({
   onCancel,
   stepsCount = 0,
 }: SequenceFormProps) {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const { selectedWorkspace } = useWorkspace()
 
@@ -142,7 +144,7 @@ export function SequenceForm({
 
     // 고객그룹 필수 검증
     if (!formData.customerGroupId) {
-      toast.error("워크플로우 실행을 위해 고객그룹을 선택해주세요")
+      toast.error(t("sequences.toast.selectCustomerGroup"))
       return
     }
 
@@ -155,29 +157,29 @@ export function SequenceForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor={nameId}>시퀀스명</Label>
+        <Label htmlFor={nameId}>{t("sequences.form.sequenceName")}</Label>
         <Input
           id={nameId}
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           required
-          placeholder="예: 신규 고객 온보딩 시퀀스"
+          placeholder={t("sequences.form.sequenceNamePlaceholder")}
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor={descriptionId}>설명</Label>
+        <Label htmlFor={descriptionId}>{t("sequences.form.description")}</Label>
         <Textarea
           id={descriptionId}
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="시퀀스에 대한 설명을 입력하세요..."
+          placeholder={t("sequences.form.descriptionPlaceholder")}
           rows={4}
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="customerGroup">워크스페이스</Label>
+        <Label htmlFor="customerGroup">{t("sequences.form.workspace")}</Label>
         <Combobox
           options={workspaces.map((workspace) => ({
             value: workspace.id,
@@ -186,15 +188,15 @@ export function SequenceForm({
           }))}
           value={formData.workspaceId}
           onValueChange={(value) => setFormData({ ...formData, workspaceId: value })}
-          placeholder="워크스페이스 선택"
-          searchPlaceholder="워크스페이스 검색..."
-          emptyText="워크스페이스가 없습니다."
+          placeholder={t("sequences.form.workspacePlaceholder")}
+          searchPlaceholder={t("sequences.form.workspaceSearchPlaceholder")}
+          emptyText={t("sequences.form.workspaceEmptyText")}
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="customerGroup" className="flex items-center gap-2">
-          고객그룹
+          {t("sequences.form.customerGroup")}
           <span className="text-red-500">*</span>
         </Label>
         <Select

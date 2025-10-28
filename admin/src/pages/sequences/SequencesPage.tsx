@@ -1,6 +1,7 @@
 import { Play, Plus, Search, Trash2, X } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -19,6 +20,7 @@ import { SequenceForm } from "./SequenceForm"
 import { SequencesTableWithPagination } from "./SequencesTableWithPagination"
 
 export default function SequencesPage() {
+  const { t } = useTranslation()
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
@@ -83,7 +85,7 @@ export default function SequencesPage() {
 
     if (
       !confirm(
-        `선택한 ${selectedSequences.length}개의 시퀀스를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`,
+        t("sequences.confirm.deleteSequences", { count: selectedSequences.length }),
       )
     )
       return
@@ -97,7 +99,7 @@ export default function SequencesPage() {
 
   const handleBulkAction = async (actionType: string, value: string | string[]) => {
     if (selectedSequences.length === 0) {
-      toast.error("선택된 시퀀스가 없습니다.")
+      toast.error(t("sequences.toast.noSequencesSelected"))
       return
     }
 
@@ -115,7 +117,7 @@ export default function SequencesPage() {
 
   const openBulkActionModal = (type: "status" | "delete") => {
     if (selectedSequences.length === 0) {
-      toast.error("선택된 시퀀스가 없습니다.")
+      toast.error(t("sequences.toast.noSequencesSelected"))
       return
     }
     setBulkActionType(type)
@@ -156,9 +158,9 @@ export default function SequencesPage() {
       {/* Sequences Table */}
       <Card>
         <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-lg">시퀀스 관리</CardTitle>
+          <CardTitle className="text-lg">{t("sequences.title.sequenceManagement")}</CardTitle>
           <Button onClick={() => setIsCreating(true)} size="sm">
-            <Plus className="h-4 w-4 mr-1" />새 시퀀스
+            <Plus className="h-4 w-4 mr-1" />{t("sequences.button.newSequence")}
           </Button>
         </CardHeader>
         <CardContent>
@@ -167,7 +169,7 @@ export default function SequencesPage() {
             <div className="relative w-full md:w-[400px]">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="시퀀스명으로 검색..."
+                placeholder={t("sequences.search.placeholder")}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
@@ -192,12 +194,12 @@ export default function SequencesPage() {
           {selectedSequences.length > 0 && (
             <div className="flex items-center gap-4 mb-6">
               <div className="text-sm text-muted-foreground">
-                <span className="font-medium">{selectedSequences.length}개 선택됨</span>
+                <span className="font-medium">{selectedSequences.length}{t("sequences.status.selectedCount")}</span>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => openBulkActionModal("status")}>
                   <Play className="h-4 w-4 mr-1" />
-                  상태 변경
+                  {t("sequences.button.changeStatus")}
                 </Button>
                 <Button
                   variant="outline"
@@ -206,7 +208,7 @@ export default function SequencesPage() {
                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                 >
                   <Trash2 className="h-4 w-4 mr-1" />
-                  선택 삭제
+                  {t("sequences.button.deleteSelected")}
                 </Button>
               </div>
             </div>
@@ -228,7 +230,7 @@ export default function SequencesPage() {
       <Dialog open={isCreating} onOpenChange={setIsCreating}>
         <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">새 시퀀스 생성</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">{t("sequences.dialog.createSequence")}</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
             <SequenceForm
@@ -244,7 +246,7 @@ export default function SequencesPage() {
       <Dialog open={!!editingSequence} onOpenChange={() => setEditingSequence(null)}>
         <DialogContent className="max-w-5xl max-h-[90vh]">
           <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">시퀀스 관리</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">{t("sequences.dialog.sequenceManagement")}</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
             {editingSequence && (

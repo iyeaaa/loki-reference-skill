@@ -1,4 +1,5 @@
 import { X } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -14,11 +15,12 @@ export function SequenceFilters({
   onStatusChange,
   onClearFilters,
 }: SequenceFiltersProps) {
+  const { t } = useTranslation()
   const statuses = [
-    { value: "draft", label: "초안" },
-    { value: "active", label: "활성" },
-    { value: "paused", label: "일시정지" },
-    { value: "archived", label: "보관됨" },
+    { value: "draft", label: t("sequences.table.status.draft") },
+    { value: "active", label: t("sequences.table.status.active") },
+    { value: "paused", label: t("sequences.table.status.paused") },
+    { value: "archived", label: t("sequences.table.status.archived") },
   ]
 
   const toggleStatus = (status: string) => {
@@ -37,7 +39,7 @@ export function SequenceFilters({
         <div className="space-y-4">
           {/* Status Filter */}
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-24">상태</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-24">{t("sequences.filter.status")}</span>
             <div className="flex flex-wrap gap-3">
               {statuses.map((status) => (
                 <div key={status.value} className="flex items-center space-x-2">
@@ -69,7 +71,7 @@ export function SequenceFilters({
                     key={status}
                     className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs rounded-full"
                   >
-                    상태: {statusLabel}
+                    {t("sequences.filter.statusLabel")}: {statusLabel}
                     <button
                       type="button"
                       onClick={() => toggleStatus(status)}
@@ -89,7 +91,7 @@ export function SequenceFilters({
           <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
             <Button variant="ghost" size="sm" onClick={onClearFilters} className="text-xs">
               <X className="w-3 h-3 mr-1" />
-              필터 초기화
+              {t("sequences.filter.clearFilters")}
             </Button>
           </div>
         )}

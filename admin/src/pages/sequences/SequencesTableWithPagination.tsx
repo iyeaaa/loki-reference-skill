@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, Edit, Pause, Play } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -38,6 +39,7 @@ export function SequencesTableWithPagination({
   onToggleAll,
   onEditSequence,
 }: SequencesTableWithPaginationProps) {
+  const { t } = useTranslation()
   const updateSequence = useUpdateSequence()
   const activateStepBased = useActivateStepBasedSequence()
   const [currentPage, setCurrentPage] = useState(1)
@@ -86,15 +88,15 @@ export function SequencesTableWithPagination({
   const getStatusText = (status: SequenceStatus) => {
     switch (status) {
       case "draft":
-        return "초안"
+        return t("sequences.table.status.draft")
       case "active":
-        return "활성"
+        return t("sequences.table.status.active")
       case "paused":
-        return "일시정지"
+        return t("sequences.table.status.paused")
       case "archived":
-        return "보관됨"
+        return t("sequences.table.status.archived")
       case "completed":
-        return "발송완료"
+        return t("sequences.table.status.completed")
       default:
         return status
     }
@@ -221,61 +223,61 @@ export function SequencesTableWithPagination({
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ minWidth: "200px" }}
                 >
-                  시퀀스명
+                  {t("sequences.table.column.sequenceName")}
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ minWidth: "250px" }}
                 >
-                  설명
+                  {t("sequences.table.column.description")}
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
-                  상태
+                  {t("sequences.table.column.status")}
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ minWidth: "150px" }}
                 >
-                  워크스페이스
+                  {t("sequences.table.column.workspace")}
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ minWidth: "120px" }}
                 >
-                  생성자
+                  {t("sequences.table.column.creator")}
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
-                  스텝 수
+                  {t("sequences.table.column.stepCount")}
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
-                  등록 수
+                  {t("sequences.table.column.enrollmentCount")}
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
-                  생성일
+                  {t("sequences.table.column.createdAt")}
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
-                  수정일
+                  {t("sequences.table.column.updatedAt")}
                 </th>
                 <th
                   className="sticky right-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
-                  작업
+                  {t("sequences.table.column.actions")}
                 </th>
               </tr>
             </thead>
@@ -369,7 +371,7 @@ export function SequencesTableWithPagination({
                           handleToggleStatus(sequence)
                         }}
                         className="text-xs h-8 px-3"
-                        title={sequence.status === "active" ? "일시정지" : "활성화"}
+                        title={sequence.status === "active" ? t("sequences.table.button.pause") : t("sequences.table.button.activate")}
                         disabled={
                           sequence.status === "archived" ||
                           sequence.status === "completed" ||
@@ -390,7 +392,7 @@ export function SequencesTableWithPagination({
                         size="sm"
                         onClick={() => navigate(`/sequences/${sequence.id}/designer`)}
                         className="text-xs h-8 px-3"
-                        title="노드 편집"
+                        title={t("sequences.table.button.editNodes")}
                       >
                         <Workflow className="h-3 w-3" />
                       </Button> */}
@@ -402,7 +404,7 @@ export function SequencesTableWithPagination({
                           onEditSequence(sequence)
                         }}
                         className="text-xs h-8 px-3"
-                        title="시퀀스 편집"
+                        title={t("sequences.table.button.editSequence")}
                       >
                         <Edit className="h-3 w-3" />
                       </Button>
@@ -423,10 +425,10 @@ export function SequencesTableWithPagination({
             {total > 0 ? (
               <>
                 {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
-                {total.toLocaleString()}개 표시
+                {t("sequences.table.pagination.displaying", { count: total })}
               </>
             ) : (
-              "0개 표시"
+              t("sequences.table.pagination.displayingZero")
             )}
           </div>
         </div>
@@ -441,7 +443,7 @@ export function SequencesTableWithPagination({
             size="sm"
             className="px-3"
           >
-            처음
+            {t("sequences.table.pagination.first")}
           </Button>
 
           {/* Previous Page */}
@@ -453,7 +455,7 @@ export function SequencesTableWithPagination({
             className="px-3"
           >
             <ChevronLeft className="h-4 w-4" />
-            이전
+            {t("sequences.table.pagination.previous")}
           </Button>
 
           {/* Page Numbers */}
@@ -478,7 +480,7 @@ export function SequencesTableWithPagination({
             size="sm"
             className="px-3"
           >
-            다음
+            {t("sequences.table.pagination.next")}
             <ChevronRight className="h-4 w-4" />
           </Button>
 
@@ -490,13 +492,13 @@ export function SequencesTableWithPagination({
             size="sm"
             className="px-3"
           >
-            마지막
+            {t("sequences.table.pagination.last")}
           </Button>
         </div>
 
         {/* Page Jump */}
         <div className="flex items-center justify-center gap-2">
-          <span className="text-sm text-muted-foreground">페이지:</span>
+          <span className="text-sm text-muted-foreground">{t("sequences.table.pagination.page")}</span>
           <Input
             type="number"
             min="1"
@@ -519,29 +521,29 @@ export function SequencesTableWithPagination({
       >
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>등록된 고객 정보 - {selectedSequenceForModal?.name}</DialogTitle>
+            <DialogTitle>{t("sequences.table.modal.title", { sequenceName: selectedSequenceForModal?.name })}</DialogTitle>
           </DialogHeader>
           <div className="mt-4">
             {customerGroupData && customerGroupData.members.length > 0 ? (
               <div className="space-y-4">
                 <p className="text-sm text-gray-600">
-                  총 {customerGroupData.total}명의 고객이 등록되어 있습니다.
+                  {t("sequences.table.modal.totalCustomers", { count: customerGroupData.total })}
                 </p>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full">
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                          회사명
+                          {t("sequences.table.modal.column.companyName")}
                         </th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                          웹사이트
+                          {t("sequences.table.modal.column.website")}
                         </th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                           상태
                         </th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                          추가일
+                          {t("sequences.table.modal.column.addedAt")}
                         </th>
                       </tr>
                     </thead>
@@ -567,7 +569,7 @@ export function SequencesTableWithPagination({
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">등록된 고객이 없습니다.</div>
+              <div className="text-center py-8 text-gray-500">{t("sequences.table.modal.noCustomers")}</div>
             )}
           </div>
         </DialogContent>

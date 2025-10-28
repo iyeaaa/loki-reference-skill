@@ -86,3 +86,6 @@ bulkModal.option.read,읽음,Read
 bulkModal.option.unread,읽지 않음,Unread
 bulkModal.button.cancel,취소,Cancel
 bulkModal.button.change,변경,Change
+bulk.selected_other,[NO TRANSLATION] email-replies.bulk.selected_other,[NO TRANSLATION] email-replies.bulk.selected_other
+bulkModal.description.readStatus_other,[NO TRANSLATION] email-replies.bulkModal.description.readStatus_other,[NO TRANSLATION] email-replies.bulkModal.description.readStatus_other
+confirm.delete.description_other,[NO TRANSLATION] email-replies.confirm.delete.description_other,[NO TRANSLATION] email-replies.confirm.delete.description_other

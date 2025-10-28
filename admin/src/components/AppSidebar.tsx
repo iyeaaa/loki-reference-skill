@@ -1,4 +1,5 @@
 import { BarChart3, FileText, GitBranch, Mail, Settings, UserCheck } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { Link, useLocation } from "react-router-dom"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import {
@@ -17,29 +18,29 @@ import type { WorkspaceOption } from "@/components/ui/workspace-selector"
 import { WorkspaceSelector } from "@/components/ui/workspace-selector"
 
 // 워크스페이스 고객 관리
-const customerMenuItems = [
+const getCustomerMenuItems = (t: (key: string) => string) => [
   {
-    title: "고객 모니터링",
+    title: t("sidebar.menu.customerMonitoring"),
     url: "/dashboard",
     icon: BarChart3,
   },
   {
-    title: "고객 관리",
+    title: t("sidebar.menu.leadManagement"),
     url: "/leads",
     icon: UserCheck,
   },
   {
-    title: "팔로우업 시퀀스 관리",
+    title: t("sidebar.menu.followupSequenceManagement"),
     url: "/sequences",
     icon: GitBranch,
   },
   {
-    title: "이메일 템플릿 관리",
+    title: t("sidebar.menu.emailTemplateManagement"),
     url: "/email-templates",
     icon: FileText,
   },
   {
-    title: "답장 관리",
+    title: t("sidebar.menu.replyManagement"),
     url: "/replied-emails",
     icon: Mail,
   },
@@ -58,18 +59,26 @@ export function AppSidebar({
   onWorkspaceChange,
   hideWorkspaceSelector = false,
 }: AppSidebarProps) {
+  const { t } = useTranslation()
   const location = useLocation()
   const pathname = location.pathname
 
+  // 메뉴 아이템들 가져오기
+  const customerMenuItems = getCustomerMenuItems(t)
+
   // "전체" 옵션을 포함한 워크스페이스 목록 생성
   const workspaceOptions: WorkspaceOption[] = [
-    { value: "all", label: "전체", sublabel: "모든 워크스페이스 보기" },
+    {
+      value: "all",
+      label: t("sidebar.workspace.all"),
+      sublabel: t("sidebar.workspace.allSublabel"),
+    },
     ...workspaces,
   ]
 
   // 선택된 워크스페이스의 이름 가져오기
   const selectedWorkspaceData = workspaceOptions.find((w) => w.value === selectedWorkspace)
-  const workspaceLabel = selectedWorkspaceData?.label || "워크스페이스"
+  const workspaceLabel = selectedWorkspaceData?.label || t("sidebar.workspace.default")
 
   return (
     <Sidebar collapsible="icon">
@@ -86,8 +95,8 @@ export function AppSidebar({
                   />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Send Grinda</span>
-                  <span className="truncate text-xs">AI 이메일 자동화 시스템</span>
+                  <span className="truncate font-semibold">{t("sidebar.title.sendGrinda")}</span>
+                  <span className="truncate text-xs">{t("sidebar.subtitle.aiEmailSystem")}</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -98,7 +107,7 @@ export function AppSidebar({
         {!hideWorkspaceSelector && workspaceOptions.length > 0 && (
           <div className="group-data-[collapsible=icon]:hidden">
             <div className="flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70">
-              워크스페이스 선택
+              {t("sidebar.workspace.select")}
             </div>
             <div className="px-2 pb-2">
               <WorkspaceSelector
@@ -116,7 +125,9 @@ export function AppSidebar({
         <SidebarGroup>
           <SidebarGroupLabel>
             {!hideWorkspaceSelector && <span className="font-semibold">{workspaceLabel}</span>}
-            <span className={hideWorkspaceSelector ? "" : "ml-1"}>고객 관리</span>
+            <span className={hideWorkspaceSelector ? "" : "ml-1"}>
+              {t("sidebar.menu.customerManagement")}
+            </span>
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -147,10 +158,14 @@ export function AppSidebar({
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="설정" isActive={pathname === "/settings"}>
+            <SidebarMenuButton
+              asChild
+              tooltip={t("sidebar.menu.settings")}
+              isActive={pathname === "/settings"}
+            >
               <Link to="/settings">
                 <Settings />
-                <span>설정</span>
+                <span>{t("sidebar.menu.settings")}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

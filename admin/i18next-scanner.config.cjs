@@ -30,11 +30,7 @@ module.exports = {
     defaultLng: "ko",
     defaultNs: "translation",
     defaultValue: (lng, ns, key) => {
-      // 기본값 설정 (스캔된 키에 대한 임시 값)
-      if (lng === "ko") {
-        return `[번역 필요] ${key}`
-      }
-      return `[Translation needed] ${key}`
+      return `[NO TRANSLATION] ${key}`
     },
     resource: {
       loadPath: "locales/.scanned/{{lng}}/{{ns}}.json",

@@ -1,6 +1,6 @@
 import { BarChart3, FileText, GitBranch, Mail, Settings, UserCheck } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
-import { LanguageToggle } from "@/components/LanguageToggle"
+import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import {
   Sidebar,
   SidebarContent,
@@ -156,7 +156,7 @@ export function AppSidebar({
           </SidebarMenuItem>
           <SidebarMenuItem>
             <div className="px-2 py-1">
-              <LanguageToggle />
+              <LanguageSwitcher />
             </div>
           </SidebarMenuItem>
         </SidebarMenu>

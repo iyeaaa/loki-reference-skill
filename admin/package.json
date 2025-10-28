@@ -15,7 +15,7 @@
     "check": "biome check ./src && tsc --noEmit",
     "preview": "vite preview",
     "prepare": "husky",
-    "i18n:scan": "i18next-scanner && tsx scripts/merge-keys-to-csv.ts",
+    "i18n:scan": "i18next-scanner --config i18next-scanner.config.cjs && tsx scripts/merge-keys-to-csv.ts",
     "i18n:build": "tsx scripts/csv-to-json.ts",
     "i18n:add": "yarn i18n:scan",
     "i18n:watch:csv": "chokidar \"locales/*.csv\" -c \"tsx scripts/csv-to-json.ts\" --debounce 500 --silent",

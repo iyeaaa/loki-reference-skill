@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { CreditCard, Eye, EyeOff, Lock, Mail, User } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { useForm } from "react-hook-form"
+import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
@@ -40,6 +41,7 @@ type LoginFormValues = z.infer<typeof loginSchema>
 type SignupFormValues = z.infer<typeof signupSchema>
 
 export default function AdminLoginPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { user, isLoading: authLoading } = useAuth()
 
@@ -144,11 +146,9 @@ export default function AdminLoginPage() {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] bg-clip-text text-transparent">
-            Send Grinda
+            {t("login.title")}
           </CardTitle>
-          <CardDescription className="text-gray-600 mt-2">
-            스마트한 이메일 마케팅 솔루션
-          </CardDescription>
+          <CardDescription className="text-gray-600 mt-2">{t("login.description")}</CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

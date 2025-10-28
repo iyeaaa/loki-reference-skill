@@ -77,8 +77,8 @@ try {
         const fullKey = `${namespace}.${key}`
         existingRows.push({
           key,
-          ko: `[번역 필요] ${fullKey}`,
-          en: `[Translation needed] ${fullKey}`,
+          ko: `[NO TRANSLATION] ${fullKey}`,
+          en: `[NO TRANSLATION] ${fullKey}`,
         })
         addedKeys.push(fullKey)
       }

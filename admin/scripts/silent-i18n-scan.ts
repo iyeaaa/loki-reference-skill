@@ -13,7 +13,7 @@ const execAsync = promisify(exec)
 async function silentScan() {
   try {
     // i18next-scanner 실행
-    await execAsync("i18next-scanner", { cwd: process.cwd() })
+    await execAsync("i18next-scanner --config i18next-scanner.config.cjs", { cwd: process.cwd() })
 
     // merge-keys-to-csv 실행
     const { stdout } = await execAsync("tsx scripts/merge-keys-to-csv.ts", { cwd: process.cwd() })

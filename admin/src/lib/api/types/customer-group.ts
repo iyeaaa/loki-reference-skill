@@ -78,3 +78,14 @@ export interface BulkAddMembersRequest {
 export interface BulkRemoveMembersRequest {
   leadIds: string[]
 }
+
+// Auto-generated group name types
+export type CompanyScale = "Small" | "Medium" | "Large" | "Unknown"
+
+export interface GroupNameTemplate {
+  country: string
+  scale: CompanyScale
+  businessType: string
+  businessSector: string
+  uploadDate: string
+}

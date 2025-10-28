@@ -1,4 +1,6 @@
 import { apiFetch } from "@/lib/api/client"
+import { generateGroupName } from "@/lib/utils/group-name-generator"
+import { analyzeLeadsForGroupName } from "@/lib/utils/lead-analyzer"
 import type {
   AddGroupMemberRequest,
   CreateCustomerGroupRequest,
@@ -7,6 +9,7 @@ import type {
   CustomerGroupsParams,
   UpdateCustomerGroupRequest,
 } from "../types/customer-group"
+import type { Lead } from "../types/lead"
 
 export const customerGroupsApi = {
   list: (params?: CustomerGroupsParams) => {
@@ -140,5 +143,61 @@ export const customerGroupsApi = {
         body: JSON.stringify({ leadIds }),
       },
     )
+  },
+
+  /**
+   * Generates a group name based on lead data analysis.
+   * Fetches lead data, analyzes common attributes, and returns a formatted group name.
+   *
+   * @param leadIds - Array of lead IDs to analyze
+   * @returns Promise resolving to generated group name string
+   *
+   * @example
+   * ```typescript
+   * const name = await customerGroupsApi.generateGroupNameFromLeads(['lead-1', 'lead-2'])
+   * // Returns: "Korea_Large_B2B_SaaS_2025-10-28"
+   * ```
+   */
+  generateGroupNameFromLeads: async (leadIds: string[]): Promise<string> => {
+    if (!leadIds || leadIds.length === 0) {
+      return generateGroupName({
+        country: "Unknown",
+        scale: "Unknown",
+        businessType: "Unknown",
+        businessSector: "Unknown",
+        uploadDate: new Date().toISOString().split("T")[0],
+      })
+    }
+
+    try {
+      // Fetch all leads in parallel
+      const leadsPromises = leadIds.map((leadId) =>
+        apiFetch<Lead>(`/api/v1/leads/${leadId}`).catch((error) => {
+          console.error(`Failed to fetch lead ${leadId}:`, error)
+          return null
+        }),
+      )
+
+      const leads = await Promise.all(leadsPromises)
+      const validLeads = leads.filter((lead): lead is Lead => lead !== null)
+
+      if (validLeads.length === 0) {
+        throw new Error("No valid leads found")
+      }
+
+      // Analyze leads and generate name
+      const template = analyzeLeadsForGroupName(validLeads)
+      return generateGroupName(template)
+    } catch (error) {
+      console.error("Error generating group name from leads:", error)
+      // Return fallback name
+      return generateGroupName({
+        country: "Unknown",
+        scale: "Unknown",
+        businessType: "Unknown",
+        businessSector: "Unknown",
+        uploadDate: new Date().toISOString().split("T")[0],
+      })
+    }
   },
 }

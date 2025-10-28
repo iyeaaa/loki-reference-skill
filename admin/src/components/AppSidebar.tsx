@@ -1,14 +1,4 @@
-import {
-  BarChart3,
-  Building2,
-  FileText,
-  FileUp,
-  GitBranch,
-  Mail,
-  Settings,
-  UserCheck,
-  Users,
-} from "lucide-react"
+import { BarChart3, FileText, GitBranch, Mail, Settings, UserCheck } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import {
   Sidebar,
@@ -21,7 +11,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
 } from "@/components/ui/sidebar"
 import type { WorkspaceOption } from "@/components/ui/workspace-selector"
 import { WorkspaceSelector } from "@/components/ui/workspace-selector"
@@ -53,35 +42,6 @@ const customerMenuItems = [
     url: "/replied-emails",
     icon: Mail,
   },
-]
-
-// 시스템 관리
-const adminMenuItems = [
-  {
-    title: "워크스페이스 관리",
-    url: "/workspaces",
-    icon: Building2,
-  },
-  {
-    title: "유저 관리",
-    url: "/users",
-    icon: Users,
-  },
-  // {
-  //   title: "메일 발송 테스트",
-  //   url: "/email-send-test",
-  //   icon: SendHorizontal,
-  // },
-  {
-    title: "리드 데이터 임포트",
-    url: "/lead-import",
-    icon: FileUp,
-  },
-  // {
-  //   title: "CSV 대량 메일 발송",
-  //   url: "/bulk-email-csv",
-  //   icon: FileSpreadsheet,
-  // },
 ]
 
 interface AppSidebarProps {
@@ -160,37 +120,6 @@ export function AppSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               {customerMenuItems.map((item) => {
-                const isActive = pathname === item.url
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={item.title}
-                      isActive={isActive}
-                      className={isActive ? "bg-violet-500/10 border-r-2 border-violet-500" : ""}
-                    >
-                      <Link to={item.url || "#"}>
-                        {item.icon && <item.icon className={isActive ? "text-violet-500" : ""} />}
-                        <span className={isActive ? "text-violet-500 font-medium" : ""}>
-                          {item.title}
-                        </span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        {/* 시스템 관리 */}
-        <SidebarGroup>
-          <SidebarGroupLabel>시스템 관리</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {adminMenuItems.map((item) => {
                 const isActive = pathname === item.url
                 return (
                   <SidebarMenuItem key={item.title}>

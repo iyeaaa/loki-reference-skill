@@ -208,8 +208,8 @@ else
     (
       cd admin
       if [ "$QUIET" = false ]; then
-        log_admin "Running ${WHITE}yarn lint${NC}..."
-        stream_logs "admin" "$ADMIN_COLOR" yarn lint
+        log_admin "Running ${WHITE}yarn lint:check${NC}..."
+        stream_logs "admin" "$ADMIN_COLOR" yarn lint:check
         LINT_EXIT=$?
         if [ $LINT_EXIT -eq 0 ]; then
           log_admin "Running ${WHITE}yarn type-check${NC}..."
@@ -219,7 +219,7 @@ else
           echo $LINT_EXIT > "$ADMIN_RESULT"
         fi
       else
-        yarn lint > /dev/null 2>&1 && yarn type-check > /dev/null 2>&1
+        yarn lint:check > /dev/null 2>&1 && yarn type-check > /dev/null 2>&1
         echo $? > "$ADMIN_RESULT"
       fi
     ) &
@@ -249,8 +249,8 @@ else
     (
       cd elysia-server
       if [ "$QUIET" = false ]; then
-        log_server "Running ${WHITE}bun lint${NC}..."
-        stream_logs "elysia-server" "$SERVER_COLOR" bun lint
+        log_server "Running ${WHITE}bun lint:check${NC}..."
+        stream_logs "elysia-server" "$SERVER_COLOR" bun lint:check
         LINT_EXIT=$?
         if [ $LINT_EXIT -eq 0 ]; then
           log_server "Running ${WHITE}bun type-check${NC}..."
@@ -260,7 +260,7 @@ else
           echo $LINT_EXIT > "$SERVER_RESULT"
         fi
       else
-        bun lint > /dev/null 2>&1 && bun type-check > /dev/null 2>&1
+        bun lint:check > /dev/null 2>&1 && bun type-check > /dev/null 2>&1
         echo $? > "$SERVER_RESULT"
       fi
     ) &

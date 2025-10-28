@@ -161,15 +161,30 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
   .put(
     "/:id",
     async ({ params: { id }, body, set }) => {
+      // 현재 시퀀스 조회
+      const currentSequence = await sequenceService.getSequence(id)
+      if (!currentSequence) {
+        set.status = 404
+        return errorResponse("시퀀스를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      }
+
+      // 고객 그룹 변경 시 enrollment 체크
+      if (
+        body.customerGroupId !== undefined &&
+        body.customerGroupId !== currentSequence.customerGroupId
+      ) {
+        const hasEnrollments = await sequenceService.hasAnyEnrollments(id)
+        if (hasEnrollments) {
+          set.status = 400
+          return errorResponse(
+            "이미 실행 이력이 있는 시퀀스는 고객 그룹을 변경할 수 없습니다.",
+            ResponseCode.BAD_REQUEST,
+          )
+        }
+      }
+
       // 활성화 상태로 변경 시 워크플로우 검증 및 자동 시작
       if (body.status === "active") {
-        // 현재 시퀀스 조회
-        const currentSequence = await sequenceService.getSequence(id)
-        if (!currentSequence) {
-          set.status = 404
-          return errorResponse("시퀀스를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
-        }
-
         // 스텝 기반 시퀀스인지 확인
         const steps = await sequenceService.getSequenceSteps(id)
         const isStepBased = steps.length > 0

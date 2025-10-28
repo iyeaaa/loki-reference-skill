@@ -17,6 +17,7 @@ import {
   useCustomerGroupMembers,
   useCustomerGroupsByWorkspace,
 } from "@/lib/api/hooks/customer-groups"
+import { useSequenceEnrollments } from "@/lib/api/hooks/sequences"
 import { useSuspenseUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import type { CustomerGroupMember } from "@/lib/api/types/customer-group"
 import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence"
@@ -88,6 +89,15 @@ export function SequenceForm({
     formData.workspaceId,
     Boolean(formData.workspaceId),
   )
+
+  // Check if sequence has any enrollments (to disable customer group change)
+  const { data: enrollmentsData } = useSequenceEnrollments(
+    sequence?.id || "",
+    1,
+    1,
+    Boolean(isEdit && sequence?.id),
+  )
+  const hasEnrollments = (enrollmentsData?.total || 0) > 0
 
   // Fetch customer group members when group is selected and lead selection is shown
   const { data: membersData } = useCustomerGroupMembers(
@@ -190,7 +200,7 @@ export function SequenceForm({
         <Select
           value={formData.customerGroupId}
           onValueChange={(value) => setFormData({ ...formData, customerGroupId: value })}
-          disabled={!formData.workspaceId}
+          disabled={!formData.workspaceId || hasEnrollments}
           required
         >
           <SelectTrigger>
@@ -217,9 +227,15 @@ export function SequenceForm({
             </SelectContent>
           )}
         </Select>
-        <p className="text-xs text-gray-500">
-          💡 워크플로우 실행을 위해 고객그룹을 반드시 선택해야 합니다
-        </p>
+        {hasEnrollments ? (
+          <p className="text-xs text-amber-600">
+            ⚠️ 이미 실행 이력이 있는 시퀀스는 고객그룹을 변경할 수 없습니다
+          </p>
+        ) : (
+          <p className="text-xs text-gray-500">
+            💡 워크플로우 실행을 위해 고객그룹을 반드시 선택해야 합니다
+          </p>
+        )}
       </div>
 
       {/* 리드 선택 섹션 */}

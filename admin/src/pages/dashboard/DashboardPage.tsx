@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 import { TodoList } from "@/components/TodoList"
 import { Badge } from "@/components/ui/badge"
@@ -66,6 +67,7 @@ function createFollowupDayButton(followupsByDate: Map<string, { totalCount: numb
 }
 
 export default function DashboardPage() {
+  const { t } = useTranslation()
   const { selectedWorkspace } = useWorkspace()
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
 
@@ -204,7 +206,9 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {selectedWorkspace?.id === "all" ? "전체 고객" : "워크스페이스 고객"}
+              {selectedWorkspace?.id === "all"
+                ? t("dashboard.stats.customers.all")
+                : t("dashboard.stats.customers.workspace")}
             </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -220,7 +224,7 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">오늘 발송</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("dashboard.stats.todaySent")}</CardTitle>
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -231,26 +235,34 @@ export default function DashboardPage() {
                 todaySentCount.toLocaleString()
               )}
             </div>
-            <p className="text-xs text-muted-foreground">해외 바이어 컨택</p>
+            <p className="text-xs text-muted-foreground">
+              {t("dashboard.stats.description.overseasContact")}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">평균 오픈율</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("dashboard.stats.avgOpenRate")}
+            </CardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {avgOpenRateLoading ? <Skeleton className="h-8 w-16" /> : `${avgOpenRate}%`}
             </div>
-            <p className="text-xs text-muted-foreground">해외 바이어 오픈</p>
+            <p className="text-xs text-muted-foreground">
+              {t("dashboard.stats.description.overseasOpen")}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">바이어 응답률</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("dashboard.stats.buyerResponseRate")}
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -261,7 +273,9 @@ export default function DashboardPage() {
                 `${buyerResponseRate}%`
               )}
             </div>
-            <p className="text-xs text-muted-foreground">미팅 요청 포함</p>
+            <p className="text-xs text-muted-foreground">
+              {t("dashboard.stats.description.meetingRequest")}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -269,8 +283,8 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 mt-6">
         <Card>
           <CardHeader>
-            <CardTitle>최근 시퀀스 성과</CardTitle>
-            <CardDescription>해외 바이어 컨택 자동 시퀀스 현황</CardDescription>
+            <CardTitle>{t("dashboard.sequences.recent.title")}</CardTitle>
+            <CardDescription>{t("dashboard.sequences.recent.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -312,19 +326,22 @@ export default function DashboardPage() {
                           <h4 className="font-medium text-sm">{sequence.name}</h4>
                           <p className="text-xs text-muted-foreground">
                             {sequence.status === "active"
-                              ? "활성"
+                              ? t("dashboard.sequences.status.active")
                               : sequence.status === "paused"
-                                ? "일시정지"
+                                ? t("dashboard.sequences.status.paused")
                                 : sequence.status === "draft"
-                                  ? "초안"
-                                  : "보관됨"}
+                                  ? t("dashboard.sequences.status.draft")
+                                  : t("dashboard.sequences.status.archived")}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-medium">{sequence.sent} 발송</div>
+                        <div className="text-sm font-medium">
+                          {sequence.sent} {t("dashboard.sequences.sent")}
+                        </div>
                         <div className="text-xs text-muted-foreground">
-                          {sequence.opened} 오픈 • {sequence.clicked} 클릭
+                          {sequence.opened} {t("dashboard.sequences.opened")} • {sequence.clicked}{" "}
+                          {t("dashboard.sequences.clicked")}
                         </div>
                       </div>
                     </div>
@@ -332,7 +349,7 @@ export default function DashboardPage() {
                 })
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  <p>최근 시퀀스가 없습니다.</p>
+                  <p>{t("dashboard.sequences.noRecent")}</p>
                 </div>
               )}
             </div>
@@ -341,9 +358,9 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>팔로우업 발송 예정</CardTitle>
+            <CardTitle>{t("dashboard.followup.title")}</CardTitle>
             <CardDescription>
-              바이어 자동 팔로우업 발송 현황 (총 {totalScheduled}건)
+              {t("dashboard.followup.description", { total: totalScheduled })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -391,7 +408,9 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {selectedDateInfo.delayDays}일 후 팔로우업
+                      {t("dashboard.followup.delayDays", {
+                        days: selectedDateInfo.delayDays,
+                      })}
                     </div>
                     <div className="space-y-2">
                       {selectedDateInfo.sequences.map((seq) => (
@@ -410,11 +429,11 @@ export default function DashboardPage() {
                   </div>
                 ) : scheduledFollowups.length === 0 ? (
                   <div className="text-center py-4 text-sm text-muted-foreground">
-                    예약된 팔로우업이 없습니다
+                    {t("dashboard.followup.noScheduled")}
                   </div>
                 ) : (
                   <div className="text-center py-4 text-sm text-muted-foreground">
-                    날짜를 선택하여 상세 정보를 확인하세요
+                    {t("dashboard.followup.selectDate")}
                   </div>
                 )}
               </div>
@@ -428,15 +447,15 @@ export default function DashboardPage() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Inbox className="h-5 w-5" />
-              인박스 미리보기
+              {t("dashboard.inbox.title")}
             </CardTitle>
-            <CardDescription>최근 받은 답장 이메일</CardDescription>
+            <CardDescription>{t("dashboard.inbox.description")}</CardDescription>
           </div>
           <Link
             to="/replied-emails"
             className="text-sm text-primary hover:underline flex items-center gap-1"
           >
-            전체 보기 →
+            {t("dashboard.inbox.viewAll")} →
           </Link>
         </CardHeader>
         <CardContent>
@@ -466,13 +485,17 @@ export default function DashboardPage() {
 
                 let timeAgo = ""
                 if (diffDays > 0) {
-                  timeAgo = `${diffDays}일 전`
+                  timeAgo = t("dashboard.time.ago.daysAgo", { days: diffDays })
                 } else if (diffHours > 0) {
-                  timeAgo = `${diffHours}시간 전`
+                  timeAgo = t("dashboard.time.ago.hoursAgo", {
+                    hours: diffHours,
+                  })
                 } else if (diffMins > 0) {
-                  timeAgo = `${diffMins}분 전`
+                  timeAgo = t("dashboard.time.ago.minutesAgo", {
+                    minutes: diffMins,
+                  })
                 } else {
-                  timeAgo = "방금 전"
+                  timeAgo = t("dashboard.time.ago.justNow")
                 }
 
                 return (
@@ -495,10 +518,10 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <div className="text-sm font-medium mb-1 truncate">
-                      {reply.subject || "(제목 없음)"}
+                      {reply.subject || t("dashboard.inbox.noSubject")}
                     </div>
                     <div className="text-xs text-muted-foreground line-clamp-2">
-                      {reply.bodyText?.slice(0, 150) || "(내용 없음)"}
+                      {reply.bodyText?.slice(0, 150) || t("dashboard.inbox.noContent")}
                     </div>
                   </Link>
                 )
@@ -507,7 +530,7 @@ export default function DashboardPage() {
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               <Inbox className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>받은 답장이 없습니다</p>
+              <p>{t("dashboard.inbox.noReplies")}</p>
             </div>
           )}
         </CardContent>

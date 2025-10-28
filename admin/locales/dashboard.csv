@@ -1,0 +1,35 @@
+key,ko,en
+title.overview,대시보드,Dashboard
+stats.customers.all,전체 고객,All Customers
+stats.customers.workspace,워크스페이스 고객,Workspace Customers
+stats.todaySent,오늘 발송,Sent Today
+stats.avgOpenRate,평균 오픈율,Average Open Rate
+stats.buyerResponseRate,바이어 응답률,Buyer Response Rate
+stats.description.overseasContact,해외 바이어 컨택,Overseas Buyer Contact
+stats.description.overseasOpen,해외 바이어 오픈,Overseas Buyer Open
+stats.description.meetingRequest,미팅 요청 포함,Including Meeting Requests
+sequences.recent.title,최근 시퀀스 성과,Recent Sequence Performance
+sequences.recent.description,해외 바이어 컨택 자동 시퀀스 현황,Automated Overseas Buyer Contact Sequence Status
+sequences.status.active,활성,Active
+sequences.status.paused,일시정지,Paused
+sequences.status.draft,초안,Draft
+sequences.status.archived,보관됨,Archived
+sequences.sent,발송,Sent
+sequences.opened,오픈,Opened
+sequences.clicked,클릭,Clicked
+sequences.noRecent,최근 시퀀스가 없습니다,No recent sequences
+followup.title,팔로우업 발송 예정,Scheduled Follow-up
+followup.description,바이어 자동 팔로우업 발송 현황 (총 {total}건),Automated Buyer Follow-up Status (Total {total} emails)
+followup.delayDays,{days}일 후 팔로우업,Follow-up in {days} days
+followup.noScheduled,예약된 팔로우업이 없습니다,No scheduled follow-ups
+followup.selectDate,날짜를 선택하여 상세 정보를 확인하세요,Select a date to view details
+inbox.title,인박스 미리보기,Inbox Preview
+inbox.description,최근 받은 답장 이메일,Recent Reply Emails
+inbox.viewAll,전체 보기,View All
+inbox.noSubject,(제목 없음),(No Subject)
+inbox.noContent,(내용 없음),(No Content)
+inbox.noReplies,받은 답장이 없습니다,No replies received
+time.ago.justNow,방금 전,Just now
+time.ago.minutesAgo,{minutes}분 전,{minutes} minutes ago
+time.ago.hoursAgo,{hours}시간 전,{hours} hours ago
+time.ago.daysAgo,{days}일 전,{days} days ago

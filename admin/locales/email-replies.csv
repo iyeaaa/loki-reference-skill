@@ -4,12 +4,16 @@ alert.selectWorkspace.title,워크스페이스를 선택해주세요,Please sele
 alert.selectWorkspace.description,답장 이메일을 조회하려면 사이드바에서 워크스페이스를 선택해주세요.,Please select a workspace from the sidebar to view email replies.
 search.placeholder,제목 발신자 이메일로 검색...,Search by subject sender email...
 bulk.selected,{{count}}개 스레드 선택됨,{{count}} threads selected
+bulk.selected_one,{{count}}개 스레드 선택됨,{{count}} thread selected
+bulk.selected_other,{{count}}개 스레드 선택됨,{{count}} threads selected
 bulk.noSelection,선택된 스레드가 없습니다.,No threads selected.
 bulk.changeReadStatus,읽음 상태 변경,Change read status
 bulk.delete,선택 삭제,Delete selected
 empty.selectWorkspace,워크스페이스를 선택하면 답장 이메일 목록이 표시됩니다.,Select a workspace to view email replies.
 confirm.delete.title,스레드 삭제 확인,Confirm thread deletion
 confirm.delete.description,선택한 {{count}}개의 스레드와 관련된 모든 이메일을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.,Do you want to delete all emails related to {{count}} selected threads? This action cannot be undone.
+confirm.delete.description_one,선택한 {{count}}개의 스레드와 관련된 모든 이메일을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.,Do you want to delete all emails related to {{count}} selected thread? This action cannot be undone.
+confirm.delete.description_other,선택한 {{count}}개의 스레드와 관련된 모든 이메일을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.,Do you want to delete all emails related to {{count}} selected threads? This action cannot be undone.
 confirm.delete.button,삭제,Delete
 confirm.cancel.button,취소,Cancel
 thread.loading,스레드 로딩 중...,Loading thread...
@@ -80,12 +84,11 @@ pagination.page,페이지,Page
 bulkModal.title.readStatus,읽음 상태 일괄 변경,Change Read Status in Bulk
 bulkModal.title.default,일괄 작업,Bulk Action
 bulkModal.description.readStatus,선택된 {{count}}개의 이메일 읽음 상태를 변경합니다.,Change the read status of {{count}} selected emails.
+bulkModal.description.readStatus_one,선택된 {{count}}개의 이메일 읽음 상태를 변경합니다.,Change the read status of {{count}} selected email.
+bulkModal.description.readStatus_other,선택된 {{count}}개의 이메일 읽음 상태를 변경합니다.,Change the read status of {{count}} selected emails.
 bulkModal.label.status,변경할 상태,Status to Change
 bulkModal.placeholder.selectStatus,상태 선택,Select Status
 bulkModal.option.read,읽음,Read
 bulkModal.option.unread,읽지 않음,Unread
 bulkModal.button.cancel,취소,Cancel
 bulkModal.button.change,변경,Change
-bulk.selected_other,[NO TRANSLATION] email-replies.bulk.selected_other,[NO TRANSLATION] email-replies.bulk.selected_other
-bulkModal.description.readStatus_other,[NO TRANSLATION] email-replies.bulkModal.description.readStatus_other,[NO TRANSLATION] email-replies.bulkModal.description.readStatus_other
-confirm.delete.description_other,[NO TRANSLATION] email-replies.confirm.delete.description_other,[NO TRANSLATION] email-replies.confirm.delete.description_other

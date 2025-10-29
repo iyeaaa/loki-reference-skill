@@ -40,6 +40,8 @@ i18n
       escapeValue: false, // React는 자동으로 XSS 방어
     },
 
+    pluralSeparator: "_",
+
     // 디버그 모드 (개발 환경에서만 활성화)
     debug: import.meta.env.DEV,
 

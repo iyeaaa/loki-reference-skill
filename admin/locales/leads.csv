@@ -129,7 +129,6 @@ error.fileParsingError,파일 파싱 오류:,File parsing error:
 error.failedToLoadWorkspaces,워크스페이스 로드 실패:,Failed to load workspaces:
 error.failedToFetchLeadGroups,리드 그룹 가져오기 실패:,Failed to fetch lead groups:
 error.failedToUpdateLeadGroups,리드 그룹 업데이트 실패:,Failed to update lead groups:
-dialog.bulkDeleteDescription.selected_other,[NO TRANSLATION] leads.dialog.bulkDeleteDescription.selected_other,[NO TRANSLATION] leads.dialog.bulkDeleteDescription.selected_other
 form.companyName,회사명,Company Name
 form.companyNameRequired,회사명 입력 (필수),Enter company name (required)
 form.foundCompanyName,발견된 회사명,Found Company Name
@@ -258,9 +257,9 @@ sequences.dialog.createSequence,새 시퀀스 생성,Create New Sequence
 sequences.dialog.sequenceManagement,시퀀스 관리,Sequence Management
 sequences.toast.noSequencesSelected,선택된 시퀀스가 없습니다.,No sequences selected
 sequences.confirm.deleteSequences,선택한 {{count}}개의 시퀀스를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.,Are you sure you want to delete the selected {{count}} sequences? This action cannot be undone.
-form.address,[NO TRANSLATION] leads.form.address,[NO TRANSLATION] leads.form.address
-form.addressPlaceholder,[NO TRANSLATION] leads.form.addressPlaceholder,[NO TRANSLATION] leads.form.addressPlaceholder
-form.city,[NO TRANSLATION] leads.form.city,[NO TRANSLATION] leads.form.city
-form.leadScore,[NO TRANSLATION] leads.form.leadScore,[NO TRANSLATION] leads.form.leadScore
-form.leadScorePlaceholder,[NO TRANSLATION] leads.form.leadScorePlaceholder,[NO TRANSLATION] leads.form.leadScorePlaceholder
-form.leadSource,[NO TRANSLATION] leads.form.leadSource,[NO TRANSLATION] leads.form.leadSource
+form.address,주소,Address
+form.addressPlaceholder,주소 입력 (선택사항),Enter address (optional)
+form.city,도시,City
+form.leadScore,리드 점수,Lead Score
+form.leadScorePlaceholder,리드 점수 입력 (선택사항),Enter lead score (optional)
+form.leadSource,리드 출처,Lead Source

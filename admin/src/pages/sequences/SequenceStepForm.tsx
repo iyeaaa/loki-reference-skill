@@ -129,6 +129,7 @@ export function SequenceStepForm({
   const delayDaysId = useId()
   const bodyTextId = useId()
   const promptId = useId()
+  const targetCountryId = useId()
 
   // 사용자 정보를 기반으로 서명 생성
   const generateUserSignature = () => {
@@ -176,7 +177,7 @@ export function SequenceStepForm({
             setTargetCountry(Array.from(countries).join(","))
           } else {
             setTargetCountry("")
-            toast.info("고객 그룹에 국가 정보가 있는 리드가 없습니다.")
+            toast.warning("고객 그룹에 국가 정보가 없습니다. 직접 입력해주세요.")
           }
         })
         .catch((error) => {
@@ -225,8 +226,8 @@ export function SequenceStepForm({
       return
     }
 
-    if (!targetCountry) {
-      toast.error("고객 그룹에 국가 정보가 있는 리드가 없습니다.")
+    if (!targetCountry?.trim()) {
+      toast.error("타겟 국가를 입력해주세요.")
       return
     }
 
@@ -352,17 +353,23 @@ export function SequenceStepForm({
 
           {showAIGenerator && (
             <div className="space-y-3 pt-2 border-t">
-              {/* 타겟 국가 표시 */}
-              <div className="rounded-md bg-primary/5 border border-primary/20 p-3">
-                <p className="text-sm font-medium text-primary">
+              {/* 타겟 국가 입력 */}
+              <div className="space-y-2">
+                <Label htmlFor={targetCountryId}>
+                  타겟 국가 <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id={targetCountryId}
+                  value={targetCountry}
+                  onChange={(e) => setTargetCountry(e.target.value)}
+                  placeholder="예: 한국, 미국, 일본 (여러 국가는 쉼표로 구분)"
+                  className="bg-background"
+                  disabled={isLoadingCountry}
+                />
+                <p className="text-xs text-muted-foreground">
                   {isLoadingCountry
-                    ? "🔄 국가 정보 조회 중..."
-                    : targetCountry
-                      ? `🌍 타겟 국가: ${targetCountry}`
-                      : "⚠️ 고객 그룹에 국가 정보가 없습니다."}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  고객 그룹의 리드에서 자동으로 국가를 감지합니다.
+                    ? "🔄 고객 그룹의 리드에서 국가 정보를 조회 중입니다..."
+                    : "고객 그룹의 리드에서 자동으로 감지되며, 직접 수정할 수 있습니다."}
                 </p>
               </div>
 
@@ -383,7 +390,10 @@ export function SequenceStepForm({
                 type="button"
                 onClick={handleGenerateWithAI}
                 disabled={
-                  isGenerating || !aiPrompt.trim() || aiPrompt.trim().length < 10 || !targetCountry
+                  isGenerating ||
+                  !aiPrompt.trim() ||
+                  aiPrompt.trim().length < 10 ||
+                  !targetCountry?.trim()
                 }
                 className="w-full"
               >

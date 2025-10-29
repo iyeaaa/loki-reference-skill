@@ -1,5 +1,16 @@
 import { useQueryClient } from "@tanstack/react-query"
-import { Download, Edit2, FileText, Plus, Search, Trash2, Upload, Users, X } from "lucide-react"
+import {
+  Download,
+  Edit2,
+  FileText,
+  Plus,
+  Search,
+  Send,
+  Trash2,
+  Upload,
+  Users,
+  X,
+} from "lucide-react"
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -63,6 +74,7 @@ import { GroupEditModal } from "./GroupEditModal"
 import { LeadForm } from "./LeadForm"
 import { LeadGroupManagementModal } from "./LeadGroupManagementModal"
 import { LeadsTableWithPagination } from "./LeadsTableWithPagination"
+import { SequenceLaunchModal } from "./SequenceLaunchModal"
 
 export default function LeadsPage() {
   const { t } = useTranslation()
@@ -125,6 +137,10 @@ export default function LeadsPage() {
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false)
   const [groupDeleteConfirmOpen, setGroupDeleteConfirmOpen] = useState(false)
   const [groupToDelete, setGroupToDelete] = useState<CustomerGroup | null>(null)
+
+  // 시퀀스 발송 모달 상태
+  const [showSequenceLaunchModal, setShowSequenceLaunchModal] = useState(false)
+  const [sequenceLaunchGroup, setSequenceLaunchGroup] = useState<CustomerGroup | null>(null)
 
   // Generate unique IDs for form elements
   const existingGroupId = useId()
@@ -847,21 +863,41 @@ export default function LeadsPage() {
                     {t("leads.filter.customerGroup")}
                   </span>
                 </div>
-                <CreateGroupModal
-                  workspaces={workspaces}
-                  selectedWorkspaceId={selectedWorkspaceId}
-                  selectedLeadIds={selectedLeads}
-                  currentLeadsData={currentLeadsData.map((lead: Lead) => ({
-                    id: lead.id,
-                    companyName: lead.companyName || "",
-                  }))}
-                  onSuccess={(groupId) => {
-                    // 생성된 그룹을 자동으로 선택
-                    setSelectedCustomerGroup(groupId)
-                    // 선택된 리드들 초기화
-                    setSelectedLeads([])
-                  }}
-                />
+                <div className="flex gap-2">
+                  {/* 시퀀스 이메일 발송 버튼 - 특정 그룹 선택 시에만 표시 */}
+                  {selectedCustomerGroup && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => {
+                        const group = customerGroups?.find((g) => g.id === selectedCustomerGroup)
+                        if (group) {
+                          setSequenceLaunchGroup(group)
+                          setShowSequenceLaunchModal(true)
+                        }
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Send className="h-4 w-4 mr-1" />
+                      시퀀스 이메일 발송
+                    </Button>
+                  )}
+                  <CreateGroupModal
+                    workspaces={workspaces}
+                    selectedWorkspaceId={selectedWorkspaceId}
+                    selectedLeadIds={selectedLeads}
+                    currentLeadsData={currentLeadsData.map((lead: Lead) => ({
+                      id: lead.id,
+                      companyName: lead.companyName || "",
+                    }))}
+                    onSuccess={(groupId) => {
+                      // 생성된 그룹을 자동으로 선택
+                      setSelectedCustomerGroup(groupId)
+                      // 선택된 리드들 초기화
+                      setSelectedLeads([])
+                    }}
+                  />
+                </div>
               </div>
               {customerGroups && customerGroups.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
@@ -1543,6 +1579,17 @@ export default function LeadsPage() {
         cancelText={t("leads.button.cancel")}
         onConfirm={confirmGroupDelete}
         variant="destructive"
+      />
+
+      {/* Sequence Launch Modal */}
+      <SequenceLaunchModal
+        isOpen={showSequenceLaunchModal}
+        onClose={() => {
+          setShowSequenceLaunchModal(false)
+          setSequenceLaunchGroup(null)
+        }}
+        customerGroup={sequenceLaunchGroup}
+        workspaceId={selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id || ""}
       />
     </div>
   )

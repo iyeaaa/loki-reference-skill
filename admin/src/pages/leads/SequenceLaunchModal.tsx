@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query"
-import { ChevronDown, Mail, Plus, Send, Trash2, X } from "lucide-react"
-import { useEffect, useState } from "react"
+import { ChevronDown, Mail, Plus, Send, Sparkles, Trash2, X } from "lucide-react"
+import { useEffect, useId, useState } from "react"
 import toast from "react-hot-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -32,9 +32,12 @@ import {
   useSequencesByWorkspace,
   useUpdateSequenceStep,
 } from "@/lib/api/hooks/sequences"
+import { leadsApi } from "@/lib/api/services/leads"
+import { sequencesApi } from "@/lib/api/services/sequences"
 import type { CustomerGroup } from "@/lib/api/types/customer-group"
 import type { SequenceStep } from "@/lib/api/types/sequence"
-import { markdownToHtml } from "@/lib/utils/markdown"
+import { generateSignatureHtml } from "@/lib/utils/email-signature"
+import { htmlToMarkdown, markdownToHtml } from "@/lib/utils/markdown"
 
 interface SequenceLaunchModalProps {
   isOpen: boolean
@@ -54,6 +57,17 @@ export function SequenceLaunchModal({
   const [selectedEmailAccountId, setSelectedEmailAccountId] = useState("")
   const [editedSteps, setEditedSteps] = useState<SequenceStep[]>([])
   const [editingStepId, setEditingStepId] = useState<string | null>(null)
+
+  // AI 이메일 생성 관련 상태
+  const [showAIGenerator, setShowAIGenerator] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState("")
+  const [targetCountry, setTargetCountry] = useState<string>("")
+  const [isLoadingCountry, setIsLoadingCountry] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+
+  // useId for form accessibility
+  const targetCountryId = useId()
+  const promptId = useId()
 
   // 고객 그룹의 모든 멤버 조회
   const { data: membersData } = useCustomerGroupMembers(
@@ -81,6 +95,41 @@ export function SequenceLaunchModal({
       })
     }
   }, [isOpen, customerGroup, members, leads])
+
+  // 고객 그룹의 리드에서 country 가져오기 (AI 생성용)
+  useEffect(() => {
+    if (customerGroup?.id && showAIGenerator) {
+      setIsLoadingCountry(true)
+      leadsApi
+        .list({ customerGroupId: customerGroup.id, limit: 1000 })
+        .then((response) => {
+          // 모든 리드에서 country 수집 (중복 제거)
+          const countries = new Set<string>()
+          for (const lead of response.leads) {
+            if (lead.country?.trim()) {
+              countries.add(lead.country.trim())
+            }
+          }
+
+          if (countries.size > 0) {
+            // comma로 구분하여 저장
+            setTargetCountry(Array.from(countries).join(","))
+          } else {
+            setTargetCountry("")
+            toast("고객 그룹에 국가 정보가 없습니다. 직접 입력해주세요.", {
+              icon: "⚠️",
+            })
+          }
+        })
+        .catch((error) => {
+          console.error("리드 조회 실패:", error)
+          toast.error("리드 정보를 가져오는데 실패했습니다.")
+        })
+        .finally(() => {
+          setIsLoadingCountry(false)
+        })
+    }
+  }, [customerGroup?.id, showAIGenerator])
 
   // 새 시퀀스 생성 모드
   const [isCreatingNewSequence, setIsCreatingNewSequence] = useState(false)
@@ -306,6 +355,83 @@ export function SequenceLaunchModal({
     } catch (error) {
       console.error("시퀀스 생성 오류:", error)
       // 에러는 이미 mutation의 onError에서 처리됨
+    }
+  }
+
+  // 사용자 서명 생성
+  const generateUserSignature = () => {
+    // TODO: 사용자 정보에서 이름과 직함 가져오기
+    const name = undefined
+    const title = undefined
+    if (name && title) {
+      return generateSignatureHtml({ name, title })
+    }
+    return generateSignatureHtml() // 기본값 사용
+  }
+
+  // AI로 이메일 템플릿 생성
+  const handleGenerateWithAI = async () => {
+    if (!editingStepId) {
+      toast.error("먼저 스텝을 선택해주세요.")
+      return
+    }
+
+    if (!workspaceId) {
+      toast.error("워크스페이스 정보가 없습니다.")
+      return
+    }
+
+    if (!customerGroup?.id) {
+      toast.error("고객 그룹이 설정되어 있지 않습니다.")
+      return
+    }
+
+    if (!targetCountry?.trim()) {
+      toast.error("타겟 국가를 입력해주세요.")
+      return
+    }
+
+    if (!aiPrompt.trim()) {
+      toast.error("이메일 내용 요청사항을 입력해주세요.")
+      return
+    }
+
+    if (aiPrompt.trim().length < 10) {
+      toast.error("이메일 내용 요청사항을 10자 이상 입력해주세요.")
+      return
+    }
+
+    setIsGenerating(true)
+    try {
+      const result = await sequencesApi.generateTemplate({
+        workspaceId,
+        country: targetCountry,
+        prompt: aiPrompt,
+      })
+
+      // 현재 편집 중인 스텝 업데이트
+      setEditedSteps((prev) =>
+        prev.map((step) =>
+          step.id === editingStepId
+            ? {
+                ...step,
+                emailSubject: result.emailSubject,
+                emailBodyText: `${htmlToMarkdown(
+                  result.emailBodyText,
+                )}\n\n${generateUserSignature()}`,
+              }
+            : step,
+        ),
+      )
+
+      toast.success(`이메일 템플릿이 생성되었습니다! (언어: ${result.detectedLanguage || "auto"})`)
+      setShowAIGenerator(false)
+      setAiPrompt("")
+    } catch (error) {
+      console.error("AI 템플릿 생성 실패:", error)
+      toast.error(error instanceof Error ? error.message : "템플릿 생성에 실패했습니다.")
+    } finally {
+      setIsGenerating(false)
     }
   }
 
@@ -699,6 +825,79 @@ export function SequenceLaunchModal({
                                 </div>
                               </div>
                             </div>
+
+                            {/* AI 생성 섹션 */}
+                            {workspaceId && customerGroup && (
+                              <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+                                <div className="flex items-center justify-between">
+                                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                                    <Sparkles className="h-4 w-4 text-primary" />
+                                    AI 이메일 템플릿 생성
+                                  </h3>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowAIGenerator(!showAIGenerator)}
+                                  >
+                                    {showAIGenerator ? "닫기" : "열기"}
+                                  </Button>
+                                </div>
+
+                                {showAIGenerator && (
+                                  <div className="space-y-3 pt-2 border-t">
+                                    {/* 타겟 국가 입력 */}
+                                    <div className="space-y-2">
+                                      <Label htmlFor={targetCountryId}>
+                                        타겟 국가 <span className="text-red-500">*</span>
+                                      </Label>
+                                      <Input
+                                        id={targetCountryId}
+                                        value={targetCountry}
+                                        onChange={(e) => setTargetCountry(e.target.value)}
+                                        placeholder="예: 한국, 미국, 일본 (여러 국가는 쉼표로 구분)"
+                                        className="bg-background"
+                                        disabled={isLoadingCountry}
+                                      />
+                                      <p className="text-xs text-muted-foreground">
+                                        {isLoadingCountry
+                                          ? "🔄 고객 그룹의 리드에서 국가 정보를 조회 중입니다..."
+                                          : "고객 그룹의 리드에서 자동으로 감지되며, 직접 수정할 수 있습니다."}
+                                      </p>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <Label htmlFor={promptId}>
+                                        이메일 내용 요청사항 <span className="text-red-500">*</span>
+                                      </Label>
+                                      <Textarea
+                                        id={promptId}
+                                        value={aiPrompt}
+                                        onChange={(e) => setAiPrompt(e.target.value)}
+                                        placeholder="예: K-뷰티 제품의 글로벌 유통 파트너십을 제안하는 이메일을 작성해주세요. 우리 제품의 강점과 파트너십 혜택을 강조해주세요."
+                                        className="bg-background min-h-[100px]"
+                                      />
+                                    </div>
+
+                                    <Button
+                                      type="button"
+                                      onClick={handleGenerateWithAI}
+                                      disabled={
+                                        isGenerating ||
+                                        !aiPrompt.trim() ||
+                                        aiPrompt.trim().length < 10 ||
+                                        !targetCountry?.trim()
+                                      }
+                                      className="w-full"
+                                    >
+                                      <Sparkles className="h-4 w-4 mr-2" />
+                                      {isGenerating ? "생성 중..." : "AI로 템플릿 생성"}
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
                             <div>
                               <Label>이메일 제목</Label>
                               <Input

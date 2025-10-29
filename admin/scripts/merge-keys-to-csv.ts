@@ -18,18 +18,18 @@ interface TranslationRow {
 }
 
 const LOCALES_DIR = join(process.cwd(), "locales")
-const SCANNED_JSON_PATH = join(process.cwd(), "locales", ".scanned", "ko", "translation.json")
+const SCANNED_JSON_PATH_KO = join(process.cwd(), "locales", ".scanned", "ko", "translation.json")
 
 try {
   // 스캔된 JSON 파일이 없으면 종료
-  if (!existsSync(SCANNED_JSON_PATH)) {
+  if (!existsSync(SCANNED_JSON_PATH_KO)) {
     console.log("ℹ️  No scanned keys found. Run i18next-scanner first.")
     process.exit(0)
   }
 
-  // 스캔된 JSON 읽기
-  const scannedData = JSON.parse(readFileSync(SCANNED_JSON_PATH, "utf-8"))
-  const scannedKeys = flattenKeys(scannedData)
+  // 한국어 스캔 결과 읽기 (기본 키만)
+  const scannedDataKo = JSON.parse(readFileSync(SCANNED_JSON_PATH_KO, "utf-8"))
+  const scannedKeys = flattenKeys(scannedDataKo)
 
   // 파일별로 키 그룹화
   const keysByFile: Record<string, string[]> = {}
@@ -38,8 +38,16 @@ try {
     const [namespace, ...rest] = fullKey.split(".")
     if (!namespace || rest.length === 0) continue
 
-    const csvFileName = `${namespace}.csv`
     const keyWithoutNamespace = rest.join(".")
+    
+    // 한국어 스캔에서 복수형 키가 나오면 무시
+    // (한국어는 복수형이 없으므로 i18next-scanner가 잘못 생성한 것)
+    const pluralSuffixes = ["_other", "_one", "_zero", "_two", "_few", "_many"]
+    if (pluralSuffixes.some(suffix => keyWithoutNamespace.endsWith(suffix))) {
+      continue // 복수형 키는 건너뛰기
+    }
+
+    const csvFileName = `${namespace}.csv`
 
     if (!keysByFile[csvFileName]) {
       keysByFile[csvFileName] = []

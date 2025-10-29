@@ -903,7 +903,7 @@ export default function LeadsPage() {
                   {/* 시퀀스 이메일 발송 버튼 - 특정 그룹 선택 시에만 표시 */}
                   {selectedCustomerGroup && (
                     <Button
-                      variant="default"
+                      variant="outline"
                       size="sm"
                       onClick={() => {
                         const group = customerGroups?.find((g) => g.id === selectedCustomerGroup)
@@ -912,7 +912,6 @@ export default function LeadsPage() {
                           setShowSequenceLaunchModal(true)
                         }
                       }}
-                      className="bg-blue-600 hover:bg-blue-700"
                     >
                       <Send className="h-4 w-4 mr-1" />
                       시퀀스 이메일 발송

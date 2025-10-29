@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { ChevronDown, Mail, Plus, Send, Sparkles, Trash2, X } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import toast from "react-hot-toast"
@@ -57,6 +57,7 @@ export function SequenceLaunchModal({
   const [selectedEmailAccountId, setSelectedEmailAccountId] = useState("")
   const [editedSteps, setEditedSteps] = useState<SequenceStep[]>([])
   const [editingStepId, setEditingStepId] = useState<string | null>(null)
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([])
 
   // AI 이메일 생성 관련 상태
   const [showAIGenerator, setShowAIGenerator] = useState(false)
@@ -82,6 +83,15 @@ export function SequenceLaunchModal({
   const leads = members.map((member) => ({
     id: member.leadId,
   }))
+
+  // 리드 상세 정보 조회 (체크박스 UI용)
+  const { data: leadsData } = useQuery({
+    queryKey: ["leads", "customer-group", customerGroup?.id],
+    queryFn: () =>
+      customerGroup?.id ? leadsApi.list({ customerGroupId: customerGroup.id, limit: 10000 }) : null,
+    enabled: !!customerGroup?.id,
+  })
+  const leadsDetail = leadsData?.leads || []
 
   // 디버깅: leads 확인
   useEffect(() => {
@@ -181,6 +191,14 @@ export function SequenceLaunchModal({
       setNewSequenceDescription("")
     }
   }, [isOpen])
+
+  // 리드 목록이 로드되면 전체 선택
+  // biome-ignore lint/correctness/useExhaustiveDependencies: selectedLeadIds를 의존성에 추가하면 무한 루프 발생
+  useEffect(() => {
+    if (isOpen && leads.length > 0 && selectedLeadIds.length === 0) {
+      setSelectedLeadIds(leads.map((lead) => lead.id))
+    }
+  }, [isOpen, leads.length])
 
   const handleStepEdit = (stepId: string, field: string, value: string | number) => {
     setEditedSteps((prev) =>
@@ -447,8 +465,8 @@ export function SequenceLaunchModal({
       return
     }
 
-    if (leads.length === 0) {
-      toast.error("발송할 리드가 없습니다.")
+    if (selectedLeadIds.length === 0) {
+      toast.error("발송할 리드를 선택해주세요.")
       return
     }
 
@@ -481,8 +499,8 @@ export function SequenceLaunchModal({
     console.log("🚀 시퀀스 실행 시작:", {
       sequenceId: selectedSequenceId,
       customerGroupId: customerGroup?.id,
-      leadCount: leads.length,
-      leadIds: leads.map((lead) => lead.id),
+      leadCount: selectedLeadIds.length,
+      leadIds: selectedLeadIds,
       stepsCount: editedSteps.length,
     })
 
@@ -496,7 +514,7 @@ export function SequenceLaunchModal({
           {
             sequenceId: selectedSequenceId,
             data: {
-              leadIds: leads.map((lead) => lead.id),
+              leadIds: selectedLeadIds,
               userEmailAccountId: selectedEmailAccountId,
             },
           },
@@ -546,12 +564,104 @@ export function SequenceLaunchModal({
                       )}
                     </p>
                     <p className="text-sm text-blue-700 mt-1">
-                      {leads.length}명의 리드에게 이메일을 발송합니다.
+                      총 {leads.length}명의 리드 중 {selectedLeadIds.length}명을 선택했습니다.
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* 대상 리드 정보 */}
+          {customerGroup && (
+            <div className="border rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium">등록 대상 리드</h4>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">{selectedLeadIds.length}명 선택</Badge>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedLeadIds(leads.map((lead) => lead.id))}
+                      className="h-7 text-xs"
+                    >
+                      전체 선택
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedLeadIds([])}
+                      className="h-7 text-xs"
+                    >
+                      전체 해제
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              {leadsDetail.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  고객그룹에 리드가 없습니다.
+                </p>
+              ) : (
+                <div className="max-h-60 overflow-y-auto space-y-2">
+                  {leadsDetail.map((lead) => {
+                    const isSelected = selectedLeadIds.includes(lead.id)
+                    const primaryEmail = lead.contacts?.find(
+                      (c) => c.isPrimary && c.contactType === "email",
+                    )?.contactValue
+
+                    return (
+                      // biome-ignore lint/a11y/useSemanticElements: 복잡한 레이아웃을 위해 div 사용
+                      <div
+                        key={lead.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedLeadIds(selectedLeadIds.filter((id) => id !== lead.id))
+                          } else {
+                            setSelectedLeadIds([...selectedLeadIds, lead.id])
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault()
+                            if (isSelected) {
+                              setSelectedLeadIds(selectedLeadIds.filter((id) => id !== lead.id))
+                            } else {
+                              setSelectedLeadIds([...selectedLeadIds, lead.id])
+                            }
+                          }
+                        }}
+                        className={`text-sm flex items-center justify-between py-2 px-3 border-b last:border-0 cursor-pointer transition-colors ${
+                          isSelected
+                            ? "bg-blue-50 hover:bg-blue-100 border-blue-200"
+                            : "hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {}}
+                              className="h-4 w-4 rounded border-gray-300"
+                            />
+                            <span className="font-medium">{lead.companyName || "회사명 없음"}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground ml-6 mt-0.5">
+                            {primaryEmail || "이메일 없음"}
+                            {lead.country && ` • ${lead.country}`}
+                            {lead.businessType && ` • ${lead.businessType}`}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           )}
 
           {/* 시퀀스 선택 또는 생성 */}

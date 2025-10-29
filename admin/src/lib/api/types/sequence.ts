@@ -1,6 +1,6 @@
 // Sequence Management API Types (aligned with backend database schema)
 
-export type SequenceStatus = "draft" | "active" | "paused" | "archived" | "completed"
+export type SequenceStatus = "draft" | "active" | "paused" | "archived" | "completed" | "no_response"
 
 export type EnrollmentStatus =
   | "active"

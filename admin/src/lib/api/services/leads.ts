@@ -157,7 +157,12 @@ export const leadsApi = {
   },
 
   // 필터 옵션 조회
-  getFilterOptions: async (field: string, workspaceId?: string, customerGroupId?: string) => {
+  getFilterOptions: async (
+    field: string,
+    workspaceId?: string,
+    customerGroupId?: string,
+    signal?: AbortSignal,
+  ) => {
     // Build query object, only including defined values
     const query: { workspaceId?: string; customerGroupId?: string } = {}
     if (workspaceId !== undefined && workspaceId !== "") {
@@ -172,6 +177,7 @@ export const leadsApi = {
         path: { field },
         query,
       },
+      signal,
     })
 
     if (error) {

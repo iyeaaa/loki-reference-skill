@@ -51,6 +51,7 @@ export interface ColumnFilterConfig {
   loadOptions?: (context?: {
     customerGroupId?: string
     workspaceId?: string
+    signal?: AbortSignal
   }) => Promise<Array<{ value: string; label: string; count?: number }>>
 }
 

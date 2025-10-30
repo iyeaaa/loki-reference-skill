@@ -42,10 +42,8 @@ export function ColumnFilterButton({
 
   const handleFilterChange = (filter: ColumnFilter | null) => {
     onFilterChange(filter)
-    // Close popover after applying filter
-    if (filter !== null) {
-      setIsOpen(false)
-    }
+    // Always close dialog after filter change (including clear)
+    setIsOpen(false)
   }
 
   // Render the appropriate filter component based on type

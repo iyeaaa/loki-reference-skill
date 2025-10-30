@@ -56,33 +56,6 @@ const app = new Elysia()
       maxAge: 86400, // 24 hours
     }),
   )
-  .use(requestId) // Add request ID for tracing
-  .use(httpLogger) // Logger
-
-  // Security plugins
-  .use(rateLimit) // Apply rate limiting to all routes
-  .onBeforeHandle(({ set }) => {
-    // Security headers
-    set.headers["x-content-type-options"] = "nosniff"
-    set.headers["x-frame-options"] = "DENY"
-    set.headers["x-xss-protection"] = "1; mode=block"
-    set.headers["referrer-policy"] = "strict-origin-when-cross-origin"
-
-    if (!isDevelopment) {
-      set.headers["strict-transport-security"] = "max-age=31536000; includeSubDomains"
-    }
-  })
-  // Handle OPTIONS requests explicitly
-  .options("*", ({ set }) => {
-    set.status = 204
-    return ""
-  })
-  .use(errorHandler) // Apply global error handler (after CORS so errors include CORS)
-  .use(responseTransformer) // Apply response transformer
-  .onError(({ error }) => {
-    logger.error({ err: error }, "Application Error")
-    throw error
-  })
   .use(
     swagger({
       documentation: {
@@ -123,6 +96,33 @@ const app = new Elysia()
       exclude: ["/health", "/health/ready", "/health/live"], // Exclude health checks from docs
     }),
   )
+  .use(requestId) // Add request ID for tracing
+  .use(httpLogger) // Logger
+
+  // Security plugins
+  .use(rateLimit) // Apply rate limiting to all routes
+  .onBeforeHandle(({ set }) => {
+    // Security headers
+    set.headers["x-content-type-options"] = "nosniff"
+    set.headers["x-frame-options"] = "DENY"
+    set.headers["x-xss-protection"] = "1; mode=block"
+    set.headers["referrer-policy"] = "strict-origin-when-cross-origin"
+
+    if (!isDevelopment) {
+      set.headers["strict-transport-security"] = "max-age=31536000; includeSubDomains"
+    }
+  })
+  // Handle OPTIONS requests explicitly
+  .options("*", ({ set }) => {
+    set.status = 204
+    return ""
+  })
+  .use(errorHandler) // Apply global error handler (after CORS so errors include CORS)
+  .use(responseTransformer) // Apply response transformer
+  .onError(({ error }) => {
+    logger.error({ err: error }, "Application Error")
+    throw error
+  })
   .get("/", () => ({ message: "SendGrid Email Service API", version: "2.1.0" }))
 
   // Register routes

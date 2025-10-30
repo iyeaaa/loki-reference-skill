@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray, or, type SQL, sql } from "drizzle-orm"
+import { and, asc, desc, eq, ilike, inArray, or, type SQL, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { customerGroupMembers } from "../db/schema/customer-groups"
 import {
@@ -12,6 +12,13 @@ import {
 import { type leadStatusEnum, leads } from "../db/schema/leads"
 import { users } from "../db/schema/users"
 import { workspaces } from "../db/schema/workspaces"
+import type { ColumnFilter } from "../types/lead-filters.types"
+import type { LeadSearchResultRuntime } from "../types/lead-service.types"
+import {
+  buildDateRangeFilter,
+  buildFiltersQuery,
+  validateFilters,
+} from "../utils/filter-builder.util"
 
 // ====================================
 // LEAD CRUD OPERATIONS
@@ -403,9 +410,19 @@ export async function listLeadsWithFilters(
     workspaceIds?: string[]
     createdByIds?: string[]
     customerGroupId?: string
+    // NEW: Column-specific filters
+    columnFilters?: ColumnFilter[]
+    // NEW: Sorting
+    sortField?: string
+    sortOrder?: "asc" | "desc"
+    // NEW: Date range filters
+    createdAfter?: string
+    createdBefore?: string
+    updatedAfter?: string
+    updatedBefore?: string
   },
-) {
-  const conditions = []
+): Promise<LeadSearchResultRuntime[]> {
+  const conditions: SQL[] = []
 
   if (filters?.leadStatus) {
     conditions.push(eq(leads.leadStatus, filters.leadStatus))
@@ -486,10 +503,55 @@ export async function listLeadsWithFilters(
     }
   }
 
+  // NEW: Add column-specific filters
+  if (filters?.columnFilters && filters.columnFilters.length > 0) {
+    // Validate filters first
+    const validation = validateFilters(filters.columnFilters)
+    if (!validation.isValid) {
+      throw new Error(`Filter validation failed: ${validation.error}`)
+    }
+
+    const columnFilterCondition = buildFiltersQuery(filters.columnFilters)
+    if (columnFilterCondition) {
+      conditions.push(columnFilterCondition)
+    }
+  }
+
+  // NEW: Add date range filters for createdAt
+  if (filters?.createdAfter || filters?.createdBefore) {
+    const createdAtFilter = buildDateRangeFilter(
+      "createdAt",
+      filters.createdAfter,
+      filters.createdBefore,
+    )
+    if (createdAtFilter) {
+      conditions.push(createdAtFilter)
+    }
+  }
+
+  // NEW: Add date range filters for updatedAt
+  if (filters?.updatedAfter || filters?.updatedBefore) {
+    const updatedAtFilter = buildDateRangeFilter(
+      "updatedAt",
+      filters.updatedAfter,
+      filters.updatedBefore,
+    )
+    if (updatedAtFilter) {
+      conditions.push(updatedAtFilter)
+    }
+  }
+
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-  // Get basic lead data
-  const baseQuery = db
+  // NEW: Determine sort order
+  const sortColumn = filters?.sortField
+    ? // biome-ignore lint/suspicious/noExplicitAny: Dynamic sort field access from schema requires any type
+      (leads as any)[filters.sortField] || leads.createdAt
+    : leads.createdAt
+  const sortDirection = filters?.sortOrder === "asc" ? asc : desc
+
+  // Build query with dynamic chaining
+  let query = db
     .select({
       id: leads.id,
       workspaceId: leads.workspaceId,
@@ -528,28 +590,29 @@ export async function listLeadsWithFilters(
     .from(leads)
     .innerJoin(workspaces, eq(leads.workspaceId, workspaces.id))
     .leftJoin(users, eq(leads.createdBy, users.id))
+    .$dynamic()
 
-  // If customerGroupId is specified, join with customerGroupMembers table
-  let result: Awaited<ReturnType<typeof baseQuery.orderBy>>
+  // Conditionally add customerGroup filter (use subquery to avoid null issues with joins)
   if (filters?.customerGroupId) {
-    result = await baseQuery
-      .innerJoin(customerGroupMembers, eq(leads.id, customerGroupMembers.leadId))
-      .where(and(eq(customerGroupMembers.groupId, filters.customerGroupId), whereClause))
-      .orderBy(desc(leads.createdAt))
-      .limit(limit)
-      .offset(offset)
+    const groupMemberSubquery = db
+      .select({ leadId: customerGroupMembers.leadId })
+      .from(customerGroupMembers)
+      .where(eq(customerGroupMembers.groupId, filters.customerGroupId))
+
+    const inGroupCondition = inArray(leads.id, groupMemberSubquery)
+    query = query.where(whereClause ? and(inGroupCondition, whereClause) : inGroupCondition)
   } else if (whereClause) {
-    result = await baseQuery
-      .where(whereClause)
-      .orderBy(desc(leads.createdAt))
-      .limit(limit)
-      .offset(offset)
-  } else {
-    result = await baseQuery.orderBy(desc(leads.createdAt)).limit(limit).offset(offset)
+    query = query.where(whereClause)
   }
 
+  // Execute query with sorting and pagination
+  const result = await query.orderBy(sortDirection(sortColumn)).limit(limit).offset(offset)
+
+  // Filter out null results (can happen with certain join conditions)
+  const validResults = result.filter((lead) => lead !== null && lead.id !== null)
+
   // Get all related data for each lead
-  const leadIds = result.map((lead) => lead.id)
+  const leadIds = validResults.map((lead) => lead.id)
 
   const contactsMap = new Map()
   const socialMediaMap = new Map()
@@ -559,52 +622,42 @@ export async function listLeadsWithFilters(
   const industryTypesMap = new Map()
 
   if (leadIds.length > 0) {
-    const leadIdCondition = or(...leadIds.map((id) => eq(leadContacts.leadId, id)))
-    const leadIdSocialCondition = or(...leadIds.map((id) => eq(leadSocialMedia.leadId, id)))
-    const leadIdProductsCondition = or(...leadIds.map((id) => eq(leadProducts.leadId, id)))
-    const leadIdBusinessSectorsCondition = or(
-      ...leadIds.map((id) => eq(leadBusinessSectors.leadId, id)),
-    )
-    const leadIdProductCategoriesCondition = or(
-      ...leadIds.map((id) => eq(leadProductCategories.leadId, id)),
-    )
-    const leadIdIndustryTypesCondition = or(
-      ...leadIds.map((id) => eq(leadIndustryTypes.leadId, id)),
-    )
-
     // Get contacts for all leads
-    const allContacts = leadIdCondition
-      ? await db
-          .select()
-          .from(leadContacts)
-          .where(leadIdCondition)
-          .orderBy(desc(leadContacts.isPrimary))
-      : []
+    const allContacts = await db
+      .select()
+      .from(leadContacts)
+      .where(inArray(leadContacts.leadId, leadIds))
+      .orderBy(desc(leadContacts.isPrimary))
 
     // Get social media for all leads
-    const allSocialMedia = leadIdSocialCondition
-      ? await db.select().from(leadSocialMedia).where(leadIdSocialCondition)
-      : []
+    const allSocialMedia = await db
+      .select()
+      .from(leadSocialMedia)
+      .where(inArray(leadSocialMedia.leadId, leadIds))
 
     // Get products for all leads
-    const allProducts = leadIdProductsCondition
-      ? await db.select().from(leadProducts).where(leadIdProductsCondition)
-      : []
+    const allProducts = await db
+      .select()
+      .from(leadProducts)
+      .where(inArray(leadProducts.leadId, leadIds))
 
     // Get business sectors for all leads
-    const allBusinessSectors = leadIdBusinessSectorsCondition
-      ? await db.select().from(leadBusinessSectors).where(leadIdBusinessSectorsCondition)
-      : []
+    const allBusinessSectors = await db
+      .select()
+      .from(leadBusinessSectors)
+      .where(inArray(leadBusinessSectors.leadId, leadIds))
 
     // Get product categories for all leads
-    const allProductCategories = leadIdProductCategoriesCondition
-      ? await db.select().from(leadProductCategories).where(leadIdProductCategoriesCondition)
-      : []
+    const allProductCategories = await db
+      .select()
+      .from(leadProductCategories)
+      .where(inArray(leadProductCategories.leadId, leadIds))
 
     // Get industry types for all leads
-    const allIndustryTypes = leadIdIndustryTypesCondition
-      ? await db.select().from(leadIndustryTypes).where(leadIdIndustryTypesCondition)
-      : []
+    const allIndustryTypes = await db
+      .select()
+      .from(leadIndustryTypes)
+      .where(inArray(leadIndustryTypes.leadId, leadIds))
 
     // Group by leadId
     allContacts.forEach((contact) => {
@@ -651,7 +704,7 @@ export async function listLeadsWithFilters(
   }
 
   // Combine data
-  return result.map((lead) => ({
+  const finalResults = validResults.map((lead) => ({
     ...lead,
     contacts: contactsMap.get(lead.id) || [],
     socialMedia: socialMediaMap.get(lead.id) || [],
@@ -660,6 +713,8 @@ export async function listLeadsWithFilters(
     productCategories: productCategoriesMap.get(lead.id) || [],
     industryTypes: industryTypesMap.get(lead.id) || [],
   }))
+
+  return finalResults
 }
 
 // GetLeadsByWorkspace :many
@@ -766,8 +821,15 @@ export async function countLeadsWithFilters(filters?: {
   workspaceIds?: string[]
   createdByIds?: string[]
   customerGroupId?: string
+  // NEW: Column-specific filters
+  columnFilters?: ColumnFilter[]
+  // NEW: Date range filters
+  createdAfter?: string
+  createdBefore?: string
+  updatedAfter?: string
+  updatedBefore?: string
 }) {
-  const conditions = []
+  const conditions: SQL[] = []
 
   if (filters?.leadStatus) {
     conditions.push(eq(leads.leadStatus, filters.leadStatus))
@@ -848,21 +910,59 @@ export async function countLeadsWithFilters(filters?: {
     }
   }
 
+  // NEW: Add column-specific filters
+  if (filters?.columnFilters && filters.columnFilters.length > 0) {
+    // Validate filters first
+    const validation = validateFilters(filters.columnFilters)
+    if (!validation.isValid) {
+      throw new Error(`Filter validation failed: ${validation.error}`)
+    }
+
+    const columnFilterCondition = buildFiltersQuery(filters.columnFilters)
+    if (columnFilterCondition) {
+      conditions.push(columnFilterCondition)
+    }
+  }
+
+  // NEW: Add date range filters for createdAt
+  if (filters?.createdAfter || filters?.createdBefore) {
+    const createdAtFilter = buildDateRangeFilter(
+      "createdAt",
+      filters.createdAfter,
+      filters.createdBefore,
+    )
+    if (createdAtFilter) {
+      conditions.push(createdAtFilter)
+    }
+  }
+
+  // NEW: Add date range filters for updatedAt
+  if (filters?.updatedAfter || filters?.updatedBefore) {
+    const updatedAtFilter = buildDateRangeFilter(
+      "updatedAt",
+      filters.updatedAfter,
+      filters.updatedBefore,
+    )
+    if (updatedAtFilter) {
+      conditions.push(updatedAtFilter)
+    }
+  }
+
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-  // If customerGroupId is specified, join with customerGroupMembers table
-  let result: { count: number }[]
+  // Build count query with dynamic chaining
+  let countQuery = db.select({ count: sql<number>`count(*)::int` }).from(leads).$dynamic()
+
+  // Conditionally add customerGroup join
   if (filters?.customerGroupId) {
-    result = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(leads)
+    countQuery = countQuery
       .innerJoin(customerGroupMembers, eq(leads.id, customerGroupMembers.leadId))
       .where(and(eq(customerGroupMembers.groupId, filters.customerGroupId), whereClause))
   } else if (whereClause) {
-    result = await db.select({ count: sql<number>`count(*)::int` }).from(leads).where(whereClause)
-  } else {
-    result = await db.select({ count: sql<number>`count(*)::int` }).from(leads)
+    countQuery = countQuery.where(whereClause)
   }
+
+  const result = await countQuery
 
   return result[0]?.count ?? 0
 }
@@ -1041,21 +1141,179 @@ export async function bulkCreateLeads(data: {
     secondaryPhone?: string
   }>
   createdBy?: string
-}) {
+}): Promise<{
+  createdLeads: Array<{
+    id: string
+    companyName: string | null
+    foundCompanyName: string | null
+    businessType: string | null
+    websiteUrl: string | null
+    description: string | null
+    country: string | null
+    city: string | null
+    leadStatus: string | null
+    leadScore: number | null
+    createdBy: string | null
+    createdAt: Date
+  }>
+  duplicateEmails: Array<{
+    email: string
+    existingLeadId: string
+    companyName: string
+    existingCompanyName?: string
+    customerGroupIds?: string[]
+    type: "database" | "csv"
+  }>
+  stats: {
+    total: number
+    created: number
+    skipped: number
+  }
+}> {
   // 대량 데이터 처리를 위한 배치 크기 제한
   const BATCH_SIZE = 10
   const totalLeads = data.leads.length
 
   if (totalLeads === 0) {
-    return []
+    return {
+      createdLeads: [],
+      duplicateEmails: [],
+      stats: { total: 0, created: 0, skipped: 0 },
+    }
   }
+
+  // Step 1: 중복 이메일 감지 (CSV 내부 + 데이터베이스)
+  const duplicateEmails: Array<{
+    email: string
+    existingLeadId: string
+    companyName: string
+    existingCompanyName?: string
+    customerGroupIds?: string[]
+    type: "database" | "csv"
+  }> = []
+  const emailToFirstOccurrence = new Map<string, number>()
+  const csvDuplicates = new Set<string>()
+
+  // CSV 내부 중복 체크
+  for (let i = 0; i < data.leads.length; i++) {
+    const lead = data.leads[i]
+    if (!lead) continue
+    const emails = [lead.primaryEmail, lead.secondaryEmail].filter(
+      (e): e is string => !!e && e.trim() !== "",
+    )
+
+    for (const email of emails) {
+      if (!emailToFirstOccurrence.has(email)) {
+        emailToFirstOccurrence.set(email, i)
+      } else {
+        csvDuplicates.add(email)
+        duplicateEmails.push({
+          email,
+          existingLeadId: "CSV_DUPLICATE",
+          companyName: lead.companyName,
+          type: "csv",
+        })
+      }
+    }
+  }
+
+  // 데이터베이스 중복 체크
+  const allEmails = Array.from(emailToFirstOccurrence.keys())
+  if (allEmails.length > 0) {
+    const existingEmails = await db
+      .select({
+        email: leadContacts.contactValue,
+        leadId: leadContacts.leadId,
+        companyName: leads.companyName,
+      })
+      .from(leadContacts)
+      .innerJoin(leads, eq(leadContacts.leadId, leads.id))
+      .where(
+        and(
+          eq(leads.workspaceId, data.workspaceId),
+          eq(leadContacts.contactType, "email"),
+          inArray(leadContacts.contactValue, allEmails),
+        ),
+      )
+
+    // Get customer groups for these leads
+    const existingLeadIds = existingEmails.map((e) => e.leadId)
+    const leadGroupMap = new Map<string, string[]>()
+
+    if (existingLeadIds.length > 0) {
+      const groupMemberships = await db
+        .select({
+          leadId: customerGroupMembers.leadId,
+          groupId: customerGroupMembers.groupId,
+        })
+        .from(customerGroupMembers)
+        .where(inArray(customerGroupMembers.leadId, existingLeadIds))
+
+      for (const membership of groupMemberships) {
+        const existing = leadGroupMap.get(membership.leadId) || []
+        existing.push(membership.groupId)
+        leadGroupMap.set(membership.leadId, existing)
+      }
+    }
+
+    for (const row of existingEmails) {
+      const leadIndex = emailToFirstOccurrence.get(row.email)
+      if (leadIndex !== undefined) {
+        const lead = data.leads[leadIndex]
+        if (!lead) continue
+        const customerGroupIds = leadGroupMap.get(row.leadId) || []
+
+        duplicateEmails.push({
+          email: row.email,
+          existingLeadId: row.leadId,
+          companyName: lead.companyName,
+          existingCompanyName: row.companyName || undefined,
+          customerGroupIds,
+          type: "database",
+        })
+      }
+    }
+  }
+
+  // Step 2: 중복이 없는 리드만 필터링
+  // CSV duplicates: 첫 번째 발생은 유지하고, 이후 중복만 스킵
+  // DB duplicates: 모두 스킵
+  const dbDuplicateEmails = new Set(
+    duplicateEmails.filter((d) => d.type === "database").map((d) => d.email),
+  )
+
+  const leadsToCreate = data.leads.filter((lead, index) => {
+    const emails = [lead.primaryEmail, lead.secondaryEmail].filter(
+      (e): e is string => !!e && e.trim() !== "",
+    )
+
+    // DB에 중복이 있으면 무조건 스킵
+    if (emails.some((email) => dbDuplicateEmails.has(email))) {
+      return false
+    }
+
+    // CSV 내부 중복: 첫 번째 발생인지 확인
+    for (const email of emails) {
+      const firstOccurrence = emailToFirstOccurrence.get(email)
+      if (firstOccurrence !== undefined && firstOccurrence !== index && csvDuplicates.has(email)) {
+        // 이 이메일은 중복이고, 현재 lead는 첫 번째 발생이 아님
+        return false
+      }
+    }
+
+    return true
+  })
+
+  console.log(
+    `Filtered leads: ${leadsToCreate.length}/${totalLeads} (skipped ${totalLeads - leadsToCreate.length} duplicates)`,
+  )
 
   const allCreatedLeads = []
 
   try {
     // 배치 단위로 처리
-    for (let i = 0; i < totalLeads; i += BATCH_SIZE) {
-      const batch = data.leads.slice(i, i + BATCH_SIZE)
+    for (let i = 0; i < leadsToCreate.length; i += BATCH_SIZE) {
+      const batch = leadsToCreate.slice(i, i + BATCH_SIZE)
 
       try {
         const batchResult = await processBatch(batch, data.workspaceId, data.createdBy)
@@ -1084,7 +1342,16 @@ export async function bulkCreateLeads(data: {
         }
       }
     }
-    return allCreatedLeads
+
+    return {
+      createdLeads: allCreatedLeads,
+      duplicateEmails,
+      stats: {
+        total: totalLeads,
+        created: allCreatedLeads.length,
+        skipped: totalLeads - leadsToCreate.length,
+      },
+    }
   } catch (error) {
     console.error("Bulk create failed:", error)
     console.error("Total leads:", totalLeads)
@@ -1664,4 +1931,187 @@ export async function exportSelectedLeadsToCSV(leadIds: string[]) {
 
   // Add BOM for proper UTF-8 encoding in Excel
   return `\uFEFF${csvContent}`
+}
+
+// ====================================
+// FILTER OPTIONS
+// ====================================
+
+/**
+ * Get filter options for a specific field with counts
+ * @param field - The filterable lead field to get options for
+ * @param workspaceId - Optional workspace ID to filter options
+ * @param customerGroupId - Optional customer group ID to filter options
+ * @returns Filter options with counts
+ */
+export async function getFilterOptions(
+  field: string,
+  workspaceId?: string,
+  customerGroupId?: string,
+): Promise<import("../types/lead-filters.types").GetFilterOptionsResponse> {
+  // Special handling for leadStatus enum - return all enum values with counts
+  if (field === "leadStatus") {
+    const enumValues = [
+      "new",
+      "contacted",
+      "qualified",
+      "unqualified",
+      "converted",
+      "lost",
+      "unsubscribed",
+    ]
+
+    // Build WHERE conditions
+    const whereConditions = []
+    if (workspaceId) {
+      whereConditions.push(eq(leads.workspaceId, workspaceId))
+    }
+    if (customerGroupId) {
+      whereConditions.push(
+        sql`${leads.id} IN (SELECT lead_id FROM customer_group_members WHERE group_id = ${customerGroupId})`,
+      )
+    }
+
+    // Get counts for each status
+    const results = await db
+      .select({
+        value: leads.leadStatus,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(leads)
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+      .groupBy(leads.leadStatus)
+
+    // Create a map of counts
+    const countMap = new Map(results.map((r) => [r.value, r.count]))
+
+    // Return all enum values with counts (0 if not in results)
+    const options = enumValues.map((value) => ({
+      value,
+      label: value.charAt(0).toUpperCase() + value.slice(1),
+      count: countMap.get(value as (typeof leadStatusEnum.enumValues)[number]) || 0,
+    }))
+
+    return {
+      field: field as import("../types/lead-filters.types").FilterableLeadField,
+      options,
+      total: options.reduce((sum, opt) => sum + opt.count, 0),
+    }
+  }
+
+  // Special handling for employeeCount ranges
+  if (field === "employeeCount") {
+    const ranges = [
+      { value: "1-10", label: "1-10", min: 1, max: 10 },
+      { value: "11-50", label: "11-50", min: 11, max: 50 },
+      { value: "51-200", label: "51-200", min: 51, max: 200 },
+      { value: "201-500", label: "201-500", min: 201, max: 500 },
+      { value: "501-1000", label: "501-1000", min: 501, max: 1000 },
+      { value: "1000+", label: "1000+", min: 1000, max: null },
+    ]
+
+    // Build WHERE conditions
+    const whereConditions = []
+    if (workspaceId) {
+      whereConditions.push(eq(leads.workspaceId, workspaceId))
+    }
+    if (customerGroupId) {
+      whereConditions.push(
+        sql`${leads.id} IN (SELECT lead_id FROM customer_group_members WHERE group_id = ${customerGroupId})`,
+      )
+    }
+    whereConditions.push(sql`${leads.employeeCount} IS NOT NULL`)
+
+    // Get all employeeCount values
+    const results = await db
+      .select({
+        employeeCount: leads.employeeCount,
+      })
+      .from(leads)
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+
+    // Count values in each range
+    const options = ranges.map((range) => {
+      const count = results.filter((r) => {
+        if (!r.employeeCount) return false
+        // Try to parse the employeeCount value
+        const match = r.employeeCount.match(/\d+/)
+        if (!match) return false
+        const value = parseInt(match[0], 10)
+        if (range.max === null) {
+          return value >= range.min
+        }
+        return value >= range.min && value <= range.max
+      }).length
+
+      return {
+        value: range.value,
+        label: range.label,
+        count,
+      }
+    })
+
+    return {
+      field: field as import("../types/lead-filters.types").FilterableLeadField,
+      options,
+      total: options.reduce((sum, opt) => sum + opt.count, 0),
+    }
+  }
+
+  // Standard fields: country, city, state, leadSource, businessType
+  const fieldMap: Record<
+    string,
+    | typeof leads.country
+    | typeof leads.city
+    | typeof leads.state
+    | typeof leads.leadSource
+    | typeof leads.businessType
+  > = {
+    country: leads.country,
+    city: leads.city,
+    state: leads.state,
+    leadSource: leads.leadSource,
+    businessType: leads.businessType,
+  }
+
+  const selectedField = fieldMap[field]
+  if (!selectedField) {
+    throw new Error(`Invalid field: ${field}`)
+  }
+
+  // Build WHERE conditions
+  const whereConditions = []
+  if (workspaceId) {
+    whereConditions.push(eq(leads.workspaceId, workspaceId))
+  }
+  if (customerGroupId) {
+    whereConditions.push(
+      sql`${leads.id} IN (SELECT lead_id FROM customer_group_members WHERE group_id = ${customerGroupId})`,
+    )
+  }
+  whereConditions.push(sql`${selectedField} IS NOT NULL`)
+
+  // Query distinct values with counts
+  const results = await db
+    .select({
+      value: selectedField,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(leads)
+    .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+    .groupBy(selectedField)
+    .orderBy(desc(sql`count(*)`))
+
+  // Map results to filter options
+  const options = results.map((r) => ({
+    value: r.value as string,
+    label: r.value as string,
+    count: r.count,
+  }))
+
+  return {
+    field: field as import("../types/lead-filters.types").FilterableLeadField,
+    options,
+    total: options.reduce((sum, opt) => sum + opt.count, 0),
+  }
 }

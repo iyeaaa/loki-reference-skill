@@ -145,6 +145,7 @@ export interface LeadsParams {
   customerGroupId?: string
   sortField?: string
   sortOrder?: "asc" | "desc"
+  filters?: string // JSON stringified ColumnFilter[]
 }
 
 export interface BulkUpdateLeadStatusRequest {

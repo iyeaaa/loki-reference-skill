@@ -40,3 +40,6 @@ backups/
 
 # But include drizzle migration files
 !drizzle/**/*.sql
+
+# Docker
+compose.db.override.yml

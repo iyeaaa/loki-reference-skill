@@ -7,6 +7,7 @@ import { and, eq, inArray } from "drizzle-orm"
 import { db } from "../db"
 import {
   customerGroupMembers,
+  customerGroups,
   leadBusinessSectors,
   leadContacts,
   leadIndustryTypes,
@@ -19,6 +20,13 @@ import type { ParsedLeadData } from "../utils/excel-parser.util"
 import { extractUsername } from "../utils/excel-parser.util"
 import logger from "../utils/logger"
 
+export interface DuplicateEmailInfo {
+  email: string
+  existingLeadId: string
+  rowNumber: number
+  companyName: string | null
+}
+
 export interface ImportProgress {
   total: number
   processed: number
@@ -27,6 +35,8 @@ export interface ImportProgress {
   failed: number
   currentRow: number
   currentCompanyName: string | null
+  duplicateEmails: DuplicateEmailInfo[]
+  emailsSkipped: number
   errors: Array<{
     row: number
     companyName: string | null
@@ -50,6 +60,13 @@ export interface ImportResult {
     industriesCreated: number
     groupMembersCreated: number
   }
+  duplicateEmails: DuplicateEmailInfo[]
+  emailsSkipped: number
+  groupAssignment: {
+    groupId: string
+    groupName: string
+    membersAdded: number
+  } | null
   errors: Array<{
     row: number
     companyName: string | null
@@ -92,6 +109,7 @@ export async function importSingleLead(
   data: ParsedLeadData,
   createdBy: string | null = null,
   customerGroupId: string | null = null,
+  duplicateEmails: Map<string, string> = new Map(),
 ): Promise<{
   success: boolean
   leadId?: string
@@ -104,6 +122,7 @@ export async function importSingleLead(
     industriesCreated: number
     groupMembersCreated: number
   }
+  skippedEmails: string[]
   error?: string
 }> {
   const stats = {
@@ -115,6 +134,8 @@ export async function importSingleLead(
     industriesCreated: 0,
     groupMembersCreated: 0,
   }
+
+  const skippedEmails: string[] = []
 
   try {
     // 트랜잭션 시작
@@ -167,17 +188,30 @@ export async function importSingleLead(
         stats.contactsCreated += phoneContacts.length
       }
 
-      // 3. Contacts 생성 (이메일)
+      // 3. Contacts 생성 (이메일) - 중복 이메일 필터링
       if (data.emails.length > 0) {
-        const emailContacts = data.emails.map((email, index) => ({
-          leadId,
-          contactType: "email" as const,
-          contactValue: email,
-          isPrimary: index === 0, // 첫 번째 이메일은 primary
-        }))
+        // 중복되지 않은 이메일만 필터링
+        const uniqueEmails = data.emails.filter((email) => {
+          if (duplicateEmails.has(email)) {
+            skippedEmails.push(email)
+            logger.debug({ email, leadId }, "Skipping duplicate email")
+            return false
+          }
+          return true
+        })
 
-        await tx.insert(leadContacts).values(emailContacts)
-        stats.contactsCreated += emailContacts.length
+        // 유니크한 이메일이 있을 경우에만 삽입
+        if (uniqueEmails.length > 0) {
+          const emailContacts = uniqueEmails.map((email, index) => ({
+            leadId,
+            contactType: "email" as const,
+            contactValue: email,
+            isPrimary: index === 0, // 첫 번째 이메일은 primary
+          }))
+
+          await tx.insert(leadContacts).values(emailContacts)
+          stats.contactsCreated += emailContacts.length
+        }
       }
 
       // 4. Social Media 생성
@@ -285,12 +319,14 @@ export async function importSingleLead(
       success: true,
       leadId: result.leadId,
       stats,
+      skippedEmails,
     }
   } catch (error: unknown) {
     logger.error({ error, websiteUrl: data.websiteUrl }, "Failed to import lead")
     return {
       success: false,
       stats,
+      skippedEmails,
       error: error instanceof Error ? error.message : "Unknown error",
     }
   }
@@ -357,6 +393,74 @@ async function checkDuplicateBatch(
 }
 
 /**
+ * Workspace 내 중복 이메일 체크 (여러 이메일을 청크로 나누어 조회)
+ *
+ * @param workspaceId - Workspace ID
+ * @param emails - 체크할 이메일 목록
+ * @returns 이메일과 해당 이메일이 속한 lead ID의 매핑
+ */
+async function checkDuplicateEmailsInWorkspace(
+  workspaceId: string,
+  emails: string[],
+): Promise<Map<string, string>> {
+  if (emails.length === 0) {
+    return new Map()
+  }
+
+  const CHUNK_SIZE = 1000 // PostgreSQL 바인드 파라미터 제한을 고려한 청크 크기
+  const emailToLeadIdMap = new Map<string, string>()
+
+  try {
+    // 이메일을 청크로 나누어 처리
+    for (let i = 0; i < emails.length; i += CHUNK_SIZE) {
+      const chunk = emails.slice(i, i + CHUNK_SIZE)
+
+      // leadContacts 테이블에서 이메일 조회 (workspace의 leads와 조인)
+      const existingEmails = await db
+        .select({
+          email: leadContacts.contactValue,
+          leadId: leadContacts.leadId,
+        })
+        .from(leadContacts)
+        .innerJoin(leads, eq(leadContacts.leadId, leads.id))
+        .where(
+          and(
+            eq(leads.workspaceId, workspaceId),
+            eq(leadContacts.contactType, "email"),
+            inArray(leadContacts.contactValue, chunk),
+          ),
+        )
+
+      for (const row of existingEmails) {
+        emailToLeadIdMap.set(row.email, row.leadId)
+      }
+
+      // 진행 상황 로깅 (대량 데이터의 경우)
+      if (emails.length > CHUNK_SIZE) {
+        logger.debug(
+          {
+            processed: Math.min(i + CHUNK_SIZE, emails.length),
+            total: emails.length,
+            found: emailToLeadIdMap.size,
+          },
+          "Duplicate email check progress",
+        )
+      }
+    }
+
+    logger.info(
+      { total: emails.length, duplicates: emailToLeadIdMap.size },
+      "Email duplicate check completed",
+    )
+
+    return emailToLeadIdMap
+  } catch (error) {
+    logger.error({ error }, "Failed to check duplicate emails")
+    return new Map()
+  }
+}
+
+/**
  * 배치 임포트 (여러 리드를 순차적으로 처리)
  */
 export async function importLeadsBatch(
@@ -376,6 +480,8 @@ export async function importLeadsBatch(
     failed: 0,
     currentRow: 0,
     currentCompanyName: null,
+    duplicateEmails: [],
+    emailsSkipped: 0,
     errors: [],
   }
 
@@ -400,6 +506,50 @@ export async function importLeadsBatch(
     { existingCount: existingUrls.size, totalUrls: websiteUrls.length },
     "Duplicate check completed",
   )
+
+  // 1-2. 이메일 중복 체크 (두 단계):
+  // Step 1: CSV 내부 중복 체크
+  logger.info({ total: leadsData.length }, "Starting within-CSV email duplicate check")
+  const emailToFirstOccurrence = new Map<string, number>() // email -> first row index
+  const csvDuplicates = new Map<string, string>() // email -> "CSV_DUPLICATE" marker
+
+  for (let i = 0; i < leadsData.length; i++) {
+    const leadData = leadsData[i]
+    if (!leadData) continue
+
+    for (const email of leadData.emails) {
+      if (email === "") continue
+
+      if (!emailToFirstOccurrence.has(email)) {
+        // 첫 번째 발견
+        emailToFirstOccurrence.set(email, i)
+      } else {
+        // CSV 내 중복 발견
+        csvDuplicates.set(email, "CSV_DUPLICATE")
+        logger.debug(
+          { email, firstRow: emailToFirstOccurrence.get(email), currentRow: i },
+          "Found duplicate email within CSV",
+        )
+      }
+    }
+  }
+
+  logger.info(
+    { csvDuplicateCount: csvDuplicates.size, totalEmails: emailToFirstOccurrence.size },
+    "Within-CSV duplicate check completed",
+  )
+
+  // Step 2: DB에 이미 존재하는 이메일들을 조회
+  logger.info({ total: leadsData.length }, "Starting database email duplicate check")
+  const allEmails = leadsData.flatMap((lead) => lead.emails).filter((email) => email !== "")
+  const dbDuplicateEmailMap = await checkDuplicateEmailsInWorkspace(workspaceId, allEmails)
+  logger.info(
+    { dbDuplicateEmailCount: dbDuplicateEmailMap.size, totalEmails: allEmails.length },
+    "Database email duplicate check completed",
+  )
+
+  // 두 중복 맵을 합치기: CSV 중복은 "CSV_DUPLICATE"로, DB 중복은 lead ID로
+  const duplicateEmailMap = new Map<string, string>([...csvDuplicates, ...dbDuplicateEmailMap])
 
   // 2. 중복되지 않은 데이터만 필터링
   const uniqueLeadsData = leadsData.filter((leadData) => {
@@ -444,8 +594,14 @@ export async function importLeadsBatch(
         leadSource: truncateString(leadData.leadSource, 100) || "뷰티DB",
       }
 
-      // 리드 임포트
-      const result = await importSingleLead(workspaceId, sanitizedData, createdBy, customerGroupId)
+      // 리드 임포트 (중복 이메일 맵 전달)
+      const result = await importSingleLead(
+        workspaceId,
+        sanitizedData,
+        createdBy,
+        customerGroupId,
+        duplicateEmailMap,
+      )
 
       if (result.success) {
         progress.success++
@@ -457,6 +613,22 @@ export async function importLeadsBatch(
         details.categoriesCreated += result.stats.categoriesCreated
         details.industriesCreated += result.stats.industriesCreated
         details.groupMembersCreated += result.stats.groupMembersCreated
+
+        // 스킵된 이메일 추적
+        if (result.skippedEmails.length > 0) {
+          for (const email of result.skippedEmails) {
+            const duplicateInfo = duplicateEmailMap.get(email)
+            if (duplicateInfo) {
+              progress.duplicateEmails.push({
+                email,
+                existingLeadId: duplicateInfo, // "CSV_DUPLICATE" 또는 실제 lead ID
+                rowNumber: originalIndex + 1,
+                companyName: leadData.companyName,
+              })
+              progress.emailsSkipped++
+            }
+          }
+        }
       } else {
         progress.failed++
         progress.errors.push({
@@ -492,12 +664,37 @@ export async function importLeadsBatch(
 
   const duration = Date.now() - startTime
 
+  // 그룹 할당 정보 가져오기 (customerGroupId가 제공된 경우)
+  let groupAssignment: ImportResult["groupAssignment"] = null
+  if (customerGroupId && details.groupMembersCreated > 0) {
+    try {
+      const [group] = await db
+        .select({ id: customerGroups.id, name: customerGroups.name })
+        .from(customerGroups)
+        .where(eq(customerGroups.id, customerGroupId))
+        .limit(1)
+
+      if (group) {
+        groupAssignment = {
+          groupId: group.id,
+          groupName: group.name,
+          membersAdded: details.groupMembersCreated,
+        }
+      }
+    } catch (error) {
+      logger.error({ error, customerGroupId }, "Failed to fetch group info for result")
+    }
+  }
+
   return {
     total: progress.total,
     success: progress.success,
     skipped: progress.skipped,
     failed: progress.failed,
     details,
+    duplicateEmails: progress.duplicateEmails,
+    emailsSkipped: progress.emailsSkipped,
+    groupAssignment,
     errors: progress.errors,
     duration,
   }

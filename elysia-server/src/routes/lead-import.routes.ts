@@ -159,7 +159,7 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
         tags: ["admin", "lead-import"],
         summary: "Excel 파일로 리드 일괄 임포트 (SSE)",
         description:
-          "Excel 파일을 업로드하여 여러 리드를 일괄 임포트합니다. 실시간 진행상황을 SSE로 전송합니다. 중복된 website_url은 자동으로 스킵됩니다. 선택적으로 고객 그룹에 자동 추가할 수 있습니다.",
+          "Excel 파일을 업로드하여 여러 리드를 일괄 임포트합니다. 실시간 진행상황을 SSE로 전송합니다. 중복 이메일 방지: (1) CSV 파일 내부의 중복 이메일과 (2) Workspace 내 기존 데이터베이스의 중복 이메일이 자동으로 감지되어 스킵되며, 완료 시 중복 이메일 목록(existingLeadId, rowNumber, companyName 포함)이 반환됩니다. 선택적으로 고객 그룹에 자동 추가할 수 있으며, 그룹 할당 정보(groupId, groupName, membersAdded)가 결과에 포함됩니다.",
       },
     },
   )

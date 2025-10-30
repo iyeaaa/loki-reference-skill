@@ -19,7 +19,8 @@
     "i18n:build": "tsx scripts/csv-to-json.ts",
     "i18n:add": "yarn i18n:scan",
     "i18n:watch:csv": "chokidar \"locales/*.csv\" -c \"tsx scripts/csv-to-json.ts\" --debounce 500 --silent",
-    "i18n:watch:scan": "chokidar \"src/**/*.{ts,tsx}\" -c \"tsx scripts/silent-i18n-scan.ts\" --debounce 3000 --silent"
+    "i18n:watch:scan": "chokidar \"src/**/*.{ts,tsx}\" -c \"tsx scripts/silent-i18n-scan.ts\" --debounce 3000 --silent",
+    "openapi:generate": "openapi-typescript http://localhost:3001/swagger/json -o src/lib/api/generated/schema.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -72,7 +73,7 @@
     "openai": "^5.23.0",
     "papaparse": "^5.5.3",
     "react": "^19.1.1",
-    "react-day-picker": "^9.11.0",
+    "react-day-picker": "^9.11.1",
     "react-dom": "^19.1.1",
     "react-hook-form": "^7.63.0",
     "react-hot-toast": "^2.6.0",
@@ -106,6 +107,9 @@
     "husky": "^9.1.7",
     "i18next-scanner": "^4.6.0",
     "lint-staged": "^16.2.1",
+    "openapi-fetch": "^0.15.0",
+    "openapi-react-query": "^0.5.1",
+    "openapi-typescript": "^7.10.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.13",
     "tailwindcss-animate": "^1.0.7",

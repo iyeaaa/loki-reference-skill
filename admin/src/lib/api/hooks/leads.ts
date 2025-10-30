@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import toast from "react-hot-toast"
+import { $api } from "../generated"
 import { leadsApi } from "../services/leads"
 import type {
   BulkUpdateBusinessTypeRequest,
@@ -21,12 +22,46 @@ export const leadKeys = {
 
 // Queries
 export function useLeads(params?: LeadsParams) {
-  return useQuery({
-    queryKey: leadKeys.list(params),
-    queryFn: () => leadsApi.list(params),
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
+  // Convert params to query parameters for the generated API
+  const queryParams: Record<string, string> = {}
+
+  if (params?.page && params?.limit) {
+    const offset = (params.page - 1) * params.limit
+    queryParams.limit = params.limit.toString()
+    queryParams.offset = offset.toString()
+  }
+  if (params?.search) queryParams.search = params.search
+  if (params?.searchType) queryParams.searchType = params.searchType
+  if (params?.leadStatus && params.leadStatus !== "all") queryParams.leadStatus = params.leadStatus
+  if (params?.businessType) queryParams.businessType = params.businessType
+  if (params?.country) queryParams.country = params.country
+  if (params?.city) queryParams.city = params.city
+  if (params?.workspaceIds) queryParams.workspaceIds = params.workspaceIds.join(",")
+  if (params?.createdByIds) queryParams.createdByIds = params.createdByIds.join(",")
+  if (params?.customerGroupId) queryParams.customerGroupId = params.customerGroupId
+  if (params?.sortField) queryParams.sortField = params.sortField
+  if (params?.sortOrder) queryParams.sortOrder = params.sortOrder
+  if (params?.filters) queryParams.filters = params.filters
+
+  const result = $api.useQuery("get", "/api/v1/leads/search", {
+    params: {
+      query: queryParams,
+    },
   })
+
+  // Transform the response to match the expected format
+  return {
+    ...result,
+    data: result.data?.data
+      ? {
+          leads: result.data.data.data as Lead[],
+          total: result.data.data.total,
+          page: params?.page || 1,
+          limit: params?.limit || 10,
+          totalPages: Math.ceil(result.data.data.total / (params?.limit || 10)),
+        }
+      : undefined,
+  }
 }
 
 export function useLead(leadId: string, enabled = true) {

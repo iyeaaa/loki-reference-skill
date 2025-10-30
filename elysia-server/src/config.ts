@@ -1,3 +1,5 @@
+import "dotenv/config"
+
 /**
  * Get required environment variable
  * Throws error if not found

@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api/client"
+import { client } from "@/lib/api/generated/client"
 import type {
   BulkUpdateBusinessTypeRequest,
   BulkUpdateLeadStatusRequest,
@@ -20,6 +21,7 @@ export const leadsApi = {
     searchParams.append("offset", offset.toString())
 
     if (params?.search) searchParams.append("search", params.search)
+    if (params?.searchType) searchParams.append("searchType", params.searchType)
     if (params?.leadStatus && params.leadStatus !== "all") {
       searchParams.append("leadStatus", params.leadStatus)
     }
@@ -35,6 +37,9 @@ export const leadsApi = {
     if (params?.customerGroupId) {
       searchParams.append("customerGroupId", params.customerGroupId)
     }
+    if (params?.sortField) searchParams.append("sortField", params.sortField)
+    if (params?.sortOrder) searchParams.append("sortOrder", params.sortOrder)
+    if (params?.filters) searchParams.append("filters", params.filters)
 
     const query = searchParams.toString()
     return apiFetch<{
@@ -149,6 +154,31 @@ export const leadsApi = {
       method: "POST",
       body: JSON.stringify(data),
     })
+  },
+
+  // 필터 옵션 조회
+  getFilterOptions: async (field: string, workspaceId?: string, customerGroupId?: string) => {
+    // Build query object, only including defined values
+    const query: { workspaceId?: string; customerGroupId?: string } = {}
+    if (workspaceId !== undefined && workspaceId !== "") {
+      query.workspaceId = workspaceId
+    }
+    if (customerGroupId !== undefined && customerGroupId !== "") {
+      query.customerGroupId = customerGroupId
+    }
+
+    const { data, error } = await client.GET("/api/v1/admin/leads/filter-options/{field}", {
+      params: {
+        path: { field },
+        query,
+      },
+    })
+
+    if (error) {
+      throw new Error("Failed to fetch filter options")
+    }
+
+    return data.data
   },
 
   // 선택된 리드들 CSV 다운로드

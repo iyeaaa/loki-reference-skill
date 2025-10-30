@@ -1,4 +1,351 @@
-# SendGrid 이메일 서비스 플랫폼
+# SendGrid Email Service Platform
+
+[English](#english) | [한국어](#korean)
+
+---
+
+## English
+
+### Project Overview
+
+A comprehensive email management system powered by SendGrid API. Provides email sending/receiving, AI-powered auto-reply, address book management, user authentication, and more.
+
+### Key Features
+
+#### Email Services
+- **Bulk Email Sending**: Marketing email campaigns via SendGrid API
+- **Inbound Email Processing**: Real-time email receiving through SendGrid Inbound Parse webhook
+- **AI Auto-Reply**: Intelligent automated response system powered by OpenAI GPT
+- **Email Thread Management**: Message-ID based email conversation tracking
+
+#### User Management
+- **JWT-based Authentication**: Secure user authentication system
+- **Department Management**: Organization structure and department-level permissions
+- **Address Book**: Contact CRUD and group management
+
+#### Admin Dashboard
+- **React-based UI**: Responsive dashboard built with React 19 and Vite
+- **Real-time Monitoring**: Email sending status and system health monitoring
+- **Data Visualization**: Statistical charts using Recharts
+
+### Tech Stack
+
+#### Backend (Elysia Server)
+- **Runtime**: Bun 1.2+
+- **Framework**: Elysia.js 1.4+
+- **Database**: PostgreSQL 17.2 + Drizzle ORM
+- **Cache**: Redis 7.4
+- **AI**: OpenAI API
+- **Email**: SendGrid API
+- **Authentication**: JWT
+
+#### Frontend (Admin Dashboard)
+- **Framework**: React 19 + TypeScript
+- **Build Tool**: Vite 7 (Rolldown)
+- **Styling**: TailwindCSS v4 + shadcn/ui
+- **State Management**: Jotai + React Query
+- **UI Components**: Radix UI
+- **Code Quality**: Biome + Husky
+
+#### DevOps
+- **Container**: Docker + Docker Compose
+- **Proxy**: Nginx
+- **Monitoring**: Uptime Kuma
+- **Redis GUI**: RedisInsight
+
+### Project Structure
+
+```
+send-grid-test/
+├── admin/                      # React admin dashboard
+│   ├── src/
+│   │   ├── components/        # React components
+│   │   ├── pages/            # Page components
+│   │   ├── hooks/            # Custom React Hooks
+│   │   ├── lib/              # Utility functions
+│   │   └── router/           # React Router config
+│   ├── package.json
+│   └── Dockerfile
+│
+├── elysia-server/             # Bun + Elysia backend server
+│   ├── src/
+│   │   ├── index.ts          # Main server
+│   │   ├── config/           # Configuration files
+│   │   ├── db/               # Database (Drizzle)
+│   │   ├── routes/           # API routes
+│   │   ├── services/         # Business logic
+│   │   ├── plugins/          # Elysia plugins
+│   │   └── lib/              # Utilities
+│   ├── package.json
+│   └── Dockerfile
+│
+├── docker-compose.yml         # Docker orchestration
+├── nginx.conf                # Nginx configuration
+├── deploy-hana.sh            # Deployment script
+└── up-hana.sh                # Server startup script
+```
+
+### API Endpoints
+
+#### Health Check
+- `GET /health` - Server health check
+- `GET /api/health` - API server status
+
+#### Authentication
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+- `GET /api/auth/me` - Current user info
+
+#### Email
+- `GET /api/emails` - List emails
+- `POST /api/emails/send` - Send email
+- `POST /api/emails/send-bulk` - Send bulk emails
+
+#### SendGrid Webhooks
+- `POST /api/webhook/inbound` - Process inbound email & AI auto-reply
+- `POST /api/webhook/inbound-store` - Store email only
+
+#### AI
+- `POST /api/ai/generate-reply` - Generate AI reply
+- `POST /api/ai/analyze` - Analyze email content
+
+#### Address Book
+- `GET /api/address-book` - List contacts
+- `POST /api/address-book` - Add contact
+- `PUT /api/address-book/:id` - Update contact
+- `DELETE /api/address-book/:id` - Delete contact
+
+#### User Management
+- `GET /api/users` - List users
+- `GET /api/users/:id` - Get user details
+- `PUT /api/users/:id` - Update user
+- `DELETE /api/users/:id` - Delete user
+
+#### Department Management
+- `GET /api/departments` - List departments
+- `POST /api/departments` - Create department
+- `PUT /api/departments/:id` - Update department
+- `DELETE /api/departments/:id` - Delete department
+
+### Getting Started
+
+#### Prerequisites
+- Docker & Docker Compose
+- Node.js 20+
+- Bun 1.2+
+- SendGrid account and API key
+- OpenAI API key (for AI features)
+
+#### Quick Start
+
+##### 1. Clone Repository
+```bash
+git clone git@github.com:CheolheeLee0/send-grid-test.git
+cd send-grid-test
+```
+
+##### 2. Environment Setup
+```bash
+cp .env.example .env
+```
+
+Edit `.env` file:
+```env
+# SendGrid
+SENDGRID_API_KEY=your_sendgrid_api_key
+
+# OpenAI
+OPENAI_API_KEY=your_openai_api_key
+
+# Database
+DB_HOST=postgres  # When using Docker
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=postgres
+
+# Redis
+REDIS_HOST=redis  # When using Docker
+REDIS_PORT=6379
+REDIS_PASSWORD=sendgrid_redis_password_2024
+
+# JWT
+JWT_SECRET=your_jwt_secret_key
+
+# Server
+NODE_ENV=production
+PORT=3001
+```
+
+##### 3. Run with Docker Compose
+```bash
+# Start all services
+docker-compose up -d
+
+# Start specific services
+docker-compose up -d postgres redis elysia-server admin
+```
+
+### Local Development
+
+#### Development Setup
+
+```bash
+# Install from root (recommended)
+yarn install  # Automatically installs Husky pre-commit hook
+
+# Or install individually
+cd admin && yarn install
+cd ../elysia-server && bun install
+```
+
+**Automatic Git Hooks**: When installing dependencies from root or admin, Husky pre-commit hooks are automatically activated. After this, Biome lint runs automatically on both admin and elysia-server directories for every commit, enforcing code quality.
+
+#### Backend Development
+```bash
+cd elysia-server
+bun run dev  # Start dev server (watch mode)
+```
+
+#### Frontend Development
+```bash
+cd admin
+yarn dev     # Start Vite dev server
+```
+
+#### Database Migrations
+```bash
+cd elysia-server
+bun run db:generate  # Generate migration files
+bun run db:migrate   # Run migrations
+bun run db:studio    # Launch Drizzle Studio
+```
+
+### Service Ports
+
+| Service | Port | Description |
+|---------|------|-------------|
+| Admin Dashboard | 3000 | React admin dashboard |
+| Elysia Server | 3001 | Backend API server |
+| PostgreSQL | 5432 | Main database |
+| Redis | 6379 | Cache & session store |
+| RedisInsight | 5540 | Redis management tool |
+| Uptime Kuma | 3002 | Service monitoring |
+
+### SendGrid Configuration
+
+#### Inbound Parse Webhook Setup
+
+1. **SendGrid Dashboard**
+   - Settings > Inbound Parse > Add Host & URL
+   - Domain: `grinda.ai`
+   - URL: `https://your-domain.com/api/webhook/inbound`
+
+2. **DNS MX Record Setup**
+   ```
+   Type: MX
+   Host: parse
+   Value: mx.sendgrid.net
+   Priority: 10
+   ```
+
+3. **Options**
+   - ✅ Check incoming emails for spam
+   - ✅ POST the raw, full MIME message
+
+### Deployment
+
+#### Production Deployment
+```bash
+# Run deployment script
+./deploy-hana.sh
+
+# Or manually
+docker-compose build
+docker-compose up -d
+```
+
+#### Server Information
+- Production URL: https://sendgrinda.cloud
+- Server IP: 43.200.230.4 (AWS EC2)
+
+### Useful Commands
+
+```bash
+# Docker management
+docker-compose ps                      # Check service status
+docker-compose logs -f [service-name]  # View logs
+docker-compose restart [service-name]  # Restart service
+docker-compose down                    # Stop all services
+docker-compose up -d --build           # Rebuild and start
+
+# Database access
+docker exec -it send-grid-test-postgres-1 psql -U postgres
+
+# Redis CLI
+docker exec -it send-grid-test-redis-1 redis-cli -a sendgrid_redis_password_2024
+
+# View logs
+docker-compose logs -f elysia-server
+docker-compose logs -f admin
+```
+
+### Code Quality
+
+#### Linting & Formatting
+```bash
+# Backend
+cd elysia-server
+bun run lint       # Run Biome lint
+bun run format     # Run Biome format
+
+# Frontend
+cd admin
+yarn lint          # Run Biome lint
+yarn format        # Run Biome format
+yarn check         # Lint + type check
+```
+
+#### Git Hooks
+The project uses Husky to automatically check code quality before commits.
+
+### Monitoring
+
+#### Uptime Kuma
+- URL: http://localhost:3002
+- Real-time monitoring of all services
+- Configurable notifications (Email, Slack, Discord, etc.)
+
+#### RedisInsight
+- URL: http://localhost:5540
+- Redis data visualization
+- Real-time command execution and monitoring
+
+### Security Considerations
+
+- All API keys managed via environment variables
+- JWT-based authentication system
+- HTTPS enforced (production)
+- Redis password protection
+- PostgreSQL access restrictions
+- CORS policy applied
+
+### Company Information
+
+**GRINDA AI**
+- CEO: Hojin Kang
+- Address: Room 503, Daejeon Tips Town, 99 Daehak-ro, Yuseong-gu, Daejeon, South Korea
+- Business Registration Number: 309-88-02709
+- Email: admin@grinda.ai
+- Website: https://grinda.ai
+
+### License
+
+This project is an internal project of GRINDA AI.
+
+---
+
+## Korean
 
 ## 프로젝트 개요
 

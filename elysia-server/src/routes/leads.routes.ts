@@ -1043,6 +1043,7 @@ export const adminLeadRoutes = new Elysia({ prefix: "/api/v1/admin/leads" })
           "employeeCount",
           "businessType",
           "leadStatus",
+          "createdBy",
         ]
 
         if (!allowedFields.includes(field)) {

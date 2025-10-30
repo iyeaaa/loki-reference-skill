@@ -2058,6 +2058,47 @@ export async function getFilterOptions(
     }
   }
 
+  // Special handling for createdBy - join with users table
+  if (field === "createdBy") {
+    // Build WHERE conditions
+    const whereConditions = []
+    if (workspaceId) {
+      whereConditions.push(eq(leads.workspaceId, workspaceId))
+    }
+    if (customerGroupId) {
+      whereConditions.push(
+        sql`${leads.id} IN (SELECT lead_id FROM customer_group_members WHERE group_id = ${customerGroupId})`,
+      )
+    }
+    whereConditions.push(sql`${leads.createdBy} IS NOT NULL`)
+
+    // Query distinct users who created leads with counts
+    const results = await db
+      .select({
+        value: users.id,
+        label: users.username,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(leads)
+      .innerJoin(users, eq(leads.createdBy, users.id))
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+      .groupBy(users.id, users.username)
+      .orderBy(desc(sql`count(*)`))
+
+    // Map results to filter options
+    const options = results.map((r) => ({
+      value: r.value as string,
+      label: r.label as string,
+      count: r.count,
+    }))
+
+    return {
+      field: field as import("../types/lead-filters.types").FilterableLeadField,
+      options,
+      total: options.reduce((sum, opt) => sum + opt.count, 0),
+    }
+  }
+
   // Standard fields: country, city, state, leadSource, businessType
   const fieldMap: Record<
     string,

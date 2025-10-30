@@ -65,6 +65,7 @@ export const FILTERABLE_LEAD_FIELDS = [
   "leadScore",
   "leadSource",
   "notes",
+  "createdBy",
   "createdAt",
   "updatedAt",
 ] as const
@@ -111,6 +112,7 @@ export const LEAD_FIELD_TYPES: Record<string, "string" | "number" | "date" | "en
   leadScore: "number",
   leadSource: "string",
   notes: "string",
+  createdBy: "string",
   createdAt: "date",
   updatedAt: "date",
 }

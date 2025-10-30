@@ -31,6 +31,7 @@ interface LeadsTableWithPaginationProps {
   selectedBusinessTypes: string[]
   selectedCountries: string[]
   selectedCities: string[]
+  selectedCreatedBy: string[]
   selectedCustomerGroup: string
   selectedLeads: string[]
   onToggleLead: (leadId: string) => void
@@ -47,6 +48,7 @@ export function LeadsTableWithPagination({
   searchQuery,
   searchType = "all",
   selectedStatuses,
+  selectedCreatedBy,
   selectedCustomerGroup,
   selectedLeads,
   onToggleLead,
@@ -112,6 +114,7 @@ export function LeadsTableWithPagination({
     searchType: searchType,
     workspaceIds: workspaceFilter,
     customerGroupId: selectedCustomerGroup || undefined,
+    createdByIds: selectedCreatedBy.length > 0 ? selectedCreatedBy : undefined,
     // Add sorting from TanStack Table
     sortField: sorting[0]?.id,
     sortOrder: sorting[0]?.desc ? "desc" : "asc",

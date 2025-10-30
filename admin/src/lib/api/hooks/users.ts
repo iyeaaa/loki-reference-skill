@@ -42,6 +42,16 @@ export function useUserStats() {
   })
 }
 
+export function useAllUsers(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: [...userKeys.all, "all"],
+    queryFn: () => usersApi.getAll(),
+    enabled: options?.enabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
+}
+
 // 3. Mutations
 export function useCreateUser() {
   const queryClient = useQueryClient()

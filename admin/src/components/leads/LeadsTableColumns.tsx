@@ -520,30 +520,46 @@ export const leadsColumns: ColumnDef<Lead>[] = [
     },
   },
   {
+    id: "createdBy",
     accessorKey: "createdByUsername",
-    header: ({ column }) => {
-      const isSorted = column.getIsSorted()
-      const canSort = column.getCanSort()
+    header: ({ column, table }) => {
+      const meta = table.options.meta as LeadsTableMeta | undefined
+      const currentFilter = meta?.columnFilters?.find((f) => f.field === "createdBy")
 
-      return canSort ? (
-        <button
-          type="button"
-          className="flex items-center gap-1.5 cursor-pointer select-none hover:text-foreground/80 border-0 bg-transparent p-0 text-left"
-          onClick={column.getToggleSortingHandler()}
-        >
-          <span>Created By</span>
-          <span className="flex-shrink-0">
-            {isSorted === "asc" && <span>↑</span>}
-            {isSorted === "desc" && <span>↓</span>}
-            {!isSorted && <span className="opacity-40">⇅</span>}
-          </span>
-        </button>
-      ) : (
-        <span>Created By</span>
+      return (
+        <FilterableColumnHeader
+          column={column}
+          title="Created By"
+          filterConfig={column.columnDef.meta?.filterConfig}
+          currentFilter={currentFilter}
+          onFilterChange={createFilterChangeHandler("createdBy", meta)}
+          workspaceId={meta?.workspaceId}
+          customerGroupId={meta?.customerGroupId}
+        />
       )
     },
     enableSorting: true,
-    enableColumnFilter: false,
+    enableColumnFilter: true,
+    meta: {
+      filterConfig: {
+        type: "select",
+        operators: ["in", "notIn", "isEmpty", "isNotEmpty"],
+        loadOptions: async (context) => {
+          try {
+            const response = await leadsApi.getFilterOptions(
+              "createdBy",
+              context?.workspaceId || undefined,
+              context?.customerGroupId || undefined,
+              context?.signal,
+            )
+            return response.options
+          } catch (error) {
+            console.error("Failed to load createdBy filter options:", error)
+            return []
+          }
+        },
+      } as ColumnFilterConfig,
+    },
     cell: ({ row }) => row.original.createdByUsername || "-",
   },
   {

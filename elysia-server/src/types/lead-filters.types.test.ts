@@ -50,11 +50,12 @@ describe("FILTERABLE_LEAD_FIELDS", () => {
       "leadScore",
       "leadSource",
       "notes",
+      "createdBy",
       "createdAt",
       "updatedAt",
     ]
 
-    expect(FILTERABLE_LEAD_FIELDS.length).toBe(18)
+    expect(FILTERABLE_LEAD_FIELDS.length).toBe(19)
     for (const field of expectedFields) {
       expect(FILTERABLE_LEAD_FIELDS).toContain(field)
     }

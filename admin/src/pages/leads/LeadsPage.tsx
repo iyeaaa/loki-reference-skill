@@ -55,6 +55,7 @@ import {
   useDownloadSelectedLeadsCSV,
   useUpdateLead,
 } from "@/lib/api/hooks/leads"
+import { useAllUsers } from "@/lib/api/hooks/users"
 import { customerGroupsApi } from "@/lib/api/services/customer-groups"
 import { leadsApi } from "@/lib/api/services/leads"
 import { workspacesApi } from "@/lib/api/services/workspaces"
@@ -74,6 +75,7 @@ import { generateGroupName } from "@/lib/utils/group-name-generator"
 import { BulkActionModal } from "./BulkActionModal"
 import { CreateGroupModal } from "./CreateGroupModal"
 import { GroupEditModal } from "./GroupEditModal"
+import { LeadFilters } from "./LeadFilters"
 import { LeadForm } from "./LeadForm"
 import { LeadGroupManagementModal } from "./LeadGroupManagementModal"
 import { LeadsTableWithPagination } from "./LeadsTableWithPagination"
@@ -90,10 +92,11 @@ export default function LeadsPage() {
   const [searchType, setSearchType] = useState<
     "all" | "company" | "country" | "email" | "website" | "industry" | "category"
   >("all")
-  const [selectedStatuses, _setSelectedStatuses] = useState<string[]>([])
-  const [selectedBusinessTypes, _setSelectedBusinessTypes] = useState<string[]>([])
-  const [selectedCountries, _setSelectedCountries] = useState<string[]>([])
-  const [selectedCities, _setSelectedCities] = useState<string[]>([])
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
+  const [selectedBusinessTypes, setSelectedBusinessTypes] = useState<string[]>([])
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([])
+  const [selectedCities, setSelectedCities] = useState<string[]>([])
+  const [selectedCreatedBy, setSelectedCreatedBy] = useState<string[]>([])
   const [selectedCustomerGroup, setSelectedCustomerGroup] = useState<string>("")
 
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -175,6 +178,9 @@ export default function LeadsPage() {
     selectedWorkspaceId !== "all" ? selectedWorkspaceId : "",
     selectedWorkspaceId !== "all",
   )
+
+  // 사용자 데이터 가져오기
+  const { data: users = [] } = useAllUsers()
 
   const loadWorkspaces = useCallback(async () => {
     try {
@@ -271,6 +277,7 @@ export default function LeadsPage() {
           search: searchQuery || undefined,
           leadStatus:
             selectedStatuses.length === 1 ? (selectedStatuses[0] as LeadStatus) : undefined,
+          createdByIds: selectedCreatedBy.length > 0 ? selectedCreatedBy : undefined,
         })
 
         if (allLeadsResponse.leads.length === 0) {
@@ -331,6 +338,7 @@ export default function LeadsPage() {
           search: searchQuery || undefined,
           leadStatus:
             selectedStatuses.length === 1 ? (selectedStatuses[0] as LeadStatus) : undefined,
+          createdByIds: selectedCreatedBy.length > 0 ? selectedCreatedBy : undefined,
         })
 
         if (allLeadsResponse.leads.length === 0) {
@@ -462,6 +470,7 @@ export default function LeadsPage() {
           search: searchQuery || undefined,
           leadStatus:
             selectedStatuses.length === 1 ? (selectedStatuses[0] as LeadStatus) : undefined,
+          createdByIds: selectedCreatedBy.length > 0 ? selectedCreatedBy : undefined,
         })
 
         if (allLeadsResponse.leads.length === 0) {
@@ -843,19 +852,30 @@ export default function LeadsPage() {
     }
   }
 
+  const clearFilters = () => {
+    setSelectedStatuses([])
+    setSelectedBusinessTypes([])
+    setSelectedCountries([])
+    setSelectedCities([])
+    setSelectedCreatedBy([])
+  }
+
   return (
     <div className="space-y-6 h-full overflow-y-auto">
-      {/* <LeadFilters
+      <LeadFilters
         selectedStatuses={selectedStatuses}
         selectedBusinessTypes={selectedBusinessTypes}
         selectedCountries={selectedCountries}
         selectedCities={selectedCities}
+        selectedCreatedBy={selectedCreatedBy}
+        users={users}
         onStatusChange={setSelectedStatuses}
         onBusinessTypeChange={setSelectedBusinessTypes}
         onCountryChange={setSelectedCountries}
         onCityChange={setSelectedCities}
+        onCreatedByChange={setSelectedCreatedBy}
         onClearFilters={clearFilters}
-      /> */}
+      />
 
       {/* Leads Table */}
       <Card>
@@ -1221,6 +1241,7 @@ export default function LeadsPage() {
             selectedBusinessTypes={selectedBusinessTypes}
             selectedCountries={selectedCountries}
             selectedCities={selectedCities}
+            selectedCreatedBy={selectedCreatedBy}
             selectedCustomerGroup={selectedCustomerGroup}
             selectedLeads={selectedLeads}
             onToggleLead={toggleLeadSelection}

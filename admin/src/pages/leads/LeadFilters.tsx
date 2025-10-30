@@ -2,16 +2,26 @@ import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox"
+
+interface User {
+  id: string
+  username: string
+  email: string
+}
 
 interface LeadFiltersProps {
   selectedStatuses: string[]
   selectedBusinessTypes: string[]
   selectedCountries: string[]
   selectedCities: string[]
+  selectedCreatedBy: string[]
+  users: User[]
   onStatusChange: (statuses: string[]) => void
   onBusinessTypeChange: (businessTypes: string[]) => void
   onCountryChange: (countries: string[]) => void
   onCityChange: (cities: string[]) => void
+  onCreatedByChange: (createdBy: string[]) => void
   onClearFilters: () => void
 }
 
@@ -20,10 +30,13 @@ export function LeadFilters({
   selectedBusinessTypes,
   selectedCountries,
   selectedCities,
+  selectedCreatedBy,
+  users,
   onStatusChange,
   onBusinessTypeChange,
   onCountryChange,
   onCityChange,
+  onCreatedByChange,
   onClearFilters,
 }: LeadFiltersProps) {
   const statuses = [
@@ -48,7 +61,8 @@ export function LeadFilters({
     selectedStatuses.length > 0 ||
     selectedBusinessTypes.length > 0 ||
     selectedCountries.length > 0 ||
-    selectedCities.length > 0
+    selectedCities.length > 0 ||
+    selectedCreatedBy.length > 0
 
   return (
     <Card>
@@ -73,6 +87,27 @@ export function LeadFilters({
                   </label>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Created By Filter */}
+          <div className="flex items-start gap-4">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-16 pt-2">
+              생성자
+            </span>
+            <div className="flex-1 max-w-md">
+              <MultiSelectCombobox
+                options={users.map((user) => ({
+                  value: user.id,
+                  label: user.username,
+                  sublabel: user.email,
+                }))}
+                value={selectedCreatedBy}
+                onValueChange={onCreatedByChange}
+                placeholder="생성자를 선택하세요..."
+                searchPlaceholder="이름 또는 이메일로 검색..."
+                emptyText="검색 결과가 없습니다."
+              />
             </div>
           </div>
         </div>
@@ -148,6 +183,26 @@ export function LeadFilters({
                   </button>
                 </span>
               ))}
+              {selectedCreatedBy.map((userId) => {
+                const user = users.find((u) => u.id === userId)
+                return (
+                  <span
+                    key={userId}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300 text-xs rounded-full"
+                  >
+                    생성자: {user?.username || userId}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onCreatedByChange(selectedCreatedBy.filter((id) => id !== userId))
+                      }
+                      className="ml-1 hover:text-teal-600 dark:hover:text-teal-200"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )
+              })}
             </div>
           </div>
         )}

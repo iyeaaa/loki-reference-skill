@@ -18,6 +18,13 @@ export type StepExecutionStatus =
   | "failed"
   | "skipped"
 
+export type StepConditionType = 
+  | "always" 
+  | "no_response" 
+  | "negative_response"
+  | "positive_response" 
+  | "custom"
+
 export interface Sequence {
   id: string
   workspaceId: string
@@ -52,6 +59,9 @@ export interface SequenceStep {
   emailBodyText?: string | null
   emailBodyHtml?: string | null
   emailTemplateId?: string | null
+  conditionType?: StepConditionType | null
+  conditionConfig?: string | null
+  previousStepId?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -117,6 +127,9 @@ export interface CreateSequenceStepRequest {
   emailBodyText?: string
   emailBodyHtml?: string
   emailTemplateId?: string
+  conditionType?: StepConditionType
+  conditionConfig?: string
+  previousStepId?: string
 }
 
 export interface CreateEnrollmentRequest {

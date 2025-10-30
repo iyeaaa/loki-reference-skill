@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -27,6 +27,7 @@ interface ColumnFilterSelectProps {
   loadOptions: (context?: {
     customerGroupId?: string
     workspaceId?: string
+    signal?: AbortSignal
   }) => Promise<FilterOption[]>
   operators?: FilterOperator[]
   customerGroupId?: string
@@ -57,24 +58,54 @@ export function ColumnFilterSelect({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Use ref to store loadOptions to avoid triggering effect on every render
+  const loadOptionsRef = useRef(loadOptions)
+
+  // Update ref when loadOptions changes (though it should be stable from column config)
+  useEffect(() => {
+    loadOptionsRef.current = loadOptions
+  }, [loadOptions])
+
   // Load options on mount
   useEffect(() => {
+    const abortController = new AbortController()
+    let isSubscribed = true
+
     const fetchOptions = async () => {
       setIsLoading(true)
       setError(null)
       try {
-        const data = await loadOptions({ customerGroupId, workspaceId })
-        setOptions(data)
+        const data = await loadOptionsRef.current({
+          customerGroupId,
+          workspaceId,
+          signal: abortController.signal,
+        })
+        // Only update state if component is still mounted
+        if (isSubscribed && !abortController.signal.aborted) {
+          setOptions(data)
+        }
       } catch (err) {
-        setError("Failed to load options")
-        console.error("Failed to load filter options:", err)
+        // Only update error state if component is still mounted and not aborted
+        if (isSubscribed && !abortController.signal.aborted) {
+          setError("Failed to load options")
+          console.error("Failed to load filter options:", err)
+        }
       } finally {
-        setIsLoading(false)
+        // Only update loading state if component is still mounted
+        if (isSubscribed) {
+          setIsLoading(false)
+        }
       }
     }
 
     fetchOptions()
-  }, [loadOptions, customerGroupId, workspaceId])
+
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isSubscribed = false
+      abortController.abort()
+    }
+  }, [customerGroupId, workspaceId])
 
   // Filter options based on search query
   const filteredOptions = options.filter((option) =>

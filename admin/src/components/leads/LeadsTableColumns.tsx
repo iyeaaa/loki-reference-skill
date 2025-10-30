@@ -213,6 +213,7 @@ export const leadsColumns: ColumnDef<Lead>[] = [
               "leadStatus",
               context?.workspaceId || undefined,
               context?.customerGroupId || undefined,
+              context?.signal,
             )
             return response.options
           } catch (error) {
@@ -282,6 +283,7 @@ export const leadsColumns: ColumnDef<Lead>[] = [
               "country",
               context?.workspaceId || undefined,
               context?.customerGroupId || undefined,
+              context?.signal,
             )
             return response.options
           } catch (error) {
@@ -323,6 +325,7 @@ export const leadsColumns: ColumnDef<Lead>[] = [
               "city",
               context?.workspaceId || undefined,
               context?.customerGroupId || undefined,
+              context?.signal,
             )
             return response.options
           } catch (error) {
@@ -392,6 +395,7 @@ export const leadsColumns: ColumnDef<Lead>[] = [
               "employeeCount",
               context?.workspaceId || undefined,
               context?.customerGroupId || undefined,
+              context?.signal,
             )
             return response.options
           } catch (error) {
@@ -433,6 +437,7 @@ export const leadsColumns: ColumnDef<Lead>[] = [
               "leadSource",
               context?.workspaceId || undefined,
               context?.customerGroupId || undefined,
+              context?.signal,
             )
             return response.options
           } catch (error) {

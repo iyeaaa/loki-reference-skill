@@ -27,12 +27,12 @@ export async function parseSSEResponse(response: Response): Promise<any> {
     if (matches) {
       actualBody = matches
         .map((match) => {
-          const jsonStr = match.replace(/^data: /, '').replace(/\n\n$/, '')
+          const jsonStr = match.replace(/^data: /, "").replace(/\n\n$/, "")
           const numObj = JSON.parse(jsonStr)
           const bytes = Object.values(numObj) as number[]
           return String.fromCharCode(...bytes)
         })
-        .join('')
+        .join("")
     }
   }
 
@@ -74,12 +74,12 @@ export async function parseAllSSEEvents(response: Response): Promise<SSEEvent[]>
     if (matches) {
       actualBody = matches
         .map((match) => {
-          const jsonStr = match.replace(/^data: /, '').replace(/\n\n$/, '')
+          const jsonStr = match.replace(/^data: /, "").replace(/\n\n$/, "")
           const numObj = JSON.parse(jsonStr)
           const bytes = Object.values(numObj) as number[]
           return String.fromCharCode(...bytes)
         })
-        .join('')
+        .join("")
     }
   }
 

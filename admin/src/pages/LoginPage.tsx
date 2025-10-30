@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { CreditCard, Eye, EyeOff, Lock, Mail, User } from "lucide-react"
+import { Eye, EyeOff, Lock, Mail, User } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
@@ -8,11 +8,10 @@ import * as z from "zod"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Combobox } from "@/components/ui/combobox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useCurrentUser, useDepartments, useVerifyToken } from "@/lib/api"
+import { useCurrentUser, useVerifyToken } from "@/lib/api"
 import { useLoginMutation, useSignupMutation } from "@/lib/api/hooks/auth"
 import { useAuth } from "@/lib/auth-provider"
 
@@ -28,8 +27,6 @@ const signupSchema = z
     email: z.string().email(),
     password: z.string().min(6),
     confirmPassword: z.string(),
-    employeeId: z.string().min(1).max(20),
-    departmentId: z.string().min(1),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "passwordMismatch",
@@ -48,11 +45,9 @@ export default function AdminLoginPage() {
   const loginPasswordId = useId()
   const signupUsernameId = useId()
   const signupEmailId = useId()
-  const signupEmployeeId = useId()
   const signupPasswordId = useId()
   const signupConfirmPasswordId = useId()
 
-  const [departmentSearch, setDepartmentSearch] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [showSignupPassword, setShowSignupPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -61,7 +56,6 @@ export default function AdminLoginPage() {
   // TanStack Query hooks
   const loginMutation = useLoginMutation()
   const signupMutation = useSignupMutation()
-  const { data: departmentsData, isLoading: searchLoading } = useDepartments(departmentSearch)
   const { data: currentUser } = useCurrentUser()
   useVerifyToken(!!currentUser)
 
@@ -80,8 +74,6 @@ export default function AdminLoginPage() {
       email: "",
       password: "",
       confirmPassword: "",
-      employeeId: "",
-      departmentId: "",
     },
   })
 
@@ -101,8 +93,6 @@ export default function AdminLoginPage() {
       username: data.username,
       email: data.email,
       password: data.password,
-      departmentId: data.departmentId,
-      employeeId: data.employeeId,
     })
 
     // After successful signup, clear form and switch to login tab with prefilled email
@@ -110,15 +100,6 @@ export default function AdminLoginPage() {
     loginForm.setValue("email", data.email)
     setActiveTab("login")
   }
-
-  // Format departments for Combobox
-  const filteredDepartments = Array.isArray(departmentsData)
-    ? departmentsData.map((dept) => ({
-        id: dept.id,
-        name: dept.name,
-        code: dept.code,
-      }))
-    : []
 
   const isLoading = loginMutation.isPending || signupMutation.isPending
 
@@ -318,59 +299,6 @@ export default function AdminLoginPage() {
                   </div>
                   {signupForm.formState.errors.email && (
                     <p className="text-sm text-red-600">{t("login.error.emailInvalid")}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-employee-id" className="text-sm font-medium text-gray-700">
-                    {t("login.field.employeeId")}
-                  </Label>
-                  <div className="relative">
-                    <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id={signupEmployeeId}
-                      type="text"
-                      placeholder={t("login.placeholder.employeeId")}
-                      className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                      {...signupForm.register("employeeId")}
-                      disabled={isLoading}
-                    />
-                  </div>
-                  {signupForm.formState.errors.employeeId && (
-                    <p className="text-sm text-red-600">
-                      {signupForm.formState.errors.employeeId.message ===
-                      "String must contain at least 1 character(s)"
-                        ? t("login.error.employeeIdRequired")
-                        : t("login.error.employeeIdMax")}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-department" className="text-sm font-medium text-gray-700">
-                    {t("login.field.department")}
-                  </Label>
-                  <Combobox
-                    options={filteredDepartments.map((dept) => ({
-                      value: dept.id,
-                      label: dept.name,
-                      sublabel: dept.code,
-                    }))}
-                    value={signupForm.watch("departmentId")}
-                    onValueChange={(value) => {
-                      signupForm.setValue("departmentId", value)
-                      signupForm.clearErrors("departmentId")
-                    }}
-                    onSearchChange={setDepartmentSearch}
-                    placeholder={t("login.placeholder.department")}
-                    searchPlaceholder={t("login.placeholder.departmentSearch")}
-                    emptyText={
-                      searchLoading ? t("login.loading.search") : t("login.empty.department")
-                    }
-                    disabled={isLoading}
-                  />
-                  {signupForm.formState.errors.departmentId && (
-                    <p className="text-sm text-red-600">{t("login.error.departmentRequired")}</p>
                   )}
                 </div>
 

@@ -13,8 +13,6 @@ const signupSchema = t.Object({
   username: t.String({ minLength: 3, maxLength: 50 }),
   email: t.String({ format: "email" }),
   password: t.String({ minLength: 6 }),
-  departmentId: t.String({ format: "uuid" }),
-  employeeId: t.String({ minLength: 1, maxLength: 20 }),
 })
 
 export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
@@ -102,8 +100,6 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
           passwordHash,
           userRole: "user",
           isActive: true, // Active by default
-          departmentId: body.departmentId,
-          employeeId: body.employeeId,
         })
 
         if (!newUser) {

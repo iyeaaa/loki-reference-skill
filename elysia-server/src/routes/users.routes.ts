@@ -17,8 +17,8 @@ const updateUserSchema = t.Object({
   email: t.String({ format: "email", maxLength: 100 }),
   userRole: t.Union([t.Literal("admin"), t.Literal("user")]),
   isActive: t.Boolean(),
-  departmentId: t.String({ format: "uuid" }),
-  employeeId: t.String({ maxLength: 20 }),
+  departmentId: t.Optional(t.Nullable(t.String({ format: "uuid" }))),
+  employeeId: t.Optional(t.Nullable(t.String({ maxLength: 20 }))),
 })
 
 export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
@@ -103,7 +103,14 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
   .put(
     "/:id",
     async ({ params: { id }, body, set }) => {
-      const user = await userService.updateUser(id, body)
+      const user = await userService.updateUser(id, {
+        username: body.username,
+        email: body.email,
+        userRole: body.userRole,
+        isActive: body.isActive,
+        departmentId: body.departmentId ?? null,
+        employeeId: body.employeeId ?? null,
+      })
       if (!user) {
         set.status = 404
         return errorResponse("사용자를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)

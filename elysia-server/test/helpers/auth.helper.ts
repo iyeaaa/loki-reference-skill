@@ -44,11 +44,7 @@ export async function signUp(baseUrl: string, credentials: AuthCredentials): Pro
 /**
  * Sign in and get authentication token
  */
-export async function signIn(
-  baseUrl: string,
-  email: string,
-  password: string,
-): Promise<string> {
+export async function signIn(baseUrl: string, email: string, password: string): Promise<string> {
   const response = await fetch(`${baseUrl}/api/v1/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

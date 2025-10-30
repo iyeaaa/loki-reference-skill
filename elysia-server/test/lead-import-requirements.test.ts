@@ -1,15 +1,20 @@
 import "dotenv/config"
-import { describe, expect, it, beforeAll, afterAll } from "bun:test"
-import { db } from "../src/db"
-import { customerGroups, departments, leads, leadContacts, users, workspaces } from "../src/db/schema"
+import { afterAll, beforeAll, describe, expect, it } from "bun:test"
 import { eq } from "drizzle-orm"
-
+import { db } from "../src/db"
+import {
+  customerGroups,
+  departments,
+  leadContacts,
+  leads,
+  users,
+  workspaces,
+} from "../src/db/schema"
+// Fixtures
+import { generateTestExcel } from "./fixtures/excel.fixture"
 // Helpers
 import { generateTestCredentials, signIn, signUp } from "./helpers/auth.helper"
 import { uploadExcelFile } from "./helpers/lead-upload.helper"
-
-// Fixtures
-import { generateTestExcel } from "./fixtures/excel.fixture"
 
 /**
  * Integration Tests for Ticket Requirements - REST API Testing
@@ -233,7 +238,7 @@ describe("Requirements Test - REST API - Duplicate Email Prevention & Group Tags
 
       // ✅ Should have duplicate entries for rows 2 and 3
       const csvDuplicates = result.duplicateEmails.filter(
-        (d: any) => d.email === "csv-duplicate@example.com"
+        (d: any) => d.email === "csv-duplicate@example.com",
       )
       expect(csvDuplicates.length).toBeGreaterThan(0)
 
@@ -264,7 +269,7 @@ describe("Requirements Test - REST API - Duplicate Email Prevention & Group Tags
 
       // ✅ Should reference the existing lead ID from database (not CSV_DUPLICATE)
       const dbDuplicates = result.duplicateEmails.filter(
-        (d: any) => d.email === "duplicate@example.com" && d.existingLeadId === existingLeadId
+        (d: any) => d.email === "duplicate@example.com" && d.existingLeadId === existingLeadId,
       )
       expect(dbDuplicates.length).toBeGreaterThan(0)
     })
@@ -289,7 +294,13 @@ describe("Requirements Test - REST API - Duplicate Email Prevention & Group Tags
         },
       ])
 
-      const result = await uploadExcelFile(baseUrl, excelBuffer, testWorkspaceId, authToken, testGroupId)
+      const result = await uploadExcelFile(
+        baseUrl,
+        excelBuffer,
+        testWorkspaceId,
+        authToken,
+        testGroupId,
+      )
 
       // ✅ Should have group assignment information
       expect(result.groupAssignment).not.toBeNull()
@@ -305,7 +316,13 @@ describe("Requirements Test - REST API - Duplicate Email Prevention & Group Tags
         },
       ])
 
-      const result = await uploadExcelFile(baseUrl, excelBuffer, testWorkspaceId, authToken, testGroupId)
+      const result = await uploadExcelFile(
+        baseUrl,
+        excelBuffer,
+        testWorkspaceId,
+        authToken,
+        testGroupId,
+      )
 
       // ✅ Group assignment should include group ID
       expect(result.groupAssignment).not.toBeNull()
@@ -321,7 +338,13 @@ describe("Requirements Test - REST API - Duplicate Email Prevention & Group Tags
         },
       ])
 
-      const result = await uploadExcelFile(baseUrl, excelBuffer, testWorkspaceId, authToken, testGroupId)
+      const result = await uploadExcelFile(
+        baseUrl,
+        excelBuffer,
+        testWorkspaceId,
+        authToken,
+        testGroupId,
+      )
 
       // ✅ Group assignment should include group name
       expect(result.groupAssignment).not.toBeNull()
@@ -342,7 +365,13 @@ describe("Requirements Test - REST API - Duplicate Email Prevention & Group Tags
         },
       ])
 
-      const result = await uploadExcelFile(baseUrl, excelBuffer, testWorkspaceId, authToken, testGroupId)
+      const result = await uploadExcelFile(
+        baseUrl,
+        excelBuffer,
+        testWorkspaceId,
+        authToken,
+        testGroupId,
+      )
 
       // ✅ Should show count of members added
       expect(result.groupAssignment).not.toBeNull()

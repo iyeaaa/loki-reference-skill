@@ -41,10 +41,8 @@ export const users = pgTable(
     passwordHash: varchar("password_hash", { length: 255 }),
     userRole: userRoleEnum("user_role").notNull().default("user"),
     isActive: boolean("is_active").notNull().default(true),
-    departmentId: uuid("department_id")
-      .notNull()
-      .references(() => departments.id),
-    employeeId: varchar("employee_id", { length: 20 }).notNull().unique(),
+    departmentId: uuid("department_id").references(() => departments.id),
+    employeeId: varchar("employee_id", { length: 20 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),

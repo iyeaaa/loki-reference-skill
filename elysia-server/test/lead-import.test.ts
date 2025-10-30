@@ -1,8 +1,8 @@
 import "dotenv/config"
 import { describe, expect, it } from "bun:test"
 import { treaty } from "@elysiajs/eden"
-import { createTestApp } from "./setup"
 import * as XLSX from "xlsx"
+import { createTestApp } from "./setup"
 
 /**
  * Type-Safe API Tests for Lead Import
@@ -17,12 +17,14 @@ describe("Lead Import API - Type Safety with Eden Treaty", () => {
   /**
    * Helper function to generate test Excel file
    */
-  function generateTestExcel(leads: Array<{ companyName: string; websiteUrl: string; email?: string; phone?: string }>) {
+  function generateTestExcel(
+    leads: Array<{ companyName: string; websiteUrl: string; email?: string; phone?: string }>,
+  ) {
     const worksheetData = leads.map((lead) => ({
-      "회사명": lead.companyName,
+      회사명: lead.companyName,
       "웹사이트 URL": lead.websiteUrl,
-      "이메일": lead.email || "",
-      "전화번호": lead.phone || "",
+      이메일: lead.email || "",
+      전화번호: lead.phone || "",
     }))
 
     const worksheet = XLSX.utils.json_to_sheet(worksheetData)
@@ -138,7 +140,7 @@ describe("Lead Import API - Type Safety with Eden Treaty", () => {
         groupMembersCreated: expect.any(Number),
       },
       duplicateEmails: expect.any(Array), // ✅ New field for duplicate detection
-      emailsSkipped: expect.any(Number),  // ✅ New field for skipped count
+      emailsSkipped: expect.any(Number), // ✅ New field for skipped count
       groupAssignment: expect.anything(), // ✅ New field for group info (can be null)
       errors: expect.any(Array),
       duration: expect.any(Number),

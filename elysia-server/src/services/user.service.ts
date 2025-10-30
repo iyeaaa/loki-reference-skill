@@ -25,7 +25,7 @@ export async function getUser(id: string) {
       departmentCode: departments.code,
     })
     .from(users)
-    .innerJoin(departments, eq(users.departmentId, departments.id))
+    .leftJoin(departments, eq(users.departmentId, departments.id))
     .where(eq(users.id, id))
     .limit(1)
 
@@ -39,8 +39,8 @@ export async function createUser(data: {
   passwordHash?: string
   userRole?: "admin" | "user"
   isActive?: boolean
-  departmentId: string
-  employeeId: string
+  departmentId?: string
+  employeeId?: string
 }) {
   const [newUser] = await db
     .insert(users)
@@ -50,8 +50,8 @@ export async function createUser(data: {
       passwordHash: data.passwordHash || null,
       userRole: data.userRole || "user",
       isActive: data.isActive !== undefined ? data.isActive : true,
-      departmentId: data.departmentId,
-      employeeId: data.employeeId,
+      departmentId: data.departmentId || null,
+      employeeId: data.employeeId || null,
     })
     .returning({
       id: users.id,
@@ -76,8 +76,8 @@ export async function updateUser(
     email: string
     userRole: "admin" | "user"
     isActive: boolean
-    departmentId: string
-    employeeId: string
+    departmentId: string | null
+    employeeId: string | null
   },
 ) {
   const [updatedUser] = await db
@@ -134,7 +134,7 @@ export async function listUsers(limit: number, offset: number) {
       departmentCode: departments.code,
     })
     .from(users)
-    .innerJoin(departments, eq(users.departmentId, departments.id))
+    .leftJoin(departments, eq(users.departmentId, departments.id))
     .orderBy(desc(users.createdAt))
     .limit(limit)
     .offset(offset)
@@ -160,7 +160,7 @@ export async function getAllUsers() {
       departmentCode: departments.code,
     })
     .from(users)
-    .innerJoin(departments, eq(users.departmentId, departments.id))
+    .leftJoin(departments, eq(users.departmentId, departments.id))
     .orderBy(desc(users.createdAt))
 
   return result
@@ -223,7 +223,7 @@ export async function listUsersWithFilters(
       departmentCode: departments.code,
     })
     .from(users)
-    .innerJoin(departments, eq(users.departmentId, departments.id))
+    .leftJoin(departments, eq(users.departmentId, departments.id))
     .where(whereClause)
     .orderBy(desc(users.createdAt))
     .limit(limit)
@@ -251,7 +251,7 @@ export async function getUserByEmail(email: string) {
       departmentCode: departments.code,
     })
     .from(users)
-    .innerJoin(departments, eq(users.departmentId, departments.id))
+    .leftJoin(departments, eq(users.departmentId, departments.id))
     .where(eq(users.email, email))
     .limit(1)
 
@@ -273,7 +273,7 @@ export async function getAssignableUsers() {
       departmentCode: departments.code,
     })
     .from(users)
-    .innerJoin(departments, eq(users.departmentId, departments.id))
+    .leftJoin(departments, eq(users.departmentId, departments.id))
     .where(and(eq(users.isActive, true), eq(users.userRole, "admin")))
     .orderBy(users.username)
 
@@ -339,7 +339,9 @@ export async function countUsersWithFilters(filters?: {
 // CheckAccountExists :one
 export async function checkAccountExists(email: string) {
   const result = await db
-    .select({ exists: sql<boolean>`EXISTS(SELECT 1 FROM ${users} WHERE email = ${email})` })
+    .select({
+      exists: sql<boolean>`EXISTS(SELECT 1 FROM ${users} WHERE email = ${email})`,
+    })
     .from(users)
     .limit(1)
 

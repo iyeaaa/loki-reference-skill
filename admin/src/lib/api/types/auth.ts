@@ -11,8 +11,6 @@ export interface SignupRequest {
   username: string
   email: string
   password: string
-  departmentId: string
-  employeeId: string
 }
 
 export interface AuthUser {
@@ -21,8 +19,8 @@ export interface AuthUser {
   email: string
   userRole: string
   isActive: boolean
-  departmentId: string
-  employeeId: string
+  departmentId?: string
+  employeeId?: string
   createdAt: string
   updatedAt: string
   lastLoginAt?: string
@@ -47,7 +45,7 @@ export interface SignupResponse {
 export interface UpdateProfileRequest {
   username: string
   email: string
-  employeeId: string
+  employeeId?: string
 }
 
 export interface UpdateProfileResponse {

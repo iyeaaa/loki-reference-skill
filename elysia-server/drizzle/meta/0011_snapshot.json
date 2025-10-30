@@ -1,6 +1,6 @@
 {
-  "id": "a65d3271-53dd-447a-8581-11651ef4a643",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "c0df72d0-7e4c-4fc3-93a7-a2d64b6b43c6",
+  "prevId": "45b5d9c0-4c5e-4f37-8a07-5825f54aa247",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1761,6 +1761,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "contact_name": {
+          "name": "contact_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "label": {
           "name": "label",
           "type": "varchar(100)",
@@ -2248,6 +2254,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "contact_name": {
+          "name": "contact_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "website_url": {
           "name": "website_url",
           "type": "varchar(500)",
@@ -2577,6 +2589,12 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "first_thread_id": {
+          "name": "first_thread_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -2829,6 +2847,27 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "sequence_step_executions_enrollment_step_unique": {
+          "name": "sequence_step_executions_enrollment_step_unique",
+          "columns": [
+            {
+              "expression": "enrollment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "step_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -2886,6 +2925,27 @@
           "primaryKey": false,
           "notNull": true,
           "default": 0
+        },
+        "scheduled_hour": {
+          "name": "scheduled_hour",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 9
+        },
+        "scheduled_minute": {
+          "name": "scheduled_minute",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'Asia/Seoul'"
         },
         "email_subject": {
           "name": "email_subject",
@@ -3018,6 +3078,12 @@
         },
         "workflow_data": {
           "name": "workflow_data",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "selected_lead_ids": {
+          "name": "selected_lead_ids",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -3297,13 +3363,13 @@
           "name": "department_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "employee_id": {
           "name": "employee_id",
           "type": "varchar(20)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -3360,11 +3426,6 @@
           "name": "users_email_unique",
           "nullsNotDistinct": false,
           "columns": ["email"]
-        },
-        "users_employee_id_unique": {
-          "name": "users_employee_id_unique",
-          "nullsNotDistinct": false,
-          "columns": ["employee_id"]
         }
       },
       "policies": {},
@@ -3939,7 +4000,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'invited'"
+          "default": "'active'"
         }
       },
       "indexes": {
@@ -4210,12 +4271,12 @@
     "public.sequence_status_enum": {
       "name": "sequence_status_enum",
       "schema": "public",
-      "values": ["draft", "active", "paused", "archived"]
+      "values": ["draft", "active", "paused", "archived", "completed"]
     },
     "public.step_execution_status_enum": {
       "name": "step_execution_status_enum",
       "schema": "public",
-      "values": ["pending", "scheduled", "sent", "failed", "skipped"]
+      "values": ["pending", "scheduled", "sent", "delivered", "failed", "skipped"]
     },
     "public.user_role_enum": {
       "name": "user_role_enum",
@@ -4240,7 +4301,7 @@
     "public.workspace_member_status_enum": {
       "name": "workspace_member_status_enum",
       "schema": "public",
-      "values": ["invited", "active", "inactive", "removed"]
+      "values": ["active", "inactive", "removed"]
     }
   },
   "schemas": {},

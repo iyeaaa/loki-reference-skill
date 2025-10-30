@@ -67,7 +67,9 @@ describe("Lead Filter Options API", () => {
     })
 
     test("returns filter options for leadSource field", async () => {
-      const response = await (api.api.v1.leads as any)["filter-options"]({ field: "leadSource" }).get()
+      const response = await (api.api.v1.leads as any)
+        ["filter-options"]({ field: "leadSource" })
+        .get()
 
       expect(response.status).toBeDefined()
       expect([200, 400, 404, 500]).toContain(response.status)
@@ -93,7 +95,9 @@ describe("Lead Filter Options API", () => {
     })
 
     test("returns filter options for businessType field", async () => {
-      const response = await (api.api.v1.leads as any)["filter-options"]({ field: "businessType" }).get()
+      const response = await (api.api.v1.leads as any)
+        ["filter-options"]({ field: "businessType" })
+        .get()
 
       expect(response.status).toBeDefined()
       expect([200, 400, 404, 500]).toContain(response.status)
@@ -108,7 +112,9 @@ describe("Lead Filter Options API", () => {
 
   describe("Special Field: leadStatus (enum)", () => {
     test("returns all enum values with counts", async () => {
-      const response = await (api.api.v1.leads as any)["filter-options"]({ field: "leadStatus" }).get()
+      const response = await (api.api.v1.leads as any)
+        ["filter-options"]({ field: "leadStatus" })
+        .get()
 
       expect(response.status).toBeDefined()
 
@@ -119,7 +125,15 @@ describe("Lead Filter Options API", () => {
         expect(Array.isArray(data.data.options)).toBe(true)
 
         // Should return all enum values
-        const expectedStatuses = ["new", "contacted", "qualified", "unqualified", "converted", "lost", "unsubscribed"]
+        const expectedStatuses = [
+          "new",
+          "contacted",
+          "qualified",
+          "unqualified",
+          "converted",
+          "lost",
+          "unsubscribed",
+        ]
         const returnedValues = data.data.options.map((opt: any) => opt.value)
 
         expectedStatuses.forEach((status) => {
@@ -138,7 +152,9 @@ describe("Lead Filter Options API", () => {
 
   describe("Special Field: employeeCount (ranges)", () => {
     test("returns predefined ranges with counts", async () => {
-      const response = await (api.api.v1.leads as any)["filter-options"]({ field: "employeeCount" }).get()
+      const response = await (api.api.v1.leads as any)
+        ["filter-options"]({ field: "employeeCount" })
+        .get()
 
       expect(response.status).toBeDefined()
 
@@ -186,7 +202,9 @@ describe("Lead Filter Options API", () => {
 
   describe("Error Handling", () => {
     test("returns 400 or 404 for invalid field parameter", async () => {
-      const response = await (api.api.v1.leads as any)["filter-options"]({ field: "invalidField" }).get()
+      const response = await (api.api.v1.leads as any)
+        ["filter-options"]({ field: "invalidField" })
+        .get()
 
       expect([400, 404]).toContain(response.status)
 
@@ -236,7 +254,9 @@ describe("Lead Filter Options API", () => {
     })
 
     test("total equals sum of all option counts", async () => {
-      const response = await (api.api.v1.leads as any)["filter-options"]({ field: "leadStatus" }).get()
+      const response = await (api.api.v1.leads as any)
+        ["filter-options"]({ field: "leadStatus" })
+        .get()
 
       if (response.status === 200 && response.data && "data" in response.data) {
         const data = response.data as any

@@ -78,6 +78,13 @@
       "when": 1761559396046,
       "tag": "0010_little_vance_astro",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1761803480059,
+      "tag": "0011_strong_madripoor",
+      "breakpoints": true
     }
   ]
 }

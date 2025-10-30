@@ -31,7 +31,10 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
   const { data: steps = [], isLoading } = useSequenceSteps(sequenceId || "", !!sequenceId)
 
   // Fetch sequence to get workspaceId
-  const { data: sequence } = useSequence(sequenceId || "", !!sequenceId)
+  const { data: sequence, isLoading: isLoadingSequence } = useSequence(
+    sequenceId || "",
+    !!sequenceId,
+  )
 
   const createStep = useCreateSequenceStep(sequenceId)
   const updateStep = useUpdateSequenceStep(sequenceId)
@@ -114,26 +117,45 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
     )
   }
 
+  // 고객그룹이 없는지 확인
+  const hasCustomerGroup = !!sequence?.customerGroupId
+
   return (
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-base">시퀀스 스텝</CardTitle>
           {sequenceId && (
-            <Button onClick={() => setIsCreating(true)} size="sm" variant="outline">
+            <Button
+              onClick={() => setIsCreating(true)}
+              size="sm"
+              variant="outline"
+              disabled={!hasCustomerGroup}
+            >
               <Plus className="h-4 w-4 mr-1" />
               스텝 추가
             </Button>
           )}
         </CardHeader>
         <CardContent>
+          {!isLoadingSequence && !hasCustomerGroup && (
+            <div className="rounded-lg border-2 border-amber-500 bg-amber-50 dark:bg-amber-950/20 p-4 mb-4">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-2">
+                ⚠️ 고객 그룹을 먼저 설정해주세요
+              </p>
+              <p className="text-xs text-amber-800 dark:text-amber-300 mb-3">
+                스텝을 추가하려면 시퀀스에 고객 그룹이 반드시 필요합니다. 위의 시퀀스 정보를
+                수정하여 고객 그룹을 선택해주세요.
+              </p>
+            </div>
+          )}
           {isLoading ? (
             <p className="text-sm text-muted-foreground text-center py-4">로딩 중...</p>
           ) : steps.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-sm text-muted-foreground mb-4">아직 생성된 스텝이 없습니다.</p>
               {sequenceId && (
-                <Button onClick={() => setIsCreating(true)} size="sm">
+                <Button onClick={() => setIsCreating(true)} size="sm" disabled={!hasCustomerGroup}>
                   <Plus className="h-4 w-4 mr-1" />첫 스텝 추가
                 </Button>
               )}

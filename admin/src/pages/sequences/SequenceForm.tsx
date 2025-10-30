@@ -1,3 +1,4 @@
+import { ExternalLink } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -229,15 +230,35 @@ export function SequenceForm({
             </SelectContent>
           )}
         </Select>
+        {customerGroups && customerGroups.length === 0 && formData.workspaceId && (
+          <div className="rounded-lg border-2 border-amber-500 bg-amber-50 dark:bg-amber-950/20 p-3 mt-2">
+            <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 mb-2">
+              ⚠️ 선택한 워크스페이스에 고객 그룹이 없습니다
+            </p>
+            <p className="text-xs text-amber-800 dark:text-amber-300 mb-2">
+              시퀀스를 생성하려면 먼저 고객 그룹을 만들어야 합니다.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-xs h-8"
+              onClick={() => window.open("/customer-groups", "_blank")}
+            >
+              <ExternalLink className="h-3 w-3 mr-1" />
+              고객 그룹 생성하러 가기
+            </Button>
+          </div>
+        )}
         {hasEnrollments ? (
           <p className="text-xs text-amber-600">
             ⚠️ 이미 실행 이력이 있는 시퀀스는 고객그룹을 변경할 수 없습니다
           </p>
-        ) : (
+        ) : customerGroups && customerGroups.length > 0 ? (
           <p className="text-xs text-gray-500">
             💡 워크플로우 실행을 위해 고객그룹을 반드시 선택해야 합니다
           </p>
-        )}
+        ) : null}
       </div>
 
       {/* 리드 선택 섹션 */}

@@ -73,6 +73,21 @@ export const sequencesApi = {
     })
   },
 
+  copy: (
+    sequenceId: string,
+    data?: {
+      name?: string
+      customerGroupId?: string
+      selectedLeadIds?: string[]
+      createdBy?: string
+    },
+  ) => {
+    return apiFetch<Sequence>(`/api/v1/sequences/${sequenceId}/copy`, {
+      method: "POST",
+      body: JSON.stringify(data || {}),
+    })
+  },
+
   // Sequence steps
   getSteps: (sequenceId: string) => {
     return apiFetch<SequenceStep[]>(`/api/v1/sequences/${sequenceId}/steps`)

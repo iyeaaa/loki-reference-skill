@@ -306,6 +306,43 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
     },
   )
 
+  // Copy sequence (시퀀스 복사 - 스텝 포함)
+  .post(
+    "/:id/copy",
+    async ({ params: { id }, body, set }) => {
+      try {
+        const copiedSequence = await sequenceService.copySequence(id, body)
+        logger.info(
+          {
+            originalId: id,
+            copiedId: copiedSequence.id,
+            copiedName: copiedSequence.name,
+          },
+          "✅ 시퀀스 복사 완료",
+        )
+        return successResponse(copiedSequence, "시퀀스가 복사되었습니다.")
+      } catch (error) {
+        logger.error({ err: error, sequenceId: id }, "❌ 시퀀스 복사 실패")
+        set.status = 500
+        return errorResponse(
+          error instanceof Error ? error.message : "시퀀스 복사에 실패했습니다.",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      body: t.Object({
+        name: t.Optional(t.String()),
+        customerGroupId: t.Optional(t.String({ format: "uuid" })),
+        selectedLeadIds: t.Optional(t.Array(t.String({ format: "uuid" }))),
+        createdBy: t.Optional(t.String({ format: "uuid" })),
+      }),
+    },
+  )
+
   // Activate step-based sequence (without workflow validation)
   .post(
     "/:id/activate-step-based",

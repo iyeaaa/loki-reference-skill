@@ -138,6 +138,153 @@ export async function deleteSequence(id: string) {
   await db.delete(sequences).where(eq(sequences.id, id))
 }
 
+// CopySequence :one - 시퀀스 복사 (스텝 포함)
+export async function copySequence(
+  sequenceId: string,
+  data?: {
+    name?: string
+    customerGroupId?: string
+    selectedLeadIds?: string[]
+    createdBy?: string
+  },
+) {
+  // 1. 원본 시퀀스 조회
+  const originalSequence = await db
+    .select()
+    .from(sequences)
+    .where(eq(sequences.id, sequenceId))
+    .limit(1)
+
+  if (!originalSequence.length || !originalSequence[0]) {
+    throw new Error("원본 시퀀스를 찾을 수 없습니다.")
+  }
+
+  const original = originalSequence[0]
+
+  // 2. 중복 이름 체크 및 자동 넘버링
+  let newName = data?.name || original.name
+  if (!data?.name) {
+    // 같은 워크스페이스에서 동일한 이름으로 시작하는 시퀀스 찾기
+    const existingSequences = await db
+      .select({ name: sequences.name })
+      .from(sequences)
+      .where(
+        and(
+          eq(sequences.workspaceId, original.workspaceId),
+          or(eq(sequences.name, original.name), ilike(sequences.name, `${original.name} (%)`)),
+        ),
+      )
+
+    // 숫자 추출 및 최대값 찾기
+    const numbers: number[] = []
+    for (const seq of existingSequences) {
+      if (seq.name === original.name) {
+        numbers.push(1)
+      } else {
+        const match = seq.name.match(/\((\d+)\)$/)
+        if (match?.[1]) {
+          numbers.push(parseInt(match[1], 10))
+        }
+      }
+    }
+
+    if (numbers.length > 0) {
+      const maxNumber = Math.max(...numbers)
+      newName = `${original.name} (${maxNumber + 1})`
+    }
+  }
+
+  // 3. 새 시퀀스 생성
+  const result = await db
+    .insert(sequences)
+    .values({
+      workspaceId: original.workspaceId,
+      customerGroupId: data?.customerGroupId || original.customerGroupId,
+      name: newName,
+      description: original.description,
+      status: "draft", // 복사본은 항상 draft 상태로
+      workflowData: original.workflowData,
+      selectedLeadIds: data?.selectedLeadIds
+        ? JSON.stringify(data.selectedLeadIds)
+        : original.selectedLeadIds,
+      createdBy: data?.createdBy || original.createdBy,
+    })
+    .returning({
+      id: sequences.id,
+      workspaceId: sequences.workspaceId,
+      customerGroupId: sequences.customerGroupId,
+      name: sequences.name,
+      description: sequences.description,
+      status: sequences.status,
+      workflowData: sequences.workflowData,
+      selectedLeadIds: sequences.selectedLeadIds,
+      createdBy: sequences.createdBy,
+      createdAt: sequences.createdAt,
+      updatedAt: sequences.updatedAt,
+    })
+
+  const copiedSequence = result[0]
+  if (!copiedSequence) {
+    throw new Error("시퀀스 복사에 실패했습니다.")
+  }
+
+  // 4. 원본 시퀀스의 스텝들 복사
+  const originalSteps = await db
+    .select()
+    .from(sequenceSteps)
+    .where(eq(sequenceSteps.sequenceId, sequenceId))
+    .orderBy(sequenceSteps.stepOrder)
+
+  if (originalSteps.length > 0) {
+    const copiedStepsData = originalSteps.map((step) => ({
+      sequenceId: copiedSequence.id,
+      stepOrder: step.stepOrder,
+      delayDays: step.delayDays,
+      scheduledHour: step.scheduledHour,
+      scheduledMinute: step.scheduledMinute,
+      timezone: step.timezone,
+      emailSubject: step.emailSubject,
+      emailBodyText: step.emailBodyText,
+      emailBodyHtml: step.emailBodyHtml,
+      emailTemplateId: step.emailTemplateId,
+    }))
+
+    const { default: logger } = await import("../utils/logger")
+    logger.info(
+      {
+        originalSequenceId: sequenceId,
+        copiedSequenceId: copiedSequence.id,
+        stepsCount: originalSteps.length,
+        originalSteps: originalSteps.map((s) => ({
+          id: s.id,
+          stepOrder: s.stepOrder,
+          scheduledHour: s.scheduledHour,
+          scheduledMinute: s.scheduledMinute,
+        })),
+      },
+      "📋 시퀀스 스텝 복사 중",
+    )
+
+    const insertedSteps = await db.insert(sequenceSteps).values(copiedStepsData).returning()
+
+    logger.info(
+      {
+        copiedSequenceId: copiedSequence.id,
+        insertedStepsCount: insertedSteps.length,
+        insertedSteps: insertedSteps.map((s) => ({
+          id: s.id,
+          stepOrder: s.stepOrder,
+          scheduledHour: s.scheduledHour,
+          scheduledMinute: s.scheduledMinute,
+        })),
+      },
+      "✅ 시퀀스 스텝 복사 완료 (새로운 스텝 ID로 생성됨)",
+    )
+  }
+
+  return copiedSequence
+}
+
 // ====================================
 // SEQUENCE QUERY OPERATIONS
 // ====================================

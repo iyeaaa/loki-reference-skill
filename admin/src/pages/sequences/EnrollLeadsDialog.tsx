@@ -1,5 +1,6 @@
 import { AlertCircle, Mail, Users } from "lucide-react"
 import { useEffect, useState } from "react"
+import toast from "react-hot-toast"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -20,7 +21,7 @@ import {
 } from "@/components/ui/select"
 import { useCustomerGroupMembers } from "@/lib/api/hooks/customer-groups"
 import { useEmailAccountsByWorkspace } from "@/lib/api/hooks/email-accounts"
-import { useBulkEnrollWithScheduling } from "@/lib/api/hooks/sequences"
+import { useBulkEnrollWithScheduling, useSequenceSteps } from "@/lib/api/hooks/sequences"
 import type { CustomerGroupMember } from "@/lib/api/types/customer-group"
 import type { Sequence } from "@/lib/api/types/sequence"
 
@@ -50,6 +51,10 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
     sequence.workspaceId,
     Boolean(sequence.workspaceId),
   )
+
+  // 시퀀스 스텝 목록 조회 (과거 시간 검증용)
+  const { data: stepsData } = useSequenceSteps(sequence.id, Boolean(sequence.id))
+  const steps = stepsData || []
 
   // 고객그룹의 멤버 목록 조회
   const { data: membersData } = useCustomerGroupMembers(
@@ -85,6 +90,40 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
     if (leads.length === 0) {
       alert("등록할 리드가 없습니다.")
       return
+    }
+
+    // ✅ 과거 시간 스케줄 검증
+    const now = new Date()
+    const KST_OFFSET_MS = 9 * 60 * 60 * 1000
+    const nowKST = new Date(now.getTime() + KST_OFFSET_MS)
+    const currentHour = nowKST.getUTCHours()
+    const currentMinute = nowKST.getUTCMinutes()
+
+    for (const step of steps) {
+      const delayDays = step.delayDays || 0
+      const scheduledHour = step.scheduledHour ?? 9
+      const scheduledMinute = step.scheduledMinute ?? 0
+
+      // delayDays가 0이면 오늘 발송인데, 스케줄 시간이 현재 시간보다 이전이면 안됨
+      if (delayDays === 0) {
+        const scheduledTimeInMinutes = scheduledHour * 60 + scheduledMinute
+        const currentTimeInMinutes = currentHour * 60 + currentMinute
+
+        if (scheduledTimeInMinutes <= currentTimeInMinutes) {
+          toast.error(
+            `스텝 ${step.stepOrder}: 스케줄 시간(${String(scheduledHour).padStart(2, "0")}:${String(
+              scheduledMinute,
+            ).padStart(2, "0")})이 현재 시간(${String(currentHour).padStart(2, "0")}:${String(
+              currentMinute,
+            ).padStart(
+              2,
+              "0",
+            )})보다 이전입니다.\n\n시퀀스를 수정하여 발송 지연일을 1일 이상으로 설정하거나, 시간을 현재 시간 이후로 변경해주세요.`,
+            { duration: 6000 },
+          )
+          return
+        }
+      }
     }
 
     bulkEnroll.mutate(

@@ -4,6 +4,7 @@ import * as leadService from "../services/lead.service"
 import type { ColumnFilter } from "../types/lead-filters.types"
 import { errorResponse, ResponseCode } from "../types/response.types"
 import { parseFiltersFromQuery } from "../utils/filter-builder.util"
+import { validatePageSize } from "../utils/pagination.util"
 
 // Response schemas for nested objects
 // NOTE: Date fields use t.String() without format because Elysia serializes Date → string AFTER validation
@@ -243,7 +244,19 @@ export const leadRoutes = new Elysia({ prefix: "/api/v1/leads" })
   .get(
     "/search",
     async ({ query }) => {
-      const limit = parseInt(query.limit || "10", 10)
+      // Validate and parse limit using utility function (defaults to 100, max 10,000)
+      let limit: number
+      try {
+        limit = validatePageSize(query.limit)
+      } catch (error) {
+        return {
+          success: false as const,
+          code: ResponseCode.BAD_REQUEST,
+          message: error instanceof Error ? error.message : "Invalid limit parameter",
+          timestamp: new Date().toISOString(),
+        }
+      }
+
       const offset = parseInt(query.offset || "0", 10)
 
       // Parse workspaceIds and createdByIds from comma-separated string

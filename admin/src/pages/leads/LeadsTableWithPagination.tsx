@@ -63,7 +63,12 @@ export function LeadsTableWithPagination({
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
-  const limit = 10
+  const [pageSize, setPageSize] = useState(() => {
+    const saved = localStorage.getItem("leadsPageSize")
+    return saved ? parseInt(saved, 10) : 100
+  })
+  const [pageSizeInput, setPageSizeInput] = useState(String(pageSize))
+  const limit = pageSize
 
   // Workspace state
   const [currentWorkspace, setCurrentWorkspace] = useState(
@@ -256,6 +261,41 @@ export function LeadsTableWithPagination({
     setActiveColumnFilters([])
   }
 
+  // Page size handlers
+  const handlePageSizeChange = (newSize: number) => {
+    if (newSize >= 1 && newSize <= 10000) {
+      setPageSize(newSize)
+      setPageSizeInput(String(newSize))
+      setCurrentPage(1) // Reset to first page
+      setPageInputValue("1")
+      localStorage.setItem("leadsPageSize", String(newSize))
+    }
+  }
+
+  const handlePageSizeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPageSizeInput(e.target.value)
+  }
+
+  const handlePageSizeInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      const value = parseInt(pageSizeInput, 10)
+      if (!isNaN(value) && value >= 1 && value <= 10000) {
+        handlePageSizeChange(value)
+      } else {
+        setPageSizeInput(String(pageSize))
+      }
+    }
+  }
+
+  const handlePageSizeInputBlur = () => {
+    const value = parseInt(pageSizeInput, 10)
+    if (!isNaN(value) && value >= 1 && value <= 10000) {
+      handlePageSizeChange(value)
+    } else {
+      setPageSizeInput(String(pageSize))
+    }
+  }
+
   return (
     <>
       {/* Filter Summary Panel */}
@@ -361,6 +401,55 @@ export function LeadsTableWithPagination({
 
       {/* Pagination */}
       <div className="mt-6 space-y-4">
+        {/* Page Size Control */}
+        <div className="flex items-center justify-center gap-3">
+          <span className="text-sm text-muted-foreground">페이지 크기:</span>
+          <Input
+            type="text"
+            value={pageSizeInput}
+            onChange={handlePageSizeInputChange}
+            onKeyDown={handlePageSizeInputKeyDown}
+            onBlur={handlePageSizeInputBlur}
+            className="w-20 h-8 text-sm text-center"
+            disabled={isFetching}
+            placeholder="100"
+          />
+          <div className="flex gap-1">
+            <Button
+              onClick={() => handlePageSizeChange(10)}
+              variant={pageSize === 10 ? "default" : "outline"}
+              size="sm"
+              disabled={isFetching}
+            >
+              10
+            </Button>
+            <Button
+              onClick={() => handlePageSizeChange(50)}
+              variant={pageSize === 50 ? "default" : "outline"}
+              size="sm"
+              disabled={isFetching}
+            >
+              50
+            </Button>
+            <Button
+              onClick={() => handlePageSizeChange(100)}
+              variant={pageSize === 100 ? "default" : "outline"}
+              size="sm"
+              disabled={isFetching}
+            >
+              100
+            </Button>
+            <Button
+              onClick={() => handlePageSizeChange(500)}
+              variant={pageSize === 500 ? "default" : "outline"}
+              size="sm"
+              disabled={isFetching}
+            >
+              500
+            </Button>
+          </div>
+        </div>
+
         {/* Pagination Info */}
         <div className="flex items-center justify-center">
           <div className="text-sm text-muted-foreground">

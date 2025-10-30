@@ -133,7 +133,7 @@ export interface LeadsResponse {
 
 export interface LeadsParams {
   page?: number
-  limit?: number
+  limit?: number // Support custom page sizes (default: 100)
   leadStatus?: LeadStatus | "all"
   businessType?: string
   country?: string

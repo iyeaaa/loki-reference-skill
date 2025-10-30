@@ -57,8 +57,8 @@ export function useLeads(params?: LeadsParams) {
           leads: result.data.data.data as Lead[],
           total: result.data.data.total,
           page: params?.page || 1,
-          limit: params?.limit || 10,
-          totalPages: Math.ceil(result.data.data.total / (params?.limit || 10)),
+          limit: params?.limit || 100,
+          totalPages: Math.ceil(result.data.data.total / (params?.limit || 100)),
         }
       : undefined,
   }

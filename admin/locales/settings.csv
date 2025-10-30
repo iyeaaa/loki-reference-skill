@@ -16,4 +16,5 @@ system.users.title,유저 관리,User Management
 system.users.desc,사용자 계정을 관리합니다,Manage user accounts
 system.import.title,리드 데이터 임포트,Lead Data Import
 system.import.desc,CSV 파일로 리드 데이터를 일괄 등록합니다,Import lead data in bulk via CSV
-
+system.emailTemplates.desc,[NO TRANSLATION] settings.system.emailTemplates.desc,[NO TRANSLATION] settings.system.emailTemplates.desc
+system.emailTemplates.title,[NO TRANSLATION] settings.system.emailTemplates.title,[NO TRANSLATION] settings.system.emailTemplates.title

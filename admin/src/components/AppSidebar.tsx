@@ -1,4 +1,4 @@
-import { BarChart3, FileText, GitBranch, Mail, Settings, UserCheck } from "lucide-react"
+import { BarChart3, GitBranch, Mail, Settings, UserCheck } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Link, useLocation } from "react-router-dom"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
@@ -33,11 +33,6 @@ const getCustomerMenuItems = (t: (key: string) => string) => [
     title: t("sidebar.menu.followupSequenceManagement"),
     url: "/sequences",
     icon: GitBranch,
-  },
-  {
-    title: t("sidebar.menu.emailTemplateManagement"),
-    url: "/email-templates",
-    icon: FileText,
   },
   {
     title: t("sidebar.menu.replyManagement"),

@@ -279,7 +279,7 @@ export function LeadsTableWithPagination({
   const handlePageSizeInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       const value = parseInt(pageSizeInput, 10)
-      if (!isNaN(value) && value >= 1 && value <= 10000) {
+      if (!Number.isNaN(value) && value >= 1 && value <= 10000) {
         handlePageSizeChange(value)
       } else {
         setPageSizeInput(String(pageSize))
@@ -289,7 +289,7 @@ export function LeadsTableWithPagination({
 
   const handlePageSizeInputBlur = () => {
     const value = parseInt(pageSizeInput, 10)
-    if (!isNaN(value) && value >= 1 && value <= 10000) {
+    if (!Number.isNaN(value) && value >= 1 && value <= 10000) {
       handlePageSizeChange(value)
     } else {
       setPageSizeInput(String(pageSize))

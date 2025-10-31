@@ -1,3 +1,5 @@
+import iconv from "iconv-lite"
+
 /**
  * Extract clean email address from various formats
  *
@@ -33,32 +35,72 @@ export function extractEmailAddress(emailString: string): string {
 }
 
 /**
- * Decode content based on Content-Transfer-Encoding
+ * Decode content based on Content-Transfer-Encoding and charset
  */
-function decodeContent(content: string, encoding?: string): string {
-  if (!encoding || encoding === "7bit" || encoding === "8bit") {
-    return content
-  }
+function decodeContent(content: string, encoding?: string, charset?: string): string {
+  let decoded = content
 
-  if (encoding === "base64") {
-    try {
-      // Remove whitespace and decode base64
-      const cleaned = content.replace(/\s/g, "")
-      return Buffer.from(cleaned, "base64").toString("utf-8")
-    } catch (error) {
-      console.error("Failed to decode base64:", error)
-      return content
+  // Step 1: Decode transfer encoding (base64, quoted-printable)
+  if (encoding && encoding !== "7bit" && encoding !== "8bit") {
+    if (encoding === "base64") {
+      try {
+        // Remove whitespace and decode base64
+        const cleaned = content.replace(/\s/g, "")
+        const buffer = Buffer.from(cleaned, "base64")
+
+        // If charset is specified, decode with that charset
+        if (charset && iconv.encodingExists(charset)) {
+          return iconv.decode(buffer, charset)
+        }
+
+        return buffer.toString("utf-8")
+      } catch (error) {
+        console.error("Failed to decode base64:", error)
+        return content
+      }
+    }
+
+    if (encoding === "quoted-printable") {
+      // Decode quoted-printable to bytes
+      decoded = content
+        .replace(/=\r?\n/g, "") // Remove soft line breaks
+        .replace(/=([0-9A-F]{2})/gi, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
     }
   }
 
-  if (encoding === "quoted-printable") {
-    // Basic quoted-printable decoding
-    return content
-      .replace(/=\r?\n/g, "") // Remove soft line breaks
-      .replace(/=([0-9A-F]{2})/gi, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
+  // Step 2: Decode character encoding (charset)
+  if (charset && charset.toLowerCase() !== "utf-8" && charset.toLowerCase() !== "utf8") {
+    try {
+      // Convert charset name to iconv-lite compatible format
+      const normalizedCharset = charset.toUpperCase().replace(/[^A-Z0-9-]/g, "")
+
+      // Common charset aliases
+      const charsetMap: Record<string, string> = {
+        "ISO-2022-JP": "ISO-2022-JP",
+        ISO2022JP: "ISO-2022-JP",
+        SHIFT_JIS: "SHIFT_JIS",
+        SHIFTJIS: "SHIFT_JIS",
+        "EUC-JP": "EUC-JP",
+        EUCJP: "EUC-JP",
+        "EUC-KR": "EUC-KR",
+        EUCKR: "EUC-KR",
+        GB2312: "GB2312",
+        BIG5: "BIG5",
+      }
+
+      const targetCharset = charsetMap[normalizedCharset] || charset
+
+      if (iconv.encodingExists(targetCharset)) {
+        // For ISO-2022-JP and other non-UTF8 charsets, we need to work with Buffer
+        const buffer = Buffer.from(decoded, "binary")
+        return iconv.decode(buffer, targetCharset)
+      }
+    } catch (error) {
+      console.error(`Failed to decode charset ${charset}:`, error)
+    }
   }
 
-  return content
+  return decoded
 }
 
 /**
@@ -143,25 +185,33 @@ export function parseEmailBody(emailContent: string): {
     for (const part of parts) {
       // Check for plain text part
       if (part.includes("Content-Type: text/plain")) {
+        // Extract charset
+        const charsetMatch = part.match(/charset=["']?([^"'\s;]+)["']?/i)
+        const charset = charsetMatch?.[1]?.trim()
+
         // Extract encoding
         const encodingMatch = part.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i)
         const encoding = encodingMatch?.[1]?.trim().toLowerCase()
 
         const textMatch = part.match(/\r?\n\r?\n([\s\S]+?)(?=\r?\n--|\r?\n$|$)/)
         if (textMatch?.[1]) {
-          text = decodeContent(textMatch[1].trim(), encoding)
+          text = decodeContent(textMatch[1].trim(), encoding, charset)
         }
       }
 
       // Check for HTML part
       if (part.includes("Content-Type: text/html")) {
+        // Extract charset
+        const charsetMatch = part.match(/charset=["']?([^"'\s;]+)["']?/i)
+        const charset = charsetMatch?.[1]?.trim()
+
         // Extract encoding
         const encodingMatch = part.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i)
         const encoding = encodingMatch?.[1]?.trim().toLowerCase()
 
         const htmlMatch = part.match(/\r?\n\r?\n([\s\S]+?)(?=\r?\n--|\r?\n$|$)/)
         if (htmlMatch?.[1]) {
-          html = decodeContent(htmlMatch[1].trim(), encoding)
+          html = decodeContent(htmlMatch[1].trim(), encoding, charset)
         }
       }
     }
@@ -177,6 +227,10 @@ export function parseEmailBody(emailContent: string): {
       return { text: undefined, html: undefined }
     }
 
+    // Extract charset from headers
+    const charsetMatch = headersPart.match(/charset=["']?([^"'\s;]+)["']?/i)
+    const charset = charsetMatch?.[1]?.trim()
+
     // Extract encoding from headers
     const encodingMatch = headersPart.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i)
     const encoding = encodingMatch?.[1]?.trim().toLowerCase()
@@ -186,7 +240,7 @@ export function parseEmailBody(emailContent: string): {
     const contentType = contentTypeMatch?.[1]?.trim().toLowerCase()
 
     // Decode the body
-    const decodedBody = decodeContent(body, encoding)
+    const decodedBody = decodeContent(body, encoding, charset)
 
     // Determine if it's HTML or text based on content type or content
     if (

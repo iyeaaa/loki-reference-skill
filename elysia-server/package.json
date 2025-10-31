@@ -61,6 +61,7 @@
     "csv-parse": "^6.1.0",
     "drizzle-orm": "^0.44.5",
     "elysia": "^1.4.7",
+    "iconv-lite": "^0.7.0",
     "jsonwebtoken": "^9.0.2",
     "marked": "^16.4.0",
     "pg": "^8.16.3",

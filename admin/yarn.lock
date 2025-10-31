@@ -2314,6 +2314,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/encoding-japanese@npm:^2":
+  version: 2.2.1
+  resolution: "@types/encoding-japanese@npm:2.2.1"
+  checksum: 10c0/406384eb5217ab28382ef8610fb411401ffdfb56bebf6344012f159af7b5169f84a59bb3800f44232612f15ccb285abc4574b7d3e695534fe67973c783d6ae7e
+  languageName: node
+  linkType: hard
+
 "@types/estree-jsx@npm:^1.0.0":
   version: 1.0.5
   resolution: "@types/estree-jsx@npm:1.0.5"
@@ -2414,6 +2421,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/quoted-printable@npm:^1":
+  version: 1.0.2
+  resolution: "@types/quoted-printable@npm:1.0.2"
+  checksum: 10c0/1b8cbc483195cee29c970956c3aebf78d117b5f463b98aad43f8a21603e1031da9699b00b592bc9de47898939888f8fba8b341e8ea44e96e9fb53e28730af60e
+  languageName: node
+  linkType: hard
+
 "@types/react-dom@npm:^19.1.9":
   version: 19.1.9
   resolution: "@types/react-dom@npm:19.1.9"
@@ -2471,6 +2485,13 @@ __metadata:
   version: 2.0.11
   resolution: "@types/unist@npm:2.0.11"
   checksum: 10c0/24dcdf25a168f453bb70298145eb043cfdbb82472db0bc0b56d6d51cd2e484b9ed8271d4ac93000a80da568f2402e9339723db262d0869e2bf13bc58e081768d
+  languageName: node
+  linkType: hard
+
+"@types/utf8@npm:^3":
+  version: 3.0.3
+  resolution: "@types/utf8@npm:3.0.3"
+  checksum: 10c0/2caa2665ec1387600597460e0bd27184f452564b80f1926470d373b7d28fbd42f20d60dcd57c593f80603bfc580d280b29382a22c40d28132abbc50af2fe93f0
   languageName: node
   linkType: hard
 
@@ -2712,12 +2733,15 @@ __metadata:
     "@tanstack/react-query": "npm:^5.90.2"
     "@tanstack/react-table": "npm:^8.21.3"
     "@types/dompurify": "npm:^3.2.0"
+    "@types/encoding-japanese": "npm:^2"
     "@types/marked": "npm:^6.0.0"
     "@types/node": "npm:^24.5.2"
     "@types/papaparse": "npm:^5.3.16"
+    "@types/quoted-printable": "npm:^1"
     "@types/react": "npm:^19.1.13"
     "@types/react-dom": "npm:^19.1.9"
     "@types/react-router-dom": "npm:^5.3.3"
+    "@types/utf8": "npm:^3"
     "@types/xlsx": "npm:^0.0.36"
     "@uiw/react-md-editor": "npm:^4.0.8"
     "@vitejs/plugin-react-swc": "npm:^4.1.0"
@@ -2734,6 +2758,7 @@ __metadata:
     dompurify: "npm:^3.3.0"
     elkjs: "npm:^0.11.0"
     embla-carousel-react: "npm:^8.6.0"
+    encoding-japanese: "npm:^2.2.0"
     husky: "npm:^9.1.7"
     i18next: "npm:^25.6.0"
     i18next-browser-languagedetector: "npm:^8.2.0"
@@ -2750,6 +2775,7 @@ __metadata:
     openapi-typescript: "npm:^7.10.1"
     papaparse: "npm:^5.5.3"
     postcss: "npm:^8.5.6"
+    quoted-printable: "npm:^1.0.1"
     react: "npm:^19.1.1"
     react-day-picker: "npm:^9.11.1"
     react-dom: "npm:^19.1.1"
@@ -2766,6 +2792,7 @@ __metadata:
     tsx: "npm:^4.20.6"
     tw-animate-css: "npm:^1.4.0"
     typescript: "npm:~5.8.3"
+    utf8: "npm:^3.0.0"
     vaul: "npm:^1.1.2"
     vite: "npm:^7.1.7"
     xlsx: "npm:^0.18.5"
@@ -3751,6 +3778,13 @@ __metadata:
   version: 9.2.2
   resolution: "emoji-regex@npm:9.2.2"
   checksum: 10c0/af014e759a72064cf66e6e694a7fc6b0ed3d8db680427b021a89727689671cefe9d04151b2cad51dbaf85d5ba790d061cd167f1cf32eb7b281f6368b3c181639
+  languageName: node
+  linkType: hard
+
+"encoding-japanese@npm:^2.2.0":
+  version: 2.2.0
+  resolution: "encoding-japanese@npm:2.2.0"
+  checksum: 10c0/9d1f10dde16f59da8a8a1a04499dffa3e9926b0dbd7dfab8054570527b7e6de30c47e828851f42d2727af31586ec8049a84eeae593ad8b22eea10921fd269798
   languageName: node
   linkType: hard
 
@@ -6179,6 +6213,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"quoted-printable@npm:^1.0.1":
+  version: 1.0.1
+  resolution: "quoted-printable@npm:1.0.1"
+  dependencies:
+    utf8: "npm:^2.1.0"
+  bin:
+    quoted-printable: bin/quoted-printable
+  checksum: 10c0/3a6be07838baf77e09214eed161dd3fdafd781495a9903afef9650f706ed399e6745a3d63bd80922a6fc0d44f087b4e5a871b4fa4f658a720d21640b17349494
+  languageName: node
+  linkType: hard
+
 "react-day-picker@npm:^9.11.1":
   version: 9.11.1
   resolution: "react-day-picker@npm:9.11.1"
@@ -7551,6 +7596,20 @@ __metadata:
   peerDependencies:
     react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
   checksum: 10c0/35e1179f872a53227bdf8a827f7911da4c37c0f4091c29b76b1e32473d1670ebe7bcd880b808b7549ba9a5605c233350f800ffab963ee4a4ee346ee983b6019b
+  languageName: node
+  linkType: hard
+
+"utf8@npm:^2.1.0":
+  version: 2.1.2
+  resolution: "utf8@npm:2.1.2"
+  checksum: 10c0/1f1d0f1c58e35338c03d377338d28dae8bd66dd6417a428a2e7c83fe87f52339573cd5bf51eb5119451b74b5b66cdc7e6f9e4d6d45f4581fd99c2f07ef118cb3
+  languageName: node
+  linkType: hard
+
+"utf8@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "utf8@npm:3.0.0"
+  checksum: 10c0/675d008bab65fc463ce718d5cae8fd4c063540f269e4f25afebce643098439d53e7164bb1f193e0c3852825c7e3e32fbd8641163d19a618dbb53f1f09acb0d5a
   languageName: node
   linkType: hard
 

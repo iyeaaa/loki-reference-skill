@@ -200,6 +200,8 @@ const getPageName = (pathname: string, t: (key: string) => string) => {
       return t("layout.page.userManagement")
     case "/email-send-test":
       return t("layout.page.emailSendTest")
+    case "/chatbot":
+      return "AI 데이터 분석"
     case "/settings":
       return t("layout.page.settings")
     default:

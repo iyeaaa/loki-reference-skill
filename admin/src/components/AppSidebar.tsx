@@ -1,4 +1,4 @@
-import { BarChart3, GitBranch, Mail, Settings, UserCheck } from "lucide-react"
+import { BarChart3, GitBranch, Mail, MessageSquare, Settings, UserCheck } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Link, useLocation } from "react-router-dom"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
@@ -41,6 +41,15 @@ const getCustomerMenuItems = (t: (key: string) => string) => [
   },
 ]
 
+// AI 영업 자동화 메뉴
+const getAIMenuItems = (t: (key: string) => string) => [
+  {
+    title: t("sidebar.menu.aiSalesAutomation"),
+    url: "/chatbot",
+    icon: MessageSquare,
+  },
+]
+
 interface AppSidebarProps {
   workspaces?: WorkspaceOption[]
   selectedWorkspace?: string
@@ -60,6 +69,7 @@ export function AppSidebar({
 
   // 메뉴 아이템들 가져오기
   const customerMenuItems = getCustomerMenuItems(t)
+  const aiMenuItems = getAIMenuItems(t)
 
   // "전체" 옵션을 포함한 워크스페이스 목록 생성
   const workspaceOptions: WorkspaceOption[] = [
@@ -116,6 +126,35 @@ export function AppSidebar({
         )}
       </SidebarHeader>
       <SidebarContent>
+        {/* AI 영업 자동화 */}
+        <SidebarGroup>
+          <SidebarGroupLabel>{t("sidebar.menu.aiSalesAutomation")}</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {aiMenuItems.map((item) => {
+                const isActive = pathname === item.url
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={item.title}
+                      isActive={isActive}
+                      className={isActive ? "bg-violet-500/10 border-r-2 border-violet-500" : ""}
+                    >
+                      <Link to={item.url || "#"}>
+                        {item.icon && <item.icon className={isActive ? "text-violet-500" : ""} />}
+                        <span className={isActive ? "text-violet-500 font-medium" : ""}>
+                          {item.title}
+                        </span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         {/* 워크스페이스 고객 관리 */}
         <SidebarGroup>
           <SidebarGroupLabel>

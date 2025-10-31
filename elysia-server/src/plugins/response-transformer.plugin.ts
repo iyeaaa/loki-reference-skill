@@ -18,13 +18,13 @@ export const responseTransformer = (app: Elysia) =>
       return response
     }
 
-    // Skip transformation for Server-Sent Events (SSE) streams
-    if (response instanceof ReadableStream) {
+    // Skip transformation for SSE streams (text/event-stream)
+    if (set.headers?.["content-type"]?.includes("text/event-stream")) {
       return response
     }
 
-    // Skip transformation for responses with SSE content-type
-    if (set.headers && set.headers["content-type"] === "text/event-stream") {
+    // Skip transformation for Response objects (e.g., ReadableStream)
+    if (response instanceof Response || response instanceof ReadableStream) {
       return response
     }
 

@@ -14,6 +14,13 @@ export {
   useSignupMutation,
   useVerifyToken,
 } from "./hooks/auth"
+// Chatbot Hooks
+export {
+  chatbotKeys,
+  useChatbot,
+  useChatbotHistory,
+  useChatbotMutation,
+} from "./hooks/chatbot"
 // Department Hooks
 export {
   departmentKeys,

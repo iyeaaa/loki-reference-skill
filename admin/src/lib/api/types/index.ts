@@ -4,6 +4,7 @@
 
 // Re-export all types from individual files
 export type * from "./auth"
+export type * from "./chatbot"
 export type {
   DepartmentCreateRequest,
   DepartmentsResponse,

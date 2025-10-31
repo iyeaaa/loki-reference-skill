@@ -11,6 +11,7 @@ import { activityLogRoutes } from "./routes/activity-logs.routes"
 import { aiRoutes } from "./routes/ai.routes"
 import { authRoutes } from "./routes/auth.routes"
 import { bulkEmailRoutes } from "./routes/bulk-email.routes"
+import { chatbotRoutes } from "./routes/chatbot.routes"
 import { adminCustomerGroupRoutes, customerGroupRoutes } from "./routes/customer-groups.routes"
 import { departmentsRoutes } from "./routes/departments.routes"
 import { adminEmailAccountRoutes, emailAccountRoutes } from "./routes/email-accounts.routes"
@@ -130,6 +131,7 @@ const app = new Elysia()
   .use(healthRoutes)
   .use(webhookRoutes)
   .use(aiRoutes)
+  .use(chatbotRoutes)
   .use(authRoutes)
   .use(departmentsRoutes)
   .use(userRoutes)

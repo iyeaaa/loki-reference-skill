@@ -12,3 +12,11 @@ menu.followupSequenceManagement,팔로우업 시퀀스 관리,Follow-up Sequence
 menu.emailTemplateManagement,이메일 템플릿 관리,Email Template Management
 menu.replyManagement,답장 관리,Reply Management
 menu.settings,설정,Settings
+menu.systemManagement,시스템 관리,System Management
+menu.aiDataAnalysis,AI 데이터 분석,AI Data Analysis
+menu.workspaceManagement,워크스페이스 관리,Workspace Management
+menu.userManagement,유저 관리,User Management
+menu.emailSendTest,메일 발송 테스트,Email Send Test
+menu.leadDataImport,리드 데이터 임포트,Lead Data Import
+menu.bulkEmailCSV,CSV 대량 메일 발송,Bulk Email CSV
+menu.aiSalesAutomation,[NO TRANSLATION] sidebar.menu.aiSalesAutomation,[NO TRANSLATION] sidebar.menu.aiSalesAutomation

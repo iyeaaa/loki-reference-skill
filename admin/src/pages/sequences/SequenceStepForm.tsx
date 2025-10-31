@@ -1,6 +1,7 @@
-import { ChevronDown, Sparkles } from "lucide-react"
+import { ChevronDown, Mail, Sparkles } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { toast } from "sonner"
+import { SignatureEditorModal } from "@/components/SignatureEditorModal"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
@@ -8,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Textarea } from "@/components/ui/textarea"
 import { TimePicker } from "@/components/ui/time-picker"
+import { useDefaultEmailSignature } from "@/lib/api/hooks/email-signatures"
 import { leadsApi } from "@/lib/api/services/leads"
 import { sequencesApi } from "@/lib/api/services/sequences"
 import type { SequenceStep } from "@/lib/api/types/sequence"
@@ -131,14 +133,28 @@ export function SequenceStepForm({
   const promptId = useId()
   const targetCountryId = useId()
 
-  // 사용자 정보를 기반으로 서명 생성
-  const generateUserSignature = () => {
+  // Get default signature from database
+  const { data: defaultSignature } = useDefaultEmailSignature(
+    {
+      workspaceId: workspaceId || "",
+      userId: user?.id || "",
+    },
+    !!workspaceId && !!user?.id,
+  )
+
+  // 사용자 서명 가져오기
+  const getUserSignature = () => {
+    // DB에서 가져온 기본 서명이 있으면 사용
+    if (defaultSignature) {
+      return defaultSignature.signatureHtml
+    }
+    // 없으면 하드코딩된 기본 서명 사용 (폴백)
     if (user) {
       const name = user.name || user.username || "사용자"
       const title = user.department_name || "직원"
       return generateSignatureHtml({ name, title })
     }
-    return generateSignatureHtml() // 기본값 사용
+    return generateSignatureHtml()
   }
 
   const [formData, setFormData] = useState({
@@ -148,7 +164,7 @@ export function SequenceStepForm({
     scheduledMinute: step?.scheduledMinute ?? new Date().getMinutes(),
     timezone: step?.timezone ?? "Asia/Seoul",
     emailSubject: step?.emailSubject || "",
-    emailBodyText: step?.emailBodyText || `\n\n${generateUserSignature()}`,
+    emailBodyText: step?.emailBodyText || "",
   })
 
   const [showAIGenerator, setShowAIGenerator] = useState(false)
@@ -156,6 +172,21 @@ export function SequenceStepForm({
   const [targetCountry, setTargetCountry] = useState<string>("")
   const [isLoadingCountry, setIsLoadingCountry] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+
+  // 서명 편집 모달 상태
+  const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false)
+
+  // DB에서 서명이 로드되면 초기 서명 설정 (새 스텝 생성 시에만)
+  useEffect(() => {
+    if (!step && !formData.emailBodyText && defaultSignature) {
+      const signature = defaultSignature.signatureHtml
+      setFormData((prev) => ({
+        ...prev,
+        emailBodyText: `\n\n${signature}`,
+      }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultSignature, step, formData.emailBodyText])
 
   // 고객 그룹의 리드에서 country 가져오기
   useEffect(() => {
@@ -252,7 +283,7 @@ export function SequenceStepForm({
       setFormData({
         ...formData,
         emailSubject: result.emailSubject,
-        emailBodyText: `${htmlToMarkdown(result.emailBodyText)}\n\n${generateUserSignature()}`,
+        emailBodyText: `${htmlToMarkdown(result.emailBodyText)}\n\n${getUserSignature()}`,
       })
 
       toast.success(`이메일 템플릿이 생성되었습니다! (언어: ${result.detectedLanguage || "auto"})`)
@@ -263,6 +294,28 @@ export function SequenceStepForm({
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  // 서명 저장
+  const handleSaveSignature = (signature: string) => {
+    // 기존 본문에서 서명 부분을 제거하고 새 서명 추가
+    let bodyWithoutSignature = formData.emailBodyText || ""
+
+    // 기존 서명 패턴 제거 (여러 가능한 구분자)
+    const signatureSeparators = [
+      /\n\n--\n[\s\S]*$/,
+      /\n\n---\n[\s\S]*$/,
+      /<div dir="ltr">[\s\S]*<\/div>\s*$/,
+    ]
+
+    for (const separator of signatureSeparators) {
+      bodyWithoutSignature = bodyWithoutSignature.replace(separator, "")
+    }
+
+    setFormData({
+      ...formData,
+      emailBodyText: `${bodyWithoutSignature.trim()}\n\n${signature}`,
+    })
   }
 
   return (
@@ -428,11 +481,23 @@ export function SequenceStepForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor={bodyTextId}>이메일 본문</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor={bodyTextId}>이메일 본문</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsSignatureModalOpen(true)}
+            className="h-7"
+          >
+            <Mail className="h-3 w-3 mr-1" />
+            서명 편집
+          </Button>
+        </div>
         <RichTextEditor
           value={formData.emailBodyText || ""}
           onChange={(value) => setFormData({ ...formData, emailBodyText: value })}
-          placeholder={`\n\n--\n${generateUserSignature()}`}
+          placeholder={`\n\n--\n${getUserSignature()}`}
           height="300px"
         />
         <Collapsible className="mt-2">
@@ -492,6 +557,16 @@ export function SequenceStepForm({
           {step ? "수정 완료" : "스텝 추가"}
         </Button>
       </div>
+
+      {/* 서명 편집 모달 */}
+      <SignatureEditorModal
+        isOpen={isSignatureModalOpen}
+        onClose={() => setIsSignatureModalOpen(false)}
+        defaultSignature={getUserSignature()}
+        onSave={handleSaveSignature}
+        workspaceId={workspaceId}
+        userId={user?.id}
+      />
     </form>
   )
 }

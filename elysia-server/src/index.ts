@@ -15,6 +15,7 @@ import { adminCustomerGroupRoutes, customerGroupRoutes } from "./routes/customer
 import { departmentsRoutes } from "./routes/departments.routes"
 import { adminEmailAccountRoutes, emailAccountRoutes } from "./routes/email-accounts.routes"
 import { emailRepliesRoutes } from "./routes/email-replies.routes"
+import { emailSignatureRoutes } from "./routes/email-signatures.routes"
 import { adminEmailTemplateRoutes, emailTemplateRoutes } from "./routes/email-templates.routes"
 import { adminEmailRoutes, emailRoutes } from "./routes/emails.routes"
 // Import routes
@@ -139,6 +140,7 @@ const app = new Elysia()
   .use(adminCustomerGroupRoutes)
   .use(emailAccountRoutes)
   .use(adminEmailAccountRoutes)
+  .use(emailSignatureRoutes)
   .use(emailTemplateRoutes)
   .use(adminEmailTemplateRoutes)
   .use(emailRoutes)

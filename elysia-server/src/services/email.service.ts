@@ -1,8 +1,9 @@
 import sgMail from "@sendgrid/mail"
-import { eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 import { config } from "../config"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
+import { emailSignatures } from "../db/schema/email-signatures"
 import { departments, users } from "../db/schema/users"
 import { workspaces } from "../db/schema/workspaces"
 import type { Attachment } from "../models/email.model"
@@ -61,7 +62,32 @@ class EmailService {
     signatureText: string
   }> {
     try {
-      // Get user info with department and workspace
+      // First, try to get the default signature from database
+      const [defaultSignature] = await db
+        .select()
+        .from(emailSignatures)
+        .where(
+          and(
+            eq(emailSignatures.userId, userId),
+            eq(emailSignatures.workspaceId, workspaceId),
+            eq(emailSignatures.isDefault, true),
+            eq(emailSignatures.isActive, true),
+          ),
+        )
+        .limit(1)
+
+      if (defaultSignature) {
+        logger.info(
+          { userId, workspaceId, signatureId: defaultSignature.id },
+          "Using user's default signature from database",
+        )
+        return {
+          signatureHtml: defaultSignature.signatureHtml,
+          signatureText: defaultSignature.signatureText,
+        }
+      }
+
+      // Fallback: Get user info with department and workspace to generate signature
       const [userInfo] = await db
         .select({
           username: users.username,
@@ -81,14 +107,18 @@ class EmailService {
         .limit(1)
 
       if (!userInfo) {
-        logger.warn({ userId, workspaceId }, "User info not found for signature generation")
-        return { signatureHtml: "", signatureText: "" }
+        logger.warn(
+          { userId, workspaceId },
+          "User info not found for signature generation, using default",
+        )
+        return this.generateGrindaSignature("김규동 Gyudong Kim", "Project Lead")
       }
 
       const { username, departmentName, displayName } = userInfo
       const name = displayName || username
       const title = departmentName
 
+      logger.info({ userId, workspaceId }, "No signature in database, generating from user info")
       return this.generateGrindaSignature(name, title)
     } catch (error) {
       logger.error({ err: error, userId, workspaceId }, "Failed to generate user signature")

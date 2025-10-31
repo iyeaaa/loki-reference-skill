@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useCurrentUser, useUpdateProfileMutation } from "@/lib/api/hooks/auth"
+import { EmailSignatureManagement } from "./settings/EmailSignatureManagement"
 
 export default function SettingsPage() {
   const { t } = useTranslation()
@@ -150,6 +151,9 @@ export default function SettingsPage() {
             </form>
           </CardContent>
         </Card>
+
+        {/* 이메일 서명 관리 */}
+        <EmailSignatureManagement />
 
         {/* 시스템 관리 */}
         <Card>

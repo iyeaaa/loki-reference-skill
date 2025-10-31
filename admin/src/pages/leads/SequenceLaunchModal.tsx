@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { ChevronDown, Mail, Plus, Send, Sparkles, Trash2, X } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import toast from "react-hot-toast"
+import { SignatureEditorModal } from "@/components/SignatureEditorModal"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,6 +22,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useCustomerGroupMembers } from "@/lib/api/hooks/customer-groups"
 import { useActiveEmailAccountsByWorkspace } from "@/lib/api/hooks/email-accounts"
+import { useDefaultEmailSignature } from "@/lib/api/hooks/email-signatures"
 import {
   sequenceKeys,
   useActivateStepBasedSequence,
@@ -36,6 +38,7 @@ import { leadsApi } from "@/lib/api/services/leads"
 import { sequencesApi } from "@/lib/api/services/sequences"
 import type { CustomerGroup } from "@/lib/api/types/customer-group"
 import type { SequenceStep } from "@/lib/api/types/sequence"
+import { useAuth } from "@/lib/auth-provider"
 import { generateSignatureHtml } from "@/lib/utils/email-signature"
 import { htmlToMarkdown, markdownToHtml } from "@/lib/utils/markdown"
 
@@ -53,6 +56,7 @@ export function SequenceLaunchModal({
   workspaceId,
 }: SequenceLaunchModalProps) {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
   const [selectedSequenceId, setSelectedSequenceId] = useState("")
   const [selectedEmailAccountId, setSelectedEmailAccountId] = useState("")
   const [editedSteps, setEditedSteps] = useState<SequenceStep[]>([])
@@ -66,9 +70,24 @@ export function SequenceLaunchModal({
   const [isLoadingCountry, setIsLoadingCountry] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
 
+  // 서명 편집 모달 상태
+  const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false)
+  const [currentEditingStepForSignature, setCurrentEditingStepForSignature] = useState<
+    string | null
+  >(null)
+
   // useId for form accessibility
   const targetCountryId = useId()
   const promptId = useId()
+
+  // Get default signature from database
+  const { data: defaultSignature } = useDefaultEmailSignature(
+    {
+      workspaceId: workspaceId || "",
+      userId: user?.id || "",
+    },
+    !!workspaceId && !!user?.id,
+  )
 
   // 고객 그룹의 모든 멤버 조회
   const { data: membersData } = useCustomerGroupMembers(
@@ -376,15 +395,51 @@ export function SequenceLaunchModal({
     }
   }
 
-  // 사용자 서명 생성
-  const generateUserSignature = () => {
-    // TODO: 사용자 정보에서 이름과 직함 가져오기
-    const name = undefined
-    const title = undefined
-    if (name && title) {
-      return generateSignatureHtml({ name, title })
+  // 사용자 서명 가져오기
+  const getUserSignature = () => {
+    // DB에서 가져온 기본 서명이 있으면 사용
+    if (defaultSignature) {
+      return defaultSignature.signatureHtml
     }
-    return generateSignatureHtml() // 기본값 사용
+    // 없으면 하드코딩된 기본 서명 사용 (폴백)
+    return generateSignatureHtml()
+  }
+
+  // 서명 편집 모달 열기
+  const handleOpenSignatureModal = (stepId: string) => {
+    setCurrentEditingStepForSignature(stepId)
+    setIsSignatureModalOpen(true)
+  }
+
+  // 서명 저장 (현재 스텝에만 적용)
+  const handleSaveSignature = (signature: string) => {
+    if (currentEditingStepForSignature) {
+      setEditedSteps((prev) =>
+        prev.map((step) => {
+          if (step.id === currentEditingStepForSignature) {
+            // 기존 본문에서 서명 부분을 제거하고 새 서명 추가
+            let bodyWithoutSignature = step.emailBodyText || ""
+
+            // 기존 서명 패턴 제거 (여러 가능한 구분자)
+            const signatureSeparators = [
+              /\n\n--\n[\s\S]*$/,
+              /\n\n---\n[\s\S]*$/,
+              /<div dir="ltr">[\s\S]*<\/div>\s*$/,
+            ]
+
+            for (const separator of signatureSeparators) {
+              bodyWithoutSignature = bodyWithoutSignature.replace(separator, "")
+            }
+
+            return {
+              ...step,
+              emailBodyText: `${bodyWithoutSignature.trim()}\n\n${signature}`,
+            }
+          }
+          return step
+        }),
+      )
+    }
   }
 
   // AI로 이메일 템플릿 생성
@@ -434,9 +489,7 @@ export function SequenceLaunchModal({
             ? {
                 ...step,
                 emailSubject: result.emailSubject,
-                emailBodyText: `${htmlToMarkdown(
-                  result.emailBodyText,
-                )}\n\n${generateUserSignature()}`,
+                emailBodyText: `${htmlToMarkdown(result.emailBodyText)}\n\n${getUserSignature()}`,
               }
             : step,
         ),
@@ -1095,7 +1148,19 @@ export function SequenceLaunchModal({
                               />
                             </div>
                             <div>
-                              <Label>이메일 본문</Label>
+                              <div className="flex items-center justify-between mb-2">
+                                <Label>이메일 본문</Label>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleOpenSignatureModal(step.id)}
+                                  className="h-7"
+                                >
+                                  <Mail className="h-3 w-3 mr-1" />
+                                  서명 편집
+                                </Button>
+                              </div>
                               <RichTextEditor
                                 value={step.emailBodyText || ""}
                                 onChange={(value) =>
@@ -1196,6 +1261,16 @@ export function SequenceLaunchModal({
           </Button>
         </div>
       </DialogContent>
+
+      {/* 서명 편집 모달 */}
+      <SignatureEditorModal
+        isOpen={isSignatureModalOpen}
+        onClose={() => setIsSignatureModalOpen(false)}
+        defaultSignature={getUserSignature()}
+        onSave={handleSaveSignature}
+        workspaceId={workspaceId}
+        userId={user?.id}
+      />
     </Dialog>
   )
 }

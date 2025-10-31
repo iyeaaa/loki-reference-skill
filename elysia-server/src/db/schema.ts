@@ -1,6 +1,7 @@
 export * from "./schema/activity-logs"
 export * from "./schema/customer-groups"
 export * from "./schema/email-accounts"
+export * from "./schema/email-signatures"
 export * from "./schema/email-templates"
 export * from "./schema/emails"
 export * from "./schema/lead-details"

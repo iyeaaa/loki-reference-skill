@@ -1,5 +1,5 @@
 import { lazy } from "react"
-import { createBrowserRouter } from "react-router-dom"
+import { createBrowserRouter, Navigate } from "react-router-dom"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { AuthProvider } from "@/lib/auth-provider"
 
@@ -54,7 +54,7 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <DashboardPage />,
+            element: <Navigate to="/chatbot" replace />,
           },
           {
             path: "dashboard",

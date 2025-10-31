@@ -6,10 +6,13 @@ workspace.all,전체,All
 workspace.allSublabel,모든 워크스페이스 보기,View all workspaces
 workspace.default,워크스페이스,Workspace
 menu.customerManagement,고객 관리,Customer Management
+menu.dashboard,대시보드,Dashboard
 menu.customerMonitoring,고객 모니터링,Customer Monitoring
 menu.leadManagement,고객 관리,Lead Management
+menu.campaign,캠페인,Campaign
 menu.followupSequenceManagement,팔로우업 시퀀스 관리,Follow-up Sequence Management
 menu.emailTemplateManagement,이메일 템플릿 관리,Email Template Management
+menu.reply,답장,Reply
 menu.replyManagement,답장 관리,Reply Management
 menu.settings,설정,Settings
 menu.systemManagement,시스템 관리,System Management

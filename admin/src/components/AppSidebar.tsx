@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react"
 import { BarChart3, GitBranch, Mail, MessageSquare, Settings, UserCheck } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Link, useLocation } from "react-router-dom"
@@ -16,26 +17,62 @@ import {
 } from "@/components/ui/sidebar"
 import type { WorkspaceOption } from "@/components/ui/workspace-selector"
 import { WorkspaceSelector } from "@/components/ui/workspace-selector"
+import { cn } from "@/lib/utils"
 
-// 워크스페이스 고객 관리
-const getCustomerMenuItems = (t: (key: string) => string) => [
+// Custom Menu Item Component
+interface CustomMenuItemProps {
+  title: string
+  url: string
+  icon: LucideIcon
+  isActive: boolean
+}
+
+function CustomMenuItem({ title, url, icon: Icon, isActive }: CustomMenuItemProps) {
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        asChild
+        tooltip={title}
+        isActive={isActive}
+        className={cn(
+          "relative h-11 px-3 py-2.5 transition-all duration-200 rounded-lg",
+          isActive
+            ? "bg-[#2563EB] text-white shadow-md shadow-[#2563EB]/30 hover:bg-[#2563EB]/90 hover:shadow-lg hover:shadow-[#2563EB]/40"
+            : "bg-transparent text-sidebar-foreground hover:bg-accent",
+        )}
+      >
+        <Link to={url} className="flex items-center gap-3 w-full">
+          <Icon
+            className={cn("h-5 w-5 shrink-0", isActive ? "text-white" : "text-muted-foreground")}
+          />
+          <span className={cn("truncate", isActive ? "font-semibold text-white" : "font-normal")}>
+            {title}
+          </span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
+}
+
+// 메인 메뉴 아이템
+const getMainMenuItems = (t: (key: string) => string) => [
   {
-    title: t("sidebar.menu.customerMonitoring"),
+    title: t("sidebar.menu.dashboard"),
     url: "/dashboard",
     icon: BarChart3,
   },
   {
-    title: t("sidebar.menu.leadManagement"),
+    title: t("sidebar.menu.customerManagement"),
     url: "/leads",
     icon: UserCheck,
   },
   {
-    title: t("sidebar.menu.followupSequenceManagement"),
+    title: t("sidebar.menu.campaign"),
     url: "/sequences",
     icon: GitBranch,
   },
   {
-    title: t("sidebar.menu.replyManagement"),
+    title: t("sidebar.menu.reply"),
     url: "/replied-emails",
     icon: Mail,
   },
@@ -68,7 +105,7 @@ export function AppSidebar({
   const pathname = location.pathname
 
   // 메뉴 아이템들 가져오기
-  const customerMenuItems = getCustomerMenuItems(t)
+  const mainMenuItems = getMainMenuItems(t)
   const aiMenuItems = getAIMenuItems(t)
 
   // "전체" 옵션을 포함한 워크스페이스 목록 생성
@@ -80,10 +117,6 @@ export function AppSidebar({
     },
     ...workspaces,
   ]
-
-  // 선택된 워크스페이스의 이름 가져오기
-  const selectedWorkspaceData = workspaceOptions.find((w) => w.value === selectedWorkspace)
-  const workspaceLabel = selectedWorkspaceData?.label || t("sidebar.workspace.default")
 
   return (
     <Sidebar collapsible="icon">
@@ -111,7 +144,7 @@ export function AppSidebar({
         {/* 워크스페이스 선택 */}
         {!hideWorkspaceSelector && workspaceOptions.length > 0 && (
           <div className="group-data-[collapsible=icon]:hidden">
-            <div className="flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70">
+            <div className="flex h-10 shrink-0 items-center rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70">
               {t("sidebar.workspace.select")}
             </div>
             <div className="px-2 pb-2">
@@ -125,66 +158,30 @@ export function AppSidebar({
           </div>
         )}
       </SidebarHeader>
-      <SidebarContent>
-        {/* AI 영업 자동화 */}
-        <SidebarGroup>
-          <SidebarGroupLabel>{t("sidebar.menu.aiSalesAutomation")}</SidebarGroupLabel>
+      <SidebarContent className="px-2">
+        {/* 메뉴 */}
+        <SidebarGroup className="py-0">
+          <SidebarGroupLabel className="mb-2 px-2">메뉴</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {aiMenuItems.map((item) => {
-                const isActive = pathname === item.url
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={item.title}
-                      isActive={isActive}
-                      className={isActive ? "bg-violet-500/10 border-r-2 border-violet-500" : ""}
-                    >
-                      <Link to={item.url || "#"}>
-                        {item.icon && <item.icon className={isActive ? "text-violet-500" : ""} />}
-                        <span className={isActive ? "text-violet-500 font-medium" : ""}>
-                          {item.title}
-                        </span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* 워크스페이스 고객 관리 */}
-        <SidebarGroup>
-          <SidebarGroupLabel>
-            {!hideWorkspaceSelector && <span className="font-semibold">{workspaceLabel}</span>}
-            <span className={hideWorkspaceSelector ? "" : "ml-1"}>
-              {t("sidebar.menu.customerManagement")}
-            </span>
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {customerMenuItems.map((item) => {
-                const isActive = pathname === item.url
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={item.title}
-                      isActive={isActive}
-                      className={isActive ? "bg-violet-500/10 border-r-2 border-violet-500" : ""}
-                    >
-                      <Link to={item.url || "#"}>
-                        {item.icon && <item.icon className={isActive ? "text-violet-500" : ""} />}
-                        <span className={isActive ? "text-violet-500 font-medium" : ""}>
-                          {item.title}
-                        </span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
+            <SidebarMenu className="gap-1.5">
+              {aiMenuItems.map((item) => (
+                <CustomMenuItem
+                  key={item.title}
+                  title={item.title}
+                  url={item.url}
+                  icon={item.icon}
+                  isActive={pathname === item.url}
+                />
+              ))}
+              {mainMenuItems.map((item) => (
+                <CustomMenuItem
+                  key={item.title}
+                  title={item.title}
+                  url={item.url}
+                  icon={item.icon}
+                  isActive={pathname === item.url}
+                />
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

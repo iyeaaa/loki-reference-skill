@@ -962,8 +962,8 @@ export default function LeadsPage() {
                     onClick={() => setSelectedCustomerGroup("")}
                     className={`text-xs ${
                       selectedCustomerGroup === ""
-                        ? "bg-violet-500/10 border-violet-500 text-violet-500 font-medium"
-                        : "hover:bg-violet-500/5 hover:border-violet-500/50"
+                        ? "bg-[#2563EB]/10 border-[#2563EB] text-[#2563EB] font-medium"
+                        : "hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50"
                     }`}
                   >
                     {t("leads.group.all")}
@@ -977,13 +977,13 @@ export default function LeadsPage() {
                           onClick={() => setSelectedCustomerGroup(group.id)}
                           className={`text-xs ${
                             selectedCustomerGroup === group.id
-                              ? "bg-violet-500/10 border-violet-500 text-violet-500 font-medium"
-                              : "hover:bg-violet-500/5 hover:border-violet-500/50"
+                              ? "bg-[#2563EB]/10 border-[#2563EB] text-[#2563EB] font-medium"
+                              : "hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50"
                           }`}
                         >
                           <Users
                             className={`h-3 w-3 mr-1 ${
-                              selectedCustomerGroup === group.id ? "text-violet-500" : ""
+                              selectedCustomerGroup === group.id ? "text-[#2563EB]" : ""
                             }`}
                           />
                           {group.name}

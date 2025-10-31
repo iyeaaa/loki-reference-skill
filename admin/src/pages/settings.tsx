@@ -168,7 +168,7 @@ export default function SettingsPage() {
                   key={item.url}
                   type="button"
                   onClick={() => navigate(item.url)}
-                  className="flex flex-col items-start gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-accent hover:border-violet-500"
+                  className="flex flex-col items-start gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-accent hover:border-[#2563EB]"
                 >
                   <div className="flex items-center gap-3 w-full">
                     <div className="rounded-lg bg-violet-100 dark:bg-violet-900/20 p-2">

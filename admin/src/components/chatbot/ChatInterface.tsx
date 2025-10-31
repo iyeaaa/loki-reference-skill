@@ -312,12 +312,10 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
 function QuestionCard({ question, onClick }: { question: string; onClick: () => void }) {
   return (
     <Card
-      className="p-4 cursor-pointer hover:bg-accent hover:border-violet-500/50 transition-all duration-200 group"
+      className="p-4 cursor-pointer hover:bg-accent hover:border-[#2563EB]/50 transition-all duration-200 group"
       onClick={onClick}
     >
-      <p className="text-sm font-medium group-hover:text-violet-600 transition-colors">
-        {question}
-      </p>
+      <p className="text-sm font-medium group-hover:text-[#2563EB] transition-colors">{question}</p>
     </Card>
   )
 }

@@ -20,6 +20,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   const [streamingMessage, setStreamingMessage] = useState<ChatMessage | null>(null)
   const [currentThinking, setCurrentThinking] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<QuestionCategory>("performance")
+  const [isProcessing, setIsProcessing] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Load conversation history if conversationId is provided
@@ -35,6 +36,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       setMessages((prev) => [...prev, message])
       setStreamingMessage(null)
       setCurrentThinking(null)
+      setIsProcessing(false)
     },
     onMessageUpdate: (message) => {
       // Real-time streaming update
@@ -47,6 +49,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       console.error("Chatbot error:", error)
       setStreamingMessage(null)
       setCurrentThinking(null)
+      setIsProcessing(false)
     },
   })
 
@@ -65,7 +68,9 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   const handleSubmit = useCallback(
     async (customInput?: string) => {
       const questionText = customInput || input
-      if (!questionText.trim() || chatbotMutation.isPending) return
+      if (!questionText.trim() || isProcessing) return
+
+      setIsProcessing(true)
 
       const userMessage: ChatMessage = {
         role: "user",
@@ -83,15 +88,20 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         timestamp: new Date(),
       })
 
-      // Use TanStack Query mutation
-      await chatbotMutation.mutateAsync({
-        question: questionText,
-        workspaceId,
-        conversationId: conversationId || `conv_${Date.now()}`,
-        messages,
-      })
+      try {
+        // Use TanStack Query mutation
+        await chatbotMutation.mutateAsync({
+          question: questionText,
+          workspaceId,
+          conversationId: conversationId || `conv_${Date.now()}`,
+          messages,
+        })
+      } catch (error) {
+        // Error is already handled in onError callback
+        console.error("Submit error:", error)
+      }
     },
-    [input, chatbotMutation, workspaceId, conversationId, messages],
+    [input, isProcessing, chatbotMutation, workspaceId, conversationId, messages],
   )
 
   // Quick question event listener
@@ -281,11 +291,11 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
               }}
               placeholder="Ask a question about your data..."
               className="min-h-[56px] max-h-[200px] resize-none pr-12 text-base"
-              disabled={chatbotMutation.isPending}
+              disabled={isProcessing}
             />
             <Button
               onClick={() => handleSubmit()}
-              disabled={!input.trim() || chatbotMutation.isPending}
+              disabled={!input.trim() || isProcessing}
               size="icon"
               className="absolute bottom-2 right-2 h-8 w-8 rounded-full"
             >

@@ -149,7 +149,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
           {messages.length === 0 && (
             <div className="flex min-h-[60vh] flex-col items-center justify-center">
               <h2 className="mb-8 text-2xl font-semibold tracking-tight text-center">
-                Send AI Agent에게 무엇이든 물어보세요
+                RINDA에게 무엇이든 물어보세요
               </h2>
 
               {/* Quick question cards */}

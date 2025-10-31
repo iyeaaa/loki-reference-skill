@@ -183,17 +183,17 @@ function DashboardContent() {
 const getPageName = (pathname: string, t: (key: string) => string) => {
   switch (pathname) {
     case "/dashboard":
-      return t("layout.page.customerMonitoring")
+      return t("sidebar.menu.dashboard")
     case "/leads":
-      return t("layout.page.leadManagement")
+      return t("sidebar.menu.customerManagement")
     case "/customer-groups":
       return t("layout.page.customerGroupManagement")
     case "/sequences":
-      return t("layout.page.sequenceManagement")
+      return t("sidebar.menu.campaign")
     case "/email-templates":
       return t("layout.page.emailTemplateManagement")
     case "/replied-emails":
-      return t("layout.page.replyManagement")
+      return t("sidebar.menu.reply")
     case "/workspaces":
       return t("layout.page.workspaceManagement")
     case "/users":
@@ -201,9 +201,9 @@ const getPageName = (pathname: string, t: (key: string) => string) => {
     case "/email-send-test":
       return t("layout.page.emailSendTest")
     case "/chatbot":
-      return "AI 데이터 분석"
+      return t("sidebar.menu.aiSalesAutomation")
     case "/settings":
-      return t("layout.page.settings")
+      return t("sidebar.menu.settings")
     default:
       return "Overview"
   }

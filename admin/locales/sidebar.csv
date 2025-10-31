@@ -19,4 +19,4 @@ menu.userManagement,유저 관리,User Management
 menu.emailSendTest,메일 발송 테스트,Email Send Test
 menu.leadDataImport,리드 데이터 임포트,Lead Data Import
 menu.bulkEmailCSV,CSV 대량 메일 발송,Bulk Email CSV
-menu.aiSalesAutomation,AI 영업 자동화,AI Sales Automation
+menu.aiSalesAutomation,AI 자동화,AI Sales Automation

@@ -144,9 +144,6 @@ export function AppSidebar({
         {/* 워크스페이스 선택 */}
         {!hideWorkspaceSelector && workspaceOptions.length > 0 && (
           <div className="group-data-[collapsible=icon]:hidden">
-            <div className="flex h-10 shrink-0 items-center rounded-md px-2 text-sm font-semibold text-sidebar-foreground/70">
-              {t("sidebar.workspace.select")}
-            </div>
             <div className="px-2 pb-2">
               <WorkspaceSelector
                 options={workspaceOptions}
@@ -186,17 +183,35 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu>
+      <SidebarFooter className="px-2">
+        <SidebarMenu className="gap-1.5">
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
               tooltip={t("sidebar.menu.settings")}
               isActive={pathname === "/settings"}
+              className={cn(
+                "relative h-11 px-3 py-2.5 transition-all duration-200 rounded-lg",
+                pathname === "/settings"
+                  ? "bg-[#2563EB] text-white shadow-md shadow-[#2563EB]/30 hover:bg-[#2563EB]/90 hover:shadow-lg hover:shadow-[#2563EB]/40"
+                  : "bg-transparent text-sidebar-foreground hover:bg-accent",
+              )}
             >
-              <Link to="/settings">
-                <Settings />
-                <span>{t("sidebar.menu.settings")}</span>
+              <Link to="/settings" className="flex items-center gap-3 w-full">
+                <Settings
+                  className={cn(
+                    "h-5 w-5 shrink-0",
+                    pathname === "/settings" ? "text-white" : "text-muted-foreground",
+                  )}
+                />
+                <span
+                  className={cn(
+                    "truncate",
+                    pathname === "/settings" ? "font-semibold text-white" : "font-normal",
+                  )}
+                >
+                  {t("sidebar.menu.settings")}
+                </span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

@@ -73,6 +73,7 @@ function Button({
       whileHover="hover"
       whileTap="tap"
       disabled={disabled}
+      // biome-ignore lint/suspicious/noExplicitAny: any type is used to pass props to the button
       {...(props as any)}
     />
   )

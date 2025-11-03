@@ -41,6 +41,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
         initial={hoverable ? "rest" : undefined}
         whileHover={hoverable ? "hover" : undefined}
         whileTap={hoverable ? "tap" : undefined}
+        // biome-ignore lint/suspicious/noExplicitAny: any type is used to pass props to the div
         {...(props as any)}
       />
     )

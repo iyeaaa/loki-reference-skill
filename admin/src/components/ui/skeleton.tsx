@@ -20,6 +20,7 @@ function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>)
         repeat: Number.POSITIVE_INFINITY,
         ease: "easeInOut",
       }}
+      // biome-ignore lint/suspicious/noExplicitAny: any type is used to pass props to the div
       {...(props as any)}
     />
   )

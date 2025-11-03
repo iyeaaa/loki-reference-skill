@@ -35,6 +35,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
         whileFocus={{ scale: 1.01 }}
         onFocus={onFocus}
         onBlur={onBlur}
+        // biome-ignore lint/suspicious/noExplicitAny: any type is used to pass props to the input
         {...(props as any)}
       />
     )

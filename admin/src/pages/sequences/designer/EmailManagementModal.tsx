@@ -59,7 +59,7 @@ export function EmailManagementModal({
   const isGenerating = progress?.status === "generating" || generateAllMutation.isPending
   const generationProgress = progress?.percentage || 0
 
-  const handleGenerateAll = async () => {
+  const handleGenerateAll = async (incremental = false) => {
     try {
       await generateAllMutation.mutateAsync({
         sequenceId,
@@ -71,6 +71,7 @@ export function EmailManagementModal({
           templateSubject: generationMode === "manual" ? templateSubject : undefined,
           templateBody: generationMode === "manual" ? templateBody : undefined,
           templateBodyHtml: generationMode === "manual" ? templateBodyHtml : undefined,
+          incremental,
         },
       })
     } catch (error) {
@@ -208,10 +209,15 @@ export function EmailManagementModal({
             {/* 액션 버튼 */}
             <div className="flex gap-2">
               <Button
-                onClick={handleGenerateAll}
+                onClick={() => handleGenerateAll(true)}
                 disabled={isGenerating || !sequence?.customerGroupId}
+                variant="default"
                 className="flex-1"
-                title={!sequence?.customerGroupId ? "시퀀스에 고객그룹을 먼저 설정해주세요" : ""}
+                title={
+                  !sequence?.customerGroupId
+                    ? "시퀀스에 고객그룹을 먼저 설정해주세요"
+                    : "이미 생성된 이메일은 유지하고 새로운 연락처에만 생성합니다"
+                }
               >
                 {isGenerating ? (
                   <>
@@ -224,11 +230,33 @@ export function EmailManagementModal({
                     {!sequence?.customerGroupId
                       ? "⚠️ 고객그룹 미지정"
                       : totalEmails > 0
-                        ? "전체 재생성"
+                        ? "새로운 연락처만 생성"
                         : "모든 연락처에 대해 생성"}
                   </>
                 )}
               </Button>
+
+              {totalEmails > 0 && (
+                <Button
+                  onClick={() => handleGenerateAll(false)}
+                  disabled={isGenerating || !sequence?.customerGroupId}
+                  variant="outline"
+                  className="flex-1"
+                  title="기존 이메일을 모두 삭제하고 전체 재생성합니다"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      재생성 중...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      전체 재생성
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
 
             {/* 진행 상황 */}

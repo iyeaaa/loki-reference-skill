@@ -35,6 +35,7 @@ export interface GenerateAllEmailsRequest {
   templateSubject?: string
   templateBody?: string
   templateBodyHtml?: string
+  incremental?: boolean // true면 이미 생성된 이메일은 스킵
 }
 
 export interface GenerateAllEmailsResponse {
@@ -42,6 +43,7 @@ export interface GenerateAllEmailsResponse {
   generated: number
   total: number
   failed: number
+  skipped?: number // incremental 모드일 때 스킵된 수
   errors?: Array<{
     leadId: string
     error: string

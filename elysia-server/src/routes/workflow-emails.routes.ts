@@ -38,6 +38,7 @@ const generateAllEmailsSchema = t.Object({
   templateSubject: t.Optional(t.String()),
   templateBody: t.Optional(t.String()),
   templateBodyHtml: t.Optional(t.String()),
+  incremental: t.Optional(t.Boolean()), // true면 이미 생성된 이메일은 스킵
 })
 
 export const workflowEmailRoutes = new Elysia({ prefix: "/api/v1/sequences" })
@@ -55,16 +56,58 @@ export const workflowEmailRoutes = new Elysia({ prefix: "/api/v1/sequences" })
     async ({ params, body }) => {
       const { id: sequenceId, nodeId } = params
 
-      logger.info({ body, mode: body.mode, aiPrompt: body.aiPrompt }, "Generate emails request")
+      logger.info(
+        { body, mode: body.mode, aiPrompt: body.aiPrompt, incremental: body.incremental },
+        "Generate emails request",
+      )
 
       // Get all leads in sequence
-      const leads = await workflowEmailService.getSequenceLeads(sequenceId)
+      const allLeads = await workflowEmailService.getSequenceLeads(sequenceId)
 
-      if (leads.length === 0) {
+      if (allLeads.length === 0) {
         return {
           message: "시퀀스에 등록된 연락처가 없습니다",
           generated: 0,
           total: 0,
+        }
+      }
+
+      // incremental 모드인 경우 이미 생성된 이메일이 있는 리드는 제외
+      let leads = allLeads
+      let skipped = 0
+
+      if (body.incremental) {
+        const existingEmails = await workflowEmailService.getGeneratedEmailsByNode(
+          sequenceId,
+          nodeId,
+        )
+        const existingLeadIds = new Set(existingEmails.map((e) => e.leadId))
+
+        leads = allLeads.filter((lead) => {
+          if (existingLeadIds.has(lead.id)) {
+            skipped++
+            return false
+          }
+          return true
+        })
+
+        logger.info(
+          {
+            totalLeads: allLeads.length,
+            existingEmails: existingEmails.length,
+            leadsToGenerate: leads.length,
+            skipped,
+          },
+          "Incremental mode: filtering leads",
+        )
+      }
+
+      if (leads.length === 0) {
+        return {
+          message: "생성할 이메일이 없습니다 (모든 연락처에 대해 이미 생성됨)",
+          generated: 0,
+          total: allLeads.length,
+          skipped,
         }
       }
 
@@ -211,8 +254,9 @@ export const workflowEmailRoutes = new Elysia({ prefix: "/api/v1/sequences" })
       return {
         message: "이메일 생성이 완료되었습니다",
         generated,
-        total: leads.length,
+        total: allLeads.length,
         failed: errors.length,
+        skipped: body.incremental ? skipped : undefined,
         errors: errors.length > 0 ? errors : undefined,
       }
     },

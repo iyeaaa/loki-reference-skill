@@ -14,6 +14,7 @@ export function parseMultipartFormData(
       headers: {
         "content-type": contentType || "",
       },
+      defCharset: "utf8",
     })
 
     bb.on("field", (name: string, value: string) => {

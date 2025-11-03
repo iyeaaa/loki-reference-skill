@@ -58,11 +58,18 @@ export function useGenerateAllEmails() {
       queryClient.invalidateQueries({
         queryKey: workflowEmailKeys.node(variables.sequenceId, variables.nodeId),
       })
-      toast.success(
-        `${response.generated}/${response.total}개의 이메일이 생성되었습니다${
-          response.failed > 0 ? ` (${response.failed}개 실패)` : ""
-        }`,
-      )
+
+      let message = `${response.generated}/${response.total}개의 이메일이 생성되었습니다`
+
+      if (response.skipped && response.skipped > 0) {
+        message += ` (${response.skipped}개 스킵)`
+      }
+
+      if (response.failed > 0) {
+        message += ` (${response.failed}개 실패)`
+      }
+
+      toast.success(message)
     },
     onError: (error: Error) => {
       toast.error(error.message || "이메일 생성에 실패했습니다")

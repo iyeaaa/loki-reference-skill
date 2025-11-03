@@ -1,3 +1,4 @@
+import { motion } from "framer-motion"
 import type { LucideIcon } from "lucide-react"
 import { BarChart3, GitBranch, Mail, MessageSquare, Settings, UserCheck } from "lucide-react"
 import { useTranslation } from "react-i18next"
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/sidebar"
 import type { WorkspaceOption } from "@/components/ui/workspace-selector"
 import { WorkspaceSelector } from "@/components/ui/workspace-selector"
+import { iconRotateVariants, shouldReduceMotion } from "@/lib/animations"
 import { cn } from "@/lib/utils"
 
 // Custom Menu Item Component
@@ -28,28 +30,50 @@ interface CustomMenuItemProps {
 }
 
 function CustomMenuItem({ title, url, icon: Icon, isActive }: CustomMenuItemProps) {
+  const reducedMotion = shouldReduceMotion()
+
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton
-        asChild
-        tooltip={title}
-        isActive={isActive}
-        className={cn(
-          "relative h-11 px-3 py-2.5 transition-all duration-200 rounded-lg",
-          isActive
-            ? "bg-[#2563EB] text-white shadow-md shadow-[#2563EB]/30 hover:bg-[#2563EB]/90 hover:shadow-lg hover:shadow-[#2563EB]/40"
-            : "bg-transparent text-sidebar-foreground hover:bg-accent",
-        )}
+      <motion.div
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3 }}
       >
-        <Link to={url} className="flex items-center gap-3 w-full">
-          <Icon
-            className={cn("h-5 w-5 shrink-0", isActive ? "text-white" : "text-muted-foreground")}
-          />
-          <span className={cn("truncate", isActive ? "font-semibold text-white" : "font-normal")}>
-            {title}
-          </span>
-        </Link>
-      </SidebarMenuButton>
+        <SidebarMenuButton
+          asChild
+          tooltip={title}
+          isActive={isActive}
+          className={cn(
+            "relative h-11 px-3 py-2.5 transition-all duration-200 rounded-lg group",
+            isActive
+              ? "bg-[#2563EB] text-white shadow-md shadow-[#2563EB]/30 hover:bg-[#2563EB]/90 hover:shadow-lg hover:shadow-[#2563EB]/40"
+              : "bg-transparent text-sidebar-foreground hover:bg-accent",
+          )}
+        >
+          <Link to={url} className="flex items-center gap-3 w-full">
+            {reducedMotion ? (
+              <Icon
+                className={cn(
+                  "h-5 w-5 shrink-0 transition-transform group-hover:scale-110",
+                  isActive ? "text-white" : "text-muted-foreground",
+                )}
+              />
+            ) : (
+              <motion.div variants={iconRotateVariants} initial="rest" whileHover="hover">
+                <Icon
+                  className={cn(
+                    "h-5 w-5 shrink-0",
+                    isActive ? "text-white" : "text-muted-foreground",
+                  )}
+                />
+              </motion.div>
+            )}
+            <span className={cn("truncate", isActive ? "font-semibold text-white" : "font-normal")}>
+              {title}
+            </span>
+          </Link>
+        </SidebarMenuButton>
+      </motion.div>
     </SidebarMenuItem>
   )
 }
@@ -185,36 +209,12 @@ export function AppSidebar({
       </SidebarContent>
       <SidebarFooter className="px-2">
         <SidebarMenu className="gap-1.5">
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              tooltip={t("sidebar.menu.settings")}
-              isActive={pathname === "/settings"}
-              className={cn(
-                "relative h-11 px-3 py-2.5 transition-all duration-200 rounded-lg",
-                pathname === "/settings"
-                  ? "bg-[#2563EB] text-white shadow-md shadow-[#2563EB]/30 hover:bg-[#2563EB]/90 hover:shadow-lg hover:shadow-[#2563EB]/40"
-                  : "bg-transparent text-sidebar-foreground hover:bg-accent",
-              )}
-            >
-              <Link to="/settings" className="flex items-center gap-3 w-full">
-                <Settings
-                  className={cn(
-                    "h-5 w-5 shrink-0",
-                    pathname === "/settings" ? "text-white" : "text-muted-foreground",
-                  )}
-                />
-                <span
-                  className={cn(
-                    "truncate",
-                    pathname === "/settings" ? "font-semibold text-white" : "font-normal",
-                  )}
-                >
-                  {t("sidebar.menu.settings")}
-                </span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          <CustomMenuItem
+            title={t("sidebar.menu.settings")}
+            url="/settings"
+            icon={Settings}
+            isActive={pathname === "/settings"}
+          />
           <SidebarMenuItem>
             <div className="px-2 py-1">
               <LanguageSwitcher />

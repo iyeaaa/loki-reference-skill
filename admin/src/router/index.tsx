@@ -6,26 +6,26 @@ import { AuthProvider } from "@/lib/auth-provider"
 // Layouts - 즉시 로드 (모든 페이지에서 필요)
 import DashboardLayout from "../layouts/DashboardLayout"
 import RootLayout from "../layouts/RootLayout"
+import ChatbotPage from "../pages/ChatbotPage"
+import DashboardPage from "../pages/dashboard/DashboardPage"
+import RepliedEmailsPage from "../pages/email-replies/EmailRepliesPage"
+// 주요 페이지 - 즉시 로드 (자주 사용하는 페이지)
+import LoginPage from "../pages/LoginPage"
+import LeadsPage from "../pages/leads"
+import SequencesPage from "../pages/sequences"
+import SettingsPage from "../pages/settings"
 
-// Pages - Lazy Loading
-const LoginPage = lazy(() => import("../pages/LoginPage"))
-const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"))
-// const CampaignsPage = lazy(() => import("../pages/campaigns"))
+// 부가 페이지 - Lazy Loading (덜 자주 사용하는 페이지)
 const CustomerGroupsPage = lazy(() => import("../pages/customer-groups"))
 const EmailSendTestPage = lazy(() => import("../pages/email-send-test"))
 const EmailTemplatesPage = lazy(() => import("../pages/email-templates"))
-const LeadsPage = lazy(() => import("../pages/leads"))
-const RepliedEmailsPage = lazy(() => import("../pages/email-replies/EmailRepliesPage"))
-const SequencesPage = lazy(() => import("../pages/sequences"))
 const SequenceDesigner = lazy(() => import("../pages/sequences/designer/SequenceDesigner"))
-const SettingsPage = lazy(() => import("../pages/settings"))
 const UsersPage = lazy(() => import("../pages/users/UsersPage"))
 const WorkspacesPage = lazy(() => import("../pages/workspaces"))
 const TailwindTestPage = lazy(() => import("../pages/tailwind-test/TailwindTestPage"))
 const LeadImportPage = lazy(() => import("../pages/lead-import"))
 const BulkEmailCSVPage = lazy(() => import("../pages/bulk-email-csv"))
 const FilterComponentsTest = lazy(() => import("../pages/test/FilterComponentsTest"))
-const ChatbotPage = lazy(() => import("../pages/ChatbotPage"))
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>

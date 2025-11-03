@@ -1,7 +1,9 @@
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
+import { motion } from "framer-motion"
 import type * as React from "react"
 
+import { buttonVariants as animationVariants, shouldReduceMotion } from "@/lib/animations"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
@@ -38,18 +40,40 @@ function Button({
   variant,
   size,
   asChild = false,
+  disabled,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
   }) {
+  const reducedMotion = shouldReduceMotion()
   const Comp = asChild ? Slot : "button"
 
+  // asChild이거나 reduced motion인 경우 애니메이션 없이
+  if (asChild || reducedMotion || disabled) {
+    return (
+      <Comp
+        data-slot="button"
+        className={cn(buttonVariants({ variant, size, className }))}
+        disabled={disabled}
+        {...props}
+      />
+    )
+  }
+
+  // 일반 버튼에 애니메이션 적용
+  const MotionComp = motion.button
+
   return (
-    <Comp
+    <MotionComp
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
+      variants={animationVariants}
+      initial="rest"
+      whileHover="hover"
+      whileTap="tap"
+      disabled={disabled}
+      {...(props as any)}
     />
   )
 }

@@ -1,3 +1,4 @@
+import { motion } from "framer-motion"
 import {
   BarChart3,
   Clock,
@@ -12,11 +13,17 @@ import {
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
+import { AnimatedNumber } from "@/components/AnimatedNumber"
 import { TodoList } from "@/components/TodoList"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  shouldReduceMotion,
+  staggerContainerFastVariants,
+  staggerItemVariants,
+} from "@/lib/animations"
 import {
   useAvgOpenRateStats,
   useBuyerResponseRate,
@@ -70,6 +77,7 @@ export default function DashboardPage() {
   const { t } = useTranslation()
   const { selectedWorkspace } = useWorkspace()
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+  const reducedMotion = shouldReduceMotion()
 
   // 투두리스트 상태 관리
   const [todos, setTodos] = useState<Todo[]>([])
@@ -202,83 +210,110 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {selectedWorkspace?.id === "all"
-                ? t("dashboard.stats.customers.all")
-                : t("dashboard.stats.customers.workspace")}
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {leadsLoading ? <Skeleton className="h-8 w-16" /> : totalCustomers.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {selectedWorkspace?.name || t("dashboard.stats.defaultWorkspace")}
-            </p>
-          </CardContent>
-        </Card>
+      <motion.div
+        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+        variants={reducedMotion ? undefined : staggerContainerFastVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div variants={reducedMotion ? undefined : staggerItemVariants}>
+          <Card hoverable animated>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {selectedWorkspace?.id === "all"
+                  ? t("dashboard.stats.customers.all")
+                  : t("dashboard.stats.customers.workspace")}
+              </CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {leadsLoading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <AnimatedNumber value={totalCustomers} />
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {selectedWorkspace?.name || t("dashboard.stats.defaultWorkspace")}
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t("dashboard.stats.todaySent")}</CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {todaySentLoading ? (
-                <Skeleton className="h-8 w-12" />
-              ) : (
-                todaySentCount.toLocaleString()
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {t("dashboard.stats.description.overseasContact")}
-            </p>
-          </CardContent>
-        </Card>
+        <motion.div variants={reducedMotion ? undefined : staggerItemVariants}>
+          <Card hoverable animated>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {t("dashboard.stats.todaySent")}
+              </CardTitle>
+              <Mail className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {todaySentLoading ? (
+                  <Skeleton className="h-8 w-12" />
+                ) : (
+                  <AnimatedNumber value={todaySentCount} />
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t("dashboard.stats.description.overseasContact")}
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {t("dashboard.stats.avgOpenRate")}
-            </CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {avgOpenRateLoading ? <Skeleton className="h-8 w-16" /> : `${avgOpenRate}%`}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {t("dashboard.stats.description.overseasOpen")}
-            </p>
-          </CardContent>
-        </Card>
+        <motion.div variants={reducedMotion ? undefined : staggerItemVariants}>
+          <Card hoverable animated>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {t("dashboard.stats.avgOpenRate")}
+              </CardTitle>
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {avgOpenRateLoading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <>
+                    <AnimatedNumber value={avgOpenRate} decimals={1} />%
+                  </>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t("dashboard.stats.description.overseasOpen")}
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {t("dashboard.stats.buyerResponseRate")}
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {buyerResponseRateLoading ? (
-                <Skeleton className="h-8 w-16" />
-              ) : (
-                `${buyerResponseRate}%`
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {t("dashboard.stats.description.meetingRequest")}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+        <motion.div variants={reducedMotion ? undefined : staggerItemVariants}>
+          <Card hoverable animated>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {t("dashboard.stats.buyerResponseRate")}
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {buyerResponseRateLoading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <>
+                    <AnimatedNumber value={buyerResponseRate} decimals={1} />%
+                  </>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t("dashboard.stats.description.meetingRequest")}
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
 
       <div className="grid gap-4 md:grid-cols-2 mt-6">
         <Card>

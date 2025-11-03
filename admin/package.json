@@ -64,6 +64,7 @@
     "elkjs": "^0.11.0",
     "embla-carousel-react": "^8.6.0",
     "encoding-japanese": "^2.2.0",
+    "framer-motion": "^12.23.24",
     "i18next": "^25.6.0",
     "i18next-browser-languagedetector": "^8.2.0",
     "input-otp": "^1.4.2",

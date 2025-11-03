@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
+import { motion } from "framer-motion"
 import { Eye, EyeOff, Lock, Mail, User } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -11,6 +12,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  fadeVariants,
+  scaleVariants,
+  shouldReduceMotion,
+  slideUpVariants,
+  staggerContainerVariants,
+  staggerItemVariants,
+} from "@/lib/animations"
 import { useCurrentUser, useVerifyToken } from "@/lib/api"
 import { useLoginMutation, useSignupMutation } from "@/lib/api/hooks/auth"
 import { useAuth } from "@/lib/auth-provider"
@@ -40,6 +49,7 @@ export default function AdminLoginPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { user, isLoading: authLoading } = useAuth()
+  const reducedMotion = shouldReduceMotion()
 
   const loginEmailId = useId()
   const loginPasswordId = useId()
@@ -113,111 +123,153 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50 via-white to-blue-50">
-      <Card className="w-full max-w-md shadow-2xl border-0 relative">
-        <div className="absolute top-4 right-4 z-10">
-          <LanguageSwitcher />
-        </div>
-        <CardHeader className="text-center pb-0">
-          <div className="flex justify-center mb-6">
-            <div className="relative w-32 h-32">
-              <img
-                src="/images/rinda-logo.png"
-                alt="Rinda Logo"
-                className="w-full h-full object-contain rounded-3xl"
-              />
-            </div>
+    <motion.div
+      className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50 via-white to-blue-50"
+      variants={reducedMotion ? undefined : fadeVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      <motion.div
+        variants={reducedMotion ? undefined : scaleVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <Card className="w-full max-w-md shadow-2xl border-0 relative">
+          <div className="absolute top-4 right-4 z-10">
+            <LanguageSwitcher />
           </div>
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] bg-clip-text text-transparent">
-            {t("login.title")}
-          </CardTitle>
-          <CardDescription className="text-gray-600 mt-2">{t("login.description")}</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 h-12 bg-gray-100">
-              <TabsTrigger
-                value="login"
-                className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium"
-              >
-                {t("login.tab.login")}
-              </TabsTrigger>
-              <TabsTrigger
-                value="signup"
-                className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium"
-              >
-                {t("login.tab.signup")}
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="login" className="space-y-4 mt-6">
-              <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                    {t("login.field.email")}
-                  </Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id={loginEmailId}
-                      type="email"
-                      placeholder={t("login.placeholder.email")}
-                      className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                      {...loginForm.register("email")}
-                      disabled={isLoading}
-                    />
-                  </div>
-                  {loginForm.formState.errors.email && (
-                    <p className="text-sm text-red-600">{t("login.error.emailInvalid")}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-                    {t("login.field.password")}
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id={loginPasswordId}
-                      type={showPassword ? "text" : "password"}
-                      placeholder={t("login.placeholder.password")}
-                      className="pl-10 pr-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                      {...loginForm.register("password")}
-                      disabled={isLoading}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  {loginForm.formState.errors.password && (
-                    <p className="text-sm text-red-600">{t("login.error.passwordMin")}</p>
-                  )}
-                </div>
-
-                <Button
-                  type="submit"
-                  size="xl"
-                  className="w-full bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] hover:from-[#5936B1] hover:to-[#2B72E6] text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
-                  disabled={isLoading}
+          <CardHeader className="text-center pb-0">
+            <motion.div
+              className="flex justify-center mb-6"
+              variants={reducedMotion ? undefined : slideUpVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <div className="relative w-32 h-32">
+                <img
+                  src="/images/rinda-logo.png"
+                  alt="Rinda Logo"
+                  className="w-full h-full object-contain rounded-3xl"
+                />
+              </div>
+            </motion.div>
+            <motion.div
+              variants={reducedMotion ? undefined : slideUpVariants}
+              initial="hidden"
+              animate="visible"
+              transition={{ delay: 0.1 }}
+            >
+              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] bg-clip-text text-transparent">
+                {t("login.title")}
+              </CardTitle>
+              <CardDescription className="text-gray-600 mt-2">
+                {t("login.description")}
+              </CardDescription>
+            </motion.div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 h-12 bg-gray-100">
+                <TabsTrigger
+                  value="login"
+                  className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium"
                 >
-                  {isLoading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      {t("login.loading.login")}
-                    </div>
-                  ) : (
-                    t("login.button.login")
-                  )}
-                </Button>
-              </form>
+                  {t("login.tab.login")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="signup"
+                  className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium"
+                >
+                  {t("login.tab.signup")}
+                </TabsTrigger>
+              </TabsList>
 
-              {/* 구글 로그인 - 임시 비활성화 */}
-              {/* <div className="relative py-2">
+              <TabsContent value="login" className="space-y-4 mt-6">
+                <motion.form
+                  onSubmit={loginForm.handleSubmit(onLoginSubmit)}
+                  className="space-y-4"
+                  variants={reducedMotion ? undefined : staggerContainerVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <motion.div
+                    className="space-y-2"
+                    variants={reducedMotion ? undefined : staggerItemVariants}
+                  >
+                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                      {t("login.field.email")}
+                    </Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id={loginEmailId}
+                        type="email"
+                        placeholder={t("login.placeholder.email")}
+                        className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                        {...loginForm.register("email")}
+                        disabled={isLoading}
+                      />
+                    </div>
+                    {loginForm.formState.errors.email && (
+                      <p className="text-sm text-red-600">{t("login.error.emailInvalid")}</p>
+                    )}
+                  </motion.div>
+
+                  <motion.div
+                    className="space-y-2"
+                    variants={reducedMotion ? undefined : staggerItemVariants}
+                  >
+                    <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                      {t("login.field.password")}
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id={loginPasswordId}
+                        type={showPassword ? "text" : "password"}
+                        placeholder={t("login.placeholder.password")}
+                        className="pl-10 pr-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                        {...loginForm.register("password")}
+                        disabled={isLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {loginForm.formState.errors.password && (
+                      <p className="text-sm text-red-600">{t("login.error.passwordMin")}</p>
+                    )}
+                  </motion.div>
+
+                  <motion.div variants={reducedMotion ? undefined : staggerItemVariants}>
+                    <Button
+                      type="submit"
+                      size="xl"
+                      className="w-full bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] hover:from-[#5936B1] hover:to-[#2B72E6] text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          {t("login.loading.login")}
+                        </div>
+                      ) : (
+                        t("login.button.login")
+                      )}
+                    </Button>
+                  </motion.div>
+                </motion.form>
+
+                {/* 구글 로그인 - 임시 비활성화 */}
+                {/* <div className="relative py-2">
                 <div className="absolute inset-0 flex items-center">
                   <Separator className="w-full" />
                 </div>
@@ -253,140 +305,161 @@ export default function AdminLoginPage() {
                 </svg>
                 구글로 로그인
               </Button> */}
-            </TabsContent>
+              </TabsContent>
 
-            <TabsContent value="signup" className="space-y-4 mt-6">
-              <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-username" className="text-sm font-medium text-gray-700">
-                    {t("login.field.username")}
-                  </Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id={signupUsernameId}
-                      type="text"
-                      placeholder={t("login.placeholder.username")}
-                      className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                      {...signupForm.register("username")}
-                      disabled={isLoading}
-                    />
-                  </div>
-                  {signupForm.formState.errors.username && (
-                    <p className="text-sm text-red-600">
-                      {signupForm.formState.errors.username.message ===
-                      "String must contain at least 3 character(s)"
-                        ? t("login.error.usernameMin")
-                        : t("login.error.usernameMax")}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email" className="text-sm font-medium text-gray-700">
-                    {t("login.field.email")}
-                  </Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id={signupEmailId}
-                      type="email"
-                      placeholder={t("login.placeholder.emailInput")}
-                      className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                      {...signupForm.register("email")}
-                      disabled={isLoading}
-                    />
-                  </div>
-                  {signupForm.formState.errors.email && (
-                    <p className="text-sm text-red-600">{t("login.error.emailInvalid")}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password" className="text-sm font-medium text-gray-700">
-                    {t("login.field.password")}
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id={signupPasswordId}
-                      type={showSignupPassword ? "text" : "password"}
-                      placeholder={t("login.placeholder.password")}
-                      className="pl-10 pr-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                      {...signupForm.register("password")}
-                      disabled={isLoading}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowSignupPassword(!showSignupPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showSignupPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                  {signupForm.formState.errors.password && (
-                    <p className="text-sm text-red-600">{t("login.error.passwordMin")}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="signup-confirm-password"
-                    className="text-sm font-medium text-gray-700"
-                  >
-                    {t("login.field.confirmPassword")}
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id={signupConfirmPasswordId}
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder={t("login.placeholder.confirmPassword")}
-                      className="pl-10 pr-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                      {...signupForm.register("confirmPassword")}
-                      disabled={isLoading}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                  {signupForm.formState.errors.confirmPassword && (
-                    <p className="text-sm text-red-600">{t("login.error.passwordMismatch")}</p>
-                  )}
-                </div>
-
-                <Button
-                  type="submit"
-                  size="xl"
-                  className="w-full bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] hover:from-[#5936B1] hover:to-[#2B72E6] text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
-                  disabled={isLoading}
+              <TabsContent value="signup" className="space-y-4 mt-6">
+                <motion.form
+                  onSubmit={signupForm.handleSubmit(onSignupSubmit)}
+                  className="space-y-4"
+                  variants={reducedMotion ? undefined : staggerContainerVariants}
+                  initial="hidden"
+                  animate="visible"
                 >
-                  {isLoading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      {t("login.loading.signup")}
+                  <motion.div
+                    className="space-y-2"
+                    variants={reducedMotion ? undefined : staggerItemVariants}
+                  >
+                    <Label htmlFor="signup-username" className="text-sm font-medium text-gray-700">
+                      {t("login.field.username")}
+                    </Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id={signupUsernameId}
+                        type="text"
+                        placeholder={t("login.placeholder.username")}
+                        className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                        {...signupForm.register("username")}
+                        disabled={isLoading}
+                      />
                     </div>
-                  ) : (
-                    t("login.button.signup")
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
+                    {signupForm.formState.errors.username && (
+                      <p className="text-sm text-red-600">
+                        {signupForm.formState.errors.username.message ===
+                        "String must contain at least 3 character(s)"
+                          ? t("login.error.usernameMin")
+                          : t("login.error.usernameMax")}
+                      </p>
+                    )}
+                  </motion.div>
+
+                  <motion.div
+                    className="space-y-2"
+                    variants={reducedMotion ? undefined : staggerItemVariants}
+                  >
+                    <Label htmlFor="signup-email" className="text-sm font-medium text-gray-700">
+                      {t("login.field.email")}
+                    </Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id={signupEmailId}
+                        type="email"
+                        placeholder={t("login.placeholder.emailInput")}
+                        className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                        {...signupForm.register("email")}
+                        disabled={isLoading}
+                      />
+                    </div>
+                    {signupForm.formState.errors.email && (
+                      <p className="text-sm text-red-600">{t("login.error.emailInvalid")}</p>
+                    )}
+                  </motion.div>
+
+                  <motion.div
+                    className="space-y-2"
+                    variants={reducedMotion ? undefined : staggerItemVariants}
+                  >
+                    <Label htmlFor="signup-password" className="text-sm font-medium text-gray-700">
+                      {t("login.field.password")}
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id={signupPasswordId}
+                        type={showSignupPassword ? "text" : "password"}
+                        placeholder={t("login.placeholder.password")}
+                        className="pl-10 pr-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                        {...signupForm.register("password")}
+                        disabled={isLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSignupPassword(!showSignupPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showSignupPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {signupForm.formState.errors.password && (
+                      <p className="text-sm text-red-600">{t("login.error.passwordMin")}</p>
+                    )}
+                  </motion.div>
+
+                  <motion.div
+                    className="space-y-2"
+                    variants={reducedMotion ? undefined : staggerItemVariants}
+                  >
+                    <Label
+                      htmlFor="signup-confirm-password"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      {t("login.field.confirmPassword")}
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id={signupConfirmPasswordId}
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder={t("login.placeholder.confirmPassword")}
+                        className="pl-10 pr-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                        {...signupForm.register("confirmPassword")}
+                        disabled={isLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {signupForm.formState.errors.confirmPassword && (
+                      <p className="text-sm text-red-600">{t("login.error.passwordMismatch")}</p>
+                    )}
+                  </motion.div>
+
+                  <motion.div variants={reducedMotion ? undefined : staggerItemVariants}>
+                    <Button
+                      type="submit"
+                      size="xl"
+                      className="w-full bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] hover:from-[#5936B1] hover:to-[#2B72E6] text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          {t("login.loading.signup")}
+                        </div>
+                      ) : (
+                        t("login.button.signup")
+                      )}
+                    </Button>
+                  </motion.div>
+                </motion.form>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
   )
 }

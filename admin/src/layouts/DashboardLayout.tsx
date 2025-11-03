@@ -3,6 +3,7 @@ import { Suspense, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Outlet, useLocation } from "react-router-dom"
 import { AppSidebar } from "@/components/AppSidebar"
+import { PageSkeleton, TableSkeleton } from "@/components/PageSkeleton"
 import { ProfileCard } from "@/components/ProfileCard"
 import {
   Breadcrumb,
@@ -26,6 +27,24 @@ function DashboardContent() {
     return localStorage.getItem("selectedWorkspace") || "all"
   })
   const { state } = useSidebar()
+
+  // 경로별로 적절한 스켈레톤 반환
+  const getSkeletonForRoute = (path: string) => {
+    // 테이블 형태의 페이지들
+    const tablePages = [
+      "/leads",
+      "/sequences",
+      "/email-templates",
+      "/replied-emails",
+      "/users",
+      "/workspaces",
+    ]
+    if (tablePages.includes(path)) {
+      return <TableSkeleton />
+    }
+    // 대시보드나 기타 페이지
+    return <PageSkeleton />
+  }
 
   // 현재 로그인한 유저의 ID 가져오기
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
@@ -138,13 +157,7 @@ function DashboardContent() {
         </header>
         <main className="flex-1 overflow-y-auto">
           <div className="p-4">
-            <Suspense
-              fallback={
-                <div className="flex items-center justify-center min-h-[400px]">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-                </div>
-              }
-            >
+            <Suspense fallback={getSkeletonForRoute(pathname)}>
               <Outlet />
             </Suspense>
           </div>

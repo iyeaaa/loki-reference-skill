@@ -76,6 +76,25 @@
   --sidebar-ring: 217 85% 53%;
   --rd-purple-01: #6D4BEB;
   --sidebar-main-color: #2563EB;
+
+  /* 그림자 시스템 - Elevation */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+
+  /* 색상 기반 그림자 */
+  --shadow-primary: 0 4px 14px 0 rgba(37, 99, 235, 0.2);
+  --shadow-primary-lg: 0 8px 24px 0 rgba(37, 99, 235, 0.25);
+  --shadow-accent: 0 4px 14px 0 rgba(109, 75, 235, 0.2);
+
+  /* 그라데이션 */
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-accent: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  --gradient-subtle: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
 }
 
 .dark {
@@ -113,6 +132,20 @@
   --sidebar-ring: 217 85% 65%;
   --rd-purple-01: #6D4BEB;
   --sidebar-main-color: #2563EB;
+
+  /* 다크모드 그림자 시스템 */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.5);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.7), 0 1px 2px -1px rgb(0 0 0 / 0.7);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.7), 0 2px 4px -2px rgb(0 0 0 / 0.7);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.8), 0 4px 6px -4px rgb(0 0 0 / 0.8);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.8), 0 8px 10px -6px rgb(0 0 0 / 0.8);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.9);
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.5);
+
+  /* 다크모드 색상 기반 그림자 */
+  --shadow-primary: 0 4px 14px 0 rgba(37, 99, 235, 0.4);
+  --shadow-primary-lg: 0 8px 24px 0 rgba(37, 99, 235, 0.5);
+  --shadow-accent: 0 4px 14px 0 rgba(109, 75, 235, 0.4);
 }
 
 @layer base {

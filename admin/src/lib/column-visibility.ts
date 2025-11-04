@@ -92,23 +92,15 @@ export function addColumn(columnId: string): {
     const updatedVisible = [...currentVisible, columnId]
     saveVisibleColumns(updatedVisible)
 
-    // Add to order (before columnActions)
-    const actionIndex = currentOrder.indexOf("columnActions")
-    const newOrder = [...currentOrder]
-    // Remove columnId if it exists in order
-    const existingIndex = newOrder.indexOf(columnId)
-    if (existingIndex !== -1) {
-      newOrder.splice(existingIndex, 1)
-    }
-    // Insert before columnActions
-    if (actionIndex !== -1) {
-      newOrder.splice(actionIndex, 0, columnId)
-    } else {
-      newOrder.push(columnId)
-    }
+    // Add to order - remove columnActions first, add new column, then saveColumnOrder will put columnActions at the end
+    const withoutActions = currentOrder.filter((id) => id !== "columnActions" && id !== columnId)
+    const newOrder = [...withoutActions, columnId, "columnActions"]
+
+    // saveColumnOrder will ensure columnActions is at the end and save
     saveColumnOrder(newOrder)
 
-    return { visibleColumns: updatedVisible, columnOrder: newOrder }
+    // Return the actual saved order (with columnActions at the end)
+    return { visibleColumns: updatedVisible, columnOrder: getColumnOrder() }
   }
 
   return { visibleColumns: currentVisible, columnOrder: currentOrder }
@@ -141,16 +133,26 @@ export function getAvailableToAdd(visibleColumns: string[]): ColumnDefinition[] 
 
 /**
  * Get column order from localStorage or defaults
+ * Always ensures columnActions is at the end
  */
 export function getColumnOrder(): string[] {
   try {
     const stored = localStorage.getItem(ORDER_STORAGE_KEY)
     if (stored) {
       const parsed = JSON.parse(stored) as string[]
-      // Ensure all columns are included (for new columns added to code)
+
+      // Get all column IDs that should exist
       const allColumnIds = AVAILABLE_COLUMNS.map((col) => col.id)
       const missing = allColumnIds.filter((id) => !parsed.includes(id))
-      return [...parsed, ...missing]
+
+      // Remove columnActions from parsed to ensure it's at the end
+      const withoutActions = parsed.filter((id) => id !== "columnActions")
+
+      // Add missing columns (excluding columnActions which we'll add at the end)
+      const missingWithoutActions = missing.filter((id) => id !== "columnActions")
+
+      // Combine: existing order + missing columns + columnActions at the end
+      return [...withoutActions, ...missingWithoutActions, "columnActions"]
     }
   } catch (error) {
     console.error("Failed to load column order from localStorage:", error)
@@ -160,10 +162,15 @@ export function getColumnOrder(): string[] {
 
 /**
  * Save column order to localStorage
+ * Always ensures columnActions is at the end
  */
 export function saveColumnOrder(columnIds: string[]): void {
   try {
-    localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(columnIds))
+    // Ensure columnActions is always at the end
+    const withoutActions = columnIds.filter((id) => id !== "columnActions")
+    const finalOrder = [...withoutActions, "columnActions"]
+
+    localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(finalOrder))
   } catch (error) {
     console.error("Failed to save column order to localStorage:", error)
   }
@@ -171,6 +178,7 @@ export function saveColumnOrder(columnIds: string[]): void {
 
 /**
  * Reorder columns - move a column from one index to another
+ * saveColumnOrder will ensure columnActions stays at the end
  */
 export function reorderColumns(
   columnOrder: string[],
@@ -180,6 +188,23 @@ export function reorderColumns(
   const result = [...columnOrder]
   const [removed] = result.splice(fromIndex, 1)
   result.splice(toIndex, 0, removed)
+
+  // saveColumnOrder will ensure columnActions is at the end
   saveColumnOrder(result)
-  return result
+
+  // Return the corrected order (with columnActions at the end)
+  return getColumnOrder()
+}
+
+/**
+ * Reset column visibility and order to defaults
+ * Useful for debugging or fixing corrupted localStorage
+ */
+export function resetColumnSettings(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(ORDER_STORAGE_KEY)
+  } catch (error) {
+    console.error("Failed to reset column settings:", error)
+  }
 }

@@ -74,6 +74,14 @@ export const chatbotLogger = {
     logger.info(message)
   },
 
+  warn: (message: string) => {
+    logger.warn(message)
+  },
+
+  debug: (message: string) => {
+    logger.debug(message)
+  },
+
   error: (message: string) => {
     logger.error(message)
   },

@@ -4,8 +4,8 @@ import { getFollowUpQuestionsPrompt } from "../prompts"
 import type { ChatbotState } from "../state"
 
 const llm = new ChatOpenAI({
-  model: "gpt-4o-mini",
-  temperature: 0.7,
+  model: "gpt-4.1-mini",
+  temperature: 0,
 })
 
 export async function generateFollowUpQuestions(

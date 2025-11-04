@@ -208,18 +208,25 @@ else
     (
       cd admin
       if [ "$QUIET" = false ]; then
-        log_admin "Running ${WHITE}yarn lint:check${NC}..."
-        stream_logs "admin" "$ADMIN_COLOR" yarn lint:check
-        LINT_EXIT=$?
-        if [ $LINT_EXIT -eq 0 ]; then
-          log_admin "Running ${WHITE}yarn type-check${NC}..."
-          stream_logs "admin" "$ADMIN_COLOR" yarn type-check
-          echo $? > "$ADMIN_RESULT"
+        log_admin "Running ${WHITE}yarn lint${NC}..."
+        stream_logs "admin" "$ADMIN_COLOR" yarn lint
+        FIX_EXIT=$?
+        if [ $FIX_EXIT -eq 0 ]; then
+          log_admin "Running ${WHITE}yarn lint:check${NC}..."
+          stream_logs "admin" "$ADMIN_COLOR" yarn lint:check
+          LINT_EXIT=$?
+          if [ $LINT_EXIT -eq 0 ]; then
+            log_admin "Running ${WHITE}yarn type-check${NC}..."
+            stream_logs "admin" "$ADMIN_COLOR" yarn type-check
+            echo $? > "$ADMIN_RESULT"
+          else
+            echo $LINT_EXIT > "$ADMIN_RESULT"
+          fi
         else
-          echo $LINT_EXIT > "$ADMIN_RESULT"
+          echo $FIX_EXIT > "$ADMIN_RESULT"
         fi
       else
-        yarn lint:check > /dev/null 2>&1 && yarn type-check > /dev/null 2>&1
+        yarn lint > /dev/null 2>&1 && yarn lint:check > /dev/null 2>&1 && yarn type-check > /dev/null 2>&1
         echo $? > "$ADMIN_RESULT"
       fi
     ) &
@@ -227,12 +234,32 @@ else
     (
       cd admin
       if [ "$QUIET" = false ]; then
-        log_admin "Running ${WHITE}yarn build${NC}..."
-        stream_logs "admin" "$ADMIN_COLOR" yarn build
-        BUILD_EXIT=$?
-        echo $BUILD_EXIT > "$ADMIN_RESULT"
+        log_admin "Running ${WHITE}yarn lint${NC}..."
+        stream_logs "admin" "$ADMIN_COLOR" yarn lint
+        FIX_EXIT=$?
+        if [ $FIX_EXIT -eq 0 ]; then
+          log_admin "Running ${WHITE}yarn lint:check${NC}..."
+          stream_logs "admin" "$ADMIN_COLOR" yarn lint:check
+          LINT_EXIT=$?
+          if [ $LINT_EXIT -eq 0 ]; then
+            log_admin "Running ${WHITE}yarn type-check${NC}..."
+            stream_logs "admin" "$ADMIN_COLOR" yarn type-check
+            TYPE_EXIT=$?
+            if [ $TYPE_EXIT -eq 0 ]; then
+              log_admin "Running ${WHITE}yarn build${NC}..."
+              stream_logs "admin" "$ADMIN_COLOR" yarn build
+              echo $? > "$ADMIN_RESULT"
+            else
+              echo $TYPE_EXIT > "$ADMIN_RESULT"
+            fi
+          else
+            echo $LINT_EXIT > "$ADMIN_RESULT"
+          fi
+        else
+          echo $FIX_EXIT > "$ADMIN_RESULT"
+        fi
       else
-        yarn build > /dev/null 2>&1
+        yarn lint > /dev/null 2>&1 && yarn lint:check > /dev/null 2>&1 && yarn type-check > /dev/null 2>&1 && yarn build > /dev/null 2>&1
         echo $? > "$ADMIN_RESULT"
       fi
     ) &
@@ -249,18 +276,25 @@ else
     (
       cd elysia-server
       if [ "$QUIET" = false ]; then
-        log_server "Running ${WHITE}bun lint:check${NC}..."
-        stream_logs "elysia-server" "$SERVER_COLOR" bun lint:check
-        LINT_EXIT=$?
-        if [ $LINT_EXIT -eq 0 ]; then
-          log_server "Running ${WHITE}bun type-check${NC}..."
-          stream_logs "elysia-server" "$SERVER_COLOR" bun type-check
-          echo $? > "$SERVER_RESULT"
+        log_server "Running ${WHITE}bun lint${NC}..."
+        stream_logs "elysia-server" "$SERVER_COLOR" bun lint
+        FIX_EXIT=$?
+        if [ $FIX_EXIT -eq 0 ]; then
+          log_server "Running ${WHITE}bun lint:check${NC}..."
+          stream_logs "elysia-server" "$SERVER_COLOR" bun lint:check
+          LINT_EXIT=$?
+          if [ $LINT_EXIT -eq 0 ]; then
+            log_server "Running ${WHITE}bun type-check${NC}..."
+            stream_logs "elysia-server" "$SERVER_COLOR" bun type-check
+            echo $? > "$SERVER_RESULT"
+          else
+            echo $LINT_EXIT > "$SERVER_RESULT"
+          fi
         else
-          echo $LINT_EXIT > "$SERVER_RESULT"
+          echo $FIX_EXIT > "$SERVER_RESULT"
         fi
       else
-        bun lint:check > /dev/null 2>&1 && bun type-check > /dev/null 2>&1
+        bun lint > /dev/null 2>&1 && bun lint:check > /dev/null 2>&1 && bun type-check > /dev/null 2>&1
         echo $? > "$SERVER_RESULT"
       fi
     ) &
@@ -268,12 +302,32 @@ else
     (
       cd elysia-server
       if [ "$QUIET" = false ]; then
-        log_server "Running ${WHITE}bun run build${NC}..."
-        stream_logs "elysia-server" "$SERVER_COLOR" bun run build
-        BUILD_EXIT=$?
-        echo $BUILD_EXIT > "$SERVER_RESULT"
+        log_server "Running ${WHITE}bun lint${NC}..."
+        stream_logs "elysia-server" "$SERVER_COLOR" bun lint
+        FIX_EXIT=$?
+        if [ $FIX_EXIT -eq 0 ]; then
+          log_server "Running ${WHITE}bun lint:check${NC}..."
+          stream_logs "elysia-server" "$SERVER_COLOR" bun lint:check
+          LINT_EXIT=$?
+          if [ $LINT_EXIT -eq 0 ]; then
+            log_server "Running ${WHITE}bun type-check${NC}..."
+            stream_logs "elysia-server" "$SERVER_COLOR" bun type-check
+            TYPE_EXIT=$?
+            if [ $TYPE_EXIT -eq 0 ]; then
+              log_server "Running ${WHITE}bun run build${NC}..."
+              stream_logs "elysia-server" "$SERVER_COLOR" bun run build
+              echo $? > "$SERVER_RESULT"
+            else
+              echo $TYPE_EXIT > "$SERVER_RESULT"
+            fi
+          else
+            echo $LINT_EXIT > "$SERVER_RESULT"
+          fi
+        else
+          echo $FIX_EXIT > "$SERVER_RESULT"
+        fi
       else
-        bun run build > /dev/null 2>&1
+        bun lint > /dev/null 2>&1 && bun lint:check > /dev/null 2>&1 && bun type-check > /dev/null 2>&1 && bun run build > /dev/null 2>&1
         echo $? > "$SERVER_RESULT"
       fi
     ) &

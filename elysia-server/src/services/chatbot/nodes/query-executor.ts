@@ -3,9 +3,8 @@ import { db } from "../../../db/drizzle"
 import { chatbotLogger } from "../../../utils/logger"
 import type { ChatbotState } from "../state"
 
-const MAX_EXECUTION_TIME = 10000 // 10초
+const MAX_EXECUTION_TIME = 60000 // 60초 (increased for large CSV processing)
 const MAX_ROWS = 1000
-const MAX_RETRIES = 10
 
 export async function executeQuery(state: ChatbotState): Promise<Partial<ChatbotState>> {
   const startTime = Date.now()
@@ -14,7 +13,6 @@ export async function executeQuery(state: ChatbotState): Promise<Partial<Chatbot
   // Log input state
   chatbotLogger.nodeDetail("executeQuery", {
     sqlLength: state.generatedSQL?.length || 0,
-    retryCount: state.retryCount,
     hasSQL: !!state.generatedSQL,
     isConfirmed: state.isConfirmed,
     isQuerySafe: state.isQuerySafe,
@@ -53,7 +51,7 @@ export async function executeQuery(state: ChatbotState): Promise<Partial<Chatbot
     // 타임아웃 설정
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(
-        () => reject(new Error("Query execution timeout (10 seconds)")),
+        () => reject(new Error("Query execution timeout (60 seconds)")),
         MAX_EXECUTION_TIME,
       )
     })
@@ -119,22 +117,45 @@ export async function executeQuery(state: ChatbotState): Promise<Partial<Chatbot
   } catch (error) {
     const executionTime = Date.now() - startTime
 
+    // Extract detailed database error information
+    const dbError = error as {
+      code?: string
+      detail?: string
+      hint?: string
+      constraint?: string
+      table?: string
+      column?: string
+      position?: string
+      severity?: string
+    }
+    const dbErrorCode = dbError?.code
+    const dbErrorDetail = dbError?.detail
+    const dbErrorHint = dbError?.hint
+    const dbErrorConstraint = dbError?.constraint
+    const dbErrorTable = dbError?.table
+    const dbErrorColumn = dbError?.column
+    const dbErrorPosition = dbError?.position
+    const dbErrorSeverity = dbError?.severity
+
     // 에러 타입별 사용자 친화적 메시지
     let errorMessage = "An error occurred while querying the database"
     let detailedError = ""
+    let userFriendlyMessage = ""
 
     if (error instanceof Error) {
       detailedError = error.message
 
       // Division by zero 에러 처리
       if (error.message.includes("division by zero")) {
-        errorMessage =
+        userFriendlyMessage =
           "Cannot calculate ratio due to no results. Please try a different time period with data."
+        errorMessage = userFriendlyMessage
       }
       // 타임아웃 에러
       else if (error.message.includes("초과") || error.message.includes("timeout")) {
-        errorMessage =
+        userFriendlyMessage =
           "Query execution timeout. Please try a narrower time range or add more conditions."
+        errorMessage = userFriendlyMessage
       }
       // 테이블/컬럼이 존재하지 않는 경우
       else if (
@@ -142,30 +163,90 @@ export async function executeQuery(state: ChatbotState): Promise<Partial<Chatbot
         error.message.includes("relation") ||
         error.message.includes("column")
       ) {
-        errorMessage = `Database schema error: ${error.message}. The query will be regenerated.`
+        userFriendlyMessage = `Database schema error: ${error.message}`
+        errorMessage = userFriendlyMessage
+      }
+      // NULL constraint violation
+      else if (error.message.includes("violates not-null constraint") || dbErrorCode === "23502") {
+        const columnName = dbErrorColumn || "unknown column"
+        const tableName = dbErrorTable || "unknown table"
+        userFriendlyMessage = `Required field '${columnName}' in table '${tableName}' cannot be empty. Please provide a value.`
+        errorMessage = userFriendlyMessage
+      }
+      // UNIQUE constraint violation
+      else if (error.message.includes("violates unique constraint") || dbErrorCode === "23505") {
+        const constraintName = dbErrorConstraint || "unique constraint"
+        userFriendlyMessage = `Duplicate entry detected (${constraintName}). This record already exists.`
+        errorMessage = userFriendlyMessage
+      }
+      // FOREIGN KEY constraint violation
+      else if (
+        error.message.includes("violates foreign key constraint") ||
+        dbErrorCode === "23503"
+      ) {
+        userFriendlyMessage = `Related record not found. Please ensure all referenced data exists.`
+        errorMessage = userFriendlyMessage
+      }
+      // CHECK constraint violation
+      else if (error.message.includes("violates check constraint") || dbErrorCode === "23514") {
+        const constraintName = dbErrorConstraint || "check constraint"
+        userFriendlyMessage = `Data validation failed (${constraintName}). Please check your input values.`
+        errorMessage = userFriendlyMessage
+      }
+      // String data too long
+      else if (error.message.includes("value too long") || dbErrorCode === "22001") {
+        const match = error.message.match(/column "(\w+)"/)
+        const columnName = match ? match[1] : "a column"
+        userFriendlyMessage = `Text is too long for ${columnName}. Please shorten the text.`
+        errorMessage = userFriendlyMessage
+      }
+      // Invalid syntax
+      else if (error.message.includes("syntax error") || dbErrorCode === "42601") {
+        userFriendlyMessage = `SQL syntax error. The query will be regenerated.`
+        errorMessage = `SQL syntax error at position ${dbErrorPosition || "unknown"}: ${error.message}`
       }
       // 그 외 일반 에러
       else {
-        errorMessage = `Database query error: ${error.message}`
+        userFriendlyMessage = `Database error: ${error.message}`
+        errorMessage = userFriendlyMessage
       }
     }
 
-    // 재시도 정보 로깅
-    const retryInfo =
-      state.retryCount > 0 ? ` (Retry ${state.retryCount + 1}/${MAX_RETRIES + 1})` : ""
-    chatbotLogger.nodeError("executeQuery", `${errorMessage}${retryInfo}`, executionTime)
+    // Comprehensive error logging
+    chatbotLogger.error(
+      `[LangGraph] Query Execution Failed:\n` +
+        `┌─────────────────────────────────────────────────────────────\n` +
+        `│ ERROR DETAILS:\n` +
+        `├─────────────────────────────────────────────────────────────\n` +
+        `│ Message: ${detailedError}\n` +
+        `│ Code: ${dbErrorCode || "N/A"}\n` +
+        `│ Severity: ${dbErrorSeverity || "N/A"}\n` +
+        `│ Table: ${dbErrorTable || "N/A"}\n` +
+        `│ Column: ${dbErrorColumn || "N/A"}\n` +
+        `│ Constraint: ${dbErrorConstraint || "N/A"}\n` +
+        `│ Position: ${dbErrorPosition || "N/A"}\n` +
+        `├─────────────────────────────────────────────────────────────\n` +
+        `│ ADDITIONAL INFO:\n` +
+        `├─────────────────────────────────────────────────────────────\n` +
+        `│ Detail: ${dbErrorDetail || "N/A"}\n` +
+        `│ Hint: ${dbErrorHint || "N/A"}\n` +
+        `├─────────────────────────────────────────────────────────────\n` +
+        `│ FAILED QUERY (first 500 chars):\n` +
+        `├─────────────────────────────────────────────────────────────\n` +
+        `│ ${state.generatedSQL?.substring(0, 500)}...\n` +
+        `├─────────────────────────────────────────────────────────────\n` +
+        `│ USER MESSAGE:\n` +
+        `├─────────────────────────────────────────────────────────────\n` +
+        `│ ${userFriendlyMessage}\n` +
+        `└─────────────────────────────────────────────────────────────`,
+    )
 
-    // 디버깅을 위한 상세 로그
-    if (detailedError) {
-      chatbotLogger.info(`[Query Error Details] ${detailedError}`)
-      chatbotLogger.info(`[Failed Query] ${state.generatedSQL}`)
-    }
+    chatbotLogger.nodeError("executeQuery", errorMessage, executionTime)
 
     return {
       queryResult: [],
       executionTime,
       error: errorMessage,
-      retryCount: state.retryCount + 1,
     }
   }
 }

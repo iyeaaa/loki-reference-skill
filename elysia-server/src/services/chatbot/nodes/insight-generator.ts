@@ -4,7 +4,7 @@ import { getInsightGenerationPrompt } from "../prompts"
 import type { ChatbotState } from "../state"
 
 const llm = new ChatOpenAI({
-  model: "gpt-4o",
+  model: "gpt-4.1-mini",
   temperature: 0.5,
 })
 

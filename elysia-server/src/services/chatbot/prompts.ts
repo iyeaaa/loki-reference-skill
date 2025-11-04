@@ -1,17 +1,37 @@
 import type { ChatMessage } from "./state"
 
-export const SYSTEM_PROMPT = `당신은 Send Grinda 이메일 자동화 시스템의 데이터 분석 AI 어시스턴트입니다.
+function getCurrentKSTTime(): string {
+  const now = new Date()
+  const kstOffset = 9 * 60 * 60 * 1000
+  const kstDate = new Date(now.getTime() + kstOffset)
 
-**역할:**
-- 사용자의 자연어 질문을 이해하고 데이터베이스에서 답을 찾습니다
-- PostgreSQL 쿼리를 생성하여 정확한 데이터를 조회합니다
-- 결과를 분석하고 실행 가능한 인사이트를 제공합니다
+  const year = kstDate.getUTCFullYear()
+  const month = String(kstDate.getUTCMonth() + 1).padStart(2, "0")
+  const day = String(kstDate.getUTCDate()).padStart(2, "0")
+  const hour = String(kstDate.getUTCHours()).padStart(2, "0")
+  const minute = String(kstDate.getUTCMinutes()).padStart(2, "0")
+  const second = String(kstDate.getUTCSeconds()).padStart(2, "0")
 
-**원칙:**
-- 정확성: 데이터에 기반한 정확한 답변을 제공합니다
-- 명확성: 복잡한 데이터를 이해하기 쉽게 설명합니다
-- 실용성: 구체적인 액션 아이템을 제안합니다
-- 안전성: READ-ONLY 쿼리만 생성하며, workspace_id 필터를 항상 포함합니다`
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+  const weekday = weekdays[kstDate.getUTCDay()]
+
+  return `${year}-${month}-${day} (${weekday}) ${hour}:${minute}:${second} KST`
+}
+
+export const SYSTEM_PROMPT = `You are an AI assistant for Send Grinda email automation system.
+
+**Current Time:** ${getCurrentKSTTime()}
+
+**Role:**
+- Understand natural language questions and query the database
+- Generate PostgreSQL queries for accurate data retrieval
+- Analyze results and provide actionable insights
+
+**Principles:**
+- Accuracy: Provide data-driven answers
+- Clarity: Explain complex data simply
+- Actionability: Suggest concrete next steps
+- Security: Always include workspace_id filters`
 
 export function getAnalysisPrompt(
   question: string,
@@ -20,7 +40,7 @@ export function getAnalysisPrompt(
 ) {
   const context =
     recentMessages.length > 0
-      ? `\n이전 대화 컨텍스트:\n${recentMessages
+      ? `\nRecent context:\n${recentMessages
           .slice(-3)
           .map((m) => `${m.role}: ${m.content}`)
           .join("\n")}`
@@ -28,40 +48,40 @@ export function getAnalysisPrompt(
 
   return `${SYSTEM_PROMPT}
 
-# 작업: 질문 분석
+# Task: Analyze Question
 
-사용자 질문: "${question}"
-워크스페이스 ID: ${workspaceId}${context}
+User question: "${question}"
+Workspace ID: ${workspaceId}${context}
 
-데이터베이스에는 다음 정보가 있습니다:
-- emails: 이메일 발송 기록 (상태, 오픈, 클릭, 답장 등)
-- leads: 리드 정보 (회사명, 상태, 점수, 업종)
-- sequences: 이메일 시퀀스 및 등록 정보
-- email_replies: 답장 감정 분석
-- users, workspaces: 사용자 및 워크스페이스 정보
+Available data:
+- emails: Email records (status, opens, clicks, replies)
+- leads: Lead information (company, status, score, industry)
+- sequences: Email sequences and enrollments
+- email_replies: Reply sentiment analysis
+- users, workspaces: User and workspace data
 
-다음을 JSON 형식으로 응답하세요:
+Respond in JSON format:
 {
-  "intent": "질문의 의도 (예: 성과 측정, 리드 분석, 트렌드 파악, 리드 생성, 데이터 수정, 데이터 삭제)",
-  "requiredTables": ["필요한 테이블 목록"],
-  "timeRange": "시간 범위 (예: 오늘, 이번 주, 지난 30일) 또는 null",
+  "intent": "Question intent (e.g., performance, lead analysis, trend, lead creation, data update, data deletion)",
+  "requiredTables": ["Required table list"],
+  "timeRange": "Time range (e.g., today, this week, last 30 days) or null",
   "needsClarification": false,
   "clarificationQuestion": null,
   "analysisType": "aggregate | trend | comparison | detail",
   "operationType": "read | create | update | delete"
 }
 
-**operationType 분류 기준:**
-- "read": 조회, 분석, 통계, 보여줘, 알려줘 등 (SELECT)
-- "create": 새로운 데이터 생성, 추가, insert, add 등 (INSERT)
-- "update": 기존 데이터 수정, 변경, update 등 (UPDATE)
-- "delete": 데이터 삭제, 제거, delete 등 (DELETE)
+**operationType Classification:**
+- "read": Query, analyze, stats, show, tell (SELECT)
+- "create": New data, add, insert (INSERT)
+- "update": Modify existing data, change, update (UPDATE)
+- "delete": Remove data, delete (DELETE)
 
-**중요:**
-- mutation 작업(create/update/delete)의 경우 needsClarification을 false로 설정하세요
-- 사용자가 명확하게 작업을 요청한 경우 clarification을 요청하지 마세요
-- 예제 데이터 생성 요청도 create로 분류하고 진행하세요
-- 불명확한 조회 요청이나 애매한 질문인 경우에만 needsClarification을 true로 설정하세요`
+**Important:**
+- For mutation operations (create/update/delete), set needsClarification to false
+- Don't request clarification when user clearly states the action
+- For sample data creation requests, classify as create and proceed
+- Only set needsClarification to true for ambiguous read queries`
 }
 
 export function getSQLGenerationPrompt(
@@ -69,194 +89,483 @@ export function getSQLGenerationPrompt(
   workspaceId: string,
   schemaContext: string,
   metadata: Record<string, unknown>,
-  previousError?: string,
-  previousSQL?: string,
 ) {
   const operationType = (metadata as { operationType?: string }).operationType || "read"
 
-  const retryContext = previousError
-    ? `
-
-⚠️ **재시도 중:**
-이전 쿼리가 실패했습니다. 아래 오류를 수정하여 새 쿼리를 생성하세요.
-
-**이전 오류:** ${previousError}
-**이전 SQL:**
-\`\`\`sql
-${previousSQL}
-\`\`\`
-
-**개선 사항:**
-- 오류 원인을 분석하고 수정하세요
-- 테이블명, 컬럼명이 정확한지 확인하세요
-- JOIN 조건과 WHERE 절을 재검토하세요
-- Division by zero 오류가 있다면 NULLIF() 사용하세요
-`
-    : ""
-
-  // Operation type별 특화 지침
   const operationGuidelines =
     operationType === "create"
       ? `
-# CREATE 작업 요구사항
+# CREATE Operation Requirements
 
-1. **INSERT 쿼리 생성**
-2. **필수 컬럼:**
-   - \`id\`: UUID 생성 (\`gen_random_uuid()\`)
+1. **Generate INSERT queries**
+2. **Required columns:**
+   - \`id\`: UUID (\`gen_random_uuid()\`)
    - \`workspace_id\`: '${workspaceId}'
    - \`created_at\`: CURRENT_TIMESTAMP
    - \`updated_at\`: CURRENT_TIMESTAMP
-3. **비즈니스 로직 컬럼:**
-   - 테이블별 필수 컬럼 확인 (NOT NULL 제약 조건)
-   - 기본값이 있는 컬럼은 생략 가능
-   - 예제 데이터 생성 시 의미 있는 값 사용
-4. **RETURNING 절 사용:** 생성된 데이터 반환을 위해 \`RETURNING *\` 추가
+3. **Business logic columns:**
+   - Check NOT NULL constraints per table
+   - Columns with defaults can be omitted
+   - Use meaningful values for sample data
+4. **RETURNING clause:** Add \`RETURNING *\` to return created data
 
-⚠️ **중요: CTE (WITH) 구문 사용 금지**
-- **CTE (Common Table Expression)를 절대 사용하지 마세요**
-- 복잡한 INSERT의 경우 여러 쿼리를 JSON 배열로 반환하세요
-- 각 쿼리는 독립적으로 실행 가능해야 합니다
-- 이전 쿼리의 ID가 필요한 경우 플레이스홀더를 사용하세요: \`{{PREV_QUERY_1_ID}}\`, \`{{PREV_QUERY_2_ID}}\` 등
+⚠️ **USE CTE (WITH) for Complex Operations - REQUIRED!**
+- **MUST USE**: Common Table Expressions (WITH clause) for multi-step INSERT operations
+- This eliminates ID reference errors completely
+- Each CTE step can reference previous steps by name
+- Return all results in final SELECT using json_build_object
 
-**INSERT 쿼리 예시:**
+**CTE Example Pattern:**
+\`\`\`sql
+WITH
+  new_group AS (
+    INSERT INTO customer_groups (...) VALUES (...) RETURNING *
+  ),
+  new_lead_1 AS (
+    INSERT INTO leads (id, workspace_id, ..., created_at, updated_at)
+    VALUES (gen_random_uuid(), '${workspaceId}', ..., CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    RETURNING *
+  ),
+  new_lead_1_contact AS (
+    INSERT INTO lead_contacts (id, lead_id, contact_type, ...)
+    SELECT gen_random_uuid(), id, 'email', ... FROM new_lead_1
+    RETURNING *
+  )
+SELECT json_build_object(
+  'group', (SELECT row_to_json(new_group.*) FROM new_group),
+  'leads', json_build_object(
+    'lead_1', (SELECT row_to_json(new_lead_1.*) FROM new_lead_1),
+    'contact', (SELECT row_to_json(new_lead_1_contact.*) FROM new_lead_1_contact)
+  )
+) as result;
+\`\`\`
 
-**기본 INSERT 예시:**
+**CRITICAL - Final SELECT Rules:**
+1. **NEVER use CTE names in FROM clause**: CTEs are already executed, reference them in subqueries only
+2. **Use subqueries with SELECT**: \`(SELECT row_to_json(cte.*) FROM cte)\`
+3. **For multiple rows, use UNION ALL**:
+   \`\`\`sql
+   SELECT json_agg(row_to_json(s.*)) FROM (
+     SELECT * FROM cte_1
+     UNION ALL SELECT * FROM cte_2
+   ) s
+   \`\`\`
+4. **WRONG**: \`FROM step_1, step_2, step_3\` ❌
+5. **CORRECT**: \`(SELECT json_agg(...) FROM (SELECT * FROM step_1 UNION ALL ...) s)\` ✅
+
+**Note:** Sequential queries with placeholders are deprecated. Use CTE instead for reliability.
+
+⚠️ **INSERT Column Requirements**
+- Always include ALL columns explicitly in INSERT statements (don't rely on defaults)
+- **CRITICAL**: Include \`updated_at\` for tables that have it: \`lead_contacts\`, \`lead_social_media\`
+  - Even though it has a default, explicitly include it: \`updated_at = CURRENT_TIMESTAMP\`
+- For \`lead_contacts\`: MUST include \`label\` column (use 'main', 'support', 'sales', etc.)
+- For nullable columns with no value: explicitly set to NULL in VALUES clause
+- Never omit columns from the column list, even if they're nullable
+
+---
+
+## 🎯 SPECIAL FLOW: Customer Group + Sequence AI Builder (7-Step Process)
+
+When user requests to create a customer group with sequence automation, follow this complete 7-step process:
+
+**Full Process Overview:**
+\`\`\`
+1. Create Customer Group → get customer_group_id
+2. Create Leads and Add to Group Members (create all leads from user data + add to group + populate all related tables)
+3. Create Sequence → get sequence_id (linked to customer_group_id)
+4. Create Sequence Steps (AI-designed 3-5 steps with email content)
+5. Activate Sequence (status = 'active')
+6. Create Sequence Enrollments (auto-enroll all leads in group)
+7. Schedule First Step Executions (schedule first step)
+\`\`\`
+
+**Related Tables & Schema:**
+
+**Core Tables:**
+- \`customer_groups\`: Groups of leads
+- \`customer_group_members\`: Many-to-many relationship (group ↔ leads)
+- \`leads\`: Main lead information
+- \`sequences\`: Email sequence campaigns
+- \`sequence_steps\`: Individual steps in sequence
+- \`sequence_enrollments\`: Lead enrollments in sequences
+- \`sequence_step_executions\`: Scheduled/executed steps
+
+**Lead Detail Tables (all reference leads.id with CASCADE delete):**
+- \`lead_contacts\`: Contact info (email, phone, fax, other)
+- \`lead_social_media\`: Social media profiles (facebook, instagram, twitter, linkedin)
+- \`lead_products\`: Product offerings
+- \`lead_business_sectors\`: Business sectors
+- \`lead_product_categories\`: Product categories
+- \`lead_industry_types\`: Industry classifications
+
+**Key Relationships:**
+\`\`\`
+customer_groups (1) ─── (N) customer_group_members ─── (1) leads
+customer_groups (1) ─── (N) sequences
+sequences (1) ─── (N) sequence_steps
+sequences (1) ─── (N) sequence_enrollments ─── (1) leads
+sequence_enrollments (1) ─── (N) sequence_step_executions ─── (1) sequence_steps
+leads (1) ─── (N) lead_contacts, lead_social_media, lead_products, etc.
+\`\`\`
+
+**Complete CTE Example: Customer Group + Leads + Sequence + Enrollments**
+
+This example shows how to use a single CTE query to create an entire outreach campaign atomically.
+The full example is available in \`elysia-server/CTE_EXAMPLE.sql\` - study it carefully!
+
+**Key Benefits:**
+- ✅ No placeholder ID errors - reference CTE names directly
+- ✅ Atomic transaction - all operations succeed or all fail
+- ✅ Easy to read and maintain
+- ✅ Can handle unlimited complexity
+
+**Structure Overview:**
+\`\`\`sql
+WITH
+  new_group AS (INSERT INTO customer_groups (...) RETURNING *),
+  new_lead_1 AS (INSERT INTO leads (...) RETURNING *),
+  new_lead_1_contact AS (INSERT INTO lead_contacts SELECT ..., id FROM new_lead_1 RETURNING *),
+  new_lead_1_social AS (INSERT INTO lead_social_media SELECT ..., id FROM new_lead_1 RETURNING *),
+  new_lead_1_sectors AS (INSERT INTO lead_business_sectors SELECT ..., id FROM new_lead_1 RETURNING *),
+  new_lead_2 AS (INSERT INTO leads (...) RETURNING *),
+  new_lead_2_contact AS (INSERT INTO lead_contacts SELECT ..., id FROM new_lead_2 RETURNING *),
+  new_sequence AS (INSERT INTO sequences SELECT ..., id FROM new_group RETURNING *),
+  new_steps AS (INSERT INTO sequence_steps SELECT ..., id FROM new_sequence RETURNING *),
+  activated_seq AS (UPDATE sequences SET status='active' WHERE id = (SELECT id FROM new_sequence) RETURNING *),
+  enrollments AS (INSERT INTO sequence_enrollments SELECT ... FROM new_sequence, new_lead_1 RETURNING *),
+  executions AS (INSERT INTO sequence_step_executions SELECT ... RETURNING *)
+SELECT json_build_object(
+  'group', (SELECT row_to_json(new_group.*) FROM new_group),
+  'leads', json_agg(leads.*),
+  'sequence', (SELECT row_to_json(activated_seq.*) FROM activated_seq),
+  'enrollments', json_agg(enrollments.*)
+) as result;
+\`\`\`
+
+**Important CTE Rules:**
+1. Each CTE step can only reference CTEs defined BEFORE it
+2. Use \`SELECT ... FROM cte_name\` to reference previous step's ID
+3. Always include \`RETURNING *\` on INSERTs/UPDATEs
+4. Final SELECT aggregates all results into JSON
+
+**Key Implementation Notes:**
+
+**CRITICAL - Column Names (MUST USE EXACT NAMES):**
+- \`lead_products\`: Use \`product_name\` (NOT product, NOT name)
+- \`lead_business_sectors\`: Use \`sector_name\` (NOT sector, NOT business_sector)
+- \`lead_product_categories\`: Use \`category_name\` (NOT category)
+- \`lead_industry_types\`: Use \`industry_name\` (NOT industry_type, NOT industry)
+
+**CRITICAL - Column Length Limits:**
+- \`leads.business_type\`: **100 chars max** - Use ONLY first/primary business type
+- \`leads.company_name\`: 255 chars max
+- \`leads.contact_name\`: 255 chars max
+- When CSV has comma-separated values (e.g., "IT, Cloud, AI"), split them into separate table rows
+
+1. **Step 1 - Create Customer Group:**
+   - Required: \`id\`, \`workspace_id\`, \`name\`, \`is_dynamic\`, \`created_at\`, \`updated_at\`
+   - Required value: \`is_dynamic\` = false (NOT NULL, cannot be NULL)
+   - Optional (set to null): \`description\`, \`criteria\`, \`created_by\`
+   - Example: Only provide \`name\` for the group, set \`is_dynamic\` to false, others to null
+
+2. **Step 2 - Create ALL Leads with Complete Data:**
+   - Create each lead from user-provided data
+   - **CRITICAL - leads table column order**: \`id, workspace_id, company_name, contact_name, website_url, business_type, description, address, country, city, employee_count, lead_status, lead_score, lead_source, created_at, updated_at\`
+   - **IMPORTANT**: Column count MUST match VALUES count exactly (common error: missing \`city\` causes column 19 error)
+   - **IMPORTANT**: \`business_type\` column has 100 char limit - use ONLY the primary/first business type
+   - Add contacts to \`lead_contacts\` (email, phone, etc.)
+     - **Required columns**: \`id\`, \`lead_id\`, \`contact_type\`, \`contact_value\`, \`is_primary\`, \`created_at\`, \`updated_at\`
+     - **Always include**: \`label\` (use 'main' for primary email, 'support', 'sales', etc.)
+     - **Optional**: \`contact_name\` (can be NULL if no contact person name available)
+     - **Column order**: id, lead_id, contact_type, contact_value, contact_name, label, is_primary, created_at, updated_at
+   - Add social media to \`lead_social_media\` if provided
+     - **Required columns**: \`id\`, \`lead_id\`, \`platform\`, \`url\`, \`is_verified\`, \`created_at\`, \`updated_at\`
+     - **Optional**: \`username\`, \`follower_count\`
+   - Add products to \`lead_products\` if provided (separate rows for each)
+     - **Required columns**: \`id\`, \`lead_id\`, \`product_name\`, \`created_at\`
+     - **Optional**: \`description\`
+     - Only has \`created_at\`, no \`updated_at\`
+   - Add business sectors to \`lead_business_sectors\` if provided (separate rows for each, comma-separated)
+     - **Required columns**: \`id\`, \`lead_id\`, \`sector_name\`, \`created_at\`
+     - Only has \`created_at\`, no \`updated_at\`
+   - Add product categories to \`lead_product_categories\` if provided (separate rows for each)
+     - **Required columns**: \`id\`, \`lead_id\`, \`category_name\`, \`created_at\`
+     - Only has \`created_at\`, no \`updated_at\`
+   - Add industry types to \`lead_industry_types\` if provided (separate rows for each)
+     - **Required columns**: \`id\`, \`lead_id\`, \`industry_name\`, \`created_at\`
+     - **IMPORTANT**: Use \`industry_name\` (NOT \`industry_type\`)
+     - Only has \`created_at\`, no \`updated_at\`
+   - Add to \`customer_group_members\` (link to group)
+   - Repeat for ALL leads in user data
+
+3. **Step 4 - AI-Designed Sequence Steps:**
+   - **Required columns**: \`id\`, \`sequence_id\`, \`step_order\`, \`delay_days\`, \`email_subject\`, \`created_at\`, \`updated_at\`
+   - **Optional columns**: \`scheduled_hour\`, \`scheduled_minute\`, \`timezone\`, \`email_body_text\`, \`email_body_html\`, \`email_template_id\`
+   - **CRITICAL**: Must include \`email_template_id\` column (set to NULL if not using template)
+   - Generate 3-5 steps based on business context
+   - Include personalized subject lines
+   - Use template variables: \`{{contact_name}}\`, \`{{company_name}}\`
+   - Set appropriate delays: Step 1 (0 days), Step 2 (3 days), Step 3 (5 days)
+   - Set optimal send times: 9AM, 10AM, 2PM KST
+   - **Email content**: Focus on text content in \`email_body_text\`, set \`email_body_html\` to null
+   - Use plain text with \\\\n for line breaks (no HTML tags)
+   - **CRITICAL**: Use only straight quotes (') in email text, NOT curly quotes (' or ')
+
+4. **Step 6 - Enrollments:**
+   - Must fetch active \`user_email_account_id\` from workspace
+   - Set \`next_step_scheduled_at\` based on first step's schedule
+   - Status: 'active'
+
+5. **Step 7 - First Step Execution:**
+   - Schedule only the FIRST step for each enrollment
+   - Use step_id from Step 4.1 (first sequence step)
+   - Calculate \`scheduled_at\`: today/tomorrow at scheduled_hour
+
+**Response Format:**
+Return as JSON with \`queries\` array and \`explanation\`.
+
+**Basic INSERT Example (Customer Group):**
 \`\`\`sql
 INSERT INTO customer_groups (
-  id,
-  workspace_id,
-  name,
-  description,
-  criteria,
-  is_dynamic,
-  created_at,
-  updated_at
+  id, workspace_id, name, description, criteria, is_dynamic, created_by, created_at, updated_at
 ) VALUES (
-  gen_random_uuid(),
-  '${workspaceId}',
-  'Enterprise IT Companies',
+  gen_random_uuid(), '${workspaceId}', 'Enterprise IT Companies',
   'Large IT companies with 100+ employees',
   '{"business_type": "IT", "employee_count": "100+"}'::jsonb,
-  false,
-  CURRENT_TIMESTAMP,
-  CURRENT_TIMESTAMP
+  false, null, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 ) RETURNING *;
 \`\`\`
 
-**복잡한 INSERT 예시 1: 리드 + 연관 데이터 생성 (순차 실행)**
+**IMPORTANT**: \`is_dynamic\` must be \`false\` (or \`true\`), NEVER \`null\`
 
-응답 형식:
+**Complex INSERT Example (Sequential Execution):**
+
+Response format:
 \`\`\`json
 {
   "queries": [
-    "쿼리1",
-    "쿼리2",
-    "쿼리3"
+    "query1",
+    "query2",
+    "query3"
   ],
-  "explanation": "설명"
+  "explanation": "Description"
 }
 \`\`\`
 
-예시:
+Example:
 \`\`\`json
 {
   "queries": [
-    "-- 1) 리드 생성\\nINSERT INTO leads (id, workspace_id, company_name, contact_name, website_url, business_type, employee_count, lead_status, lead_score, lead_source, description, created_at, updated_at) VALUES (gen_random_uuid(), '${workspaceId}', 'Tech Innovation Corp', 'Jane Smith', 'https://techinnovation.com', 'IT Services', '50-100', 'new', 85, 'Manual Entry', 'Leading AI and cloud solutions provider', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING *;",
-    "-- 2) 연락처 추가 (이전 쿼리의 ID 사용)\\nINSERT INTO lead_contacts (id, lead_id, contact_type, contact_value, contact_name, label, is_primary, created_at) VALUES (gen_random_uuid(), '{{PREV_QUERY_1_ID}}', 'email', 'jane.smith@techinnovation.com', 'Jane Smith', 'main', true, CURRENT_TIMESTAMP), (gen_random_uuid(), '{{PREV_QUERY_1_ID}}', 'phone', '02-1234-5678', 'Jane Smith', 'main', false, CURRENT_TIMESTAMP) RETURNING *;",
-    "-- 3) 소셜 미디어 추가\\nINSERT INTO lead_social_media (id, lead_id, platform, url, username, created_at) VALUES (gen_random_uuid(), '{{PREV_QUERY_1_ID}}', 'linkedin', 'https://linkedin.com/company/techinnovation', 'techinnovation', CURRENT_TIMESTAMP), (gen_random_uuid(), '{{PREV_QUERY_1_ID}}', 'twitter', 'https://twitter.com/techinnovation', '@techinnovation', CURRENT_TIMESTAMP) RETURNING *;",
-    "-- 4) 최종 결과 조회\\nSELECT * FROM leads WHERE id = '{{PREV_QUERY_1_ID}}';"
+    "-- 1) Create lead\\nINSERT INTO leads (id, workspace_id, company_name, contact_name, website_url, business_type, description, address, country, city, employee_count, lead_status, lead_score, lead_source, created_at, updated_at) VALUES (gen_random_uuid(), '${workspaceId}', 'Tech Innovation Corp', 'Jane Smith', 'https://techinnovation.com', 'IT Services', 'Leading AI and cloud solutions provider', NULL, 'USA', 'San Francisco', '50-100', 'new', 85, 'Manual Entry', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING *;",
+    "-- 2) Add contact (using previous query ID)\\nINSERT INTO lead_contacts (id, lead_id, contact_type, contact_value, contact_name, label, is_primary, created_at, updated_at) VALUES (gen_random_uuid(), '{{PREV_QUERY_1_ID}}', 'email', 'jane.smith@techinnovation.com', 'Jane Smith', 'main', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING *;",
+    "-- 3) Verify result\\nSELECT * FROM leads WHERE id = '{{PREV_QUERY_1_ID}}';"
   ],
-  "explanation": "리드와 연관 데이터를 순차적으로 생성합니다. 첫 번째 쿼리에서 생성된 lead ID를 사용하여 연락처와 소셜 미디어 정보를 추가합니다."
+  "explanation": "Creates lead and associated data sequentially. Uses first query's lead ID for contacts."
 }
 \`\`\`
 
-**사용자 요청에 따른 응답 형식:**
-- 단일 INSERT: SQL 쿼리를 직접 반환
-- 복잡한 INSERT (연관 데이터 포함): JSON 형식으로 queries 배열 반환
+**Response format:**
+- **Single INSERT**: Return SQL query directly as string
+- **Complex multi-step INSERT**: Return as single CTE query (not queries array)
 
-**간단한 요청 예시** (customer group 1개만 생성):
+**Simple request example** (1 customer group):
 \`\`\`sql
 INSERT INTO customer_groups (
-  id, workspace_id, name, description, criteria, is_dynamic, created_at, updated_at
+  id, workspace_id, name, description, criteria, is_dynamic, created_by, created_at, updated_at
 ) VALUES (
-  gen_random_uuid(), '${workspaceId}', 'Enterprise IT Companies', 'Large IT companies', '{}'::jsonb, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+  gen_random_uuid(), '${workspaceId}', 'Enterprise IT Companies', 'Large IT companies', '{}'::jsonb, false, null, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 ) RETURNING *;
 \`\`\`
 
-**복잡한 요청 예시** (리드 + 연락처 + 소셜미디어):
-\`\`\`json
-{
-  "queries": [
-    "INSERT INTO leads (...) VALUES (...) RETURNING *;",
-    "INSERT INTO lead_contacts (...) VALUES (gen_random_uuid(), '{{PREV_QUERY_1_ID}}', ...) RETURNING *;",
-    "INSERT INTO lead_social_media (...) VALUES (gen_random_uuid(), '{{PREV_QUERY_1_ID}}', ...) RETURNING *;"
-  ],
-  "explanation": "리드를 생성하고 연관 데이터를 추가합니다."
-}
+**Complex request example** (lead + contacts + social media using CTE):
+\`\`\`sql
+WITH
+  new_lead AS (
+    INSERT INTO leads (id, workspace_id, company_name, ...)
+    VALUES (gen_random_uuid(), '${workspaceId}', 'Tech Corp', ...)
+    RETURNING *
+  ),
+  new_contact AS (
+    INSERT INTO lead_contacts (id, lead_id, contact_type, contact_value, ...)
+    SELECT gen_random_uuid(), id, 'email', 'contact@example.com', ...
+    FROM new_lead
+    RETURNING *
+  ),
+  new_social AS (
+    INSERT INTO lead_social_media (id, lead_id, platform, url, ...)
+    SELECT gen_random_uuid(), id, 'linkedin', 'https://linkedin.com/company/...',  ...
+    FROM new_lead
+    RETURNING *
+  )
+SELECT json_build_object(
+  'lead', (SELECT row_to_json(new_lead.*) FROM new_lead),
+  'contact', (SELECT row_to_json(new_contact.*) FROM new_contact),
+  'social', (SELECT row_to_json(new_social.*) FROM new_social)
+) as result;
 \`\`\`
 `
       : operationType === "update"
         ? `
-# UPDATE 작업 요구사항
+# UPDATE Operation Requirements
 
-1. **UPDATE 쿼리 생성**
-2. **필수 조건:**
-   - \`WHERE workspace_id = '${workspaceId}'\` 반드시 포함
-   - 업데이트할 레코드를 정확히 특정 (id 또는 unique 조건)
-3. **updated_at 자동 갱신:** \`updated_at = CURRENT_TIMESTAMP\` 포함
-4. **RETURNING 절 사용:** 수정된 데이터 반환을 위해 \`RETURNING *\` 추가
-5. **안전장치:** 의도치 않은 대량 업데이트 방지를 위해 WHERE 조건 명확히
+1. **Generate UPDATE queries**
+2. **Required conditions:**
+   - \`WHERE workspace_id = '${workspaceId}'\` must be included
+   - Specify exact record to update (id or unique condition)
+3. **Auto-update:** Include \`updated_at = CURRENT_TIMESTAMP\`
+4. **RETURNING clause:** Add \`RETURNING *\` to return modified data
+5. **Safety:** Clear WHERE conditions to prevent unintended mass updates
+
+⚠️ **Foreign Key Considerations (Very Important!)**
+Consider foreign key relationships when updating:
+
+**Key relationships:**
+- \`leads\` updates affect: \`emails\`, \`sequence_enrollments\`, \`lead_contacts\`, \`lead_social_media\`, \`customer_group_members\`
+  - Impact: Changing lead status may require stopping active sequences
+- \`sequences\` updates affect: \`sequence_steps\`, \`sequence_enrollments\`, \`emails\`
+  - Impact: Setting sequence to 'paused' may require pausing enrollments
+- \`sequence_enrollments\` updates affect: \`sequence_step_executions\`
+  - Impact: Stopping enrollment requires canceling scheduled step executions
+
+**Complex UPDATE Example (with related data):**
+Changing lead to 'unsubscribed' and stopping active sequences:
+\`\`\`json
+{
+  "queries": [
+    "UPDATE leads SET lead_status = 'unsubscribed', updated_at = CURRENT_TIMESTAMP WHERE id = '{{LEAD_ID}}' AND workspace_id = '${workspaceId}' RETURNING *;",
+    "UPDATE sequence_enrollments SET status = 'unsubscribed', stopped_at = CURRENT_TIMESTAMP WHERE lead_id = '{{LEAD_ID}}' AND status = 'active' RETURNING *;",
+    "UPDATE sequence_step_executions SET status = 'skipped' WHERE enrollment_id IN (SELECT id FROM sequence_enrollments WHERE lead_id = '{{LEAD_ID}}') AND status = 'pending' RETURNING *;"
+  ],
+  "explanation": "Changes lead to unsubscribed, stops active sequences, and skips scheduled step executions."
+}
+\`\`\`
+
+**Simple UPDATE Example:**
+\`\`\`sql
+UPDATE leads
+SET lead_score = 90, updated_at = CURRENT_TIMESTAMP
+WHERE id = '{{LEAD_ID}}' AND workspace_id = '${workspaceId}'
+RETURNING *;
+\`\`\`
 `
         : operationType === "delete"
           ? `
-# DELETE 작업 요구사항
+# DELETE Operation Requirements
 
-1. **DELETE 쿼리 생성**
-2. **필수 조건:**
-   - \`WHERE workspace_id = '${workspaceId}'\` 반드시 포함
-   - 삭제할 레코드를 정확히 특정 (id 또는 unique 조건)
-3. **RETURNING 절 사용:** 삭제된 데이터 확인을 위해 \`RETURNING *\` 추가
-4. **안전장치:** 의도치 않은 대량 삭제 방지를 위해 WHERE 조건 명확히
-5. **Soft Delete 고려:** 테이블에 \`deleted_at\` 컬럼이 있다면 UPDATE로 처리
+1. **Generate DELETE queries**
+2. **Required conditions:**
+   - \`WHERE workspace_id = '${workspaceId}'\` must be included
+   - Specify exact record to delete (id or unique condition)
+3. **RETURNING clause:** Add \`RETURNING *\` to confirm deleted data
+4. **Safety:** Clear WHERE conditions to prevent unintended mass deletion
+5. **Soft Delete:** If \`deleted_at\` column exists, use UPDATE instead
+
+⚠️ **Foreign Key Considerations (Very Important!)**
+Consider CASCADE behavior and related tables when deleting:
+
+**Key relationships and deletion impact:**
+
+**1. \`leads\` deletion affects:**
+   - \`emails\` (lead_id) - All related emails
+   - \`sequence_enrollments\` (lead_id) - Sequence registrations
+   - \`lead_contacts\` (lead_id) - Contact info
+   - \`lead_social_media\` (lead_id) - Social media
+   - \`lead_products\` (lead_id) - Products
+   - \`lead_business_sectors\` (lead_id) - Business sectors
+   - \`lead_product_categories\` (lead_id) - Product categories
+   - \`lead_industry_types\` (lead_id) - Industry types
+   - \`customer_group_members\` (lead_id) - Group memberships
+
+**2. \`sequences\` deletion affects:**
+   - \`sequence_steps\` (sequence_id) - Sequence steps
+   - \`sequence_enrollments\` (sequence_id) - Enrollments
+   - \`emails\` (sequence_id) - Sent emails
+
+**3. \`sequence_enrollments\` deletion affects:**
+   - \`sequence_step_executions\` (enrollment_id) - Step execution records
+
+**4. \`customer_groups\` deletion affects:**
+   - \`customer_group_members\` (group_id) - Group members
+   - \`sequences\` (customer_group_id) - Connected sequences
+
+**CASCADE DELETE Example (complex case):**
+To fully delete a lead with all related data:
+\`\`\`json
+{
+  "queries": [
+    "DELETE FROM email_replies WHERE reply_email_id IN (SELECT id FROM emails WHERE lead_id = '{{LEAD_ID}}') RETURNING *;",
+    "DELETE FROM email_events WHERE email_id IN (SELECT id FROM emails WHERE lead_id = '{{LEAD_ID}}') RETURNING *;",
+    "DELETE FROM sequence_step_executions WHERE enrollment_id IN (SELECT id FROM sequence_enrollments WHERE lead_id = '{{LEAD_ID}}') RETURNING *;",
+    "DELETE FROM sequence_enrollments WHERE lead_id = '{{LEAD_ID}}' RETURNING *;",
+    "DELETE FROM emails WHERE lead_id = '{{LEAD_ID}}' RETURNING *;",
+    "DELETE FROM lead_contacts WHERE lead_id = '{{LEAD_ID}}' RETURNING *;",
+    "DELETE FROM lead_social_media WHERE lead_id = '{{LEAD_ID}}' RETURNING *;",
+    "DELETE FROM lead_products WHERE lead_id = '{{LEAD_ID}}' RETURNING *;",
+    "DELETE FROM lead_business_sectors WHERE lead_id = '{{LEAD_ID}}' RETURNING *;",
+    "DELETE FROM lead_product_categories WHERE lead_id = '{{LEAD_ID}}' RETURNING *;",
+    "DELETE FROM lead_industry_types WHERE lead_id = '{{LEAD_ID}}' RETURNING *;",
+    "DELETE FROM customer_group_members WHERE lead_id = '{{LEAD_ID}}' RETURNING *;",
+    "DELETE FROM leads WHERE id = '{{LEAD_ID}}' AND workspace_id = '${workspaceId}' RETURNING *;"
+  ],
+  "explanation": "Sequentially deletes lead and all related data. Deletes child tables first to prevent foreign key errors."
+}
+\`\`\`
+
+**Simple DELETE Example (no related data):**
+\`\`\`sql
+DELETE FROM lead_contacts
+WHERE id = '{{CONTACT_ID}}' AND lead_id IN (SELECT id FROM leads WHERE workspace_id = '${workspaceId}')
+RETURNING *;
+\`\`\`
+
+**Soft Delete Recommended (when possible):**
+Instead of actual DELETE, use status change:
+\`\`\`sql
+UPDATE leads
+SET lead_status = 'lost', updated_at = CURRENT_TIMESTAMP
+WHERE id = '{{LEAD_ID}}' AND workspace_id = '${workspaceId}'
+RETURNING *;
+\`\`\`
 `
           : `
-# READ 작업 요구사항
+# READ Operation Requirements
 
-1. **SELECT 쿼리 생성**
-2. **필수 필터:** \`WHERE workspace_id = '${workspaceId}'\` 반드시 포함
-3. **성능:** 필요한 컬럼만 SELECT, 적절한 인덱스 활용
-4. **제한:** LIMIT 절 사용 (기본 100, 최대 1000)
-5. **NULL 처리:** IS NULL, IS NOT NULL 명시적 사용
-6. **타임존:** TIMESTAMP WITH TIME ZONE 타입 고려
-7. **Division by Zero 방지:** 나누기 연산 시 NULLIF() 또는 CASE WHEN 사용 필수
-   - ❌ 잘못된 예: \`COUNT(*) / total\`
-   - ✅ 올바른 예: \`COUNT(*) / NULLIF(total, 0)\`
+1. **Generate SELECT queries**
+2. **Required filter:** \`WHERE workspace_id = '${workspaceId}'\` must be included
+3. **Performance:** Select only needed columns, use appropriate indexes
+4. **Limit:** Use LIMIT clause (default 100, max 1000)
+5. **NULL handling:** Use IS NULL, IS NOT NULL explicitly
+6. **Timezone:** Consider TIMESTAMP WITH TIME ZONE type
+7. **Division by Zero Prevention:** Use NULLIF() or CASE WHEN for division
+   - ❌ Wrong: \`COUNT(*) / total\`
+   - ✅ Correct: \`COUNT(*) / NULLIF(total, 0)\`
 `
 
   return `${SYSTEM_PROMPT}
 
-# 작업: SQL 쿼리 생성 (Operation: ${operationType.toUpperCase()})
+# Task: Generate SQL Query (Operation: ${operationType.toUpperCase()})
 
 ${schemaContext}
 
 ---
 
-**사용자 질문:** "${question}"
-**워크스페이스 ID:** ${workspaceId}
-**분석 결과:** ${JSON.stringify(metadata, null, 2)}${retryContext}
+**User Question:** "${question}"
+**Workspace ID:** ${workspaceId}
+**Analysis Result:** ${JSON.stringify(metadata, null, 2)}
 
 ${operationGuidelines}
 
-# 공통 요구사항
+# Common Requirements
 
-1. **PostgreSQL 문법** 사용
-2. **워크스페이스 격리:** 모든 쿼리에 \`workspace_id = '${workspaceId}'\` 필터 필수
+1. **PostgreSQL syntax** required
+2. **Workspace isolation:** All queries must include \`workspace_id = '${workspaceId}'\` filter
 
-# 자주 사용되는 패턴
+# Common Patterns
 
-**⚠️ 중요: 모든 나누기 연산에는 반드시 NULLIF()를 사용하세요!**
+**⚠️ Important: Always use NULLIF() for all division operations!**
 
-**오픈율 계산 (Division by Zero 방지):**
+**Open Rate (Division by Zero Prevention):**
 \`\`\`sql
 SELECT
   COUNT(*) as total,
@@ -266,10 +575,10 @@ SELECT
     NULLIF(COUNT(*), 0)::numeric * 100, 2
   ) as open_rate
 FROM emails
-WHERE workspace_id = '${workspaceId}' AND status IN ('sent', 'delivered', 'opened', 'clicked', 'replied')
+WHERE workspace_id = '${workspaceId}' AND status IN ('sent', 'delivered', 'opened', 'clicked', 'replied');
 \`\`\`
 
-**응답률 계산:**
+**Reply Rate:**
 \`\`\`sql
 SELECT
   COUNT(*) as total_sent,
@@ -281,59 +590,59 @@ SELECT
     ), 0
   ) as reply_rate
 FROM emails
-WHERE workspace_id = '${workspaceId}' AND status IN ('sent', 'delivered', 'opened', 'clicked', 'replied')
+WHERE workspace_id = '${workspaceId}' AND status IN ('sent', 'delivered', 'opened', 'clicked', 'replied');
 \`\`\`
 
-**기간 필터:**
-- 오늘: \`sent_at >= CURRENT_DATE\`
-- 이번 주: \`sent_at >= date_trunc('week', CURRENT_TIMESTAMP)\`
-- 이번 달: \`sent_at >= date_trunc('month', CURRENT_TIMESTAMP)\`
-- 지난 N일: \`sent_at >= CURRENT_DATE - INTERVAL 'N days'\`
+**Time Filters:**
+- Today: \`sent_at >= CURRENT_DATE\`
+- This week: \`sent_at >= date_trunc('week', CURRENT_TIMESTAMP)\`
+- This month: \`sent_at >= date_trunc('month', CURRENT_TIMESTAMP)\`
+- Last N days: \`sent_at >= CURRENT_DATE - INTERVAL 'N days'\`
 
-**조인 예시:**
+**JOIN Example:**
 \`\`\`sql
 SELECT e.*, l.company_name, l.lead_status
 FROM emails e
 LEFT JOIN leads l ON e.lead_id = l.id
-WHERE e.workspace_id = '${workspaceId}'
+WHERE e.workspace_id = '${workspaceId}';
 \`\`\`
 
-# 응답 형식
+# Response Format
 
-다음 JSON 형식으로 응답하세요:
+Respond in JSON format:
 \`\`\`json
 {
-  "sql": "실행할 SQL 쿼리 (세미콜론 제외)",
-  "explanation": "이 쿼리가 무엇을 조회하는지 1-2문장 설명",
-  "estimatedRows": 예상 결과 행 수 (숫자)
+  "sql": "SQL query to execute (without semicolon)",
+  "explanation": "1-2 sentence explanation of what this query does",
+  "estimatedRows": Expected result row count (number)
 }
 \`\`\`
 
-SQL 쿼리를 생성하세요:`
+Generate the SQL query:`
 }
 
 export function getValidationPrompt(sql: string) {
-  return `다음 SQL 쿼리를 보안 관점에서 검증하세요:
+  return `Validate the following SQL query from a security perspective:
 
 \`\`\`sql
 ${sql}
 \`\`\`
 
-# 검증 체크리스트
+# Validation Checklist
 
-1. ✅ SELECT 쿼리인가? (INSERT, UPDATE, DELETE, DROP 등 금지)
-2. ✅ workspace_id 필터가 있는가?
-3. ✅ 위험한 함수 사용이 없는가? (pg_sleep, pg_terminate_backend 등)
-4. ✅ 무한 루프나 과도한 리소스 사용 가능성은 없는가?
-5. ✅ 조인이 적절하게 사용되었는가?
+1. ✅ Is it a SELECT query? (INSERT, UPDATE, DELETE, DROP prohibited)
+2. ✅ Does it include workspace_id filter?
+3. ✅ No dangerous functions? (pg_sleep, pg_terminate_backend, etc.)
+4. ✅ No infinite loops or excessive resource usage?
+5. ✅ Are JOINs used appropriately?
 
-# 응답 형식
+# Response Format
 
-JSON으로 응답하세요:
+Respond in JSON:
 {
   "isSafe": true/false,
-  "issues": ["발견된 문제점 목록"],
-  "suggestions": ["개선 제안 목록"]
+  "issues": ["List of found issues"],
+  "suggestions": ["List of improvement suggestions"]
 }`
 }
 
@@ -348,95 +657,95 @@ export function getAnalysisResultPrompt(
 
   return `${SYSTEM_PROMPT}
 
-# 작업: 결과 분석
+# Task: Analyze Results
 
-**사용자 질문:** "${question}"
+**User Question:** "${question}"
 
-**실행한 SQL:**
+**Executed SQL:**
 \`\`\`sql
 ${sql}
 \`\`\`
 
-**쿼리 결과:**
-- 총 행 수: ${result.length}
-- 실행 시간: ${executionTime}ms
+**Query Results:**
+- Total rows: ${result.length}
+- Execution time: ${executionTime}ms
 
-**데이터 샘플 (최대 5개):**
+**Data Sample (max 5):**
 \`\`\`json
 ${JSON.stringify(sample, null, 2)}
 \`\`\`
 
-# 작업 요구사항
+# Task Requirements
 
-당신은 **경험 많은 영업 전문가이자 데이터 분석가**입니다.
-사용자의 질문에 대해 데이터를 기반으로 명확하고 실용적인 답변을 제공하세요.
+You are an **experienced sales professional and data analyst**.
+Provide clear, practical answers to user questions based on data.
 
-**포함할 내용:**
-1. 핵심 답변 (1-2문장으로 요약)
-2. 주요 수치 및 통계 (구체적인 숫자 강조)
-3. 발견된 패턴이나 트렌드
-4. **영업 관점의 구체적 조언**: 데이터에서 발견한 인사이트를 바탕으로 즉시 실행 가능한 영업 전략 제시
-5. 필요시 테이블이나 목록 형식으로 데이터 정리
+**Include:**
+1. Core answer (1-2 sentence summary)
+2. Key numbers and statistics (emphasize concrete figures)
+3. Found patterns or trends
+4. **Actionable sales advice**: Specific, executable sales strategies based on insights
+5. Organize data in tables or lists when needed
 
-**답변 톤:**
-- 영업팀을 격려하고 동기부여하는 긍정적이고 힘찬 톤
-- "잘하고 계십니다", "이 데이터가 보여주는 기회", "다음 단계로 나아갈 준비" 등의 표현 사용
-- 단, 과도하지 않고 진정성 있게 데이터 기반으로 응원
+**Answer Tone:**
+- Positive and motivating tone that encourages sales teams
+- Use expressions like "You're doing great", "This data shows opportunities", "Ready for the next step"
+- Be genuine and data-driven, not excessive
 
-**답변 형식:**
-- 불릿 포인트로 구조화
-- 명확하고 이해하기 쉬운 언어 사용
-- 마지막에 간단한 동기부여 문구나 격려 메시지 추가
+**Answer Format:**
+- Structure with bullet points
+- Use clear, easy-to-understand language
+- Add brief motivation or encouragement at the end
 
-답변을 작성하세요:`
+Write your answer:`
 }
 
 export function getInsightGenerationPrompt(question: string, analysis: string, result: unknown[]) {
   return `${SYSTEM_PROMPT}
 
-# 작업: 비즈니스 인사이트 생성
+# Task: Generate Business Insights
 
-**질문:** "${question}"
-**분석 결과:** ${analysis}
-**데이터 샘플:** ${JSON.stringify(result.slice(0, 3), null, 2)}
+**Question:** "${question}"
+**Analysis Result:** ${analysis}
+**Data Sample:** ${JSON.stringify(result.slice(0, 3), null, 2)}
 
-# 요구사항
+# Requirements
 
-당신은 **영업 성공을 이끄는 전략 컨설턴트**입니다.
-데이터에서 발견한 패턴과 이상 징후를 바탕으로 **즉시 실행 가능한 영업 인사이트**를 3-5개 제공하세요.
+You are a **strategy consultant driving sales success**.
+Provide 3-5 **immediately actionable sales insights** based on patterns and anomalies found in data.
 
-각 인사이트는 다음을 포함해야 합니다:
-- **발견 사항**: 데이터에서 발견한 구체적인 패턴과 그것이 영업 성과에 미치는 영향
-- **추천 액션**: 구체적이고 실행 가능한 영업 전략 및 행동 지침
-- **영향도**: high, medium, low
-- **카테고리**: performance (성과), optimization (최적화), warning (주의), opportunity (기회)
+Each insight should include:
+- **Finding**: Specific pattern found in data and its impact on sales performance
+- **Recommended Action**: Specific, actionable sales strategy and behavior guidelines
+- **Impact**: high, medium, low
+- **Category**: performance (performance), optimization (optimization), warning (caution), opportunity (opportunity)
 
-**인사이트 작성 원칙:**
-1. 데이터 기반의 구체적인 수치와 사실 제시
-2. 즉시 실천 가능한 액션 아이템 제공
-3. 긍정적이고 동기부여가 되는 톤 사용
-4. "이 데이터는 ~한 기회를 보여줍니다", "~하면 더 나은 결과를 만들 수 있습니다" 등의 표현
-5. 영업팀이 힘을 얻고 행동하고 싶어지는 메시지
+**Insight Writing Principles:**
+1. Present specific numbers and facts based on data
+2. Provide immediately actionable action items
+3. Use positive, motivating tone
+4. Use expressions like "This data shows an opportunity", "Better results possible by doing"
+5. Messages that energize sales team and inspire action
 
-# 응답 형식
+# Response Format
 
-JSON 배열로 응답하세요:
+Respond in JSON array:
 [
   {
-    "insight": "발견한 패턴 (예: 월요일 오픈율이 42%로 가장 높습니다. 이는 업계 평균 28%를 크게 상회하는 훌륭한 성과입니다!)",
-    "recommendation": "구체적인 액션과 격려 (예: 중요한 캠페인은 월요일에 발송하여 이 강점을 최대한 활용하세요. 여러분의 타이밍 전략이 효과를 내고 있습니다!)",
+    "insight": "Found pattern (e.g., Monday open rate is 42%, significantly exceeding industry average 28%. Excellent performance!)",
+    "recommendation": "Specific action and encouragement (e.g., Send important campaigns on Mondays to maximize this strength. Your timing strategy is working!)",
     "impact": "high",
     "category": "opportunity"
   }
 ]
 
-**좋은 인사이트 예시:**
-- opportunity: "답장률 15%는 업계 평균 5%의 3배입니다! 고객과의 관계 구축이 매우 잘 되고 있습니다. 이 강점을 살려 후속 미팅 제안을 적극적으로 진행하세요."
-- performance: "지난 주 대비 발송량이 40% 증가했고, 오픈율도 5%p 상승했습니다. 여러분의 노력이 확실한 성과로 나타나고 있습니다!"
-- optimization: "오후 2-4시 사이 발송한 이메일의 응답률이 20%로 가장 높습니다. 이 골든타임을 활용하면 더 많은 기회를 만들 수 있습니다."
-- warning: "최근 7일간 답장이 없는 고객이 증가 추세입니다. 지금이 재접근 전략을 다시 점검할 좋은 시점입니다. 새로운 접근법으로 돌파구를 찾아보세요!"
+**Good Insight Examples:**
+- opportunity: "15% reply rate is 3x industry average 5%! Customer relationship building is excellent. Leverage this strength for aggressive follow-up meeting proposals."
+- performance: "Sending volume increased 40% vs last week, open rate also rose 5%p. Your efforts are showing clear results!"
+- optimization: "Emails sent between 2-4 PM have highest 20% response rate. Use this golden hour to create more opportunities."
+- warning: "Customers with no replies increasing in last 7 days. Good time to review re-engagement strategy. Find breakthroughs with new approaches!"
 
-인사이트를 생성하세요:`
+Generate insights:`
 }
 
 export function getVisualizationSuggestionPrompt(result: unknown[]) {
@@ -450,71 +759,71 @@ export function getVisualizationSuggestionPrompt(result: unknown[]) {
 
   return `${SYSTEM_PROMPT}
 
-# 작업: 데이터 시각화 추천
+# Task: Recommend Data Visualization
 
-**데이터 샘플:**
+**Data Sample:**
 \`\`\`json
 ${JSON.stringify(sampleData, null, 2)}
 \`\`\`
 
-**컬럼 목록:** ${columns.join(", ")}
-**총 행 수:** ${result.length}
+**Column List:** ${columns.join(", ")}
+**Total Rows:** ${result.length}
 
-# 요구사항
+# Requirements
 
-이 데이터를 가장 효과적으로 시각화할 방법을 1-3개 추천하세요.
+Recommend 1-3 most effective ways to visualize this data.
 
-**시각화 타입:**
-- **metric**: 단일 숫자 지표 (예: 오픈율 36.5%)
-- **bar**: 카테고리별 비교 (예: 요일별 발송 수)
-- **line**: 시계열 트렌드 (예: 일별 오픈율 추이)
-- **pie**: 비율 분포 (예: 리드 상태별 분포)
-- **table**: 상세 데이터 테이블
+**Visualization Types:**
+- **metric**: Single number metric (e.g., Open rate 36.5%)
+- **bar**: Category comparison (e.g., Sends by day of week)
+- **line**: Time series trend (e.g., Daily open rate trend)
+- **pie**: Ratio distribution (e.g., Lead status distribution)
+- **table**: Detailed data table
 
-# 응답 형식
+# Response Format
 
-JSON 배열로 응답하세요:
+Respond in JSON array:
 [
   {
     "type": "bar",
-    "title": "차트 제목",
-    "xAxis": "x축에 사용할 컬럼명",
-    "yAxis": "y축에 사용할 컬럼명",
-    "description": "왜 이 시각화가 적합한지 설명"
+    "title": "Chart title",
+    "xAxis": "Column name for x-axis",
+    "yAxis": "Column name for y-axis",
+    "description": "Why this visualization is appropriate"
   }
 ]
 
-시각화를 추천하세요:`
+Recommend visualizations:`
 }
 
 export function getFollowUpQuestionsPrompt(question: string, analysis: string) {
   return `${SYSTEM_PROMPT}
 
-# 작업: 후속 질문 생성
+# Task: Generate Follow-up Questions
 
-**현재 질문:** "${question}"
-**분석 결과:** ${analysis}
+**Current Question:** "${question}"
+**Analysis Result:** ${analysis}
 
-# 요구사항
+# Requirements
 
-현재 분석 결과를 바탕으로 사용자가 궁금해할 만한 **유용한 후속 질문**을 3개 생성하세요.
+Generate 3 **useful follow-up questions** users might be curious about based on current analysis.
 
-**좋은 후속 질문의 특징:**
-- 현재 분석과 관련이 있음
-- 더 깊이 있는 인사이트를 제공
-- 구체적이고 실행 가능
-- 다양한 관점 제공 (시간, 세그먼트, 비교 등)
+**Good follow-up question characteristics:**
+- Related to current analysis
+- Provides deeper insights
+- Specific and actionable
+- Offers various perspectives (time, segments, comparisons, etc.)
 
-**예시:**
-- "지난 주와 비교하면 어떤가요?"
-- "시퀀스별로 분석해주세요"
-- "가장 성과가 좋은 요일은?"
-- "업종별로 나눠서 보여주세요"
+**Examples:**
+- "How does it compare to last week?"
+- "Can you analyze by sequence?"
+- "What day has best performance?"
+- "Can you break it down by industry?"
 
-# 응답 형식
+# Response Format
 
-JSON 배열로 응답하세요:
-["후속 질문 1", "후속 질문 2", "후속 질문 3"]
+Respond in JSON array:
+["Follow-up question 1", "Follow-up question 2", "Follow-up question 3"]
 
-후속 질문을 생성하세요:`
+Generate follow-up questions:`
 }

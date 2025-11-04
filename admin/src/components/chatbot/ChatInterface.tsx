@@ -1,10 +1,13 @@
-import { ArrowUp, BarChart3, GitBranch, Users } from "lucide-react"
+import { ArrowUp, BarChart3, GitBranch, Paperclip, Users } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { type ChatMessage, useChatbotHistory, useChatbotMutation } from "@/lib/api/hooks/chatbot"
 import { chatbotApi } from "@/lib/api/services/chatbot"
+import type { FileAttachment as FileAttachmentType } from "@/lib/api/types/chatbot"
+import { parseCsvToText, readFileAsText } from "@/lib/utils/csv"
+import { FileAttachment } from "./FileAttachment"
 import { MessageBubble } from "./MessageBubble"
 import { ThinkingIndicator } from "./ThinkingIndicator"
 
@@ -24,7 +27,9 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   const [isProcessing, setIsProcessing] = useState(false)
   const [needsConfirmation, setNeedsConfirmation] = useState(false)
   const [currentConversationId, setCurrentConversationId] = useState(conversationId || "")
+  const [attachedFile, setAttachedFile] = useState<FileAttachmentType | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Load conversation history if conversationId is provided
   const { data: historyData, isLoading: isLoadingHistory } = useChatbotHistory(
@@ -82,21 +87,112 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     scrollRef.current?.scrollIntoView({ behavior: "smooth" })
   })
 
+  const handleFileChange = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      if (!file) return
+
+      // Only accept CSV files
+      if (!file.name.endsWith(".csv")) {
+        alert("Only CSV files are allowed.")
+        return
+      }
+
+      try {
+        // Read file content
+        const fileContent = await readFileAsText(file)
+        const parsedContent = parseCsvToText(fileContent)
+
+        const fileAttachment: FileAttachmentType = {
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          content: parsedContent,
+        }
+
+        setAttachedFile(fileAttachment)
+
+        // Auto-submit with custom prompt when CSV is uploaded
+        const autoPrompt =
+          "Create customer groups and leads, then design optimal sequences from attached CSV data"
+
+        // Submit immediately with the auto prompt
+        setIsProcessing(true)
+
+        // Combine prompt with CSV content
+        const finalContent = `${autoPrompt}\n\n${parsedContent}`
+
+        const userMessage: ChatMessage = {
+          role: "user",
+          content: finalContent,
+          timestamp: new Date(),
+          attachment: fileAttachment,
+        }
+
+        setMessages((prev) => [...prev, userMessage])
+        setAttachedFile(null)
+
+        // Initialize streaming message
+        setStreamingMessage({
+          role: "assistant",
+          content: "",
+          timestamp: new Date(),
+        })
+
+        try {
+          // Use TanStack Query mutation
+          const convId = conversationId || `conv_${Date.now()}`
+          setCurrentConversationId(convId)
+          await chatbotMutation.mutateAsync({
+            question: finalContent, // Send the complete content with CSV data
+            workspaceId,
+            conversationId: convId,
+            messages,
+          })
+        } catch (error) {
+          // Error is already handled in onError callback
+          console.error("Submit error:", error)
+        }
+      } catch (error) {
+        console.error("Failed to read file:", error)
+        alert("Failed to read file.")
+      }
+
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+    },
+    [conversationId, workspaceId, messages, chatbotMutation],
+  )
+
+  const handleRemoveFile = useCallback(() => {
+    setAttachedFile(null)
+  }, [])
+
   const handleSubmit = useCallback(
     async (customInput?: string) => {
       const questionText = customInput || input
-      if (!questionText.trim() || isProcessing) return
+      if ((!questionText.trim() && !attachedFile) || isProcessing) return
 
       setIsProcessing(true)
 
+      // Combine text input with CSV content if file is attached
+      let finalContent = questionText
+      if (attachedFile?.content) {
+        finalContent = `${questionText}\n\n${attachedFile.content}`
+      }
+
       const userMessage: ChatMessage = {
         role: "user",
-        content: questionText,
+        content: finalContent,
         timestamp: new Date(),
+        attachment: attachedFile || undefined,
       }
 
       setMessages((prev) => [...prev, userMessage])
       setInput("")
+      setAttachedFile(null)
 
       // Initialize streaming message
       setStreamingMessage({
@@ -120,7 +216,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         console.error("Submit error:", error)
       }
     },
-    [input, isProcessing, chatbotMutation, workspaceId, conversationId, messages],
+    [input, isProcessing, chatbotMutation, workspaceId, conversationId, messages, attachedFile],
   )
 
   const handleConfirmation = useCallback(
@@ -133,7 +229,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
             streamingMessage,
             {
               role: "assistant",
-              content: "작업이 취소되었습니다.",
+              content: "Operation canceled.",
               timestamp: new Date(),
             },
           ])
@@ -235,7 +331,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
           {messages.length === 0 && (
             <div className="flex min-h-[60vh] flex-col items-center justify-center">
               <h2 className="mb-8 text-2xl font-semibold tracking-tight text-center">
-                RINDA에게 무엇이든 물어보세요
+                Ask RINDA anything
               </h2>
 
               {/* Quick question cards */}
@@ -247,7 +343,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                     onClick={() => setSelectedCategory("performance")}
                   >
                     <BarChart3 className="h-4 w-4" />
-                    성과
+                    Performance
                   </Button>
                   <Button
                     variant={selectedCategory === "leads" ? "default" : "outline"}
@@ -255,7 +351,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                     onClick={() => setSelectedCategory("leads")}
                   >
                     <Users className="h-4 w-4" />
-                    리드
+                    Leads
                   </Button>
                   <Button
                     variant={selectedCategory === "sequences" ? "default" : "outline"}
@@ -263,7 +359,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                     onClick={() => setSelectedCategory("sequences")}
                   >
                     <GitBranch className="h-4 w-4" />
-                    시퀀스
+                    Sequences
                   </Button>
                 </div>
 
@@ -271,20 +367,20 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                   {selectedCategory === "performance" && (
                     <>
                       <QuestionCard
-                        question="오늘 발송한 이메일 수는?"
-                        onClick={() => handleSubmit("오늘 발송한 이메일 수는?")}
+                        question="How many emails sent today?"
+                        onClick={() => handleSubmit("How many emails sent today?")}
                       />
                       <QuestionCard
-                        question="이번 주 오픈율은?"
-                        onClick={() => handleSubmit("이번 주 오픈율은?")}
+                        question="What's this week's open rate?"
+                        onClick={() => handleSubmit("What's this week's open rate?")}
                       />
                       <QuestionCard
-                        question="가장 높은 응답률을 보인 시퀀스는?"
-                        onClick={() => handleSubmit("가장 높은 응답률을 보인 시퀀스는?")}
+                        question="Which sequence has the highest reply rate?"
+                        onClick={() => handleSubmit("Which sequence has the highest reply rate?")}
                       />
                       <QuestionCard
-                        question="최근 7일 트렌드를 보여줘"
-                        onClick={() => handleSubmit("최근 7일 트렌드를 보여줘")}
+                        question="Show me the last 7 days trend"
+                        onClick={() => handleSubmit("Show me the last 7 days trend")}
                       />
                     </>
                   )}
@@ -292,20 +388,20 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                   {selectedCategory === "leads" && (
                     <>
                       <QuestionCard
-                        question="신규 리드 현황은?"
-                        onClick={() => handleSubmit("신규 리드 현황은?")}
+                        question="What's the status of new leads?"
+                        onClick={() => handleSubmit("What's the status of new leads?")}
                       />
                       <QuestionCard
-                        question="전환된 리드 수는?"
-                        onClick={() => handleSubmit("전환된 리드 수는?")}
+                        question="How many leads converted?"
+                        onClick={() => handleSubmit("How many leads converted?")}
                       />
                       <QuestionCard
-                        question="업종별 리드 분포는?"
-                        onClick={() => handleSubmit("업종별 리드 분포는?")}
+                        question="What's the lead distribution by industry?"
+                        onClick={() => handleSubmit("What's the lead distribution by industry?")}
                       />
                       <QuestionCard
-                        question="리드 점수가 높은 순으로 보여줘"
-                        onClick={() => handleSubmit("리드 점수가 높은 순으로 보여줘")}
+                        question="Show me leads by highest score"
+                        onClick={() => handleSubmit("Show me leads by highest score")}
                       />
                     </>
                   )}
@@ -313,20 +409,20 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                   {selectedCategory === "sequences" && (
                     <>
                       <QuestionCard
-                        question="활성 시퀀스 목록"
-                        onClick={() => handleSubmit("활성 시퀀스 목록")}
+                        question="List active sequences"
+                        onClick={() => handleSubmit("List active sequences")}
                       />
                       <QuestionCard
-                        question="시퀀스별 완료율"
-                        onClick={() => handleSubmit("시퀀스별 완료율")}
+                        question="Completion rate by sequence"
+                        onClick={() => handleSubmit("Completion rate by sequence")}
                       />
                       <QuestionCard
-                        question="가장 많이 등록된 시퀀스는?"
-                        onClick={() => handleSubmit("가장 많이 등록된 시퀀스는?")}
+                        question="Which sequence has most enrollments?"
+                        onClick={() => handleSubmit("Which sequence has most enrollments?")}
                       />
                       <QuestionCard
-                        question="시퀀스별 성과 비교"
-                        onClick={() => handleSubmit("시퀀스별 성과 비교")}
+                        question="Compare performance by sequence"
+                        onClick={() => handleSubmit("Compare performance by sequence")}
                       />
                     </>
                   )}
@@ -367,28 +463,62 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       {/* Input area - Fixed at bottom with max-width */}
       <div className="border-t bg-background">
         <div className="mx-auto max-w-3xl px-4 py-4">
-          <div className="relative">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSubmit()
-                }
-              }}
-              placeholder="Ask a question about your data..."
-              className="min-h-[56px] max-h-[200px] resize-none pr-12 text-base"
-              disabled={isProcessing}
-            />
-            <Button
-              onClick={() => handleSubmit()}
-              disabled={!input.trim() || isProcessing}
-              size="icon"
-              className="absolute bottom-2 right-2 h-8 w-8 rounded-full"
-            >
-              <ArrowUp className="h-4 w-4" />
-            </Button>
+          <div className="space-y-2">
+            {/* File attachment preview */}
+            {attachedFile && (
+              <div className="flex items-center gap-2">
+                <FileAttachment
+                  fileName={attachedFile.fileName}
+                  fileSize={attachedFile.fileSize}
+                  onRemove={handleRemoveFile}
+                  variant="removable"
+                />
+              </div>
+            )}
+
+            {/* Input area */}
+            <div className="relative">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSubmit()
+                  }
+                }}
+                placeholder="Ask a question about your data..."
+                className="min-h-[56px] max-h-[200px] resize-none pl-12 pr-12 text-base"
+                disabled={isProcessing}
+              />
+              {/* File upload button */}
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isProcessing || !!attachedFile}
+                size="icon"
+                variant="ghost"
+                className="absolute bottom-2 left-2 h-8 w-8 rounded-full"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              {/* Submit button */}
+              <Button
+                onClick={() => handleSubmit()}
+                disabled={(!input.trim() && !attachedFile) || isProcessing}
+                size="icon"
+                className="absolute bottom-2 right-2 h-8 w-8 rounded-full"
+              >
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>

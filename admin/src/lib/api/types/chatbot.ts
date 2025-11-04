@@ -1,7 +1,15 @@
+export interface FileAttachment {
+  fileName: string
+  fileSize: number
+  fileType: string
+  content?: string // Parsed content for CSV files
+}
+
 export interface ChatMessage {
   role: "user" | "assistant"
   content: string
   timestamp: Date
+  attachment?: FileAttachment
   metadata?: {
     sql?: string
     result?: unknown[]
@@ -20,7 +28,7 @@ export interface ChatbotAskRequest {
 }
 
 export interface StreamEvent {
-  type: "node" | "done" | "error" | "text_chunk" | "waiting_confirmation" | "interrupt"
+  type: "node" | "done" | "error" | "text_chunk" | "waiting_confirmation" | "interrupt" | "ping"
   node?: string
   state?: {
     generatedSQL?: string

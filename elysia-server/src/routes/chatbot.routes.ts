@@ -63,6 +63,19 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
           async start(controller) {
             const encoder = new TextEncoder()
 
+            // SSE Heartbeat: Keep connection alive during long processing
+            // Send ping every 30 seconds to prevent proxy/nginx timeout
+            const heartbeatInterval = setInterval(() => {
+              try {
+                const pingEvent = `data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}\n\n`
+                controller.enqueue(encoder.encode(pingEvent))
+                chatbotLogger.debug("[SSE] Heartbeat ping sent")
+              } catch (_error) {
+                // If enqueue fails, connection is already closed
+                clearInterval(heartbeatInterval)
+              }
+            }, 30000) // 30 seconds
+
             try {
               const config = {
                 configurable: {
@@ -144,8 +157,13 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
                       timestamp: Date.now(),
                     }
 
-                    const eventData = `data: ${JSON.stringify(interruptEvent)}\n\n`
-                    controller.enqueue(encoder.encode(eventData))
+                    try {
+                      const eventData = `data: ${JSON.stringify(interruptEvent)}\n\n`
+                      controller.enqueue(encoder.encode(eventData))
+                    } catch (_enqueueError) {
+                      chatbotLogger.warn("[SSE] Client disconnected, cannot send interrupt event")
+                      break
+                    }
 
                     continue // Skip further processing for interrupt node
                   }
@@ -165,49 +183,82 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
                       let accumulatedText = ""
                       let lastSendTime = Date.now()
                       const THROTTLE_MS = 50 // Send updates every 50ms maximum
+                      let streamSuccess = true
 
-                      for await (const chunk of streamAnalysisResults(currentState)) {
-                        accumulatedText += chunk
+                      try {
+                        for await (const chunk of streamAnalysisResults(currentState)) {
+                          accumulatedText += chunk
 
-                        const now = Date.now()
-                        const timeSinceLastSend = now - lastSendTime
+                          const now = Date.now()
+                          const timeSinceLastSend = now - lastSendTime
 
-                        // Throttle: only send if enough time has passed
-                        if (timeSinceLastSend >= THROTTLE_MS) {
-                          // Send text chunk event
-                          const chunkEvent = {
+                          // Throttle: only send if enough time has passed
+                          if (timeSinceLastSend >= THROTTLE_MS) {
+                            // Send text chunk event
+                            const chunkEvent = {
+                              type: "text_chunk",
+                              node: nodeName,
+                              chunk: chunk,
+                              accumulatedText: accumulatedText,
+                              timestamp: now,
+                            }
+
+                            try {
+                              const chunkData = `data: ${JSON.stringify(chunkEvent)}\n\n`
+                              controller.enqueue(encoder.encode(chunkData))
+                              lastSendTime = now
+                            } catch (_enqueueError) {
+                              // Client disconnected - stop streaming
+                              chatbotLogger.warn("[SSE] Client disconnected during LLM streaming")
+                              streamSuccess = false
+                              break
+                            }
+                          }
+                        }
+                      } catch (streamGeneratorError) {
+                        // Error in the async generator itself
+                        chatbotLogger.error(
+                          `[SSE] Error in streamAnalysisResults generator: ${streamGeneratorError instanceof Error ? streamGeneratorError.message : String(streamGeneratorError)}`,
+                        )
+                        streamSuccess = false
+                        accumulatedText += "\n\n[Error: Failed to complete analysis streaming]"
+                      }
+
+                      // Only send final event if stream was successful
+                      if (streamSuccess) {
+                        // Send final accumulated text
+                        try {
+                          const finalEvent = {
                             type: "text_chunk",
                             node: nodeName,
-                            chunk: chunk,
+                            chunk: "",
                             accumulatedText: accumulatedText,
-                            timestamp: now,
+                            timestamp: Date.now(),
                           }
-
-                          const chunkData = `data: ${JSON.stringify(chunkEvent)}\n\n`
-                          controller.enqueue(encoder.encode(chunkData))
-                          lastSendTime = now
+                          const finalData = `data: ${JSON.stringify(finalEvent)}\n\n`
+                          controller.enqueue(encoder.encode(finalData))
+                        } catch (_enqueueError) {
+                          chatbotLogger.warn(
+                            "[SSE] Client disconnected, cannot send final LLM chunk",
+                          )
                         }
-                      }
 
-                      // Send final accumulated text
-                      const finalEvent = {
-                        type: "text_chunk",
-                        node: nodeName,
-                        chunk: "",
-                        accumulatedText: accumulatedText,
-                        timestamp: Date.now(),
+                        console.log(
+                          `[SSE] LLM streaming completed. Total length: ${accumulatedText.length}`,
+                        )
+                      } else {
+                        console.log(
+                          `[SSE] LLM streaming terminated early. Partial length: ${accumulatedText.length}`,
+                        )
                       }
-                      const finalData = `data: ${JSON.stringify(finalEvent)}\n\n`
-                      controller.enqueue(encoder.encode(finalData))
-
-                      console.log(
-                        `[SSE] LLM streaming completed. Total length: ${accumulatedText.length}`,
-                      )
 
                       // Update nodeState with final accumulated text
                       nodeState.analysis = accumulatedText
                     } catch (streamError) {
                       console.error("[SSE] Error during LLM streaming:", streamError)
+                      // Ensure we have some analysis text even if streaming failed
+                      nodeState.analysis =
+                        nodeState.analysis || "An error occurred during analysis."
                     }
                   }
 
@@ -248,7 +299,16 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
                   // Encode as Uint8Array for proper streaming
                   const eventData = `data: ${JSON.stringify(streamEvent)}\n\n`
                   console.log(`[SSE] Sending event to client:`, streamEvent.type, streamEvent.node)
-                  controller.enqueue(encoder.encode(eventData))
+
+                  try {
+                    controller.enqueue(encoder.encode(eventData))
+                  } catch (_enqueueError) {
+                    // Client disconnected - break the loop
+                    chatbotLogger.warn(
+                      "[SSE] Client disconnected during streaming, stopping graph execution",
+                    )
+                    break
+                  }
                 }
 
                 // Mark graph execution as successful
@@ -276,18 +336,22 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
               chatbotLogger.routeSuccess("POST", "/api/chatbot/ask", 200, routeDuration)
 
               // Only send done event if we're not waiting for confirmation
-              if (!isWaitingForConfirmation) {
-                const doneEvent = `data: ${JSON.stringify({ type: "done" })}\n\n`
-                controller.enqueue(encoder.encode(doneEvent))
-              } else {
-                chatbotLogger.info(
-                  "[LangGraph] Stream ending with confirmation pending (no done event)",
-                )
-                // Send a special waiting event instead
-                const waitingEvent = `data: ${JSON.stringify({ type: "waiting_confirmation" })}\n\n`
-                controller.enqueue(encoder.encode(waitingEvent))
+              try {
+                if (!isWaitingForConfirmation) {
+                  const doneEvent = `data: ${JSON.stringify({ type: "done" })}\n\n`
+                  controller.enqueue(encoder.encode(doneEvent))
+                } else {
+                  chatbotLogger.info(
+                    "[LangGraph] Stream ending with confirmation pending (no done event)",
+                  )
+                  // Send a special waiting event instead
+                  const waitingEvent = `data: ${JSON.stringify({ type: "waiting_confirmation" })}\n\n`
+                  controller.enqueue(encoder.encode(waitingEvent))
+                }
+              } catch (_enqueueError) {
+                // Connection already closed by client - this is normal
+                chatbotLogger.debug("[SSE] Cannot enqueue final event - connection closed")
               }
-              controller.close()
             } catch (error) {
               const routeDuration = Date.now() - routeStartTime
               const errorMessage =
@@ -295,12 +359,29 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
 
               chatbotLogger.routeError("POST", "/api/chatbot/ask", 500, routeDuration, errorMessage)
 
-              const errorEvent = `data: ${JSON.stringify({
-                type: "error",
-                error: errorMessage,
-              })}\n\n`
-              controller.enqueue(encoder.encode(errorEvent))
-              controller.close()
+              try {
+                const errorEvent = `data: ${JSON.stringify({
+                  type: "error",
+                  error: errorMessage,
+                })}\n\n`
+                controller.enqueue(encoder.encode(errorEvent))
+              } catch (_enqueueError) {
+                // Connection already closed - this is fine
+                chatbotLogger.debug("[SSE] Cannot enqueue error event - connection closed")
+              }
+            } finally {
+              // CRITICAL: Always cleanup heartbeat interval to prevent memory leak
+              clearInterval(heartbeatInterval)
+              chatbotLogger.debug("[SSE] Heartbeat interval cleared")
+
+              // Safe close: check if controller is still open
+              try {
+                controller.close()
+                chatbotLogger.debug("[SSE] Stream closed successfully")
+              } catch (_closeError) {
+                // Already closed - this is fine
+                chatbotLogger.debug("[SSE] Stream already closed")
+              }
             }
           },
         })
@@ -471,6 +552,17 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
           async start(controller) {
             const encoder = new TextEncoder()
 
+            // SSE Heartbeat: Keep connection alive during long processing
+            const heartbeatInterval = setInterval(() => {
+              try {
+                const pingEvent = `data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}\n\n`
+                controller.enqueue(encoder.encode(pingEvent))
+                chatbotLogger.debug("[SSE] Heartbeat ping sent (confirm)")
+              } catch (_error) {
+                clearInterval(heartbeatInterval)
+              }
+            }, 30000) // 30 seconds
+
             try {
               const graphStartTime = Date.now()
               chatbotLogger.info(`[LangGraph] Resuming execution after user approval`)
@@ -517,8 +609,13 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
                     timestamp: Date.now(),
                   }
 
-                  const eventData = `data: ${JSON.stringify(streamEvent)}\n\n`
-                  controller.enqueue(encoder.encode(eventData))
+                  try {
+                    const eventData = `data: ${JSON.stringify(streamEvent)}\n\n`
+                    controller.enqueue(encoder.encode(eventData))
+                  } catch (_enqueueError) {
+                    chatbotLogger.warn("[SSE] Client disconnected during confirm streaming")
+                    break
+                  }
                 }
 
                 _graphSuccess = true
@@ -534,9 +631,12 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
               const routeDuration = Date.now() - routeStartTime
               chatbotLogger.routeSuccess("POST", "/api/chatbot/confirm", 200, routeDuration)
 
-              const doneEvent = `data: ${JSON.stringify({ type: "done" })}\n\n`
-              controller.enqueue(encoder.encode(doneEvent))
-              controller.close()
+              try {
+                const doneEvent = `data: ${JSON.stringify({ type: "done" })}\n\n`
+                controller.enqueue(encoder.encode(doneEvent))
+              } catch (_enqueueError) {
+                chatbotLogger.debug("[SSE] Cannot enqueue done event - connection closed (confirm)")
+              }
             } catch (error) {
               const routeDuration = Date.now() - routeStartTime
               const errorMessage =
@@ -550,12 +650,29 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
                 errorMessage,
               )
 
-              const errorEvent = `data: ${JSON.stringify({
-                type: "error",
-                error: errorMessage,
-              })}\n\n`
-              controller.enqueue(encoder.encode(errorEvent))
-              controller.close()
+              try {
+                const errorEvent = `data: ${JSON.stringify({
+                  type: "error",
+                  error: errorMessage,
+                })}\n\n`
+                controller.enqueue(encoder.encode(errorEvent))
+              } catch (_enqueueError) {
+                chatbotLogger.debug(
+                  "[SSE] Cannot enqueue error event - connection closed (confirm)",
+                )
+              }
+            } finally {
+              // CRITICAL: Always cleanup heartbeat interval to prevent memory leak
+              clearInterval(heartbeatInterval)
+              chatbotLogger.debug("[SSE] Heartbeat interval cleared (confirm)")
+
+              // Safe close: check if controller is still open
+              try {
+                controller.close()
+                chatbotLogger.debug("[SSE] Stream closed successfully (confirm)")
+              } catch (_closeError) {
+                chatbotLogger.debug("[SSE] Stream already closed (confirm)")
+              }
             }
           },
         })

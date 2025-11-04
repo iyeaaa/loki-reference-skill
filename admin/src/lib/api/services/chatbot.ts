@@ -13,6 +13,7 @@ export const chatbotApi = {
    */
   async streamAsk(request: ChatbotAskRequest, callbacks: StreamCallbacks): Promise<void> {
     const { onMessage, onMessageUpdate, onThinking, onError, onConfirmationRequired } = callbacks
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
 
     try {
       const token = getToken()
@@ -29,7 +30,7 @@ export const chatbotApi = {
         throw new Error(`Server error: ${response.status}`)
       }
 
-      const reader = response.body?.getReader()
+      reader = response.body?.getReader()
       if (!reader) {
         throw new Error("Failed to read response stream")
       }
@@ -53,54 +54,101 @@ export const chatbotApi = {
 
       // Read the stream
       console.log("[Chatbot] Starting to read SSE stream...")
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) {
-          console.log("[Chatbot] Stream reading completed")
-          break
-        }
+      let streamCompleted = false
+      let lastEventType = ""
 
-        const chunk = decoder.decode(value)
-        const lines = chunk.split("\n")
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) {
+            console.log("[Chatbot] Stream reading completed")
+            streamCompleted = true
+            break
+          }
 
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const data: StreamEvent = JSON.parse(line.slice(6))
-              console.log(`[Chatbot] Received event:`, data.type, data.node || "")
+          const chunk = decoder.decode(value, { stream: true })
+          const lines = chunk.split("\n")
 
-              // Handle different event types
-              if (data.type === "text_chunk") {
-                console.log(`[Chatbot] Received text chunk:`, data.chunk?.substring(0, 50))
-                chatbotApi.handleTextChunk(data, onMessageUpdate, accumulatedData)
-              } else if (data.type === "interrupt") {
-                // NEW: Handle interrupt() event from LangGraph
-                console.log("[Chatbot] Received interrupt event:", data.payload)
-                chatbotApi.handleInterruptEvent(data, onConfirmationRequired, onMessageUpdate)
-              } else if (data.type === "node") {
-                chatbotApi.handleNodeEvent(
-                  data,
-                  onThinking,
-                  onMessageUpdate,
-                  accumulatedData,
-                  onConfirmationRequired,
-                )
-              } else if (data.type === "waiting_confirmation") {
-                console.log("[Chatbot] Waiting for user confirmation - keeping UI active")
-                // Don't call onMessage - keep the confirmation UI visible
-                // The confirmation state is already set by onConfirmationRequired in handleNodeEvent
-              } else if (data.type === "done") {
-                console.log("[Chatbot] Processing done event")
-                chatbotApi.handleDoneEvent(accumulatedData, onMessage)
-              } else if (data.type === "error") {
-                console.error("[Chatbot] Received error event:", data.error)
-                chatbotApi.handleErrorEvent(data, onError, onMessage)
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const data: StreamEvent = JSON.parse(line.slice(6))
+                lastEventType = data.type
+                console.log(`[Chatbot] Received event:`, data.type, data.node || "")
+
+                // Ignore ping/heartbeat events - they're only for keeping connection alive
+                if (data.type === "ping") {
+                  console.log("[Chatbot] Heartbeat ping received, connection alive")
+                  continue
+                }
+
+                // Handle different event types
+                if (data.type === "text_chunk") {
+                  console.log(`[Chatbot] Received text chunk:`, data.chunk?.substring(0, 50))
+                  chatbotApi.handleTextChunk(data, onMessageUpdate, accumulatedData)
+                } else if (data.type === "interrupt") {
+                  // NEW: Handle interrupt() event from LangGraph
+                  console.log("[Chatbot] Received interrupt event:", data.payload)
+                  chatbotApi.handleInterruptEvent(data, onConfirmationRequired, onMessageUpdate)
+                } else if (data.type === "node") {
+                  chatbotApi.handleNodeEvent(
+                    data,
+                    onThinking,
+                    onMessageUpdate,
+                    accumulatedData,
+                    onConfirmationRequired,
+                  )
+                } else if (data.type === "waiting_confirmation") {
+                  console.log("[Chatbot] Waiting for user confirmation - keeping UI active")
+                  // Don't call onMessage - keep the confirmation UI visible
+                  // The confirmation state is already set by onConfirmationRequired in handleNodeEvent
+                } else if (data.type === "done") {
+                  console.log("[Chatbot] Processing done event")
+                  chatbotApi.handleDoneEvent(accumulatedData, onMessage)
+                  streamCompleted = true
+                } else if (data.type === "error") {
+                  console.error("[Chatbot] Received error event:", data.error)
+                  chatbotApi.handleErrorEvent(data, onError, onMessage)
+                  streamCompleted = true
+                }
+              } catch (parseError) {
+                console.error("[Chatbot] Failed to parse stream event:", parseError, line)
               }
-            } catch (parseError) {
-              console.error("[Chatbot] Failed to parse stream event:", parseError, line)
             }
           }
         }
+      } catch (streamReadError) {
+        console.error("[Chatbot] Stream read error:", streamReadError)
+
+        // Check if this is an incomplete chunked encoding error
+        if (
+          streamReadError instanceof Error &&
+          (streamReadError.message.includes("INCOMPLETE_CHUNKED_ENCODING") ||
+            streamReadError.message.includes("premature close"))
+        ) {
+          console.warn(
+            "[Chatbot] Stream closed prematurely. Last event:",
+            lastEventType,
+            "Completed:",
+            streamCompleted,
+          )
+
+          // If we have accumulated data and haven't sent a final message, send it now
+          if (!streamCompleted && accumulatedData.analysis) {
+            console.log("[Chatbot] Recovering from incomplete stream with accumulated data")
+            chatbotApi.handleDoneEvent(accumulatedData, onMessage)
+            return // Exit gracefully
+          }
+        }
+
+        // Re-throw other errors
+        throw streamReadError
+      }
+
+      // Final check: if stream ended without 'done' or 'error' event but we have data
+      if (!streamCompleted && accumulatedData.analysis) {
+        console.log("[Chatbot] Stream ended without completion event, sending accumulated data")
+        chatbotApi.handleDoneEvent(accumulatedData, onMessage)
       }
     } catch (error) {
       console.error("Chat stream error:", error)
@@ -112,6 +160,15 @@ export const chatbotApi = {
         timestamp: new Date(),
       })
       throw error // Re-throw for mutation error handling
+    } finally {
+      // Always release the reader lock
+      if (reader) {
+        try {
+          reader.releaseLock()
+        } catch (_releaseError) {
+          console.debug("[Chatbot] Reader already released")
+        }
+      }
     }
   },
 
@@ -415,6 +472,7 @@ export const chatbotApi = {
     }
 
     const { onMessage, onMessageUpdate, onThinking, onError } = callbacks
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
 
     try {
       const token = getToken()
@@ -431,7 +489,7 @@ export const chatbotApi = {
         throw new Error(`Server error: ${response.status}`)
       }
 
-      const reader = response.body?.getReader()
+      reader = response.body?.getReader()
       if (!reader) {
         throw new Error("Failed to read response stream")
       }
@@ -455,36 +513,89 @@ export const chatbotApi = {
 
       // Read the stream
       console.log("[Chatbot] Starting confirmation stream...")
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
+      let streamCompleted = false
+      let lastEventType = ""
 
-        const chunk = decoder.decode(value)
-        const lines = chunk.split("\n")
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) {
+            console.log("[Chatbot] Confirmation stream reading completed")
+            streamCompleted = true
+            break
+          }
 
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const data: StreamEvent = JSON.parse(line.slice(6))
+          const chunk = decoder.decode(value, { stream: true })
+          const lines = chunk.split("\n")
 
-              if (data.type === "node") {
-                chatbotApi.handleNodeEvent(
-                  data,
-                  onThinking,
-                  onMessageUpdate,
-                  accumulatedData,
-                  undefined,
-                )
-              } else if (data.type === "done") {
-                chatbotApi.handleDoneEvent(accumulatedData, onMessage)
-              } else if (data.type === "error") {
-                chatbotApi.handleErrorEvent(data, onError, onMessage)
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const data: StreamEvent = JSON.parse(line.slice(6))
+                lastEventType = data.type
+
+                // Ignore ping/heartbeat events
+                if (data.type === "ping") {
+                  continue
+                }
+
+                if (data.type === "node") {
+                  chatbotApi.handleNodeEvent(
+                    data,
+                    onThinking,
+                    onMessageUpdate,
+                    accumulatedData,
+                    undefined,
+                  )
+                } else if (data.type === "done") {
+                  chatbotApi.handleDoneEvent(accumulatedData, onMessage)
+                  streamCompleted = true
+                } else if (data.type === "error") {
+                  chatbotApi.handleErrorEvent(data, onError, onMessage)
+                  streamCompleted = true
+                }
+              } catch (parseError) {
+                console.error("[Chatbot] Failed to parse stream event:", parseError)
               }
-            } catch (parseError) {
-              console.error("[Chatbot] Failed to parse stream event:", parseError)
             }
           }
         }
+      } catch (streamReadError) {
+        console.error("[Chatbot] Confirmation stream read error:", streamReadError)
+
+        // Check if this is an incomplete chunked encoding error
+        if (
+          streamReadError instanceof Error &&
+          (streamReadError.message.includes("INCOMPLETE_CHUNKED_ENCODING") ||
+            streamReadError.message.includes("premature close"))
+        ) {
+          console.warn(
+            "[Chatbot] Confirmation stream closed prematurely. Last event:",
+            lastEventType,
+            "Completed:",
+            streamCompleted,
+          )
+
+          // If we have accumulated data and haven't sent a final message, send it now
+          if (!streamCompleted && accumulatedData.analysis) {
+            console.log(
+              "[Chatbot] Recovering from incomplete confirmation stream with accumulated data",
+            )
+            chatbotApi.handleDoneEvent(accumulatedData, onMessage)
+            return // Exit gracefully
+          }
+        }
+
+        // Re-throw other errors
+        throw streamReadError
+      }
+
+      // Final check: if stream ended without 'done' or 'error' event but we have data
+      if (!streamCompleted && accumulatedData.analysis) {
+        console.log(
+          "[Chatbot] Confirmation stream ended without completion event, sending accumulated data",
+        )
+        chatbotApi.handleDoneEvent(accumulatedData, onMessage)
       }
     } catch (error) {
       console.error("Confirmation stream error:", error)
@@ -496,6 +607,15 @@ export const chatbotApi = {
         timestamp: new Date(),
       })
       throw error
+    } finally {
+      // Always release the reader lock
+      if (reader) {
+        try {
+          reader.releaseLock()
+        } catch (_releaseError) {
+          console.debug("[Chatbot] Confirmation reader already released")
+        }
+      }
     }
   },
 }

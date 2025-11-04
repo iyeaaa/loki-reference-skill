@@ -13,9 +13,6 @@ import { suggestVisualizations } from "./nodes/visualization-suggester"
 import type { ChatbotState } from "./state"
 import { ChatbotStateAnnotation } from "./state"
 
-// 최대 재시도 횟수
-const MAX_RETRIES = 10
-
 // 노드 이름을 상수로 정의하여 타입 안전성 확보
 const NODE_NAMES = {
   ANALYZE: "analyze",
@@ -165,11 +162,18 @@ async function formatResponse(state: ChatbotState): Promise<Partial<ChatbotState
       insights: state.insights,
       visualization: state.visualizationSuggestions,
       followUpQuestions: state.followUpQuestions,
+      error: state.error, // Include error for frontend display
+      hasError: !!state.error, // Flag to indicate error state
     },
   }
 
   const duration = Date.now() - startTime
   chatbotLogger.nodeSuccess("formatResponse", duration)
+
+  // Log if this is an error response
+  if (state.error) {
+    chatbotLogger.info(`[LangGraph] Formatting error response: ${state.error}`)
+  }
 
   return {
     messages: [assistantMessage],
@@ -243,38 +247,17 @@ function routeAfterValidation(state: ChatbotState): NodeName {
 }
 
 function routeAfterExecution(state: ChatbotState): NodeName {
-  // 쿼리 실행에 실패하고 재시도 횟수가 최대치보다 작으면 재시도
+  // 쿼리 실행 실패 시 재시도 없이 바로 에러 처리
   if (state.error && state.queryResult.length === 0) {
-    // Safety check: Don't retry if we don't have a valid question to regenerate SQL
-    if (!state.currentQuestion || state.currentQuestion.trim() === "") {
-      chatbotLogger.routeDecision(
-        NODE_NAMES.EXECUTE_QUERY,
-        NODE_NAMES.HANDLE_ERROR,
-        "no question to retry with",
-      )
-      chatbotLogger.error("[LangGraph] Cannot retry: currentQuestion is empty")
-      return NODE_NAMES.HANDLE_ERROR
-    }
-
-    if (state.retryCount < MAX_RETRIES) {
-      chatbotLogger.routeDecision(
-        NODE_NAMES.EXECUTE_QUERY,
-        NODE_NAMES.GENERATE_SQL,
-        `retry ${state.retryCount + 1}/${MAX_RETRIES}`,
-      )
-      chatbotLogger.info(
-        `[LangGraph] Query execution failed, retrying (${state.retryCount + 1}/${MAX_RETRIES})`,
-      )
-      return NODE_NAMES.GENERATE_SQL
-    }
     chatbotLogger.routeDecision(
       NODE_NAMES.EXECUTE_QUERY,
       NODE_NAMES.HANDLE_ERROR,
-      `max retries (${MAX_RETRIES}) exceeded`,
+      "query execution failed",
     )
-    chatbotLogger.error(`[LangGraph] Max retries (${MAX_RETRIES}) exceeded`)
+    chatbotLogger.error("[LangGraph] Query execution failed, routing to error handler")
     return NODE_NAMES.HANDLE_ERROR
   }
+
   chatbotLogger.routeDecision(
     NODE_NAMES.EXECUTE_QUERY,
     NODE_NAMES.ANALYZE_RESULTS,
@@ -331,15 +314,13 @@ export function createChatbotGraph() {
   workflow.addConditionalEdges(NODE_NAMES.EXECUTE_QUERY, routeAfterExecution, {
     [NODE_NAMES.HANDLE_ERROR]: NODE_NAMES.HANDLE_ERROR,
     [NODE_NAMES.ANALYZE_RESULTS]: NODE_NAMES.ANALYZE_RESULTS,
-    [NODE_NAMES.GENERATE_SQL]: NODE_NAMES.GENERATE_SQL, // 재시도를 위한 경로
   })
 
-  // executeSequential도 동일한 라우팅 로직 사용
+  // executeSequential도 동일한 라우팅 로직 사용 (재시도 없음)
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
   workflow.addConditionalEdges(NODE_NAMES.EXECUTE_SEQUENTIAL, routeAfterExecution, {
     [NODE_NAMES.HANDLE_ERROR]: NODE_NAMES.HANDLE_ERROR,
     [NODE_NAMES.ANALYZE_RESULTS]: NODE_NAMES.ANALYZE_RESULTS,
-    [NODE_NAMES.GENERATE_SQL]: NODE_NAMES.GENERATE_SQL, // 재시도를 위한 경로
   })
 
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions

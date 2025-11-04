@@ -4,6 +4,7 @@ import { Streamdown } from "streamdown"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import type { ChatMessage } from "@/lib/api/hooks/chatbot"
+import { FileAttachment } from "./FileAttachment"
 
 interface MessageBubbleProps {
   message: ChatMessage
@@ -96,15 +97,41 @@ export const MessageBubble = React.memo(function MessageBubble({
     [],
   )
 
+  // Extract user text from content (remove CSV data if present)
+  const getUserDisplayText = (content: string): string => {
+    if (!content) return ""
+    // If content contains CSV data, extract only the text before it
+    const csvIndex = content.indexOf("\n\nCSV Data")
+    if (csvIndex > 0) {
+      return content.substring(0, csvIndex)
+    }
+    return content
+  }
+
   return (
     <div className="w-full">
       {/* User message - right aligned, compact */}
       {isUser ? (
         <div className="flex justify-end">
-          <div className="max-w-[80%] rounded-2xl bg-primary px-4 py-2.5 text-primary-foreground">
-            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
-              {message.content}
-            </p>
+          <div className="max-w-[80%] space-y-2">
+            {/* File attachment display */}
+            {message.attachment && (
+              <div className="flex justify-end">
+                <FileAttachment
+                  fileName={message.attachment.fileName}
+                  fileSize={message.attachment.fileSize}
+                  variant="display"
+                />
+              </div>
+            )}
+            {/* Message content - show user's text input */}
+            {getUserDisplayText(message.content) && (
+              <div className="rounded-2xl bg-primary px-4 py-2.5 text-primary-foreground">
+                <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                  {getUserDisplayText(message.content)}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       ) : (

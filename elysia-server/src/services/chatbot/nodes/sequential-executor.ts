@@ -3,7 +3,7 @@ import { db } from "../../../db/drizzle"
 import { chatbotLogger } from "../../../utils/logger"
 import type { ChatbotState } from "../state"
 
-const MAX_EXECUTION_TIME = 10000 // 10초
+const MAX_EXECUTION_TIME = 60000 // 60초 (increased for large CSV processing)
 const MAX_ROWS = 1000
 
 /**
@@ -66,7 +66,7 @@ export async function executeSequential(state: ChatbotState): Promise<Partial<Ch
       // Execute with timeout
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(
-          () => reject(new Error(`Query ${i + 1} execution timeout (10 seconds)`)),
+          () => reject(new Error(`Query ${i + 1} execution timeout (60 seconds)`)),
           MAX_EXECUTION_TIME,
         )
       })
@@ -121,10 +121,99 @@ export async function executeSequential(state: ChatbotState): Promise<Partial<Ch
     const executionTime = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : "Unknown error"
 
-    chatbotLogger.nodeError("executeSequential", errorMessage, executionTime)
+    // Extract database error details if available
+    const dbError = error as {
+      code?: string
+      detail?: string
+      hint?: string
+      constraint?: string
+      table?: string
+      column?: string
+      message?: string
+      severity?: string
+      position?: string
+    }
+    const dbErrorCode = dbError?.code
+    const dbErrorDetail = dbError?.detail
+    const dbErrorHint = dbError?.hint
+    const dbErrorConstraint = dbError?.constraint
+    const dbErrorTable = dbError?.table
+    const dbErrorColumn = dbError?.column
+    const _dbErrorMessage = dbError?.message
+    const dbErrorSeverity = dbError?.severity
+    const dbErrorPosition = dbError?.position
+
+    // Log the current query that failed
+    const currentQueryIndex = sequentialResults.length
+    const failedQuery = queries[currentQueryIndex]
+
+    // Generate user-friendly error message
+    let userFriendlyMessage = ""
+
+    if (errorMessage.includes("violates not-null constraint") || dbErrorCode === "23502") {
+      const columnName = dbErrorColumn || "unknown column"
+      const tableName = dbErrorTable || "unknown table"
+      userFriendlyMessage = `Required field '${columnName}' in table '${tableName}' cannot be empty. Query ${currentQueryIndex + 1}/${queries.length} failed.`
+    } else if (errorMessage.includes("violates unique constraint") || dbErrorCode === "23505") {
+      const constraintName = dbErrorConstraint || "unique constraint"
+      userFriendlyMessage = `Duplicate entry detected (${constraintName}). Query ${currentQueryIndex + 1}/${queries.length} failed.`
+    } else if (
+      errorMessage.includes("violates foreign key constraint") ||
+      dbErrorCode === "23503"
+    ) {
+      userFriendlyMessage = `Related record not found. Please ensure all referenced data exists. Query ${currentQueryIndex + 1}/${queries.length} failed.`
+    } else if (errorMessage.includes("violates check constraint") || dbErrorCode === "23514") {
+      const constraintName = dbErrorConstraint || "check constraint"
+      userFriendlyMessage = `Data validation failed (${constraintName}). Query ${currentQueryIndex + 1}/${queries.length} failed.`
+    } else if (errorMessage.includes("value too long") || dbErrorCode === "22001") {
+      const match = errorMessage.match(/column "(\w+)"/)
+      const columnName = match ? match[1] : "a column"
+      userFriendlyMessage = `Text is too long for ${columnName}. Query ${currentQueryIndex + 1}/${queries.length} failed.`
+    } else if (errorMessage.includes("syntax error") || dbErrorCode === "42601") {
+      userFriendlyMessage = `SQL syntax error in query ${currentQueryIndex + 1}/${queries.length}. The query will be regenerated.`
+    } else if (errorMessage.includes("does not exist")) {
+      userFriendlyMessage = `Database schema error: ${errorMessage}. Query ${currentQueryIndex + 1}/${queries.length} failed.`
+    } else {
+      userFriendlyMessage = `Query ${currentQueryIndex + 1}/${queries.length} failed: ${errorMessage}`
+    }
+
+    // Comprehensive error logging with box formatting
+    chatbotLogger.error(
+      `[LangGraph] Sequential Query Execution Failed:\n` +
+        `┌─────────────────────────────────────────────────────────────\n` +
+        `│ QUERY PROGRESS: ${currentQueryIndex}/${queries.length} completed\n` +
+        `├─────────────────────────────────────────────────────────────\n` +
+        `│ ERROR DETAILS:\n` +
+        `├─────────────────────────────────────────────────────────────\n` +
+        `│ Message: ${errorMessage}\n` +
+        `│ Code: ${dbErrorCode || "N/A"}\n` +
+        `│ Severity: ${dbErrorSeverity || "N/A"}\n` +
+        `│ Table: ${dbErrorTable || "N/A"}\n` +
+        `│ Column: ${dbErrorColumn || "N/A"}\n` +
+        `│ Constraint: ${dbErrorConstraint || "N/A"}\n` +
+        `│ Position: ${dbErrorPosition || "N/A"}\n` +
+        `├─────────────────────────────────────────────────────────────\n` +
+        `│ ADDITIONAL INFO:\n` +
+        `├─────────────────────────────────────────────────────────────\n` +
+        `│ Detail: ${dbErrorDetail || "N/A"}\n` +
+        `│ Hint: ${dbErrorHint || "N/A"}\n` +
+        `├─────────────────────────────────────────────────────────────\n` +
+        `│ FAILED QUERY #${currentQueryIndex + 1} (first 500 chars):\n` +
+        `├─────────────────────────────────────────────────────────────\n` +
+        `│ ${failedQuery?.substring(0, 500)}...\n` +
+        `├─────────────────────────────────────────────────────────────\n` +
+        `│ SUCCESSFULLY COMPLETED QUERIES: ${currentQueryIndex}/${queries.length}\n` +
+        `├─────────────────────────────────────────────────────────────\n` +
+        `│ USER MESSAGE:\n` +
+        `├─────────────────────────────────────────────────────────────\n` +
+        `│ ${userFriendlyMessage}\n` +
+        `└─────────────────────────────────────────────────────────────`,
+    )
+
+    chatbotLogger.nodeError("executeSequential", userFriendlyMessage, executionTime)
 
     return {
-      error: `Sequential query execution failed: ${errorMessage}`,
+      error: userFriendlyMessage,
       queryResult: [],
       sequentialResults,
       executionTime,

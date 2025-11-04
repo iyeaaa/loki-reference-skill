@@ -4,7 +4,7 @@ import { getSQLGenerationPrompt } from "../prompts"
 import type { ChatbotState } from "../state"
 
 const llm = new ChatOpenAI({
-  model: "gpt-4o",
+  model: "gpt-4.1-mini",
   temperature: 0,
 })
 
@@ -16,23 +16,16 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
   chatbotLogger.nodeDetail("generateSQL", {
     question: state.currentQuestion,
     workspaceId: state.workspaceId,
-    retryCount: state.retryCount,
     metadata: state.metadata,
     hasError: !!state.error,
   })
 
   try {
-    // 재시도 시 이전 오류 정보를 포함
-    const previousError = state.retryCount > 0 ? state.error || undefined : undefined
-    const previousSQL = state.retryCount > 0 ? state.generatedSQL || undefined : undefined
-
     const prompt = getSQLGenerationPrompt(
       state.currentQuestion,
       state.workspaceId,
       state.schemaContext,
       state.metadata || {},
-      previousError,
-      previousSQL,
     )
 
     const response = await llm.invoke(prompt)

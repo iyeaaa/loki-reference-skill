@@ -420,12 +420,13 @@ class WebhookService {
       return
     }
 
-    // 3. 답장인 경우: 원본 이메일에서 leadId, sequenceId, threadId를 가져옴
+    // 3. 답장인 경우: 원본 이메일에서 leadId, sequenceId, threadId, workspaceId를 가져옴
     let leadId: string | null = null
     let sequenceId: string | null = null
     let leadName: string | null = null
     let sequenceName: string | null = null
     let threadId = headers.messageId // First email: messageId becomes threadId
+    let workspaceId = account.workspaceId // Default to account workspace, will be overridden if reply
 
     if (headers.inReplyTo) {
       // 답장인 경우: 원본 이메일 찾기 (모든 필요한 정보 한번에 조회)
@@ -445,6 +446,13 @@ class WebhookService {
 
       if (originalEmailResults.length > 0 && originalEmailResults[0]) {
         const originalEmail = originalEmailResults[0]
+
+        // workspaceId 상속 (reply-to-reply를 위해 중요!)
+        workspaceId = originalEmail.workspaceId
+        logger.info(
+          { workspaceId, inReplyTo: headers.inReplyTo },
+          "Workspace ID inherited from original email",
+        )
 
         // threadId 상속
         if (originalEmail.threadId) {
@@ -546,7 +554,7 @@ class WebhookService {
     const inboundEmailResults = await db
       .insert(emailsTable)
       .values({
-        workspaceId: account.workspaceId,
+        workspaceId, // Use inherited workspace from original email for replies
         userEmailAccountId: account.id,
         leadId,
         sequenceId, // ← 원본 이메일에서 상속
@@ -668,7 +676,7 @@ class WebhookService {
                 and(
                   eq(emailsTable.threadId, repliedToEmail.threadId),
                   eq(emailsTable.direction, "outbound"),
-                  eq(emailsTable.workspaceId, account.workspaceId),
+                  eq(emailsTable.workspaceId, repliedToEmail.workspaceId),
                 ),
               )
               .orderBy(emailsTable.createdAt) // Get the FIRST outbound email

@@ -111,8 +111,8 @@ export function InlineComposeBox({
   return (
     <Card
       className={`
-        ${fullscreen ? "fixed inset-0 z-50 rounded-none" : "mt-6"}
-        ${expanded ? "min-h-[500px]" : "min-h-[300px]"}
+        ${fullscreen ? "fixed inset-0 z-50 rounded-none flex flex-col overflow-hidden bg-white dark:bg-gray-900" : "mt-6"}
+        ${expanded && !fullscreen ? "min-h-[500px]" : !fullscreen ? "min-h-[300px]" : ""}
         transition-all duration-200 border-2
       `}
     >
@@ -145,7 +145,7 @@ export function InlineComposeBox({
       </div>
 
       {/* Recipients */}
-      <div className="px-4 py-2 space-y-2 border-b">
+      <div className={`px-4 py-2 space-y-2 border-b ${fullscreen ? "flex-shrink-0" : ""}`}>
         <RecipientInput
           label="받는사람"
           value={to}
@@ -173,12 +173,12 @@ export function InlineComposeBox({
       </div>
 
       {/* Body Editor */}
-      <div className={`${expanded ? "min-h-[350px]" : "min-h-[200px]"}`}>
+      <div className={`${fullscreen ? "flex-1 overflow-auto" : expanded ? "min-h-[350px]" : "min-h-[200px]"}`}>
         <SimpleTextEditor value={body} onChange={setBody} placeholder="메시지를 입력하세요..." />
       </div>
 
       {/* Footer Actions */}
-      <div className="px-4 py-3 border-t flex items-center justify-between bg-gray-50 dark:bg-gray-800">
+      <div className={`px-4 py-3 border-t flex items-center justify-between bg-gray-50 dark:bg-gray-800 ${fullscreen ? "flex-shrink-0" : ""}`}>
         <div className="flex items-center gap-2">
           <Button onClick={handleSend} disabled={!to || !subject || sendEmail.isPending} size="sm">
             {sendEmail.isPending ? (

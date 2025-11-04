@@ -1,4 +1,5 @@
 import { Globe } from "lucide-react"
+import { useContext } from "react"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import {
@@ -7,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useSidebar } from "@/components/ui/sidebar"
+import { SidebarContext } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 const languages = [
@@ -17,7 +18,9 @@ const languages = [
 
 export function LanguageSwitcher() {
   const { i18n } = useTranslation()
-  const { state, isMobile } = useSidebar()
+  const sidebarContext = useContext(SidebarContext)
+  const state = sidebarContext?.state
+  const isMobile = sidebarContext?.isMobile
 
   const currentLanguage = languages.find((lang) => lang.code === i18n.language) || languages[0]
 

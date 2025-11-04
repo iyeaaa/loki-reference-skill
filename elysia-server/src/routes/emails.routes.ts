@@ -1128,7 +1128,8 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         .offset(offset)
         .as("threads")
 
-      // Get full email details for first email in each thread + latest reply intent/sentiment
+      // Get full email details for first email in each thread + reply intent/sentiment
+      // Note: There's only ONE email_replies record per thread (gets updated with latest reply)
       const threadEmails = await db
         .select({
           id: emails.id,
@@ -1176,7 +1177,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           enrollmentCompletedAt: sequenceEnrollments.completedAt,
           enrollmentStoppedAt: sequenceEnrollments.stoppedAt,
           enrollmentNextStepScheduledAt: sequenceEnrollments.nextStepScheduledAt,
-          // Latest reply classification (from email_replies)
+          // Reply classification (from email_replies) - always shows latest reply's classification
           replyIntent: emailReplies.intent,
           replySentiment: emailReplies.sentiment,
           // Latest activity timestamp from thread
@@ -1193,6 +1194,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             eq(sequenceEnrollments.leadId, emails.leadId),
           ),
         )
+        // Join email_replies - there's only ONE record per thread
         .leftJoin(emailReplies, eq(emailReplies.originalEmailId, emails.id))
         .where(eq(emails.createdAt, threadsQuery.firstCreatedAt))
 

@@ -603,35 +603,94 @@ class WebhookService {
         "✅ Reply detected (In-Reply-To header present)",
       )
 
-      // 원본 이메일 ID 찾기 (이미 위에서 정보를 가져왔지만, ID가 필요함)
+      // 원본 이메일 ID 찾기 - 2-step process to support reply-to-reply
+      // Step 1: Try to find the email being replied to (could be outbound or inbound)
       logger.info({
-        msg: "🔍 [WEBHOOK] Searching for original email",
+        msg: "🔍 [WEBHOOK] Searching for email being replied to",
         searchCriteria: {
           messageId: headers.inReplyTo,
-          direction: "outbound",
           workspaceId: account.workspaceId,
         },
       })
 
-      const originalEmailResults = await db
+      const repliedToEmailResults = await db
         .select({
           id: emailsTable.id,
           workspaceId: emailsTable.workspaceId,
           messageId: emailsTable.messageId,
           threadId: emailsTable.threadId,
           subject: emailsTable.subject,
+          direction: emailsTable.direction,
         })
         .from(emailsTable)
         .where(
           and(
             eq(emailsTable.messageId, headers.inReplyTo),
-            eq(emailsTable.direction, "outbound"),
             eq(emailsTable.workspaceId, account.workspaceId),
           ),
         )
         .limit(1)
 
-      const originalEmail = originalEmailResults[0]
+      const repliedToEmail = repliedToEmailResults[0]
+      let originalEmail: typeof repliedToEmail | undefined
+
+      if (repliedToEmail) {
+        if (repliedToEmail.direction === "outbound") {
+          // Case 1: Direct reply to an outbound email (most common)
+          originalEmail = repliedToEmail
+          logger.info({
+            msg: "✅ [WEBHOOK] Direct reply to outbound email",
+            originalEmailId: originalEmail.id,
+            threadId: originalEmail.threadId,
+          })
+        } else {
+          // Case 2: Reply to an inbound email (reply-to-reply)
+          // Find the FIRST outbound email in this thread
+          logger.info({
+            msg: "🔄 [WEBHOOK] Reply-to-reply detected, finding first outbound email in thread",
+            repliedToEmailId: repliedToEmail.id,
+            threadId: repliedToEmail.threadId,
+          })
+
+          // Only search if threadId exists
+          if (repliedToEmail.threadId) {
+            const firstOutboundResults = await db
+              .select({
+                id: emailsTable.id,
+                workspaceId: emailsTable.workspaceId,
+                messageId: emailsTable.messageId,
+                threadId: emailsTable.threadId,
+                subject: emailsTable.subject,
+                direction: emailsTable.direction,
+              })
+              .from(emailsTable)
+              .where(
+                and(
+                  eq(emailsTable.threadId, repliedToEmail.threadId),
+                  eq(emailsTable.direction, "outbound"),
+                  eq(emailsTable.workspaceId, account.workspaceId),
+                ),
+              )
+              .orderBy(emailsTable.createdAt) // Get the FIRST outbound email
+              .limit(1)
+
+            originalEmail = firstOutboundResults[0]
+
+            if (originalEmail) {
+              logger.info({
+                msg: "✅ [WEBHOOK] Found original outbound email in thread",
+                originalEmailId: originalEmail.id,
+                threadId: originalEmail.threadId,
+              })
+            }
+          } else {
+            logger.warn({
+              msg: "⚠️  [WEBHOOK] Reply-to-reply email has no threadId",
+              repliedToEmailId: repliedToEmail.id,
+            })
+          }
+        }
+      }
       if (originalEmail) {
         logger.info({
           msg: "✅ [WEBHOOK] Original email found",
@@ -643,25 +702,60 @@ class WebhookService {
           headersMatch: originalEmail.messageId === headers.inReplyTo,
         })
 
-        // email_replies 테이블에 저장
-        const [emailReply] = await db
-          .insert(emailReplies)
-          .values({
-            workspaceId: originalEmail.workspaceId,
+        // Check if email_replies record already exists for this thread
+        // One email_replies record per thread - update if exists, insert if new
+        const existingReplyResults = await db
+          .select({ id: emailReplies.id })
+          .from(emailReplies)
+          .where(eq(emailReplies.originalEmailId, originalEmail.id))
+          .limit(1)
+
+        const existingReply = existingReplyResults[0]
+        let emailReply: { id: string } | undefined
+
+        if (existingReply) {
+          // Update existing reply with the LATEST reply email
+          const [updated] = await db
+            .update(emailReplies)
+            .set({
+              replyEmailId: inboundEmail.id, // Update to latest reply
+              // Reset classification - will be reclassified below
+              intent: null,
+              sentiment: null,
+            })
+            .where(eq(emailReplies.id, existingReply.id))
+            .returning({ id: emailReplies.id })
+
+          emailReply = updated
+          logger.info({
+            msg: "✅ [WEBHOOK] email_replies record UPDATED with latest reply",
+            emailReplyId: emailReply?.id,
+            originalEmailId: originalEmail.id,
+            newReplyEmailId: inboundEmail.id,
+            threadId: inboundEmail.threadId,
+          })
+        } else {
+          // Create new email_replies record for this thread
+          const [inserted] = await db
+            .insert(emailReplies)
+            .values({
+              workspaceId: originalEmail.workspaceId,
+              originalEmailId: originalEmail.id,
+              replyEmailId: inboundEmail.id,
+              isRead: false,
+            })
+            .returning({ id: emailReplies.id })
+
+          emailReply = inserted
+          logger.info({
+            msg: "✅ [WEBHOOK] email_replies record CREATED for new thread",
+            emailReplyId: emailReply?.id,
             originalEmailId: originalEmail.id,
             replyEmailId: inboundEmail.id,
-            isRead: false,
+            workspaceId: originalEmail.workspaceId,
+            threadId: inboundEmail.threadId,
           })
-          .returning({ id: emailReplies.id })
-
-        logger.info({
-          msg: "✅ [WEBHOOK] email_replies record created successfully",
-          emailReplyId: emailReply?.id,
-          originalEmailId: originalEmail.id,
-          replyEmailId: inboundEmail.id,
-          workspaceId: originalEmail.workspaceId,
-          threadId: inboundEmail.threadId,
-        })
+        }
 
         // AI classification (enabled by default, non-blocking - errors won't fail email ingestion)
         const classificationEnabled = process.env.AI_CLASSIFICATION_ENABLED !== "false"

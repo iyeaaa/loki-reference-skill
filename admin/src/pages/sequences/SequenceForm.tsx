@@ -209,14 +209,16 @@ export function SequenceForm({
           <SelectTrigger>
             <SelectValue
               placeholder={
-                formData.workspaceId ? "고객그룹 선택 (필수)" : "먼저 워크스페이스를 선택하세요"
+                formData.workspaceId
+                  ? t("sequences.form.customerGroupSelect")
+                  : t("sequences.form.selectWorkspaceFirst")
               }
             />
           </SelectTrigger>
           {customerGroups && customerGroups.length === 0 && (
             <SelectContent>
               <SelectItem disabled value="none">
-                고객그룹이 없습니다.
+                {t("sequences.form.noCustomerGroups")}
               </SelectItem>
             </SelectContent>
           )}
@@ -224,7 +226,7 @@ export function SequenceForm({
             <SelectContent>
               {customerGroups.map((group) => (
                 <SelectItem key={group.id} value={group.id}>
-                  {group.name} ({group.leadCount || 0}개 리드)
+                  {t("sequences.form.leadCount", { name: group.name, count: group.leadCount || 0 })}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -233,10 +235,10 @@ export function SequenceForm({
         {customerGroups && customerGroups.length === 0 && formData.workspaceId && (
           <div className="rounded-lg border-2 border-amber-500 bg-amber-50 dark:bg-amber-950/20 p-3 mt-2">
             <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 mb-2">
-              ⚠️ 선택한 워크스페이스에 고객 그룹이 없습니다
+              {t("sequences.form.warning.noCustomerGroupsInWorkspace")}
             </p>
             <p className="text-xs text-amber-800 dark:text-amber-300 mb-2">
-              시퀀스를 생성하려면 먼저 고객 그룹을 만들어야 합니다.
+              {t("sequences.form.warning.createCustomerGroupFirst")}
             </p>
             <Button
               type="button"
@@ -246,18 +248,16 @@ export function SequenceForm({
               onClick={() => window.open("/customer-groups", "_blank")}
             >
               <ExternalLink className="h-3 w-3 mr-1" />
-              고객 그룹 생성하러 가기
+              {t("sequences.form.button.goToCreateCustomerGroup")}
             </Button>
           </div>
         )}
         {hasEnrollments ? (
           <p className="text-xs text-amber-600">
-            ⚠️ 이미 실행 이력이 있는 시퀀스는 고객그룹을 변경할 수 없습니다
+            {t("sequences.form.warning.cannotChangeCustomerGroup")}
           </p>
         ) : customerGroups && customerGroups.length > 0 ? (
-          <p className="text-xs text-gray-500">
-            💡 워크플로우 실행을 위해 고객그룹을 반드시 선택해야 합니다
-          </p>
+          <p className="text-xs text-gray-500">{t("sequences.form.info.customerGroupRequired")}</p>
         ) : null}
       </div>
 
@@ -265,21 +265,24 @@ export function SequenceForm({
       {formData.customerGroupId && (
         <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
           <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">이메일 대상 선택 (선택사항)</Label>
+            <Label className="text-sm font-medium">{t("sequences.form.leadSelection.title")}</Label>
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => setShowLeadSelection(!showLeadSelection)}
             >
-              {showLeadSelection ? "접기" : "특정 고객 선택"}
+              {showLeadSelection
+                ? t("sequences.form.leadSelection.collapse")
+                : t("sequences.form.leadSelection.selectSpecific")}
             </Button>
           </div>
 
           {!showLeadSelection && (
             <p className="text-xs text-muted-foreground">
-              기본값: 고객 그룹의 모든 리드에게 이메일 발송
-              {selectedLeadIds.length > 0 && ` (현재 ${selectedLeadIds.length}명 선택됨)`}
+              {t("sequences.form.leadSelection.defaultNote")}
+              {selectedLeadIds.length > 0 &&
+                ` ${t("sequences.form.leadSelection.currentlySelected", { count: selectedLeadIds.length })}`}
             </p>
           )}
 
@@ -293,7 +296,10 @@ export function SequenceForm({
                     onCheckedChange={handleToggleAllLeads}
                   />
                   <Label htmlFor={selectAllId} className="text-sm font-medium cursor-pointer">
-                    전체 선택 ({selectedLeadIds.length}/{members.length})
+                    {t("sequences.form.leadSelection.selectAll", {
+                      selected: selectedLeadIds.length,
+                      total: members.length,
+                    })}
                   </Label>
                 </div>
                 {selectedLeadIds.length > 0 && (
@@ -303,7 +309,7 @@ export function SequenceForm({
                     size="sm"
                     onClick={() => setSelectedLeadIds([])}
                   >
-                    선택 해제
+                    {t("sequences.form.leadSelection.deselectAll")}
                   </Button>
                 )}
               </div>
@@ -311,7 +317,7 @@ export function SequenceForm({
               <div className="max-h-60 space-y-2 overflow-y-auto rounded-md border bg-background p-3">
                 {members.length === 0 ? (
                   <p className="text-center text-sm text-muted-foreground">
-                    고객 그룹에 리드가 없습니다.
+                    {t("sequences.form.leadSelection.noLeads")}
                   </p>
                 ) : (
                   members.map((member) => (
@@ -339,8 +345,10 @@ export function SequenceForm({
 
               <p className="text-xs text-muted-foreground">
                 {selectedLeadIds.length > 0
-                  ? `선택된 ${selectedLeadIds.length}명의 고객에게만 이메일이 발송됩니다.`
-                  : "고객을 선택하지 않으면 고객 그룹의 모든 리드에게 발송됩니다."}
+                  ? t("sequences.form.leadSelection.selectedNote", {
+                      count: selectedLeadIds.length,
+                    })
+                  : t("sequences.form.leadSelection.defaultNote2")}
               </p>
             </div>
           )}
@@ -349,7 +357,7 @@ export function SequenceForm({
 
       {isEdit && (
         <div className="space-y-2">
-          <Label htmlFor="status">상태</Label>
+          <Label htmlFor="status">{t("sequences.form.status.label")}</Label>
           <Select
             value={formData.status}
             onValueChange={(value) =>
@@ -363,29 +371,28 @@ export function SequenceForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="draft">초안</SelectItem>
+              <SelectItem value="draft">{t("sequences.form.status.draft")}</SelectItem>
               <SelectItem value="active" disabled={stepsCount > 0}>
-                활성 {stepsCount > 0 && "(스텝 기반은 토글 버튼 사용)"}
+                {t("sequences.form.status.active")}{" "}
+                {stepsCount > 0 && t("sequences.form.status.stepBasedNote")}
               </SelectItem>
-              <SelectItem value="paused">일시정지</SelectItem>
-              <SelectItem value="archived">보관됨</SelectItem>
-              <SelectItem value="completed">발송완료</SelectItem>
+              <SelectItem value="paused">{t("sequences.form.status.paused")}</SelectItem>
+              <SelectItem value="archived">{t("sequences.form.status.archived")}</SelectItem>
+              <SelectItem value="completed">{t("sequences.form.status.completed")}</SelectItem>
             </SelectContent>
           </Select>
           {stepsCount > 0 && formData.status !== "active" && (
-            <p className="text-xs text-amber-600">
-              💡 스텝 기반 시퀀스는 목록의 활성화 토글 버튼을 사용하세요
-            </p>
+            <p className="text-xs text-amber-600">{t("sequences.form.info.useToggleButton")}</p>
           )}
         </div>
       )}
 
       <div className="flex justify-end gap-3 pt-4 border-t">
         <Button type="button" variant="outline" onClick={onCancel}>
-          취소
+          {t("sequences.form.button.cancel")}
         </Button>
         <Button type="submit" className="min-w-[100px]">
-          {isEdit ? "수정 완료" : "생성"}
+          {isEdit ? t("sequences.form.button.editComplete") : t("sequences.form.button.create")}
         </Button>
       </div>
     </form>

@@ -1,5 +1,6 @@
 import { ChevronDown, Mail, Sparkles } from "lucide-react"
 import { useEffect, useId, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { SignatureEditorModal } from "@/components/SignatureEditorModal"
 import { Button } from "@/components/ui/button"
@@ -126,6 +127,7 @@ export function SequenceStepForm({
   onSave,
   onCancel,
 }: SequenceStepFormProps) {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const subjectId = useId()
   const delayDaysId = useId()
@@ -208,18 +210,18 @@ export function SequenceStepForm({
             setTargetCountry(Array.from(countries).join(","))
           } else {
             setTargetCountry("")
-            toast.warning("고객 그룹에 국가 정보가 없습니다. 직접 입력해주세요.")
+            toast.warning(t("sequences.stepForm.toast.noCountryInfo"))
           }
         })
         .catch((error) => {
           console.error("리드 조회 실패:", error)
-          toast.error("리드 정보를 가져오는데 실패했습니다.")
+          toast.error(t("sequences.stepForm.error.customerGroupRequired"))
         })
         .finally(() => {
           setIsLoadingCountry(false)
         })
     }
-  }, [customerGroupId, showAIGenerator])
+  }, [customerGroupId, showAIGenerator, t])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -248,27 +250,27 @@ export function SequenceStepForm({
 
   const handleGenerateWithAI = async () => {
     if (!workspaceId) {
-      toast.error("워크스페이스 정보가 없습니다.")
+      toast.error(t("sequences.stepForm.error.workspaceRequired"))
       return
     }
 
     if (!customerGroupId) {
-      toast.error("시퀀스에 고객 그룹이 설정되어 있지 않습니다.")
+      toast.error(t("sequences.stepForm.error.customerGroupRequired"))
       return
     }
 
     if (!targetCountry?.trim()) {
-      toast.error("타겟 국가를 입력해주세요.")
+      toast.error(t("sequences.stepForm.error.targetCountryRequired"))
       return
     }
 
     if (!aiPrompt.trim()) {
-      toast.error("이메일 내용 요청사항을 입력해주세요.")
+      toast.error(t("sequences.stepForm.error.promptRequired"))
       return
     }
 
     if (aiPrompt.trim().length < 10) {
-      toast.error("이메일 내용 요청사항을 10자 이상 입력해주세요.")
+      toast.error(t("sequences.stepForm.error.promptTooShort"))
       return
     }
 
@@ -286,7 +288,11 @@ export function SequenceStepForm({
         emailBodyText: `${htmlToMarkdown(result.emailBodyText)}\n\n${getUserSignature()}`,
       })
 
-      toast.success(`이메일 템플릿이 생성되었습니다! (언어: ${result.detectedLanguage || "auto"})`)
+      toast.success(
+        t("sequences.stepForm.success.templateGenerated", {
+          language: result.detectedLanguage || "auto",
+        }),
+      )
       setShowAIGenerator(false)
     } catch (error) {
       console.error("AI 템플릿 생성 실패:", error)
@@ -322,7 +328,9 @@ export function SequenceStepForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* 스텝 순서 표시 */}
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-muted-foreground">스텝 순서:</span>
+        <span className="text-sm font-medium text-muted-foreground">
+          {t("sequences.stepForm.stepOrder")}
+        </span>
         <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
           {formData.stepOrder}
         </span>
@@ -330,12 +338,12 @@ export function SequenceStepForm({
 
       {/* 발송 스케줄 섹션 */}
       <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
-        <h3 className="text-sm font-semibold">발송 스케줄</h3>
+        <h3 className="text-sm font-semibold">{t("sequences.stepForm.scheduleTitle")}</h3>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor={delayDaysId}>
-              대기 일수 <span className="text-red-500">*</span>
+              {t("sequences.stepForm.delayDaysLabel")} <span className="text-red-500">*</span>
             </Label>
             <Input
               id={delayDaysId}
@@ -352,12 +360,14 @@ export function SequenceStepForm({
               placeholder="0"
               className="bg-background"
             />
-            <p className="text-xs text-muted-foreground">이전 이메일 발송 후 며칠 뒤</p>
+            <p className="text-xs text-muted-foreground">
+              {t("sequences.stepForm.delayDaysHelper")}
+            </p>
           </div>
 
           <div className="space-y-2">
             <Label className="mb-3 inline-block">
-              발송 시각 (KST) <span className="text-red-500">*</span>
+              {t("sequences.stepForm.sendTimeLabel")} <span className="text-red-500">*</span>
             </Label>
             <TimePicker
               value={{
@@ -379,9 +389,10 @@ export function SequenceStepForm({
         {/* 발송 예정 미리보기 */}
         <div className="rounded-md bg-primary/5 border border-primary/20 p-3">
           <p className="text-sm font-medium text-primary">
-            📅 발송 예정: 이전 이메일 + {formData.delayDays}일 후{" "}
-            {formData.scheduledHour.toString().padStart(2, "0")}:
-            {formData.scheduledMinute.toString().padStart(2, "0")}
+            {t("sequences.stepForm.schedulePreview", {
+              days: formData.delayDays,
+              time: `${formData.scheduledHour.toString().padStart(2, "0")}:${formData.scheduledMinute.toString().padStart(2, "0")}`,
+            })}
           </p>
         </div>
       </div>
@@ -392,7 +403,7 @@ export function SequenceStepForm({
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
-              AI 이메일 템플릿 생성
+              {t("sequences.stepForm.aiGeneratorTitle")}
             </h3>
             <Button
               type="button"
@@ -400,7 +411,9 @@ export function SequenceStepForm({
               size="sm"
               onClick={() => setShowAIGenerator(!showAIGenerator)}
             >
-              {showAIGenerator ? "닫기" : "열기"}
+              {showAIGenerator
+                ? t("sequences.stepForm.aiGeneratorClose")
+                : t("sequences.stepForm.aiGeneratorOpen")}
             </Button>
           </div>
 
@@ -409,32 +422,34 @@ export function SequenceStepForm({
               {/* 타겟 국가 입력 */}
               <div className="space-y-2">
                 <Label htmlFor={targetCountryId}>
-                  타겟 국가 <span className="text-red-500">*</span>
+                  {t("sequences.stepForm.targetCountryLabel")}{" "}
+                  <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id={targetCountryId}
                   value={targetCountry}
                   onChange={(e) => setTargetCountry(e.target.value)}
-                  placeholder="예: 한국, 미국, 일본 (여러 국가는 쉼표로 구분)"
+                  placeholder={t("sequences.stepForm.targetCountryPlaceholder")}
                   className="bg-background"
                   disabled={isLoadingCountry}
                 />
                 <p className="text-xs text-muted-foreground">
                   {isLoadingCountry
-                    ? "🔄 고객 그룹의 리드에서 국가 정보를 조회 중입니다..."
-                    : "고객 그룹의 리드에서 자동으로 감지되며, 직접 수정할 수 있습니다."}
+                    ? t("sequences.stepForm.countryAutoDetecting")
+                    : t("sequences.stepForm.countryAutoDetected")}
                 </p>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor={promptId}>
-                  이메일 내용 요청사항 <span className="text-red-500">*</span>
+                  {t("sequences.stepForm.emailContentRequestLabel")}{" "}
+                  <span className="text-red-500">*</span>
                 </Label>
                 <Textarea
                   id={promptId}
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
-                  placeholder="예: K-뷰티 제품의 글로벌 유통 파트너십을 제안하는 이메일을 작성해주세요. 우리 제품의 강점과 파트너십 혜택을 강조해주세요."
+                  placeholder={t("sequences.stepForm.emailContentRequestPlaceholder")}
                   className="bg-background min-h-[100px]"
                 />
               </div>
@@ -451,7 +466,9 @@ export function SequenceStepForm({
                 className="w-full"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
-                {isGenerating ? "생성 중..." : "AI로 템플릿 생성"}
+                {isGenerating
+                  ? t("sequences.stepForm.generating")
+                  : t("sequences.stepForm.generateButton")}
               </Button>
             </div>
           )}
@@ -461,14 +478,14 @@ export function SequenceStepForm({
       {workspaceId && !customerGroupId && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-4">
           <p className="text-sm text-amber-800 dark:text-amber-200">
-            💡 AI 이메일 생성을 사용하려면 시퀀스에 고객 그룹을 먼저 설정해주세요.
+            {t("sequences.stepForm.aiRequiresCustomerGroup")}
           </p>
         </div>
       )}
 
       <div className="space-y-2">
         <Label htmlFor={subjectId}>
-          이메일 제목 <span className="text-red-500">*</span>
+          {t("sequences.stepForm.emailSubjectLabel")} <span className="text-red-500">*</span>
         </Label>
         <Input
           id={subjectId}
@@ -476,13 +493,13 @@ export function SequenceStepForm({
           onChange={(e) => setFormData({ ...formData, emailSubject: e.target.value })}
           required
           maxLength={500}
-          placeholder="예: K-Beauty Partnership Opportunity with {{company_name}}"
+          placeholder={t("sequences.stepForm.emailSubjectPlaceholder")}
         />
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor={bodyTextId}>이메일 본문</Label>
+          <Label htmlFor={bodyTextId}>{t("sequences.stepForm.emailBodyLabel")}</Label>
           <Button
             type="button"
             variant="outline"
@@ -491,7 +508,7 @@ export function SequenceStepForm({
             className="h-7"
           >
             <Mail className="h-3 w-3 mr-1" />
-            서명 편집
+            {t("sequences.stepForm.editSignatureButton")}
           </Button>
         </div>
         <RichTextEditor
@@ -503,13 +520,15 @@ export function SequenceStepForm({
         <Collapsible className="mt-2">
           <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
             <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
-            사용 가능한 변수 보기
+            {t("sequences.stepForm.viewVariablesButton")}
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-2">
             <div className="text-xs text-muted-foreground rounded-md border bg-muted/30 p-3">
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <div className="space-y-1">
-                  <p className="font-medium text-foreground">회사 정보:</p>
+                  <p className="font-medium text-foreground">
+                    {t("sequences.stepForm.variablesCompanyInfo")}
+                  </p>
                   <ul className="space-y-0.5 ml-2 text-[11px]">
                     <li>{"{{회사명}}"}</li>
                     <li>{"{{웹사이트}}"}</li>
@@ -520,7 +539,9 @@ export function SequenceStepForm({
                   </ul>
                 </div>
                 <div className="space-y-1">
-                  <p className="font-medium text-foreground">위치 정보:</p>
+                  <p className="font-medium text-foreground">
+                    {t("sequences.stepForm.variablesLocationInfo")}
+                  </p>
                   <ul className="space-y-0.5 ml-2 text-[11px]">
                     <li>{"{{국가}}"}</li>
                     <li>{"{{도시}}"}</li>
@@ -529,14 +550,18 @@ export function SequenceStepForm({
                   </ul>
                 </div>
                 <div className="space-y-1">
-                  <p className="font-medium text-foreground">연락처:</p>
+                  <p className="font-medium text-foreground">
+                    {t("sequences.stepForm.variablesContactInfo")}
+                  </p>
                   <ul className="space-y-0.5 ml-2 text-[11px]">
                     <li>{"{{담당자명}}"}</li>
                     <li>{"{{이메일}}"}</li>
                   </ul>
                 </div>
                 <div className="space-y-1">
-                  <p className="font-medium text-foreground">리드 관리:</p>
+                  <p className="font-medium text-foreground">
+                    {t("sequences.stepForm.variablesLeadManagement")}
+                  </p>
                   <ul className="space-y-0.5 ml-2 text-[11px]">
                     <li>{"{{리드소스}}"}</li>
                     <li>{"{{리드상태}}"}</li>
@@ -551,10 +576,10 @@ export function SequenceStepForm({
 
       <div className="flex justify-end gap-3 pt-4 border-t">
         <Button type="button" variant="outline" onClick={onCancel}>
-          취소
+          {t("sequences.stepForm.cancelButton")}
         </Button>
         <Button type="submit" className="min-w-[100px]">
-          {step ? "수정 완료" : "스텝 추가"}
+          {step ? t("sequences.stepForm.updateButton") : t("sequences.stepForm.submitButton")}
         </Button>
       </div>
 

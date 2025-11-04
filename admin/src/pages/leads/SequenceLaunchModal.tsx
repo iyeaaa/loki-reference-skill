@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { ChevronDown, Mail, Plus, Send, Sparkles, Trash2, X } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import { SignatureEditorModal } from "@/components/SignatureEditorModal"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -55,6 +56,7 @@ export function SequenceLaunchModal({
   customerGroup,
   workspaceId,
 }: SequenceLaunchModalProps) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const [selectedSequenceId, setSelectedSequenceId] = useState("")
@@ -145,20 +147,20 @@ export function SequenceLaunchModal({
             setTargetCountry(Array.from(countries).join(","))
           } else {
             setTargetCountry("")
-            toast("고객 그룹에 국가 정보가 없습니다. 직접 입력해주세요.", {
+            toast(t("sequences.launchModal.toast.noCountryInfo"), {
               icon: "⚠️",
             })
           }
         })
         .catch((error) => {
           console.error("리드 조회 실패:", error)
-          toast.error("리드 정보를 가져오는데 실패했습니다.")
+          toast.error(t("stepForm.error.customerGroupRequired"))
         })
         .finally(() => {
           setIsLoadingCountry(false)
         })
     }
-  }, [customerGroup?.id, showAIGenerator])
+  }, [customerGroup?.id, showAIGenerator, t])
 
   // 새 시퀀스 생성 모드
   const [isCreatingNewSequence, setIsCreatingNewSequence] = useState(false)
@@ -232,12 +234,12 @@ export function SequenceLaunchModal({
 
     // 유효성 검사
     if (!step.emailSubject?.trim()) {
-      toast.error("이메일 제목을 입력해주세요.")
+      toast.error(t("sequences.launchModal.error.emailSubjectRequired"))
       return
     }
 
     if (!step.emailBodyText?.trim() && !step.emailBodyHtml?.trim()) {
-      toast.error("이메일 본문을 입력해주세요.")
+      toast.error(t("sequences.launchModal.error.emailBodyRequired"))
       return
     }
 
@@ -286,7 +288,7 @@ export function SequenceLaunchModal({
       })
 
       setEditingStepId(null)
-      toast.success("스텝이 저장되었습니다.")
+      toast.success(t("sequences.launchModal.toast.stepSaved"))
     } catch (error) {
       console.error("스텝 저장 오류:", error)
       toast.error("스텝 저장에 실패했습니다.")
@@ -318,7 +320,7 @@ export function SequenceLaunchModal({
 
     setEditedSteps([...editedSteps, newStep])
     setEditingStepId(newStep.id)
-    toast.success("스텝이 추가되었습니다. 제목과 내용을 입력 후 저장해주세요.")
+    toast.success(t("sequences.launchModal.toast.stepAdded"))
   }
 
   const handleRemoveStep = async (stepId: string) => {
@@ -333,7 +335,7 @@ export function SequenceLaunchModal({
             stepOrder: index + 1,
           }))
         })
-        toast.success("스텝이 삭제되었습니다.")
+        toast.success(t("sequences.launchModal.toast.stepDeleted"))
         return
       }
 
@@ -354,7 +356,7 @@ export function SequenceLaunchModal({
         queryKey: sequenceKeys.steps(selectedSequenceId),
       })
 
-      toast.success("스텝이 삭제되었습니다.")
+      toast.success(t("sequences.launchModal.toast.stepDeleted"))
     } catch (error) {
       console.error("스텝 삭제 오류:", error)
       toast.error("스텝 삭제에 실패했습니다.")
@@ -363,7 +365,7 @@ export function SequenceLaunchModal({
 
   const handleCreateNewSequence = async () => {
     if (!newSequenceName.trim()) {
-      toast.error("시퀀스 이름을 입력해주세요.")
+      toast.error(t("sequences.launchModal.error.sequenceNameRequired"))
       return
     }
 
@@ -388,7 +390,7 @@ export function SequenceLaunchModal({
 
       // 새 시퀀스는 스텝이 없으므로 빈 배열로 설정하고 첫 스텝 추가
       setEditedSteps([])
-      toast.success("새 시퀀스가 생성되었습니다. 이메일 스텝을 추가해주세요.")
+      toast.success(t("sequences.launchModal.toast.sequenceCreated"))
     } catch (error) {
       console.error("시퀀스 생성 오류:", error)
       // 에러는 이미 mutation의 onError에서 처리됨
@@ -445,32 +447,32 @@ export function SequenceLaunchModal({
   // AI로 이메일 템플릿 생성
   const handleGenerateWithAI = async () => {
     if (!editingStepId) {
-      toast.error("먼저 스텝을 선택해주세요.")
+      toast.error(t("sequences.launchModal.error.selectSequence"))
       return
     }
 
     if (!workspaceId) {
-      toast.error("워크스페이스 정보가 없습니다.")
+      toast.error(t("sequences.launchModal.error.workspaceRequired"))
       return
     }
 
     if (!customerGroup?.id) {
-      toast.error("고객 그룹이 설정되어 있지 않습니다.")
+      toast.error(t("sequences.launchModal.error.customerGroupRequired"))
       return
     }
 
     if (!targetCountry?.trim()) {
-      toast.error("타겟 국가를 입력해주세요.")
+      toast.error(t("sequences.launchModal.error.targetCountryRequired"))
       return
     }
 
     if (!aiPrompt.trim()) {
-      toast.error("이메일 내용 요청사항을 입력해주세요.")
+      toast.error(t("sequences.launchModal.error.promptRequired"))
       return
     }
 
     if (aiPrompt.trim().length < 10) {
-      toast.error("이메일 내용 요청사항을 10자 이상 입력해주세요.")
+      toast.error(t("sequences.launchModal.error.promptTooShort"))
       return
     }
 
@@ -495,7 +497,11 @@ export function SequenceLaunchModal({
         ),
       )
 
-      toast.success(`이메일 템플릿이 생성되었습니다! (언어: ${result.detectedLanguage || "auto"})`)
+      toast.success(
+        t("sequences.launchModal.success.templateGenerated", {
+          language: result.detectedLanguage || "auto",
+        }),
+      )
       setShowAIGenerator(false)
       setAiPrompt("")
     } catch (error) {
@@ -509,48 +515,46 @@ export function SequenceLaunchModal({
   // EnrollLeadsDialog와 동일한 방식으로 시퀀스 실행 (복사본 생성)
   const handleLaunch = async () => {
     if (!selectedSequenceId) {
-      toast.error("시퀀스를 선택하거나 생성해주세요.")
+      toast.error(t("sequences.launchModal.error.selectSequence"))
       return
     }
 
     if (!selectedEmailAccountId) {
-      toast.error("이메일 계정을 선택해주세요.")
+      toast.error(t("sequences.launchModal.error.selectEmailAccount"))
       return
     }
 
     if (selectedLeadIds.length === 0) {
-      toast.error("발송할 리드를 선택해주세요.")
+      toast.error(t("sequences.launchModal.error.selectLeads"))
       return
     }
 
     // 시퀀스 스텝 유효성 검사
     if (editedSteps.length === 0) {
-      toast.error("최소 1개 이상의 이메일 스텝이 필요합니다.")
+      toast.error(t("sequences.launchModal.error.needSteps"))
       return
     }
 
     // 저장되지 않은 스텝 확인
     const unsavedSteps = editedSteps.filter((step) => step.id.startsWith("temp-"))
     if (unsavedSteps.length > 0) {
-      toast.error(
-        `저장되지 않은 스텝이 ${unsavedSteps.length}개 있습니다. 모든 스텝을 저장한 후 실행해주세요.`,
-      )
+      toast.error(t("sequences.launchModal.error.unsavedSteps", { count: unsavedSteps.length }))
       return
     }
 
     // 편집 중인 스텝 확인
     if (editingStepId) {
-      toast.error("편집 중인 스텝이 있습니다. 저장 또는 취소 후 실행해주세요.")
+      toast.error(t("sequences.launchModal.error.editingStep"))
       return
     }
 
     for (const step of editedSteps) {
       if (!step.emailSubject?.trim()) {
-        toast.error(`스텝 ${step.stepOrder}: 이메일 제목이 필요합니다.`)
+        toast.error(t("sequences.launchModal.error.stepNeedsSubject", { order: step.stepOrder }))
         return
       }
       if (!step.emailBodyText?.trim() && !step.emailBodyHtml?.trim()) {
-        toast.error(`스텝 ${step.stepOrder}: 이메일 본문이 필요합니다.`)
+        toast.error(t("sequences.launchModal.error.stepNeedsBody", { order: step.stepOrder }))
         return
       }
     }
@@ -573,15 +577,14 @@ export function SequenceLaunchModal({
         const currentTimeInMinutes = currentHour * 60 + currentMinute
 
         if (scheduledTimeInMinutes <= currentTimeInMinutes) {
+          const scheduled = `${String(scheduledHour).padStart(2, "0")}:${String(scheduledMinute).padStart(2, "0")}`
+          const current = `${String(currentHour).padStart(2, "0")}:${String(currentMinute).padStart(2, "0")}`
           toast.error(
-            `스텝 ${step.stepOrder}: 스케줄 시간(${String(scheduledHour).padStart(2, "0")}:${String(
-              scheduledMinute,
-            ).padStart(2, "0")})이 현재 시간(${String(currentHour).padStart(2, "0")}:${String(
-              currentMinute,
-            ).padStart(
-              2,
-              "0",
-            )})보다 이전입니다.\n\n발송 지연일을 1일 이상으로 설정하거나, 시간을 현재 시간 이후로 변경해주세요.`,
+            t("sequences.launchModal.error.pastScheduleTime", {
+              order: step.stepOrder,
+              scheduled,
+              current,
+            }),
             { duration: 6000 },
           )
           return
@@ -606,7 +609,7 @@ export function SequenceLaunchModal({
 
     try {
       // 1. 시퀀스 복사 (고객 그룹 및 리드 포함)
-      toast("시퀀스 복사 중...", { icon: "📋" })
+      toast(t("sequences.launchModal.toast.sequenceCopying"), { icon: "📋" })
       const copiedSequence = await sequencesApi.copy(selectedSequenceId, {
         customerGroupId: customerGroup?.id,
         selectedLeadIds: selectedLeadIds,
@@ -620,7 +623,7 @@ export function SequenceLaunchModal({
 
       console.log("📌 복사 시점의 원본 스텝 정보를 확인하려면 백엔드 로그를 확인하세요.")
 
-      toast.success(`시퀀스 복사 완료: ${copiedSequence.name}`)
+      toast.success(t("sequences.launchModal.toast.sequenceCopied", { name: copiedSequence.name }))
 
       // 2. 복사된 시퀀스 활성화
       activateStepBased.mutate(copiedSequence.id, {
@@ -640,11 +643,11 @@ export function SequenceLaunchModal({
               onSuccess: (result) => {
                 console.log("🎉 시퀀스 실행 결과:", result)
                 toast.success(
-                  `시퀀스가 성공적으로 실행되었습니다! (${
-                    copiedSequence.name
-                  }, ${result.enrolledCount || 0}명 등록, ${
-                    result.scheduledExecutions || 0
-                  }개 이메일 스케줄됨)`,
+                  t("sequences.launchModal.success.launched", {
+                    name: copiedSequence.name,
+                    enrolled: result.enrolledCount || 0,
+                    scheduled: result.scheduledExecutions || 0,
+                  }),
                 )
                 onClose()
 
@@ -673,7 +676,7 @@ export function SequenceLaunchModal({
         <DialogHeader className="pb-4 border-b flex-shrink-0">
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
             <Send className="h-5 w-5" />
-            시퀀스 이메일 발송
+            {t("sequences.launchModal.title")}
           </DialogTitle>
         </DialogHeader>
 
@@ -685,7 +688,9 @@ export function SequenceLaunchModal({
                 <div className="flex items-start gap-3">
                   <Mail className="h-5 w-5 text-blue-600 mt-1" />
                   <div>
-                    <h4 className="font-medium text-blue-900">선택된 고객 그룹</h4>
+                    <h4 className="font-medium text-blue-900">
+                      {t("sequences.launchModal.selectedCustomerGroup")}
+                    </h4>
                     <p className="text-sm text-blue-800 mt-1">
                       <strong>{customerGroup.name}</strong>
                       {customerGroup.description && (
@@ -693,7 +698,10 @@ export function SequenceLaunchModal({
                       )}
                     </p>
                     <p className="text-sm text-blue-700 mt-1">
-                      총 {leads.length}명의 리드 중 {selectedLeadIds.length}명을 선택했습니다.
+                      {t("sequences.launchModal.totalLeadsSelected", {
+                        total: leads.length,
+                        selected: selectedLeadIds.length,
+                      })}
                     </p>
                   </div>
                 </div>
@@ -705,9 +713,11 @@ export function SequenceLaunchModal({
           {customerGroup && (
             <div className="border rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium">등록 대상 리드</h4>
+                <h4 className="font-medium">{t("sequences.launchModal.enrollmentTargetLeads")}</h4>
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary">{selectedLeadIds.length}명 선택</Badge>
+                  <Badge variant="secondary">
+                    {t("sequences.launchModal.leadsSelected", { count: selectedLeadIds.length })}
+                  </Badge>
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"
@@ -715,7 +725,7 @@ export function SequenceLaunchModal({
                       onClick={() => setSelectedLeadIds(leads.map((lead) => lead.id))}
                       className="h-7 text-xs"
                     >
-                      전체 선택
+                      {t("sequences.launchModal.selectAllLeads")}
                     </Button>
                     <Button
                       variant="ghost"
@@ -723,14 +733,14 @@ export function SequenceLaunchModal({
                       onClick={() => setSelectedLeadIds([])}
                       className="h-7 text-xs"
                     >
-                      전체 해제
+                      {t("sequences.launchModal.deselectAllLeads")}
                     </Button>
                   </div>
                 </div>
               </div>
               {leadsDetail.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  고객그룹에 리드가 없습니다.
+                  {t("sequences.launchModal.noLeadsInGroup")}
                 </p>
               ) : (
                 <div className="max-h-60 overflow-y-auto space-y-2">
@@ -777,10 +787,12 @@ export function SequenceLaunchModal({
                               onChange={() => {}}
                               className="h-4 w-4 rounded border-gray-300"
                             />
-                            <span className="font-medium">{lead.companyName || "회사명 없음"}</span>
+                            <span className="font-medium">
+                              {lead.companyName || t("sequences.launchModal.companyNameUnknown")}
+                            </span>
                           </div>
                           <div className="text-xs text-muted-foreground ml-6 mt-0.5">
-                            {primaryEmail || "이메일 없음"}
+                            {primaryEmail || t("sequences.launchModal.noEmail")}
                             {lead.country && ` • ${lead.country}`}
                             {lead.businessType && ` • ${lead.businessType}`}
                           </div>
@@ -796,7 +808,7 @@ export function SequenceLaunchModal({
           {/* 시퀀스 선택 또는 생성 */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>시퀀스 선택</Label>
+              <Label>{t("sequences.launchModal.selectSequence")}</Label>
               <Button
                 variant="outline"
                 size="sm"
@@ -806,11 +818,12 @@ export function SequenceLaunchModal({
                 {isCreatingNewSequence ? (
                   <>
                     <X className="h-4 w-4 mr-1" />
-                    시퀀스 선택으로 돌아가기
+                    {t("sequences.launchModal.backToSequenceSelect")}
                   </>
                 ) : (
                   <>
-                    <Plus className="h-4 w-4 mr-1" />새 시퀀스 만들기
+                    <Plus className="h-4 w-4 mr-1" />
+                    {t("sequences.launchModal.createNewSequence")}
                   </>
                 )}
               </Button>
@@ -820,20 +833,20 @@ export function SequenceLaunchModal({
               <Card className="bg-green-50 border-green-200">
                 <CardContent className="pt-4 space-y-4">
                   <div className="space-y-2">
-                    <Label>시퀀스 이름 *</Label>
+                    <Label>{t("sequences.launchModal.sequenceNameLabel")}</Label>
                     <Input
                       value={newSequenceName}
                       onChange={(e) => setNewSequenceName(e.target.value)}
-                      placeholder="예: 신규 고객 환영 시퀀스"
+                      placeholder={t("sequences.launchModal.sequenceNamePlaceholder")}
                       disabled={createSequence.isPending}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>시퀀스 설명</Label>
+                    <Label>{t("sequences.launchModal.sequenceDescriptionLabel")}</Label>
                     <Textarea
                       value={newSequenceDescription}
                       onChange={(e) => setNewSequenceDescription(e.target.value)}
-                      placeholder="시퀀스에 대한 설명을 입력하세요 (선택사항)"
+                      placeholder={t("sequences.launchModal.sequenceDescriptionPlaceholder")}
                       rows={2}
                       disabled={createSequence.isPending}
                     />
@@ -849,24 +862,28 @@ export function SequenceLaunchModal({
                       }}
                       disabled={createSequence.isPending}
                     >
-                      취소
+                      {t("sequences.launchModal.cancelButton")}
                     </Button>
                     <Button
                       size="sm"
                       onClick={handleCreateNewSequence}
                       disabled={!newSequenceName.trim() || createSequence.isPending}
                     >
-                      {createSequence.isPending ? "생성 중..." : "시퀀스 생성"}
+                      {createSequence.isPending
+                        ? t("sequences.launchModal.creating")
+                        : t("sequences.launchModal.createSequenceButton")}
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             ) : isLoadingSequences ? (
-              <div className="text-sm text-muted-foreground">로딩 중...</div>
+              <div className="text-sm text-muted-foreground">
+                {t("sequences.launchModal.loading")}
+              </div>
             ) : sequences && sequences.length > 0 ? (
               <Select value={selectedSequenceId} onValueChange={setSelectedSequenceId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="시퀀스를 선택하세요" />
+                  <SelectValue placeholder={t("sequences.launchModal.selectSequencePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px] overflow-y-auto">
                   {sequences.map((sequence) => (
@@ -876,7 +893,8 @@ export function SequenceLaunchModal({
                         <Badge variant="outline">{sequence.status}</Badge>
                         {sequence.stepsCount !== undefined && (
                           <span className="text-xs text-muted-foreground">
-                            ({sequence.stepsCount}개 스텝)
+                            ({t("sequences.launchModal.stepsCount", { count: sequence.stepsCount })}
+                            )
                           </span>
                         )}
                       </div>
@@ -887,8 +905,7 @@ export function SequenceLaunchModal({
             ) : (
               <Alert>
                 <AlertDescription>
-                  생성된 시퀀스가 없습니다. 위의 "새 시퀀스 만들기" 버튼을 눌러 시퀀스를
-                  생성해주세요.
+                  {t("sequences.launchModal.noSequencesAvailable")}
                 </AlertDescription>
               </Alert>
             )}
@@ -897,13 +914,15 @@ export function SequenceLaunchModal({
           {/* 이메일 계정 선택 */}
           {selectedSequenceId && (
             <div className="space-y-3">
-              <Label>발송 이메일 계정</Label>
+              <Label>{t("sequences.launchModal.emailAccountLabel")}</Label>
               {isLoadingAccounts ? (
-                <div className="text-sm text-muted-foreground">로딩 중...</div>
+                <div className="text-sm text-muted-foreground">
+                  {t("sequences.launchModal.loading")}
+                </div>
               ) : emailAccounts && emailAccounts.length > 0 ? (
                 <Select value={selectedEmailAccountId} onValueChange={setSelectedEmailAccountId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="이메일 계정을 선택하세요" />
+                    <SelectValue placeholder={t("sequences.launchModal.selectEmailAccount")} />
                   </SelectTrigger>
                   <SelectContent className="max-h-[200px] overflow-y-auto">
                     {emailAccounts.map((account) => (
@@ -915,7 +934,11 @@ export function SequenceLaunchModal({
                               ({account.displayName})
                             </span>
                           )}
-                          {account.isDefault && <Badge variant="secondary">기본</Badge>}
+                          {account.isDefault && (
+                            <Badge variant="secondary">
+                              {t("sequences.launchModal.defaultBadge")}
+                            </Badge>
+                          )}
                         </div>
                       </SelectItem>
                     ))}
@@ -923,9 +946,7 @@ export function SequenceLaunchModal({
                 </Select>
               ) : (
                 <Alert>
-                  <AlertDescription>
-                    활성화된 이메일 계정이 없습니다. 설정 페이지에서 이메일 계정을 추가해주세요.
-                  </AlertDescription>
+                  <AlertDescription>{t("sequences.launchModal.noEmailAccounts")}</AlertDescription>
                 </Alert>
               )}
             </div>
@@ -935,7 +956,7 @@ export function SequenceLaunchModal({
           {selectedSequenceId && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>이메일 시퀀스 스텝</Label>
+                <Label>{t("sequences.launchModal.sequenceSteps")}</Label>
                 <Button
                   variant="outline"
                   size="sm"
@@ -943,21 +964,21 @@ export function SequenceLaunchModal({
                   disabled={bulkEnroll.isPending}
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  스텝 추가
+                  {t("sequences.launchModal.addStep")}
                 </Button>
               </div>
 
               {isLoadingSteps ? (
-                <div className="text-sm text-muted-foreground">로딩 중...</div>
+                <div className="text-sm text-muted-foreground">
+                  {t("sequences.launchModal.loading")}
+                </div>
               ) : editedSteps.length === 0 ? (
                 <Card className="bg-gray-50">
                   <CardContent className="pt-6 pb-6">
                     <div className="text-center text-muted-foreground">
                       <Mail className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                      <p className="text-sm">아직 이메일 스텝이 없습니다.</p>
-                      <p className="text-xs mt-1">
-                        "스텝 추가" 버튼을 눌러 첫 번째 이메일을 만들어보세요.
-                      </p>
+                      <p className="text-sm">{t("sequences.launchModal.noStepsYet")}</p>
+                      <p className="text-xs mt-1">{t("sequences.launchModal.addFirstStep")}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -968,17 +989,23 @@ export function SequenceLaunchModal({
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-sm font-medium flex items-center gap-2">
-                            <Badge>스텝 {step.stepOrder}</Badge>
+                            <Badge>
+                              {t("sequences.launchModal.stepBadge", { order: step.stepOrder })}
+                            </Badge>
                             {step.id.startsWith("temp-") && (
                               <Badge
                                 variant="outline"
                                 className="text-orange-600 border-orange-300"
                               >
-                                저장 필요
+                                {t("sequences.launchModal.unsavedBadge")}
                               </Badge>
                             )}
                             <span className="text-muted-foreground">
-                              {step.delayDays === 0 ? "즉시 발송" : `${step.delayDays}일 후`}
+                              {step.delayDays === 0
+                                ? t("sequences.launchModal.immediatelySend")
+                                : t("sequences.launchModal.sendAfterDays", {
+                                    days: step.delayDays,
+                                  })}
                             </span>
                           </CardTitle>
                           <div className="flex gap-2">
@@ -996,7 +1023,9 @@ export function SequenceLaunchModal({
                               }}
                               disabled={updateSequenceStep.isPending}
                             >
-                              {editingStepId === step.id ? "저장" : "편집"}
+                              {editingStepId === step.id
+                                ? t("sequences.launchModal.saveButton")
+                                : t("sequences.launchModal.editButton")}
                             </Button>
                             <Button
                               variant="ghost"
@@ -1015,7 +1044,7 @@ export function SequenceLaunchModal({
                           <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <Label>발송 지연 (일)</Label>
+                                <Label>{t("sequences.launchModal.delayDaysLabel")}</Label>
                                 <Input
                                   type="number"
                                   min="0"
@@ -1030,7 +1059,7 @@ export function SequenceLaunchModal({
                                 />
                               </div>
                               <div>
-                                <Label>발송 시간</Label>
+                                <Label>{t("sequences.launchModal.sendTimeLabel")}</Label>
                                 <div className="flex gap-2">
                                   <Input
                                     type="number"
@@ -1044,7 +1073,7 @@ export function SequenceLaunchModal({
                                         parseInt(e.target.value, 10) || 0,
                                       )
                                     }
-                                    placeholder="시"
+                                    placeholder={t("sequences.launchModal.hourPlaceholder")}
                                   />
                                   <span className="self-center">:</span>
                                   <Input
@@ -1059,7 +1088,7 @@ export function SequenceLaunchModal({
                                         parseInt(e.target.value, 10) || 0,
                                       )
                                     }
-                                    placeholder="분"
+                                    placeholder={t("sequences.launchModal.minutePlaceholder")}
                                   />
                                 </div>
                               </div>
@@ -1071,7 +1100,7 @@ export function SequenceLaunchModal({
                                 <div className="flex items-center justify-between">
                                   <h3 className="text-sm font-semibold flex items-center gap-2">
                                     <Sparkles className="h-4 w-4 text-primary" />
-                                    AI 이메일 템플릿 생성
+                                    {t("sequences.launchModal.aiGeneratorTitle")}
                                   </h3>
                                   <Button
                                     type="button"
@@ -1079,7 +1108,9 @@ export function SequenceLaunchModal({
                                     size="sm"
                                     onClick={() => setShowAIGenerator(!showAIGenerator)}
                                   >
-                                    {showAIGenerator ? "닫기" : "열기"}
+                                    {showAIGenerator
+                                      ? t("sequences.launchModal.aiGeneratorClose")
+                                      : t("sequences.launchModal.aiGeneratorOpen")}
                                   </Button>
                                 </div>
 
@@ -1088,32 +1119,38 @@ export function SequenceLaunchModal({
                                     {/* 타겟 국가 입력 */}
                                     <div className="space-y-2">
                                       <Label htmlFor={targetCountryId}>
-                                        타겟 국가 <span className="text-red-500">*</span>
+                                        {t("sequences.launchModal.targetCountryLabel")}{" "}
+                                        <span className="text-red-500">*</span>
                                       </Label>
                                       <Input
                                         id={targetCountryId}
                                         value={targetCountry}
                                         onChange={(e) => setTargetCountry(e.target.value)}
-                                        placeholder="예: 한국, 미국, 일본 (여러 국가는 쉼표로 구분)"
+                                        placeholder={t(
+                                          "sequences.launchModal.targetCountryPlaceholder",
+                                        )}
                                         className="bg-background"
                                         disabled={isLoadingCountry}
                                       />
                                       <p className="text-xs text-muted-foreground">
                                         {isLoadingCountry
-                                          ? "🔄 고객 그룹의 리드에서 국가 정보를 조회 중입니다..."
-                                          : "고객 그룹의 리드에서 자동으로 감지되며, 직접 수정할 수 있습니다."}
+                                          ? t("sequences.launchModal.countryAutoDetecting")
+                                          : t("sequences.launchModal.countryAutoDetected")}
                                       </p>
                                     </div>
 
                                     <div className="space-y-2">
                                       <Label htmlFor={promptId}>
-                                        이메일 내용 요청사항 <span className="text-red-500">*</span>
+                                        {t("sequences.launchModal.emailContentRequestLabel")}{" "}
+                                        <span className="text-red-500">*</span>
                                       </Label>
                                       <Textarea
                                         id={promptId}
                                         value={aiPrompt}
                                         onChange={(e) => setAiPrompt(e.target.value)}
-                                        placeholder="예: K-뷰티 제품의 글로벌 유통 파트너십을 제안하는 이메일을 작성해주세요. 우리 제품의 강점과 파트너십 혜택을 강조해주세요."
+                                        placeholder={t(
+                                          "sequences.launchModal.emailContentRequestPlaceholder",
+                                        )}
                                         className="bg-background min-h-[100px]"
                                       />
                                     </div>
@@ -1130,7 +1167,9 @@ export function SequenceLaunchModal({
                                       className="w-full"
                                     >
                                       <Sparkles className="h-4 w-4 mr-2" />
-                                      {isGenerating ? "생성 중..." : "AI로 템플릿 생성"}
+                                      {isGenerating
+                                        ? t("sequences.launchModal.generating")
+                                        : t("sequences.launchModal.generateWithAI")}
                                     </Button>
                                   </div>
                                 )}
@@ -1138,18 +1177,18 @@ export function SequenceLaunchModal({
                             )}
 
                             <div>
-                              <Label>이메일 제목</Label>
+                              <Label>{t("sequences.launchModal.emailSubjectLabel")}</Label>
                               <Input
                                 value={step.emailSubject}
                                 onChange={(e) =>
                                   handleStepEdit(step.id, "emailSubject", e.target.value)
                                 }
-                                placeholder="이메일 제목을 입력하세요"
+                                placeholder={t("sequences.launchModal.emailSubjectPlaceholder")}
                               />
                             </div>
                             <div>
                               <div className="flex items-center justify-between mb-2">
-                                <Label>이메일 본문</Label>
+                                <Label>{t("sequences.launchModal.emailBodyLabel")}</Label>
                                 <Button
                                   type="button"
                                   variant="outline"
@@ -1158,7 +1197,7 @@ export function SequenceLaunchModal({
                                   className="h-7"
                                 >
                                   <Mail className="h-3 w-3 mr-1" />
-                                  서명 편집
+                                  {t("sequences.launchModal.editSignature")}
                                 </Button>
                               </div>
                               <RichTextEditor
@@ -1172,13 +1211,15 @@ export function SequenceLaunchModal({
                               <Collapsible className="mt-2">
                                 <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
                                   <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
-                                  사용 가능한 변수 보기
+                                  {t("sequences.launchModal.viewVariables")}
                                 </CollapsibleTrigger>
                                 <CollapsibleContent className="mt-2">
                                   <div className="text-xs text-muted-foreground rounded-md border bg-muted/30 p-3">
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                                       <div className="space-y-1">
-                                        <p className="font-medium text-foreground">회사 정보:</p>
+                                        <p className="font-medium text-foreground">
+                                          {t("sequences.launchModal.variablesCompanyInfo")}
+                                        </p>
                                         <ul className="space-y-0.5 ml-2 text-[11px]">
                                           <li>{"{{회사명}}"}</li>
                                           <li>{"{{웹사이트}}"}</li>
@@ -1189,7 +1230,9 @@ export function SequenceLaunchModal({
                                         </ul>
                                       </div>
                                       <div className="space-y-1">
-                                        <p className="font-medium text-foreground">위치 정보:</p>
+                                        <p className="font-medium text-foreground">
+                                          {t("sequences.launchModal.variablesLocationInfo")}
+                                        </p>
                                         <ul className="space-y-0.5 ml-2 text-[11px]">
                                           <li>{"{{국가}}"}</li>
                                           <li>{"{{도시}}"}</li>
@@ -1198,14 +1241,18 @@ export function SequenceLaunchModal({
                                         </ul>
                                       </div>
                                       <div className="space-y-1">
-                                        <p className="font-medium text-foreground">연락처:</p>
+                                        <p className="font-medium text-foreground">
+                                          {t("sequences.launchModal.variablesContactInfo")}
+                                        </p>
                                         <ul className="space-y-0.5 ml-2 text-[11px]">
                                           <li>{"{{담당자명}}"}</li>
                                           <li>{"{{이메일}}"}</li>
                                         </ul>
                                       </div>
                                       <div className="space-y-1">
-                                        <p className="font-medium text-foreground">리드 관리:</p>
+                                        <p className="font-medium text-foreground">
+                                          {t("sequences.launchModal.variablesLeadManagement")}
+                                        </p>
                                         <ul className="space-y-0.5 ml-2 text-[11px]">
                                           <li>{"{{리드소스}}"}</li>
                                           <li>{"{{리드상태}}"}</li>
@@ -1221,14 +1268,16 @@ export function SequenceLaunchModal({
                         ) : (
                           <div className="space-y-2">
                             <div className="text-sm">
-                              <strong>제목:</strong> {step.emailSubject}
+                              <strong>{t("sequences.launchModal.previewSubject")}</strong>{" "}
+                              {step.emailSubject}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              <strong>본문:</strong> {step.emailBodyText?.substring(0, 100)}
+                              <strong>{t("sequences.launchModal.previewBody")}</strong>{" "}
+                              {step.emailBodyText?.substring(0, 100)}
                               {(step.emailBodyText?.length || 0) > 100 && "..."}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              발송 시간: {step.scheduledHour ?? 9}:
+                              {t("sequences.launchModal.sendTime")} {step.scheduledHour ?? 9}:
                               {(step.scheduledMinute ?? 0).toString().padStart(2, "0")}
                             </div>
                           </div>
@@ -1245,7 +1294,7 @@ export function SequenceLaunchModal({
         <div className="flex justify-end gap-2 pt-4 border-t mt-4 flex-shrink-0 bg-white dark:bg-gray-950">
           <Button variant="outline" onClick={onClose} disabled={bulkEnroll.isPending}>
             <X className="h-4 w-4 mr-1" />
-            취소
+            {t("sequences.launchModal.cancelButton")}
           </Button>
           <Button
             onClick={handleLaunch}
@@ -1257,7 +1306,9 @@ export function SequenceLaunchModal({
             }
           >
             <Send className="h-4 w-4 mr-1" />
-            {bulkEnroll.isPending ? "발송 중..." : "시퀀스 실행"}
+            {bulkEnroll.isPending
+              ? t("sequences.launchModal.launching")
+              : t("sequences.launchModal.launchButton")}
           </Button>
         </div>
       </DialogContent>

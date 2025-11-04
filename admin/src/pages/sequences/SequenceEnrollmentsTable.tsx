@@ -12,6 +12,7 @@ import {
   XCircle,
 } from "lucide-react"
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 import { CompanyMetricsModal } from "@/components/CompanyMetricsModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -34,10 +35,13 @@ import type { EnrollmentStatus } from "@/lib/api/types/sequence"
 
 // EnrollmentOpenStatus - 실제 오픈 상태를 표시하는 컴포넌트
 function EnrollmentOpenStatus({ enrollmentId }: { enrollmentId: string }) {
+  const { t } = useTranslation()
   const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId)
 
   if (isLoading) {
-    return <span className="text-sm text-muted-foreground">로딩중...</span>
+    return (
+      <span className="text-sm text-muted-foreground">{t("sequences.enrollments.loading")}</span>
+    )
   }
 
   if (!metricsData?.data) {
@@ -54,7 +58,7 @@ function EnrollmentOpenStatus({ enrollmentId }: { enrollmentId: string }) {
     return (
       <div className="flex items-center gap-1 text-sm text-green-600">
         <Eye className="w-3 h-3" />
-        <span className="font-medium">오픈함</span>
+        <span className="font-medium">{t("sequences.enrollments.open.opened")}</span>
       </div>
     )
   }
@@ -62,17 +66,20 @@ function EnrollmentOpenStatus({ enrollmentId }: { enrollmentId: string }) {
   return (
     <div className="flex items-center gap-1 text-sm text-gray-600">
       <Eye className="w-3 h-3" />
-      <span className="font-medium">미오픈</span>
+      <span className="font-medium">{t("sequences.enrollments.open.notOpened")}</span>
     </div>
   )
 }
 
 // EnrollmentDeliveryStatus - 발송완료 상태를 표시하는 컴포넌트
 function EnrollmentDeliveryStatus({ enrollmentId }: { enrollmentId: string }) {
+  const { t } = useTranslation()
   const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId)
 
   if (isLoading) {
-    return <span className="text-sm text-muted-foreground">로딩중...</span>
+    return (
+      <span className="text-sm text-muted-foreground">{t("sequences.enrollments.loading")}</span>
+    )
   }
 
   if (!metricsData?.data) {
@@ -89,7 +96,7 @@ function EnrollmentDeliveryStatus({ enrollmentId }: { enrollmentId: string }) {
     return (
       <div className="flex items-center gap-1 text-sm text-green-600">
         <CheckCircle className="w-3 h-3" />
-        <span className="font-medium">발송완료</span>
+        <span className="font-medium">{t("sequences.enrollments.delivery.completed")}</span>
       </div>
     )
   }
@@ -97,17 +104,20 @@ function EnrollmentDeliveryStatus({ enrollmentId }: { enrollmentId: string }) {
   return (
     <div className="flex items-center gap-1 text-sm text-blue-600">
       <Mail className="w-3 h-3" />
-      <span className="font-medium">발송중</span>
+      <span className="font-medium">{t("sequences.enrollments.delivery.sending")}</span>
     </div>
   )
 }
 
 // EnrollmentClickStatus - 실제 클릭 상태를 표시하는 컴포넌트
 function EnrollmentClickStatus({ enrollmentId }: { enrollmentId: string }) {
+  const { t } = useTranslation()
   const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId)
 
   if (isLoading) {
-    return <span className="text-sm text-muted-foreground">로딩중...</span>
+    return (
+      <span className="text-sm text-muted-foreground">{t("sequences.enrollments.loading")}</span>
+    )
   }
 
   if (!metricsData?.data) {
@@ -124,7 +134,7 @@ function EnrollmentClickStatus({ enrollmentId }: { enrollmentId: string }) {
     return (
       <div className="flex items-center gap-1 text-sm text-green-600">
         <MousePointer className="w-3 h-3" />
-        <span className="font-medium">클릭함</span>
+        <span className="font-medium">{t("sequences.enrollments.click.clicked")}</span>
       </div>
     )
   }
@@ -132,7 +142,7 @@ function EnrollmentClickStatus({ enrollmentId }: { enrollmentId: string }) {
   return (
     <div className="flex items-center gap-1 text-sm text-gray-600">
       <MousePointer className="w-3 h-3" />
-      <span className="font-medium">미클릭</span>
+      <span className="font-medium">{t("sequences.enrollments.click.notClicked")}</span>
     </div>
   )
 }
@@ -168,6 +178,7 @@ interface SequenceEnrollmentsTableProps {
 }
 
 export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTableProps) {
+  const { t } = useTranslation()
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null)
   const [showMetricsModal, setShowMetricsModal] = useState(false)
@@ -188,10 +199,12 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
     return (
       <Card>
         <CardHeader>
-          <CardTitle>등록 현황</CardTitle>
+          <CardTitle>{t("sequences.enrollments.title")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">로딩 중...</div>
+          <div className="text-center py-8 text-muted-foreground">
+            {t("sequences.enrollments.loading")}
+          </div>
         </CardContent>
       </Card>
     )
@@ -209,13 +222,29 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
         icon: LucideIcon
       }
     > = {
-      active: { label: "진행 중", variant: "default", icon: Clock },
-      paused: { label: "일시정지", variant: "secondary", icon: Pause },
-      completed: { label: "완료", variant: "outline", icon: CheckCircle2 },
-      stopped: { label: "중지됨", variant: "destructive", icon: StopCircle },
-      bounced: { label: "반송됨", variant: "destructive", icon: XCircle },
+      active: { label: t("sequences.enrollments.status.active"), variant: "default", icon: Clock },
+      paused: {
+        label: t("sequences.enrollments.status.paused"),
+        variant: "secondary",
+        icon: Pause,
+      },
+      completed: {
+        label: t("sequences.enrollments.status.completed"),
+        variant: "outline",
+        icon: CheckCircle2,
+      },
+      stopped: {
+        label: t("sequences.enrollments.status.stopped"),
+        variant: "destructive",
+        icon: StopCircle,
+      },
+      bounced: {
+        label: t("sequences.enrollments.status.bounced"),
+        variant: "destructive",
+        icon: XCircle,
+      },
       unsubscribed: {
-        label: "구독취소",
+        label: t("sequences.enrollments.status.unsubscribed"),
         variant: "destructive",
         icon: XCircle,
       },
@@ -253,29 +282,33 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>등록 현황</span>
-            <Badge variant="secondary">총 {enrollmentsData?.total || 0}명 등록</Badge>
+            <span>{t("sequences.enrollments.title")}</span>
+            <Badge variant="secondary">
+              {t("sequences.enrollments.totalEnrolled", { count: enrollmentsData?.total || 0 })}
+            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {enrollments.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">등록된 리드가 없습니다</div>
+            <div className="text-center py-8 text-muted-foreground">
+              {t("sequences.enrollments.noEnrollments")}
+            </div>
           ) : (
             <>
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>회사명</TableHead>
-                      <TableHead>상태</TableHead>
-                      <TableHead>진행도</TableHead>
-                      <TableHead>발송</TableHead>
-                      <TableHead>발송완료</TableHead>
-                      <TableHead>오픈</TableHead>
-                      <TableHead>클릭</TableHead>
-                      <TableHead>등록일</TableHead>
-                      <TableHead>마지막 발송</TableHead>
-                      <TableHead>상세보기</TableHead>
+                      <TableHead>{t("sequences.enrollments.column.companyName")}</TableHead>
+                      <TableHead>{t("sequences.enrollments.column.status")}</TableHead>
+                      <TableHead>{t("sequences.enrollments.column.progress")}</TableHead>
+                      <TableHead>{t("sequences.enrollments.column.sent")}</TableHead>
+                      <TableHead>{t("sequences.enrollments.column.delivered")}</TableHead>
+                      <TableHead>{t("sequences.enrollments.column.opened")}</TableHead>
+                      <TableHead>{t("sequences.enrollments.column.clicked")}</TableHead>
+                      <TableHead>{t("sequences.enrollments.column.enrolledAt")}</TableHead>
+                      <TableHead>{t("sequences.enrollments.column.lastEmailSent")}</TableHead>
+                      <TableHead>{t("sequences.enrollments.column.viewDetails")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -298,7 +331,10 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                         <TableRow key={enrollment.id} className="cursor-pointer hover:bg-muted/50">
                           <TableCell className="font-medium">
                             <div className="flex flex-col gap-1">
-                              <span>{enrollment.leadCompanyName || "알 수 없음"}</span>
+                              <span>
+                                {enrollment.leadCompanyName ||
+                                  t("sequences.enrollments.companyNameUnknown")}
+                              </span>
                               {enrollment.emailAccountAddress && (
                                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                                   <Mail className="w-3 h-3" />
@@ -312,7 +348,10 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                             <div className="flex flex-col gap-2 min-w-[120px]">
                               <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">
-                                  Step {enrollment.currentStepOrder}/{totalSteps}
+                                  {t("sequences.enrollments.progress.step", {
+                                    current: enrollment.currentStepOrder,
+                                    total: totalSteps,
+                                  })}
                                 </span>
                                 <span className="font-medium">{progress}%</span>
                               </div>
@@ -324,11 +363,15 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                               <div className="flex items-center gap-1 text-sm text-blue-600">
                                 <Mail className="w-3 h-3" />
                                 <span className="font-medium">
-                                  {enrollment.currentStepOrder}개 발송
+                                  {t("sequences.enrollments.sent.count", {
+                                    count: enrollment.currentStepOrder,
+                                  })}
                                 </span>
                               </div>
                             ) : (
-                              <span className="text-sm text-muted-foreground">대기중</span>
+                              <span className="text-sm text-muted-foreground">
+                                {t("sequences.enrollments.sent.waiting")}
+                              </span>
                             )}
                           </TableCell>
                           <TableCell>
@@ -353,9 +396,13 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                                 {formatDate(enrollment.lastEmailSentAt)}
                               </div>
                             ) : hasEmailsSent ? (
-                              <span className="text-muted-foreground">발송 중</span>
+                              <span className="text-muted-foreground">
+                                {t("sequences.enrollments.lastSent.sending")}
+                              </span>
                             ) : (
-                              <span className="text-muted-foreground">대기 중</span>
+                              <span className="text-muted-foreground">
+                                {t("sequences.enrollments.lastSent.waiting")}
+                              </span>
                             )}
                           </TableCell>
                           <TableCell>
@@ -366,7 +413,7 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                               className="flex items-center gap-1"
                             >
                               <Eye className="w-3 h-3" />
-                              상세
+                              {t("sequences.enrollments.viewDetailsButton")}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -380,7 +427,10 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4">
                   <div className="text-sm text-muted-foreground">
-                    페이지 {currentPage} / {totalPages}
+                    {t("sequences.enrollments.pagination.page", {
+                      current: currentPage,
+                      total: totalPages,
+                    })}
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -389,7 +439,7 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                       onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                       disabled={currentPage === 1}
                     >
-                      이전
+                      {t("sequences.enrollments.pagination.previous")}
                     </Button>
                     <Button
                       variant="outline"
@@ -397,7 +447,7 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                       onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                       disabled={currentPage === totalPages}
                     >
-                      다음
+                      {t("sequences.enrollments.pagination.next")}
                     </Button>
                   </div>
                 </div>

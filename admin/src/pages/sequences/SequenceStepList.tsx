@@ -1,5 +1,6 @@
 import { Edit, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,6 +25,7 @@ interface SequenceStepsListProps {
 }
 
 export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsListProps) {
+  const { t } = useTranslation()
   const [editingStep, setEditingStep] = useState<SequenceStep | null>(null)
   const [isCreating, setIsCreating] = useState(false)
 
@@ -95,7 +97,7 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
   }
 
   const handleDeleteStep = (stepId: string) => {
-    if (!confirm("이 스텝을 삭제하시겠습니까?")) return
+    if (!confirm(t("sequences.stepsList.confirm.deleteStep"))) return
     deleteStep.mutate({ stepId })
   }
 
@@ -106,11 +108,11 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">시퀀스 스텝</CardTitle>
+          <CardTitle className="text-base">{t("sequences.stepsList.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground text-center py-8">
-            시퀀스를 생성한 후 스텝을 추가할 수 있습니다.
+            {t("sequences.stepsList.createSequenceFirst")}
           </p>
         </CardContent>
       </Card>
@@ -124,7 +126,7 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-base">시퀀스 스텝</CardTitle>
+          <CardTitle className="text-base">{t("sequences.stepsList.title")}</CardTitle>
           {sequenceId && (
             <Button
               onClick={() => setIsCreating(true)}
@@ -133,7 +135,7 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
               disabled={!hasCustomerGroup}
             >
               <Plus className="h-4 w-4 mr-1" />
-              스텝 추가
+              {t("sequences.stepsList.addStep")}
             </Button>
           )}
         </CardHeader>
@@ -141,22 +143,26 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
           {!isLoadingSequence && !hasCustomerGroup && (
             <div className="rounded-lg border-2 border-amber-500 bg-amber-50 dark:bg-amber-950/20 p-4 mb-4">
               <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-2">
-                ⚠️ 고객 그룹을 먼저 설정해주세요
+                {t("sequences.stepsList.warning.setCustomerGroupFirst")}
               </p>
               <p className="text-xs text-amber-800 dark:text-amber-300 mb-3">
-                스텝을 추가하려면 시퀀스에 고객 그룹이 반드시 필요합니다. 위의 시퀀스 정보를
-                수정하여 고객 그룹을 선택해주세요.
+                {t("sequences.stepsList.warning.customerGroupRequired")}
               </p>
             </div>
           )}
           {isLoading ? (
-            <p className="text-sm text-muted-foreground text-center py-4">로딩 중...</p>
+            <p className="text-sm text-muted-foreground text-center py-4">
+              {t("sequences.stepsList.loading")}
+            </p>
           ) : steps.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground mb-4">아직 생성된 스텝이 없습니다.</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                {t("sequences.stepsList.noSteps")}
+              </p>
               {sequenceId && (
                 <Button onClick={() => setIsCreating(true)} size="sm" disabled={!hasCustomerGroup}>
-                  <Plus className="h-4 w-4 mr-1" />첫 스텝 추가
+                  <Plus className="h-4 w-4 mr-1" />
+                  {t("sequences.stepsList.addFirstStep")}
                 </Button>
               )}
             </div>
@@ -173,10 +179,12 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
                           <Badge variant="outline" className="text-xs">
-                            스텝 {step.stepOrder}
+                            {t("sequences.stepsList.stepNumber", { order: step.stepOrder })}
                           </Badge>
                           <Badge variant="secondary" className="text-xs">
-                            {step.delayDays === 0 ? "즉시 발송" : `${step.delayDays}일 후 발송`}
+                            {step.delayDays === 0
+                              ? t("sequences.stepsList.sendImmediately")
+                              : t("sequences.stepsList.sendAfterDays", { days: step.delayDays })}
                           </Badge>
                         </div>
                         <h4 className="font-medium text-sm mb-1 truncate" title={step.emailSubject}>
@@ -218,7 +226,7 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
       <Dialog open={isCreating} onOpenChange={setIsCreating}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>새 스텝 추가</DialogTitle>
+            <DialogTitle>{t("sequences.stepsList.dialog.createTitle")}</DialogTitle>
           </DialogHeader>
           <SequenceStepForm
             stepOrder={nextStepOrder}
@@ -234,7 +242,7 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
       <Dialog open={!!editingStep} onOpenChange={() => setEditingStep(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>스텝 수정</DialogTitle>
+            <DialogTitle>{t("sequences.stepsList.dialog.editTitle")}</DialogTitle>
           </DialogHeader>
           {editingStep && (
             <SequenceStepForm

@@ -20,7 +20,7 @@ export interface ChatbotAskRequest {
 }
 
 export interface StreamEvent {
-  type: "node" | "done" | "error" | "text_chunk"
+  type: "node" | "done" | "error" | "text_chunk" | "waiting_confirmation" | "interrupt"
   node?: string
   state?: {
     generatedSQL?: string
@@ -30,11 +30,24 @@ export interface StreamEvent {
     visualizationSuggestions?: unknown[]
     followUpQuestions?: string[]
     error?: string
+    needsConfirmation?: boolean
+    confirmationMessage?: string
   }
   chunk?: string
   accumulatedText?: string
   timestamp?: number
   error?: string
+  // New: interrupt event payload
+  payload?: {
+    type?: string
+    confirmationMessage?: string
+    metadata?: {
+      sql?: string
+      sqlQueries?: string[]
+      sqlExplanation?: string
+      queryCount?: number
+    }
+  }
 }
 
 export interface ChatbotHistoryResponse {
@@ -47,4 +60,5 @@ export interface StreamCallbacks {
   onMessageUpdate?: (message: ChatMessage) => void
   onThinking: (thinking: string) => void
   onError?: (error: string) => void
+  onConfirmationRequired?: (message: string) => void
 }

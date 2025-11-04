@@ -12,7 +12,7 @@ export const chatbotApi = {
    * Stream chatbot response using Server-Sent Events
    */
   async streamAsk(request: ChatbotAskRequest, callbacks: StreamCallbacks): Promise<void> {
-    const { onMessage, onMessageUpdate, onThinking, onError } = callbacks
+    const { onMessage, onMessageUpdate, onThinking, onError, onConfirmationRequired } = callbacks
 
     try {
       const token = getToken()
@@ -73,8 +73,22 @@ export const chatbotApi = {
               if (data.type === "text_chunk") {
                 console.log(`[Chatbot] Received text chunk:`, data.chunk?.substring(0, 50))
                 chatbotApi.handleTextChunk(data, onMessageUpdate, accumulatedData)
+              } else if (data.type === "interrupt") {
+                // NEW: Handle interrupt() event from LangGraph
+                console.log("[Chatbot] Received interrupt event:", data.payload)
+                chatbotApi.handleInterruptEvent(data, onConfirmationRequired, onMessageUpdate)
               } else if (data.type === "node") {
-                chatbotApi.handleNodeEvent(data, onThinking, onMessageUpdate, accumulatedData)
+                chatbotApi.handleNodeEvent(
+                  data,
+                  onThinking,
+                  onMessageUpdate,
+                  accumulatedData,
+                  onConfirmationRequired,
+                )
+              } else if (data.type === "waiting_confirmation") {
+                console.log("[Chatbot] Waiting for user confirmation - keeping UI active")
+                // Don't call onMessage - keep the confirmation UI visible
+                // The confirmation state is already set by onConfirmationRequired in handleNodeEvent
               } else if (data.type === "done") {
                 console.log("[Chatbot] Processing done event")
                 chatbotApi.handleDoneEvent(accumulatedData, onMessage)
@@ -98,6 +112,46 @@ export const chatbotApi = {
         timestamp: new Date(),
       })
       throw error // Re-throw for mutation error handling
+    }
+  },
+
+  /**
+   * Handle interrupt event from LangGraph's interrupt() function
+   */
+  handleInterruptEvent(
+    data: StreamEvent,
+    onConfirmationRequired: ((message: string) => void) | undefined,
+    onMessageUpdate: ((message: ChatMessage) => void) | undefined,
+  ): void {
+    const payload = data.payload as {
+      type?: string
+      confirmationMessage?: string
+      metadata?: {
+        sql?: string
+        sqlQueries?: string[]
+        sqlExplanation?: string
+        queryCount?: number
+      }
+    }
+
+    console.log("[Chatbot] Interrupt payload:", payload)
+
+    if (payload.confirmationMessage) {
+      // Trigger confirmation UI
+      if (onConfirmationRequired) {
+        onConfirmationRequired(payload.confirmationMessage)
+      }
+
+      // Update message display with confirmation request
+      if (onMessageUpdate) {
+        const confirmationMsg: ChatMessage = {
+          role: "assistant",
+          content: payload.confirmationMessage,
+          timestamp: new Date(),
+          metadata: payload.metadata,
+        }
+        onMessageUpdate(confirmationMsg)
+      }
     }
   },
 
@@ -149,7 +203,28 @@ export const chatbotApi = {
       followUpQuestions: string[]
       visualizationSuggestions: unknown[]
     },
+    onConfirmationRequired?: (message: string) => void,
   ): void {
+    // Check for confirmation requirement first
+    if (data.state?.needsConfirmation && data.state?.confirmationMessage) {
+      console.log("[Chatbot] Confirmation required:", data.state.confirmationMessage)
+      if (onConfirmationRequired) {
+        onConfirmationRequired(data.state.confirmationMessage)
+      }
+      // Update analysis with confirmation message
+      accumulatedData.analysis = data.state.confirmationMessage
+      if (onMessageUpdate) {
+        const confirmationMsg: ChatMessage = {
+          role: "assistant",
+          content: data.state.confirmationMessage,
+          timestamp: new Date(),
+          metadata: undefined,
+        }
+        onMessageUpdate(confirmationMsg)
+      }
+      return
+    }
+
     let thinkingMessage = ""
     let shouldUpdateMessage = false
 
@@ -215,6 +290,19 @@ export const chatbotApi = {
       }
     } else if (nodeName.includes("format")) {
       thinkingMessage = "Formatting response and preparing final output..."
+    } else if (nodeName.includes("confirmation") || nodeName.includes("askconfirmation")) {
+      thinkingMessage = "Waiting for user confirmation..."
+      // Update analysis with confirmation message if available
+      if (data.state?.analysis) {
+        accumulatedData.analysis = data.state.analysis
+        shouldUpdateMessage = true
+
+        // Trigger confirmation UI
+        console.log("[Chatbot] askConfirmation node detected, triggering confirmation")
+        if (onConfirmationRequired) {
+          onConfirmationRequired(data.state.analysis)
+        }
+      }
     } else if (nodeName.includes("error")) {
       if (data.state?.error) {
         thinkingMessage = `Error: ${data.state.error}`
@@ -306,5 +394,108 @@ export const chatbotApi = {
 
     const result = await response.json()
     return result.data || result
+  },
+
+  /**
+   * Confirm or reject mutation query
+   */
+  async confirmMutation(
+    conversationId: string,
+    confirmed: boolean,
+    callbacks?: StreamCallbacks,
+  ): Promise<void> {
+    if (!confirmed) {
+      // User rejected - no streaming needed
+      return
+    }
+
+    // User confirmed - stream the execution results
+    if (!callbacks) {
+      throw new Error("Callbacks required for confirmed mutations")
+    }
+
+    const { onMessage, onMessageUpdate, onThinking, onError } = callbacks
+
+    try {
+      const token = getToken()
+      const response = await fetch(`${API_BASE_URL}/api/chatbot/confirm`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ conversationId, confirmed }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`)
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error("Failed to read response stream")
+      }
+
+      const decoder = new TextDecoder()
+      const accumulatedData: {
+        analysis: string
+        insights: unknown[]
+        sql: string
+        result: unknown[]
+        followUpQuestions: string[]
+        visualizationSuggestions: unknown[]
+      } = {
+        analysis: "",
+        insights: [],
+        sql: "",
+        result: [],
+        followUpQuestions: [],
+        visualizationSuggestions: [],
+      }
+
+      // Read the stream
+      console.log("[Chatbot] Starting confirmation stream...")
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        const lines = chunk.split("\n")
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data: StreamEvent = JSON.parse(line.slice(6))
+
+              if (data.type === "node") {
+                chatbotApi.handleNodeEvent(
+                  data,
+                  onThinking,
+                  onMessageUpdate,
+                  accumulatedData,
+                  undefined,
+                )
+              } else if (data.type === "done") {
+                chatbotApi.handleDoneEvent(accumulatedData, onMessage)
+              } else if (data.type === "error") {
+                chatbotApi.handleErrorEvent(data, onError, onMessage)
+              }
+            } catch (parseError) {
+              console.error("[Chatbot] Failed to parse stream event:", parseError)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Confirmation stream error:", error)
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred"
+      onError?.(errorMessage)
+      onMessage({
+        role: "assistant",
+        content: `Connection error: ${errorMessage}`,
+        timestamp: new Date(),
+      })
+      throw error
+    }
   },
 }

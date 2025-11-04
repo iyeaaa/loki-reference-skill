@@ -2,16 +2,21 @@ import React, { useMemo } from "react"
 import ReactMarkdown from "react-markdown"
 import { Streamdown } from "streamdown"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import type { ChatMessage } from "@/lib/api/hooks/chatbot"
 
 interface MessageBubbleProps {
   message: ChatMessage
   isStreaming?: boolean
+  needsConfirmation?: boolean
+  onConfirm?: (confirmed: boolean) => void
 }
 
 export const MessageBubble = React.memo(function MessageBubble({
   message,
   isStreaming = false,
+  needsConfirmation = false,
+  onConfirm,
 }: MessageBubbleProps) {
   const isUser = message.role === "user"
 
@@ -116,6 +121,27 @@ export const MessageBubble = React.memo(function MessageBubble({
             )}
           </div>
 
+          {/* Confirmation buttons - Claude Code style */}
+          {needsConfirmation && onConfirm && (
+            <div className="mt-4 flex gap-2">
+              <Button
+                onClick={() => onConfirm(true)}
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                ✓ 계속 진행
+              </Button>
+              <Button
+                onClick={() => onConfirm(false)}
+                size="sm"
+                variant="outline"
+                className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+              >
+                ✗ 취소
+              </Button>
+            </div>
+          )}
+
           {/* Metadata sections - only show when not streaming */}
           {shouldShowMetadata && (
             <div className="space-y-4 border-l-2 border-border pl-4">
@@ -125,7 +151,7 @@ export const MessageBubble = React.memo(function MessageBubble({
                   <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Executed Query
                   </div>
-                  <pre className="whitespace-pre-wrap break-all rounded-lg bg-muted p-3 text-xs font-mono">
+                  <pre className="max-h-[400px] overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-muted p-3 text-xs font-mono">
                     <code className="text-foreground">{message.metadata?.sql}</code>
                   </pre>
                 </div>

@@ -11,6 +11,44 @@ export async function executeQuery(state: ChatbotState): Promise<Partial<Chatbot
   const startTime = Date.now()
   chatbotLogger.nodeStart("executeQuery")
 
+  // Log input state
+  chatbotLogger.nodeDetail("executeQuery", {
+    sqlLength: state.generatedSQL?.length || 0,
+    retryCount: state.retryCount,
+    hasSQL: !!state.generatedSQL,
+    isConfirmed: state.isConfirmed,
+    isQuerySafe: state.isQuerySafe,
+    needsConfirmation: state.needsConfirmation,
+  })
+
+  // Check if this operation needs confirmation but user hasn't confirmed yet
+  if (state.needsConfirmation && !state.isConfirmed) {
+    chatbotLogger.info(
+      "[LangGraph] Mutation requires confirmation but not yet confirmed - this should not happen",
+    )
+    return {
+      error: "This operation requires user confirmation.",
+      executionTime: Date.now() - startTime,
+    }
+  }
+
+  // Critical check: SQL must exist
+  if (!state.generatedSQL || state.generatedSQL.trim().length === 0) {
+    const stateInfo = JSON.stringify({
+      generatedSQL: state.generatedSQL,
+      sqlQueries: state.sqlQueries,
+      isConfirmed: state.isConfirmed,
+      needsConfirmation: state.needsConfirmation,
+    })
+    chatbotLogger.error(`[LangGraph] ERROR: No SQL to execute! State: ${stateInfo}`)
+    return {
+      error: "No SQL query to execute. This is a bug in the system.",
+      executionTime: Date.now() - startTime,
+    }
+  }
+
+  chatbotLogger.info(`[LangGraph] Executing SQL:\n${state.generatedSQL}`)
+
   try {
     // 타임아웃 설정
     const timeoutPromise = new Promise((_, reject) => {

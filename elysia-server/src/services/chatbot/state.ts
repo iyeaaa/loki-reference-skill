@@ -13,12 +13,18 @@ export interface ChatbotState {
     requiredTables?: string[]
     timeRange?: string | null
     analysisType?: string
+    operationType?: "read" | "create" | "update" | "delete"
   }
 
   // SQL 생성
   generatedSQL: string
   sqlExplanation: string
   isQuerySafe: boolean
+
+  // 순차 실행을 위한 SQL 배열 (복잡한 mutation의 경우)
+  sqlQueries: string[] // 순차적으로 실행할 SQL 쿼리 배열
+  currentQueryIndex: number // 현재 실행 중인 쿼리 인덱스
+  sequentialResults: unknown[][] // 각 쿼리의 실행 결과
 
   // 실행 결과
   queryResult: unknown[]
@@ -43,6 +49,11 @@ export interface ChatbotState {
   followUpQuestions: string[]
   needsClarification: boolean
   clarificationQuestion: string
+
+  // Human-in-the-Loop: Mutation 확인
+  needsConfirmation: boolean
+  confirmationMessage: string
+  isConfirmed: boolean
 }
 
 export interface ChatMessage {
@@ -88,11 +99,11 @@ export const ChatbotStateAnnotation = Annotation.Root({
     default: () => [],
   }),
   currentQuestion: Annotation<string>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => "",
   }),
   conversationId: Annotation<string>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => "",
   }),
   metadata: Annotation<Record<string, unknown>>({
@@ -100,63 +111,63 @@ export const ChatbotStateAnnotation = Annotation.Root({
     default: () => ({}),
   }),
   generatedSQL: Annotation<string>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => "",
   }),
   sqlExplanation: Annotation<string>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => "",
   }),
   isQuerySafe: Annotation<boolean>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => false,
   }),
   queryResult: Annotation<unknown[]>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => [],
   }),
   executionTime: Annotation<number>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => 0,
   }),
   error: Annotation<string | null>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => null,
   }),
   fromCache: Annotation<boolean>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => false,
   }),
   retryCount: Annotation<number>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => 0,
   }),
   affectedRows: Annotation<number>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => 0,
   }),
   analysis: Annotation<string>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => "",
   }),
   insights: Annotation<Insight[]>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => [],
   }),
   visualizationSuggestions: Annotation<VisualizationSuggestion[]>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => [],
   }),
   workspaceId: Annotation<string>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => "",
   }),
   userId: Annotation<string>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => "",
   }),
   schemaContext: Annotation<string>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => "",
   }),
   previousQueries: Annotation<QueryHistory[]>({
@@ -164,15 +175,39 @@ export const ChatbotStateAnnotation = Annotation.Root({
     default: () => [],
   }),
   followUpQuestions: Annotation<string[]>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => [],
   }),
   needsClarification: Annotation<boolean>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => false,
   }),
   clarificationQuestion: Annotation<string>({
-    reducer: (_prev, next) => next,
+    reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => "",
+  }),
+  needsConfirmation: Annotation<boolean>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => false,
+  }),
+  confirmationMessage: Annotation<string>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => "",
+  }),
+  isConfirmed: Annotation<boolean>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => false,
+  }),
+  sqlQueries: Annotation<string[]>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => [],
+  }),
+  currentQueryIndex: Annotation<number>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => 0,
+  }),
+  sequentialResults: Annotation<unknown[][]>({
+    reducer: (prev, next) => [...prev, ...next],
+    default: () => [],
   }),
 })

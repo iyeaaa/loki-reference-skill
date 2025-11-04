@@ -124,6 +124,44 @@ export const chatbotLogger = {
         : ""
     logger.debug(`[Graph] ${eventType}: ${nodeName}${durationStr}`)
   },
+
+  // State logging for debugging
+  nodeState: (nodeName: string, stateType: "input" | "output", state: Record<string, unknown>) => {
+    logger.debug(
+      {
+        node: nodeName,
+        stateType,
+        state,
+      },
+      `[LangGraph] ${nodeName} ${stateType} state`,
+    )
+  },
+
+  // Routing decision logging
+  routeDecision: (fromNode: string, toNode: string, reason?: string) => {
+    const reasonStr = reason ? ` (${reason})` : ""
+    logger.info(`[LangGraph] Route: ${fromNode} → ${toNode}${reasonStr}`)
+  },
+
+  // Graph execution logging
+  graphStart: (conversationId: string, question: string) => {
+    logger.info(`[LangGraph] Graph execution started - ConversationID: ${conversationId}`)
+    logger.info(`[LangGraph] Question: "${question}"`)
+  },
+
+  graphEnd: (conversationId: string, duration: number, success: boolean) => {
+    const durationStr =
+      duration < 1000 ? `${Math.round(duration)}ms` : `${(duration / 1000).toFixed(2)}s`
+    const status = success ? "completed successfully" : "failed"
+    logger.info(
+      `[LangGraph] Graph execution ${status} - ConversationID: ${conversationId} (${durationStr})`,
+    )
+  },
+
+  // Detailed node logging with context
+  nodeDetail: (nodeName: string, details: Record<string, unknown>) => {
+    logger.debug(details, `[LangGraph] ${nodeName} details`)
+  },
 }
 
 export default logger

@@ -42,15 +42,26 @@ export function getAnalysisPrompt(
 
 다음을 JSON 형식으로 응답하세요:
 {
-  "intent": "질문의 의도 (예: 성과 측정, 리드 분석, 트렌드 파악)",
+  "intent": "질문의 의도 (예: 성과 측정, 리드 분석, 트렌드 파악, 리드 생성, 데이터 수정, 데이터 삭제)",
   "requiredTables": ["필요한 테이블 목록"],
   "timeRange": "시간 범위 (예: 오늘, 이번 주, 지난 30일) 또는 null",
   "needsClarification": false,
   "clarificationQuestion": null,
-  "analysisType": "aggregate | trend | comparison | detail"
+  "analysisType": "aggregate | trend | comparison | detail",
+  "operationType": "read | create | update | delete"
 }
 
-명확하지 않은 경우에만 needsClarification을 true로 설정하세요.`
+**operationType 분류 기준:**
+- "read": 조회, 분석, 통계, 보여줘, 알려줘 등 (SELECT)
+- "create": 새로운 데이터 생성, 추가, insert, add 등 (INSERT)
+- "update": 기존 데이터 수정, 변경, update 등 (UPDATE)
+- "delete": 데이터 삭제, 제거, delete 등 (DELETE)
+
+**중요:**
+- mutation 작업(create/update/delete)의 경우 needsClarification을 false로 설정하세요
+- 사용자가 명확하게 작업을 요청한 경우 clarification을 요청하지 마세요
+- 예제 데이터 생성 요청도 create로 분류하고 진행하세요
+- 불명확한 조회 요청이나 애매한 질문인 경우에만 needsClarification을 true로 설정하세요`
 }
 
 export function getSQLGenerationPrompt(
@@ -61,6 +72,8 @@ export function getSQLGenerationPrompt(
   previousError?: string,
   previousSQL?: string,
 ) {
+  const operationType = (metadata as { operationType?: string }).operationType || "read"
+
   const retryContext = previousError
     ? `
 
@@ -81,9 +94,148 @@ ${previousSQL}
 `
     : ""
 
+  // Operation type별 특화 지침
+  const operationGuidelines =
+    operationType === "create"
+      ? `
+# CREATE 작업 요구사항
+
+1. **INSERT 쿼리 생성**
+2. **필수 컬럼:**
+   - \`id\`: UUID 생성 (\`gen_random_uuid()\`)
+   - \`workspace_id\`: '${workspaceId}'
+   - \`created_at\`: CURRENT_TIMESTAMP
+   - \`updated_at\`: CURRENT_TIMESTAMP
+3. **비즈니스 로직 컬럼:**
+   - 테이블별 필수 컬럼 확인 (NOT NULL 제약 조건)
+   - 기본값이 있는 컬럼은 생략 가능
+   - 예제 데이터 생성 시 의미 있는 값 사용
+4. **RETURNING 절 사용:** 생성된 데이터 반환을 위해 \`RETURNING *\` 추가
+
+⚠️ **중요: CTE (WITH) 구문 사용 금지**
+- **CTE (Common Table Expression)를 절대 사용하지 마세요**
+- 복잡한 INSERT의 경우 여러 쿼리를 JSON 배열로 반환하세요
+- 각 쿼리는 독립적으로 실행 가능해야 합니다
+- 이전 쿼리의 ID가 필요한 경우 플레이스홀더를 사용하세요: \`{{PREV_QUERY_1_ID}}\`, \`{{PREV_QUERY_2_ID}}\` 등
+
+**INSERT 쿼리 예시:**
+
+**기본 INSERT 예시:**
+\`\`\`sql
+INSERT INTO customer_groups (
+  id,
+  workspace_id,
+  name,
+  description,
+  criteria,
+  is_dynamic,
+  created_at,
+  updated_at
+) VALUES (
+  gen_random_uuid(),
+  '${workspaceId}',
+  'Enterprise IT Companies',
+  'Large IT companies with 100+ employees',
+  '{"business_type": "IT", "employee_count": "100+"}'::jsonb,
+  false,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+) RETURNING *;
+\`\`\`
+
+**복잡한 INSERT 예시 1: 리드 + 연관 데이터 생성 (순차 실행)**
+
+응답 형식:
+\`\`\`json
+{
+  "queries": [
+    "쿼리1",
+    "쿼리2",
+    "쿼리3"
+  ],
+  "explanation": "설명"
+}
+\`\`\`
+
+예시:
+\`\`\`json
+{
+  "queries": [
+    "-- 1) 리드 생성\\nINSERT INTO leads (id, workspace_id, company_name, contact_name, website_url, business_type, employee_count, lead_status, lead_score, lead_source, description, created_at, updated_at) VALUES (gen_random_uuid(), '${workspaceId}', 'Tech Innovation Corp', 'Jane Smith', 'https://techinnovation.com', 'IT Services', '50-100', 'new', 85, 'Manual Entry', 'Leading AI and cloud solutions provider', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING *;",
+    "-- 2) 연락처 추가 (이전 쿼리의 ID 사용)\\nINSERT INTO lead_contacts (id, lead_id, contact_type, contact_value, contact_name, label, is_primary, created_at) VALUES (gen_random_uuid(), '{{PREV_QUERY_1_ID}}', 'email', 'jane.smith@techinnovation.com', 'Jane Smith', 'main', true, CURRENT_TIMESTAMP), (gen_random_uuid(), '{{PREV_QUERY_1_ID}}', 'phone', '02-1234-5678', 'Jane Smith', 'main', false, CURRENT_TIMESTAMP) RETURNING *;",
+    "-- 3) 소셜 미디어 추가\\nINSERT INTO lead_social_media (id, lead_id, platform, url, username, created_at) VALUES (gen_random_uuid(), '{{PREV_QUERY_1_ID}}', 'linkedin', 'https://linkedin.com/company/techinnovation', 'techinnovation', CURRENT_TIMESTAMP), (gen_random_uuid(), '{{PREV_QUERY_1_ID}}', 'twitter', 'https://twitter.com/techinnovation', '@techinnovation', CURRENT_TIMESTAMP) RETURNING *;",
+    "-- 4) 최종 결과 조회\\nSELECT * FROM leads WHERE id = '{{PREV_QUERY_1_ID}}';"
+  ],
+  "explanation": "리드와 연관 데이터를 순차적으로 생성합니다. 첫 번째 쿼리에서 생성된 lead ID를 사용하여 연락처와 소셜 미디어 정보를 추가합니다."
+}
+\`\`\`
+
+**사용자 요청에 따른 응답 형식:**
+- 단일 INSERT: SQL 쿼리를 직접 반환
+- 복잡한 INSERT (연관 데이터 포함): JSON 형식으로 queries 배열 반환
+
+**간단한 요청 예시** (customer group 1개만 생성):
+\`\`\`sql
+INSERT INTO customer_groups (
+  id, workspace_id, name, description, criteria, is_dynamic, created_at, updated_at
+) VALUES (
+  gen_random_uuid(), '${workspaceId}', 'Enterprise IT Companies', 'Large IT companies', '{}'::jsonb, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+) RETURNING *;
+\`\`\`
+
+**복잡한 요청 예시** (리드 + 연락처 + 소셜미디어):
+\`\`\`json
+{
+  "queries": [
+    "INSERT INTO leads (...) VALUES (...) RETURNING *;",
+    "INSERT INTO lead_contacts (...) VALUES (gen_random_uuid(), '{{PREV_QUERY_1_ID}}', ...) RETURNING *;",
+    "INSERT INTO lead_social_media (...) VALUES (gen_random_uuid(), '{{PREV_QUERY_1_ID}}', ...) RETURNING *;"
+  ],
+  "explanation": "리드를 생성하고 연관 데이터를 추가합니다."
+}
+\`\`\`
+`
+      : operationType === "update"
+        ? `
+# UPDATE 작업 요구사항
+
+1. **UPDATE 쿼리 생성**
+2. **필수 조건:**
+   - \`WHERE workspace_id = '${workspaceId}'\` 반드시 포함
+   - 업데이트할 레코드를 정확히 특정 (id 또는 unique 조건)
+3. **updated_at 자동 갱신:** \`updated_at = CURRENT_TIMESTAMP\` 포함
+4. **RETURNING 절 사용:** 수정된 데이터 반환을 위해 \`RETURNING *\` 추가
+5. **안전장치:** 의도치 않은 대량 업데이트 방지를 위해 WHERE 조건 명확히
+`
+        : operationType === "delete"
+          ? `
+# DELETE 작업 요구사항
+
+1. **DELETE 쿼리 생성**
+2. **필수 조건:**
+   - \`WHERE workspace_id = '${workspaceId}'\` 반드시 포함
+   - 삭제할 레코드를 정확히 특정 (id 또는 unique 조건)
+3. **RETURNING 절 사용:** 삭제된 데이터 확인을 위해 \`RETURNING *\` 추가
+4. **안전장치:** 의도치 않은 대량 삭제 방지를 위해 WHERE 조건 명확히
+5. **Soft Delete 고려:** 테이블에 \`deleted_at\` 컬럼이 있다면 UPDATE로 처리
+`
+          : `
+# READ 작업 요구사항
+
+1. **SELECT 쿼리 생성**
+2. **필수 필터:** \`WHERE workspace_id = '${workspaceId}'\` 반드시 포함
+3. **성능:** 필요한 컬럼만 SELECT, 적절한 인덱스 활용
+4. **제한:** LIMIT 절 사용 (기본 100, 최대 1000)
+5. **NULL 처리:** IS NULL, IS NOT NULL 명시적 사용
+6. **타임존:** TIMESTAMP WITH TIME ZONE 타입 고려
+7. **Division by Zero 방지:** 나누기 연산 시 NULLIF() 또는 CASE WHEN 사용 필수
+   - ❌ 잘못된 예: \`COUNT(*) / total\`
+   - ✅ 올바른 예: \`COUNT(*) / NULLIF(total, 0)\`
+`
+
   return `${SYSTEM_PROMPT}
 
-# 작업: SQL 쿼리 생성
+# 작업: SQL 쿼리 생성 (Operation: ${operationType.toUpperCase()})
 
 ${schemaContext}
 
@@ -93,18 +245,12 @@ ${schemaContext}
 **워크스페이스 ID:** ${workspaceId}
 **분석 결과:** ${JSON.stringify(metadata, null, 2)}${retryContext}
 
-# 요구사항
+${operationGuidelines}
+
+# 공통 요구사항
 
 1. **PostgreSQL 문법** 사용
-2. **필수 필터:** \`WHERE workspace_id = '${workspaceId}'\` 반드시 포함
-3. **READ-ONLY:** SELECT 쿼리만 생성 (INSERT, UPDATE, DELETE 금지)
-4. **성능:** 필요한 컬럼만 SELECT, 적절한 인덱스 활용
-5. **제한:** LIMIT 절 사용 (기본 100, 최대 1000)
-6. **NULL 처리:** IS NULL, IS NOT NULL 명시적 사용
-7. **타임존:** TIMESTAMP WITH TIME ZONE 타입 고려
-8. **Division by Zero 방지:** 나누기 연산 시 NULLIF() 또는 CASE WHEN 사용 필수
-   - ❌ 잘못된 예: \`COUNT(*) / total\`
-   - ✅ 올바른 예: \`COUNT(*) / NULLIF(total, 0)\`
+2. **워크스페이스 격리:** 모든 쿼리에 \`workspace_id = '${workspaceId}'\` 필터 필수
 
 # 자주 사용되는 패턴
 

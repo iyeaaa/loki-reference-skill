@@ -25,6 +25,7 @@ interface UseChatbotMutationOptions {
   onMessageUpdate?: (message: ChatMessage) => void
   onThinking: (thinking: string) => void
   onError?: (error: string) => void
+  onConfirmationRequired?: (message: string) => void
 }
 
 /**
@@ -32,7 +33,7 @@ interface UseChatbotMutationOptions {
  * Handles lifecycle management while preserving streaming functionality
  */
 export function useChatbotMutation(options: UseChatbotMutationOptions) {
-  const { onMessage, onMessageUpdate, onThinking, onError } = options
+  const { onMessage, onMessageUpdate, onThinking, onError, onConfirmationRequired } = options
 
   return useMutation({
     mutationKey: ["chatbot", "ask"],
@@ -42,6 +43,7 @@ export function useChatbotMutation(options: UseChatbotMutationOptions) {
         onMessageUpdate,
         onThinking,
         onError,
+        onConfirmationRequired,
       })
     },
     retry: 1, // Retry once on failure

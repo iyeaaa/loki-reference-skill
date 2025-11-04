@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { type ChatMessage, useChatbotHistory, useChatbotMutation } from "@/lib/api/hooks/chatbot"
+import { chatbotApi } from "@/lib/api/services/chatbot"
 import { MessageBubble } from "./MessageBubble"
 import { ThinkingIndicator } from "./ThinkingIndicator"
 
@@ -21,6 +22,8 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   const [currentThinking, setCurrentThinking] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<QuestionCategory>("performance")
   const [isProcessing, setIsProcessing] = useState(false)
+  const [needsConfirmation, setNeedsConfirmation] = useState(false)
+  const [currentConversationId, setCurrentConversationId] = useState(conversationId || "")
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Load conversation history if conversationId is provided
@@ -37,6 +40,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       setStreamingMessage(null)
       setCurrentThinking(null)
       setIsProcessing(false)
+      setNeedsConfirmation(false)
     },
     onMessageUpdate: (message) => {
       // Real-time streaming update
@@ -45,11 +49,24 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     onThinking: (thinking) => {
       setCurrentThinking(thinking)
     },
+    onConfirmationRequired: (message) => {
+      // Confirmation required - show confirmation UI
+      console.log("[ChatInterface] Confirmation required:", message)
+      setNeedsConfirmation(true)
+      setStreamingMessage({
+        role: "assistant",
+        content: message,
+        timestamp: new Date(),
+      })
+      setCurrentThinking(null)
+      setIsProcessing(false)
+    },
     onError: (error) => {
       console.error("Chatbot error:", error)
       setStreamingMessage(null)
       setCurrentThinking(null)
       setIsProcessing(false)
+      setNeedsConfirmation(false)
     },
   })
 
@@ -90,10 +107,12 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
 
       try {
         // Use TanStack Query mutation
+        const convId = conversationId || `conv_${Date.now()}`
+        setCurrentConversationId(convId)
         await chatbotMutation.mutateAsync({
           question: questionText,
           workspaceId,
-          conversationId: conversationId || `conv_${Date.now()}`,
+          conversationId: convId,
           messages,
         })
       } catch (error) {
@@ -102,6 +121,73 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       }
     },
     [input, isProcessing, chatbotMutation, workspaceId, conversationId, messages],
+  )
+
+  const handleConfirmation = useCallback(
+    async (confirmed: boolean) => {
+      if (!confirmed) {
+        // User rejected - add rejection message and clear confirmation state
+        if (streamingMessage) {
+          setMessages((prev) => [
+            ...prev,
+            streamingMessage,
+            {
+              role: "assistant",
+              content: "작업이 취소되었습니다.",
+              timestamp: new Date(),
+            },
+          ])
+        }
+        setStreamingMessage(null)
+        setNeedsConfirmation(false)
+        setIsProcessing(false)
+        return
+      }
+
+      // User confirmed - continue execution
+      setIsProcessing(true)
+      setNeedsConfirmation(false)
+
+      // Add confirmation message to messages
+      if (streamingMessage) {
+        setMessages((prev) => [...prev, streamingMessage])
+      }
+      setStreamingMessage(null)
+
+      // Initialize new streaming message for results
+      setStreamingMessage({
+        role: "assistant",
+        content: "",
+        timestamp: new Date(),
+      })
+
+      try {
+        await chatbotApi.confirmMutation(currentConversationId, true, {
+          onMessage: (message) => {
+            setMessages((prev) => [...prev, message])
+            setStreamingMessage(null)
+            setCurrentThinking(null)
+            setIsProcessing(false)
+          },
+          onMessageUpdate: (message) => {
+            setStreamingMessage(message)
+          },
+          onThinking: (thinking) => {
+            setCurrentThinking(thinking)
+          },
+          onError: (error) => {
+            console.error("Confirmation error:", error)
+            setStreamingMessage(null)
+            setCurrentThinking(null)
+            setIsProcessing(false)
+          },
+        })
+      } catch (error) {
+        console.error("Confirmation error:", error)
+        setIsProcessing(false)
+      }
+    },
+    [streamingMessage, currentConversationId],
   )
 
   // Quick question event listener
@@ -262,7 +348,9 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
               <MessageBubble
                 key="streaming-message"
                 message={streamingMessage}
-                isStreaming={true}
+                isStreaming={!needsConfirmation}
+                needsConfirmation={needsConfirmation}
+                onConfirm={handleConfirmation}
               />
             )}
 

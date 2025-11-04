@@ -13,6 +13,13 @@ export async function analyzeQuestion(state: ChatbotState): Promise<Partial<Chat
   const startTime = Date.now()
   chatbotLogger.nodeStart("analyzeQuestion")
 
+  // Log input state
+  chatbotLogger.nodeDetail("analyzeQuestion", {
+    question: state.currentQuestion,
+    workspaceId: state.workspaceId,
+    messageCount: state.messages.length,
+  })
+
   try {
     const prompt = getAnalysisPrompt(state.currentQuestion, state.workspaceId, state.messages)
 
@@ -30,6 +37,15 @@ export async function analyzeQuestion(state: ChatbotState): Promise<Partial<Chat
 
     const duration = Date.now() - startTime
     chatbotLogger.nodeSuccess("analyzeQuestion", duration)
+
+    // Log output details
+    chatbotLogger.nodeDetail("analyzeQuestion", {
+      intent: analysis.intent,
+      requiredTables: analysis.requiredTables,
+      timeRange: analysis.timeRange,
+      needsClarification: analysis.needsClarification || false,
+      analysisType: analysis.analysisType,
+    })
 
     return {
       metadata: analysis,

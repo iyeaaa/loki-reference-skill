@@ -1,9 +1,7 @@
 /**
- * Lead Filtering Types
- *
- * Type definitions for the advanced filtering system matching backend types
+ * Filter operators for column-specific filtering
+ * Mirrors backend: elysia-server/src/types/lead-filters.types.ts
  */
-
 export type FilterOperator =
   | "equals" // Exact match
   | "notEquals" // Not equal
@@ -20,159 +18,218 @@ export type FilterOperator =
   | "isEmpty" // Null or empty string
   | "isNotEmpty" // Not null and not empty
 
+/**
+ * Filter value types
+ */
 export type FilterValue =
   | string
   | string[]
   | number
   | { min: number; max: number }
-  | { from: string; to: string }
+  | { from: string; to: string } // for date ranges
   | null
 
+/**
+ * Column filter definition
+ */
 export interface ColumnFilter {
   field: string
   operator: FilterOperator
   value: FilterValue
 }
 
+/**
+ * Column filter configuration
+ */
+export interface ColumnFilterConfig {
+  type: "text" | "number" | "date" | "enum" | "select"
+  operators: FilterOperator[]
+  loadOptions?: (context?: {
+    workspaceId?: string
+    customerGroupId?: string
+    signal?: AbortSignal
+  }) => Promise<Array<{ value: string; label: string }>>
+}
+
+/**
+ * Filter preset - saved collection of filters
+ */
 export interface FilterPreset {
   id: string
   name: string
   filters: ColumnFilter[]
   createdAt: string
-  isShared?: boolean
 }
 
-export type ColumnFilterType = "text" | "select" | "number" | "date" | "enum"
-
-export interface ColumnFilterConfig {
-  type: ColumnFilterType
-  operators?: FilterOperator[]
-  options?: Array<{ value: string; label: string }>
-  loadOptions?: (context?: {
-    customerGroupId?: string
-    workspaceId?: string
-    signal?: AbortSignal
-  }) => Promise<Array<{ value: string; label: string; count?: number }>>
+/**
+ * Searchable field configuration
+ */
+export interface SearchableField {
+  field: string
+  label: string
+  type: "string" | "number" | "date" | "enum"
+  options?: { value: string; label: string }[]
+  placeholder?: string
 }
 
-// Filterable lead fields (must match backend FILTERABLE_LEAD_FIELDS)
-export const FILTERABLE_LEAD_FIELDS = [
-  "companyName",
-  "foundCompanyName",
-  "contactName",
-  "websiteUrl",
-  "businessType",
-  "description",
-  "country",
-  "city",
-  "state",
-  "address",
-  "foundedYear",
-  "employeeCount",
-  "leadStatus",
-  "leadScore",
-  "leadSource",
-  "notes",
-  "createdAt",
-  "updatedAt",
-] as const
+/**
+ * All searchable lead fields
+ */
+export const SEARCHABLE_LEAD_FIELDS: SearchableField[] = [
+  {
+    field: "companyName",
+    label: "회사명",
+    type: "string",
+    placeholder: "회사명을 입력하세요...",
+  },
+  {
+    field: "contactName",
+    label: "담당자명",
+    type: "string",
+    placeholder: "담당자명을 입력하세요...",
+  },
+  {
+    field: "websiteUrl",
+    label: "웹사이트",
+    type: "string",
+    placeholder: "웹사이트 URL을 입력하세요...",
+  },
+  {
+    field: "country",
+    label: "국가",
+    type: "string",
+    placeholder: "국가를 입력하세요...",
+  },
+  {
+    field: "city",
+    label: "도시",
+    type: "string",
+    placeholder: "도시를 입력하세요...",
+  },
+  {
+    field: "state",
+    label: "주/도",
+    type: "string",
+    placeholder: "주/도를 입력하세요...",
+  },
+  {
+    field: "businessType",
+    label: "비즈니스 타입",
+    type: "string",
+    placeholder: "비즈니스 타입을 입력하세요...",
+  },
+  {
+    field: "leadStatus",
+    label: "상태",
+    type: "enum",
+    options: [
+      { value: "new", label: "신규" },
+      { value: "contacted", label: "연락됨" },
+      { value: "qualified", label: "적격" },
+      { value: "unqualified", label: "부적격" },
+      { value: "converted", label: "전환됨" },
+      { value: "lost", label: "실패" },
+      { value: "unsubscribed", label: "구독취소" },
+    ],
+  },
+  {
+    field: "leadSource",
+    label: "리드 소스",
+    type: "string",
+    placeholder: "리드 소스를 입력하세요...",
+  },
+  {
+    field: "leadScore",
+    label: "리드 점수",
+    type: "number",
+    placeholder: "리드 점수를 입력하세요...",
+  },
+  {
+    field: "foundedYear",
+    label: "설립연도",
+    type: "number",
+    placeholder: "설립연도를 입력하세요...",
+  },
+  {
+    field: "employeeCount",
+    label: "직원수",
+    type: "string",
+    placeholder: "직원수를 입력하세요...",
+  },
+  {
+    field: "address",
+    label: "주소",
+    type: "string",
+    placeholder: "주소를 입력하세요...",
+  },
+  {
+    field: "description",
+    label: "설명",
+    type: "string",
+    placeholder: "설명을 입력하세요...",
+  },
+  {
+    field: "notes",
+    label: "메모",
+    type: "string",
+    placeholder: "메모를 입력하세요...",
+  },
+  {
+    field: "createdBy",
+    label: "생성자",
+    type: "string",
+    placeholder: "생성자를 입력하세요...",
+  },
+  {
+    field: "createdAt",
+    label: "생성일",
+    type: "date",
+    placeholder: "날짜를 선택하세요...",
+  },
+  {
+    field: "updatedAt",
+    label: "수정일",
+    type: "date",
+    placeholder: "날짜를 선택하세요...",
+  },
+  {
+    field: "lastContactedAt",
+    label: "마지막 연락일",
+    type: "date",
+    placeholder: "날짜를 선택하세요...",
+  },
+]
 
-export type FilterableLeadField = (typeof FILTERABLE_LEAD_FIELDS)[number]
-
-// Field type mapping for validation
-export const LEAD_FIELD_TYPES: Record<string, ColumnFilterType> = {
-  companyName: "text",
-  foundCompanyName: "text",
-  contactName: "text",
-  websiteUrl: "text",
-  businessType: "text",
-  description: "text",
-  country: "select",
-  city: "select",
-  state: "text",
-  address: "text",
-  foundedYear: "number",
-  employeeCount: "select",
-  leadStatus: "enum",
-  leadScore: "number",
-  leadSource: "select",
-  notes: "text",
-  createdAt: "date",
-  updatedAt: "date",
+/**
+ * Get field configuration by field name
+ */
+export function getFieldConfig(field: string): SearchableField | undefined {
+  return SEARCHABLE_LEAD_FIELDS.find((f) => f.field === field)
 }
 
-// Operator-field type compatibility map
-export const OPERATOR_FIELD_TYPE_MAP: Record<ColumnFilterType, FilterOperator[]> = {
-  text: [
-    "equals",
-    "notEquals",
-    "contains",
-    "startsWith",
-    "endsWith",
-    "in",
-    "notIn",
-    "isEmpty",
-    "isNotEmpty",
-  ],
-  number: ["equals", "notEquals", "gt", "lt", "gte", "lte", "between", "isEmpty", "isNotEmpty"],
-  date: ["equals", "notEquals", "gt", "lt", "gte", "lte", "between"],
-  enum: ["equals", "notEquals", "in", "notIn"],
-  select: ["in", "notIn", "isEmpty", "isNotEmpty"],
+/**
+ * Get field label by field name
+ */
+export function getFieldLabel(field: string): string {
+  return getFieldConfig(field)?.label || field
 }
 
-// Filter display labels
+/**
+ * Operator labels for display
+ */
 export const OPERATOR_LABELS: Record<FilterOperator, string> = {
   equals: "Equals",
-  notEquals: "Does not equal",
+  notEquals: "Not Equals",
   contains: "Contains",
-  startsWith: "Starts with",
-  endsWith: "Ends with",
-  gt: "Greater than",
-  lt: "Less than",
-  gte: "Greater than or equal to",
-  lte: "Less than or equal to",
+  startsWith: "Starts With",
+  endsWith: "Ends With",
+  gt: "Greater Than",
+  lt: "Less Than",
+  gte: "Greater Than or Equal",
+  lte: "Less Than or Equal",
   between: "Between",
-  in: "Is one of",
-  notIn: "Is not one of",
-  isEmpty: "Is empty",
-  isNotEmpty: "Is not empty",
-}
-
-// Helper to get valid operators for a field
-export function getOperatorsForField(field: string): FilterOperator[] {
-  const fieldType = LEAD_FIELD_TYPES[field]
-  if (!fieldType) return []
-  return OPERATOR_FIELD_TYPE_MAP[fieldType] || []
-}
-
-// Helper to validate filter
-export function isValidFilter(filter: ColumnFilter): boolean {
-  if (!FILTERABLE_LEAD_FIELDS.includes(filter.field as FilterableLeadField)) {
-    return false
-  }
-
-  const validOperators = getOperatorsForField(filter.field)
-  if (!validOperators.includes(filter.operator)) {
-    return false
-  }
-
-  // Validate value based on operator
-  if (filter.operator === "between") {
-    if (typeof filter.value !== "object" || filter.value === null) {
-      return false
-    }
-    const hasMinMax = "min" in filter.value && "max" in filter.value
-    const hasFromTo = "from" in filter.value && "to" in filter.value
-    return hasMinMax || hasFromTo
-  }
-
-  if (["in", "notIn"].includes(filter.operator)) {
-    return Array.isArray(filter.value)
-  }
-
-  if (["isEmpty", "isNotEmpty"].includes(filter.operator)) {
-    return true // Value doesn't matter for these operators
-  }
-
-  return filter.value !== undefined && filter.value !== null
+  in: "In",
+  notIn: "Not In",
+  isEmpty: "Is Empty",
+  isNotEmpty: "Is Not Empty",
 }

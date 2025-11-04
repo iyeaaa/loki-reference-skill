@@ -1,10 +1,12 @@
 import type { ColumnDef, RowData } from "@tanstack/react-table"
 import { formatDistanceToNow } from "date-fns"
+import { ColumnSelector } from "@/components/leads/ColumnSelector"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { leadsApi } from "@/lib/api/services/leads"
 import type { Lead, LeadStatus } from "@/lib/api/types/lead"
 import type { ColumnFilter, ColumnFilterConfig } from "@/lib/api/types/lead-filters"
+import { AVAILABLE_COLUMNS } from "@/lib/column-visibility"
 import { FilterableColumnHeader } from "./FilterableColumnHeader"
 
 // Extend TanStack Table meta types
@@ -61,6 +63,12 @@ interface LeadsTableMeta {
   // Filter context
   workspaceId?: string
   customerGroupId?: string
+  // Column visibility
+  visibleColumns?: string[]
+  columnOrder?: string[]
+  onAddColumn?: (columnId: string) => void
+  onRemoveColumn?: (columnId: string) => void
+  onReorderColumns?: (fromIndex: number, toIndex: number) => void
 }
 
 // Helper function to create filter change handler
@@ -79,6 +87,33 @@ function createFilterChangeHandler(columnId: string, meta: LeadsTableMeta | unde
       meta.setColumnFilters((prev) => prev.filter((f) => f.field !== columnId))
     }
   }
+}
+
+// Helper function to create column header with remove button
+function createColumnHeader(
+  columnId: string,
+  title: string,
+  meta: LeadsTableMeta | undefined,
+  currentFilter: ColumnFilter | undefined,
+  filterConfig: ColumnFilterConfig | undefined,
+  // biome-ignore lint/suspicious/noExplicitAny: Column type from TanStack Table is complex
+  column: any,
+) {
+  const columnDef = AVAILABLE_COLUMNS.find((col) => col.id === columnId)
+
+  return (
+    <FilterableColumnHeader
+      column={column}
+      title={title}
+      filterConfig={filterConfig}
+      currentFilter={currentFilter}
+      onFilterChange={createFilterChangeHandler(columnId, meta)}
+      workspaceId={meta?.workspaceId}
+      customerGroupId={meta?.customerGroupId}
+      canRemove={columnDef?.canHide}
+      onRemove={() => meta?.onRemoveColumn?.(columnId)}
+    />
+  )
 }
 
 // Column definitions for Leads Table
@@ -122,6 +157,7 @@ export const leadsColumns: ColumnDef<Lead>[] = [
     header: ({ column, table }) => {
       const meta = table.options.meta as LeadsTableMeta | undefined
       const currentFilter = meta?.columnFilters?.find((f) => f.field === column.id)
+      const columnDef = AVAILABLE_COLUMNS.find((col) => col.id === column.id)
 
       return (
         <FilterableColumnHeader
@@ -132,6 +168,8 @@ export const leadsColumns: ColumnDef<Lead>[] = [
           onFilterChange={createFilterChangeHandler(column.id, meta)}
           workspaceId={meta?.workspaceId}
           customerGroupId={meta?.customerGroupId}
+          canRemove={columnDef?.canHide}
+          onRemove={() => meta?.onRemoveColumn?.(column.id)}
         />
       )
     },
@@ -160,6 +198,7 @@ export const leadsColumns: ColumnDef<Lead>[] = [
     header: ({ column, table }) => {
       const meta = table.options.meta as LeadsTableMeta | undefined
       const currentFilter = meta?.columnFilters?.find((f) => f.field === column.id)
+      const columnDef = AVAILABLE_COLUMNS.find((col) => col.id === column.id)
 
       return (
         <FilterableColumnHeader
@@ -170,6 +209,8 @@ export const leadsColumns: ColumnDef<Lead>[] = [
           onFilterChange={createFilterChangeHandler(column.id, meta)}
           workspaceId={meta?.workspaceId}
           customerGroupId={meta?.customerGroupId}
+          canRemove={columnDef?.canHide}
+          onRemove={() => meta?.onRemoveColumn?.(column.id)}
         />
       )
     },
@@ -184,10 +225,50 @@ export const leadsColumns: ColumnDef<Lead>[] = [
     cell: ({ row }) => row.original.contactName || "-",
   },
   {
+    id: "email",
+    accessorFn: (row) => {
+      const emailContact = row.contacts?.find((c) => c.contactType === "email")
+      return emailContact?.contactValue || row.createdByEmail
+    },
+    header: ({ column, table }) => {
+      const meta = table.options.meta as LeadsTableMeta | undefined
+      const currentFilter = meta?.columnFilters?.find((f) => f.field === "email")
+      const columnDef = AVAILABLE_COLUMNS.find((col) => col.id === "email")
+
+      return (
+        <FilterableColumnHeader
+          column={column}
+          title="Email"
+          filterConfig={column.columnDef.meta?.filterConfig}
+          currentFilter={currentFilter}
+          onFilterChange={createFilterChangeHandler("email", meta)}
+          workspaceId={meta?.workspaceId}
+          customerGroupId={meta?.customerGroupId}
+          canRemove={columnDef?.canHide}
+          onRemove={() => meta?.onRemoveColumn?.("email")}
+        />
+      )
+    },
+    enableSorting: false,
+    enableColumnFilter: true,
+    meta: {
+      filterConfig: {
+        type: "text",
+        operators: ["contains", "equals", "isEmpty", "isNotEmpty"],
+      } as ColumnFilterConfig,
+    },
+    cell: ({ row }) => {
+      const emailContact = row.original.contacts?.find((c) => c.contactType === "email")
+      const email = emailContact?.contactValue || row.original.createdByEmail
+      return email || "-"
+    },
+  },
+  {
     accessorKey: "leadStatus",
     header: ({ column, table }) => {
       const meta = table.options.meta as LeadsTableMeta | undefined
       const currentFilter = meta?.columnFilters?.find((f) => f.field === column.id)
+      const columnDef = AVAILABLE_COLUMNS.find((col) => col.id === column.id)
 
       return (
         <FilterableColumnHeader
@@ -198,6 +279,8 @@ export const leadsColumns: ColumnDef<Lead>[] = [
           onFilterChange={createFilterChangeHandler(column.id, meta)}
           workspaceId={meta?.workspaceId}
           customerGroupId={meta?.customerGroupId}
+          canRemove={columnDef?.canHide}
+          onRemove={() => meta?.onRemoveColumn?.(column.id)}
         />
       )
     },
@@ -207,7 +290,11 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       filterConfig: {
         type: "enum",
         operators: ["in", "notIn", "equals"],
-        loadOptions: async (context) => {
+        loadOptions: async (context?: {
+          workspaceId?: string
+          customerGroupId?: string
+          signal?: AbortSignal
+        }) => {
           try {
             const response = await leadsApi.getFilterOptions(
               "leadStatus",
@@ -230,6 +317,7 @@ export const leadsColumns: ColumnDef<Lead>[] = [
     header: ({ column, table }) => {
       const meta = table.options.meta as LeadsTableMeta | undefined
       const currentFilter = meta?.columnFilters?.find((f) => f.field === column.id)
+      const columnDef = AVAILABLE_COLUMNS.find((col) => col.id === column.id)
 
       return (
         <FilterableColumnHeader
@@ -240,6 +328,8 @@ export const leadsColumns: ColumnDef<Lead>[] = [
           onFilterChange={createFilterChangeHandler(column.id, meta)}
           workspaceId={meta?.workspaceId}
           customerGroupId={meta?.customerGroupId}
+          canRemove={columnDef?.canHide}
+          onRemove={() => meta?.onRemoveColumn?.(column.id)}
         />
       )
     },
@@ -259,16 +349,13 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       const meta = table.options.meta as LeadsTableMeta | undefined
       const currentFilter = meta?.columnFilters?.find((f) => f.field === column.id)
 
-      return (
-        <FilterableColumnHeader
-          column={column}
-          title="Country"
-          filterConfig={column.columnDef.meta?.filterConfig}
-          currentFilter={currentFilter}
-          onFilterChange={createFilterChangeHandler(column.id, meta)}
-          workspaceId={meta?.workspaceId}
-          customerGroupId={meta?.customerGroupId}
-        />
+      return createColumnHeader(
+        column.id,
+        "Country",
+        meta,
+        currentFilter,
+        column.columnDef.meta?.filterConfig,
+        column,
       )
     },
     enableSorting: true,
@@ -277,7 +364,11 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       filterConfig: {
         type: "select",
         operators: ["in", "notIn", "equals", "isEmpty"],
-        loadOptions: async (context) => {
+        loadOptions: async (context?: {
+          workspaceId?: string
+          customerGroupId?: string
+          signal?: AbortSignal
+        }) => {
           try {
             const response = await leadsApi.getFilterOptions(
               "country",
@@ -301,16 +392,13 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       const meta = table.options.meta as LeadsTableMeta | undefined
       const currentFilter = meta?.columnFilters?.find((f) => f.field === column.id)
 
-      return (
-        <FilterableColumnHeader
-          column={column}
-          title="City"
-          filterConfig={column.columnDef.meta?.filterConfig}
-          currentFilter={currentFilter}
-          onFilterChange={createFilterChangeHandler(column.id, meta)}
-          workspaceId={meta?.workspaceId}
-          customerGroupId={meta?.customerGroupId}
-        />
+      return createColumnHeader(
+        column.id,
+        "City",
+        meta,
+        currentFilter,
+        column.columnDef.meta?.filterConfig,
+        column,
       )
     },
     enableSorting: true,
@@ -319,7 +407,11 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       filterConfig: {
         type: "select",
         operators: ["in", "notIn", "equals", "isEmpty"],
-        loadOptions: async (context) => {
+        loadOptions: async (context?: {
+          workspaceId?: string
+          customerGroupId?: string
+          signal?: AbortSignal
+        }) => {
           try {
             const response = await leadsApi.getFilterOptions(
               "city",
@@ -343,16 +435,13 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       const meta = table.options.meta as LeadsTableMeta | undefined
       const currentFilter = meta?.columnFilters?.find((f) => f.field === column.id)
 
-      return (
-        <FilterableColumnHeader
-          column={column}
-          title="Business Type"
-          filterConfig={column.columnDef.meta?.filterConfig}
-          currentFilter={currentFilter}
-          onFilterChange={createFilterChangeHandler(column.id, meta)}
-          workspaceId={meta?.workspaceId}
-          customerGroupId={meta?.customerGroupId}
-        />
+      return createColumnHeader(
+        column.id,
+        "Business Type",
+        meta,
+        currentFilter,
+        column.columnDef.meta?.filterConfig,
+        column,
       )
     },
     enableSorting: true,
@@ -371,16 +460,13 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       const meta = table.options.meta as LeadsTableMeta | undefined
       const currentFilter = meta?.columnFilters?.find((f) => f.field === column.id)
 
-      return (
-        <FilterableColumnHeader
-          column={column}
-          title="Employees"
-          filterConfig={column.columnDef.meta?.filterConfig}
-          currentFilter={currentFilter}
-          onFilterChange={createFilterChangeHandler(column.id, meta)}
-          workspaceId={meta?.workspaceId}
-          customerGroupId={meta?.customerGroupId}
-        />
+      return createColumnHeader(
+        column.id,
+        "Employees",
+        meta,
+        currentFilter,
+        column.columnDef.meta?.filterConfig,
+        column,
       )
     },
     enableSorting: true,
@@ -389,7 +475,11 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       filterConfig: {
         type: "select",
         operators: ["in", "equals"],
-        loadOptions: async (context) => {
+        loadOptions: async (context?: {
+          workspaceId?: string
+          customerGroupId?: string
+          signal?: AbortSignal
+        }) => {
           try {
             const response = await leadsApi.getFilterOptions(
               "employeeCount",
@@ -413,16 +503,13 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       const meta = table.options.meta as LeadsTableMeta | undefined
       const currentFilter = meta?.columnFilters?.find((f) => f.field === column.id)
 
-      return (
-        <FilterableColumnHeader
-          column={column}
-          title="Source"
-          filterConfig={column.columnDef.meta?.filterConfig}
-          currentFilter={currentFilter}
-          onFilterChange={createFilterChangeHandler(column.id, meta)}
-          workspaceId={meta?.workspaceId}
-          customerGroupId={meta?.customerGroupId}
-        />
+      return createColumnHeader(
+        column.id,
+        "Source",
+        meta,
+        currentFilter,
+        column.columnDef.meta?.filterConfig,
+        column,
       )
     },
     enableSorting: true,
@@ -431,7 +518,11 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       filterConfig: {
         type: "select",
         operators: ["in", "notIn", "equals"],
-        loadOptions: async (context) => {
+        loadOptions: async (context?: {
+          workspaceId?: string
+          customerGroupId?: string
+          signal?: AbortSignal
+        }) => {
           try {
             const response = await leadsApi.getFilterOptions(
               "leadSource",
@@ -455,16 +546,13 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       const meta = table.options.meta as LeadsTableMeta | undefined
       const currentFilter = meta?.columnFilters?.find((f) => f.field === column.id)
 
-      return (
-        <FilterableColumnHeader
-          column={column}
-          title="Founded"
-          filterConfig={column.columnDef.meta?.filterConfig}
-          currentFilter={currentFilter}
-          onFilterChange={createFilterChangeHandler(column.id, meta)}
-          workspaceId={meta?.workspaceId}
-          customerGroupId={meta?.customerGroupId}
-        />
+      return createColumnHeader(
+        column.id,
+        "Founded",
+        meta,
+        currentFilter,
+        column.columnDef.meta?.filterConfig,
+        column,
       )
     },
     enableSorting: true,
@@ -483,16 +571,13 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       const meta = table.options.meta as LeadsTableMeta | undefined
       const currentFilter = meta?.columnFilters?.find((f) => f.field === column.id)
 
-      return (
-        <FilterableColumnHeader
-          column={column}
-          title="Website"
-          filterConfig={column.columnDef.meta?.filterConfig}
-          currentFilter={currentFilter}
-          onFilterChange={createFilterChangeHandler(column.id, meta)}
-          workspaceId={meta?.workspaceId}
-          customerGroupId={meta?.customerGroupId}
-        />
+      return createColumnHeader(
+        column.id,
+        "Website",
+        meta,
+        currentFilter,
+        column.columnDef.meta?.filterConfig,
+        column,
       )
     },
     enableSorting: false,
@@ -526,16 +611,13 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       const meta = table.options.meta as LeadsTableMeta | undefined
       const currentFilter = meta?.columnFilters?.find((f) => f.field === "createdBy")
 
-      return (
-        <FilterableColumnHeader
-          column={column}
-          title="Created By"
-          filterConfig={column.columnDef.meta?.filterConfig}
-          currentFilter={currentFilter}
-          onFilterChange={createFilterChangeHandler("createdBy", meta)}
-          workspaceId={meta?.workspaceId}
-          customerGroupId={meta?.customerGroupId}
-        />
+      return createColumnHeader(
+        "createdBy",
+        "Created By",
+        meta,
+        currentFilter,
+        column.columnDef.meta?.filterConfig,
+        column,
       )
     },
     enableSorting: true,
@@ -544,7 +626,11 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       filterConfig: {
         type: "select",
         operators: ["in", "notIn", "isEmpty", "isNotEmpty"],
-        loadOptions: async (context) => {
+        loadOptions: async (context?: {
+          workspaceId?: string
+          customerGroupId?: string
+          signal?: AbortSignal
+        }) => {
           try {
             const response = await leadsApi.getFilterOptions(
               "createdBy",
@@ -568,16 +654,13 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       const meta = table.options.meta as LeadsTableMeta | undefined
       const currentFilter = meta?.columnFilters?.find((f) => f.field === column.id)
 
-      return (
-        <FilterableColumnHeader
-          column={column}
-          title="Created"
-          filterConfig={column.columnDef.meta?.filterConfig}
-          currentFilter={currentFilter}
-          onFilterChange={createFilterChangeHandler(column.id, meta)}
-          workspaceId={meta?.workspaceId}
-          customerGroupId={meta?.customerGroupId}
-        />
+      return createColumnHeader(
+        column.id,
+        "Created",
+        meta,
+        currentFilter,
+        column.columnDef.meta?.filterConfig,
+        column,
       )
     },
     enableSorting: true,
@@ -606,14 +689,13 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       const meta = table.options.meta as LeadsTableMeta | undefined
       const currentFilter = meta?.columnFilters?.find((f) => f.field === column.id)
 
-      return (
-        <FilterableColumnHeader
-          column={column}
-          title="Updated"
-          filterConfig={column.columnDef.meta?.filterConfig}
-          currentFilter={currentFilter}
-          onFilterChange={createFilterChangeHandler(column.id, meta)}
-        />
+      return createColumnHeader(
+        column.id,
+        "Updated",
+        meta,
+        currentFilter,
+        column.columnDef.meta?.filterConfig,
+        column,
       )
     },
     enableSorting: true,
@@ -635,6 +717,23 @@ export const leadsColumns: ColumnDef<Lead>[] = [
         </div>
       )
     },
+  },
+  {
+    id: "columnActions",
+    header: ({ table }) => {
+      const meta = table.options.meta as LeadsTableMeta | undefined
+      return (
+        <div className="flex items-center justify-center">
+          <ColumnSelector
+            visibleColumns={meta?.visibleColumns || []}
+            onAddColumn={meta?.onAddColumn || (() => {})}
+          />
+        </div>
+      )
+    },
+    cell: () => null,
+    enableSorting: false,
+    enableColumnFilter: false,
   },
 ]
 

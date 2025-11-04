@@ -249,16 +249,26 @@ export function buildFilterCondition(filter: ColumnFilter): SQL | undefined {
       return ilike(column, `%${value as string}`)
 
     case "gt":
-      return gt(column, value)
+      // Convert date strings to Date objects for timestamp columns
+      return gt(column, typeof value === "string" && field.includes("At") ? new Date(value) : value)
 
     case "lt":
-      return lt(column, value)
+      // Convert date strings to Date objects for timestamp columns
+      return lt(column, typeof value === "string" && field.includes("At") ? new Date(value) : value)
 
     case "gte":
-      return gte(column, value)
+      // Convert date strings to Date objects for timestamp columns
+      return gte(
+        column,
+        typeof value === "string" && field.includes("At") ? new Date(value) : value,
+      )
 
     case "lte":
-      return lte(column, value)
+      // Convert date strings to Date objects for timestamp columns
+      return lte(
+        column,
+        typeof value === "string" && field.includes("At") ? new Date(value) : value,
+      )
 
     case "between": {
       if (typeof value === "object" && value !== null) {

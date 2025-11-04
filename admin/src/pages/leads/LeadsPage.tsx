@@ -5,16 +5,16 @@ import {
   FileText,
   Plus,
   RefreshCw,
-  Search,
   Send,
   Trash2,
   Upload,
   Users,
   X,
 } from "lucide-react"
-import { useCallback, useEffect, useId, useRef, useState } from "react"
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
+import { AdvancedSearchInput } from "@/components/search/AdvancedSearchInput"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -72,10 +72,11 @@ import {
 } from "@/lib/csv-utils"
 import { analyzeCSVLeadsForGroupName } from "@/lib/utils/csv-lead-analyzer"
 import { generateGroupName } from "@/lib/utils/group-name-generator"
+import type { SearchToken } from "@/lib/utils/search-tokens"
+import { tokensToFilters } from "@/lib/utils/search-tokens"
 import { BulkActionModal } from "./BulkActionModal"
 import { CreateGroupModal } from "./CreateGroupModal"
 import { GroupEditModal } from "./GroupEditModal"
-import { LeadFilters } from "./LeadFilters"
 import { LeadForm } from "./LeadForm"
 import { LeadGroupManagementModal } from "./LeadGroupManagementModal"
 import { LeadsTableWithPagination } from "./LeadsTableWithPagination"
@@ -87,16 +88,7 @@ export default function LeadsPage() {
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>(() => {
     return localStorage.getItem("selectedWorkspace") || "all"
   })
-  const [searchInput, setSearchInput] = useState("")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [searchType, setSearchType] = useState<
-    "all" | "company" | "country" | "email" | "website" | "industry" | "category"
-  >("all")
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
-  const [selectedBusinessTypes, setSelectedBusinessTypes] = useState<string[]>([])
-  const [selectedCountries, setSelectedCountries] = useState<string[]>([])
-  const [selectedCities, setSelectedCities] = useState<string[]>([])
-  const [selectedCreatedBy, setSelectedCreatedBy] = useState<string[]>([])
+  const [searchTokens, setSearchTokens] = useState<SearchToken[]>([])
   const [selectedCustomerGroup, setSelectedCustomerGroup] = useState<string>("")
 
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -156,8 +148,6 @@ export default function LeadsPage() {
   const groupSelectId = useId()
   const newGroupNameId = useId()
   const groupDescriptionId = useId()
-  const searchTypeId = useId()
-  const searchInputId = useId()
 
   const queryClient = useQueryClient()
   const createLead = useCreateLead()
@@ -179,8 +169,8 @@ export default function LeadsPage() {
     selectedWorkspaceId !== "all",
   )
 
-  // 사용자 데이터 가져오기
-  const { data: users = [] } = useAllUsers()
+  // 사용자 데이터 가져오기 (필요시 사용)
+  useAllUsers()
 
   const loadWorkspaces = useCallback(async () => {
     try {
@@ -219,14 +209,10 @@ export default function LeadsPage() {
     }
   }, [selectedWorkspaceId])
 
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearchQuery(searchInput)
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [searchInput])
+  // Convert search tokens to column filters
+  const columnFilters = useMemo(() => {
+    return tokensToFilters(searchTokens)
+  }, [searchTokens])
 
   const handleCreateLead = async (leadData: unknown) => {
     createLead.mutate(leadData as Lead, {
@@ -274,10 +260,7 @@ export default function LeadsPage() {
           limit: 10000, // 충분히 큰 값
           workspaceIds: [workspaceId],
           customerGroupId: selectedCustomerGroup || undefined,
-          search: searchQuery || undefined,
-          leadStatus:
-            selectedStatuses.length === 1 ? (selectedStatuses[0] as LeadStatus) : undefined,
-          createdByIds: selectedCreatedBy.length > 0 ? selectedCreatedBy : undefined,
+          filters: columnFilters.length > 0 ? JSON.stringify(columnFilters) : undefined,
         })
 
         if (allLeadsResponse.leads.length === 0) {
@@ -335,10 +318,7 @@ export default function LeadsPage() {
           limit: 10000,
           workspaceIds: [workspaceId],
           customerGroupId: selectedCustomerGroup || undefined,
-          search: searchQuery || undefined,
-          leadStatus:
-            selectedStatuses.length === 1 ? (selectedStatuses[0] as LeadStatus) : undefined,
-          createdByIds: selectedCreatedBy.length > 0 ? selectedCreatedBy : undefined,
+          filters: columnFilters.length > 0 ? JSON.stringify(columnFilters) : undefined,
         })
 
         if (allLeadsResponse.leads.length === 0) {
@@ -402,12 +382,6 @@ export default function LeadsPage() {
     setShowBulkActionModal(true)
   }
 
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      setSearchQuery(searchInput)
-    }
-  }
-
   const toggleLeadSelection = useCallback((leadId: string) => {
     setSelectedLeads((prev) =>
       prev.includes(leadId) ? prev.filter((id) => id !== leadId) : [...prev, leadId],
@@ -467,10 +441,7 @@ export default function LeadsPage() {
           limit: 10000, // 충분히 큰 값
           workspaceIds: [workspaceId],
           customerGroupId: selectedCustomerGroup || undefined,
-          search: searchQuery || undefined,
-          leadStatus:
-            selectedStatuses.length === 1 ? (selectedStatuses[0] as LeadStatus) : undefined,
-          createdByIds: selectedCreatedBy.length > 0 ? selectedCreatedBy : undefined,
+          filters: columnFilters.length > 0 ? JSON.stringify(columnFilters) : undefined,
         })
 
         if (allLeadsResponse.leads.length === 0) {
@@ -852,31 +823,8 @@ export default function LeadsPage() {
     }
   }
 
-  const clearFilters = () => {
-    setSelectedStatuses([])
-    setSelectedBusinessTypes([])
-    setSelectedCountries([])
-    setSelectedCities([])
-    setSelectedCreatedBy([])
-  }
-
   return (
     <div className="space-y-6 h-full overflow-y-auto">
-      <LeadFilters
-        selectedStatuses={selectedStatuses}
-        selectedBusinessTypes={selectedBusinessTypes}
-        selectedCountries={selectedCountries}
-        selectedCities={selectedCities}
-        selectedCreatedBy={selectedCreatedBy}
-        users={users}
-        onStatusChange={setSelectedStatuses}
-        onBusinessTypeChange={setSelectedBusinessTypes}
-        onCountryChange={setSelectedCountries}
-        onCityChange={setSelectedCities}
-        onCreatedByChange={setSelectedCreatedBy}
-        onClearFilters={clearFilters}
-      />
-
       {/* Leads Table */}
       <Card>
         <CardHeader className="pb-4">
@@ -1020,138 +968,13 @@ export default function LeadsPage() {
             </div>
           )}
 
-          {/* 고급 검색 섹션 */}
+          {/* 고급 검색 */}
           <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <Search className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">
-                {t("leads.filter.advancedSearch")}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* 검색 타입 선택 */}
-              <div className="space-y-2">
-                <Label htmlFor={searchTypeId}>{t("leads.filter.searchScope")}</Label>
-                <Select
-                  value={searchType}
-                  onValueChange={(
-                    value:
-                      | "all"
-                      | "company"
-                      | "country"
-                      | "email"
-                      | "website"
-                      | "industry"
-                      | "category",
-                  ) => setSearchType(value)}
-                >
-                  <SelectTrigger id={searchTypeId}>
-                    <SelectValue placeholder={t("leads.filter.selectScope")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t("leads.filter.unifiedSearch")}</SelectItem>
-                    <SelectItem value="company">{t("leads.filter.companyName")}</SelectItem>
-                    <SelectItem value="country">{t("leads.filter.country")}</SelectItem>
-                    <SelectItem value="email">{t("leads.filter.email")}</SelectItem>
-                    <SelectItem value="website">{t("leads.filter.website")}</SelectItem>
-                    <SelectItem value="industry">{t("leads.filter.industry")}</SelectItem>
-                    <SelectItem value="category">{t("leads.filter.category")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* 검색어 입력 */}
-              <div className="space-y-2">
-                <Label htmlFor={searchInputId}>{t("leads.filter.searchTerm")}</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id={searchInputId}
-                    placeholder={
-                      searchType === "all"
-                        ? t("leads.filter.searchPlaceholder.all")
-                        : searchType === "company"
-                          ? t("leads.filter.searchPlaceholder.company")
-                          : searchType === "country"
-                            ? t("leads.filter.searchPlaceholder.country")
-                            : searchType === "email"
-                              ? t("leads.filter.searchPlaceholder.email")
-                              : searchType === "website"
-                                ? t("leads.filter.searchPlaceholder.website")
-                                : searchType === "industry"
-                                  ? t("leads.filter.searchPlaceholder.industry")
-                                  : t("leads.filter.searchPlaceholder.category")
-                    }
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    onKeyDown={handleSearchKeyDown}
-                    className="pl-10 pr-10"
-                  />
-                  {searchInput && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSearchInput("")
-                        setSearchQuery("")
-                      }}
-                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* 검색 버튼 */}
-              <div className="space-y-2">
-                <Label>&nbsp;</Label>
-                <div className="flex gap-2">
-                  <Button onClick={() => setSearchQuery(searchInput)} className="flex-1">
-                    <Search className="h-4 w-4 mr-2" />
-                    {t("leads.button.search")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSearchInput("")
-                      setSearchQuery("")
-                      setSearchType("all")
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* 검색 결과 요약 */}
-            {searchQuery && (
-              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <div className="flex items-center gap-2 text-sm text-blue-800">
-                  <Search className="h-4 w-4" />
-                  <span>
-                    <strong>
-                      {searchType === "all"
-                        ? t("leads.filter.unifiedSearch")
-                        : searchType === "company"
-                          ? t("leads.filter.companyName")
-                          : searchType === "country"
-                            ? t("leads.filter.country")
-                            : searchType === "email"
-                              ? t("leads.filter.email")
-                              : searchType === "website"
-                                ? t("leads.filter.website")
-                                : searchType === "industry"
-                                  ? t("leads.filter.industry")
-                                  : t("leads.filter.category")}
-                    </strong>
-                    {t("leads.filter.searchResult.in")} "<strong>{searchQuery}</strong>"{" "}
-                    {t("leads.filter.searchResult.searching")}
-                  </span>
-                </div>
-              </div>
-            )}
+            <AdvancedSearchInput
+              tokens={searchTokens}
+              onChange={setSearchTokens}
+              placeholder="필드를 선택하여 검색하세요..."
+            />
           </div>
           {/* 전체 선택 및 Bulk Actions */}
           <div className="flex items-center justify-between mb-6">
@@ -1235,13 +1058,7 @@ export default function LeadsPage() {
           </div>
           {/* Leads Table with Pagination */}
           <LeadsTableWithPagination
-            searchQuery={searchQuery}
-            searchType={searchType}
-            selectedStatuses={selectedStatuses}
-            selectedBusinessTypes={selectedBusinessTypes}
-            selectedCountries={selectedCountries}
-            selectedCities={selectedCities}
-            selectedCreatedBy={selectedCreatedBy}
+            columnFilters={columnFilters}
             selectedCustomerGroup={selectedCustomerGroup}
             selectedLeads={selectedLeads}
             onToggleLead={toggleLeadSelection}

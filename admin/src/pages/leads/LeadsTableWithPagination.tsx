@@ -7,7 +7,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import { ChevronLeft, ChevronRight, Edit, Trash2, Users } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { FilterSummaryPanel } from "@/components/leads/filters/FilterSummaryPanel"
 import { leadsColumns } from "@/components/leads/LeadsTableColumns"
 import { Button } from "@/components/ui/button"
@@ -21,17 +21,18 @@ import {
 } from "@/components/ui/context-menu"
 import { Input } from "@/components/ui/input"
 import { useDeleteLead, useLeads } from "@/lib/api/hooks/leads"
-import type { Lead, LeadStatus, LeadsParams } from "@/lib/api/types/lead"
+import type { Lead, LeadsParams } from "@/lib/api/types/lead"
 import type { ColumnFilter } from "@/lib/api/types/lead-filters"
+import {
+  addColumn,
+  getColumnOrder,
+  getVisibleColumns,
+  removeColumn,
+  reorderColumns,
+} from "@/lib/column-visibility"
 
 interface LeadsTableWithPaginationProps {
-  searchQuery: string
-  searchType?: "all" | "company" | "country" | "email" | "website" | "industry" | "category"
-  selectedStatuses: string[]
-  selectedBusinessTypes: string[]
-  selectedCountries: string[]
-  selectedCities: string[]
-  selectedCreatedBy: string[]
+  columnFilters: ColumnFilter[]
   selectedCustomerGroup: string
   selectedLeads: string[]
   onToggleLead: (leadId: string) => void
@@ -45,10 +46,7 @@ interface LeadsTableWithPaginationProps {
 }
 
 export function LeadsTableWithPagination({
-  searchQuery,
-  searchType = "all",
-  selectedStatuses,
-  selectedCreatedBy,
+  columnFilters: propsColumnFilters,
   selectedCustomerGroup,
   selectedLeads,
   onToggleLead,
@@ -74,6 +72,10 @@ export function LeadsTableWithPagination({
   const [currentWorkspace, setCurrentWorkspace] = useState(
     () => localStorage.getItem("selectedWorkspace") || "all",
   )
+
+  // Column visibility state
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(() => getVisibleColumns())
+  const [columnOrder, setColumnOrder] = useState<string[]>(() => getColumnOrder())
 
   // TanStack Table state
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }])
@@ -105,27 +107,27 @@ export function LeadsTableWithPagination({
 
   const workspaceFilter = currentWorkspace === "all" ? undefined : [currentWorkspace]
 
+  // Merge prop column filters with active column filters from table
+  const mergedFilters = useMemo(
+    () => [...propsColumnFilters, ...activeColumnFilters],
+    [propsColumnFilters, activeColumnFilters],
+  )
+
   // Build params for API call
-  const params: LeadsParams = {
-    page: currentPage,
-    limit: limit,
-    leadStatus:
-      selectedStatuses.length === 1
-        ? (selectedStatuses[0] as LeadStatus)
-        : selectedStatuses.length > 0
-          ? "all"
-          : undefined,
-    search: searchQuery || undefined,
-    searchType: searchType,
-    workspaceIds: workspaceFilter,
-    customerGroupId: selectedCustomerGroup || undefined,
-    createdByIds: selectedCreatedBy.length > 0 ? selectedCreatedBy : undefined,
-    // Add sorting from TanStack Table
-    sortField: sorting[0]?.id,
-    sortOrder: sorting[0]?.desc ? "desc" : "asc",
-    // Add column filters
-    filters: activeColumnFilters.length > 0 ? JSON.stringify(activeColumnFilters) : undefined,
-  }
+  const params: LeadsParams = useMemo(
+    () => ({
+      page: currentPage,
+      limit: limit,
+      workspaceIds: workspaceFilter,
+      customerGroupId: selectedCustomerGroup || undefined,
+      // Add sorting from TanStack Table
+      sortField: sorting[0]?.id,
+      sortOrder: sorting[0]?.desc ? "desc" : "asc",
+      // Add column filters (merged from props and table state)
+      filters: mergedFilters.length > 0 ? JSON.stringify(mergedFilters) : undefined,
+    }),
+    [currentPage, limit, workspaceFilter, selectedCustomerGroup, sorting, mergedFilters],
+  )
 
   // Fetch leads
   const { data: leadsData, isFetching } = useLeads(params)
@@ -163,10 +165,53 @@ export function LeadsTableWithPagination({
     }
   }, [leads, onToggleAll, isSelectAllMode, onToggleSelectAll])
 
+  // Column visibility handlers
+  const handleAddColumn = useCallback((columnId: string) => {
+    const result = addColumn(columnId)
+    setVisibleColumns(result.visibleColumns)
+    setColumnOrder(result.columnOrder)
+  }, [])
+
+  const handleRemoveColumn = useCallback((columnId: string) => {
+    const updated = removeColumn(columnId)
+    setVisibleColumns(updated)
+  }, [])
+
+  const handleReorderColumns = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      const updated = reorderColumns(columnOrder, fromIndex, toIndex)
+      setColumnOrder(updated)
+    },
+    [columnOrder],
+  )
+
+  // Filter and sort columns based on visibility and order
+  const displayedColumns = useMemo(() => {
+    // First, filter visible columns
+    const visibleCols = leadsColumns.filter((col) => {
+      const colId = col.id || ("accessorKey" in col ? String(col.accessorKey) : "")
+      return visibleColumns.includes(colId)
+    })
+
+    // Then, sort by columnOrder
+    return visibleCols.sort((a, b) => {
+      const aId = a.id || ("accessorKey" in a ? String(a.accessorKey) : "")
+      const bId = b.id || ("accessorKey" in b ? String(b.accessorKey) : "")
+      const aIndex = columnOrder.indexOf(aId)
+      const bIndex = columnOrder.indexOf(bId)
+
+      // If not in order array, put at the end
+      if (aIndex === -1) return 1
+      if (bIndex === -1) return -1
+
+      return aIndex - bIndex
+    })
+  }, [visibleColumns, columnOrder])
+
   // Initialize TanStack Table
   const table = useReactTable({
     data: leads,
-    columns: leadsColumns,
+    columns: displayedColumns,
     state: {
       sorting,
       columnFilters,
@@ -191,6 +236,12 @@ export function LeadsTableWithPagination({
       setColumnFilters: setActiveColumnFilters,
       customerGroupId: selectedCustomerGroup || undefined,
       workspaceId: currentWorkspace !== "all" ? currentWorkspace : undefined,
+      // Column visibility
+      visibleColumns,
+      columnOrder,
+      onAddColumn: handleAddColumn,
+      onRemoveColumn: handleRemoveColumn,
+      onReorderColumns: handleReorderColumns,
     },
   })
 
@@ -296,6 +347,53 @@ export function LeadsTableWithPagination({
     }
   }
 
+  // Drag and drop state
+  const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null)
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, columnId: string) => {
+    setDraggedColumnId(columnId)
+    e.dataTransfer.effectAllowed = "move"
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+  }
+
+  const handleDrop = (e: React.DragEvent, targetColumnId: string) => {
+    e.preventDefault()
+
+    if (!draggedColumnId || draggedColumnId === targetColumnId) {
+      setDraggedColumnId(null)
+      return
+    }
+
+    // Don't allow dragging select or columnActions columns
+    if (
+      draggedColumnId === "select" ||
+      draggedColumnId === "columnActions" ||
+      targetColumnId === "select" ||
+      targetColumnId === "columnActions"
+    ) {
+      setDraggedColumnId(null)
+      return
+    }
+
+    const fromIndex = columnOrder.indexOf(draggedColumnId)
+    const toIndex = columnOrder.indexOf(targetColumnId)
+
+    if (fromIndex !== -1 && toIndex !== -1) {
+      handleReorderColumns(fromIndex, toIndex)
+    }
+
+    setDraggedColumnId(null)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedColumnId(null)
+  }
+
   return (
     <>
       {/* Filter Summary Panel */}
@@ -322,25 +420,37 @@ export function LeadsTableWithPagination({
             <thead className="bg-gray-50 dark:bg-gray-700">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      className={
-                        header.id === "select"
-                          ? "sticky left-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
-                          : "p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                      }
-                      style={
-                        header.id === "select"
-                          ? { width: "1%", whiteSpace: "nowrap" }
-                          : { minWidth: "120px" }
-                      }
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
-                  ))}
+                  {headerGroup.headers.map((header) => {
+                    const isDraggable = header.id !== "select" && header.id !== "columnActions"
+                    const isDragging = draggedColumnId === header.id
+
+                    return (
+                      <th
+                        key={header.id}
+                        draggable={isDraggable}
+                        onDragStart={(e) => isDraggable && handleDragStart(e, header.id)}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => isDraggable && handleDrop(e, header.id)}
+                        onDragEnd={handleDragEnd}
+                        className={
+                          header.id === "select"
+                            ? "sticky left-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
+                            : `p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${
+                                isDragging ? "opacity-50" : ""
+                              } ${isDraggable ? "cursor-move" : ""}`
+                        }
+                        style={
+                          header.id === "select"
+                            ? { width: "1%", whiteSpace: "nowrap" }
+                            : { minWidth: "120px" }
+                        }
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(header.column.columnDef.header, header.getContext())}
+                      </th>
+                    )
+                  })}
                 </tr>
               ))}
             </thead>

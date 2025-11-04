@@ -1,5 +1,6 @@
 import type { Column } from "@tanstack/react-table"
-import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import type { ColumnFilter, ColumnFilterConfig } from "@/lib/api/types/lead-filters"
 import { ColumnFilterButton } from "./filters/ColumnFilterButton"
 
@@ -11,6 +12,8 @@ interface FilterableColumnHeaderProps<TData> {
   onFilterChange?: (filter: ColumnFilter | null) => void
   workspaceId?: string
   customerGroupId?: string
+  canRemove?: boolean
+  onRemove?: () => void
 }
 
 /**
@@ -25,6 +28,8 @@ export function FilterableColumnHeader<TData>({
   onFilterChange,
   workspaceId,
   customerGroupId,
+  canRemove = false,
+  onRemove,
 }: FilterableColumnHeaderProps<TData>) {
   const isSorted = column.getIsSorted()
   const canSort = column.getCanSort()
@@ -52,9 +57,9 @@ export function FilterableColumnHeader<TData>({
         </div>
       )}
 
-      {/* Filter Button */}
-      {filterConfig && onFilterChange && (
-        <span className="flex-shrink-0">
+      <div className="flex items-center gap-1 flex-shrink-0">
+        {/* Filter Button */}
+        {filterConfig && onFilterChange && (
           <ColumnFilterButton
             field={column.id}
             filterConfig={filterConfig}
@@ -63,8 +68,23 @@ export function FilterableColumnHeader<TData>({
             customerGroupId={customerGroupId}
             workspaceId={workspaceId}
           />
-        </span>
-      )}
+        )}
+
+        {/* Remove Column Button */}
+        {canRemove && onRemove && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 hover:bg-red-100 dark:hover:bg-red-900/30"
+            onClick={(e) => {
+              e.stopPropagation()
+              onRemove()
+            }}
+          >
+            <X className="h-3.5 w-3.5 text-muted-foreground hover:text-red-600 dark:hover:text-red-400" />
+          </Button>
+        )}
+      </div>
     </div>
   )
 }

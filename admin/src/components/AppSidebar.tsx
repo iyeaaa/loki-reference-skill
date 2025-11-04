@@ -46,15 +46,15 @@ function CustomMenuItem({ title, url, icon: Icon, isActive }: CustomMenuItemProp
           className={cn(
             "relative h-11 px-3 py-2.5 transition-all duration-200 rounded-lg group",
             isActive
-              ? "bg-[#2563EB] text-white shadow-md shadow-[#2563EB]/30 hover:bg-[#2563EB]/90 hover:shadow-lg hover:shadow-[#2563EB]/40"
-              : "bg-transparent text-sidebar-foreground hover:bg-accent",
+              ? "bg-[#2563EB] text-white shadow-sm hover:bg-[#2563EB]/95"
+              : "bg-transparent text-sidebar-foreground hover:bg-accent/50",
           )}
         >
           <Link to={url} className="flex items-center gap-3 w-full">
             {reducedMotion ? (
               <Icon
                 className={cn(
-                  "h-5 w-5 shrink-0 transition-transform group-hover:scale-110",
+                  "h-5 w-5 shrink-0 transition-transform group-hover:scale-105",
                   isActive ? "text-white" : "text-muted-foreground",
                 )}
               />
@@ -68,7 +68,12 @@ function CustomMenuItem({ title, url, icon: Icon, isActive }: CustomMenuItemProp
                 />
               </motion.div>
             )}
-            <span className={cn("truncate", isActive ? "font-semibold text-white" : "font-normal")}>
+            <span
+              className={cn(
+                "truncate text-sm group-data-[collapsible=icon]:hidden",
+                isActive ? "font-medium text-white" : "font-normal",
+              )}
+            >
               {title}
             </span>
           </Link>
@@ -78,8 +83,13 @@ function CustomMenuItem({ title, url, icon: Icon, isActive }: CustomMenuItemProp
   )
 }
 
-// 메인 메뉴 아이템
+// 메인 메뉴 아이템 - Natural sales workflow order
 const getMainMenuItems = (t: (key: string) => string) => [
+  {
+    title: t("sidebar.menu.aiSalesAutomation"),
+    url: "/chatbot",
+    icon: MessageSquare,
+  },
   {
     title: t("sidebar.menu.dashboard"),
     url: "/dashboard",
@@ -102,15 +112,6 @@ const getMainMenuItems = (t: (key: string) => string) => [
   },
 ]
 
-// AI 영업 자동화 메뉴
-const getAIMenuItems = (t: (key: string) => string) => [
-  {
-    title: t("sidebar.menu.aiSalesAutomation"),
-    url: "/chatbot",
-    icon: MessageSquare,
-  },
-]
-
 interface AppSidebarProps {
   workspaces?: WorkspaceOption[]
   selectedWorkspace?: string
@@ -130,7 +131,6 @@ export function AppSidebar({
 
   // 메뉴 아이템들 가져오기
   const mainMenuItems = getMainMenuItems(t)
-  const aiMenuItems = getAIMenuItems(t)
 
   // "전체" 옵션을 포함한 워크스페이스 목록 생성
   const workspaceOptions: WorkspaceOption[] = [
@@ -144,21 +144,25 @@ export function AppSidebar({
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
+      <SidebarHeader className="border-b border-sidebar-border pb-3 group-data-[collapsible=icon]:pb-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
+            <SidebarMenuButton size="lg" asChild className="hover:bg-transparent">
               <Link to="/dashboard">
-                <div className="flex aspect-square size-8 items-center justify-center group-data-[collapsible=icon]:size-8">
+                <div className="flex aspect-square size-10 items-center justify-center group-data-[collapsible=icon]:size-8">
                   <img
                     src="/images/rinda-logo.png"
                     alt="Rinda Logo"
-                    className="size-8 object-contain rounded-xl"
+                    className="size-10 object-contain rounded-xl group-data-[collapsible=icon]:size-8"
                   />
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{t("sidebar.title.sendGrinda")}</span>
-                  <span className="truncate text-xs">{t("sidebar.subtitle.aiEmailSystem")}</span>
+                <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                  <span className="truncate font-bold text-base">
+                    {t("sidebar.title.sendGrinda")}
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {t("sidebar.subtitle.aiEmailSystem")}
+                  </span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -167,8 +171,8 @@ export function AppSidebar({
 
         {/* 워크스페이스 선택 */}
         {!hideWorkspaceSelector && workspaceOptions.length > 0 && (
-          <div className="group-data-[collapsible=icon]:hidden">
-            <div className="px-2 pb-2">
+          <div className="group-data-[collapsible=icon]:hidden mt-3">
+            <div className="px-2">
               <WorkspaceSelector
                 options={workspaceOptions}
                 value={selectedWorkspace}
@@ -179,21 +183,14 @@ export function AppSidebar({
           </div>
         )}
       </SidebarHeader>
-      <SidebarContent className="px-2">
-        {/* 메뉴 */}
+      <SidebarContent className="px-3 py-4 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-8">
+        {/* Main Menu Section - Natural workflow order */}
         <SidebarGroup className="py-0">
-          <SidebarGroupLabel className="mb-2 px-2">메뉴</SidebarGroupLabel>
+          <SidebarGroupLabel className="mb-3 px-2 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+            MENU
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="gap-1.5">
-              {aiMenuItems.map((item) => (
-                <CustomMenuItem
-                  key={item.title}
-                  title={item.title}
-                  url={item.url}
-                  icon={item.icon}
-                  isActive={pathname === item.url}
-                />
-              ))}
+            <SidebarMenu className="gap-0.5 group-data-[collapsible=icon]:gap-8 group-data-[collapsible=icon]:items-center">
               {mainMenuItems.map((item) => (
                 <CustomMenuItem
                   key={item.title}
@@ -207,19 +204,18 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="px-2">
-        <SidebarMenu className="gap-1.5">
+      <SidebarFooter className="border-t border-sidebar-border px-3 py-4 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-8">
+        {/* Language and Settings */}
+        <SidebarMenu className="gap-0.5 group-data-[collapsible=icon]:gap-8 group-data-[collapsible=icon]:items-center">
+          <SidebarMenuItem>
+            <LanguageSwitcher />
+          </SidebarMenuItem>
           <CustomMenuItem
             title={t("sidebar.menu.settings")}
             url="/settings"
             icon={Settings}
             isActive={pathname === "/settings"}
           />
-          <SidebarMenuItem>
-            <div className="px-2 py-1">
-              <LanguageSwitcher />
-            </div>
-          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>

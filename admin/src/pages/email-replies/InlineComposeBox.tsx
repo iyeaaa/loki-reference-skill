@@ -173,12 +173,16 @@ export function InlineComposeBox({
       </div>
 
       {/* Body Editor */}
-      <div className={`${fullscreen ? "flex-1 overflow-auto" : expanded ? "min-h-[350px]" : "min-h-[200px]"}`}>
+      <div
+        className={`${fullscreen ? "flex-1 overflow-auto" : expanded ? "min-h-[350px]" : "min-h-[200px]"}`}
+      >
         <SimpleTextEditor value={body} onChange={setBody} placeholder="메시지를 입력하세요..." />
       </div>
 
       {/* Footer Actions */}
-      <div className={`px-4 py-3 border-t flex items-center justify-between bg-gray-50 dark:bg-gray-800 ${fullscreen ? "flex-shrink-0" : ""}`}>
+      <div
+        className={`px-4 py-3 border-t flex items-center justify-between bg-gray-50 dark:bg-gray-800 ${fullscreen ? "flex-shrink-0" : ""}`}
+      >
         <div className="flex items-center gap-2">
           <Button onClick={handleSend} disabled={!to || !subject || sendEmail.isPending} size="sm">
             {sendEmail.isPending ? (

@@ -7,6 +7,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useSidebar } from "@/components/ui/sidebar"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 const languages = [
   { code: "ko", name: "한국어", flag: "🇰🇷" },
@@ -15,6 +17,7 @@ const languages = [
 
 export function LanguageSwitcher() {
   const { i18n } = useTranslation()
+  const { state, isMobile } = useSidebar()
 
   const currentLanguage = languages.find((lang) => lang.code === i18n.language) || languages[0]
 
@@ -22,16 +25,22 @@ export function LanguageSwitcher() {
     i18n.changeLanguage(languageCode)
   }
 
-  return (
+  const button = (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Globe className="h-4 w-4 mr-2" />
-          <span className="mr-1">{currentLanguage.flag}</span>
-          {currentLanguage.name}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start h-10 px-3 py-2 hover:bg-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2"
+        >
+          <Globe className="h-4 w-4 text-muted-foreground group-data-[collapsible=icon]:mr-0 mr-3 shrink-0" />
+          <span className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+            <span>{currentLanguage.flag}</span>
+            <span className="font-normal">{currentLanguage.name}</span>
+          </span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="start" side="right">
         {languages.map((language) => (
           <DropdownMenuItem
             key={language.code}
@@ -45,4 +54,18 @@ export function LanguageSwitcher() {
       </DropdownMenuContent>
     </DropdownMenu>
   )
+
+  // Show tooltip only when collapsed
+  if (state === "collapsed" && !isMobile) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent side="right" align="center">
+          {currentLanguage.name}
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
+
+  return button
 }

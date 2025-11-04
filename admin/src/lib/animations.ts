@@ -214,7 +214,7 @@ export const buttonVariants: Variants = {
 export const iconRotateVariants: Variants = {
   rest: { rotate: 0 },
   hover: {
-    rotate: 15,
+    rotate: 0, // Disabled rotation - no tilt effect
     transition: transitions.springFast,
   },
 }

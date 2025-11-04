@@ -3,8 +3,7 @@ import { chatbotLogger } from "../../../utils/logger"
 import type { ChatbotState } from "../state"
 
 const _llm = new ChatOpenAI({
-  model: "gpt-4.1-mini",
-  temperature: 0,
+  model: "gpt-5",
 })
 
 const DANGEROUS_KEYWORDS = [

@@ -4,8 +4,7 @@ import { getVisualizationSuggestionPrompt } from "../prompts"
 import type { ChatbotState } from "../state"
 
 const llm = new ChatOpenAI({
-  model: "gpt-4.1-mini",
-  temperature: 0.3,
+  model: "gpt-5",
 })
 
 export async function suggestVisualizations(state: ChatbotState): Promise<Partial<ChatbotState>> {

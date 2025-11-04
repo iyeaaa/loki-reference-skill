@@ -30,6 +30,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   const [attachedFile, setAttachedFile] = useState<FileAttachmentType | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const isProcessingFileRef = useRef(false)
 
   // Load conversation history if conversationId is provided
   const { data: historyData, isLoading: isLoadingHistory } = useChatbotHistory(
@@ -92,6 +93,12 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       const file = event.target.files?.[0]
       if (!file) return
 
+      // Prevent duplicate processing
+      if (isProcessingFileRef.current) {
+        console.log("[ChatInterface] File already being processed, skipping duplicate")
+        return
+      }
+
       // Only accept CSV files
       if (!file.name.endsWith(".csv")) {
         alert("Only CSV files are allowed.")
@@ -99,6 +106,9 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       }
 
       try {
+        // Mark as processing
+        isProcessingFileRef.current = true
+
         // Read file content
         const fileContent = await readFileAsText(file)
         const parsedContent = parseCsvToText(fileContent)
@@ -129,6 +139,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
           attachment: fileAttachment,
         }
 
+        // Use functional update to avoid dependency on messages
         setMessages((prev) => [...prev, userMessage])
         setAttachedFile(null)
 
@@ -143,19 +154,35 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
           // Use TanStack Query mutation
           const convId = conversationId || `conv_${Date.now()}`
           setCurrentConversationId(convId)
-          await chatbotMutation.mutateAsync({
-            question: finalContent, // Send the complete content with CSV data
-            workspaceId,
-            conversationId: convId,
-            messages,
+
+          // Get the latest messages from state
+          setMessages((currentMessages) => {
+            // Use the current messages for the API call
+            chatbotMutation.mutateAsync({
+              question: finalContent, // Send the complete content with CSV data
+              workspaceId,
+              conversationId: convId,
+              messages: currentMessages,
+            }).catch((error) => {
+              // Error is already handled in onError callback
+              console.error("Submit error:", error)
+            }).finally(() => {
+              // Reset processing flag after completion
+              isProcessingFileRef.current = false
+            })
+
+            // Return the current messages unchanged
+            return currentMessages
           })
         } catch (error) {
           // Error is already handled in onError callback
           console.error("Submit error:", error)
+          isProcessingFileRef.current = false
         }
       } catch (error) {
         console.error("Failed to read file:", error)
         alert("Failed to read file.")
+        isProcessingFileRef.current = false
       }
 
       // Reset file input
@@ -163,7 +190,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         fileInputRef.current.value = ""
       }
     },
-    [conversationId, workspaceId, messages, chatbotMutation],
+    [conversationId, workspaceId, chatbotMutation],
   )
 
   const handleRemoveFile = useCallback(() => {
@@ -190,6 +217,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         attachment: attachedFile || undefined,
       }
 
+      // Use functional update to avoid dependency on messages
       setMessages((prev) => [...prev, userMessage])
       setInput("")
       setAttachedFile(null)
@@ -205,18 +233,29 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         // Use TanStack Query mutation
         const convId = conversationId || `conv_${Date.now()}`
         setCurrentConversationId(convId)
-        await chatbotMutation.mutateAsync({
-          question: questionText,
-          workspaceId,
-          conversationId: convId,
-          messages,
+
+        // Get the latest messages from state
+        setMessages((currentMessages) => {
+          // Use the current messages for the API call
+          chatbotMutation.mutateAsync({
+            question: questionText,
+            workspaceId,
+            conversationId: convId,
+            messages: currentMessages,
+          }).catch((error) => {
+            // Error is already handled in onError callback
+            console.error("Submit error:", error)
+          })
+
+          // Return the current messages unchanged
+          return currentMessages
         })
       } catch (error) {
         // Error is already handled in onError callback
         console.error("Submit error:", error)
       }
     },
-    [input, isProcessing, chatbotMutation, workspaceId, conversationId, messages, attachedFile],
+    [input, isProcessing, chatbotMutation, workspaceId, conversationId, attachedFile],
   )
 
   const handleConfirmation = useCallback(

@@ -109,301 +109,220 @@ export function getSQLGenerationPrompt(
    - Use meaningful values for sample data
 4. **RETURNING clause:** Add \`RETURNING *\` to return created data
 
+⚠️ **MOST CRITICAL RULE - Column Consistency in UNION ALL:**
+When creating multiple CTEs that will be combined with UNION ALL (e.g., new_lead_1_linkedin and new_lead_2_socials):
+- ALL CTEs inserting to the SAME table MUST specify IDENTICAL column lists
+- Never mix explicit column lists with default columns across different CTEs
+- Example: If one social media CTE specifies 8 columns, ALL other social media CTEs must specify the same 8 columns
+- This prevents "column count mismatch" errors in the final json_agg aggregation
+
 ⚠️ **USE CTE (WITH) for Complex Operations - REQUIRED!**
-- **MUST USE**: Common Table Expressions (WITH clause) for multi-step INSERT operations
-- This eliminates ID reference errors completely
-- Each CTE step can reference previous steps by name
-- Return all results in final SELECT using json_build_object
+- Use Common Table Expressions for multi-step INSERTs (eliminates ID reference errors)
+- Each CTE references previous steps by name
+- Final SELECT: Use UNION ALL inside FROM for json_agg aggregation
 
-**CTE Example Pattern:**
-\`\`\`sql
-WITH
-  new_group AS (
-    INSERT INTO customer_groups (...) VALUES (...) RETURNING *
-  ),
-  new_lead_1 AS (
-    INSERT INTO leads (id, workspace_id, ..., created_at, updated_at)
-    VALUES (gen_random_uuid(), '${workspaceId}', ..., CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    RETURNING *
-  ),
-  new_lead_1_contact AS (
-    INSERT INTO lead_contacts (id, lead_id, contact_type, ...)
-    SELECT gen_random_uuid(), id, 'email', ... FROM new_lead_1
-    RETURNING *
-  )
-SELECT json_build_object(
-  'group', (SELECT row_to_json(new_group.*) FROM new_group),
-  'leads', json_build_object(
-    'lead_1', (SELECT row_to_json(new_lead_1.*) FROM new_lead_1),
-    'contact', (SELECT row_to_json(new_lead_1_contact.*) FROM new_lead_1_contact)
-  )
-) as result;
-\`\`\`
-
-**CRITICAL - Final SELECT Rules:**
-1. **NEVER use CTE names in FROM clause**: CTEs are already executed, reference them in subqueries only
-2. **Use subqueries with SELECT**: \`(SELECT row_to_json(cte.*) FROM cte)\`
-3. **For multiple rows, use UNION ALL**:
-   \`\`\`sql
-   SELECT json_agg(row_to_json(s.*)) FROM (
-     SELECT * FROM cte_1
-     UNION ALL SELECT * FROM cte_2
-   ) s
-   \`\`\`
-4. **WRONG**: \`FROM step_1, step_2, step_3\` ❌
-5. **CORRECT**: \`(SELECT json_agg(...) FROM (SELECT * FROM step_1 UNION ALL ...) s)\` ✅
-
-**Note:** Sequential queries with placeholders are deprecated. Use CTE instead for reliability.
-
-⚠️ **INSERT Column Requirements**
-- Always include ALL columns explicitly in INSERT statements (don't rely on defaults)
-- **CRITICAL**: Include \`updated_at\` for tables that have it: \`lead_contacts\`, \`lead_social_media\`
-  - Even though it has a default, explicitly include it: \`updated_at = CURRENT_TIMESTAMP\`
-- For \`lead_contacts\`: MUST include \`label\` column (use 'main', 'support', 'sales', etc.)
-- For nullable columns with no value: explicitly set to NULL in VALUES clause
-- Never omit columns from the column list, even if they're nullable
+**Critical Rules:**
+1. json_agg() REQUIRES FROM clause: \`(SELECT json_agg(x) FROM (SELECT * FROM cte1 UNION ALL ...) x)\`
+2. Single result: \`(SELECT row_to_json(cte.*) FROM cte)\`
+3. Always include \`RETURNING *\` on INSERTs/UPDATEs
+4. Include ALL columns explicitly (id, created_at, updated_at, etc.)
 
 ---
 
-## 🎯 SPECIAL FLOW: Customer Group + Sequence AI Builder (7-Step Process)
+## 🎯 Customer Group + Sequence Builder (7 Steps)
 
-When user requests to create a customer group with sequence automation, follow this complete 7-step process:
-
-**Full Process Overview:**
-\`\`\`
-1. Create Customer Group → get customer_group_id
-2. Create Leads and Add to Group Members (create all leads from user data + add to group + populate all related tables)
-3. Create Sequence → get sequence_id (linked to customer_group_id)
-4. Create Sequence Steps (AI-designed 3-5 steps with email content)
+1. Create Customer Group
+2. Create Leads + Add to Group Members + Populate related tables (contacts, social media, products, sectors, categories, industries)
+3. Create Sequence (linked to group)
+4. Create Sequence Steps (3-5 AI-designed emails with {{company_name}}, {{contact_name}} variables)
 5. Activate Sequence (status = 'active')
-6. Create Sequence Enrollments (auto-enroll all leads in group)
-7. Schedule First Step Executions (schedule first step)
-\`\`\`
+6. Create Sequence Enrollments (auto-enroll all group leads)
+7. Schedule First Step Executions
 
-**Related Tables & Schema:**
-
-**Core Tables:**
-- \`customer_groups\`: Groups of leads
-- \`customer_group_members\`: Many-to-many relationship (group ↔ leads)
-- \`leads\`: Main lead information
-- \`sequences\`: Email sequence campaigns
-- \`sequence_steps\`: Individual steps in sequence
-- \`sequence_enrollments\`: Lead enrollments in sequences
-- \`sequence_step_executions\`: Scheduled/executed steps
-
-**Lead Detail Tables (all reference leads.id with CASCADE delete):**
-- \`lead_contacts\`: Contact info (email, phone, fax, other)
-- \`lead_social_media\`: Social media profiles (facebook, instagram, twitter, linkedin)
-- \`lead_products\`: Product offerings
-- \`lead_business_sectors\`: Business sectors
-- \`lead_product_categories\`: Product categories
-- \`lead_industry_types\`: Industry classifications
-
-**Key Relationships:**
-\`\`\`
-customer_groups (1) ─── (N) customer_group_members ─── (1) leads
-customer_groups (1) ─── (N) sequences
-sequences (1) ─── (N) sequence_steps
-sequences (1) ─── (N) sequence_enrollments ─── (1) leads
-sequence_enrollments (1) ─── (N) sequence_step_executions ─── (1) sequence_steps
-leads (1) ─── (N) lead_contacts, lead_social_media, lead_products, etc.
-\`\`\`
-
-**Complete CTE Example: Customer Group + Leads + Sequence + Enrollments**
-
-This example shows how to use a single CTE query to create an entire outreach campaign atomically.
-The full example is available in \`elysia-server/CTE_EXAMPLE.sql\` - study it carefully!
-
-**Key Benefits:**
-- ✅ No placeholder ID errors - reference CTE names directly
-- ✅ Atomic transaction - all operations succeed or all fail
-- ✅ Easy to read and maintain
-- ✅ Can handle unlimited complexity
-
-**Structure Overview:**
+**Complete CTE Example:**
 \`\`\`sql
 WITH
-  new_group AS (INSERT INTO customer_groups (...) RETURNING *),
-  new_lead_1 AS (INSERT INTO leads (...) RETURNING *),
-  new_lead_1_contact AS (INSERT INTO lead_contacts SELECT ..., id FROM new_lead_1 RETURNING *),
-  new_lead_1_social AS (INSERT INTO lead_social_media SELECT ..., id FROM new_lead_1 RETURNING *),
-  new_lead_1_sectors AS (INSERT INTO lead_business_sectors SELECT ..., id FROM new_lead_1 RETURNING *),
-  new_lead_2 AS (INSERT INTO leads (...) RETURNING *),
-  new_lead_2_contact AS (INSERT INTO lead_contacts SELECT ..., id FROM new_lead_2 RETURNING *),
-  new_sequence AS (INSERT INTO sequences SELECT ..., id FROM new_group RETURNING *),
-  new_steps AS (INSERT INTO sequence_steps SELECT ..., id FROM new_sequence RETURNING *),
-  activated_seq AS (UPDATE sequences SET status='active' WHERE id = (SELECT id FROM new_sequence) RETURNING *),
-  enrollments AS (INSERT INTO sequence_enrollments SELECT ... FROM new_sequence, new_lead_1 RETURNING *),
-  executions AS (INSERT INTO sequence_step_executions SELECT ... RETURNING *)
-SELECT json_build_object(
-  'group', (SELECT row_to_json(new_group.*) FROM new_group),
-  'leads', json_agg(leads.*),
-  'sequence', (SELECT row_to_json(activated_seq.*) FROM activated_seq),
-  'enrollments', json_agg(enrollments.*)
-) as result;
-\`\`\`
-
-**Important CTE Rules:**
-1. Each CTE step can only reference CTEs defined BEFORE it
-2. Use \`SELECT ... FROM cte_name\` to reference previous step's ID
-3. Always include \`RETURNING *\` on INSERTs/UPDATEs
-4. Final SELECT aggregates all results into JSON
-
-**Key Implementation Notes:**
-
-**CRITICAL - Column Names (MUST USE EXACT NAMES):**
-- \`lead_products\`: Use \`product_name\` (NOT product, NOT name)
-- \`lead_business_sectors\`: Use \`sector_name\` (NOT sector, NOT business_sector)
-- \`lead_product_categories\`: Use \`category_name\` (NOT category)
-- \`lead_industry_types\`: Use \`industry_name\` (NOT industry_type, NOT industry)
-
-**CRITICAL - Column Length Limits:**
-- \`leads.business_type\`: **100 chars max** - Use ONLY first/primary business type
-- \`leads.company_name\`: 255 chars max
-- \`leads.contact_name\`: 255 chars max
-- When CSV has comma-separated values (e.g., "IT, Cloud, AI"), split them into separate table rows
-
-1. **Step 1 - Create Customer Group:**
-   - Required: \`id\`, \`workspace_id\`, \`name\`, \`is_dynamic\`, \`created_at\`, \`updated_at\`
-   - Required value: \`is_dynamic\` = false (NOT NULL, cannot be NULL)
-   - Optional (set to null): \`description\`, \`criteria\`, \`created_by\`
-   - Example: Only provide \`name\` for the group, set \`is_dynamic\` to false, others to null
-
-2. **Step 2 - Create ALL Leads with Complete Data:**
-   - Create each lead from user-provided data
-   - **CRITICAL - leads table column order**: \`id, workspace_id, company_name, contact_name, website_url, business_type, description, address, country, city, employee_count, lead_status, lead_score, lead_source, created_at, updated_at\`
-   - **IMPORTANT**: Column count MUST match VALUES count exactly (common error: missing \`city\` causes column 19 error)
-   - **IMPORTANT**: \`business_type\` column has 100 char limit - use ONLY the primary/first business type
-   - Add contacts to \`lead_contacts\` (email, phone, etc.)
-     - **Required columns**: \`id\`, \`lead_id\`, \`contact_type\`, \`contact_value\`, \`is_primary\`, \`created_at\`, \`updated_at\`
-     - **Always include**: \`label\` (use 'main' for primary email, 'support', 'sales', etc.)
-     - **Optional**: \`contact_name\` (can be NULL if no contact person name available)
-     - **Column order**: id, lead_id, contact_type, contact_value, contact_name, label, is_primary, created_at, updated_at
-   - Add social media to \`lead_social_media\` if provided
-     - **Required columns**: \`id\`, \`lead_id\`, \`platform\`, \`url\`, \`is_verified\`, \`created_at\`, \`updated_at\`
-     - **Optional**: \`username\`, \`follower_count\`
-   - Add products to \`lead_products\` if provided (separate rows for each)
-     - **Required columns**: \`id\`, \`lead_id\`, \`product_name\`, \`created_at\`
-     - **Optional**: \`description\`
-     - Only has \`created_at\`, no \`updated_at\`
-   - Add business sectors to \`lead_business_sectors\` if provided (separate rows for each, comma-separated)
-     - **Required columns**: \`id\`, \`lead_id\`, \`sector_name\`, \`created_at\`
-     - Only has \`created_at\`, no \`updated_at\`
-   - Add product categories to \`lead_product_categories\` if provided (separate rows for each)
-     - **Required columns**: \`id\`, \`lead_id\`, \`category_name\`, \`created_at\`
-     - Only has \`created_at\`, no \`updated_at\`
-   - Add industry types to \`lead_industry_types\` if provided (separate rows for each)
-     - **Required columns**: \`id\`, \`lead_id\`, \`industry_name\`, \`created_at\`
-     - **IMPORTANT**: Use \`industry_name\` (NOT \`industry_type\`)
-     - Only has \`created_at\`, no \`updated_at\`
-   - Add to \`customer_group_members\` (link to group)
-   - Repeat for ALL leads in user data
-
-3. **Step 4 - AI-Designed Sequence Steps:**
-   - **Required columns**: \`id\`, \`sequence_id\`, \`step_order\`, \`delay_days\`, \`email_subject\`, \`created_at\`, \`updated_at\`
-   - **Optional columns**: \`scheduled_hour\`, \`scheduled_minute\`, \`timezone\`, \`email_body_text\`, \`email_body_html\`, \`email_template_id\`
-   - **CRITICAL**: Must include \`email_template_id\` column (set to NULL if not using template)
-   - Generate 3-5 steps based on business context
-   - Include personalized subject lines
-   - Use template variables: \`{{contact_name}}\`, \`{{company_name}}\`
-   - Set appropriate delays: Step 1 (0 days), Step 2 (3 days), Step 3 (5 days)
-   - Set optimal send times: 9AM, 10AM, 2PM KST
-   - **Email content**: Focus on text content in \`email_body_text\`, set \`email_body_html\` to null
-   - Use plain text with \\\\n for line breaks (no HTML tags)
-   - **CRITICAL**: Use only straight quotes (') in email text, NOT curly quotes (' or ')
-
-4. **Step 6 - Enrollments:**
-   - Must fetch active \`user_email_account_id\` from workspace
-   - Set \`next_step_scheduled_at\` based on first step's schedule
-   - Status: 'active'
-
-5. **Step 7 - First Step Execution:**
-   - Schedule only the FIRST step for each enrollment
-   - Use step_id from Step 4.1 (first sequence step)
-   - Calculate \`scheduled_at\`: today/tomorrow at scheduled_hour
-
-**Response Format:**
-Return as JSON with \`queries\` array and \`explanation\`.
-
-**Basic INSERT Example (Customer Group):**
-\`\`\`sql
-INSERT INTO customer_groups (
-  id, workspace_id, name, description, criteria, is_dynamic, created_by, created_at, updated_at
-) VALUES (
-  gen_random_uuid(), '${workspaceId}', 'Enterprise IT Companies',
-  'Large IT companies with 100+ employees',
-  '{"business_type": "IT", "employee_count": "100+"}'::jsonb,
-  false, null, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-) RETURNING *;
-\`\`\`
-
-**IMPORTANT**: \`is_dynamic\` must be \`false\` (or \`true\`), NEVER \`null\`
-
-**Complex INSERT Example (Sequential Execution):**
-
-Response format:
-\`\`\`json
-{
-  "queries": [
-    "query1",
-    "query2",
-    "query3"
-  ],
-  "explanation": "Description"
-}
-\`\`\`
-
-Example:
-\`\`\`json
-{
-  "queries": [
-    "-- 1) Create lead\\nINSERT INTO leads (id, workspace_id, company_name, contact_name, website_url, business_type, description, address, country, city, employee_count, lead_status, lead_score, lead_source, created_at, updated_at) VALUES (gen_random_uuid(), '${workspaceId}', 'Tech Innovation Corp', 'Jane Smith', 'https://techinnovation.com', 'IT Services', 'Leading AI and cloud solutions provider', NULL, 'USA', 'San Francisco', '50-100', 'new', 85, 'Manual Entry', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING *;",
-    "-- 2) Add contact (using previous query ID)\\nINSERT INTO lead_contacts (id, lead_id, contact_type, contact_value, contact_name, label, is_primary, created_at, updated_at) VALUES (gen_random_uuid(), '{{PREV_QUERY_1_ID}}', 'email', 'jane.smith@techinnovation.com', 'Jane Smith', 'main', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING *;",
-    "-- 3) Verify result\\nSELECT * FROM leads WHERE id = '{{PREV_QUERY_1_ID}}';"
-  ],
-  "explanation": "Creates lead and associated data sequentially. Uses first query's lead ID for contacts."
-}
-\`\`\`
-
-**Response format:**
-- **Single INSERT**: Return SQL query directly as string
-- **Complex multi-step INSERT**: Return as single CTE query (not queries array)
-
-**Simple request example** (1 customer group):
-\`\`\`sql
-INSERT INTO customer_groups (
-  id, workspace_id, name, description, criteria, is_dynamic, created_by, created_at, updated_at
-) VALUES (
-  gen_random_uuid(), '${workspaceId}', 'Enterprise IT Companies', 'Large IT companies', '{}'::jsonb, false, null, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-) RETURNING *;
-\`\`\`
-
-**Complex request example** (lead + contacts + social media using CTE):
-\`\`\`sql
-WITH
-  new_lead AS (
-    INSERT INTO leads (id, workspace_id, company_name, ...)
-    VALUES (gen_random_uuid(), '${workspaceId}', 'Tech Corp', ...)
+  new_group AS (
+    INSERT INTO customer_groups (id, workspace_id, name, description, criteria, is_dynamic, created_by, created_at, updated_at)
+    VALUES (gen_random_uuid(), '${workspaceId}', 'Tech Startups', 'AI and SaaS companies', NULL, false, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     RETURNING *
   ),
-  new_contact AS (
-    INSERT INTO lead_contacts (id, lead_id, contact_type, contact_value, ...)
-    SELECT gen_random_uuid(), id, 'email', 'contact@example.com', ...
-    FROM new_lead
+  new_lead_1 AS (
+    INSERT INTO leads (id, workspace_id, company_name, contact_name, website_url, business_type, description, country, city, state, lead_status, created_at, updated_at)
+    VALUES (gen_random_uuid(), '${workspaceId}', 'TechCorp AI', 'John Doe', 'https://techcorp.ai', 'SaaS', 'AI-powered solutions', 'USA', 'San Francisco', 'CA', 'new', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     RETURNING *
   ),
-  new_social AS (
-    INSERT INTO lead_social_media (id, lead_id, platform, url, ...)
-    SELECT gen_random_uuid(), id, 'linkedin', 'https://linkedin.com/company/...',  ...
-    FROM new_lead
+  new_lead_1_email AS (
+    INSERT INTO lead_contacts (id, lead_id, contact_type, contact_value, label, is_primary, created_at, updated_at)
+    SELECT gen_random_uuid(), id, 'email', 'john@techcorp.ai', 'main', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    FROM new_lead_1
+    RETURNING *
+  ),
+  new_lead_2 AS (
+    INSERT INTO leads (id, workspace_id, company_name, contact_name, website_url, business_type, description, country, city, state, lead_status, created_at, updated_at)
+    VALUES (gen_random_uuid(), '${workspaceId}', 'CloudStart Inc', 'Jane Smith', 'https://cloudstart.io', 'Cloud', 'Cloud infrastructure', 'USA', 'Seattle', 'WA', 'new', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    RETURNING *
+  ),
+  new_lead_2_email AS (
+    INSERT INTO lead_contacts (id, lead_id, contact_type, contact_value, label, is_primary, created_at, updated_at)
+    SELECT gen_random_uuid(), id, 'email', 'jane@cloudstart.io', 'main', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    FROM new_lead_2
+    RETURNING *
+  ),
+  group_members AS (
+    INSERT INTO customer_group_members (id, group_id, lead_id, added_at)
+    SELECT gen_random_uuid(), (SELECT id FROM new_group), id, CURRENT_TIMESTAMP
+    FROM (SELECT id FROM new_lead_1 UNION ALL SELECT id FROM new_lead_2) leads
+    RETURNING *
+  ),
+  new_sequence AS (
+    INSERT INTO sequences (id, workspace_id, customer_group_id, name, description, status, created_at, updated_at)
+    SELECT gen_random_uuid(), '${workspaceId}', id, 'AI Outreach Campaign', 'Automated outreach for AI companies', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    FROM new_group
+    RETURNING *
+  ),
+  step_1 AS (
+    INSERT INTO sequence_steps (id, sequence_id, step_order, delay_days, email_subject, email_body_text, created_at, updated_at)
+    SELECT gen_random_uuid(), id, 1, 0, 'Hello {{company_name}}!', 'Hi {{contact_name}},\\n\\nExcited to connect!', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    FROM new_sequence
+    RETURNING *
+  ),
+  step_2 AS (
+    INSERT INTO sequence_steps (id, sequence_id, step_order, delay_days, email_subject, email_body_text, created_at, updated_at)
+    SELECT gen_random_uuid(), id, 2, 3, 'Following up with {{company_name}}', 'Hi {{contact_name}},\\n\\nJust checking in!', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    FROM new_sequence
     RETURNING *
   )
 SELECT json_build_object(
-  'lead', (SELECT row_to_json(new_lead.*) FROM new_lead),
-  'contact', (SELECT row_to_json(new_contact.*) FROM new_contact),
-  'social', (SELECT row_to_json(new_social.*) FROM new_social)
-) as result;
+  'customer_group', (SELECT row_to_json(g) FROM new_group g),
+  'leads', (SELECT json_agg(l) FROM (SELECT * FROM new_lead_1 UNION ALL SELECT * FROM new_lead_2) l),
+  'contacts', (SELECT json_agg(c) FROM (SELECT * FROM new_lead_1_email UNION ALL SELECT * FROM new_lead_2_email) c),
+  'group_members', (SELECT json_agg(m) FROM group_members m),
+  'sequence', (SELECT row_to_json(s) FROM new_sequence s),
+  'steps', (SELECT json_agg(st) FROM (SELECT * FROM step_1 UNION ALL SELECT * FROM step_2) st)
+) AS result;
 \`\`\`
+
+⚠️ **CRITICAL - UNION ALL Column Consistency:**
+In the above example, note that:
+- \`new_lead_1_email\` and \`new_lead_2_email\` both INSERT with IDENTICAL column lists (id, lead_id, contact_type, contact_value, label, is_primary, created_at, updated_at)
+- \`step_1\` and \`step_2\` both INSERT with IDENTICAL column lists
+- This ensures that UNION ALL operations in json_agg work correctly
+- If you add social_media CTEs, ALL must have the same column list (e.g., id, lead_id, platform, url, username, is_verified, created_at, updated_at)
+
+**Critical Schema Rules:**
+
+**Column Names (exact):**
+- lead_products: \`product_name\`, lead_business_sectors: \`sector_name\`
+- lead_product_categories: \`category_name\`, lead_industry_types: \`industry_name\`
+
+**Length Limits:**
+- leads.business_type: VARCHAR(100) - use ONLY primary type
+- company_name/contact_name: VARCHAR(255), website_url: VARCHAR(500)
+- Split CSV values ("IT, Cloud") into separate rows
+
+**Table Constraints:**
+
+**leads:** ⚠️ CRITICAL - Include \`state\` column!
+\`\`\`sql
+INSERT INTO leads (
+  id, workspace_id, company_name, contact_name, website_url, business_type,
+  description, address, country, city, state, employee_count,
+  lead_status, lead_score, lead_source, created_at, updated_at
+) VALUES (
+  gen_random_uuid(), '${workspaceId}', 'Company', 'Contact', 'https://...', 'Industry',
+  'Desc', 'Address', 'Country', 'City', 'State', '10-50',
+  'new', NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+)
+\`\`\`
+
+**lead_contacts:**
+- Required: lead_id, contact_type (phone/email/fax/other), contact_value
+- Defaults: id, is_primary (false), is_verified (false), created_at, updated_at
+- Nullable: contact_name, label
+- Best practice: Include label ('main', 'support', 'sales')
+
+**lead_social_media:**
+- Required: lead_id, platform (facebook/instagram/twitter/linkedin), url
+- Auto-generated: id (gen_random_uuid()), is_verified (false), created_at (CURRENT_TIMESTAMP), updated_at (CURRENT_TIMESTAMP)
+- Best practice: Include id, created_at, updated_at explicitly in INSERT for consistency with RETURNING *
+- Example: INSERT INTO lead_social_media (id, lead_id, platform, url, username, is_verified, created_at, updated_at) SELECT gen_random_uuid(), id, 'linkedin', 'https://...', NULL, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP FROM new_lead_1 RETURNING *
+
+**lead_products/sectors/categories/industries:**
+- Required: lead_id, name field (product_name/sector_name/category_name/industry_name)
+- Defaults: id, created_at (NO updated_at)
+
+**sequence_steps:**
+- Required: sequence_id, step_order, email_subject
+- Defaults: id, delay_days (0), scheduled_hour (9), scheduled_minute (0), timezone ('Asia/Seoul'), created_at, updated_at
+- Use {{company_name}}, {{contact_name}} variables
+- Plain text with \\n for breaks, use straight quotes (')
+
+**sequence_enrollments:**
+- Required: sequence_id, lead_id, user_email_account_id
+- Fetch user_email_account_id:
+  \`\`\`sql
+  SELECT id FROM user_email_accounts
+  WHERE workspace_id = '${workspaceId}' AND status = 'active' AND is_verified = true
+  ORDER BY is_default DESC NULLS LAST LIMIT 1
+  \`\`\`
+
+**sequence_step_executions:**
+- Required: enrollment_id, step_id, step_order, scheduled_at
+- Schedule FIRST step only
+
+---
+
+## 🚨 Common Error Prevention Guide
+
+**1. Column Count Mismatch (MOST COMMON ERROR)**
+- ❌ Error: "INSERT has more expressions than target columns"
+- ✅ Fix: Ensure column list count matches VALUES count exactly
+- **CRITICAL**: \`leads\` table has \`state\` column between \`city\` and \`employee_count\`
+  - Correct order: \`country, city, state, employee_count\` (NOT \`country, city, employee_count\`)
+  - Missing \`state\` causes all subsequent values to shift
+- Check for missing columns like \`state\`, \`updated_at\`, or extra columns
+
+**2. String Length Exceeded**
+- ❌ Error: "value too long for type character varying(100)"
+- ✅ Fix: Truncate business_type to first 100 chars, use only primary type
+- Check all VARCHAR limits before inserting
+
+**3. Foreign Key Violations**
+- ❌ Error: "violates foreign key constraint"
+- ✅ Fix: Ensure referenced IDs exist (use CTE to reference previous steps)
+- Never use placeholder IDs like {{PREV_QUERY_ID}} - use CTEs instead
+
+**4. NOT NULL Constraint Violations**
+- ❌ Error: "null value in column violates not-null constraint"
+- ✅ Fix: Check schema for NOT NULL columns without defaults
+  - leads.workspace_id: REQUIRED
+  - leads.lead_status: Has DEFAULT, but check if explicitly set to NULL
+  - customer_groups.is_dynamic: Has DEFAULT false, never set to NULL
+  - lead_contacts.contact_type, contact_value: REQUIRED
+  - sequence_steps.step_order, email_subject: REQUIRED
+
+**5. Enum Type Violations**
+- ❌ Error: "invalid input value for enum"
+- ✅ Fix: Use only valid enum values:
+  - contact_type: 'phone', 'email', 'fax', 'other'
+  - platform: 'facebook', 'instagram', 'twitter', 'linkedin'
+  - lead_status: 'new', 'contacted', 'qualified', 'unqualified', 'converted', 'lost', 'unsubscribed'
+  - sequence_status: 'draft', 'active', 'paused', 'archived', 'completed'
+  - enrollment_status: 'active', 'paused', 'completed', 'stopped', 'bounced', 'unsubscribed'
+  - step_execution_status: 'pending', 'scheduled', 'sent', 'delivered', 'failed', 'skipped'
+
+**6. JSON Aggregation Without FROM**
+- ❌ Error: undefined column / aggregate not allowed
+- ✅ Fix: \`(SELECT json_agg(x) FROM (SELECT * FROM cte1 UNION ALL ...) x)\`
+
+**7. UNION ALL Column Mismatch**
+- ❌ Error: "UNION query must have same number of columns"
+- ✅ Fix: Ensure identical column count/types in all SELECTs
+- ⚠️ CRITICAL: When using UNION ALL in json_agg, ALL CTEs must have IDENTICAL column lists
+  - Example: If aggregating social_media with UNION ALL, ensure both CTEs specify the SAME columns (e.g., both must use: id, lead_id, platform, url, username, is_verified, created_at, updated_at)
+  - Don't mix CTEs with different column specifications even if they insert to same table
+  - Use explicit column lists in ALL INSERTs, never rely on defaults for some but not others
 `
       : operationType === "update"
         ? `
@@ -431,14 +350,12 @@ Consider foreign key relationships when updating:
 **Complex UPDATE Example (with related data):**
 Changing lead to 'unsubscribed' and stopping active sequences:
 \`\`\`json
-{
   "queries": [
     "UPDATE leads SET lead_status = 'unsubscribed', updated_at = CURRENT_TIMESTAMP WHERE id = '{{LEAD_ID}}' AND workspace_id = '${workspaceId}' RETURNING *;",
     "UPDATE sequence_enrollments SET status = 'unsubscribed', stopped_at = CURRENT_TIMESTAMP WHERE lead_id = '{{LEAD_ID}}' AND status = 'active' RETURNING *;",
     "UPDATE sequence_step_executions SET status = 'skipped' WHERE enrollment_id IN (SELECT id FROM sequence_enrollments WHERE lead_id = '{{LEAD_ID}}') AND status = 'pending' RETURNING *;"
   ],
   "explanation": "Changes lead to unsubscribed, stops active sequences, and skips scheduled step executions."
-}
 \`\`\`
 
 **Simple UPDATE Example:**
@@ -492,7 +409,6 @@ Consider CASCADE behavior and related tables when deleting:
 **CASCADE DELETE Example (complex case):**
 To fully delete a lead with all related data:
 \`\`\`json
-{
   "queries": [
     "DELETE FROM email_replies WHERE reply_email_id IN (SELECT id FROM emails WHERE lead_id = '{{LEAD_ID}}') RETURNING *;",
     "DELETE FROM email_events WHERE email_id IN (SELECT id FROM emails WHERE lead_id = '{{LEAD_ID}}') RETURNING *;",
@@ -509,7 +425,6 @@ To fully delete a lead with all related data:
     "DELETE FROM leads WHERE id = '{{LEAD_ID}}' AND workspace_id = '${workspaceId}' RETURNING *;"
   ],
   "explanation": "Sequentially deletes lead and all related data. Deletes child tables first to prevent foreign key errors."
-}
 \`\`\`
 
 **Simple DELETE Example (no related data):**

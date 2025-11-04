@@ -18,4 +18,26 @@ layout.page.workspaceManagement,워크스페이스 관리,Workspace Management
 layout.page.userManagement,유저 관리,User Management
 layout.page.emailSendTest,메일 발송 테스트,Email Send Test
 layout.page.settings,설정,Settings
+tag.remove,태그 제거,Remove tag
+tag.sentiment.positive,긍정적,Positive
+tag.sentiment.negative,부정적,Negative
+tag.sentiment.other,기타,Other
+tag.sentiment.unclassified,미분류,Unclassified
+tag.priority.high,높음,High
+tag.priority.medium,보통,Medium
+tag.priority.low,낮음,Low
+tag.category.meetingRequest,회의 요청,Meeting Request
+tag.category.question,질문,Question
+tag.category.auto,자동,Auto
+tag.category.other,기타,Other
+tag.tooltip.positive,긍정적인 감정이 감지되었습니다,Positive sentiment detected
+tag.tooltip.negative,부정적인 감정이 감지되었습니다,Negative sentiment detected
+tag.tooltip.other,기타 감정,Other sentiment
+tag.tooltip.unclassified,감정이 분류되지 않음,Sentiment unclassified
+tag.tooltip.high,높은 우선순위,High priority
+tag.tooltip.medium,보통 우선순위,Medium priority
+tag.tooltip.low,낮은 우선순위,Low priority
+tag.tooltip.meetingRequest,회의 요청 메시지,Meeting request message
+tag.tooltip.question,질문 메시지,Question message
+tag.tooltip.auto,자동 생성된 메시지,Auto-generated message
 

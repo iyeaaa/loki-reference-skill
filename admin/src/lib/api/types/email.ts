@@ -90,13 +90,22 @@ export interface Email {
 
 // EmailThread interface removed - using threadId field in Email instead
 
+export type EmailIntent =
+  | "meeting_request"
+  | "question"
+  | "objection"
+  | "out_of_office"
+  | "not_interested"
+  | "positive_interest"
+  | "neutral"
+
 export interface EmailReply {
   id: string
   workspaceId: string
   originalEmailId: string
   replyEmailId: string
   sentiment?: EmailReplySentiment | null
-  intent?: string | null
+  intent?: EmailIntent | null
   aiSummary?: string | null
   isRead: boolean
   assignedTo?: string | null
@@ -243,6 +252,16 @@ export interface RepliedEmail {
   enrollmentCompletedAt?: string | null
   enrollmentStoppedAt?: string | null
   enrollmentNextStepScheduledAt?: string | null
+  // Latest activity timestamp (latest message in conversation)
+  latestActivityAt?: string | null
+  // Latest reply classification (from email_replies)
+  replyIntent?: EmailIntent | null
+  replySentiment?: EmailReplySentiment | null
+  // Latest message content (for preview - shows actual reply, not original)
+  latestMessageBody?: string | null
+  latestMessageBodyHtml?: string | null
+  latestMessageDirection?: EmailDirection | null
+  latestMessageFrom?: string | null
 }
 
 // Thread email for conversation history (스레드 대화 이력)
@@ -259,6 +278,7 @@ export interface ThreadEmail {
   repliedAt?: string | null
   deliveredAt?: string | null
   openedAt?: string | null
+  clickedAt?: string | null
   createdAt: string
   updatedAt: string
   threadId?: string | null
@@ -269,7 +289,11 @@ export interface ThreadEmail {
   sequenceName?: string | null
   leadId?: string | null
   sequenceId?: string | null
+  stepId?: string | null
   workspaceId: string
+  openCount: number
+  clickCount: number
+  stepOrder?: number | null
 }
 
 export interface ThreadGroupedEmail {

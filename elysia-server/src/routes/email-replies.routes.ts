@@ -3,6 +3,20 @@ import * as emailRepliesService from "../services/email-replies.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
 
 export const emailRepliesRoutes = new Elysia({ prefix: "/api/v1/email-replies" })
+  // Get category counts for filter
+  .get(
+    "/stats/by-intent",
+    async ({ query }) => {
+      const counts = await emailRepliesService.getIntentCounts(query.workspaceId)
+      return { data: counts }
+    },
+    {
+      query: t.Object({
+        workspaceId: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
   // List email replies with pagination and filters
   .get(
     "/",
@@ -119,6 +133,36 @@ export const emailRepliesRoutes = new Elysia({ prefix: "/api/v1/email-replies" }
     {
       body: t.Object({
         replyIds: t.Array(t.String({ format: "uuid" })),
+      }),
+    },
+  )
+
+  // Reclassify email reply with AI
+  .post(
+    "/:id/reclassify",
+    async ({ params: { id }, set }) => {
+      try {
+        const result = await emailRepliesService.reclassifyEmailReply(id)
+        if (!result) {
+          set.status = 404
+          return errorResponse("답장을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+        }
+        return {
+          success: true,
+          data: result,
+          message: "AI 분류가 완료되었습니다.",
+        }
+      } catch (error) {
+        set.status = 500
+        return errorResponse(
+          error instanceof Error ? error.message : "AI 분류 중 오류가 발생했습니다.",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
       }),
     },
   )

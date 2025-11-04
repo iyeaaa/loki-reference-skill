@@ -13,6 +13,7 @@ import type {
 import { emails } from "../types/email-storage"
 import { extractEmailAddress, parseEmailBody, parseEmailHeaders } from "../utils/email.util"
 import logger from "../utils/logger"
+import { getAIClassificationService } from "./ai-classification.service"
 import { emailService } from "./email.service"
 
 interface SendGridEvent {
@@ -585,14 +586,40 @@ class WebhookService {
     )
 
     // 6. 답장인지 확인 (In-Reply-To 헤더가 있는 경우)
+    logger.info({
+      msg: "🔍 [WEBHOOK] Checking email_replies creation conditions",
+      inboundEmailId: inboundEmail.id,
+      hasInReplyTo: !!headers.inReplyTo,
+      inReplyToValue: headers.inReplyTo,
+      messageId: headers.messageId,
+      threadId: inboundEmail.threadId,
+      workspaceId: inboundEmail.workspaceId,
+      accountWorkspaceId: account.workspaceId,
+    })
+
     if (headers.inReplyTo) {
-      logger.info({ inReplyTo: headers.inReplyTo }, "Reply detected")
+      logger.info(
+        { inReplyTo: headers.inReplyTo },
+        "✅ Reply detected (In-Reply-To header present)",
+      )
 
       // 원본 이메일 ID 찾기 (이미 위에서 정보를 가져왔지만, ID가 필요함)
+      logger.info({
+        msg: "🔍 [WEBHOOK] Searching for original email",
+        searchCriteria: {
+          messageId: headers.inReplyTo,
+          direction: "outbound",
+          workspaceId: account.workspaceId,
+        },
+      })
+
       const originalEmailResults = await db
         .select({
           id: emailsTable.id,
           workspaceId: emailsTable.workspaceId,
+          messageId: emailsTable.messageId,
+          threadId: emailsTable.threadId,
+          subject: emailsTable.subject,
         })
         .from(emailsTable)
         .where(
@@ -606,17 +633,63 @@ class WebhookService {
 
       const originalEmail = originalEmailResults[0]
       if (originalEmail) {
-        logger.info({ originalEmailId: originalEmail.id }, "Original email found")
-
-        // email_replies 테이블에 저장
-        await db.insert(emailReplies).values({
-          workspaceId: originalEmail.workspaceId,
+        logger.info({
+          msg: "✅ [WEBHOOK] Original email found",
           originalEmailId: originalEmail.id,
-          replyEmailId: inboundEmail.id,
-          isRead: false,
+          originalMessageId: originalEmail.messageId,
+          originalThreadId: originalEmail.threadId,
+          originalSubject: originalEmail.subject,
+          inReplyToHeader: headers.inReplyTo,
+          headersMatch: originalEmail.messageId === headers.inReplyTo,
         })
 
-        logger.info("Saved to email_replies table")
+        // email_replies 테이블에 저장
+        const [emailReply] = await db
+          .insert(emailReplies)
+          .values({
+            workspaceId: originalEmail.workspaceId,
+            originalEmailId: originalEmail.id,
+            replyEmailId: inboundEmail.id,
+            isRead: false,
+          })
+          .returning({ id: emailReplies.id })
+
+        logger.info({
+          msg: "✅ [WEBHOOK] email_replies record created successfully",
+          emailReplyId: emailReply?.id,
+          originalEmailId: originalEmail.id,
+          replyEmailId: inboundEmail.id,
+          workspaceId: originalEmail.workspaceId,
+          threadId: inboundEmail.threadId,
+        })
+
+        // AI classification (enabled by default, non-blocking - errors won't fail email ingestion)
+        const classificationEnabled = process.env.AI_CLASSIFICATION_ENABLED !== "false"
+        logger.info({
+          msg: "🤖 [WEBHOOK] AI classification check",
+          hasEmailReply: !!emailReply,
+          classificationEnabled: classificationEnabled,
+          willRunClassification: !!(emailReply && classificationEnabled),
+        })
+
+        if (emailReply && classificationEnabled) {
+          logger.info({
+            msg: "🚀 [WEBHOOK] Starting AI classification (async)",
+            emailReplyId: emailReply.id,
+          })
+
+          this.classifyEmailReplyAsync(
+            emailReply.id,
+            inboundEmail.subject || "",
+            inboundEmail.bodyText || inboundEmail.bodyHtml || "",
+          ).catch((error) => {
+            logger.error({
+              err: error,
+              emailReplyId: emailReply.id,
+              msg: "❌ [WEBHOOK] AI classification failed, but email was still saved",
+            })
+          })
+        }
 
         // 원본 이메일의 repliedAt 업데이트
         await db
@@ -627,10 +700,28 @@ class WebhookService {
           })
           .where(eq(emailsTable.id, originalEmail.id))
 
-        logger.info({ originalEmailId: originalEmail.id }, "Original email repliedAt updated")
+        logger.info({
+          msg: "✅ [WEBHOOK] Original email repliedAt updated",
+          originalEmailId: originalEmail.id,
+        })
       } else {
-        logger.warn({ inReplyTo: headers.inReplyTo }, "Original email not found")
+        logger.warn({
+          msg: "❌ [WEBHOOK] Original email NOT found - email_replies record NOT created",
+          inReplyTo: headers.inReplyTo,
+          inboundEmailId: inboundEmail.id,
+          threadId: inboundEmail.threadId,
+          workspaceId: account.workspaceId,
+          searchedMessageId: headers.inReplyTo,
+          reason: "No matching outbound email with this messageId in this workspace",
+        })
       }
+    } else {
+      logger.warn({
+        msg: "⚠️  [WEBHOOK] No In-Reply-To header - email_replies record NOT created",
+        inboundEmailId: inboundEmail.id,
+        threadId: inboundEmail.threadId,
+        reason: "Inbound email has no In-Reply-To header, cannot link to original email",
+      })
     }
   }
 
@@ -784,6 +875,83 @@ class WebhookService {
     } catch (error) {
       logger.error({ error, emailId, status }, "Failed to update sequence step execution status")
     }
+  }
+
+  /**
+   * Classify email reply using AI (async, non-blocking) with retry logic
+   */
+  private async classifyEmailReplyAsync(
+    emailReplyId: string,
+    subject: string,
+    body: string,
+  ): Promise<void> {
+    const maxRetries = 3
+    let lastError: Error | null = null
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        logger.info({ emailReplyId, attempt }, "Starting AI classification")
+
+        const aiService = getAIClassificationService()
+        const classification = await aiService.classifyReply({
+          subject,
+          body,
+        })
+
+        // Update email_replies with classification results
+        await db
+          .update(emailReplies)
+          .set({
+            intent: classification.intent,
+            sentiment: classification.sentiment as
+              | "positive"
+              | "neutral"
+              | "negative"
+              | "interested"
+              | "not_interested",
+          })
+          .where(eq(emailReplies.id, emailReplyId))
+
+        logger.info(
+          {
+            emailReplyId,
+            attempt,
+            intent: classification.intent,
+            sentiment: classification.sentiment,
+            confidence: classification.confidence,
+          },
+          "AI classification completed and saved",
+        )
+
+        // Success - exit retry loop
+        return
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error))
+
+        logger.warn({
+          err: lastError,
+          emailReplyId,
+          attempt,
+          maxRetries,
+          msg: `AI classification attempt ${attempt} failed`,
+        })
+
+        // If not the last attempt, wait before retrying (exponential backoff)
+        if (attempt < maxRetries) {
+          const delayMs = 2 ** (attempt - 1) * 1000 // 1s, 2s, 4s
+          await new Promise((resolve) => setTimeout(resolve, delayMs))
+        }
+      }
+    }
+
+    // All retries exhausted
+    logger.error({
+      err: lastError,
+      emailReplyId,
+      attempts: maxRetries,
+      msg: "AI classification failed after all retry attempts - email saved without classification",
+    })
+    // Don't throw - classification failure shouldn't break email processing
   }
 }
 

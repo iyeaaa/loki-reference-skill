@@ -118,3 +118,54 @@ export function formatDate(date: Date | string): string {
     day: "2-digit",
   })
 }
+
+// Format as contextual date/time based on recency
+// - Within same hour: "5 mins ago"
+// - Same day: "2:30 PM"
+// - More than 1 day: "Nov 4, 2025 3:45 PM"
+export function formatAbsoluteDateTime(date: Date | string | null): string {
+  if (!date) return "-"
+
+  const targetDate = typeof date === "string" ? new Date(date) : date
+  const now = new Date()
+
+  // Calculate time difference
+  const diffInMs = now.getTime() - targetDate.getTime()
+  const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
+  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60))
+
+  // Check if same day
+  const isSameDay =
+    now.getFullYear() === targetDate.getFullYear() &&
+    now.getMonth() === targetDate.getMonth() &&
+    now.getDate() === targetDate.getDate()
+
+  // Within same hour: show relative minutes
+  if (diffInHours < 1 && isSameDay) {
+    if (diffInMinutes < 1) return "Just now"
+    if (diffInMinutes === 1) return "1 min ago"
+    return `${diffInMinutes} mins ago`
+  }
+
+  // Same day but different hours: show time only
+  if (isSameDay) {
+    const timeFormatter = new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    })
+    return timeFormatter.format(targetDate)
+  }
+
+  // More than 1 day: show full date and time
+  const fullFormatter = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })
+
+  return fullFormatter.format(targetDate)
+}

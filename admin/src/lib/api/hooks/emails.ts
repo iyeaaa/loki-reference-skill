@@ -227,6 +227,7 @@ export interface RepliedEmailsParams {
   leadId?: string
   sequenceId?: string
   search?: string
+  intent?: string
 }
 
 export function useRepliedEmails(params: RepliedEmailsParams) {
@@ -234,10 +235,10 @@ export function useRepliedEmails(params: RepliedEmailsParams) {
     queryKey: ["replied-emails", params],
     queryFn: () => emailsApi.searchRepliedEmails(params),
     enabled: !!params.workspaceId,
-    staleTime: 0, // Always fetch fresh data
+    staleTime: 30 * 1000, // Data is fresh for 30 seconds
     gcTime: 5 * 60 * 1000,
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false, // Disable to prevent aggressive refetching
   })
 }
 
@@ -247,9 +248,9 @@ export function useThreadEmails(threadId: string | null, workspaceId?: string) {
     queryKey: ["thread-emails", threadId, workspaceId],
     queryFn: () => emailsApi.getThreadEmails(threadId || "", workspaceId),
     enabled: !!threadId,
-    staleTime: 0, // Always fetch fresh data
+    staleTime: 30 * 1000, // Data is fresh for 30 seconds
     gcTime: 10 * 60 * 1000,
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false, // Disable to prevent aggressive refetching
   })
 }

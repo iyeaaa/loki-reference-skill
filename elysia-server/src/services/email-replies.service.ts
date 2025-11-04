@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike, inArray, or } from "drizzle-orm"
+import { and, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { db } from "../db"
 import { emailReplies, emails, userEmailAccounts } from "../db/schema"
@@ -414,4 +414,108 @@ function buildFilterConditions(filters: EmailReplyFilters) {
   }
 
   return conditions
+}
+
+/**
+ * Get count of replies by intent category
+ */
+export async function getIntentCounts(workspaceId: string) {
+  const counts = await db
+    .select({
+      intent: emailReplies.intent,
+      count: sql<number>`COUNT(*)::int`,
+    })
+    .from(emailReplies)
+    .where(eq(emailReplies.workspaceId, workspaceId))
+    .groupBy(emailReplies.intent)
+
+  // Get total count
+  const totalResult = await db
+    .select({ count: sql<number>`COUNT(*)::int` })
+    .from(emailReplies)
+    .where(eq(emailReplies.workspaceId, workspaceId))
+
+  const total = totalResult[0]?.count || 0
+
+  // Format the response
+  const intentCounts: Record<string, number> = {
+    all: total,
+    meeting_request: 0,
+    question: 0,
+    objection: 0,
+    out_of_office: 0,
+    not_interested: 0,
+    positive_interest: 0,
+    neutral: 0,
+    unclassified: 0,
+  }
+
+  for (const row of counts) {
+    if (row.intent) {
+      intentCounts[row.intent] = Number(row.count)
+    } else {
+      intentCounts.unclassified = Number(row.count)
+    }
+  }
+
+  return intentCounts
+}
+
+/**
+ * Reclassify email reply using AI
+ */
+export async function reclassifyEmailReply(replyId: string) {
+  const { getAIClassificationService } = await import("./ai-classification.service")
+
+  // Get email reply with full details
+  const replyResult = await db
+    .select({
+      id: emailReplies.id,
+      replyEmailId: emailReplies.replyEmailId,
+      subject: replyEmail.subject,
+      bodyText: replyEmail.bodyText,
+      bodyHtml: replyEmail.bodyHtml,
+    })
+    .from(emailReplies)
+    .innerJoin(replyEmail, eq(emailReplies.replyEmailId, replyEmail.id))
+    .where(eq(emailReplies.id, replyId))
+    .limit(1)
+
+  const reply = replyResult[0]
+
+  if (!reply) {
+    return null
+  }
+
+  // Classify using AI
+  const aiService = getAIClassificationService()
+  const classification = await aiService.classifyReply({
+    subject: reply.subject || "",
+    body: reply.bodyText || reply.bodyHtml || "",
+  })
+
+  // Update email_replies with classification results
+  const [updated] = await db
+    .update(emailReplies)
+    .set({
+      intent: classification.intent,
+      sentiment: classification.sentiment as
+        | "positive"
+        | "neutral"
+        | "negative"
+        | "interested"
+        | "not_interested",
+    })
+    .where(eq(emailReplies.id, replyId))
+    .returning()
+
+  return {
+    ...updated,
+    classification: {
+      intent: classification.intent,
+      sentiment: classification.sentiment,
+      confidence: classification.confidence,
+      reasoning: classification.reasoning,
+    },
+  }
 }

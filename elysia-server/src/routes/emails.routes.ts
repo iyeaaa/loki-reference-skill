@@ -135,7 +135,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         )
         return errorResponse(
           "오늘 발송된 이메일 수 조회에 실패했습니다.",
-          // ResponseCode.INTERNAL_SERVER_ERROR
+          ResponseCode.INTERNAL_ERROR,
         )
       }
     },
@@ -193,10 +193,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           },
           "Failed to get average open rate",
         )
-        return errorResponse(
-          "평균 오픈률 조회에 실패했습니다.",
-          // ResponseCode.INTERNAL_SERVER_ERROR
-        )
+        return errorResponse("평균 오픈률 조회에 실패했습니다.", ResponseCode.INTERNAL_ERROR)
       }
     },
     {
@@ -284,10 +281,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         }
       } catch (error) {
         logger.error({ error }, "Failed to get recent sequence performance")
-        return errorResponse(
-          "최근 시퀀스 성과 조회에 실패했습니다.",
-          // ResponseCode.INTERNAL_SERVER_ERROR
-        )
+        return errorResponse("최근 시퀀스 성과 조회에 실패했습니다.", ResponseCode.INTERNAL_ERROR)
       }
     },
     {
@@ -411,7 +405,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         )
         return errorResponse(
           "예약된 팔로우업 이메일 조회에 실패했습니다.",
-          // ResponseCode.INTERNAL_SERVER_ERROR
+          ResponseCode.INTERNAL_ERROR,
         )
       }
     },
@@ -492,10 +486,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           },
           "Failed to get buyer response rate",
         )
-        return errorResponse(
-          "바이어 응답률 조회에 실패했습니다.",
-          // ResponseCode.INTERNAL_SERVER_ERROR
-        )
+        return errorResponse("바이어 응답률 조회에 실패했습니다.", ResponseCode.INTERNAL_ERROR)
       }
     },
     {
@@ -966,6 +957,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       const leadIdFilter = query.leadId
       const sequenceIdFilter = query.sequenceId
       const searchFilter = query.search
+      const intentFilter = query.intent
 
       if (!workspaceId) {
         return {
@@ -986,6 +978,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           leadIdFilter,
           sequenceIdFilter,
           searchFilter,
+          intentFilter,
         },
       })
 
@@ -996,10 +989,33 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         inboundConditions.push(eq(emails.workspaceId, workspaceId))
       }
 
-      const repliedThreadIds = await db
-        .selectDistinct({ threadId: emails.threadId })
-        .from(emails)
-        .where(and(...inboundConditions))
+      // Build the query for finding replied threads
+      // Handle intent filter by building the appropriate query
+      let repliedThreadIds: { threadId: string | null }[]
+
+      if (intentFilter && intentFilter !== "all") {
+        // Add intent filter conditions
+        if (intentFilter === "unclassified") {
+          // Filter for threads with unclassified replies (intent IS NULL)
+          inboundConditions.push(sql`${emailReplies.intent} IS NULL`)
+        } else {
+          // Filter for specific intent
+          inboundConditions.push(eq(emailReplies.intent, intentFilter))
+        }
+
+        // Build query with join
+        repliedThreadIds = await db
+          .selectDistinct({ threadId: emails.threadId })
+          .from(emails)
+          .innerJoin(emailReplies, eq(emailReplies.replyEmailId, emails.id))
+          .where(and(...inboundConditions))
+      } else {
+        // Build query without join
+        repliedThreadIds = await db
+          .selectDistinct({ threadId: emails.threadId })
+          .from(emails)
+          .where(and(...inboundConditions))
+      }
 
       const threadIdsList = repliedThreadIds
         .map((t) => t.threadId)
@@ -1009,6 +1025,14 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         msg: "✓ [REPLIED-EMAILS] Found threads with replies",
         threadIdsCount: threadIdsList.length,
         threadIds: threadIdsList.slice(0, 10), // Log first 10 for debugging
+        intentFilter: intentFilter || "none",
+        usedIntentJoin: !!(intentFilter && intentFilter !== "all"),
+        queryDetails: {
+          hasIntentFilter: !!intentFilter && intentFilter !== "all",
+          intentValue: intentFilter,
+          joinedEmailReplies: !!(intentFilter && intentFilter !== "all"),
+          searchingUnclassified: intentFilter === "unclassified",
+        },
       })
 
       if (threadIdsList.length === 0) {
@@ -1057,7 +1081,18 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         const searchCondition = or(
           ilike(emails.subject, `%${searchFilter}%`),
           ilike(emails.fromEmail, `%${searchFilter}%`),
+          ilike(emails.toEmail, `%${searchFilter}%`),
           ilike(emails.leadName, `%${searchFilter}%`),
+          ilike(emails.leadEmail, `%${searchFilter}%`),
+          // Search in related leads table
+          sql`EXISTS (
+            SELECT 1 FROM ${leads}
+            WHERE ${leads.id} = ${emails.leadId}
+            AND (
+              ${leads.companyName} ILIKE ${`%${searchFilter}%`}
+              OR ${leads.contactName} ILIKE ${`%${searchFilter}%`}
+            )
+          )`,
         )
         if (searchCondition) {
           conditions.push(searchCondition)
@@ -1074,6 +1109,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         hasLeadFilter: !!leadIdFilter,
         hasSequenceFilter: !!sequenceIdFilter,
         hasSearchFilter: !!searchFilter,
+        hasIntentFilter: !!intentFilter && intentFilter !== "all",
       })
 
       // Step 3: Get threads with their first email (스레드별 첫 번째 이메일 - threadId 최신순 정렬)
@@ -1092,7 +1128,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         .offset(offset)
         .as("threads")
 
-      // Get full email details for first email in each thread
+      // Get full email details for first email in each thread + latest reply intent/sentiment
       const threadEmails = await db
         .select({
           id: emails.id,
@@ -1140,6 +1176,11 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           enrollmentCompletedAt: sequenceEnrollments.completedAt,
           enrollmentStoppedAt: sequenceEnrollments.stoppedAt,
           enrollmentNextStepScheduledAt: sequenceEnrollments.nextStepScheduledAt,
+          // Latest reply classification (from email_replies)
+          replyIntent: emailReplies.intent,
+          replySentiment: emailReplies.sentiment,
+          // Latest activity timestamp from thread
+          latestActivityAt: threadsQuery.latestCreatedAt,
         })
         .from(emails)
         .innerJoin(threadsQuery, eq(emails.threadId, threadsQuery.threadId))
@@ -1152,6 +1193,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             eq(sequenceEnrollments.leadId, emails.leadId),
           ),
         )
+        .leftJoin(emailReplies, eq(emailReplies.originalEmailId, emails.id))
         .where(eq(emails.createdAt, threadsQuery.firstCreatedAt))
 
       logger.info({
@@ -1191,12 +1233,61 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         })),
       })
 
+      // Get latest message body for each thread (for preview)
+      // Fetch all messages in these threads, ordered by date desc
+      const threadIdsForLatest = threadEmails
+        .map((e) => e.threadId)
+        .filter((id): id is string => !!id)
+
+      let allThreadMessages: Array<{
+        threadId: string | null
+        bodyText: string | null
+        bodyHtml: string | null
+        direction: "outbound" | "inbound"
+        fromEmail: string
+        createdAt: Date
+      }> = []
+
+      if (threadIdsForLatest.length > 0) {
+        allThreadMessages = await db
+          .select({
+            threadId: emails.threadId,
+            bodyText: emails.bodyText,
+            bodyHtml: emails.bodyHtml,
+            direction: emails.direction,
+            fromEmail: emails.fromEmail,
+            createdAt: emails.createdAt,
+          })
+          .from(emails)
+          .where(inArray(emails.threadId, threadIdsForLatest))
+          .orderBy(desc(emails.createdAt))
+      }
+
+      // Group by threadId and take the first (latest) message per thread
+      const latestMessagesMap = new Map<string, (typeof allThreadMessages)[0]>()
+      for (const msg of allThreadMessages) {
+        if (msg.threadId && !latestMessagesMap.has(msg.threadId)) {
+          latestMessagesMap.set(msg.threadId, msg)
+        }
+      }
+
+      logger.info({
+        msg: "✓ [REPLIED-EMAILS] Latest messages fetched",
+        latestMessagesCount: latestMessagesMap.size,
+      })
+
       // Combine data
       const threadsWithCounts = threadEmails.map((email) => {
         const countData = threadCounts.find((tc) => tc.threadId === email.threadId)
+        const latestMsg = email.threadId ? latestMessagesMap.get(email.threadId) : undefined
         return {
           ...email,
           messageCount: Number(countData?.messageCount || 1),
+          // Add latest message preview (for showing the actual reply content)
+          latestMessageBody: latestMsg?.bodyText || email.bodyText,
+          latestMessageBodyHtml: latestMsg?.bodyHtml || email.bodyHtml,
+          latestMessageDirection: latestMsg?.direction || email.direction,
+          latestMessageFrom: latestMsg?.fromEmail || email.fromEmail,
         }
       })
 
@@ -1232,6 +1323,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         leadId: t.Optional(t.String({ format: "uuid" })),
         sequenceId: t.Optional(t.String({ format: "uuid" })),
         search: t.Optional(t.String()),
+        intent: t.Optional(t.String()), // Intent filter (e.g., "meeting_request", "positive_interest", "unclassified")
       }),
     },
   )
@@ -1308,6 +1400,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           repliedAt: emails.repliedAt,
           deliveredAt: emails.deliveredAt,
           openedAt: emails.openedAt,
+          clickedAt: emails.clickedAt,
           createdAt: emails.createdAt,
           updatedAt: emails.updatedAt,
           threadId: emails.threadId,
@@ -1318,10 +1411,15 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           sequenceName: sequences.name,
           leadId: emails.leadId,
           sequenceId: emails.sequenceId,
+          stepId: emails.stepId,
           workspaceId: emails.workspaceId,
+          openCount: emails.openCount,
+          clickCount: emails.clickCount,
+          stepOrder: sequenceSteps.stepOrder,
         })
         .from(emails)
         .leftJoin(sequences, eq(emails.sequenceId, sequences.id))
+        .leftJoin(sequenceSteps, eq(emails.stepId, sequenceSteps.id))
         .where(and(...conditions))
         .orderBy(asc(emails.createdAt))
 

@@ -147,3 +147,38 @@ export function useBulkDeleteEmailReplies() {
     },
   })
 }
+
+/**
+ * Hook to reclassify email reply using AI
+ */
+export function useReclassifyEmailReply() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => emailRepliesApi.reclassify(id),
+    onSuccess: (response) => {
+      // Invalidate related queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: [EMAIL_REPLIES_QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
+      toast.success(
+        `AI 분류 완료: ${response.data.classification.intent} (신뢰도: ${Math.round(response.data.classification.confidence * 100)}%)`,
+      )
+    },
+    onError: (error: Error) => {
+      toast.error(`AI 분류 실패: ${error.message}`)
+    },
+  })
+}
+
+/**
+ * Hook to get intent counts for a workspace
+ */
+export function useIntentCounts(workspaceId: string) {
+  return useQuery({
+    queryKey: ["intent-counts", workspaceId],
+    queryFn: () => emailRepliesApi.getIntentCounts(workspaceId),
+    enabled: !!workspaceId,
+    staleTime: 30 * 1000, // Cache for 30 seconds
+    gcTime: 5 * 60 * 1000, // 5 minutes
+  })
+}

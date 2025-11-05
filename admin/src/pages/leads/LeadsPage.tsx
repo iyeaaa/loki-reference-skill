@@ -133,6 +133,13 @@ export default function LeadsPage() {
 
   // 현재 로드된 리드 데이터 저장
   const [currentLeadsData, setCurrentLeadsData] = useState<Lead[]>([])
+  const [totalLeadsCount, setTotalLeadsCount] = useState<number>(0)
+
+  // 페이지 크기 상태
+  const [pageSize, setPageSize] = useState(() => {
+    const saved = localStorage.getItem("leadsPageSize")
+    return saved ? parseInt(saved, 10) : 100
+  })
 
   // 확인 다이얼로그 상태
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false)
@@ -406,6 +413,14 @@ export default function LeadsPage() {
       setAllLeadsSelected(true)
     }
   }, [isSelectAllMode])
+
+  // 페이지 크기 변경 핸들러
+  const handlePageSizeChange = useCallback((newSize: number) => {
+    if (newSize >= 1 && newSize <= 10000) {
+      setPageSize(newSize)
+      localStorage.setItem("leadsPageSize", String(newSize))
+    }
+  }, [])
 
   // 전체 리드 선택/해제
   const handleSelectAllLeads = useCallback(() => {
@@ -842,6 +857,9 @@ export default function LeadsPage() {
                   className="text-xs h-9 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:hover:bg-violet-700"
                 >
                   {t("leads.group.all")}
+                  {!selectedCustomerGroup && totalLeadsCount > 0 && (
+                    <span className="ml-1.5 text-xs opacity-70">({totalLeadsCount})</span>
+                  )}
                 </TabsTrigger>
                 {selectedWorkspaceId !== "all" &&
                   customerGroups?.map((group) => (
@@ -960,6 +978,41 @@ export default function LeadsPage() {
           {/* 전체 선택 및 Bulk Actions */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
+              {/* 페이지 크기 설정 */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">페이지 크기:</span>
+                <div className="flex gap-1">
+                  <Button
+                    onClick={() => handlePageSizeChange(10)}
+                    variant={pageSize === 10 ? "default" : "outline"}
+                    size="sm"
+                  >
+                    10
+                  </Button>
+                  <Button
+                    onClick={() => handlePageSizeChange(50)}
+                    variant={pageSize === 50 ? "default" : "outline"}
+                    size="sm"
+                  >
+                    50
+                  </Button>
+                  <Button
+                    onClick={() => handlePageSizeChange(100)}
+                    variant={pageSize === 100 ? "default" : "outline"}
+                    size="sm"
+                  >
+                    100
+                  </Button>
+                  <Button
+                    onClick={() => handlePageSizeChange(500)}
+                    variant={pageSize === 500 ? "default" : "outline"}
+                    size="sm"
+                  >
+                    500
+                  </Button>
+                </div>
+              </div>
+
               {/* 전체 선택 버튼 */}
               <Button
                 variant={isSelectAllMode ? "default" : "outline"}
@@ -1047,6 +1100,8 @@ export default function LeadsPage() {
             onEditLead={setEditingLead}
             onManageGroups={handleManageLeadGroups}
             onLeadsDataChange={setCurrentLeadsData}
+            onTotalChange={setTotalLeadsCount}
+            pageSize={pageSize}
             isSelectAllMode={isSelectAllMode}
             allLeadsSelected={allLeadsSelected}
             onToggleSelectAll={handleSelectAllLeads}

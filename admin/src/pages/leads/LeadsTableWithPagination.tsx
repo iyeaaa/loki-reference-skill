@@ -20,7 +20,6 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
-import { Input } from "@/components/ui/input"
 import { useDeleteLead, useLeads } from "@/lib/api/hooks/leads"
 import type { Lead, LeadsParams } from "@/lib/api/types/lead"
 import type { ColumnFilter } from "@/lib/api/types/lead-filters"
@@ -41,6 +40,8 @@ interface LeadsTableWithPaginationProps {
   onEditLead: (lead: Lead) => void
   onManageGroups: (lead: Lead) => void
   onLeadsDataChange?: (leads: Lead[]) => void
+  onTotalChange?: (total: number) => void
+  pageSize?: number
   isSelectAllMode?: boolean
   allLeadsSelected?: boolean
   onToggleSelectAll?: () => void
@@ -55,18 +56,15 @@ export function LeadsTableWithPagination({
   onEditLead,
   onManageGroups,
   onLeadsDataChange,
+  onTotalChange,
+  pageSize: propsPageSize,
   isSelectAllMode = false,
   allLeadsSelected = false,
   onToggleSelectAll,
 }: LeadsTableWithPaginationProps) {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageInputValue, setPageInputValue] = useState("1")
-  const [pageSize, setPageSize] = useState(() => {
-    const saved = localStorage.getItem("leadsPageSize")
-    return saved ? parseInt(saved, 10) : 100
-  })
-  const [pageSizeInput, setPageSizeInput] = useState(String(pageSize))
+  const pageSize = propsPageSize || 100
   const limit = pageSize
 
   // Workspace state
@@ -249,6 +247,13 @@ export function LeadsTableWithPagination({
     }
   }, [leads, onLeadsDataChange])
 
+  // Notify parent of total changes
+  useEffect(() => {
+    if (onTotalChange) {
+      onTotalChange(total)
+    }
+  }, [total, onTotalChange])
+
   // Sync row selection with parent component
   useEffect(() => {
     const newSelection: RowSelectionState = {}
@@ -358,31 +363,6 @@ export function LeadsTableWithPagination({
   // Pagination handlers
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
-    setPageInputValue(page.toString())
-  }
-
-  const handlePageInputChange = (value: string) => {
-    setPageInputValue(value)
-  }
-
-  const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      const page = parseInt(pageInputValue, 10)
-      if (page >= 1 && page <= totalPages) {
-        setCurrentPage(page)
-      } else {
-        setPageInputValue(currentPage.toString())
-      }
-    }
-  }
-
-  const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10)
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page)
-    } else {
-      setPageInputValue(currentPage.toString())
-    }
   }
 
   const getPageNumbers = () => {
@@ -420,41 +400,6 @@ export function LeadsTableWithPagination({
 
   const handleClearAllFilters = () => {
     setActiveColumnFilters([])
-  }
-
-  // Page size handlers
-  const handlePageSizeChange = (newSize: number) => {
-    if (newSize >= 1 && newSize <= 10000) {
-      setPageSize(newSize)
-      setPageSizeInput(String(newSize))
-      setCurrentPage(1) // Reset to first page
-      setPageInputValue("1")
-      localStorage.setItem("leadsPageSize", String(newSize))
-    }
-  }
-
-  const handlePageSizeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPageSizeInput(e.target.value)
-  }
-
-  const handlePageSizeInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      const value = parseInt(pageSizeInput, 10)
-      if (!Number.isNaN(value) && value >= 1 && value <= 10000) {
-        handlePageSizeChange(value)
-      } else {
-        setPageSizeInput(String(pageSize))
-      }
-    }
-  }
-
-  const handlePageSizeInputBlur = () => {
-    const value = parseInt(pageSizeInput, 10)
-    if (!Number.isNaN(value) && value >= 1 && value <= 10000) {
-      handlePageSizeChange(value)
-    } else {
-      setPageSizeInput(String(pageSize))
-    }
   }
 
   // Drag and drop state
@@ -690,69 +635,6 @@ export function LeadsTableWithPagination({
 
       {/* Pagination */}
       <div className="mt-6 space-y-4">
-        {/* Page Size Control */}
-        <div className="flex items-center justify-center gap-3">
-          <span className="text-sm text-muted-foreground">페이지 크기:</span>
-          <Input
-            type="text"
-            value={pageSizeInput}
-            onChange={handlePageSizeInputChange}
-            onKeyDown={handlePageSizeInputKeyDown}
-            onBlur={handlePageSizeInputBlur}
-            className="w-20 h-8 text-sm text-center"
-            disabled={isFetching}
-            placeholder="100"
-          />
-          <div className="flex gap-1">
-            <Button
-              onClick={() => handlePageSizeChange(10)}
-              variant={pageSize === 10 ? "default" : "outline"}
-              size="sm"
-              disabled={isFetching}
-            >
-              10
-            </Button>
-            <Button
-              onClick={() => handlePageSizeChange(50)}
-              variant={pageSize === 50 ? "default" : "outline"}
-              size="sm"
-              disabled={isFetching}
-            >
-              50
-            </Button>
-            <Button
-              onClick={() => handlePageSizeChange(100)}
-              variant={pageSize === 100 ? "default" : "outline"}
-              size="sm"
-              disabled={isFetching}
-            >
-              100
-            </Button>
-            <Button
-              onClick={() => handlePageSizeChange(500)}
-              variant={pageSize === 500 ? "default" : "outline"}
-              size="sm"
-              disabled={isFetching}
-            >
-              500
-            </Button>
-          </div>
-        </div>
-
-        {/* Pagination Info */}
-        <div className="flex items-center justify-center">
-          <div className="text-sm text-muted-foreground">
-            {total > 0 ? (
-              <>
-                {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
-                {total.toLocaleString()}개 표시
-              </>
-            ) : (
-              "0개 표시"
-            )}
-          </div>
-        </div>
-
         {/* Pagination Controls */}
         <div className="flex items-center justify-center gap-1">
           {/* First Page */}
@@ -814,23 +696,6 @@ export function LeadsTableWithPagination({
           >
             마지막
           </Button>
-        </div>
-
-        {/* Page Jump */}
-        <div className="flex items-center justify-center gap-2">
-          <span className="text-sm text-muted-foreground">페이지:</span>
-          <Input
-            type="number"
-            min="1"
-            max={totalPages || 1}
-            value={pageInputValue}
-            onChange={(e) => handlePageInputChange(e.target.value)}
-            onKeyDown={handlePageInputKeyDown}
-            onBlur={handlePageInputBlur}
-            className="w-20 h-8 text-sm text-center"
-            disabled={isFetching}
-          />
-          <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
         </div>
       </div>
 

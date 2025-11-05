@@ -50,7 +50,8 @@ export async function analyzeResults(state: ChatbotState): Promise<Partial<Chatb
         else if (sqlLower.includes("delete")) operationType = "deleted"
         else if (sqlLower.includes("insert")) operationType = "created"
 
-        const operationText = operationType === "created" ? "저장" : operationType === "updated" ? "수정" : "삭제"
+        const operationText =
+          operationType === "created" ? "저장" : operationType === "updated" ? "수정" : "삭제"
         const message = `✅ ${affectedRows || 1}건의 데이터를 ${operationText}했어요.\n\n데이터베이스에 성공적으로 반영되었습니다.`
 
         if (emitter) {
@@ -92,7 +93,8 @@ export async function analyzeResults(state: ChatbotState): Promise<Partial<Chatb
             "\n```"
           : `\n\n**${state.queryResult.length} records ${operationType}**`
 
-      const operationText = operationType === "created" ? "저장" : operationType === "updated" ? "수정" : "삭제"
+      const operationText =
+        operationType === "created" ? "저장" : operationType === "updated" ? "수정" : "삭제"
       const message = `✅ ${state.queryResult.length}건의 데이터를 ${operationText}했어요.${resultSummary}`
 
       if (emitter) {

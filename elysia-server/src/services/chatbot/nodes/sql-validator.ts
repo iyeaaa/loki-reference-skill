@@ -72,8 +72,7 @@ export async function validateSQL(state: ChatbotState): Promise<Partial<ChatbotS
       }
       return {
         isQuerySafe: false,
-        error:
-          "처리하기에 너무 복잡한 요청이에요. 좀 더 간단하게 나눠서 요청해주시겠어요?",
+        error: "처리하기에 너무 복잡한 요청이에요. 좀 더 간단하게 나눠서 요청해주시겠어요?",
       }
     }
 

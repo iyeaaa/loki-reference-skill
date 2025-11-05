@@ -37,8 +37,7 @@ async function handleError(state: ChatbotState): Promise<Partial<ChatbotState>> 
 
   const result = {
     analysis:
-      state.error ||
-      "예상치 못한 문제가 발생했어요. 다른 방식으로 질문해주시거나 문의해주세요.",
+      state.error || "예상치 못한 문제가 발생했어요. 다른 방식으로 질문해주시거나 문의해주세요.",
   }
 
   const duration = Date.now() - startTime

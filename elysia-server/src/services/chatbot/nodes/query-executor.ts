@@ -169,8 +169,7 @@ export async function executeQuery(state: ChatbotState): Promise<Partial<Chatbot
 
       // Division by zero 에러 처리
       if (error.message.includes("division by zero")) {
-        userFriendlyMessage =
-          "계산할 데이터가 없어요. 다른 기간으로 다시 시도해주세요."
+        userFriendlyMessage = "계산할 데이터가 없어요. 다른 기간으로 다시 시도해주세요."
         errorMessage = userFriendlyMessage
       }
       // 타임아웃 에러

@@ -124,11 +124,7 @@ export const emailRepliesApi = {
   /**
    * Get intent counts for a workspace
    */
-  getIntentCounts: async (
-    workspaceId: string,
-  ): Promise<{
-    data: Record<string, number>
-  }> => {
+  getIntentCounts: async (workspaceId: string): Promise<Record<string, number>> => {
     return apiFetch(`/api/v1/email-replies/stats/by-intent?workspaceId=${workspaceId}`)
   },
 }

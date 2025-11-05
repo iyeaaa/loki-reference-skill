@@ -7,12 +7,25 @@ export const emailRepliesRoutes = new Elysia({ prefix: "/api/v1/email-replies" }
   .get(
     "/stats/by-intent",
     async ({ query }) => {
+      if (!query.workspaceId) {
+        return {
+          all: 0,
+          meeting_request: 0,
+          question: 0,
+          objection: 0,
+          out_of_office: 0,
+          not_interested: 0,
+          positive_interest: 0,
+          neutral: 0,
+          unclassified: 0,
+        }
+      }
       const counts = await emailRepliesService.getIntentCounts(query.workspaceId)
-      return { data: counts }
+      return counts
     },
     {
       query: t.Object({
-        workspaceId: t.String({ format: "uuid" }),
+        workspaceId: t.String(),
       }),
     },
   )

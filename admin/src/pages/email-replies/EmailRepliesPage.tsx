@@ -30,27 +30,27 @@ export default function EmailRepliesPage() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
   // Fetch real category counts from API
-  const { data: intentCounts } = useIntentCounts(selectedWorkspace?.id || "")
+  const { data: intentCounts } = useIntentCounts(selectedWorkspace?.id || "all")
 
   // Transform API data to category format
   const categories = [
-    { id: "all", label: "All", count: intentCounts?.data?.all || 0 },
-    { id: "out_of_office", label: "Auto Messages", count: intentCounts?.data?.out_of_office || 0 },
+    { id: "all", label: "All", count: intentCounts?.all || 0 },
+    { id: "out_of_office", label: "Auto Messages", count: intentCounts?.out_of_office || 0 },
     {
       id: "positive_interest",
       label: "Positive",
-      count: intentCounts?.data?.positive_interest || 0,
+      count: intentCounts?.positive_interest || 0,
     },
     {
       id: "not_interested",
       label: "Negative",
-      count: intentCounts?.data?.not_interested || 0,
+      count: intentCounts?.not_interested || 0,
     },
-    { id: "neutral", label: "Other", count: intentCounts?.data?.neutral || 0 },
+    { id: "neutral", label: "Other", count: intentCounts?.neutral || 0 },
     {
       id: "unclassified",
       label: "Unclassified",
-      count: intentCounts?.data?.unclassified || 0,
+      count: intentCounts?.unclassified || 0,
     },
   ]
 

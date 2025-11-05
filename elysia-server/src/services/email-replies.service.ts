@@ -418,22 +418,27 @@ function buildFilterConditions(filters: EmailReplyFilters) {
 
 /**
  * Get count of replies by intent category
+ * Counts DISTINCT threads (conversations), not individual email replies
  */
 export async function getIntentCounts(workspaceId: string) {
+  const whereClause = workspaceId === "all" ? undefined : eq(emailReplies.workspaceId, workspaceId)
+
   const counts = await db
     .select({
       intent: emailReplies.intent,
-      count: sql<number>`COUNT(*)::int`,
+      count: sql<number>`COUNT(DISTINCT ${emails.threadId})::int`,
     })
     .from(emailReplies)
-    .where(eq(emailReplies.workspaceId, workspaceId))
+    .innerJoin(emails, eq(emailReplies.originalEmailId, emails.id))
+    .where(whereClause)
     .groupBy(emailReplies.intent)
 
-  // Get total count
+  // Get total count of distinct threads
   const totalResult = await db
-    .select({ count: sql<number>`COUNT(*)::int` })
+    .select({ count: sql<number>`COUNT(DISTINCT ${emails.threadId})::int` })
     .from(emailReplies)
-    .where(eq(emailReplies.workspaceId, workspaceId))
+    .innerJoin(emails, eq(emailReplies.originalEmailId, emails.id))
+    .where(whereClause)
 
   const total = totalResult[0]?.count || 0
 

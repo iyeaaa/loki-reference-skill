@@ -61,14 +61,37 @@ function decodeContent(content: string, encoding?: string, charset?: string): st
     }
 
     if (encoding === "quoted-printable") {
-      // Decode quoted-printable to bytes
-      decoded = content
-        .replace(/=\r?\n/g, "") // Remove soft line breaks
-        .replace(/=([0-9A-F]{2})/gi, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
+      try {
+        const withoutSoftBreaks = content.replace(/=\r?\n/g, "")
+        
+        const bytes: number[] = []
+        let i = 0
+        while (i < withoutSoftBreaks.length) {
+          if (withoutSoftBreaks[i] === "=" && i + 2 < withoutSoftBreaks.length) {
+            const hex = withoutSoftBreaks.substring(i + 1, i + 3)
+            bytes.push(Number.parseInt(hex, 16))
+            i += 3
+          } else {
+            bytes.push(withoutSoftBreaks.charCodeAt(i))
+            i++
+          }
+        }
+        
+        const buffer = Buffer.from(bytes)
+        
+        if (charset && iconv.encodingExists(charset)) {
+          return iconv.decode(buffer, charset)
+        }
+        
+        return buffer.toString("utf-8")
+      } catch (error) {
+        console.error("Failed to decode quoted-printable:", error)
+        return content
+      }
     }
   }
 
-  // Step 2: Decode character encoding (charset)
+  // Step 2: Decode character encoding (charset) for non-quoted-printable content
   if (charset && charset.toLowerCase() !== "utf-8" && charset.toLowerCase() !== "utf8") {
     try {
       // Convert charset name to iconv-lite compatible format
@@ -91,8 +114,8 @@ function decodeContent(content: string, encoding?: string, charset?: string): st
       const targetCharset = charsetMap[normalizedCharset] || charset
 
       if (iconv.encodingExists(targetCharset)) {
-        // For ISO-2022-JP and other non-UTF8 charsets, we need to work with Buffer
-        const buffer = Buffer.from(decoded, "binary")
+        // For non-UTF8 charsets, we need to work with Buffer
+        const buffer = Buffer.from(decoded, "latin1")
         return iconv.decode(buffer, targetCharset)
       }
     } catch (error) {
@@ -101,6 +124,59 @@ function decodeContent(content: string, encoding?: string, charset?: string): st
   }
 
   return decoded
+}
+
+/**
+ * Fix UTF-8 encoding issues where UTF-8 bytes were incorrectly interpreted as Latin-1
+ * This happens when UTF-8 encoded text is read as Latin-1/ISO-8859-1
+ * 
+ * Example: "ì í" (wrong) -> "전화" (correct)
+ */
+export function fixUtf8Encoding(text: string): string {
+  if (!text) return text
+  
+  try {
+    // Look for sequences of Latin-1 extended characters that are common in UTF-8 mojibake
+    // Korean UTF-8 bytes (0xEA-0xED range) appear as ê, ë, ì, í when misread as Latin-1
+    const hasMojibake = /[ê-í]{2,}|[ë-í][^a-zA-Z0-9\s<>]{1,2}[ê-í]/.test(text)
+    
+    if (!hasMojibake) {
+      return text
+    }
+    
+    // Convert string to Latin-1 bytes, then decode as UTF-8
+    const bytes: number[] = []
+    for (let i = 0; i < text.length; i++) {
+      const code = text.charCodeAt(i)
+      // Only convert characters in Latin-1 range (0-255)
+      if (code < 256) {
+        bytes.push(code)
+      } else {
+        // If character is already outside Latin-1 range, text is already UTF-8
+        return text
+      }
+    }
+    
+    const buffer = Buffer.from(bytes)
+    let fixed: string
+    
+    try {
+      fixed = buffer.toString('utf-8')
+    } catch (e) {
+      // If UTF-8 decoding fails, return original
+      return text
+    }
+    
+    // Verify the fix worked by checking if we now have valid Korean/CJK characters
+    // and the mojibake pattern is gone
+    const hasValidCJK = /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf\uac00-\ud7a3]/.test(fixed)
+    const stillHasMojibake = /[ê-í]{2,}/.test(fixed)
+    
+    return (hasValidCJK && !stillHasMojibake) ? fixed : text
+  } catch (error) {
+    console.error('Failed to fix UTF-8 encoding:', error)
+    return text
+  }
 }
 
 /**
@@ -193,9 +269,16 @@ export function parseEmailBody(emailContent: string): {
         const encodingMatch = part.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i)
         const encoding = encodingMatch?.[1]?.trim().toLowerCase()
 
-        const textMatch = part.match(/\r?\n\r?\n([\s\S]+?)(?=\r?\n--|\r?\n$|$)/)
-        if (textMatch?.[1]) {
-          text = decodeContent(textMatch[1].trim(), encoding, charset)
+        // This ensures we don't include MIME headers in the body
+        const headerEndMatch = part.match(/\r?\n\r?\n/)
+        if (headerEndMatch && headerEndMatch.index !== undefined) {
+          const contentStart = headerEndMatch.index + headerEndMatch[0].length
+          const content = part.substring(contentStart)
+          // Remove boundary markers at the end
+          const cleanContent = content.replace(/\r?\n--[^\r\n]*$/, '').trim()
+          if (cleanContent) {
+            text = decodeContent(cleanContent, encoding, charset)
+          }
         }
       }
 
@@ -209,9 +292,14 @@ export function parseEmailBody(emailContent: string): {
         const encodingMatch = part.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i)
         const encoding = encodingMatch?.[1]?.trim().toLowerCase()
 
-        const htmlMatch = part.match(/\r?\n\r?\n([\s\S]+?)(?=\r?\n--|\r?\n$|$)/)
-        if (htmlMatch?.[1]) {
-          html = decodeContent(htmlMatch[1].trim(), encoding, charset)
+        const headerEndMatch = part.match(/\r?\n\r?\n/)
+        if (headerEndMatch && headerEndMatch.index !== undefined) {
+          const contentStart = headerEndMatch.index + headerEndMatch[0].length
+          const content = part.substring(contentStart)
+          const cleanContent = content.replace(/\r?\n--[^\r\n]*$/, '').trim()
+          if (cleanContent) {
+            html = decodeContent(cleanContent, encoding, charset)
+          }
         }
       }
     }

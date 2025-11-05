@@ -63,7 +63,7 @@ function decodeContent(content: string, encoding?: string, charset?: string): st
     if (encoding === "quoted-printable") {
       try {
         const withoutSoftBreaks = content.replace(/=\r?\n/g, "")
-        
+
         const bytes: number[] = []
         let i = 0
         while (i < withoutSoftBreaks.length) {
@@ -76,13 +76,13 @@ function decodeContent(content: string, encoding?: string, charset?: string): st
             i++
           }
         }
-        
+
         const buffer = Buffer.from(bytes)
-        
+
         if (charset && iconv.encodingExists(charset)) {
           return iconv.decode(buffer, charset)
         }
-        
+
         return buffer.toString("utf-8")
       } catch (error) {
         console.error("Failed to decode quoted-printable:", error)
@@ -129,21 +129,21 @@ function decodeContent(content: string, encoding?: string, charset?: string): st
 /**
  * Fix UTF-8 encoding issues where UTF-8 bytes were incorrectly interpreted as Latin-1
  * This happens when UTF-8 encoded text is read as Latin-1/ISO-8859-1
- * 
+ *
  * Example: "ì í" (wrong) -> "전화" (correct)
  */
 export function fixUtf8Encoding(text: string): string {
   if (!text) return text
-  
+
   try {
     // Look for sequences of Latin-1 extended characters that are common in UTF-8 mojibake
     // Korean UTF-8 bytes (0xEA-0xED range) appear as ê, ë, ì, í when misread as Latin-1
     const hasMojibake = /[ê-í]{2,}|[ë-í][^a-zA-Z0-9\s<>]{1,2}[ê-í]/.test(text)
-    
+
     if (!hasMojibake) {
       return text
     }
-    
+
     // Convert string to Latin-1 bytes, then decode as UTF-8
     const bytes: number[] = []
     for (let i = 0; i < text.length; i++) {
@@ -156,25 +156,28 @@ export function fixUtf8Encoding(text: string): string {
         return text
       }
     }
-    
+
     const buffer = Buffer.from(bytes)
     let fixed: string
-    
+
     try {
-      fixed = buffer.toString('utf-8')
-    } catch (e) {
+      fixed = buffer.toString("utf-8")
+    } catch (_e) {
       // If UTF-8 decoding fails, return original
       return text
     }
-    
+
     // Verify the fix worked by checking if we now have valid Korean/CJK characters
     // and the mojibake pattern is gone
-    const hasValidCJK = /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf\uac00-\ud7a3]/.test(fixed)
+    const hasValidCJK =
+      /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf\uac00-\ud7a3]/.test(
+        fixed,
+      )
     const stillHasMojibake = /[ê-í]{2,}/.test(fixed)
-    
-    return (hasValidCJK && !stillHasMojibake) ? fixed : text
+
+    return hasValidCJK && !stillHasMojibake ? fixed : text
   } catch (error) {
-    console.error('Failed to fix UTF-8 encoding:', error)
+    console.error("Failed to fix UTF-8 encoding:", error)
     return text
   }
 }
@@ -275,7 +278,7 @@ export function parseEmailBody(emailContent: string): {
           const contentStart = headerEndMatch.index + headerEndMatch[0].length
           const content = part.substring(contentStart)
           // Remove boundary markers at the end
-          const cleanContent = content.replace(/\r?\n--[^\r\n]*$/, '').trim()
+          const cleanContent = content.replace(/\r?\n--[^\r\n]*$/, "").trim()
           if (cleanContent) {
             text = decodeContent(cleanContent, encoding, charset)
           }
@@ -296,7 +299,7 @@ export function parseEmailBody(emailContent: string): {
         if (headerEndMatch && headerEndMatch.index !== undefined) {
           const contentStart = headerEndMatch.index + headerEndMatch[0].length
           const content = part.substring(contentStart)
-          const cleanContent = content.replace(/\r?\n--[^\r\n]*$/, '').trim()
+          const cleanContent = content.replace(/\r?\n--[^\r\n]*$/, "").trim()
           if (cleanContent) {
             html = decodeContent(cleanContent, encoding, charset)
           }

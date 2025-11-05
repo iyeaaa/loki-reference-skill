@@ -3,11 +3,11 @@
  * Re-parses emails that have MIME headers in bodyText/bodyHtml
  */
 
+import { eq, like, or } from "drizzle-orm"
 import { db } from "../db/index"
 import { emails } from "../db/schema/emails"
 import { parseEmailBody } from "../utils/email.util"
 import logger from "../utils/logger"
-import { eq, and, like, or } from "drizzle-orm"
 
 async function fixEmailEncoding() {
   logger.info("🔧 Starting email encoding fix...")
@@ -28,8 +28,8 @@ async function fixEmailEncoding() {
           like(emails.bodyText, "%Content-Type:%"),
           like(emails.bodyText, "%Content-Transfer-Encoding:%"),
           like(emails.bodyHtml, "%Content-Type:%"),
-          like(emails.bodyHtml, "%Content-Transfer-Encoding:%")
-        )
+          like(emails.bodyHtml, "%Content-Transfer-Encoding:%"),
+        ),
       )
 
     logger.info({

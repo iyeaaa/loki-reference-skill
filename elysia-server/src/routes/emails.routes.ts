@@ -14,7 +14,7 @@ import { workspaces } from "../db/schema/workspaces"
 import { emailService } from "../services/email.service"
 import * as leadService from "../services/lead.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
-import { parseEmailBody, fixUtf8Encoding } from "../utils/email.util"
+import { fixUtf8Encoding, parseEmailBody } from "../utils/email.util"
 import logger from "../utils/logger"
 
 // Email Schema
@@ -1282,18 +1282,18 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       // Helper function to clean MIME headers from body content and fix encoding
       const cleanBodyContent = (body: string | null): string | null => {
         if (!body) return body
-        
+
         let cleaned = body
-        
+
         // Check if body contains MIME headers (indicates unparsed content)
         if (cleaned.includes("Content-Type:") || cleaned.includes("Content-Transfer-Encoding:")) {
           const parsed = parseEmailBody(cleaned)
           cleaned = parsed.html || parsed.text || cleaned
         }
-        
+
         // Fix UTF-8 encoding issues (mojibake)
         cleaned = fixUtf8Encoding(cleaned)
-        
+
         return cleaned
       }
 
@@ -1301,11 +1301,11 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       const threadsWithCounts = threadEmails.map((email) => {
         const countData = threadCounts.find((tc) => tc.threadId === email.threadId)
         const latestMsg = email.threadId ? latestMessagesMap.get(email.threadId) : undefined
-        
+
         // Clean MIME headers from latest message if present
         const latestBodyText = cleanBodyContent(latestMsg?.bodyText || email.bodyText)
         const latestBodyHtml = cleanBodyContent(latestMsg?.bodyHtml || email.bodyHtml)
-        
+
         return {
           ...email,
           messageCount: Number(countData?.messageCount || 1),
@@ -1461,13 +1461,21 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         let cleanedBodyHtml = email.bodyHtml
 
         // Check and parse bodyText if it contains MIME headers
-        if (cleanedBodyText && (cleanedBodyText.includes("Content-Type:") || cleanedBodyText.includes("Content-Transfer-Encoding:"))) {
+        if (
+          cleanedBodyText &&
+          (cleanedBodyText.includes("Content-Type:") ||
+            cleanedBodyText.includes("Content-Transfer-Encoding:"))
+        ) {
           const parsed = parseEmailBody(cleanedBodyText)
           cleanedBodyText = parsed.text || parsed.html || cleanedBodyText
         }
 
         // Check and parse bodyHtml if it contains MIME headers
-        if (cleanedBodyHtml && (cleanedBodyHtml.includes("Content-Type:") || cleanedBodyHtml.includes("Content-Transfer-Encoding:"))) {
+        if (
+          cleanedBodyHtml &&
+          (cleanedBodyHtml.includes("Content-Type:") ||
+            cleanedBodyHtml.includes("Content-Transfer-Encoding:"))
+        ) {
           const parsed = parseEmailBody(cleanedBodyHtml)
           cleanedBodyHtml = parsed.html || parsed.text || cleanedBodyHtml
         }

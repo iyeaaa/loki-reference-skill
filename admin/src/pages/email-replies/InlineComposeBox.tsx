@@ -57,13 +57,13 @@ export function InlineComposeBox({
     }
 
     const effectiveWorkspaceId = originalEmail.workspaceId || workspaceId
-    
+
     if (!effectiveWorkspaceId || effectiveWorkspaceId === "" || effectiveWorkspaceId === "all") {
       toast.error("워크스페이스가 선택되지 않았습니다")
-      console.error("❌ workspaceId is invalid:", { 
-        workspaceId, 
+      console.error("❌ workspaceId is invalid:", {
+        workspaceId,
         originalEmailWorkspaceId: originalEmail.workspaceId,
-        user: user.id 
+        user: user.id,
       })
       return
     }

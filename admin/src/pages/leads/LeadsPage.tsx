@@ -18,7 +18,7 @@ import { AdvancedSearchInput } from "@/components/search/AdvancedSearchInput"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   ContextMenu,
@@ -37,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   customerGroupKeys,
   useBulkAddGroupMembers,
@@ -828,9 +829,108 @@ export default function LeadsPage() {
       {/* Leads Table */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">{t("leads.title.leadManagement")}</CardTitle>
-            <div className="flex gap-2">
+          {/* 고객 그룹 선택 - 탭 형태 */}
+          <div className="flex items-center justify-between mb-4">
+            <Tabs
+              value={selectedCustomerGroup || "all"}
+              onValueChange={(value) => setSelectedCustomerGroup(value === "all" ? "" : value)}
+              className="flex-1"
+            >
+              <TabsList className="inline-flex h-auto items-center justify-start gap-2 bg-transparent p-0 w-auto">
+                <TabsTrigger
+                  value="all"
+                  className="text-xs h-9 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:hover:bg-violet-700"
+                >
+                  {t("leads.group.all")}
+                </TabsTrigger>
+                {selectedWorkspaceId !== "all" &&
+                  customerGroups?.map((group) => (
+                    <ContextMenu key={group.id}>
+                      <ContextMenuTrigger asChild>
+                        <TabsTrigger
+                          value={group.id}
+                          className={`text-xs h-9 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground ${selectedCustomerGroup === group.id ? "bg-violet-600 text-white hover:bg-violet-700" : ""}`}
+                        >
+                          <Users className="h-3 w-3 mr-1" />
+                          {group.name}
+                          {group.leadCount !== undefined && (
+                            <span className="ml-1.5 text-xs opacity-70">({group.leadCount})</span>
+                          )}
+                        </TabsTrigger>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent className="w-48">
+                        <ContextMenuItem
+                          onClick={() => handleEditGroup(group)}
+                          className="cursor-pointer"
+                        >
+                          <Edit2 className="mr-2 h-4 w-4" />
+                          {t("leads.button.editGroup")}
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem
+                          onClick={() => handleDeleteGroup(group)}
+                          className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          {t("leads.button.deleteGroup")}
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  ))}
+                <CreateGroupModal
+                  workspaces={workspaces}
+                  selectedWorkspaceId={selectedWorkspaceId}
+                  selectedLeadIds={selectedLeads}
+                  currentLeadsData={currentLeadsData.map((lead: Lead) => ({
+                    id: lead.id,
+                    companyName: lead.companyName || "",
+                  }))}
+                  onSuccess={(groupId) => {
+                    // 생성된 그룹을 자동으로 선택
+                    setSelectedCustomerGroup(groupId)
+                    // 선택된 리드들 초기화
+                    setSelectedLeads([])
+                  }}
+                />
+              </TabsList>
+            </Tabs>
+            {selectedWorkspaceId !== "all" && (
+              <div className="flex gap-2 ml-4">
+                {/* 시퀀스 이메일 발송 버튼 - 특정 그룹 선택 시에만 표시 */}
+                {selectedCustomerGroup && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const group = customerGroups?.find((g) => g.id === selectedCustomerGroup)
+                      if (group) {
+                        setSequenceLaunchGroup(group)
+                        setShowSequenceLaunchModal(true)
+                      }
+                    }}
+                  >
+                    <Send className="h-4 w-4 mr-1" />
+                    시퀀스 이메일 발송
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+          {selectedWorkspaceId !== "all" && customerGroups && customerGroups.length === 0 && (
+            <div className="text-sm text-muted-foreground text-center py-4 bg-gray-50 rounded-md mb-4">
+              {t("leads.group.noGroups")}
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-2">
+            {/* 고급 검색 */}
+            <div className="flex-auto">
+              <AdvancedSearchInput
+                tokens={searchTokens}
+                onChange={setSearchTokens}
+                placeholder="필드를 선택하여 검색하세요..."
+              />
+            </div>
+            <div className="gap-2">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -857,125 +957,6 @@ export default function LeadsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* 고객 그룹 선택 - 최상단으로 이동 */}
-          {selectedWorkspaceId !== "all" && (
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-700">
-                    {t("leads.filter.customerGroup")}
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  {/* 시퀀스 이메일 발송 버튼 - 특정 그룹 선택 시에만 표시 */}
-                  {selectedCustomerGroup && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const group = customerGroups?.find((g) => g.id === selectedCustomerGroup)
-                        if (group) {
-                          setSequenceLaunchGroup(group)
-                          setShowSequenceLaunchModal(true)
-                        }
-                      }}
-                    >
-                      <Send className="h-4 w-4 mr-1" />
-                      시퀀스 이메일 발송
-                    </Button>
-                  )}
-                  <CreateGroupModal
-                    workspaces={workspaces}
-                    selectedWorkspaceId={selectedWorkspaceId}
-                    selectedLeadIds={selectedLeads}
-                    currentLeadsData={currentLeadsData.map((lead: Lead) => ({
-                      id: lead.id,
-                      companyName: lead.companyName || "",
-                    }))}
-                    onSuccess={(groupId) => {
-                      // 생성된 그룹을 자동으로 선택
-                      setSelectedCustomerGroup(groupId)
-                      // 선택된 리드들 초기화
-                      setSelectedLeads([])
-                    }}
-                  />
-                </div>
-              </div>
-              {customerGroups && customerGroups.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedCustomerGroup("")}
-                    className={`text-xs ${
-                      selectedCustomerGroup === ""
-                        ? "bg-[#2563EB]/10 border-[#2563EB] text-[#2563EB] font-medium"
-                        : "hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50"
-                    }`}
-                  >
-                    {t("leads.group.all")}
-                  </Button>
-                  {customerGroups.map((group) => (
-                    <ContextMenu key={group.id}>
-                      <ContextMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedCustomerGroup(group.id)}
-                          className={`text-xs ${
-                            selectedCustomerGroup === group.id
-                              ? "bg-[#2563EB]/10 border-[#2563EB] text-[#2563EB] font-medium"
-                              : "hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50"
-                          }`}
-                        >
-                          <Users
-                            className={`h-3 w-3 mr-1 ${
-                              selectedCustomerGroup === group.id ? "text-[#2563EB]" : ""
-                            }`}
-                          />
-                          {group.name}
-                          {group.leadCount !== undefined && (
-                            <span className="ml-1.5 text-xs opacity-70">({group.leadCount})</span>
-                          )}
-                        </Button>
-                      </ContextMenuTrigger>
-                      <ContextMenuContent className="w-48">
-                        <ContextMenuItem
-                          onClick={() => handleEditGroup(group)}
-                          className="cursor-pointer"
-                        >
-                          <Edit2 className="mr-2 h-4 w-4" />
-                          {t("leads.button.editGroup")}
-                        </ContextMenuItem>
-                        <ContextMenuSeparator />
-                        <ContextMenuItem
-                          onClick={() => handleDeleteGroup(group)}
-                          className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          {t("leads.button.deleteGroup")}
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-muted-foreground text-center py-4 bg-gray-50 rounded-md">
-                  {t("leads.group.noGroups")}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 고급 검색 */}
-          <div className="mb-6">
-            <AdvancedSearchInput
-              tokens={searchTokens}
-              onChange={setSearchTokens}
-              placeholder="필드를 선택하여 검색하세요..."
-            />
-          </div>
           {/* 전체 선택 및 Bulk Actions */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">

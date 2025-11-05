@@ -293,152 +293,152 @@ stepsList.sendAfterDays,{{days}}일 후 발송,Send after {{days}} days
 stepsList.dialog.createTitle,새 스텝 추가,Add New Step
 stepsList.dialog.editTitle,스텝 수정,Edit Step
 stepsList.confirm.deleteStep,이 스텝을 삭제하시겠습니까?,Are you sure you want to delete this step?
-ai.prompt,[NO TRANSLATION] sequences.ai.prompt,[NO TRANSLATION] sequences.ai.prompt
-ai_create,[NO TRANSLATION] sequences.ai_create,[NO TRANSLATION] sequences.ai_create
-ai_자동_create,[NO TRANSLATION] sequences.ai_자동_create,[NO TRANSLATION] sequences.ai_자동_create
-ai_프롬프트,[NO TRANSLATION] sequences.ai_프롬프트,[NO TRANSLATION] sequences.ai_프롬프트
-bulk.changeStatusTitle,[NO TRANSLATION] sequences.bulk.changeStatusTitle,[NO TRANSLATION] sequences.bulk.changeStatusTitle
-bulk.deleteTitle,[NO TRANSLATION] sequences.bulk.deleteTitle,[NO TRANSLATION] sequences.bulk.deleteTitle
-button.timerNode_저장,[NO TRANSLATION] sequences.button.timerNode_저장,[NO TRANSLATION] sequences.button.timerNode_저장
-confirm.deleteStepAlt,[NO TRANSLATION] sequences.confirm.deleteStepAlt,[NO TRANSLATION] sequences.confirm.deleteStepAlt
-confirm.sequenceStepList_이스텝을삭제하시겠습니까,[NO TRANSLATION] sequences.confirm.sequenceStepList_이스텝을삭제하시겠습니까,[NO TRANSLATION] sequences.confirm.sequenceStepList_이스텝을삭제하시겠습니까
-customer_그룹에_국가_정보가_없습니다,[NO TRANSLATION] sequences.customer_그룹에_국가_정보가_없습니다,[NO TRANSLATION] sequences.customer_그룹에_국가_정보가_없습니다
-email_본문을_입력하세요1010변수_예시_회사명,[NO TRANSLATION] sequences.email_본문을_입력하세요1010변수_예시_회사명,[NO TRANSLATION] sequences.email_본문을_입력하세요1010변수_예시_회사명
-error.workflowLoadFailedAlt,[NO TRANSLATION] sequences.error.workflowLoadFailedAlt,[NO TRANSLATION] sequences.error.workflowLoadFailedAlt
-error.workflowSaveFailedAlt,[NO TRANSLATION] sequences.error.workflowSaveFailedAlt,[NO TRANSLATION] sequences.error.workflowSaveFailedAlt
-form.createGroupFirst,[NO TRANSLATION] sequences.form.createGroupFirst,[NO TRANSLATION] sequences.form.createGroupFirst
-form.goToCreateGroup,[NO TRANSLATION] sequences.form.goToCreateGroup,[NO TRANSLATION] sequences.form.goToCreateGroup
-form.noGroupsInWorkspace,[NO TRANSLATION] sequences.form.noGroupsInWorkspace,[NO TRANSLATION] sequences.form.noGroupsInWorkspace
-label.bulkActionModal_변경할상태,[NO TRANSLATION] sequences.label.bulkActionModal_변경할상태,[NO TRANSLATION] sequences.label.bulkActionModal_변경할상태
-label.timerNode_대기시간,[NO TRANSLATION] sequences.label.timerNode_대기시간,[NO TRANSLATION] sequences.label.timerNode_대기시간
-node.addCommentAlt,[NO TRANSLATION] sequences.node.addCommentAlt,[NO TRANSLATION] sequences.node.addCommentAlt
-phtml_형식의_email_본문을_입력하세요p1010변수,[NO TRANSLATION] sequences.phtml_형식의_email_본문을_입력하세요p1010변수,[NO TRANSLATION] sequences.phtml_형식의_email_본문을_입력하세요p1010변수
-placeholder.bulkActionModal_상태선택,[NO TRANSLATION] sequences.placeholder.bulkActionModal_상태선택,[NO TRANSLATION] sequences.placeholder.bulkActionModal_상태선택
-placeholder.commentNode_메모를입력하세요,[NO TRANSLATION] sequences.placeholder.commentNode_메모를입력하세요,[NO TRANSLATION] sequences.placeholder.commentNode_메모를입력하세요
-placeholder.timerNode_일단위로입력,[NO TRANSLATION] sequences.placeholder.timerNode_일단위로입력,[NO TRANSLATION] sequences.placeholder.timerNode_일단위로입력
-register_중,[NO TRANSLATION] sequences.register_중,[NO TRANSLATION] sequences.register_중
-sequence_status_일괄_change,[NO TRANSLATION] sequences.sequence_status_일괄_change,[NO TRANSLATION] sequences.sequence_status_일괄_change
-sequence_일괄_delete,[NO TRANSLATION] sequences.sequence_일괄_delete,[NO TRANSLATION] sequences.sequence_일괄_delete
-status.notAssignedAlt,[NO TRANSLATION] sequences.status.notAssignedAlt,[NO TRANSLATION] sequences.status.notAssignedAlt
-status.unknown,[NO TRANSLATION] sequences.status.unknown,[NO TRANSLATION] sequences.status.unknown
-step.daysPlaceholderAlt,[NO TRANSLATION] sequences.step.daysPlaceholderAlt,[NO TRANSLATION] sequences.step.daysPlaceholderAlt
-step.subjectTemplateAlt,[NO TRANSLATION] sequences.step.subjectTemplateAlt,[NO TRANSLATION] sequences.step.subjectTemplateAlt
-step.targetCountryPlaceholder,[NO TRANSLATION] sequences.step.targetCountryPlaceholder,[NO TRANSLATION] sequences.step.targetCountryPlaceholder
-step.templateSelectOptionalAlt,[NO TRANSLATION] sequences.step.templateSelectOptionalAlt,[NO TRANSLATION] sequences.step.templateSelectOptionalAlt
-template_select_선택사항,[NO TRANSLATION] sequences.template_select_선택사항,[NO TRANSLATION] sequences.template_select_선택사항
-text.bulkActionModal_개의시퀀스를삭제합니다,[NO TRANSLATION] sequences.text.bulkActionModal_개의시퀀스를삭제합니다,[NO TRANSLATION] sequences.text.bulkActionModal_개의시퀀스를삭제합니다
-text.bulkActionModal_개의시퀀스상태를변경합니다,[NO TRANSLATION] sequences.text.bulkActionModal_개의시퀀스상태를변경합니다,[NO TRANSLATION] sequences.text.bulkActionModal_개의시퀀스상태를변경합니다
-text.bulkActionModal_변경,[NO TRANSLATION] sequences.text.bulkActionModal_변경,[NO TRANSLATION] sequences.text.bulkActionModal_변경
-text.bulkActionModal_보관됨,[NO TRANSLATION] sequences.text.bulkActionModal_보관됨,[NO TRANSLATION] sequences.text.bulkActionModal_보관됨
-text.bulkActionModal_삭제,[NO TRANSLATION] sequences.text.bulkActionModal_삭제,[NO TRANSLATION] sequences.text.bulkActionModal_삭제
-text.bulkActionModal_선택된,[NO TRANSLATION] sequences.text.bulkActionModal_선택된,[NO TRANSLATION] sequences.text.bulkActionModal_선택된
-text.bulkActionModal_시퀀스상태일괄변경,[NO TRANSLATION] sequences.text.bulkActionModal_시퀀스상태일괄변경,[NO TRANSLATION] sequences.text.bulkActionModal_시퀀스상태일괄변경
-text.bulkActionModal_시퀀스일괄삭제,[NO TRANSLATION] sequences.text.bulkActionModal_시퀀스일괄삭제,[NO TRANSLATION] sequences.text.bulkActionModal_시퀀스일괄삭제
-text.bulkActionModal_이작업은취소할수없습니다,[NO TRANSLATION] sequences.text.bulkActionModal_이작업은취소할수없습니다,[NO TRANSLATION] sequences.text.bulkActionModal_이작업은취소할수없습니다
-text.bulkActionModal_일괄작업,[NO TRANSLATION] sequences.text.bulkActionModal_일괄작업,[NO TRANSLATION] sequences.text.bulkActionModal_일괄작업
-text.bulkActionModal_일시정지,[NO TRANSLATION] sequences.text.bulkActionModal_일시정지,[NO TRANSLATION] sequences.text.bulkActionModal_일시정지
-text.bulkActionModal_초안,[NO TRANSLATION] sequences.text.bulkActionModal_초안,[NO TRANSLATION] sequences.text.bulkActionModal_초안
-text.bulkActionModal_취소,[NO TRANSLATION] sequences.text.bulkActionModal_취소,[NO TRANSLATION] sequences.text.bulkActionModal_취소
-text.bulkActionModal_활성,[NO TRANSLATION] sequences.text.bulkActionModal_활성,[NO TRANSLATION] sequences.text.bulkActionModal_활성
-text.commentNode_메모작성,[NO TRANSLATION] sequences.text.commentNode_메모작성,[NO TRANSLATION] sequences.text.commentNode_메모작성
-text.commentNode_저장,[NO TRANSLATION] sequences.text.commentNode_저장,[NO TRANSLATION] sequences.text.commentNode_저장
-text.commentNode_취소,[NO TRANSLATION] sequences.text.commentNode_취소,[NO TRANSLATION] sequences.text.commentNode_취소
-text.emailDraftNode_노드추가,[NO TRANSLATION] sequences.text.emailDraftNode_노드추가,[NO TRANSLATION] sequences.text.emailDraftNode_노드추가
-text.emailDraftNode_등록된모든연락처에게개별발송,[NO TRANSLATION] sequences.text.emailDraftNode_등록된모든연락처에게개별발송,[NO TRANSLATION] sequences.text.emailDraftNode_등록된모든연락처에게개별발송
-text.emailDraftNode_설정,[NO TRANSLATION] sequences.text.emailDraftNode_설정,[NO TRANSLATION] sequences.text.emailDraftNode_설정
-text.emailDraftNode_설정되지않음,[NO TRANSLATION] sequences.text.emailDraftNode_설정되지않음,[NO TRANSLATION] sequences.text.emailDraftNode_설정되지않음
-text.emailDraftNode_수동작성,[NO TRANSLATION] sequences.text.emailDraftNode_수동작성,[NO TRANSLATION] sequences.text.emailDraftNode_수동작성
-text.emailDraftNode_이메일관리,[NO TRANSLATION] sequences.text.emailDraftNode_이메일관리,[NO TRANSLATION] sequences.text.emailDraftNode_이메일관리
-text.emailDraftNode_이메일초안,[NO TRANSLATION] sequences.text.emailDraftNode_이메일초안,[NO TRANSLATION] sequences.text.emailDraftNode_이메일초안
-text.emailDraftNode_자동생성,[NO TRANSLATION] sequences.text.emailDraftNode_자동생성,[NO TRANSLATION] sequences.text.emailDraftNode_자동생성
-text.emailDraftNode_작성됨,[NO TRANSLATION] sequences.text.emailDraftNode_작성됨,[NO TRANSLATION] sequences.text.emailDraftNode_작성됨
-text.emailDraftNode_제목템플릿,[NO TRANSLATION] sequences.text.emailDraftNode_제목템플릿,[NO TRANSLATION] sequences.text.emailDraftNode_제목템플릿
-text.emailDraftNode_타이머추가,[NO TRANSLATION] sequences.text.emailDraftNode_타이머추가,[NO TRANSLATION] sequences.text.emailDraftNode_타이머추가
-text.emailDraftNode_프롬프트,[NO TRANSLATION] sequences.text.emailDraftNode_프롬프트,[NO TRANSLATION] sequences.text.emailDraftNode_프롬프트
-text.sequenceStepList_고객그룹을먼저설정해주세요,[NO TRANSLATION] sequences.text.sequenceStepList_고객그룹을먼저설정해주세요,[NO TRANSLATION] sequences.text.sequenceStepList_고객그룹을먼저설정해주세요
-text.sequenceStepList_로딩중,[NO TRANSLATION] sequences.text.sequenceStepList_로딩중,[NO TRANSLATION] sequences.text.sequenceStepList_로딩중
-text.sequenceStepList_수정하여고객그룹을선택해주세요,[NO TRANSLATION] sequences.text.sequenceStepList_수정하여고객그룹을선택해주세요,[NO TRANSLATION] sequences.text.sequenceStepList_수정하여고객그룹을선택해주세요
-text.sequenceStepList_스텝,[NO TRANSLATION] sequences.text.sequenceStepList_스텝,[NO TRANSLATION] sequences.text.sequenceStepList_스텝
-text.sequenceStepList_스텝을추가하려면시퀀스에고객그룹이반드시,[NO TRANSLATION] sequences.text.sequenceStepList_스텝을추가하려면시퀀스에고객그룹이반드시,[NO TRANSLATION] sequences.text.sequenceStepList_스텝을추가하려면시퀀스에고객그룹이반드시
-text.sequenceStepList_스텝추가,[NO TRANSLATION] sequences.text.sequenceStepList_스텝추가,[NO TRANSLATION] sequences.text.sequenceStepList_스텝추가
-text.sequenceStepList_시퀀스를생성한후스텝을추가할수있습니다,[NO TRANSLATION] sequences.text.sequenceStepList_시퀀스를생성한후스텝을추가할수있습니다,[NO TRANSLATION] sequences.text.sequenceStepList_시퀀스를생성한후스텝을추가할수있습니다
-text.sequenceStepList_아직생성된스텝이없습니다,[NO TRANSLATION] sequences.text.sequenceStepList_아직생성된스텝이없습니다,[NO TRANSLATION] sequences.text.sequenceStepList_아직생성된스텝이없습니다
-text.sequenceStepList_위의시퀀스정보를,[NO TRANSLATION] sequences.text.sequenceStepList_위의시퀀스정보를,[NO TRANSLATION] sequences.text.sequenceStepList_위의시퀀스정보를
-text.sequenceStepList_일후발송,[NO TRANSLATION] sequences.text.sequenceStepList_일후발송,[NO TRANSLATION] sequences.text.sequenceStepList_일후발송
-text.sequenceStepList_즉시발송,[NO TRANSLATION] sequences.text.sequenceStepList_즉시발송,[NO TRANSLATION] sequences.text.sequenceStepList_즉시발송
-text.sequenceStepList_첫스텝추가,[NO TRANSLATION] sequences.text.sequenceStepList_첫스텝추가,[NO TRANSLATION] sequences.text.sequenceStepList_첫스텝추가
-text.startNode_노드추가,[NO TRANSLATION] sequences.text.startNode_노드추가,[NO TRANSLATION] sequences.text.startNode_노드추가
-text.startNode_시작,[NO TRANSLATION] sequences.text.startNode_시작,[NO TRANSLATION] sequences.text.startNode_시작
-text.startNode_워크플로우시작점,[NO TRANSLATION] sequences.text.startNode_워크플로우시작점,[NO TRANSLATION] sequences.text.startNode_워크플로우시작점
-text.startNode_이메일초안추가,[NO TRANSLATION] sequences.text.startNode_이메일초안추가,[NO TRANSLATION] sequences.text.startNode_이메일초안추가
-text.timerNode_노드추가,[NO TRANSLATION] sequences.text.timerNode_노드추가,[NO TRANSLATION] sequences.text.timerNode_노드추가
-text.timerNode_답장,[NO TRANSLATION] sequences.text.timerNode_답장,[NO TRANSLATION] sequences.text.timerNode_답장
-text.timerNode_답장이없으면다음노드실행,[NO TRANSLATION] sequences.text.timerNode_답장이없으면다음노드실행,[NO TRANSLATION] sequences.text.timerNode_답장이없으면다음노드실행
-text.timerNode_대기,[NO TRANSLATION] sequences.text.timerNode_대기,[NO TRANSLATION] sequences.text.timerNode_대기
-text.timerNode_대기시간,[NO TRANSLATION] sequences.text.timerNode_대기시간,[NO TRANSLATION] sequences.text.timerNode_대기시간
-text.timerNode_발송,[NO TRANSLATION] sequences.text.timerNode_발송,[NO TRANSLATION] sequences.text.timerNode_발송
-text.timerNode_실시간통계,[NO TRANSLATION] sequences.text.timerNode_실시간통계,[NO TRANSLATION] sequences.text.timerNode_실시간통계
-text.timerNode_이메일초안추가,[NO TRANSLATION] sequences.text.timerNode_이메일초안추가,[NO TRANSLATION] sequences.text.timerNode_이메일초안추가
-text.timerNode_이시간동안답장이없으면다음노드가실행됩니,[NO TRANSLATION] sequences.text.timerNode_이시간동안답장이없으면다음노드가실행됩니,[NO TRANSLATION] sequences.text.timerNode_이시간동안답장이없으면다음노드가실행됩니
-text.timerNode_일,[NO TRANSLATION] sequences.text.timerNode_일,[NO TRANSLATION] sequences.text.timerNode_일
-text.timerNode_취소,[NO TRANSLATION] sequences.text.timerNode_취소,[NO TRANSLATION] sequences.text.timerNode_취소
-text.timerNode_타이머,[NO TRANSLATION] sequences.text.timerNode_타이머,[NO TRANSLATION] sequences.text.timerNode_타이머
-text.timerNode_편집,[NO TRANSLATION] sequences.text.timerNode_편집,[NO TRANSLATION] sequences.text.timerNode_편집
-title.commentNode_삭제,[NO TRANSLATION] sequences.title.commentNode_삭제,[NO TRANSLATION] sequences.title.commentNode_삭제
-title.commentNode_편집,[NO TRANSLATION] sequences.title.commentNode_편집,[NO TRANSLATION] sequences.title.commentNode_편집
-title.sequenceStepList_새스텝추가,[NO TRANSLATION] sequences.title.sequenceStepList_새스텝추가,[NO TRANSLATION] sequences.title.sequenceStepList_새스텝추가
-title.sequenceStepList_스텝수정,[NO TRANSLATION] sequences.title.sequenceStepList_스텝수정,[NO TRANSLATION] sequences.title.sequenceStepList_스텝수정
-title.sequenceStepList_시퀀스스텝,[NO TRANSLATION] sequences.title.sequenceStepList_시퀀스스텝,[NO TRANSLATION] sequences.title.sequenceStepList_시퀀스스텝
-title.timerNode_타이머설정,[NO TRANSLATION] sequences.title.timerNode_타이머설정,[NO TRANSLATION] sequences.title.timerNode_타이머설정
-title_template,[NO TRANSLATION] sequences.title_template,[NO TRANSLATION] sequences.title_template
-toast.workflowSavedAlt,[NO TRANSLATION] sequences.toast.workflowSavedAlt,[NO TRANSLATION] sequences.toast.workflowSavedAlt
-고객그룹_미지정,[NO TRANSLATION] sequences.고객그룹_미지정,[NO TRANSLATION] sequences.고객그룹_미지정
-고객그룹미지정,[NO TRANSLATION] sequences.고객그룹미지정,[NO TRANSLATION] sequences.고객그룹미지정
-고객을선택하지않으면고객그룹의모든리드에게발송됩니다,[NO TRANSLATION] sequences.고객을선택하지않으면고객그룹의모든리드에게발송됩니다,[NO TRANSLATION] sequences.고객을선택하지않으면고객그룹의모든리드에게발송됩니다
-기존_이메일을_모두_삭제하고_all,[NO TRANSLATION] sequences.기존_이메일을_모두_삭제하고_all,[NO TRANSLATION] sequences.기존_이메일을_모두_삭제하고_all
-기존이메일을모두삭제하고전체재생성합니다,[NO TRANSLATION] sequences.기존이메일을모두삭제하고전체재생성합니다,[NO TRANSLATION] sequences.기존이메일을모두삭제하고전체재생성합니다
-등록할리드가없습니다,[NO TRANSLATION] sequences.등록할리드가없습니다,[NO TRANSLATION] sequences.등록할리드가없습니다
-먼저워크스페이스를선택하세요,[NO TRANSLATION] sequences.먼저워크스페이스를선택하세요,[NO TRANSLATION] sequences.먼저워크스페이스를선택하세요
-메모를_입력하세요,[NO TRANSLATION] sequences.메모를_입력하세요,[NO TRANSLATION] sequences.메모를_입력하세요
-메모를입력하세요,[NO TRANSLATION] sequences.메모를입력하세요,[NO TRANSLATION] sequences.메모를입력하세요
-모든_연락처에_대해_create,[NO TRANSLATION] sequences.모든_연락처에_대해_create,[NO TRANSLATION] sequences.모든_연락처에_대해_create
-모든연락처에대해생성,[NO TRANSLATION] sequences.모든연락처에대해생성,[NO TRANSLATION] sequences.모든연락처에대해생성
-발송할이메일계정을선택하세요,[NO TRANSLATION] sequences.발송할이메일계정을선택하세요,[NO TRANSLATION] sequences.발송할이메일계정을선택하세요
-새로운_연락처만_create,[NO TRANSLATION] sequences.새로운_연락처만_create,[NO TRANSLATION] sequences.새로운_연락처만_create
-수동_작성,[NO TRANSLATION] sequences.수동_작성,[NO TRANSLATION] sequences.수동_작성
-수동_작성템플릿,[NO TRANSLATION] sequences.수동_작성템플릿,[NO TRANSLATION] sequences.수동_작성템플릿
-수동작성,[NO TRANSLATION] sequences.수동작성,[NO TRANSLATION] sequences.수동작성
-수동작성템플릿,[NO TRANSLATION] sequences.수동작성템플릿,[NO TRANSLATION] sequences.수동작성템플릿
-스텝_기반은_토글_버튼_사용,[NO TRANSLATION] sequences.스텝_기반은_토글_버튼_사용,[NO TRANSLATION] sequences.스텝_기반은_토글_버튼_사용
-스텝기반은토글버튼사용,[NO TRANSLATION] sequences.스텝기반은토글버튼사용,[NO TRANSLATION] sequences.스텝기반은토글버튼사용
-시퀀스상태일괄변경,[NO TRANSLATION] sequences.시퀀스상태일괄변경,[NO TRANSLATION] sequences.시퀀스상태일괄변경
-시퀀스에_customer_그룹이_설정되어_있지,[NO TRANSLATION] sequences.시퀀스에_customer_그룹이_설정되어_있지,[NO TRANSLATION] sequences.시퀀스에_customer_그룹이_설정되어_있지
-시퀀스에_고객그룹을_먼저_설정해주세요,[NO TRANSLATION] sequences.시퀀스에_고객그룹을_먼저_설정해주세요,[NO TRANSLATION] sequences.시퀀스에_고객그룹을_먼저_설정해주세요
-시퀀스에고객그룹이설정되어있지않습니다,[NO TRANSLATION] sequences.시퀀스에고객그룹이설정되어있지않습니다,[NO TRANSLATION] sequences.시퀀스에고객그룹이설정되어있지않습니다
-시퀀스일괄삭제,[NO TRANSLATION] sequences.시퀀스일괄삭제,[NO TRANSLATION] sequences.시퀀스일괄삭제
-알_수_none,[NO TRANSLATION] sequences.알_수_none,[NO TRANSLATION] sequences.알_수_none
-알수없음,[NO TRANSLATION] sequences.알수없음,[NO TRANSLATION] sequences.알수없음
-예_kbeauty_partnership_opportunity_with,[NO TRANSLATION] sequences.예_kbeauty_partnership_opportunity_with,[NO TRANSLATION] sequences.예_kbeauty_partnership_opportunity_with
-예_안녕하세요_회사명님,[NO TRANSLATION] sequences.예_안녕하세요_회사명님,[NO TRANSLATION] sequences.예_안녕하세요_회사명님
-예_회사명에게_우리_서비스를_소개하는,[NO TRANSLATION] sequences.예_회사명에게_우리_서비스를_소개하는,[NO TRANSLATION] sequences.예_회사명에게_우리_서비스를_소개하는
-예kbeautypartnershipopportunitywithcompan,[NO TRANSLATION] sequences.예kbeautypartnershipopportunitywithcompan,[NO TRANSLATION] sequences.예kbeautypartnershipopportunitywithcompan
-예회사명에게우리서비스를소개하는친근하고전문적인이메일을작성해주세요업종업계의특,[NO TRANSLATION] sequences.예회사명에게우리서비스를소개하는친근하고전문적인이메일을작성해주세요업종업계의특,[NO TRANSLATION] sequences.예회사명에게우리서비스를소개하는친근하고전문적인이메일을작성해주세요업종업계의특
-워크플로우_데이터를_불러오는데_실패했습니다,[NO TRANSLATION] sequences.워크플로우_데이터를_불러오는데_실패했습니다,[NO TRANSLATION] sequences.워크플로우_데이터를_불러오는데_실패했습니다
-워크플로우_저장에_실패했습니다,[NO TRANSLATION] sequences.워크플로우_저장에_실패했습니다,[NO TRANSLATION] sequences.워크플로우_저장에_실패했습니다
-워크플로우가_저장되었습니다,[NO TRANSLATION] sequences.워크플로우가_저장되었습니다,[NO TRANSLATION] sequences.워크플로우가_저장되었습니다
-워크플로우가저장되었습니다,[NO TRANSLATION] sequences.워크플로우가저장되었습니다,[NO TRANSLATION] sequences.워크플로우가저장되었습니다
-워크플로우데이터를불러오는데실패했습니다,[NO TRANSLATION] sequences.워크플로우데이터를불러오는데실패했습니다,[NO TRANSLATION] sequences.워크플로우데이터를불러오는데실패했습니다
-워크플로우저장에실패했습니다,[NO TRANSLATION] sequences.워크플로우저장에실패했습니다,[NO TRANSLATION] sequences.워크플로우저장에실패했습니다
-이_스텝을_삭제하시겠습니까,[NO TRANSLATION] sequences.이_스텝을_삭제하시겠습니까,[NO TRANSLATION] sequences.이_스텝을_삭제하시겠습니까
-이미_생성된_이메일은_유지하고_새로운,[NO TRANSLATION] sequences.이미_생성된_이메일은_유지하고_새로운,[NO TRANSLATION] sequences.이미_생성된_이메일은_유지하고_새로운
-이미생성된이메일은유지하고새로운연락처에만생성합니다,[NO TRANSLATION] sequences.이미생성된이메일은유지하고새로운연락처에만생성합니다,[NO TRANSLATION] sequences.이미생성된이메일은유지하고새로운연락처에만생성합니다
-이스텝을삭제하시겠습니까,[NO TRANSLATION] sequences.이스텝을삭제하시겠습니까,[NO TRANSLATION] sequences.이스텝을삭제하시겠습니까
-일_단위로_입력,[NO TRANSLATION] sequences.일_단위로_입력,[NO TRANSLATION] sequences.일_단위로_입력
-일단위로입력,[NO TRANSLATION] sequences.일단위로입력,[NO TRANSLATION] sequences.일단위로입력
-제목템플릿,[NO TRANSLATION] sequences.제목템플릿,[NO TRANSLATION] sequences.제목템플릿
-주석_노드_add,[NO TRANSLATION] sequences.주석_노드_add,[NO TRANSLATION] sequences.주석_노드_add
-주석노드추가,[NO TRANSLATION] sequences.주석노드추가,[NO TRANSLATION] sequences.주석노드추가
-지정_안_됨,[NO TRANSLATION] sequences.지정_안_됨,[NO TRANSLATION] sequences.지정_안_됨
-지정안됨,[NO TRANSLATION] sequences.지정안됨,[NO TRANSLATION] sequences.지정안됨
-템플릿선택선택사항,[NO TRANSLATION] sequences.템플릿선택선택사항,[NO TRANSLATION] sequences.템플릿선택선택사항
-특정고객선택,[NO TRANSLATION] sequences.특정고객선택,[NO TRANSLATION] sequences.특정고객선택
+ai.prompt,AI 프롬프트,AI Prompt
+ai_create,AI 생성,AI Create
+ai_자동_create,AI 자동 생성,AI Auto Create
+ai_프롬프트,AI 프롬프트,AI Prompt
+bulk.changeStatusTitle,상태 일괄 변경,Bulk Change Status
+bulk.deleteTitle,일괄 삭제,Bulk Delete
+button.timerNode_저장,저장,Save
+confirm.deleteStepAlt,이 스텝을 삭제하시겠습니까?,Are you sure you want to delete this step?
+confirm.sequenceStepList_이스텝을삭제하시겠습니까,이 스텝을 삭제하시겠습니까?,Are you sure you want to delete this step?
+customer_그룹에_국가_정보가_없습니다,고객 그룹에 국가 정보가 없습니다,No country information in customer group
+email_본문을_입력하세요1010변수_예시_회사명,이메일 본문을 입력하세요 (변수 예시: {{company_name}}),Enter email body (variable example: {{company_name}})
+error.workflowLoadFailedAlt,워크플로우 데이터를 불러오는데 실패했습니다,Failed to load workflow data
+error.workflowSaveFailedAlt,워크플로우 저장에 실패했습니다,Failed to save workflow
+form.createGroupFirst,고객 그룹을 먼저 생성해주세요,Please create customer group first
+form.goToCreateGroup,고객 그룹 생성하러 가기,Go to Create Customer Group
+form.noGroupsInWorkspace,워크스페이스에 고객 그룹이 없습니다,No customer groups in workspace
+label.bulkActionModal_변경할상태,변경할 상태,Status to change
+label.timerNode_대기시간,대기 시간,Wait time
+node.addCommentAlt,주석 추가,Add comment
+phtml_형식의_email_본문을_입력하세요p1010변수,HTML 형식의 이메일 본문을 입력하세요 (변수 사용 가능),Enter email body in HTML format (variables available)
+placeholder.bulkActionModal_상태선택,상태 선택,Select status
+placeholder.commentNode_메모를입력하세요,메모를 입력하세요,Enter memo
+placeholder.timerNode_일단위로입력,일 단위로 입력,Enter in days
+register_중,등록 중,Registering
+sequence_status_일괄_change,시퀀스 상태 일괄 변경,Bulk change sequence status
+sequence_일괄_delete,시퀀스 일괄 삭제,Bulk delete sequences
+status.notAssignedAlt,지정 안 됨,Not assigned
+status.unknown,알 수 없음,Unknown
+step.daysPlaceholderAlt,일 단위로 입력,Enter in days
+step.subjectTemplateAlt,제목 템플릿,Subject template
+step.targetCountryPlaceholder,타겟 국가,Target country
+step.templateSelectOptionalAlt,템플릿 선택 (선택사항),Select template (optional)
+template_select_선택사항,템플릿 선택 (선택사항),Select template (optional)
+text.bulkActionModal_개의시퀀스를삭제합니다,개의 시퀀스를 삭제합니다,sequences will be deleted
+text.bulkActionModal_개의시퀀스상태를변경합니다,개의 시퀀스 상태를 변경합니다,sequence statuses will be changed
+text.bulkActionModal_변경,변경,Change
+text.bulkActionModal_보관됨,보관됨,Archived
+text.bulkActionModal_삭제,삭제,Delete
+text.bulkActionModal_선택된,선택된,Selected
+text.bulkActionModal_시퀀스상태일괄변경,시퀀스 상태 일괄 변경,Bulk Change Sequence Status
+text.bulkActionModal_시퀀스일괄삭제,시퀀스 일괄 삭제,Bulk Delete Sequences
+text.bulkActionModal_이작업은취소할수없습니다,이 작업은 취소할 수 없습니다,This action cannot be undone
+text.bulkActionModal_일괄작업,일괄 작업,Bulk Action
+text.bulkActionModal_일시정지,일시정지,Paused
+text.bulkActionModal_초안,초안,Draft
+text.bulkActionModal_취소,취소,Cancel
+text.bulkActionModal_활성,활성,Active
+text.commentNode_메모작성,메모 작성,Write Memo
+text.commentNode_저장,저장,Save
+text.commentNode_취소,취소,Cancel
+text.emailDraftNode_노드추가,노드 추가,Add Node
+text.emailDraftNode_등록된모든연락처에게개별발송,등록된 모든 연락처에게 개별 발송,Send individually to all registered contacts
+text.emailDraftNode_설정,설정,Settings
+text.emailDraftNode_설정되지않음,설정되지 않음,Not configured
+text.emailDraftNode_수동작성,수동 작성,Manual Creation
+text.emailDraftNode_이메일관리,이메일 관리,Email Management
+text.emailDraftNode_이메일초안,이메일 초안,Email Draft
+text.emailDraftNode_자동생성,자동 생성,Auto Generate
+text.emailDraftNode_작성됨,작성됨,Created
+text.emailDraftNode_제목템플릿,제목 템플릿,Subject Template
+text.emailDraftNode_타이머추가,타이머 추가,Add Timer
+text.emailDraftNode_프롬프트,프롬프트,Prompt
+text.sequenceStepList_고객그룹을먼저설정해주세요,고객 그룹을 먼저 설정해주세요,Please set customer group first
+text.sequenceStepList_로딩중,로딩 중,Loading
+text.sequenceStepList_수정하여고객그룹을선택해주세요,수정하여 고객 그룹을 선택해주세요,Edit to select customer group
+text.sequenceStepList_스텝,스텝,Step
+text.sequenceStepList_스텝을추가하려면시퀀스에고객그룹이반드시,스텝을 추가하려면 시퀀스에 고객 그룹이 반드시,Customer group is required in sequence to add steps
+text.sequenceStepList_스텝추가,스텝 추가,Add Step
+text.sequenceStepList_시퀀스를생성한후스텝을추가할수있습니다,시퀀스를 생성한 후 스텝을 추가할 수 있습니다,You can add steps after creating a sequence
+text.sequenceStepList_아직생성된스텝이없습니다,아직 생성된 스텝이 없습니다,No steps created yet
+text.sequenceStepList_위의시퀀스정보를,위의 시퀀스 정보를,Edit the sequence information above
+text.sequenceStepList_일후발송,일 후 발송,Send after days
+text.sequenceStepList_즉시발송,즉시 발송,Send Immediately
+text.sequenceStepList_첫스텝추가,첫 스텝 추가,Add First Step
+text.startNode_노드추가,노드 추가,Add Node
+text.startNode_시작,시작,Start
+text.startNode_워크플로우시작점,워크플로우 시작점,Workflow Start Point
+text.startNode_이메일초안추가,이메일 초안 추가,Add Email Draft
+text.timerNode_노드추가,노드 추가,Add Node
+text.timerNode_답장,답장,Reply
+text.timerNode_답장이없으면다음노드실행,답장이 없으면 다음 노드 실행,Execute next node if no reply
+text.timerNode_대기,대기,Wait
+text.timerNode_대기시간,대기 시간,Wait Time
+text.timerNode_발송,발송,Send
+text.timerNode_실시간통계,실시간 통계,Real-time Statistics
+text.timerNode_이메일초안추가,이메일 초안 추가,Add Email Draft
+text.timerNode_이시간동안답장이없으면다음노드가실행됩니,이 시간 동안 답장이 없으면 다음 노드가 실행됩니다,Next node will execute if no reply during this time
+text.timerNode_일,일,Days
+text.timerNode_취소,취소,Cancel
+text.timerNode_타이머,타이머,Timer
+text.timerNode_편집,편집,Edit
+title.commentNode_삭제,삭제,Delete
+title.commentNode_편집,편집,Edit
+title.sequenceStepList_새스텝추가,새 스텝 추가,Add New Step
+title.sequenceStepList_스텝수정,스텝 수정,Edit Step
+title.sequenceStepList_시퀀스스텝,시퀀스 스텝,Sequence Steps
+title.timerNode_타이머설정,타이머 설정,Timer Settings
+title_template,제목 템플릿,Title Template
+toast.workflowSavedAlt,워크플로우가 저장되었습니다,Workflow has been saved
+고객그룹_미지정,고객 그룹 미지정,Customer group not assigned
+고객그룹미지정,고객 그룹 미지정,Customer group not assigned
+고객을선택하지않으면고객그룹의모든리드에게발송됩니다,고객을 선택하지 않으면 고객 그룹의 모든 리드에게 발송됩니다,"If no customers are selected, emails will be sent to all leads in the customer group"
+기존_이메일을_모두_삭제하고_all,기존 이메일을 모두 삭제하고 전체 재생성,Delete all existing emails and regenerate all
+기존이메일을모두삭제하고전체재생성합니다,기존 이메일을 모두 삭제하고 전체 재생성합니다,Delete all existing emails and regenerate all
+등록할리드가없습니다,등록할 리드가 없습니다,No leads to enroll
+먼저워크스페이스를선택하세요,먼저 워크스페이스를 선택하세요,Please select workspace first
+메모를_입력하세요,메모를 입력하세요,Enter memo
+메모를입력하세요,메모를 입력하세요,Enter memo
+모든_연락처에_대해_create,모든 연락처에 대해 생성,Create for all contacts
+모든연락처에대해생성,모든 연락처에 대해 생성,Create for all contacts
+발송할이메일계정을선택하세요,발송할 이메일 계정을 선택하세요,Select email account to send from
+새로운_연락처만_create,새로운 연락처만 생성,Create for new contacts only
+수동_작성,수동 작성,Manual Creation
+수동_작성템플릿,수동 작성 템플릿,Manual Creation Template
+수동작성,수동 작성,Manual Creation
+수동작성템플릿,수동 작성 템플릿,Manual Creation Template
+스텝_기반은_토글_버튼_사용,스텝 기반은 토글 버튼 사용,Use toggle button for step-based
+스텝기반은토글버튼사용,스텝 기반은 토글 버튼 사용,Use toggle button for step-based
+시퀀스상태일괄변경,시퀀스 상태 일괄 변경,Bulk Change Sequence Status
+시퀀스에_customer_그룹이_설정되어_있지,시퀀스에 고객 그룹이 설정되어 있지 않습니다,Customer group is not set in sequence
+시퀀스에_고객그룹을_먼저_설정해주세요,시퀀스에 고객 그룹을 먼저 설정해주세요,Please set customer group in sequence first
+시퀀스에고객그룹이설정되어있지않습니다,시퀀스에 고객 그룹이 설정되어 있지 않습니다,Customer group is not set in sequence
+시퀀스일괄삭제,시퀀스 일괄 삭제,Bulk Delete Sequences
+알_수_none,알 수 없음,Unknown
+알수없음,알 수 없음,Unknown
+예_kbeauty_partnership_opportunity_with,"예: K-Beauty Partnership Opportunity with {{company_name}}","Ex: K-Beauty Partnership Opportunity with {{company_name}}"
+예_안녕하세요_회사명님,"예: 안녕하세요 {{company_name}}님","Ex: Hello {{company_name}}"
+예_회사명에게_우리_서비스를_소개하는,"예: {{company_name}}에게 우리 서비스를 소개하는 이메일","Ex: Email introducing our services to {{company_name}}"
+예kbeautypartnershipopportunitywithcompan,"예: K-Beauty Partnership Opportunity with {{company_name}}","Ex: K-Beauty Partnership Opportunity with {{company_name}}"
+예회사명에게우리서비스를소개하는친근하고전문적인이메일을작성해주세요업종업계의특,"예: {{company_name}}에게 우리 서비스를 소개하는 친근하고 전문적인 이메일을 작성해주세요. 업종/업계의 특성을 고려해주세요.","Ex: Create a friendly and professional email introducing our services to {{company_name}}. Please consider the characteristics of the industry/sector."
+워크플로우_데이터를_불러오는데_실패했습니다,워크플로우 데이터를 불러오는데 실패했습니다,Failed to load workflow data
+워크플로우_저장에_실패했습니다,워크플로우 저장에 실패했습니다,Failed to save workflow
+워크플로우가_저장되었습니다,워크플로우가 저장되었습니다,Workflow has been saved
+워크플로우가저장되었습니다,워크플로우가 저장되었습니다,Workflow has been saved
+워크플로우데이터를불러오는데실패했습니다,워크플로우 데이터를 불러오는데 실패했습니다,Failed to load workflow data
+워크플로우저장에실패했습니다,워크플로우 저장에 실패했습니다,Failed to save workflow
+이_스텝을_삭제하시겠습니까,이 스텝을 삭제하시겠습니까?,Are you sure you want to delete this step?
+이미_생성된_이메일은_유지하고_새로운,이미 생성된 이메일은 유지하고 새로운 연락처만,Keep existing emails and create for new contacts only
+이미생성된이메일은유지하고새로운연락처에만생성합니다,이미 생성된 이메일은 유지하고 새로운 연락처에만 생성합니다,Keep existing emails and create for new contacts only
+이스텝을삭제하시겠습니까,이 스텝을 삭제하시겠습니까?,Are you sure you want to delete this step?
+일_단위로_입력,일 단위로 입력,Enter in days
+일단위로입력,일 단위로 입력,Enter in days
+제목템플릿,제목 템플릿,Subject Template
+주석_노드_add,주석 노드 추가,Add Comment Node
+주석노드추가,주석 노드 추가,Add Comment Node
+지정_안_됨,지정 안 됨,Not Assigned
+지정안됨,지정 안 됨,Not Assigned
+템플릿선택선택사항,템플릿 선택 (선택사항),Select Template (Optional)
+특정고객선택,특정 고객 선택,Select Specific Customers

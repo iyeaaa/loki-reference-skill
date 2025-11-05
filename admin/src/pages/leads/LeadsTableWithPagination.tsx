@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-table"
 import { ChevronLeft, ChevronRight, Edit, Trash2, Users } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { FilterSummaryPanel } from "@/components/leads/filters/FilterSummaryPanel"
 import { leadsColumns } from "@/components/leads/LeadsTableColumns"
 import { Button } from "@/components/ui/button"
@@ -62,6 +63,8 @@ export function LeadsTableWithPagination({
   allLeadsSelected = false,
   onToggleSelectAll,
 }: LeadsTableWithPaginationProps) {
+  const { t } = useTranslation()
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = propsPageSize || 100
@@ -645,7 +648,7 @@ export function LeadsTableWithPagination({
             size="sm"
             className="px-3"
           >
-            처음
+            {t("leads.button.firstPage")}
           </Button>
 
           {/* Previous Page */}
@@ -657,7 +660,7 @@ export function LeadsTableWithPagination({
             className="px-3"
           >
             <ChevronLeft className="h-4 w-4" />
-            이전
+            {t("leads.button.previousPage")}
           </Button>
 
           {/* Page Numbers */}
@@ -682,7 +685,7 @@ export function LeadsTableWithPagination({
             size="sm"
             className="px-3"
           >
-            다음
+            {t("leads.button.nextPage")}
             <ChevronRight className="h-4 w-4" />
           </Button>
 
@@ -694,7 +697,7 @@ export function LeadsTableWithPagination({
             size="sm"
             className="px-3"
           >
-            마지막
+            {t("leads.button.lastPage")}
           </Button>
         </div>
       </div>
@@ -703,12 +706,10 @@ export function LeadsTableWithPagination({
       <ConfirmDialog
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
-        title="리드 삭제"
-        description={`"${
-          leadToDelete?.name || ""
-        }" 리드를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`}
-        confirmText="삭제"
-        cancelText="취소"
+        title={t("leads.button.deleteLead")}
+        description={`"${leadToDelete?.name || ""}" ${t("leads.button.deleteLeadConfirm")}`}
+        confirmText={t("leads.button.delete")}
+        cancelText={t("leads.button.cancel")}
         onConfirm={confirmDelete}
         variant="destructive"
       />

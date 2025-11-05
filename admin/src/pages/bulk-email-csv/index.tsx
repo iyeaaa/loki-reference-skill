@@ -1,7 +1,7 @@
 import {
   Building2,
   Download,
-  FileUp,
+  FileSpreadsheet,
   Loader2,
   Mail,
   Send,
@@ -38,6 +38,7 @@ import { useEmailAccountByWorkspaceAndUser } from "@/lib/api/hooks/email-account
 import { useUsers } from "@/lib/api/hooks/users"
 import { useSuspenseWorkspaces } from "@/lib/api/hooks/workspaces"
 import type { BulkEmailResult } from "@/lib/api/types/bulk-email"
+import { useAuth } from "@/lib/auth-provider"
 
 interface CSVEmailData {
   fromEmail: string
@@ -49,15 +50,22 @@ interface CSVEmailData {
 }
 
 export default function BulkEmailCSVPage() {
+  // Auth context for current user
+  const { user } = useAuth()
+
   // Generate unique IDs for form elements
   const sendWorkspaceId = useId()
   const sendUserId = useId()
   const fromNameId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // 워크스페이스 및 사용자 선택
-  const [selectedSendWorkspace, setSelectedSendWorkspace] = useState("")
-  const [selectedSendUser, setSelectedSendUser] = useState("")
+  // 워크스페이스 및 사용자 선택 - localStorage에서 기본값 가져오기
+  const [selectedSendWorkspace, setSelectedSendWorkspace] = useState<string>(() => {
+    return localStorage.getItem("selectedWorkspace") || ""
+  })
+  const [selectedSendUser, setSelectedSendUser] = useState<string>(() => {
+    return user?.id || ""
+  })
 
   // 발신자 이름 (공통)
   const [fromName, setFromName] = useState("")
@@ -86,19 +94,28 @@ export default function BulkEmailCSVPage() {
     error: emailAccountError,
   } = useEmailAccountByWorkspaceAndUser(selectedSendWorkspace, selectedSendUser)
 
-  // 워크스페이스를 첫 번째 항목으로 자동 선택
+  // 워크스페이스를 사이드바 선택값 또는 첫 번째 항목으로 자동 선택
   useEffect(() => {
-    if (workspaces && workspaces.length > 0 && !selectedSendWorkspace) {
+    const savedWorkspace = localStorage.getItem("selectedWorkspace")
+    if (savedWorkspace && savedWorkspace !== "all" && !selectedSendWorkspace) {
+      setSelectedSendWorkspace(savedWorkspace)
+    } else if (workspaces && workspaces.length > 0 && !selectedSendWorkspace) {
       setSelectedSendWorkspace(workspaces[0].id)
     }
   }, [workspaces, selectedSendWorkspace])
 
-  // 유저를 첫 번째 항목으로 자동 선택
+  // 현재 로그인한 사용자를 기본값으로 설정
   useEffect(() => {
-    if (usersData?.users && usersData.users.length > 0 && !selectedSendUser) {
-      setSelectedSendUser(usersData.users[0].id)
+    if (user?.id && !selectedSendUser) {
+      // 사용자가 선택한 워크스페이스의 사용자 목록에 현재 사용자가 있는지 확인
+      const currentUserExists = usersData?.users?.some((u) => u.id === user.id)
+      if (currentUserExists) {
+        setSelectedSendUser(user.id)
+      } else if (usersData?.users && usersData.users.length > 0) {
+        setSelectedSendUser(usersData.users[0].id)
+      }
     }
-  }, [usersData, selectedSendUser])
+  }, [user, usersData, selectedSendUser])
 
   // CSV 파일 선택 핸들러
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -351,28 +368,31 @@ export default function BulkEmailCSVPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="p-6 space-y-6">
       {/* 페이지 헤더 */}
-      <div className="flex items-center gap-3">
-        <FileUp className="h-8 w-8 text-violet-600" />
-        <div>
-          <h1 className="text-3xl font-bold">CSV 대량 메일 발송</h1>
-          <p className="text-muted-foreground">
-            CSV 파일을 업로드하여 여러 수신자에게 이메일을 한 번에 발송합니다
-          </p>
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-2">
+          <FileSpreadsheet className="h-6 w-6" />
+          <h1 className="text-2xl font-bold">CSV 대량 메일 발송</h1>
         </div>
+        <p className="text-muted-foreground">
+          CSV 파일을 업로드하여 여러 수신자에게 이메일을 한 번에 발송합니다
+        </p>
       </div>
 
       {/* 발송 설정 - 워크스페이스 및 사용자 선택 */}
       <Card>
         <CardHeader>
-          <CardTitle>발송 설정</CardTitle>
+          <div className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            <CardTitle>발송 설정</CardTitle>
+          </div>
           <CardDescription>
             선택한 워크스페이스와 사용자에 따라 발송 이메일 계정이 자동으로 설정됩니다
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor={sendWorkspaceId}>워크스페이스 *</Label>
               <Select value={selectedSendWorkspace} onValueChange={setSelectedSendWorkspace}>
@@ -495,7 +515,10 @@ export default function BulkEmailCSVPage() {
       {/* CSV 파일 업로드 */}
       <Card>
         <CardHeader>
-          <CardTitle>CSV 파일 업로드</CardTitle>
+          <div className="flex items-center gap-2">
+            <Upload className="h-5 w-5" />
+            <CardTitle>CSV 파일 업로드</CardTitle>
+          </div>
           <CardDescription>
             발신인, 수신인, 제목, 이메일 내용 순서로 구성된 CSV 파일을 업로드하세요
           </CardDescription>
@@ -534,19 +557,7 @@ export default function BulkEmailCSVPage() {
 
           <div className="space-y-2">
             <Label>파일 선택</Label>
-            <div className="flex gap-2">
-              <Input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv"
-                onChange={handleFileChange}
-                className="flex-1"
-              />
-              <Button variant="outline" onClick={handleClear}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                초기화
-              </Button>
-            </div>
+            <Input ref={fileInputRef} type="file" accept=".csv" onChange={handleFileChange} />
           </div>
 
           {csvFile && (
@@ -571,7 +582,10 @@ export default function BulkEmailCSVPage() {
       {emailsData.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>업로드된 데이터 미리보기</CardTitle>
+            <div className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              <CardTitle>업로드된 데이터 미리보기</CardTitle>
+            </div>
             <CardDescription>{emailsData.length}개의 이메일이 발송됩니다</CardDescription>
           </CardHeader>
           <CardContent>
@@ -623,36 +637,27 @@ export default function BulkEmailCSVPage() {
       )}
 
       {/* 발송 버튼 */}
-      {emailsData.length > 0 && (
-        <Card>
-          <CardContent className="pt-6">
-            <Button
-              onClick={handleBulkSend}
-              disabled={isSending || !emailAccountInfo}
-              className="w-full"
-              size="lg"
-            >
-              {isSending ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  발송 중... ({sendingProgress.current}/{sendingProgress.total})
-                </>
-              ) : (
-                <>
-                  <Send className="mr-2 h-5 w-5" />
-                  {emailsData.length}개 이메일 발송
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+      {emailsData.length > 0 && !isSending && sendResults.length === 0 && (
+        <div className="flex justify-end gap-3">
+          <Button variant="outline" onClick={handleClear} disabled={isSending}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            초기화
+          </Button>
+          <Button onClick={handleBulkSend} disabled={isSending || !emailAccountInfo} size="lg">
+            <Send className="mr-2 h-5 w-5" />
+            {emailsData.length}개 이메일 발송
+          </Button>
+        </div>
       )}
 
       {/* 진행률 표시 */}
       {isSending && (
         <Card>
           <CardHeader>
-            <CardTitle>발송 진행 중</CardTitle>
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <CardTitle>발송 진행 중</CardTitle>
+            </div>
             <CardDescription>
               {sendingProgress.current} / {sendingProgress.total} 완료 (
               {Math.round((sendingProgress.current / sendingProgress.total) * 100)}%)
@@ -682,7 +687,10 @@ export default function BulkEmailCSVPage() {
       {sendResults.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>발송 결과</CardTitle>
+            <div className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              <CardTitle>발송 결과</CardTitle>
+            </div>
             <CardDescription>
               성공: {sendResults.filter((r) => r.success).length}건, 실패:{" "}
               {sendResults.filter((r) => !r.success).length}건
@@ -735,6 +743,16 @@ export default function BulkEmailCSVPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* 발송 완료 후 초기화 버튼 */}
+      {sendResults.length > 0 && !isSending && (
+        <div className="flex justify-end">
+          <Button variant="outline" onClick={handleClear}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            초기화하고 다시 시작
+          </Button>
+        </div>
       )}
     </div>
   )

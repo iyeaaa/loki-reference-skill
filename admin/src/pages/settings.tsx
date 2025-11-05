@@ -1,4 +1,12 @@
-import { Building2, FileText, FileUp, Settings as SettingsIcon, User, Users } from "lucide-react"
+import {
+  Building2,
+  FileSpreadsheet,
+  FileText,
+  FileUp,
+  Settings as SettingsIcon,
+  User,
+  Users,
+} from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
@@ -44,6 +52,12 @@ export default function SettingsPage() {
       description: t("settings.system.import.desc"),
       url: "/lead-import",
       icon: FileUp,
+    },
+    {
+      title: t("settings.system.bulkEmailCSV.title"),
+      description: t("settings.system.bulkEmailCSV.desc"),
+      url: "/bulk-email-csv",
+      icon: FileSpreadsheet,
     },
   ]
 

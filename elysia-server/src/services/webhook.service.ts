@@ -554,7 +554,7 @@ class WebhookService {
     const inboundEmailResults = await db
       .insert(emailsTable)
       .values({
-        workspaceId, // Use inherited workspace from original email for replies
+        workspaceId: account.workspaceId, // Use email account's workspace
         userEmailAccountId: account.id,
         leadId,
         sequenceId, // ← 원본 이메일에서 상속
@@ -613,11 +613,11 @@ class WebhookService {
 
       // 원본 이메일 ID 찾기 - 2-step process to support reply-to-reply
       // Step 1: Try to find the email being replied to (could be outbound or inbound)
+      // Search WITHOUT workspace filter first to find the email
       logger.info({
         msg: "🔍 [WEBHOOK] Searching for email being replied to",
         searchCriteria: {
           messageId: headers.inReplyTo,
-          workspaceId: workspaceId,
         },
       })
 
@@ -631,12 +631,7 @@ class WebhookService {
           direction: emailsTable.direction,
         })
         .from(emailsTable)
-        .where(
-          and(
-            eq(emailsTable.messageId, headers.inReplyTo),
-            eq(emailsTable.workspaceId, workspaceId),
-          ),
-        )
+        .where(eq(emailsTable.messageId, headers.inReplyTo))
         .limit(1)
 
       const repliedToEmail = repliedToEmailResults[0]

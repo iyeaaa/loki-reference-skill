@@ -85,6 +85,7 @@ export function BulkActionModal({
                   <SelectItem value="active">활성</SelectItem>
                   <SelectItem value="paused">일시정지</SelectItem>
                   <SelectItem value="archived">보관됨</SelectItem>
+                  <SelectItem value="no_response">답변 없음</SelectItem>
                 </SelectContent>
               </Select>
             </div>

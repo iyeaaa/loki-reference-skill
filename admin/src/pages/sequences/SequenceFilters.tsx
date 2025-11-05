@@ -21,6 +21,7 @@ export function SequenceFilters({
     { value: "active", label: t("sequences.table.status.active") },
     { value: "paused", label: t("sequences.table.status.paused") },
     { value: "archived", label: t("sequences.table.status.archived") },
+    { value: "no_response", label: t("sequences.table.status.noResponse") },
   ]
 
   const toggleStatus = (status: string) => {

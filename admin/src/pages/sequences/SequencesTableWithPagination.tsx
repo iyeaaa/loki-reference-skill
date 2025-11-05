@@ -97,6 +97,8 @@ export function SequencesTableWithPagination({
         return t("sequences.table.status.archived")
       case "completed":
         return t("sequences.table.status.completed")
+      case "no_response":
+        return t("sequences.table.status.noResponse")
       default:
         return status
     }
@@ -114,6 +116,8 @@ export function SequencesTableWithPagination({
         return "outline" as const
       case "completed":
         return "default" as const
+      case "no_response":
+        return "destructive" as const
       default:
         return "outline" as const
     }

@@ -53,6 +53,7 @@ table.status.active,활성,Active
 table.status.paused,일시정지,Paused
 table.status.archived,보관됨,Archived
 table.status.completed,발송완료,Completed
+table.status.noResponse,답변 없음,No Response
 table.button.pause,일시정지,Pause
 table.button.activate,활성화,Activate
 table.button.editNodes,노드 편집,Edit Nodes

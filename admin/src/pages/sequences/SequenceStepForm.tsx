@@ -8,12 +8,19 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { TimePicker } from "@/components/ui/time-picker"
 import { useDefaultEmailSignature } from "@/lib/api/hooks/email-signatures"
 import { leadsApi } from "@/lib/api/services/leads"
 import { sequencesApi } from "@/lib/api/services/sequences"
-import type { SequenceStep } from "@/lib/api/types/sequence"
+import type { SequenceStep, StepConditionType } from "@/lib/api/types/sequence"
 import { useAuth } from "@/lib/auth-provider"
 import { generateSignatureHtml } from "@/lib/utils/email-signature"
 import { markdownToHtml } from "@/lib/utils/markdown"
@@ -115,6 +122,9 @@ interface SequenceStepFormProps {
     emailSubject: string
     emailBodyText?: string
     emailBodyHtml?: string
+    conditionType?: StepConditionType
+    conditionConfig?: string
+    previousStepId?: string
   }) => void
   onCancel: () => void
 }
@@ -167,6 +177,10 @@ export function SequenceStepForm({
     timezone: step?.timezone ?? "Asia/Seoul",
     emailSubject: step?.emailSubject || "",
     emailBodyText: step?.emailBodyText || "",
+    conditionType:
+      step?.conditionType ?? ((stepOrder === 1 ? "always" : "no_response") as StepConditionType),
+    conditionConfig: step?.conditionConfig || "",
+    previousStepId: step?.previousStepId || "",
   })
 
   const [showAIGenerator, setShowAIGenerator] = useState(false)
@@ -226,6 +240,11 @@ export function SequenceStepForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (formData.stepOrder > 1 && !formData.conditionType) {
+      toast.error("Step 2 이상에서는 발송 조건을 선택해야 합니다.")
+      return
+    }
+
     // Markdown을 HTML로 변환
     const emailBodyHtml = formData.emailBodyText
       ? markdownToHtml(formData.emailBodyText)
@@ -234,6 +253,7 @@ export function SequenceStepForm({
     onSave({
       ...formData,
       emailBodyHtml,
+      conditionType: formData.stepOrder === 1 ? "always" : formData.conditionType,
     })
   }
 
@@ -336,6 +356,44 @@ export function SequenceStepForm({
         </span>
       </div>
 
+      {formData.stepOrder > 1 && (
+        <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+          <h3 className="text-sm font-semibold">{t("sequence.step.sendCondition")}</h3>
+
+          <div className="space-y-2">
+            <Label htmlFor="conditionType">
+              {t("sequence.step.sendConditionLabel")} <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              value={formData.conditionType}
+              onValueChange={(value: StepConditionType) =>
+                setFormData({
+                  ...formData,
+                  conditionType: value,
+                })
+              }
+            >
+              <SelectTrigger className="bg-background">
+                <SelectValue placeholder={t("sequence.step.sendConditionPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="always">{t("sequence.step.condition.always")}</SelectItem>
+                <SelectItem value="no_response">
+                  {t("sequence.step.condition.noResponse")}
+                </SelectItem>
+                <SelectItem value="negative_response">
+                  {t("sequence.step.condition.negativeResponse")}
+                </SelectItem>
+                <SelectItem value="positive_response">
+                  {t("sequence.step.condition.positiveResponse")}
+                </SelectItem>
+                <SelectItem value="custom">{t("sequence.step.condition.custom")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
       {/* 발송 스케줄 섹션 */}
       <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
         <h3 className="text-sm font-semibold">{t("sequences.stepForm.scheduleTitle")}</h3>
@@ -436,7 +494,9 @@ export function SequenceStepForm({
                 <p className="text-xs text-muted-foreground">
                   {isLoadingCountry
                     ? t("sequences.stepForm.countryAutoDetecting")
-                    : t("sequences.stepForm.countryAutoDetected")}
+                    : targetCountry
+                      ? t("sequences.stepForm.countryAutoDetected", { country: targetCountry })
+                      : t("sequences.stepForm.toast.noCountryInfo")}
                 </p>
               </div>
 

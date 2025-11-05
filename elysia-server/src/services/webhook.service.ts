@@ -617,7 +617,7 @@ class WebhookService {
         msg: "🔍 [WEBHOOK] Searching for email being replied to",
         searchCriteria: {
           messageId: headers.inReplyTo,
-          workspaceId: account.workspaceId,
+          workspaceId: workspaceId,
         },
       })
 
@@ -634,7 +634,7 @@ class WebhookService {
         .where(
           and(
             eq(emailsTable.messageId, headers.inReplyTo),
-            eq(emailsTable.workspaceId, account.workspaceId),
+            eq(emailsTable.workspaceId, workspaceId),
           ),
         )
         .limit(1)

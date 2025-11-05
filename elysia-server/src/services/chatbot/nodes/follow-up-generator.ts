@@ -1,21 +1,26 @@
 import { ChatOpenAI } from "@langchain/openai"
-import { chatbotLogger } from "../../../utils/logger"
 import { getFollowUpQuestionsPrompt } from "../prompts"
 import type { ChatbotState } from "../state"
 
 const llm = new ChatOpenAI({
-  model: "gpt-5",
+  model: "gpt-4.1-mini",
+  temperature: 0.8, // High creativity for diverse, engaging follow-up questions
 })
 
 export async function generateFollowUpQuestions(
   state: ChatbotState,
 ): Promise<Partial<ChatbotState>> {
-  const startTime = Date.now()
-  chatbotLogger.nodeStart("generateFollowUpQuestions")
+  const emitter = state._emitter
+
+  // 노드 시작 이벤트
+  if (emitter) {
+    emitter.nodeStart("generateFollowUpQuestions", "추가 질문 제안 중...")
+  }
 
   try {
     const prompt = getFollowUpQuestionsPrompt(state.currentQuestion, state.analysis)
 
+    // Use non-streaming LLM call for intermediate node (no progress events)
     const response = await llm.invoke(prompt)
     const content = response.content as string
 
@@ -24,19 +29,22 @@ export async function generateFollowUpQuestions(
 
     const questions = JSON.parse(jsonStr.trim())
 
-    const duration = Date.now() - startTime
-    chatbotLogger.nodeSuccess(
-      `generateFollowUpQuestions (${Array.isArray(questions) ? questions.length : 0} questions)`,
-      duration,
-    )
+    if (emitter) {
+      emitter.nodeComplete(
+        "generateFollowUpQuestions",
+        `후속 질문 생성 완료 (${Array.isArray(questions) ? questions.length : 0}개)`,
+        { followUpQuestions: Array.isArray(questions) ? questions : [] }, // 즉시 프론트엔드로 전송
+      )
+    }
 
     return {
       followUpQuestions: Array.isArray(questions) ? questions : [],
     }
   } catch (error) {
-    const duration = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류"
-    chatbotLogger.nodeError("generateFollowUpQuestions", errorMessage, duration)
+    if (emitter) {
+      emitter.error("generateFollowUpQuestions", errorMessage)
+    }
 
     return {
       followUpQuestions: [],

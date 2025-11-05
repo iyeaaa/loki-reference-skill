@@ -151,30 +151,27 @@ export async function executeSequential(state: ChatbotState): Promise<Partial<Ch
     let userFriendlyMessage = ""
 
     if (errorMessage.includes("violates not-null constraint") || dbErrorCode === "23502") {
-      const columnName = dbErrorColumn || "unknown column"
-      const tableName = dbErrorTable || "unknown table"
-      userFriendlyMessage = `Required field '${columnName}' in table '${tableName}' cannot be empty. Query ${currentQueryIndex + 1}/${queries.length} failed.`
+      const columnName = dbErrorColumn || "항목"
+      userFriendlyMessage = `'${columnName}' 항목은 반드시 입력해야 해요. (${currentQueryIndex + 1}/${queries.length} 단계에서 문제 발생)`
     } else if (errorMessage.includes("violates unique constraint") || dbErrorCode === "23505") {
-      const constraintName = dbErrorConstraint || "unique constraint"
-      userFriendlyMessage = `Duplicate entry detected (${constraintName}). Query ${currentQueryIndex + 1}/${queries.length} failed.`
+      userFriendlyMessage = `이미 동일한 데이터가 존재해요. 중복된 데이터는 저장할 수 없어요. (${currentQueryIndex + 1}/${queries.length} 단계에서 문제 발생)`
     } else if (
       errorMessage.includes("violates foreign key constraint") ||
       dbErrorCode === "23503"
     ) {
-      userFriendlyMessage = `Related record not found. Please ensure all referenced data exists. Query ${currentQueryIndex + 1}/${queries.length} failed.`
+      userFriendlyMessage = `연결된 데이터를 찾을 수 없어요. 먼저 필요한 데이터가 있는지 확인해주세요. (${currentQueryIndex + 1}/${queries.length} 단계에서 문제 발생)`
     } else if (errorMessage.includes("violates check constraint") || dbErrorCode === "23514") {
-      const constraintName = dbErrorConstraint || "check constraint"
-      userFriendlyMessage = `Data validation failed (${constraintName}). Query ${currentQueryIndex + 1}/${queries.length} failed.`
+      userFriendlyMessage = `입력하신 값이 올바르지 않아요. 다시 확인해주세요. (${currentQueryIndex + 1}/${queries.length} 단계에서 문제 발생)`
     } else if (errorMessage.includes("value too long") || dbErrorCode === "22001") {
       const match = errorMessage.match(/column "(\w+)"/)
-      const columnName = match ? match[1] : "a column"
-      userFriendlyMessage = `Text is too long for ${columnName}. Query ${currentQueryIndex + 1}/${queries.length} failed.`
+      const columnName = match ? match[1] : "텍스트"
+      userFriendlyMessage = `${columnName} 항목의 내용이 너무 길어요. 좀 더 짧게 입력해주세요. (${currentQueryIndex + 1}/${queries.length} 단계에서 문제 발생)`
     } else if (errorMessage.includes("syntax error") || dbErrorCode === "42601") {
-      userFriendlyMessage = `SQL syntax error in query ${currentQueryIndex + 1}/${queries.length}. The query will be regenerated.`
+      userFriendlyMessage = `처리 중 오류가 발생했어요. 다시 시도해볼게요. (${currentQueryIndex + 1}/${queries.length} 단계)`
     } else if (errorMessage.includes("does not exist")) {
-      userFriendlyMessage = `Database schema error: ${errorMessage}. Query ${currentQueryIndex + 1}/${queries.length} failed.`
+      userFriendlyMessage = `요청하신 데이터 항목을 찾을 수 없어요. (${currentQueryIndex + 1}/${queries.length} 단계에서 문제 발생)`
     } else {
-      userFriendlyMessage = `Query ${currentQueryIndex + 1}/${queries.length} failed: ${errorMessage}`
+      userFriendlyMessage = `${currentQueryIndex + 1}/${queries.length} 단계에서 문제가 발생했어요: ${errorMessage}`
     }
 
     // Comprehensive error logging with box formatting

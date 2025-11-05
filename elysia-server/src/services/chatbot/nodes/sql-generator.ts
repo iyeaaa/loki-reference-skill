@@ -4,11 +4,19 @@ import { getSQLGenerationPrompt } from "../prompts"
 import type { ChatbotState } from "../state"
 
 const llm = new ChatOpenAI({
-  model: "gpt-5",
+  model: "gpt-4.1-mini",
+  temperature: 0.1, // Low temperature for accurate, deterministic SQL generation
 })
 
 export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotState>> {
   const startTime = Date.now()
+  const emitter = state._emitter
+
+  // Emit node start event
+  if (emitter) {
+    emitter.nodeStart("generateSQL", "필요한 데이터를 찾고 있어요...")
+  }
+
   chatbotLogger.nodeStart("generateSQL")
 
   // Log input state
@@ -31,6 +39,7 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
       hasCSV ? state.csvData : undefined,
     )
 
+    // Generate SQL using LLM (no intermediate progress events)
     const response = await llm.invoke(prompt)
     const content = response.content as string
 
@@ -55,6 +64,13 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
           `[LangGraph] Generated ${result.queries.length} sequential queries:\n${result.queries.map((q: string, i: number) => `${i + 1}. ${q.substring(0, 100)}...`).join("\n")}`,
         )
 
+        // Emit node complete event
+        if (emitter) {
+          emitter.nodeComplete("generateSQL", `데이터 준비 완료 (${result.queries.length}단계)`, {
+            queryCount: result.queries.length,
+          })
+        }
+
         return {
           sqlQueries: result.queries,
           generatedSQL: result.queries[0], // 첫 번째 쿼리를 기본값으로
@@ -74,6 +90,11 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
         })
         chatbotLogger.info(`[LangGraph] Generated SQL:\n${result.sql}`)
 
+        // Emit node complete event
+        if (emitter) {
+          emitter.nodeComplete("generateSQL", "데이터 준비 완료")
+        }
+
         return {
           generatedSQL: result.sql,
           sqlExplanation: result.explanation,
@@ -88,6 +109,11 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
 
     chatbotLogger.info(`[LangGraph] Generated raw SQL:\n${content}`)
 
+    // Emit node complete event
+    if (emitter) {
+      emitter.nodeComplete("generateSQL", "데이터 준비 완료")
+    }
+
     return {
       generatedSQL: content.trim(),
       sqlExplanation: "SQL generated without explanation",
@@ -96,12 +122,26 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
   } catch (error) {
     const duration = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : "Unknown error"
+
+    // More specific error message for JSON parsing errors
+    let userFriendlyError = `데이터를 찾는 중 문제가 발생했어요: ${errorMessage}`
+    if (errorMessage.includes("JSON") || errorMessage.includes("parse")) {
+      userFriendlyError =
+        "요청하신 내용을 처리하지 못했어요. 질문을 조금 더 구체적으로 바꿔서 다시 시도해주세요."
+    }
+
     chatbotLogger.nodeError("generateSQL", errorMessage, duration)
 
+    // Emit error event
+    if (emitter) {
+      emitter.error("generateSQL", userFriendlyError)
+    }
+
     return {
-      error: `SQL generation error: ${errorMessage}`,
+      error: userFriendlyError,
       generatedSQL: "",
       sqlExplanation: "",
+      sqlQueries: [],
     }
   }
 }

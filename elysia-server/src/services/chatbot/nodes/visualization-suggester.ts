@@ -1,21 +1,26 @@
 import { ChatOpenAI } from "@langchain/openai"
-import { chatbotLogger } from "../../../utils/logger"
 import { getVisualizationSuggestionPrompt } from "../prompts"
 import type { ChatbotState } from "../state"
 
 const llm = new ChatOpenAI({
-  model: "gpt-5",
+  model: "gpt-4.1-mini",
+  temperature: 0.6, // Moderate creativity for varied visualization suggestions
 })
 
 export async function suggestVisualizations(state: ChatbotState): Promise<Partial<ChatbotState>> {
-  const startTime = Date.now()
-  chatbotLogger.nodeStart("suggestVisualizations")
+  const emitter = state._emitter
+
+  // 노드 시작 이벤트
+  if (emitter) {
+    emitter.nodeStart("suggestVisualizations", "그래프 만드는 중...")
+  }
 
   try {
     // 결과가 없는 경우 시각화 생략
     if (state.queryResult.length === 0) {
-      const duration = Date.now() - startTime
-      chatbotLogger.nodeSuccess("suggestVisualizations (skipped)", duration)
+      if (emitter) {
+        emitter.nodeComplete("suggestVisualizations", "시각화 제안 생략 (결과 없음)")
+      }
       return {
         visualizationSuggestions: [],
       }
@@ -24,13 +29,15 @@ export async function suggestVisualizations(state: ChatbotState): Promise<Partia
     const prompt = getVisualizationSuggestionPrompt(state.queryResult)
 
     if (!prompt) {
-      const duration = Date.now() - startTime
-      chatbotLogger.nodeSuccess("suggestVisualizations (no prompt)", duration)
+      if (emitter) {
+        emitter.nodeComplete("suggestVisualizations", "시각화 제안 생략 (프롬프트 없음)")
+      }
       return {
         visualizationSuggestions: [],
       }
     }
 
+    // Use non-streaming LLM call for intermediate node (no progress events)
     const response = await llm.invoke(prompt)
     const content = response.content as string
 
@@ -39,19 +46,22 @@ export async function suggestVisualizations(state: ChatbotState): Promise<Partia
 
     const suggestions = JSON.parse(jsonStr.trim())
 
-    const duration = Date.now() - startTime
-    chatbotLogger.nodeSuccess(
-      `suggestVisualizations (${Array.isArray(suggestions) ? suggestions.length : 0} suggestions)`,
-      duration,
-    )
+    if (emitter) {
+      emitter.nodeComplete(
+        "suggestVisualizations",
+        `시각화 제안 생성 완료 (${Array.isArray(suggestions) ? suggestions.length : 0}개)`,
+        { visualizationSuggestions: Array.isArray(suggestions) ? suggestions : [] }, // 즉시 프론트엔드로 전송
+      )
+    }
 
     return {
       visualizationSuggestions: Array.isArray(suggestions) ? suggestions : [],
     }
   } catch (error) {
-    const duration = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류"
-    chatbotLogger.nodeError("suggestVisualizations", errorMessage, duration)
+    if (emitter) {
+      emitter.error("suggestVisualizations", errorMessage)
+    }
 
     return {
       visualizationSuggestions: [],

@@ -3,16 +3,19 @@ import type {
   ChatbotAskRequest,
   ChatbotHistoryResponse,
   ChatMessage,
+  Insight,
   StreamCallbacks,
   StreamEvent,
 } from "../types/chatbot"
+import { type EventHandlerContext, eventHandlers } from "./chatbot-event-handlers"
 
 export const chatbotApi = {
   /**
    * Stream chatbot response using Server-Sent Events
    */
   async streamAsk(request: ChatbotAskRequest, callbacks: StreamCallbacks): Promise<void> {
-    const { onMessage, onMessageUpdate, onThinking, onError, onConfirmationRequired } = callbacks
+    const { onMessage, onMessageUpdate, onThinking, onProgress, onError, onConfirmationRequired } =
+      callbacks
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
 
     try {
@@ -52,6 +55,19 @@ export const chatbotApi = {
         visualizationSuggestions: [],
       }
 
+      // Create event handler context (once, outside the loop)
+      const eventContext: EventHandlerContext = {
+        accumulatedData,
+        callbacks: {
+          onMessage,
+          onMessageUpdate,
+          onThinking,
+          onProgress,
+          onError,
+          onConfirmationRequired,
+        },
+      }
+
       // Read the stream
       console.log("[Chatbot] Starting to read SSE stream...")
       let streamCompleted = false
@@ -82,34 +98,19 @@ export const chatbotApi = {
                   continue
                 }
 
-                // Handle different event types
-                if (data.type === "text_chunk") {
-                  console.log(`[Chatbot] Received text chunk:`, data.chunk?.substring(0, 50))
-                  chatbotApi.handleTextChunk(data, onMessageUpdate, accumulatedData)
-                } else if (data.type === "interrupt") {
-                  // NEW: Handle interrupt() event from LangGraph
-                  console.log("[Chatbot] Received interrupt event:", data.payload)
-                  chatbotApi.handleInterruptEvent(data, onConfirmationRequired, onMessageUpdate)
-                } else if (data.type === "node") {
-                  chatbotApi.handleNodeEvent(
-                    data,
-                    onThinking,
-                    onMessageUpdate,
-                    accumulatedData,
-                    onConfirmationRequired,
-                  )
-                } else if (data.type === "waiting_confirmation") {
-                  console.log("[Chatbot] Waiting for user confirmation - keeping UI active")
-                  // Don't call onMessage - keep the confirmation UI visible
-                  // The confirmation state is already set by onConfirmationRequired in handleNodeEvent
-                } else if (data.type === "done") {
-                  console.log("[Chatbot] Processing done event")
-                  chatbotApi.handleDoneEvent(accumulatedData, onMessage)
-                  streamCompleted = true
-                } else if (data.type === "error") {
-                  console.error("[Chatbot] Received error event:", data.error)
-                  chatbotApi.handleErrorEvent(data, onError, onMessage)
-                  streamCompleted = true
+                // Dispatch to appropriate handler using Handler Map pattern
+                const handler = eventHandlers[data.type]
+                if (handler) {
+                  handler(data, eventContext)
+
+                  // Track stream completion state for done/error events
+                  if (data.type === "done" || data.type === "error") {
+                    streamCompleted = true
+                    // ⭐ Don't break - let server close the connection naturally
+                    // This ensures all node events are processed before stream ends
+                  }
+                } else {
+                  console.warn(`[Chatbot] Unknown event type: ${data.type}`)
                 }
               } catch (parseError) {
                 console.error("[Chatbot] Failed to parse stream event:", parseError, line)
@@ -189,268 +190,6 @@ export const chatbotApi = {
   },
 
   /**
-   * Handle interrupt event from LangGraph's interrupt() function
-   */
-  handleInterruptEvent(
-    data: StreamEvent,
-    onConfirmationRequired: ((message: string) => void) | undefined,
-    onMessageUpdate: ((message: ChatMessage) => void) | undefined,
-  ): void {
-    const payload = data.payload as {
-      type?: string
-      confirmationMessage?: string
-      metadata?: {
-        sql?: string
-        sqlQueries?: string[]
-        sqlExplanation?: string
-        queryCount?: number
-      }
-    }
-
-    console.log("[Chatbot] Interrupt payload:", payload)
-
-    if (payload.confirmationMessage) {
-      // Trigger confirmation UI
-      if (onConfirmationRequired) {
-        onConfirmationRequired(payload.confirmationMessage)
-      }
-
-      // Update message display with confirmation request
-      if (onMessageUpdate) {
-        const confirmationMsg: ChatMessage = {
-          role: "assistant",
-          content: payload.confirmationMessage,
-          timestamp: new Date(),
-          metadata: payload.metadata,
-        }
-        onMessageUpdate(confirmationMsg)
-      }
-    }
-  },
-
-  /**
-   * Handle text chunk events from LLM streaming
-   */
-  handleTextChunk(
-    data: StreamEvent,
-    onMessageUpdate: ((message: ChatMessage) => void) | undefined,
-    accumulatedData: {
-      analysis: string
-      insights: unknown[]
-      sql: string
-      result: unknown[]
-      followUpQuestions: string[]
-      visualizationSuggestions: unknown[]
-    },
-  ): void {
-    if (!data.accumulatedText) return
-
-    // Update accumulated analysis text
-    accumulatedData.analysis = data.accumulatedText
-
-    // Stream message update in real-time
-    // Don't send metadata during streaming to prevent flickering
-    if (onMessageUpdate) {
-      const streamingMessage: ChatMessage = {
-        role: "assistant",
-        content: data.accumulatedText,
-        timestamp: new Date(),
-        metadata: undefined,
-      }
-      onMessageUpdate(streamingMessage)
-    }
-  },
-
-  /**
-   * Handle node events during streaming
-   */
-  handleNodeEvent(
-    data: StreamEvent,
-    onThinking: (thinking: string) => void,
-    onMessageUpdate: ((message: ChatMessage) => void) | undefined,
-    accumulatedData: {
-      analysis: string
-      insights: unknown[]
-      sql: string
-      result: unknown[]
-      followUpQuestions: string[]
-      visualizationSuggestions: unknown[]
-    },
-    onConfirmationRequired?: (message: string) => void,
-  ): void {
-    // Check for confirmation requirement first
-    if (data.state?.needsConfirmation && data.state?.confirmationMessage) {
-      console.log("[Chatbot] Confirmation required:", data.state.confirmationMessage)
-      if (onConfirmationRequired) {
-        onConfirmationRequired(data.state.confirmationMessage)
-      }
-      // Update analysis with confirmation message
-      accumulatedData.analysis = data.state.confirmationMessage
-      if (onMessageUpdate) {
-        const confirmationMsg: ChatMessage = {
-          role: "assistant",
-          content: data.state.confirmationMessage,
-          timestamp: new Date(),
-          metadata: undefined,
-        }
-        onMessageUpdate(confirmationMsg)
-      }
-      return
-    }
-
-    let thinkingMessage = ""
-    let shouldUpdateMessage = false
-
-    // Node name mapping: handle both old and new node names
-    const nodeName = data.node?.toLowerCase() || ""
-
-    if (nodeName.includes("analyze") && !nodeName.includes("result")) {
-      thinkingMessage = "Analyzing your question and understanding the context..."
-    } else if (nodeName.includes("generatesql") || nodeName.includes("sql")) {
-      thinkingMessage = "Generating SQL query based on your question..."
-      if (data.state?.generatedSQL) {
-        accumulatedData.sql = data.state.generatedSQL
-        shouldUpdateMessage = true
-        thinkingMessage = `Generating SQL query: ${data.state.generatedSQL.split("\n")[0].substring(0, 80)}...`
-      }
-    } else if (nodeName.includes("validatesql") || nodeName.includes("validate")) {
-      thinkingMessage = "Validating query safety and checking for potential issues..."
-    } else if (nodeName.includes("executequery") || nodeName.includes("execute")) {
-      thinkingMessage = "Executing query against your database..."
-      if (data.state?.generatedSQL) {
-        accumulatedData.sql = data.state.generatedSQL
-        shouldUpdateMessage = true
-      }
-      if (data.state?.queryResult) {
-        accumulatedData.result = data.state.queryResult
-        shouldUpdateMessage = true
-        const rowCount = Array.isArray(data.state.queryResult) ? data.state.queryResult.length : 0
-        thinkingMessage = `Query executed successfully. Retrieved ${rowCount} row${rowCount !== 1 ? "s" : ""}...`
-      }
-    } else if (nodeName.includes("analyzeresult") || nodeName.includes("result")) {
-      thinkingMessage = "Analyzing query results and extracting key information..."
-      if (data.state?.analysis) {
-        accumulatedData.analysis = data.state.analysis
-        shouldUpdateMessage = true
-      }
-    } else if (nodeName.includes("insight")) {
-      thinkingMessage = "Generating insights and identifying important patterns..."
-      if (data.state?.insights) {
-        accumulatedData.insights = data.state.insights
-        shouldUpdateMessage = true
-        const insightCount = Array.isArray(data.state.insights) ? data.state.insights.length : 0
-        if (insightCount > 0) {
-          thinkingMessage = `Generated ${insightCount} insight${insightCount !== 1 ? "s" : ""} from the data...`
-        }
-      }
-    } else if (nodeName.includes("visual")) {
-      thinkingMessage = "Recommending visualization options for your data..."
-      if (data.state?.visualizationSuggestions) {
-        accumulatedData.visualizationSuggestions = data.state.visualizationSuggestions
-        shouldUpdateMessage = true
-      }
-    } else if (nodeName.includes("followup") || nodeName.includes("follow")) {
-      thinkingMessage = "Preparing related questions you might want to explore..."
-      if (data.state?.followUpQuestions) {
-        accumulatedData.followUpQuestions = data.state.followUpQuestions
-        shouldUpdateMessage = true
-        const questionCount = Array.isArray(data.state.followUpQuestions)
-          ? data.state.followUpQuestions.length
-          : 0
-        if (questionCount > 0) {
-          thinkingMessage = `Generated ${questionCount} follow-up question${questionCount !== 1 ? "s" : ""}...`
-        }
-      }
-    } else if (nodeName.includes("format")) {
-      thinkingMessage = "Formatting response and preparing final output..."
-    } else if (nodeName.includes("confirmation") || nodeName.includes("askconfirmation")) {
-      thinkingMessage = "Waiting for user confirmation..."
-      // Update analysis with confirmation message if available
-      if (data.state?.analysis) {
-        accumulatedData.analysis = data.state.analysis
-        shouldUpdateMessage = true
-
-        // Trigger confirmation UI
-        console.log("[Chatbot] askConfirmation node detected, triggering confirmation")
-        if (onConfirmationRequired) {
-          onConfirmationRequired(data.state.analysis)
-        }
-      }
-    } else if (nodeName.includes("error")) {
-      if (data.state?.error) {
-        thinkingMessage = `Error: ${data.state.error}`
-      }
-    } else {
-      // Default case for unknown nodes
-      thinkingMessage = `Processing: ${data.node}...`
-    }
-
-    if (thinkingMessage) {
-      console.log(`[Chatbot] Thinking update for '${data.node}': ${thinkingMessage}`)
-      onThinking(thinkingMessage)
-    }
-
-    // Stream message updates in real-time
-    // Only update if there's actual analysis content to show
-    if (shouldUpdateMessage && onMessageUpdate && accumulatedData.analysis) {
-      const streamingMessage: ChatMessage = {
-        role: "assistant",
-        content: accumulatedData.analysis,
-        timestamp: new Date(),
-        // Don't send metadata during streaming to prevent flickering
-        metadata: undefined,
-      }
-      console.log(`[Chatbot] Streaming message update:`, streamingMessage)
-      onMessageUpdate(streamingMessage)
-    }
-  },
-
-  /**
-   * Handle done event - send final message
-   */
-  handleDoneEvent(
-    accumulatedData: {
-      analysis: string
-      insights: unknown[]
-      sql: string
-      result: unknown[]
-      followUpQuestions: string[]
-      visualizationSuggestions: unknown[]
-    },
-    onMessage: (message: ChatMessage) => void,
-  ): void {
-    onMessage({
-      role: "assistant",
-      content: accumulatedData.analysis || "Processing completed.",
-      timestamp: new Date(),
-      metadata: {
-        sql: accumulatedData.sql,
-        result: accumulatedData.result,
-        insights: accumulatedData.insights,
-        followUpQuestions: accumulatedData.followUpQuestions,
-        visualization: accumulatedData.visualizationSuggestions,
-      },
-    })
-  },
-
-  /**
-   * Handle error event
-   */
-  handleErrorEvent(
-    data: StreamEvent,
-    onError: ((error: string) => void) | undefined,
-    onMessage: (message: ChatMessage) => void,
-  ): void {
-    const errorMsg = data.error || "An unexpected error occurred"
-    onError?.(errorMsg)
-    onMessage({
-      role: "assistant",
-      content: `Error: ${errorMsg}`,
-      timestamp: new Date(),
-    })
-  },
-
-  /**
    * Get conversation history
    */
   async getHistory(conversationId: string): Promise<ChatbotHistoryResponse> {
@@ -487,7 +226,7 @@ export const chatbotApi = {
       throw new Error("Callbacks required for confirmed mutations")
     }
 
-    const { onMessage, onMessageUpdate, onThinking, onError } = callbacks
+    const { onMessage, onMessageUpdate, onThinking, onProgress, onError } = callbacks
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
 
     try {
@@ -527,6 +266,19 @@ export const chatbotApi = {
         visualizationSuggestions: [],
       }
 
+      // Create event handler context (once, outside the loop)
+      const eventContext: EventHandlerContext = {
+        accumulatedData,
+        callbacks: {
+          onMessage,
+          onMessageUpdate,
+          onThinking,
+          onProgress,
+          onError,
+          onConfirmationRequired: undefined, // No confirmation needed in confirm flow
+        },
+      }
+
       // Read the stream
       console.log("[Chatbot] Starting confirmation stream...")
       let streamCompleted = false
@@ -555,20 +307,17 @@ export const chatbotApi = {
                   continue
                 }
 
-                if (data.type === "node") {
-                  chatbotApi.handleNodeEvent(
-                    data,
-                    onThinking,
-                    onMessageUpdate,
-                    accumulatedData,
-                    undefined,
-                  )
-                } else if (data.type === "done") {
-                  chatbotApi.handleDoneEvent(accumulatedData, onMessage)
-                  streamCompleted = true
-                } else if (data.type === "error") {
-                  chatbotApi.handleErrorEvent(data, onError, onMessage)
-                  streamCompleted = true
+                // Dispatch to appropriate handler using Handler Map pattern
+                const handler = eventHandlers[data.type]
+                if (handler) {
+                  handler(data, eventContext)
+
+                  // Track stream completion state for done/error events
+                  if (data.type === "done" || data.type === "error") {
+                    streamCompleted = true
+                  }
+                } else {
+                  console.warn(`[Chatbot] Unknown confirmation event type: ${data.type}`)
                 }
               } catch (parseError) {
                 console.error("[Chatbot] Failed to parse stream event:", parseError)
@@ -650,5 +399,40 @@ export const chatbotApi = {
         }
       }
     }
+  },
+
+  /**
+   * Handle done event - create final message from accumulated data
+   * Used for recovery when stream ends prematurely
+   */
+  handleDoneEvent(
+    accumulatedData: {
+      analysis: string
+      insights: unknown[]
+      sql: string
+      result: unknown[]
+      followUpQuestions: string[]
+      visualizationSuggestions: unknown[]
+    },
+    onMessage: (message: ChatMessage) => void,
+  ): void {
+    const finalMessage: ChatMessage = {
+      role: "assistant",
+      content: accumulatedData.analysis || "분석이 완료되었습니다.",
+      timestamp: new Date(),
+      metadata: {
+        sql: accumulatedData.sql || undefined,
+        result: accumulatedData.result?.length ? accumulatedData.result : undefined,
+        insights: accumulatedData.insights?.length
+          ? (accumulatedData.insights as Insight[])
+          : undefined,
+        followUpQuestions: accumulatedData.followUpQuestions?.length
+          ? accumulatedData.followUpQuestions
+          : undefined,
+      },
+    }
+
+    console.log("[Chatbot] Sending final message from accumulated data:", finalMessage)
+    onMessage(finalMessage)
   },
 }

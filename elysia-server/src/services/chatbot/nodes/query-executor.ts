@@ -8,6 +8,13 @@ const MAX_ROWS = 1000
 
 export async function executeQuery(state: ChatbotState): Promise<Partial<ChatbotState>> {
   const startTime = Date.now()
+  const emitter = state._emitter
+
+  // Emit node start event
+  if (emitter) {
+    emitter.nodeStart("executeQuery", "데이터를 불러오고 있어요...")
+  }
+
   chatbotLogger.nodeStart("executeQuery")
 
   // Log input state
@@ -24,8 +31,13 @@ export async function executeQuery(state: ChatbotState): Promise<Partial<Chatbot
     chatbotLogger.info(
       "[LangGraph] Mutation requires confirmation but not yet confirmed - this should not happen",
     )
+
+    if (emitter) {
+      emitter.error("executeQuery", "승인이 필요해요")
+    }
+
     return {
-      error: "This operation requires user confirmation.",
+      error: "이 작업은 승인이 필요해요.",
       executionTime: Date.now() - startTime,
     }
   }
@@ -39,13 +51,23 @@ export async function executeQuery(state: ChatbotState): Promise<Partial<Chatbot
       needsConfirmation: state.needsConfirmation,
     })
     chatbotLogger.error(`[LangGraph] ERROR: No SQL to execute! State: ${stateInfo}`)
+
+    if (emitter) {
+      emitter.error("executeQuery", "처리할 요청이 없어요")
+    }
+
     return {
-      error: "No SQL query to execute. This is a bug in the system.",
+      error: "처리할 요청이 없어요. 시스템 오류가 발생했습니다.",
       executionTime: Date.now() - startTime,
     }
   }
 
   chatbotLogger.info(`[LangGraph] Executing SQL:\n${state.generatedSQL}`)
+
+  // Emit progress
+  if (emitter) {
+    emitter.progress("executeQuery", "데이터를 검색하고 있어요...")
+  }
 
   try {
     // 타임아웃 설정
@@ -148,13 +170,13 @@ export async function executeQuery(state: ChatbotState): Promise<Partial<Chatbot
       // Division by zero 에러 처리
       if (error.message.includes("division by zero")) {
         userFriendlyMessage =
-          "Cannot calculate ratio due to no results. Please try a different time period with data."
+          "계산할 데이터가 없어요. 다른 기간으로 다시 시도해주세요."
         errorMessage = userFriendlyMessage
       }
       // 타임아웃 에러
       else if (error.message.includes("초과") || error.message.includes("timeout")) {
         userFriendlyMessage =
-          "Query execution timeout. Please try a narrower time range or add more conditions."
+          "처리 시간이 너무 오래 걸리고 있어요. 검색 범위를 줄이거나 조건을 추가해주세요."
         errorMessage = userFriendlyMessage
       }
       // 테이블/컬럼이 존재하지 않는 경우
@@ -163,20 +185,18 @@ export async function executeQuery(state: ChatbotState): Promise<Partial<Chatbot
         error.message.includes("relation") ||
         error.message.includes("column")
       ) {
-        userFriendlyMessage = `Database schema error: ${error.message}`
+        userFriendlyMessage = `요청하신 데이터 항목을 찾을 수 없어요. 다시 확인해주세요.`
         errorMessage = userFriendlyMessage
       }
       // NULL constraint violation
       else if (error.message.includes("violates not-null constraint") || dbErrorCode === "23502") {
-        const columnName = dbErrorColumn || "unknown column"
-        const tableName = dbErrorTable || "unknown table"
-        userFriendlyMessage = `Required field '${columnName}' in table '${tableName}' cannot be empty. Please provide a value.`
+        const columnName = dbErrorColumn || "항목"
+        userFriendlyMessage = `'${columnName}' 항목은 반드시 입력해야 해요.`
         errorMessage = userFriendlyMessage
       }
       // UNIQUE constraint violation
       else if (error.message.includes("violates unique constraint") || dbErrorCode === "23505") {
-        const constraintName = dbErrorConstraint || "unique constraint"
-        userFriendlyMessage = `Duplicate entry detected (${constraintName}). This record already exists.`
+        userFriendlyMessage = `이미 동일한 데이터가 존재해요. 중복된 데이터는 저장할 수 없어요.`
         errorMessage = userFriendlyMessage
       }
       // FOREIGN KEY constraint violation
@@ -184,30 +204,29 @@ export async function executeQuery(state: ChatbotState): Promise<Partial<Chatbot
         error.message.includes("violates foreign key constraint") ||
         dbErrorCode === "23503"
       ) {
-        userFriendlyMessage = `Related record not found. Please ensure all referenced data exists.`
+        userFriendlyMessage = `연결된 데이터를 찾을 수 없어요. 먼저 필요한 데이터가 있는지 확인해주세요.`
         errorMessage = userFriendlyMessage
       }
       // CHECK constraint violation
       else if (error.message.includes("violates check constraint") || dbErrorCode === "23514") {
-        const constraintName = dbErrorConstraint || "check constraint"
-        userFriendlyMessage = `Data validation failed (${constraintName}). Please check your input values.`
+        userFriendlyMessage = `입력하신 값이 올바르지 않아요. 다시 확인해주세요.`
         errorMessage = userFriendlyMessage
       }
       // String data too long
       else if (error.message.includes("value too long") || dbErrorCode === "22001") {
         const match = error.message.match(/column "(\w+)"/)
-        const columnName = match ? match[1] : "a column"
-        userFriendlyMessage = `Text is too long for ${columnName}. Please shorten the text.`
+        const columnName = match ? match[1] : "텍스트"
+        userFriendlyMessage = `${columnName} 항목의 내용이 너무 길어요. 좀 더 짧게 입력해주세요.`
         errorMessage = userFriendlyMessage
       }
       // Invalid syntax
       else if (error.message.includes("syntax error") || dbErrorCode === "42601") {
-        userFriendlyMessage = `SQL syntax error. The query will be regenerated.`
+        userFriendlyMessage = `처리 중 오류가 발생했어요. 다시 시도해볼게요.`
         errorMessage = `SQL syntax error at position ${dbErrorPosition || "unknown"}: ${error.message}`
       }
       // 그 외 일반 에러
       else {
-        userFriendlyMessage = `Database error: ${error.message}`
+        userFriendlyMessage = `데이터 처리 중 문제가 발생했어요: ${error.message}`
         errorMessage = userFriendlyMessage
       }
     }

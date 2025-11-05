@@ -9,7 +9,6 @@ import { analyzeResults } from "./nodes/result-analyzer"
 import { executeSequential } from "./nodes/sequential-executor"
 import { generateSQL } from "./nodes/sql-generator"
 import { validateSQL } from "./nodes/sql-validator"
-import { suggestVisualizations } from "./nodes/visualization-suggester"
 import type { ChatbotState } from "./state"
 import { ChatbotStateAnnotation } from "./state"
 
@@ -23,7 +22,6 @@ const NODE_NAMES = {
   EXECUTE_SEQUENTIAL: "executeSequential",
   ANALYZE_RESULTS: "analyzeResults",
   GENERATE_INSIGHTS: "generateInsights",
-  SUGGEST_VISUALIZATIONS: "suggestVisualizations",
   GENERATE_FOLLOW_UPS: "generateFollowUps",
   FORMAT_RESPONSE: "formatResponse",
   HANDLE_ERROR: "handleError",
@@ -40,7 +38,7 @@ async function handleError(state: ChatbotState): Promise<Partial<ChatbotState>> 
   const result = {
     analysis:
       state.error ||
-      "An unknown error occurred. Please try rephrasing your question or contact support.",
+      "예상치 못한 문제가 발생했어요. 다른 방식으로 질문해주시거나 문의해주세요.",
   }
 
   const duration = Date.now() - startTime
@@ -141,8 +139,8 @@ async function askConfirmation(state: ChatbotState): Promise<Command> {
   return new Command({
     goto: NODE_NAMES.HANDLE_ERROR,
     update: {
-      error: "작업이 사용자에 의해 취소되었습니다.",
-      analysis: "작업이 취소되었습니다.",
+      error: "작업을 취소했어요.",
+      analysis: "작업을 취소했어요.",
     },
   })
 }
@@ -196,6 +194,36 @@ function routeAfterAnalysis(state: ChatbotState): NodeName {
   }
   chatbotLogger.routeDecision(NODE_NAMES.ANALYZE, NODE_NAMES.GENERATE_SQL, "analysis complete")
   return NODE_NAMES.GENERATE_SQL
+}
+
+function routeAfterSQLGeneration(state: ChatbotState): NodeName {
+  // 1. Error check - SQL generation failed
+  if (state.error) {
+    chatbotLogger.routeDecision(
+      NODE_NAMES.GENERATE_SQL,
+      NODE_NAMES.HANDLE_ERROR,
+      "SQL generation failed",
+    )
+    return NODE_NAMES.HANDLE_ERROR
+  }
+
+  // 2. Missing SQL check - should not happen but safeguard
+  if (!state.generatedSQL || state.generatedSQL.trim().length === 0) {
+    chatbotLogger.routeDecision(
+      NODE_NAMES.GENERATE_SQL,
+      NODE_NAMES.HANDLE_ERROR,
+      "no SQL generated",
+    )
+    return NODE_NAMES.HANDLE_ERROR
+  }
+
+  // 3. Success - proceed to validation
+  chatbotLogger.routeDecision(
+    NODE_NAMES.GENERATE_SQL,
+    NODE_NAMES.VALIDATE_SQL,
+    "SQL generated successfully",
+  )
+  return NODE_NAMES.VALIDATE_SQL
 }
 
 function routeAfterValidation(state: ChatbotState): NodeName {
@@ -279,7 +307,6 @@ export function createChatbotGraph() {
   workflow.addNode(NODE_NAMES.EXECUTE_SEQUENTIAL, executeSequential)
   workflow.addNode(NODE_NAMES.ANALYZE_RESULTS, analyzeResults)
   workflow.addNode(NODE_NAMES.GENERATE_INSIGHTS, generateInsights)
-  workflow.addNode(NODE_NAMES.SUGGEST_VISUALIZATIONS, suggestVisualizations)
   workflow.addNode(NODE_NAMES.GENERATE_FOLLOW_UPS, generateFollowUpQuestions)
   workflow.addNode(NODE_NAMES.FORMAT_RESPONSE, formatResponse)
   workflow.addNode(NODE_NAMES.HANDLE_ERROR, handleError)
@@ -295,8 +322,13 @@ export function createChatbotGraph() {
 
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
   workflow.addEdge(NODE_NAMES.ASK_CLARIFICATION, NODE_NAMES.FORMAT_RESPONSE)
+
+  // FIXED: Add conditional routing after SQL generation to catch errors
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
-  workflow.addEdge(NODE_NAMES.GENERATE_SQL, NODE_NAMES.VALIDATE_SQL)
+  workflow.addConditionalEdges(NODE_NAMES.GENERATE_SQL, routeAfterSQLGeneration, {
+    [NODE_NAMES.HANDLE_ERROR]: NODE_NAMES.HANDLE_ERROR,
+    [NODE_NAMES.VALIDATE_SQL]: NODE_NAMES.VALIDATE_SQL,
+  })
 
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
   workflow.addConditionalEdges(NODE_NAMES.VALIDATE_SQL, routeAfterValidation, {
@@ -326,19 +358,16 @@ export function createChatbotGraph() {
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
   workflow.addEdge(NODE_NAMES.HANDLE_ERROR, NODE_NAMES.FORMAT_RESPONSE)
 
-  // 병렬 실행: 인사이트, 시각화, 후속질문
+  // 병렬 실행: 인사이트, 후속질문 동시 실행
+  // LangGraph는 자동으로 두 노드가 모두 완료될 때까지 대기 후 formatResponse 실행
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
   workflow.addEdge(NODE_NAMES.ANALYZE_RESULTS, NODE_NAMES.GENERATE_INSIGHTS)
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
-  workflow.addEdge(NODE_NAMES.ANALYZE_RESULTS, NODE_NAMES.SUGGEST_VISUALIZATIONS)
-  // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
   workflow.addEdge(NODE_NAMES.ANALYZE_RESULTS, NODE_NAMES.GENERATE_FOLLOW_UPS)
 
-  // 모든 병렬 작업이 완료되면 formatResponse로
+  // 두 병렬 노드가 모두 완료되면 formatResponse 실행
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
   workflow.addEdge(NODE_NAMES.GENERATE_INSIGHTS, NODE_NAMES.FORMAT_RESPONSE)
-  // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
-  workflow.addEdge(NODE_NAMES.SUGGEST_VISUALIZATIONS, NODE_NAMES.FORMAT_RESPONSE)
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
   workflow.addEdge(NODE_NAMES.GENERATE_FOLLOW_UPS, NODE_NAMES.FORMAT_RESPONSE)
 

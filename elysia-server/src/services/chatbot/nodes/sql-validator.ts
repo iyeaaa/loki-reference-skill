@@ -1,165 +1,101 @@
-import { ChatOpenAI } from "@langchain/openai"
 import { chatbotLogger } from "../../../utils/logger"
 import type { ChatbotState } from "../state"
 
-const _llm = new ChatOpenAI({
-  model: "gpt-5",
-})
+export async function validateSQL(state: ChatbotState): Promise<Partial<ChatbotState>> {
+  const emitter = state._emitter
 
-const DANGEROUS_KEYWORDS = [
-  "drop",
-  "delete",
-  "truncate",
-  "alter",
-  "create",
-  "update",
-  "insert",
-  "grant",
-  "revoke",
-  "exec",
-  "execute",
-  "pg_sleep",
-  "pg_terminate_backend",
-]
-
-/**
- * Check if SQL contains dangerous keywords using word boundary matching
- * This prevents false positives like "created_at" containing "create"
- */
-function _containsDangerousKeyword(sql: string): { found: boolean; keyword?: string } {
-  const sqlLower = sql.toLowerCase()
-
-  for (const keyword of DANGEROUS_KEYWORDS) {
-    // Use word boundary (\b) to match only complete words
-    // This prevents matching partial words like "created" or "updated"
-    const regex = new RegExp(`\\b${keyword}\\b`, "i")
-    if (regex.test(sqlLower)) {
-      return { found: true, keyword }
-    }
+  // 노드 시작 이벤트
+  if (emitter) {
+    emitter.nodeStart("validateSQL", "요청 내용을 확인하고 있어요...")
   }
 
-  return { found: false }
-}
+  try {
+    const sql = state.generatedSQL
+    const sqlLower = sql.toLowerCase()
 
-export async function validateSQL(state: ChatbotState): Promise<Partial<ChatbotState>> {
-  const startTime = Date.now()
-  chatbotLogger.nodeStart("validateSQL")
+    // 중간 진행 상황 업데이트
+    if (emitter) {
+      emitter.progress("validateSQL", "안전하게 처리할 수 있는지 확인 중...")
+    }
 
-  const _sql = state.generatedSQL
+    // 1. Check for dangerous operations (DROP, ALTER, CREATE TABLE, TRUNCATE)
+    if (
+      sqlLower.startsWith("drop") ||
+      sqlLower.startsWith("alter") ||
+      sqlLower.startsWith("create table") ||
+      sqlLower.startsWith("create database") ||
+      sqlLower.startsWith("truncate")
+    ) {
+      if (emitter) {
+        emitter.error("validateSQL", "보안상 허용되지 않는 작업이에요")
+      }
+      return {
+        isQuerySafe: false,
+        error:
+          "안전하지 않은 작업이 포함되어 처리할 수 없어요. 데이터베이스 구조를 변경하려면 관리자에게 문의해주세요.",
+      }
+    }
 
-  // ⚠️ SECURITY VALIDATIONS TEMPORARILY DISABLED FOR TESTING
-  // TODO: Re-enable these validations in production environment
+    if (emitter) {
+      emitter.progress("validateSQL", "데이터 접근 권한 확인 중...")
+    }
 
-  // 기본 보안 검사 - word boundary를 사용한 정확한 키워드 매칭
-  // TEMPORARILY DISABLED: Allow all SQL operations for testing
-  // const dangerousCheck = containsDangerousKeyword(sql)
+    // 2. workspace_id filter check (required for data isolation)
+    if (!sqlLower.includes("workspace_id")) {
+      chatbotLogger.nodeError("validateSQL", "Missing workspace_id filter", 0)
+      if (emitter) {
+        emitter.error("validateSQL", "데이터 접근 권한 확인 실패")
+      }
+      return {
+        isQuerySafe: false,
+        error: "보안을 위해 귀하의 작업공간 데이터만 조회할 수 있어요.",
+      }
+    }
 
-  // if (dangerousCheck.found) {
-  //   const duration = Date.now() - startTime
-  //   chatbotLogger.nodeError(
-  //     "validateSQL",
-  //     `Dangerous keyword detected: ${dangerousCheck.keyword}`,
-  //     duration,
-  //   )
-  //   return {
-  //     isQuerySafe: false,
-  //     error: `For security reasons, only read-only queries (SELECT) are allowed. Detected keyword: ${dangerousCheck.keyword?.toUpperCase()}`,
-  //   }
-  // }
+    if (emitter) {
+      emitter.progress("validateSQL", "처리 가능 여부 확인 중...")
+    }
 
-  // workspace_id 필터 확인
-  // TEMPORARILY DISABLED: Allow queries without workspace_id for testing
-  // const sqlLower = sql.toLowerCase()
-  // if (!sqlLower.includes("workspace_id")) {
-  //   const duration = Date.now() - startTime
-  //   chatbotLogger.nodeError("validateSQL", "Missing workspace_id filter", duration)
-  //   return {
-  //     isQuerySafe: false,
-  //     error: "For security, workspace_id filter is required.",
-  //   }
-  // }
+    // 3. Check query complexity (prevent overly complex queries)
+    const cteCount = (sql.match(/WITH\s+/gi) || []).length
+    const unionCount = (sql.match(/UNION\s+ALL/gi) || []).length
+    const subqueryCount = (sql.match(/\(\s*SELECT/gi) || []).length
 
-  // SELECT 쿼리인지 확인
-  // TEMPORARILY DISABLED: Allow all SQL operations for testing
-  // const trimmedSql = sqlLower.trim()
-  // if (!trimmedSql.startsWith("select") && !trimmedSql.startsWith("with")) {
-  //   const duration = Date.now() - startTime
-  //   chatbotLogger.nodeError("validateSQL", "Only SELECT queries allowed", duration)
-  //   return {
-  //     isQuerySafe: false,
-  //     error: "Only SELECT queries are allowed.",
-  //   }
-  // }
+    if (cteCount > 3 || unionCount > 5 || subqueryCount > 5) {
+      chatbotLogger.nodeError(
+        "validateSQL",
+        `Query too complex: ${cteCount} CTEs, ${unionCount} UNIONs, ${subqueryCount} subqueries`,
+        0,
+      )
+      if (emitter) {
+        emitter.error("validateSQL", "요청이 너무 복잡해요")
+      }
+      return {
+        isQuerySafe: false,
+        error:
+          "처리하기에 너무 복잡한 요청이에요. 좀 더 간단하게 나눠서 요청해주시겠어요?",
+      }
+    }
 
-  // AI 검증 (추가 검증)
-  // TEMPORARILY DISABLED: Skip AI validation for faster testing
-  // try {
-  //   const prompt = getValidationPrompt(state.generatedSQL)
-  //   const response = await llm.invoke(prompt)
-  //   const content = response.content as string
+    // 성공 이벤트
+    if (emitter) {
+      emitter.nodeComplete("validateSQL", "요청 확인 완료")
+    }
 
-  //   const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || content.match(/(\{[\s\S]*\})/)
-  //   const jsonStr = jsonMatch?.[1] || content
-  //   const validation = JSON.parse(jsonStr.trim())
-
-  //   if (!validation.isSafe) {
-  //     const duration = Date.now() - startTime
-  //     chatbotLogger.nodeError("validateSQL", validation.issues.join(", "), duration)
-  //     return {
-  //       isQuerySafe: false,
-  //       error: validation.issues.join(", "),
-  //     }
-  //   }
-
-  //   const duration = Date.now() - startTime
-  //   chatbotLogger.nodeSuccess("validateSQL", duration)
-
-  //   return {
-  //     isQuerySafe: true,
-  //     error: null,
-  //   }
-  // } catch (error) {
-  //   const duration = Date.now() - startTime
-  //   const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류"
-  //   chatbotLogger.nodeError("validateSQL", errorMessage, duration)
-
-  //   // 검증 실패 시 안전하게 차단
-  //   return {
-  //     isQuerySafe: false,
-  //     error: "An error occurred during query validation. Execution blocked for safety.",
-  //   }
-  // }
-
-  // For testing: Allow all queries (validations disabled)
-  const duration = Date.now() - startTime
-  chatbotLogger.nodeSuccess("validateSQL (validations disabled)", duration)
-
-  // Check for dangerous operations (DROP, ALTER, CREATE TABLE)
-  const sqlLower = state.generatedSQL.toLowerCase().trim()
-  const isDangerous =
-    sqlLower.startsWith("drop") ||
-    sqlLower.startsWith("alter") ||
-    sqlLower.startsWith("create table") ||
-    sqlLower.startsWith("create database")
-
-  if (isDangerous) {
-    chatbotLogger.nodeError(
-      "validateSQL",
-      "Dangerous operation blocked: DROP/ALTER/CREATE TABLE",
-      Date.now() - startTime,
-    )
+    // All checks passed
+    return {
+      isQuerySafe: true,
+      error: null,
+      needsConfirmation: false,
+    }
+  } catch (error) {
+    if (emitter) {
+      const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류"
+      emitter.error("validateSQL", errorMessage)
+    }
     return {
       isQuerySafe: false,
-      error:
-        "보안상의 이유로 DROP, ALTER, CREATE TABLE 작업은 허용되지 않습니다. 스키마 변경은 데이터베이스 관리자에게 문의해주세요.",
+      error: "요청을 확인하는 중 문제가 발생했어요.",
     }
-  }
-
-  // INSERT, UPDATE, DELETE are now allowed without confirmation
-  // Only DROP, ALTER, CREATE TABLE/DATABASE are blocked (checked above)
-  return {
-    isQuerySafe: true,
-    error: null,
-    needsConfirmation: false,
   }
 }

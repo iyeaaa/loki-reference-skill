@@ -1,21 +1,28 @@
 import { ChatOpenAI } from "@langchain/openai"
-import { chatbotLogger } from "../../../utils/logger"
 import { getInsightGenerationPrompt } from "../prompts"
 import type { ChatbotState } from "../state"
 
 const llm = new ChatOpenAI({
-  model: "gpt-5",
+  model: "gpt-4.1-mini",
+  temperature: 0.7, // Higher temperature for creative, diverse insights
 })
 
 export async function generateInsights(state: ChatbotState): Promise<Partial<ChatbotState>> {
-  const startTime = Date.now()
-  chatbotLogger.nodeStart("generateInsights")
+  const emitter = state._emitter
+
+  // 노드 시작 이벤트
+  if (emitter) {
+    emitter.nodeStart("generateInsights", "중요한 내용을 정리하고 있어요...")
+  }
 
   try {
-    // 결과가 없거나 단순한 경우 인사이트 생략
-    if (state.queryResult.length === 0 || state.queryResult.length === 1) {
-      const duration = Date.now() - startTime
-      chatbotLogger.nodeSuccess("generateInsights (skipped)", duration)
+    // 결과가 없는 경우에만 인사이트 생략 (1개 행도 인사이트 생성 가능)
+    if (state.queryResult.length === 0) {
+      if (emitter) {
+        emitter.nodeComplete("generateInsights", "데이터 인사이트 생략 (결과 없음)", {
+          insights: [],
+        })
+      }
       return {
         insights: [],
       }
@@ -27,6 +34,7 @@ export async function generateInsights(state: ChatbotState): Promise<Partial<Cha
       state.queryResult,
     )
 
+    // Use non-streaming LLM call for intermediate node (no progress events)
     const response = await llm.invoke(prompt)
     const content = response.content as string
 
@@ -35,19 +43,22 @@ export async function generateInsights(state: ChatbotState): Promise<Partial<Cha
 
     const insights = JSON.parse(jsonStr.trim())
 
-    const duration = Date.now() - startTime
-    chatbotLogger.nodeSuccess(
-      `generateInsights (${Array.isArray(insights) ? insights.length : 0} insights)`,
-      duration,
-    )
+    if (emitter) {
+      emitter.nodeComplete(
+        "generateInsights",
+        `핵심 내용 정리 완료 (${Array.isArray(insights) ? insights.length : 0}개)`,
+        { insights: Array.isArray(insights) ? insights : [] }, // 즉시 프론트엔드로 전송
+      )
+    }
 
     return {
       insights: Array.isArray(insights) ? insights : [],
     }
   } catch (error) {
-    const duration = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류"
-    chatbotLogger.nodeError("generateInsights", errorMessage, duration)
+    if (emitter) {
+      emitter.error("generateInsights", errorMessage)
+    }
 
     return {
       insights: [],

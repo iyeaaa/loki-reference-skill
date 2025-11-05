@@ -10,11 +10,16 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { type ChatMessage, useChatbotHistory, useChatbotMutation } from "@/lib/api/hooks/chatbot"
 import { chatbotApi } from "@/lib/api/services/chatbot"
-import type { FileAttachment as FileAttachmentType } from "@/lib/api/types/chatbot"
+import type {
+  FileAttachment as FileAttachmentType,
+  NodeProgressUpdate,
+} from "@/lib/api/types/chatbot"
 import { readFileAsText } from "@/lib/utils/csv"
+import { DataArtifact } from "./DataArtifact"
 import { FileAttachment } from "./FileAttachment"
 import { MessageBubble } from "./MessageBubble"
-import { ThinkingIndicator } from "./ThinkingIndicator"
+import type { NodeProgress } from "./NodeProgressTracker"
+import { StreamingMessageContainer } from "./StreamingMessageContainer"
 
 interface ChatInterfaceProps {
   workspaceId: string
@@ -31,6 +36,8 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   const [currentConversationId, setCurrentConversationId] = useState(conversationId || "")
   const [attachedFile, setAttachedFile] = useState<FileAttachmentType | null>(null)
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [nodeProgress, setNodeProgress] = useState<NodeProgress[]>([])
+  const [selectedArtifact, setSelectedArtifact] = useState<ChatMessage | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isProcessingFileRef = useRef(false)
@@ -46,12 +53,17 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
 
   // Memoize callbacks to prevent unnecessary re-renders
   const handleMessage = useCallback((message: ChatMessage) => {
-    // Final message - replace streaming message with completed one
+    // Final message - add to messages array
     setMessages((prev) => [...prev, message])
-    setStreamingMessage(null)
-    setCurrentThinking(null)
-    setIsProcessing(false)
-    setNeedsConfirmation(false)
+
+    // Delay clearing streamingMessage and thinking to prevent sudden disappearance
+    setTimeout(() => {
+      setStreamingMessage(null)
+      setCurrentThinking(null)
+      setIsProcessing(false)
+      setNeedsConfirmation(false)
+      setNodeProgress([]) // Clear node progress when done
+    }, 150) // Brief delay for smooth transition
   }, [])
 
   const handleMessageUpdate = useCallback((message: ChatMessage) => {
@@ -62,6 +74,20 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   const handleThinking = useCallback((thinking: string) => {
     setCurrentThinking(thinking)
   }, [])
+
+  const handleProgress = useCallback(
+    (progress: { message?: string; percent?: number; node?: string }) => {
+      // Update thinking with progress info
+      if (progress.message) {
+        const progressText =
+          progress.percent !== undefined
+            ? `${progress.message} (${progress.percent}%)`
+            : progress.message
+        setCurrentThinking(progressText)
+      }
+    },
+    [],
+  )
 
   const handleConfirmationRequired = useCallback((message: string) => {
     // Confirmation required - show confirmation UI
@@ -82,6 +108,24 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     setCurrentThinking(null)
     setIsProcessing(false)
     setNeedsConfirmation(false)
+    setNodeProgress([]) // Clear node progress on error
+  }, [])
+
+  const handleNodeProgress = useCallback((update: NodeProgressUpdate) => {
+    setNodeProgress((prev) => {
+      // Find if this node already exists in the progress array
+      const existingIndex = prev.findIndex((p) => p.nodeName === update.nodeName)
+
+      if (existingIndex >= 0) {
+        // Update existing node progress
+        const updated = [...prev]
+        updated[existingIndex] = update
+        return updated
+      }
+
+      // Add new node progress
+      return [...prev, update]
+    })
   }, [])
 
   // Setup chatbot mutation with TanStack Query - memoized to prevent recreation
@@ -89,8 +133,10 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     onMessage: handleMessage,
     onMessageUpdate: handleMessageUpdate,
     onThinking: handleThinking,
+    onProgress: handleProgress,
     onConfirmationRequired: handleConfirmationRequired,
     onError: handleError,
+    onNodeProgress: handleNodeProgress,
   })
 
   // Load history into messages when available
@@ -118,9 +164,10 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         return
       }
 
-      // Only accept CSV files
-      if (!file.name.endsWith(".csv")) {
-        alert("Only CSV files are allowed.")
+      // Accept CSV, XLSX, XLS files
+      const fileName = file.name.toLowerCase()
+      if (!fileName.endsWith(".csv") && !fileName.endsWith(".xlsx") && !fileName.endsWith(".xls")) {
+        alert("Only CSV, XLSX, or XLS files are allowed.")
         return
       }
 
@@ -128,72 +175,155 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         // Mark as processing
         isProcessingFileRef.current = true
 
-        // Read file content
-        const fileContent = await readFileAsText(file)
+        // Check file type: xlsx/xls vs csv
+        const isExcelFile = fileName.endsWith(".xlsx") || fileName.endsWith(".xls")
 
-        // OPTIMIZATION: Don't parse CSV to verbose text format
-        // Send raw CSV data - server will handle it more efficiently
-        const fileAttachment: FileAttachmentType = {
-          fileName: file.name,
-          fileSize: file.size,
-          fileType: file.type,
-          content: fileContent, // Raw CSV content, not parsed text
-        }
+        if (isExcelFile) {
+          // Excel file: Use lead-import API
+          const fileAttachment: FileAttachmentType = {
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+          }
 
-        setAttachedFile(fileAttachment)
+          setAttachedFile(fileAttachment)
 
-        // Auto-submit with custom prompt when CSV is uploaded
-        const autoPrompt =
-          "Create customer groups and leads, then design optimal sequences from attached CSV data"
+          // Display user message about xlsx upload
+          const userMessage: ChatMessage = {
+            role: "user",
+            content: "리드 데이터 임포트를 시작합니다",
+            timestamp: new Date(),
+            attachment: fileAttachment,
+          }
 
-        // Submit immediately with the auto prompt
-        setIsProcessing(true)
+          setMessages((prev) => [...prev, userMessage])
+          setAttachedFile(null)
+          setIsProcessing(true)
 
-        // Send ONLY the prompt, CSV data will be in attachment
-        const finalContent = autoPrompt
-
-        const userMessage: ChatMessage = {
-          role: "user",
-          content: finalContent,
-          timestamp: new Date(),
-          attachment: fileAttachment,
-        }
-
-        // Add user message to the list
-        setMessages((prev) => [...prev, userMessage])
-        setAttachedFile(null)
-
-        // Initialize streaming message
-        setStreamingMessage({
-          role: "assistant",
-          content: "",
-          timestamp: new Date(),
-        })
-
-        // Use TanStack Query mutation
-        const convId = conversationId || `conv_${Date.now()}`
-        setCurrentConversationId(convId)
-
-        // CRITICAL FIX: Don't call API inside setState
-        // Call API directly with the updated messages
-        try {
-          await chatbotMutation.mutateAsync({
-            question: finalContent,
-            workspaceId,
-            conversationId: convId,
-            messages: [...messages, userMessage], // Use computed messages
+          // Initialize streaming message for import progress
+          setStreamingMessage({
+            role: "assistant",
+            content: "임포트를 시작합니다...",
+            timestamp: new Date(),
           })
-        } catch (error) {
-          // Error is already handled in onError callback
-          console.error("Submit error:", error)
-        } finally {
-          // Reset processing flag after completion
-          isProcessingFileRef.current = false
+
+          // Import lead-import service dynamically
+          const { uploadLeadsFile } = await import("@/lib/api/services/lead-import")
+
+          try {
+            const result = await uploadLeadsFile({
+              file,
+              workspaceId,
+              sheetName: "", // Will auto-select first sheet
+              onProgress: (progress) => {
+                // Update streaming message with progress
+                const progressMsg = `임포트 진행 중: ${progress.processed || 0} / ${progress.total || 0}\n성공: ${progress.success || 0}, 스킵: ${progress.skipped || 0}, 실패: ${progress.failed || 0}`
+
+                setStreamingMessage({
+                  role: "assistant",
+                  content: progressMsg,
+                  timestamp: new Date(),
+                  metadata: {
+                    importProgress: progress,
+                  },
+                })
+              },
+            })
+
+            // Final success message with artifact
+            const finalMessage: ChatMessage = {
+              role: "assistant",
+              content: `임포트가 완료되었습니다!\n\n- 총 처리: ${result.total}건\n- 성공: ${result.success}건\n- 스킵: ${result.skipped}건\n- 실패: ${result.failed}건`,
+              timestamp: new Date(),
+              metadata: {
+                importResult: result,
+              },
+            }
+
+            setMessages((prev) => [...prev, finalMessage])
+            setStreamingMessage(null)
+          } catch (error) {
+            console.error("Lead import failed:", error)
+            const errorMessage: ChatMessage = {
+              role: "assistant",
+              content: `임포트 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
+              timestamp: new Date(),
+            }
+            setMessages((prev) => [...prev, errorMessage])
+            setStreamingMessage(null)
+          } finally {
+            setIsProcessing(false)
+            isProcessingFileRef.current = false
+          }
+        } else {
+          // CSV file: Use chatbot API (existing logic)
+          const fileContent = await readFileAsText(file)
+
+          // OPTIMIZATION: Don't parse CSV to verbose text format
+          // Send raw CSV data - server will handle it more efficiently
+          const fileAttachment: FileAttachmentType = {
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            content: fileContent, // Raw CSV content, not parsed text
+          }
+
+          setAttachedFile(fileAttachment)
+
+          // Auto-submit with custom prompt when CSV is uploaded
+          const autoPrompt =
+            "Create customer groups and leads, then design optimal sequences from attached CSV data"
+
+          // Submit immediately with the auto prompt
+          setIsProcessing(true)
+
+          // Send ONLY the prompt, CSV data will be in attachment
+          const finalContent = autoPrompt
+
+          const userMessage: ChatMessage = {
+            role: "user",
+            content: finalContent,
+            timestamp: new Date(),
+            attachment: fileAttachment,
+          }
+
+          // Add user message to the list
+          setMessages((prev) => [...prev, userMessage])
+          setAttachedFile(null)
+
+          // Initialize streaming message
+          setStreamingMessage({
+            role: "assistant",
+            content: "",
+            timestamp: new Date(),
+          })
+
+          // Use TanStack Query mutation
+          const convId = conversationId || `conv_${Date.now()}`
+          setCurrentConversationId(convId)
+
+          // CRITICAL FIX: Don't call API inside setState
+          // Call API directly with the updated messages
+          try {
+            await chatbotMutation.mutateAsync({
+              question: finalContent,
+              workspaceId,
+              conversationId: convId,
+              messages: [...messages, userMessage], // Use computed messages
+            })
+          } catch (error) {
+            // Error is already handled in onError callback
+            console.error("Submit error:", error)
+          } finally {
+            // Reset processing flag after completion
+            isProcessingFileRef.current = false
+          }
         }
       } catch (error) {
-        console.error("Failed to read file:", error)
-        alert("Failed to read file.")
+        console.error("Failed to process file:", error)
+        alert("Failed to process file.")
         isProcessingFileRef.current = false
+        setIsProcessing(false)
       }
 
       // Reset file input
@@ -276,11 +406,12 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
 
   // Suggested questions for empty state
   const suggestedQuestions = [
-    "What insights can you provide from my customer data?",
-    "Help me create customer segments for targeted campaigns",
-    "Analyze customer behavior patterns",
-    "Generate email sequences based on customer data",
-    "What are the key trends in my sales data?",
+    "이번 달 이메일 성과는 어때?",
+    "오픈율이 가장 높은 이메일 제목은?",
+    "클릭률이 낮은 이메일의 공통점은?",
+    "지난 주 대비 이번 주 응답률 변화는?",
+    "반응이 좋은 발송 시간대는?",
+    "이탈률이 높은 시퀀스는?",
   ]
 
   // Use previous questions if available, otherwise use suggested questions
@@ -435,13 +566,21 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     )
   }
 
+  // Check if any message has artifact data (for split view)
+  const hasAnyArtifact =
+    messages.some(
+      (msg) => (msg.metadata?.insights && msg.metadata.insights.length > 0) || !!msg.metadata?.sql,
+    ) ||
+    (streamingMessage?.metadata?.insights && streamingMessage.metadata.insights.length > 0) ||
+    !!streamingMessage?.metadata?.sql
+
   return (
     <div className="flex h-full flex-col bg-background">
       {/* Hidden file input - shared across all states */}
       <input
         ref={fileInputRef}
         type="file"
-        accept=".csv"
+        accept=".csv,.xlsx,.xls"
         onChange={handleFileChange}
         onClick={(e) => {
           if (isProcessingFileRef.current) {
@@ -521,14 +660,14 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                       <Plus className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent side="top" align="start" className="w-48">
+                  <DropdownMenuContent side="top" align="start" className="w-56">
                     <DropdownMenuItem
                       onClick={() => fileInputRef.current?.click()}
                       disabled={!!attachedFile || isProcessing}
                       className="gap-2 cursor-pointer"
                     >
                       <FileText className="h-4 w-4" />
-                      Upload CSV File
+                      Upload Excel/CSV File
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -561,112 +700,176 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
           </div>
         </div>
       ) : (
-        // Messages view - Traditional layout with fixed input at bottom
-        <>
-          {/* Messages area */}
-          <div className="flex-1 overflow-y-auto">
-            {/* Messages */}
-            <div className="mx-auto max-w-3xl px-4 py-8">
-              <div className="space-y-6">
-                {messages.map((message, index) => (
-                  <MessageBubble
-                    key={`msg-${index}-${message.timestamp?.getTime() || index}`}
-                    message={message}
-                    isStreaming={false}
-                  />
-                ))}
+        // Messages view - Claude-style split layout when artifacts exist
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left side: Messages + Input (50% when artifact exists, 100% otherwise) */}
+          <div
+            className={`flex flex-col ${hasAnyArtifact ? "w-1/2" : "w-full"} transition-all duration-300`}
+          >
+            {/* Messages area */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="mx-auto max-w-3xl px-4 py-8 pb-24">
+                <div className="space-y-6">
+                  {messages.map((message, index) => {
+                    // Find the corresponding user question for this assistant message
+                    let questionText: string | undefined
+                    if (message.role === "assistant" && index > 0) {
+                      for (let i = index - 1; i >= 0; i--) {
+                        if (messages[i].role === "user") {
+                          questionText = messages[i].content
+                          break
+                        }
+                      }
+                    }
 
-                {streamingMessage && (
-                  <MessageBubble
-                    key="streaming-message"
+                    return (
+                      <MessageBubble
+                        key={`msg-${index}-${message.timestamp?.getTime() || index}`}
+                        message={message}
+                        isStreaming={false}
+                        hideArtifact={hasAnyArtifact}
+                        onViewArtifact={() => setSelectedArtifact(message)}
+                        questionText={questionText}
+                      />
+                    )
+                  })}
+
+                  {/* Unified streaming container - Claude/ChatGPT style */}
+                  <StreamingMessageContainer
                     message={streamingMessage}
                     isStreaming={!needsConfirmation}
                     needsConfirmation={needsConfirmation}
                     onConfirm={handleConfirmation}
+                    nodeProgress={nodeProgress}
+                    thinkingMessage={currentThinking}
+                    hideArtifact={hasAnyArtifact}
                   />
-                )}
 
-                {currentThinking && !streamingMessage?.content && (
-                  <ThinkingIndicator key="thinking" thinking={currentThinking} />
-                )}
-
-                <div ref={scrollRef} />
+                  <div ref={scrollRef} />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Input area - Fixed at bottom */}
-          <div className="bg-background/95 backdrop-blur">
-            <div className="mx-auto w-full px-4 py-2" style={{ maxWidth: "670px" }}>
-              {/* File attachment preview */}
-              {attachedFile && (
-                <div className="flex items-center gap-2 mb-3">
-                  <FileAttachment
-                    fileName={attachedFile.fileName}
-                    fileSize={attachedFile.fileSize}
-                    onRemove={handleRemoveFile}
-                    variant="removable"
-                  />
-                </div>
-              )}
+            {/* Input area - Fixed at bottom */}
+            <div className="relative border-t border-border">
+              {/* Input container */}
+              <div className="bg-background p-4">
+                <div
+                  className="mx-auto w-full"
+                  style={{ maxWidth: hasAnyArtifact ? "100%" : "670px" }}
+                >
+                  {/* File attachment preview */}
+                  {attachedFile && (
+                    <div className="flex items-center gap-2 mb-3">
+                      <FileAttachment
+                        fileName={attachedFile.fileName}
+                        fileSize={attachedFile.fileSize}
+                        onRemove={handleRemoveFile}
+                        variant="removable"
+                      />
+                    </div>
+                  )}
 
-              {/* Input area */}
-              <div className="relative w-full">
-                <div className="relative border rounded-2xl bg-background">
-                  <Textarea
-                    ref={textareaRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault()
-                        handleSubmit()
-                      }
-                    }}
-                    placeholder="Ask a question about your data..."
-                    className="min-h-[56px] resize-none pl-4 pr-12 pt-3 pb-11 text-[15px] leading-relaxed border-0 focus-visible:ring-0 focus-visible:ring-offset-0 overflow-y-auto bg-transparent rounded-2xl placeholder:text-muted-foreground/60"
-                    style={{ maxHeight: "400px" }}
-                  />
-                  {/* Submit / Stop button */}
-                  <Button
-                    onClick={() => (isProcessing ? handleStop() : handleSubmit())}
-                    disabled={!isProcessing && !input.trim() && !attachedFile}
-                    size="icon"
-                    className="absolute bottom-2 right-2 h-8 w-8 rounded-full"
-                  >
-                    {isProcessing ? (
-                      <Square className="h-4 w-4" fill="currentColor" />
-                    ) : (
-                      <ArrowUp className="h-4 w-4" />
-                    )}
-                  </Button>
-                  {/* Plus button with dropdown - Bottom left */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                  {/* Input area */}
+                  <div className="relative w-full">
+                    <div className="relative border rounded-2xl bg-background">
+                      <Textarea
+                        ref={textareaRef}
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault()
+                            handleSubmit()
+                          }
+                        }}
+                        placeholder="Ask a question about your data..."
+                        className="min-h-[56px] resize-none pl-4 pr-12 pt-3 pb-11 text-[15px] leading-relaxed border-0 focus-visible:ring-0 focus-visible:ring-offset-0 overflow-y-auto bg-transparent rounded-2xl placeholder:text-muted-foreground/60"
+                        style={{ maxHeight: "400px" }}
+                      />
+                      {/* Submit / Stop button */}
                       <Button
+                        onClick={() => (isProcessing ? handleStop() : handleSubmit())}
+                        disabled={!isProcessing && !input.trim() && !attachedFile}
                         size="icon"
-                        variant="outline"
-                        className="absolute bottom-2 left-2 h-8 w-8 rounded-lg"
+                        className="absolute bottom-2 right-2 h-8 w-8 rounded-full"
                       >
-                        <Plus className="h-4 w-4" />
+                        {isProcessing ? (
+                          <Square className="h-4 w-4" fill="currentColor" />
+                        ) : (
+                          <ArrowUp className="h-4 w-4" />
+                        )}
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent side="top" align="start" className="w-48">
-                      <DropdownMenuItem
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={!!attachedFile || isProcessing}
-                        className="gap-2 cursor-pointer"
-                      >
-                        <FileText className="h-4 w-4" />
-                        Upload CSV File
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                      {/* Plus button with dropdown - Bottom left */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="absolute bottom-2 left-2 h-8 w-8 rounded-lg"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="top" align="start" className="w-56">
+                          <DropdownMenuItem
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={!!attachedFile || isProcessing}
+                            className="gap-2 cursor-pointer"
+                          >
+                            <FileText className="h-4 w-4" />
+                            Upload Excel/CSV File
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </>
+
+          {/* Right side: Artifact panel (50% width, full height, sticky) */}
+          {hasAnyArtifact && (
+            <div className="w-1/2 border-l border-border bg-muted/20 overflow-hidden">
+              <DataArtifact
+                sql={
+                  selectedArtifact?.metadata?.sql ||
+                  streamingMessage?.metadata?.sql ||
+                  messages[messages.length - 1]?.metadata?.sql
+                }
+                insights={
+                  selectedArtifact?.metadata?.insights ||
+                  streamingMessage?.metadata?.insights ||
+                  messages[messages.length - 1]?.metadata?.insights
+                }
+                data={
+                  selectedArtifact?.metadata?.result ||
+                  streamingMessage?.metadata?.result ||
+                  messages[messages.length - 1]?.metadata?.result
+                }
+                isStreaming={!selectedArtifact && isProcessing}
+                question={(() => {
+                  // If selected artifact, find its corresponding user message
+                  if (selectedArtifact) {
+                    const selectedIndex = messages.indexOf(selectedArtifact)
+                    if (selectedIndex > 0) {
+                      // Find the user message before this assistant message
+                      for (let i = selectedIndex - 1; i >= 0; i--) {
+                        if (messages[i].role === "user") {
+                          return messages[i].content
+                        }
+                      }
+                    }
+                  }
+                  // Otherwise, find the last user message
+                  const userMessages = messages.filter((m) => m.role === "user")
+                  return userMessages[userMessages.length - 1]?.content || undefined
+                })()}
+              />
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

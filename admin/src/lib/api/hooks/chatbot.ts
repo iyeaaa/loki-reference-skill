@@ -1,5 +1,10 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
-import type { ChatbotAskRequest, ChatMessage } from "@/lib/api/types/chatbot"
+import type {
+  ChatbotAskRequest,
+  ChatbotProgress,
+  ChatMessage,
+  NodeProgressUpdate,
+} from "@/lib/api/types/chatbot"
 import { chatbotApi } from "../services/chatbot"
 
 // 1. Query Keys
@@ -24,8 +29,10 @@ interface UseChatbotMutationOptions {
   onMessage: (message: ChatMessage) => void
   onMessageUpdate?: (message: ChatMessage) => void
   onThinking: (thinking: string) => void
+  onProgress?: (progress: ChatbotProgress) => void
   onError?: (error: string) => void
   onConfirmationRequired?: (message: string) => void
+  onNodeProgress?: (progress: NodeProgressUpdate) => void
 }
 
 /**
@@ -33,7 +40,15 @@ interface UseChatbotMutationOptions {
  * Handles lifecycle management while preserving streaming functionality
  */
 export function useChatbotMutation(options: UseChatbotMutationOptions) {
-  const { onMessage, onMessageUpdate, onThinking, onError, onConfirmationRequired } = options
+  const {
+    onMessage,
+    onMessageUpdate,
+    onThinking,
+    onProgress,
+    onError,
+    onConfirmationRequired,
+    onNodeProgress,
+  } = options
 
   return useMutation({
     mutationKey: ["chatbot", "ask"],
@@ -42,8 +57,10 @@ export function useChatbotMutation(options: UseChatbotMutationOptions) {
         onMessage,
         onMessageUpdate,
         onThinking,
+        onProgress,
         onError,
         onConfirmationRequired,
+        onNodeProgress,
       })
     },
     retry: 1, // Retry once on failure

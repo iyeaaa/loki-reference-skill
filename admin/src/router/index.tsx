@@ -29,6 +29,7 @@ const FilterComponentsTest = lazy(() => import("../pages/test/FilterComponentsTe
 const SSETestPage = lazy(() =>
   import("../pages/settings/SSETestPage").then((m) => ({ default: m.SSETestPage })),
 )
+const SpinnerTestPage = lazy(() => import("../pages/settings/SpinnerTestPage"))
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>
@@ -134,6 +135,10 @@ export const router = createBrowserRouter([
           {
             path: "test/sse",
             element: <SSETestPage />,
+          },
+          {
+            path: "settings/spinner-test",
+            element: <SpinnerTestPage />,
           },
         ],
       },

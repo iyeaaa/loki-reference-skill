@@ -1,4 +1,5 @@
 import { Annotation } from "@langchain/langgraph"
+import type { NodeEventEmitter } from "./sse-context"
 
 // State 타입 정의
 export interface ChatbotState {
@@ -6,6 +7,9 @@ export interface ChatbotState {
   messages: ChatMessage[]
   currentQuestion: string
   conversationId: string
+
+  // SSE Context for real-time events (not serialized, injected at runtime)
+  _emitter?: NodeEventEmitter
 
   // 메타데이터
   metadata?: {
@@ -231,6 +235,10 @@ export const ChatbotStateAnnotation = Annotation.Root({
       }
     | undefined
   >({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => undefined,
+  }),
+  _emitter: Annotation<NodeEventEmitter | undefined>({
     reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => undefined,
   }),

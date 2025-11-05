@@ -1,16 +1,22 @@
-import React, { useMemo } from "react"
+import { Check, Copy, CornerDownRight, FileCode2, ThumbsDown, ThumbsUp } from "lucide-react"
+import React, { useMemo, useState } from "react"
+import toast from "react-hot-toast"
 import ReactMarkdown from "react-markdown"
 import { Streamdown } from "streamdown"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import type { ChatMessage } from "@/lib/api/hooks/chatbot"
+import type { ImportResult } from "@/lib/api/services/lead-import"
+import type { ChatMessage } from "@/lib/api/types/chatbot"
 import { FileAttachment } from "./FileAttachment"
+import { LeadImportArtifact } from "./LeadImportArtifact"
 
 interface MessageBubbleProps {
   message: ChatMessage
   isStreaming?: boolean
   needsConfirmation?: boolean
   onConfirm?: (confirmed: boolean) => void
+  hideArtifact?: boolean
+  onViewArtifact?: () => void
+  questionText?: string
 }
 
 export const MessageBubble = React.memo(function MessageBubble({
@@ -18,11 +24,41 @@ export const MessageBubble = React.memo(function MessageBubble({
   isStreaming = false,
   needsConfirmation = false,
   onConfirm,
+  hideArtifact: _hideArtifact = false,
+  onViewArtifact,
+  questionText,
 }: MessageBubbleProps) {
   const isUser = message.role === "user"
+  const [feedback, setFeedback] = useState<"like" | "dislike" | null>(null)
+  const [copied, setCopied] = useState(false)
 
-  // Show metadata only when not streaming or when streaming is complete
-  const shouldShowMetadata = !isStreaming && message.metadata
+  const handleLike = () => {
+    setFeedback("like")
+    toast.success("피드백 주셔서 감사합니다!")
+  }
+
+  const handleDislike = () => {
+    setFeedback("dislike")
+    toast.success("피드백 주셔서 감사합니다!")
+  }
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content)
+      setCopied(true)
+      toast.success("복사되었습니다!")
+      setTimeout(() => setCopied(false), 2000)
+    } catch (_err) {
+      toast.error("복사에 실패했습니다.")
+    }
+  }
+
+  // Check if this message has artifact data
+  const hasArtifact =
+    message.metadata?.sql || (message.metadata?.insights && message.metadata.insights.length > 0)
+
+  // Show metadata when available (even during streaming for real-time artifact updates)
+  const shouldShowMetadata = message.metadata
 
   // Memoize markdown components to prevent re-creation
   const markdownComponents = useMemo(
@@ -64,14 +100,16 @@ export const MessageBubble = React.memo(function MessageBubble({
           {children}
         </blockquote>
       ),
-      a: ({ children, href }: { children?: React.ReactNode; href?: string }) => (
+      a: (
+        props: React.AnchorHTMLAttributes<HTMLAnchorElement> & { children?: React.ReactNode },
+      ) => (
         <a
-          href={href}
+          {...props}
           target="_blank"
           rel="noopener noreferrer"
           className="text-primary underline hover:text-primary/80"
         >
-          {children}
+          {props.children}
         </a>
       ),
       // Remove table decorations - simple, clean table styling
@@ -135,9 +173,10 @@ export const MessageBubble = React.memo(function MessageBubble({
           </div>
         </div>
       ) : (
-        /* Assistant message - full width, clean layout */
-        <div className="space-y-4">
+        /* Assistant message - full width when hideArtifact is true */
+        <div className="w-full space-y-4">
           {/* Main response with markdown support */}
+          {/* @ts-ignore - Complex markdown component types */}
           <div className="prose prose-sm max-w-none dark:prose-invert will-change-auto">
             {isStreaming ? (
               // Streaming mode: real-time markdown rendering with Streamdown
@@ -169,95 +208,109 @@ export const MessageBubble = React.memo(function MessageBubble({
             </div>
           )}
 
-          {/* Metadata sections - only show when not streaming */}
-          {shouldShowMetadata && (
-            <div className="space-y-4 border-l-2 border-border pl-4">
-              {/* SQL Query */}
-              {message.metadata?.sql && (
-                <div className="space-y-2">
-                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Executed Query
-                  </div>
-                  <pre className="max-h-[400px] overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-muted p-3 text-xs font-mono">
-                    <code className="text-foreground">{message.metadata?.sql}</code>
-                  </pre>
-                </div>
-              )}
+          {/* Lead Import Artifact - show as prominent artifact */}
+          {shouldShowMetadata && message.metadata?.importResult && (
+            <LeadImportArtifact result={message.metadata.importResult as ImportResult} />
+          )}
 
-              {/* Insights */}
-              {message.metadata?.insights && message.metadata?.insights.length > 0 && (
-                <div className="space-y-3">
-                  <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Key Insights
+          {/* Artifact card - between content and follow-up questions */}
+          {!isStreaming && !needsConfirmation && hasArtifact && onViewArtifact && (
+            <button
+              type="button"
+              onClick={onViewArtifact}
+              className="mt-4 w-full rounded-lg border border-border bg-muted/30 p-4 text-left transition-all hover:bg-muted/50 hover:border-primary/50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <FileCode2 className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-foreground truncate">
+                    {questionText || "아티팩트 보기"}
                   </div>
-                  <div className="space-y-2">
-                    {message.metadata?.insights.map((insight: unknown, i: number) => {
-                      const insightData = insight as {
-                        impact: string
-                        insight: string
-                        recommendation: string
-                      }
-                      return (
-                        <div
-                          key={i}
-                          className="rounded-lg border border-border bg-card/50 p-3 text-sm"
-                        >
-                          <div className="mb-1.5 flex items-center gap-2">
-                            <Badge
-                              variant={
-                                insightData.impact === "high"
-                                  ? "default"
-                                  : insightData.impact === "medium"
-                                    ? "secondary"
-                                    : "outline"
-                              }
-                              className="text-xs"
-                            >
-                              {insightData.impact.toUpperCase()}
-                            </Badge>
-                            <span className="font-medium text-foreground">
-                              {insightData.insight}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {insightData.recommendation}
-                          </p>
-                        </div>
-                      )
-                    })}
+                  <div className="text-xs text-muted-foreground">
+                    {message.metadata?.sql &&
+                    message.metadata?.insights?.length &&
+                    message.metadata.insights.length > 0
+                      ? `SQL 쿼리 및 ${message.metadata.insights.length}개의 인사이트`
+                      : message.metadata?.sql
+                        ? "SQL 쿼리"
+                        : `${message.metadata?.insights?.length || 0}개의 인사이트`}
                   </div>
                 </div>
-              )}
+              </div>
+            </button>
+          )}
 
-              {/* Follow-up questions */}
-              {message.metadata?.followUpQuestions &&
-                message.metadata?.followUpQuestions.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Related Questions
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {message.metadata?.followUpQuestions.map((q: string, i: number) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => {
-                            window.dispatchEvent(
-                              new CustomEvent("quickQuestion", {
-                                detail: { question: q },
-                              }),
-                            )
-                          }}
-                          className="rounded-full border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-accent hover:text-accent-foreground"
-                        >
-                          {q}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+          {/* Feedback buttons - below artifact card */}
+          {!isStreaming && !needsConfirmation && (
+            <div className="flex items-center justify-end gap-1 mt-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg hover:bg-accent"
+                onClick={handleLike}
+              >
+                <ThumbsUp
+                  className={`h-4 w-4 ${feedback === "like" ? "fill-current text-primary" : ""}`}
+                />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg hover:bg-accent"
+                onClick={handleDislike}
+              >
+                <ThumbsDown
+                  className={`h-4 w-4 ${feedback === "dislike" ? "fill-current text-primary" : ""}`}
+                />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg hover:bg-accent"
+                onClick={handleCopy}
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-green-600" />
+                ) : (
+                  <Copy className="h-4 w-4" />
                 )}
+              </Button>
             </div>
           )}
+
+          {/* Follow-up questions - Perplexity style */}
+          {shouldShowMetadata &&
+            message.metadata?.followUpQuestions &&
+            message.metadata.followUpQuestions.length > 0 && (
+              <div className="mt-6 space-y-0">
+                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3">
+                  Related Questions
+                </div>
+                <div className="divide-y divide-border/50">
+                  {message.metadata.followUpQuestions.map((q: string, i: number) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        window.dispatchEvent(
+                          new CustomEvent("quickQuestion", {
+                            detail: { question: q },
+                          }),
+                        )
+                      }}
+                      className="w-full flex items-start gap-2 py-3 text-left transition-colors hover:bg-accent/50 group"
+                    >
+                      <CornerDownRight className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0 group-hover:text-foreground transition-colors" />
+                      <span className="text-sm text-foreground group-hover:text-primary transition-colors">
+                        {q}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
         </div>
       )}
     </div>

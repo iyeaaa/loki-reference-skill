@@ -3,6 +3,7 @@ import {
   Building2,
   FileText,
   FileUp,
+  Loader2,
   Settings as SettingsIcon,
   User,
   Users,
@@ -216,6 +217,24 @@ export default function SettingsPage() {
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Test Server-Sent Events functionality with real-time streaming
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate("/settings/spinner-test")}
+                className="flex flex-col items-start gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-accent hover:border-[#2563EB]"
+              >
+                <div className="flex items-center gap-3 w-full">
+                  <div className="rounded-lg bg-purple-100 dark:bg-purple-900/20 p-2">
+                    <Loader2 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">Spinner Test</h3>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Test various loading spinner animations for LLM responses
                 </p>
               </button>
             </div>

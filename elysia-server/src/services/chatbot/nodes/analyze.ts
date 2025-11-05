@@ -5,11 +5,19 @@ import { getRelevantSchema } from "../schema-context"
 import type { ChatbotState } from "../state"
 
 const llm = new ChatOpenAI({
-  model: "gpt-5",
+  model: "gpt-4.1-mini",
+  temperature: 0.3, // Consistent analysis with some flexibility
 })
 
 export async function analyzeQuestion(state: ChatbotState): Promise<Partial<ChatbotState>> {
   const startTime = Date.now()
+  const emitter = state._emitter
+
+  // Emit node start event
+  if (emitter) {
+    emitter.nodeStart("analyzeQuestion", "요청하신 내용을 확인하고 있어요...")
+  }
+
   chatbotLogger.nodeStart("analyzeQuestion")
 
   // Log input state
@@ -33,6 +41,7 @@ export async function analyzeQuestion(state: ChatbotState): Promise<Partial<Chat
           )
         : getAnalysisPrompt(state.currentQuestion, state.workspaceId, state.messages)
 
+    // Generate analysis using LLM (no intermediate progress events)
     const response = await llm.invoke(prompt)
     const content = response.content as string
 
@@ -57,6 +66,14 @@ export async function analyzeQuestion(state: ChatbotState): Promise<Partial<Chat
       analysisType: analysis.analysisType,
     })
 
+    // Emit node complete event
+    if (emitter) {
+      emitter.nodeComplete("analyzeQuestion", "내용 확인 완료", {
+        intent: analysis.intent,
+        needsClarification: analysis.needsClarification || false,
+      })
+    }
+
     return {
       metadata: analysis,
       needsClarification: analysis.needsClarification || false,
@@ -68,8 +85,13 @@ export async function analyzeQuestion(state: ChatbotState): Promise<Partial<Chat
     const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류"
     chatbotLogger.nodeError("analyzeQuestion", errorMessage, duration)
 
+    // Emit error event
+    if (emitter) {
+      emitter.error("analyzeQuestion", `내용을 이해하는데 문제가 생겼어요: ${errorMessage}`)
+    }
+
     return {
-      error: `질문 분석 중 오류가 발생했습니다: ${errorMessage}`,
+      error: `요청하신 내용을 확인하는 중 문제가 발생했어요. 다시 한 번 시도해주세요.`,
       needsClarification: false,
     }
   }

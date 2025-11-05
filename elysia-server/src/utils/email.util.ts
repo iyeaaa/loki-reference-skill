@@ -38,7 +38,7 @@ export function extractEmailAddress(emailString: string): string {
  * Decode content based on Content-Transfer-Encoding and charset
  */
 function decodeContent(content: string, encoding?: string, charset?: string): string {
-  let decoded = content
+  const decoded = content
 
   // Step 1: Decode transfer encoding (base64, quoted-printable)
   if (encoding && encoding !== "7bit" && encoding !== "8bit") {

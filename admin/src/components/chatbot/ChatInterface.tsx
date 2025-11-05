@@ -158,18 +158,21 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
           // Get the latest messages from state
           setMessages((currentMessages) => {
             // Use the current messages for the API call
-            chatbotMutation.mutateAsync({
-              question: finalContent, // Send the complete content with CSV data
-              workspaceId,
-              conversationId: convId,
-              messages: currentMessages,
-            }).catch((error) => {
-              // Error is already handled in onError callback
-              console.error("Submit error:", error)
-            }).finally(() => {
-              // Reset processing flag after completion
-              isProcessingFileRef.current = false
-            })
+            chatbotMutation
+              .mutateAsync({
+                question: finalContent, // Send the complete content with CSV data
+                workspaceId,
+                conversationId: convId,
+                messages: currentMessages,
+              })
+              .catch((error) => {
+                // Error is already handled in onError callback
+                console.error("Submit error:", error)
+              })
+              .finally(() => {
+                // Reset processing flag after completion
+                isProcessingFileRef.current = false
+              })
 
             // Return the current messages unchanged
             return currentMessages
@@ -237,15 +240,17 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         // Get the latest messages from state
         setMessages((currentMessages) => {
           // Use the current messages for the API call
-          chatbotMutation.mutateAsync({
-            question: questionText,
-            workspaceId,
-            conversationId: convId,
-            messages: currentMessages,
-          }).catch((error) => {
-            // Error is already handled in onError callback
-            console.error("Submit error:", error)
-          })
+          chatbotMutation
+            .mutateAsync({
+              question: questionText,
+              workspaceId,
+              conversationId: convId,
+              messages: currentMessages,
+            })
+            .catch((error) => {
+              // Error is already handled in onError callback
+              console.error("Submit error:", error)
+            })
 
           // Return the current messages unchanged
           return currentMessages

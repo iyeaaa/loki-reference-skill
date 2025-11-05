@@ -509,7 +509,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           "Looking for email account",
         )
 
-        // Find user's email account by workspaceId and userId
+        // Find user's email account - try by userId only first (user can only have one active account)
         const [emailAccount] = await db
           .select({
             id: userEmailAccounts.id,
@@ -518,11 +518,11 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             apiKey: userEmailAccounts.apiKey,
             status: userEmailAccounts.status,
             isVerified: userEmailAccounts.isVerified,
+            workspaceId: userEmailAccounts.workspaceId,
           })
           .from(userEmailAccounts)
           .where(
             and(
-              eq(userEmailAccounts.workspaceId, body.workspaceId),
               eq(userEmailAccounts.userId, body.userId),
               eq(userEmailAccounts.status, "active"),
             ),
@@ -586,7 +586,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             const [newEmail] = await db
               .insert(emails)
               .values({
-                workspaceId: body.workspaceId,
+                workspaceId: emailAccount.workspaceId,
                 userEmailAccountId: emailAccount.id,
                 direction: "outbound",
                 fromEmail: fromEmail,
@@ -734,7 +734,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           const savedEmails = await db
             .insert(emails)
             .values({
-              workspaceId: body.workspaceId,
+              workspaceId: emailAccount.workspaceId,
               userEmailAccountId: emailAccount.id,
               leadId: body.leadId || null,
               sequenceId: body.sequenceId || null,

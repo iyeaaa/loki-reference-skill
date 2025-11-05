@@ -1,4 +1,12 @@
-import { Building2, FileText, FileUp, Settings as SettingsIcon, User, Users } from "lucide-react"
+import {
+  Activity,
+  Building2,
+  FileText,
+  FileUp,
+  Settings as SettingsIcon,
+  User,
+  Users,
+} from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
@@ -181,6 +189,35 @@ export default function SettingsPage() {
                   <p className="text-sm text-muted-foreground">{item.description}</p>
                 </button>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 개발 도구 / Development Tools */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Development Tools</CardTitle>
+            <CardDescription>Tools for testing and debugging application features</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <button
+                type="button"
+                onClick={() => navigate("/test/sse")}
+                className="flex flex-col items-start gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-accent hover:border-[#2563EB]"
+              >
+                <div className="flex items-center gap-3 w-full">
+                  <div className="rounded-lg bg-blue-100 dark:bg-blue-900/20 p-2">
+                    <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">SSE Test</h3>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Test Server-Sent Events functionality with real-time streaming
+                </p>
+              </button>
             </div>
           </CardContent>
         </Card>

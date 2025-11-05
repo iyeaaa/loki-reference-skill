@@ -24,6 +24,7 @@ import { healthRoutes } from "./routes/health.routes"
 import { leadImportRoutes } from "./routes/lead-import.routes"
 import { adminLeadRoutes, leadRoutes } from "./routes/leads.routes"
 import { adminSequenceRoutes, sequenceRoutes } from "./routes/sequences.routes"
+import { sseTestRoutes } from "./routes/sse-test.routes"
 import { adminUserRoutes, userRoutes } from "./routes/users.routes"
 import { webhookRoutes } from "./routes/webhook.routes"
 import { workflowEmailRoutes } from "./routes/workflow-emails.routes"
@@ -129,6 +130,7 @@ const app = new Elysia()
 
   // Register routes
   .use(healthRoutes)
+  .use(sseTestRoutes)
   .use(webhookRoutes)
   .use(aiRoutes)
   .use(chatbotRoutes)

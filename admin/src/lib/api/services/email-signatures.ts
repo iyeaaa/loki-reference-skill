@@ -42,18 +42,24 @@ export const emailSignaturesApi = {
 
   // Get default signature
   getDefault: async (params: GetDefaultSignatureParams): Promise<EmailSignature | null> => {
-    try {
-      const searchParams = new URLSearchParams()
-      searchParams.append("workspaceId", params.workspaceId)
-      searchParams.append("userId", params.userId)
+    const searchParams = new URLSearchParams()
+    searchParams.append("workspaceId", params.workspaceId)
+    searchParams.append("userId", params.userId)
 
-      const response = await apiFetch<{ code: number; data: EmailSignature }>(
+    try {
+      const response = await apiFetch<{ code: number; data: EmailSignature | null }>(
         `${BASE_PATH}/default?${searchParams.toString()}`,
       )
-      return response.data
-    } catch (_error) {
-      // If no default signature found, return null
-      return null
+      // Return the data, which could be null if no default signature exists
+      return response.data ?? null
+    } catch (error) {
+      // If the error is a 404 (not found), return null gracefully
+      // For other errors, let React Query handle them
+      if (error && typeof error === "object" && "status" in error && error.status === 404) {
+        return null
+      }
+      // Re-throw other errors for React Query to handle
+      throw error
     }
   },
 

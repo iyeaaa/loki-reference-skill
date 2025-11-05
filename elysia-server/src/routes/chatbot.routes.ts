@@ -7,6 +7,73 @@ import type { ChatbotState } from "../services/chatbot/state"
 import { errorResponse, successResponse } from "../types/response.types"
 import { chatbotLogger } from "../utils/logger"
 
+/**
+ * Parse CSV string to structured data
+ * Optimized for performance with large CSV files
+ */
+function parseCSV(csvContent: string): {
+  headers: string[]
+  rows: Record<string, string>[]
+  rowCount: number
+} {
+  const lines = csvContent.trim().split("\n")
+
+  if (lines.length === 0) {
+    return { headers: [], rows: [], rowCount: 0 }
+  }
+
+  // Simple CSV parser (handles basic quoted fields)
+  const parseCSVLine = (line: string): string[] => {
+    const result: string[] = []
+    let current = ""
+    let inQuotes = false
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i]
+
+      if (char === '"') {
+        inQuotes = !inQuotes
+      } else if (char === "," && !inQuotes) {
+        result.push(current.trim())
+        current = ""
+      } else {
+        current += char
+      }
+    }
+
+    result.push(current.trim())
+    return result
+  }
+
+  // Parse header
+  const headers = parseCSVLine(lines[0] || "").filter((h) => h.length > 0)
+
+  // Parse data rows
+  const rows: Record<string, string>[] = []
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i]?.trim() || ""
+    if (line.length === 0) continue
+
+    const values = parseCSVLine(line)
+    const row: Record<string, string> = {}
+
+    for (let j = 0; j < headers.length; j++) {
+      const header = headers[j]
+      if (header) {
+        row[header] = values[j] || ""
+      }
+    }
+
+    rows.push(row)
+  }
+
+  return {
+    headers,
+    rows,
+    rowCount: rows.length,
+  }
+}
+
 type LangGraphEvent = {
   [key: string]: Partial<ChatbotState>
 }
@@ -83,6 +150,27 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
                 },
               }
 
+              // Parse CSV from message attachment if present
+              let csvData:
+                | { headers: string[]; rows: Record<string, string>[]; rowCount: number }
+                | undefined
+
+              const lastMessage = body.messages?.[body.messages.length - 1]
+              if (
+                lastMessage?.attachment?.content &&
+                lastMessage.attachment.fileName?.endsWith(".csv")
+              ) {
+                chatbotLogger.info(
+                  `[CSV] Parsing CSV attachment: ${lastMessage.attachment.fileName}`,
+                )
+                csvData = parseCSV(lastMessage.attachment.content)
+                chatbotLogger.nodeDetail("csv-parsing", {
+                  fileName: lastMessage.attachment.fileName,
+                  headers: csvData.headers,
+                  rowCount: csvData.rowCount,
+                })
+              }
+
               // 스트리밍 실행
               const initialState: Partial<ChatbotState> = {
                 currentQuestion: body.question,
@@ -105,6 +193,7 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
                 followUpQuestions: [],
                 needsClarification: false,
                 clarificationQuestion: "",
+                csvData, // Add parsed CSV data to state
               }
 
               let currentState: ChatbotState | null = null
@@ -340,6 +429,8 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
                 if (!isWaitingForConfirmation) {
                   const doneEvent = `data: ${JSON.stringify({ type: "done" })}\n\n`
                   controller.enqueue(encoder.encode(doneEvent))
+                  // Give client time to process the done event before closing
+                  await new Promise((resolve) => setTimeout(resolve, 100))
                 } else {
                   chatbotLogger.info(
                     "[LangGraph] Stream ending with confirmation pending (no done event)",
@@ -347,6 +438,8 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
                   // Send a special waiting event instead
                   const waitingEvent = `data: ${JSON.stringify({ type: "waiting_confirmation" })}\n\n`
                   controller.enqueue(encoder.encode(waitingEvent))
+                  // Give client time to process the waiting event before closing
+                  await new Promise((resolve) => setTimeout(resolve, 100))
                 }
               } catch (_enqueueError) {
                 // Connection already closed by client - this is normal
@@ -417,6 +510,14 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
               content: t.String(),
               timestamp: t.Optional(t.Any()),
               metadata: t.Optional(t.Any()),
+              attachment: t.Optional(
+                t.Object({
+                  fileName: t.String(),
+                  fileSize: t.Number(),
+                  fileType: t.String(),
+                  content: t.Optional(t.String()),
+                }),
+              ),
             }),
           ),
         ),
@@ -634,6 +735,8 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
               try {
                 const doneEvent = `data: ${JSON.stringify({ type: "done" })}\n\n`
                 controller.enqueue(encoder.encode(doneEvent))
+                // Give client time to process the done event before closing
+                await new Promise((resolve) => setTimeout(resolve, 100))
               } catch (_enqueueError) {
                 chatbotLogger.debug("[SSE] Cannot enqueue done event - connection closed (confirm)")
               }

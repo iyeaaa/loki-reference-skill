@@ -38,11 +38,16 @@ import {
   useCustomerGroupsByWorkspace,
 } from "@/lib/api/hooks/customer-groups"
 import { useFetchSheetNames, useUploadLeads } from "@/lib/api/hooks/lead-import"
-import { useSuspenseWorkspaces } from "@/lib/api/hooks/workspaces"
+import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import type { ImportProgress, ImportResult } from "@/lib/api/services/lead-import"
 
 export default function LeadImportPage() {
-  const [selectedWorkspace, setSelectedWorkspace] = useState("")
+  // localStorage에서 사이드바의 현재 워크스페이스 가져오기
+  const [selectedWorkspace, setSelectedWorkspace] = useState<string>(() => {
+    const savedWorkspace = localStorage.getItem("selectedWorkspace") || ""
+    // "all"이 선택된 경우 빈 문자열로 처리 (선택 안함)
+    return savedWorkspace === "all" ? "" : savedWorkspace
+  })
   const [selectedCustomerGroup, setSelectedCustomerGroup] = useState("")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedSheet, setSelectedSheet] = useState("")
@@ -63,9 +68,15 @@ export default function LeadImportPage() {
   const groupNameId = useId()
   const groupDescriptionId = useId()
 
-  const {
-    data: { workspaces },
-  } = useSuspenseWorkspaces({ limit: 100 })
+  // 현재 로그인한 유저의 ID 가져오기
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
+  const userId = currentUser?.id || ""
+
+  // 유저가 소유하거나 멤버인 워크스페이스 목록 가져오기 (참여/소유한 것만)
+  const { data: userWorkspaces } = useUserWorkspaces(userId, !!userId)
+
+  // Workspace 배열로 변환
+  const workspaces = userWorkspaces || []
 
   // 선택된 워크스페이스의 고객 그룹 조회
   const { data: customerGroups, refetch: refetchCustomerGroups } = useCustomerGroupsByWorkspace(
@@ -87,13 +98,13 @@ export default function LeadImportPage() {
   // 리드 임포트 mutation
   const uploadLeadsMutation = useUploadLeads()
 
-  // 필수 컬럼 목록 (Excel에서 필요한 컬럼)
+  // 필수 컬럼 목록 (Excel/CSV에서 필요한 컬럼)
   const requiredColumns = ["company_name", "website_url"]
 
   // 선택적이지만 권장되는 컬럼
-  const recommendedColumns = ["phone_number", "email", "business_type", "country", "products"]
+  const recommendedColumns = ["phone_number", "email"]
 
-  // 엑셀 데이터 유효성 검증
+  // 엑셀/CSV 데이터 유효성 검증
   const validateExcelData = useCallback(
     async (
       file: File,
@@ -103,18 +114,42 @@ export default function LeadImportPage() {
         const XLSX = await import("xlsx")
 
         const arrayBuffer = await file.arrayBuffer()
-        const workbook = XLSX.read(arrayBuffer, { type: "buffer" })
+        const fileName = file.name.toLowerCase()
 
-        const sheet = workbook.Sheets[sheetName]
-        if (!sheet) {
-          return { valid: false, error: "선택한 시트를 찾을 수 없습니다" }
+        let data: unknown[]
+
+        // CSV 파일 처리
+        if (fileName.endsWith(".csv")) {
+          // CSV는 UTF-8로 읽기 (인코딩 문제 최소화)
+          const workbook = XLSX.read(arrayBuffer, {
+            type: "buffer",
+            raw: false, // 문자열로 변환
+            codepage: 65001, // UTF-8 코드페이지
+          })
+          const firstSheetName = workbook.SheetNames[0]
+          const sheet = workbook.Sheets[firstSheetName]
+          data = XLSX.utils.sheet_to_json(sheet, {
+            defval: null,
+            raw: false, // 문자열로 변환
+          })
+        } else {
+          // Excel 파일 처리
+          const workbook = XLSX.read(arrayBuffer, {
+            type: "buffer",
+            raw: false, // 문자열로 변환
+          })
+          const sheet = workbook.Sheets[sheetName]
+          if (!sheet) {
+            return { valid: false, error: "선택한 시트를 찾을 수 없습니다" }
+          }
+          data = XLSX.utils.sheet_to_json(sheet, {
+            defval: null,
+            raw: false, // 문자열로 변환
+          })
         }
 
-        // 데이터 읽기
-        const data = XLSX.utils.sheet_to_json(sheet, { defval: null })
-
         if (data.length === 0) {
-          return { valid: false, error: "시트에 데이터가 없습니다" }
+          return { valid: false, error: "파일에 데이터가 없습니다" }
         }
 
         // 첫 번째 행의 컬럼 확인
@@ -201,8 +236,8 @@ export default function LeadImportPage() {
 
     // 파일 확장자 체크
     const fileName = file.name.toLowerCase()
-    if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls")) {
-      toast.error("Excel 파일(.xlsx, .xls)만 업로드 가능합니다")
+    if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls") && !fileName.endsWith(".csv")) {
+      toast.error("Excel 파일(.xlsx, .xls) 또는 CSV 파일(.csv)만 업로드 가능합니다")
       return
     }
 
@@ -211,6 +246,22 @@ export default function LeadImportPage() {
     setImportProgress(null)
     setImportResult(null)
     setValidationError(null)
+
+    // CSV 파일인 경우 자동으로 유효성 검증 수행
+    if (fileName.endsWith(".csv")) {
+      const validation = await validateExcelData(file, "")
+      if (!validation.valid) {
+        setValidationError(validation.error || "유효성 검증 실패")
+        toast.error(validation.error || "유효성 검증 실패")
+      } else {
+        setValidationError(null)
+        if (validation.warning) {
+          toast.error(validation.warning, { duration: 5000, icon: "⚠️" })
+        } else {
+          toast.success("유효성 검증 완료")
+        }
+      }
+    }
   }
 
   // 워크스페이스 변경 핸들러
@@ -286,7 +337,9 @@ export default function LeadImportPage() {
       return
     }
 
-    if (!selectedSheet) {
+    // CSV 파일이 아닌 경우에만 시트 선택 확인
+    const isCSV = selectedFile.name.toLowerCase().endsWith(".csv")
+    if (!isCSV && !selectedSheet) {
       toast.error("시트를 선택해주세요")
       return
     }
@@ -303,7 +356,7 @@ export default function LeadImportPage() {
       const result = await uploadLeadsMutation.mutateAsync({
         file: selectedFile,
         workspaceId: selectedWorkspace,
-        sheetName: selectedSheet,
+        sheetName: isCSV ? "" : selectedSheet,
         customerGroupId: selectedCustomerGroup || undefined,
         onProgress: (progress: ImportProgress) => {
           setImportProgress(progress)
@@ -346,8 +399,8 @@ export default function LeadImportPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">리드 데이터 임포트</h1>
         <p className="text-muted-foreground mt-2">
-          Excel 파일을 업로드하여 리드 데이터를 일괄 임포트합니다. 중복된 website_url은 자동으로
-          스킵됩니다.
+          Excel 또는 CSV 파일을 업로드하여 리드 데이터를 일괄 임포트합니다. 중복된 website_url은
+          자동으로 스킵됩니다.
         </p>
       </div>
 
@@ -355,7 +408,7 @@ export default function LeadImportPage() {
       <Card>
         <CardHeader>
           <CardTitle>임포트 설정</CardTitle>
-          <CardDescription>워크스페이스와 Excel 파일을 선택하세요</CardDescription>
+          <CardDescription>워크스페이스와 Excel 또는 CSV 파일을 선택하세요</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* 워크스페이스 선택 */}
@@ -370,7 +423,7 @@ export default function LeadImportPage() {
                 <SelectValue placeholder="워크스페이스 선택" />
               </SelectTrigger>
               <SelectContent>
-                {workspaces?.map((workspace) => (
+                {workspaces.map((workspace) => (
                   <SelectItem key={workspace.id} value={workspace.id}>
                     {workspace.name}
                   </SelectItem>
@@ -421,11 +474,11 @@ export default function LeadImportPage() {
 
           {/* 파일 업로드 */}
           <div className="space-y-2">
-            <Label htmlFor={fileUploadId}>Excel 파일 *</Label>
+            <Label htmlFor={fileUploadId}>Excel 또는 CSV 파일 *</Label>
             <Input
               id={fileUploadId}
               type="file"
-              accept=".xlsx,.xls"
+              accept=".xlsx,.xls,.csv"
               onChange={handleFileSelect}
               disabled={isImporting}
             />
@@ -439,31 +492,34 @@ export default function LeadImportPage() {
             )}
           </div>
 
-          {/* 시트 선택 */}
-          {sheetNamesData?.sheetNames && sheetNamesData.sheetNames.length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor={sheetSelectId}>시트 선택 *</Label>
-              <Select
-                value={selectedSheet}
-                onValueChange={handleSheetChange}
-                disabled={isImporting || isLoadingSheets}
-              >
-                <SelectTrigger id={sheetSelectId}>
-                  <SelectValue placeholder="시트 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sheetNamesData.sheetNames.map((sheetName) => (
-                    <SelectItem key={sheetName} value={sheetName}>
-                      {sheetName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                시트 선택 시 자동으로 유효성 검증이 수행됩니다
-              </p>
-            </div>
-          )}
+          {/* 시트 선택 (Excel 파일만) */}
+          {selectedFile &&
+            !selectedFile.name.toLowerCase().endsWith(".csv") &&
+            sheetNamesData?.sheetNames &&
+            sheetNamesData.sheetNames.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor={sheetSelectId}>시트 선택 *</Label>
+                <Select
+                  value={selectedSheet}
+                  onValueChange={handleSheetChange}
+                  disabled={isImporting || isLoadingSheets}
+                >
+                  <SelectTrigger id={sheetSelectId}>
+                    <SelectValue placeholder="시트 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sheetNamesData.sheetNames.map((sheetName) => (
+                      <SelectItem key={sheetName} value={sheetName}>
+                        {sheetName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  시트 선택 시 자동으로 유효성 검증이 수행됩니다
+                </p>
+              </div>
+            )}
 
           {/* 유효성 검증 에러 표시 */}
           {validationError && (
@@ -488,7 +544,7 @@ export default function LeadImportPage() {
               disabled={
                 !selectedWorkspace ||
                 !selectedFile ||
-                !selectedSheet ||
+                (!selectedFile?.name.toLowerCase().endsWith(".csv") && !selectedSheet) ||
                 isImporting ||
                 !!validationError
               }
@@ -601,6 +657,31 @@ export default function LeadImportPage() {
                 </Badge>
               )}
             </div>
+
+            {/* 스킵된 항목 목록 */}
+            {importResult.skippedLeads && importResult.skippedLeads.length > 0 && (
+              <Alert>
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <AlertTitle>스킵된 항목 ({importResult.skippedLeads.length}건)</AlertTitle>
+                <AlertDescription>
+                  <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
+                    {importResult.skippedLeads.map((skipped, index) => (
+                      <div key={index} className="text-sm border-l-2 border-yellow-400 pl-2">
+                        <div className="font-medium">
+                          Row {skipped.rowNumber}: {skipped.companyName || "N/A"}
+                        </div>
+                        <div className="text-muted-foreground text-xs">
+                          {skipped.websiteUrl}
+                        </div>
+                        <div className="text-yellow-700 dark:text-yellow-300">
+                          {skipped.reason}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* 에러 목록 */}
             {importResult.errors && importResult.errors.length > 0 && (

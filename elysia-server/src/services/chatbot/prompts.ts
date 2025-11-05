@@ -84,13 +84,99 @@ Respond in JSON format:
 - Only set needsClarification to true for ambiguous read queries`
 }
 
+/**
+ * Analysis prompt optimized for CSV imports
+ * Includes only CSV metadata, NOT the full data
+ */
+export function getAnalysisPromptWithCSV(
+  question: string,
+  workspaceId: string,
+  csvData: { headers: string[]; rows: Record<string, string>[]; rowCount: number },
+  recentMessages: ChatMessage[],
+) {
+  const context =
+    recentMessages.length > 0
+      ? `\nRecent context:\n${recentMessages
+          .slice(-3)
+          .map((m) => `${m.role}: ${m.content}`)
+          .join("\n")}`
+      : ""
+
+  // Show only first row as sample
+  const sampleRow = csvData.rows[0] || {}
+
+  return `${SYSTEM_PROMPT}
+
+# Task: Analyze CSV Import Request
+
+User question: "${question}"
+Workspace ID: ${workspaceId}${context}
+
+**CSV File Metadata:**
+- Total rows: ${csvData.rowCount}
+- Columns (${csvData.headers.length}): ${csvData.headers.join(", ")}
+- Sample row: ${JSON.stringify(sampleRow)}
+
+**Important:**
+- The full CSV data is available in state.csvData
+- You are analyzing ONLY the metadata here
+- Do NOT request the full CSV content in prompts
+
+Available database tables:
+- leads, lead_contacts, lead_social_media
+- lead_products, lead_business_sectors, lead_product_categories, lead_industry_types
+- customer_groups, customer_group_members
+- sequences, sequence_steps, sequence_enrollments
+
+Respond in JSON format:
+{
+  "intent": "csv_import",
+  "requiredTables": ["Tables to be populated from CSV"],
+  "timeRange": null,
+  "needsClarification": false,
+  "clarificationQuestion": null,
+  "analysisType": "create",
+  "operationType": "create"
+}
+
+**Critical:**
+- Always set operationType to "create" for CSV imports
+- Set needsClarification to false (CSV structure is clear)
+- The SQL generation step will handle the actual data insertion`
+}
+
 export function getSQLGenerationPrompt(
   question: string,
   workspaceId: string,
   schemaContext: string,
   metadata: Record<string, unknown>,
+  csvData?: { headers: string[]; rows: Record<string, string>[]; rowCount: number },
 ) {
   const operationType = (metadata as { operationType?: string }).operationType || "read"
+
+  // If CSV data is present, add compact representation
+  let csvContext = ""
+  if (csvData && csvData.rowCount > 0) {
+    const sampleRow = csvData.rows[0] || {}
+    csvContext = `
+
+**CSV Data Available:**
+- Rows: ${csvData.rowCount}
+- Columns: ${csvData.headers.join(", ")}
+- Sample: ${JSON.stringify(sampleRow)}
+- Access full data: Use the provided CSV rows to generate INSERT VALUES
+
+**CSV to SQL Mapping:**
+You must generate SQL INSERT statements that:
+1. Map CSV columns to appropriate database columns
+2. Handle ALL ${csvData.rowCount} rows from the CSV
+3. Use batched INSERTs or CTEs for efficiency
+4. Include proper type conversions and NULL handling
+
+**CSV Rows Preview (first 3):**
+${JSON.stringify(csvData.rows.slice(0, 3), null, 2)}
+`
+  }
 
   const operationGuidelines =
     operationType === "create"
@@ -468,6 +554,8 @@ ${schemaContext}
 **User Question:** "${question}"
 **Workspace ID:** ${workspaceId}
 **Analysis Result:** ${JSON.stringify(metadata, null, 2)}
+
+${csvContext}
 
 ${operationGuidelines}
 

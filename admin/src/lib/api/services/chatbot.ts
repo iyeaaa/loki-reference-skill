@@ -120,12 +120,15 @@ export const chatbotApi = {
       } catch (streamReadError) {
         console.error("[Chatbot] Stream read error:", streamReadError)
 
-        // Check if this is an incomplete chunked encoding error
-        if (
+        // Check if this is an incomplete chunked encoding error or network error
+        const isNetworkError =
           streamReadError instanceof Error &&
           (streamReadError.message.includes("INCOMPLETE_CHUNKED_ENCODING") ||
-            streamReadError.message.includes("premature close"))
-        ) {
+            streamReadError.message.includes("premature close") ||
+            streamReadError.message.includes("network error") ||
+            streamReadError.name === "AbortError")
+
+        if (isNetworkError) {
           console.warn(
             "[Chatbot] Stream closed prematurely. Last event:",
             lastEventType,
@@ -137,6 +140,19 @@ export const chatbotApi = {
           if (!streamCompleted && accumulatedData.analysis) {
             console.log("[Chatbot] Recovering from incomplete stream with accumulated data")
             chatbotApi.handleDoneEvent(accumulatedData, onMessage)
+            return // Exit gracefully
+          }
+
+          // If we have no data at all, inform the user
+          if (!accumulatedData.analysis) {
+            console.log("[Chatbot] Stream closed with no data - connection interrupted")
+            onError?.("Connection interrupted. The response may be incomplete. Please try again.")
+            onMessage({
+              role: "assistant",
+              content:
+                "Sorry, the connection was interrupted. Please try asking your question again.",
+              timestamp: new Date(),
+            })
             return // Exit gracefully
           }
         }
@@ -563,12 +579,15 @@ export const chatbotApi = {
       } catch (streamReadError) {
         console.error("[Chatbot] Confirmation stream read error:", streamReadError)
 
-        // Check if this is an incomplete chunked encoding error
-        if (
+        // Check if this is an incomplete chunked encoding error or network error
+        const isNetworkError =
           streamReadError instanceof Error &&
           (streamReadError.message.includes("INCOMPLETE_CHUNKED_ENCODING") ||
-            streamReadError.message.includes("premature close"))
-        ) {
+            streamReadError.message.includes("premature close") ||
+            streamReadError.message.includes("network error") ||
+            streamReadError.name === "AbortError")
+
+        if (isNetworkError) {
           console.warn(
             "[Chatbot] Confirmation stream closed prematurely. Last event:",
             lastEventType,
@@ -582,6 +601,20 @@ export const chatbotApi = {
               "[Chatbot] Recovering from incomplete confirmation stream with accumulated data",
             )
             chatbotApi.handleDoneEvent(accumulatedData, onMessage)
+            return // Exit gracefully
+          }
+
+          // If we have no data at all, inform the user
+          if (!accumulatedData.analysis) {
+            console.log(
+              "[Chatbot] Confirmation stream closed with no data - connection interrupted",
+            )
+            onError?.("Connection interrupted. The response may be incomplete. Please try again.")
+            onMessage({
+              role: "assistant",
+              content: "Sorry, the connection was interrupted during execution. Please try again.",
+              timestamp: new Date(),
+            })
             return // Exit gracefully
           }
         }

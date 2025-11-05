@@ -20,11 +20,15 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
   })
 
   try {
+    // Check if CSV data is present
+    const hasCSV = !!state.csvData && state.csvData.rowCount > 0
+
     const prompt = getSQLGenerationPrompt(
       state.currentQuestion,
       state.workspaceId,
       state.schemaContext,
       state.metadata || {},
+      hasCSV ? state.csvData : undefined,
     )
 
     const response = await llm.invoke(prompt)

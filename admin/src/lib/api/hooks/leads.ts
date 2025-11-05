@@ -166,7 +166,7 @@ export function useBulkDeleteLeads() {
     mutationFn: (leadIds: string[]) => leadsApi.bulkDelete(leadIds),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() })
-      queryClient.invalidateQueries({ queryKey: customerGroupKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: customerGroupKeys.all })
       toast.success(`${response.deletedCount || 0}개의 리드가 삭제되었습니다`)
     },
     onError: (error: Error) => {

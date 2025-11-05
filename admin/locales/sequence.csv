@@ -1,0 +1,9 @@
+key,ko,en
+step.condition.always,[NO TRANSLATION] sequence.step.condition.always,[NO TRANSLATION] sequence.step.condition.always
+step.condition.custom,[NO TRANSLATION] sequence.step.condition.custom,[NO TRANSLATION] sequence.step.condition.custom
+step.condition.negativeResponse,[NO TRANSLATION] sequence.step.condition.negativeResponse,[NO TRANSLATION] sequence.step.condition.negativeResponse
+step.condition.noResponse,[NO TRANSLATION] sequence.step.condition.noResponse,[NO TRANSLATION] sequence.step.condition.noResponse
+step.condition.positiveResponse,[NO TRANSLATION] sequence.step.condition.positiveResponse,[NO TRANSLATION] sequence.step.condition.positiveResponse
+step.sendCondition,[NO TRANSLATION] sequence.step.sendCondition,[NO TRANSLATION] sequence.step.sendCondition
+step.sendConditionLabel,[NO TRANSLATION] sequence.step.sendConditionLabel,[NO TRANSLATION] sequence.step.sendConditionLabel
+step.sendConditionPlaceholder,[NO TRANSLATION] sequence.step.sendConditionPlaceholder,[NO TRANSLATION] sequence.step.sendConditionPlaceholder

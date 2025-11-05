@@ -27,6 +27,14 @@ export interface DuplicateEmailInfo {
   companyName: string | null
 }
 
+export interface SkippedLeadInfo {
+  rowNumber: number
+  companyName: string | null
+  websiteUrl: string | null
+  reason: string
+  existingLeadId?: string
+}
+
 export interface ImportProgress {
   total: number
   processed: number
@@ -37,6 +45,7 @@ export interface ImportProgress {
   currentCompanyName: string | null
   duplicateEmails: DuplicateEmailInfo[]
   emailsSkipped: number
+  skippedLeads: SkippedLeadInfo[]
   errors: Array<{
     row: number
     companyName: string | null
@@ -62,6 +71,7 @@ export interface ImportResult {
   }
   duplicateEmails: DuplicateEmailInfo[]
   emailsSkipped: number
+  skippedLeads: SkippedLeadInfo[]
   groupAssignment: {
     groupId: string
     groupName: string
@@ -482,6 +492,7 @@ export async function importLeadsBatch(
     currentCompanyName: null,
     duplicateEmails: [],
     emailsSkipped: 0,
+    skippedLeads: [],
     errors: [],
   }
 
@@ -551,23 +562,35 @@ export async function importLeadsBatch(
   // 두 중복 맵을 합치기: CSV 중복은 "CSV_DUPLICATE"로, DB 중복은 lead ID로
   const duplicateEmailMap = new Map<string, string>([...csvDuplicates, ...dbDuplicateEmailMap])
 
-  // 2. 중복되지 않은 데이터만 필터링
-  const uniqueLeadsData = leadsData.filter((leadData) => {
-    if (!leadData.websiteUrl) {
-      return true // website_url이 없으면 일단 포함 (나중에 실패할 수 있음)
-    }
-    return !existingUrls.has(leadData.websiteUrl)
-  })
+  // 2. 중복되지 않은 데이터만 필터링 (스킵된 항목 기록)
+  const uniqueLeadsData: ParsedLeadData[] = []
+  for (let i = 0; i < leadsData.length; i++) {
+    const leadData = leadsData[i]
+    if (!leadData) continue
 
-  const skippedCount = leadsData.length - uniqueLeadsData.length
+    if (leadData.websiteUrl && existingUrls.has(leadData.websiteUrl)) {
+      // website_url 중복으로 스킵
+      progress.skippedLeads.push({
+        rowNumber: i + 1,
+        companyName: leadData.companyName,
+        websiteUrl: leadData.websiteUrl,
+        reason: "중복된 website_url (이미 워크스페이스에 존재)",
+      })
+      progress.skipped++
+      progress.processed++
+      logger.debug(
+        { row: i + 1, websiteUrl: leadData.websiteUrl, companyName: leadData.companyName },
+        "Skipping duplicate website_url",
+      )
+    } else {
+      uniqueLeadsData.push(leadData)
+    }
+  }
+
   logger.info(
-    { skipped: skippedCount, toImport: uniqueLeadsData.length },
+    { skipped: progress.skipped, toImport: uniqueLeadsData.length },
     "Filtered out duplicates",
   )
-
-  // 진행상황 업데이트: 스킵된 항목 반영
-  progress.skipped = skippedCount
-  progress.processed = skippedCount
 
   // 3. 중복되지 않은 항목들만 처리
   for (let i = 0; i < uniqueLeadsData.length; i++) {
@@ -694,6 +717,7 @@ export async function importLeadsBatch(
     details,
     duplicateEmails: progress.duplicateEmails,
     emailsSkipped: progress.emailsSkipped,
+    skippedLeads: progress.skippedLeads,
     groupAssignment,
     errors: progress.errors,
     duration,

@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { type ChatMessage, useChatbotHistory, useChatbotMutation } from "@/lib/api/hooks/chatbot"
 import { chatbotApi } from "@/lib/api/services/chatbot"
 import type { FileAttachment as FileAttachmentType } from "@/lib/api/types/chatbot"
-import { parseCsvToText, readFileAsText } from "@/lib/utils/csv"
+import { readFileAsText } from "@/lib/utils/csv"
 import { FileAttachment } from "./FileAttachment"
 import { MessageBubble } from "./MessageBubble"
 import { ThinkingIndicator } from "./ThinkingIndicator"
@@ -38,42 +38,53 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     !!conversationId,
   )
 
-  // Setup chatbot mutation with TanStack Query
+  // Memoize callbacks to prevent unnecessary re-renders
+  const handleMessage = useCallback((message: ChatMessage) => {
+    // Final message - replace streaming message with completed one
+    setMessages((prev) => [...prev, message])
+    setStreamingMessage(null)
+    setCurrentThinking(null)
+    setIsProcessing(false)
+    setNeedsConfirmation(false)
+  }, [])
+
+  const handleMessageUpdate = useCallback((message: ChatMessage) => {
+    // Real-time streaming update
+    setStreamingMessage(message)
+  }, [])
+
+  const handleThinking = useCallback((thinking: string) => {
+    setCurrentThinking(thinking)
+  }, [])
+
+  const handleConfirmationRequired = useCallback((message: string) => {
+    // Confirmation required - show confirmation UI
+    console.log("[ChatInterface] Confirmation required:", message)
+    setNeedsConfirmation(true)
+    setStreamingMessage({
+      role: "assistant",
+      content: message,
+      timestamp: new Date(),
+    })
+    setCurrentThinking(null)
+    setIsProcessing(false)
+  }, [])
+
+  const handleError = useCallback((error: string) => {
+    console.error("Chatbot error:", error)
+    setStreamingMessage(null)
+    setCurrentThinking(null)
+    setIsProcessing(false)
+    setNeedsConfirmation(false)
+  }, [])
+
+  // Setup chatbot mutation with TanStack Query - memoized to prevent recreation
   const chatbotMutation = useChatbotMutation({
-    onMessage: (message) => {
-      // Final message - replace streaming message with completed one
-      setMessages((prev) => [...prev, message])
-      setStreamingMessage(null)
-      setCurrentThinking(null)
-      setIsProcessing(false)
-      setNeedsConfirmation(false)
-    },
-    onMessageUpdate: (message) => {
-      // Real-time streaming update
-      setStreamingMessage(message)
-    },
-    onThinking: (thinking) => {
-      setCurrentThinking(thinking)
-    },
-    onConfirmationRequired: (message) => {
-      // Confirmation required - show confirmation UI
-      console.log("[ChatInterface] Confirmation required:", message)
-      setNeedsConfirmation(true)
-      setStreamingMessage({
-        role: "assistant",
-        content: message,
-        timestamp: new Date(),
-      })
-      setCurrentThinking(null)
-      setIsProcessing(false)
-    },
-    onError: (error) => {
-      console.error("Chatbot error:", error)
-      setStreamingMessage(null)
-      setCurrentThinking(null)
-      setIsProcessing(false)
-      setNeedsConfirmation(false)
-    },
+    onMessage: handleMessage,
+    onMessageUpdate: handleMessageUpdate,
+    onThinking: handleThinking,
+    onConfirmationRequired: handleConfirmationRequired,
+    onError: handleError,
   })
 
   // Load history into messages when available
@@ -86,7 +97,9 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   // Auto-scroll when messages or thinking state changes
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" })
-  })
+    // Dependency array is intentionally empty to avoid infinite scrolling
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,13 +124,14 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
 
         // Read file content
         const fileContent = await readFileAsText(file)
-        const parsedContent = parseCsvToText(fileContent)
 
+        // OPTIMIZATION: Don't parse CSV to verbose text format
+        // Send raw CSV data - server will handle it more efficiently
         const fileAttachment: FileAttachmentType = {
           fileName: file.name,
           fileSize: file.size,
           fileType: file.type,
-          content: parsedContent,
+          content: fileContent, // Raw CSV content, not parsed text
         }
 
         setAttachedFile(fileAttachment)
@@ -129,8 +143,8 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         // Submit immediately with the auto prompt
         setIsProcessing(true)
 
-        // Combine prompt with CSV content
-        const finalContent = `${autoPrompt}\n\n${parsedContent}`
+        // Send ONLY the prompt, CSV data will be in attachment
+        const finalContent = autoPrompt
 
         const userMessage: ChatMessage = {
           role: "user",
@@ -139,7 +153,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
           attachment: fileAttachment,
         }
 
-        // Use functional update to avoid dependency on messages
+        // Add user message to the list
         setMessages((prev) => [...prev, userMessage])
         setAttachedFile(null)
 
@@ -150,36 +164,24 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
           timestamp: new Date(),
         })
 
+        // Use TanStack Query mutation
+        const convId = conversationId || `conv_${Date.now()}`
+        setCurrentConversationId(convId)
+
+        // CRITICAL FIX: Don't call API inside setState
+        // Call API directly with the updated messages
         try {
-          // Use TanStack Query mutation
-          const convId = conversationId || `conv_${Date.now()}`
-          setCurrentConversationId(convId)
-
-          // Get the latest messages from state
-          setMessages((currentMessages) => {
-            // Use the current messages for the API call
-            chatbotMutation
-              .mutateAsync({
-                question: finalContent, // Send the complete content with CSV data
-                workspaceId,
-                conversationId: convId,
-                messages: currentMessages,
-              })
-              .catch((error) => {
-                // Error is already handled in onError callback
-                console.error("Submit error:", error)
-              })
-              .finally(() => {
-                // Reset processing flag after completion
-                isProcessingFileRef.current = false
-              })
-
-            // Return the current messages unchanged
-            return currentMessages
+          await chatbotMutation.mutateAsync({
+            question: finalContent,
+            workspaceId,
+            conversationId: convId,
+            messages: [...messages, userMessage], // Use computed messages
           })
         } catch (error) {
           // Error is already handled in onError callback
           console.error("Submit error:", error)
+        } finally {
+          // Reset processing flag after completion
           isProcessingFileRef.current = false
         }
       } catch (error) {
@@ -193,7 +195,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         fileInputRef.current.value = ""
       }
     },
-    [conversationId, workspaceId, chatbotMutation],
+    [conversationId, workspaceId, chatbotMutation, messages],
   )
 
   const handleRemoveFile = useCallback(() => {
@@ -207,11 +209,9 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
 
       setIsProcessing(true)
 
-      // Combine text input with CSV content if file is attached
-      let finalContent = questionText
-      if (attachedFile?.content) {
-        finalContent = `${questionText}\n\n${attachedFile.content}`
-      }
+      // OPTIMIZATION: Don't combine CSV content with prompt
+      // Let the server handle CSV data separately for better performance
+      const finalContent = questionText
 
       const userMessage: ChatMessage = {
         role: "user",
@@ -220,7 +220,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         attachment: attachedFile || undefined,
       }
 
-      // Use functional update to avoid dependency on messages
+      // Add user message to the list
       setMessages((prev) => [...prev, userMessage])
       setInput("")
       setAttachedFile(null)
@@ -232,35 +232,25 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         timestamp: new Date(),
       })
 
+      // Use TanStack Query mutation
+      const convId = conversationId || `conv_${Date.now()}`
+      setCurrentConversationId(convId)
+
+      // CRITICAL FIX: Don't call API inside setState
+      // Call API directly with the updated messages
       try {
-        // Use TanStack Query mutation
-        const convId = conversationId || `conv_${Date.now()}`
-        setCurrentConversationId(convId)
-
-        // Get the latest messages from state
-        setMessages((currentMessages) => {
-          // Use the current messages for the API call
-          chatbotMutation
-            .mutateAsync({
-              question: questionText,
-              workspaceId,
-              conversationId: convId,
-              messages: currentMessages,
-            })
-            .catch((error) => {
-              // Error is already handled in onError callback
-              console.error("Submit error:", error)
-            })
-
-          // Return the current messages unchanged
-          return currentMessages
+        await chatbotMutation.mutateAsync({
+          question: questionText,
+          workspaceId,
+          conversationId: convId,
+          messages: [...messages, userMessage], // Use computed messages
         })
       } catch (error) {
         // Error is already handled in onError callback
         console.error("Submit error:", error)
       }
     },
-    [input, isProcessing, chatbotMutation, workspaceId, conversationId, attachedFile],
+    [input, isProcessing, chatbotMutation, workspaceId, conversationId, attachedFile, messages],
   )
 
   const handleConfirmation = useCallback(
@@ -551,6 +541,13 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                 type="file"
                 accept=".csv"
                 onChange={handleFileChange}
+                onClick={(e) => {
+                  // Reset value to allow same file selection
+                  // But don't trigger onChange if already processing
+                  if (isProcessingFileRef.current) {
+                    e.preventDefault()
+                  }
+                }}
                 className="hidden"
               />
               {/* Submit button */}

@@ -263,3 +263,11 @@ form.city,도시,City
 form.leadScore,리드 점수,Lead Score
 form.leadScorePlaceholder,리드 점수 입력 (선택사항),Enter lead score (optional)
 form.leadSource,리드 출처,Lead Source
+button.deleteLead,[NO TRANSLATION] leads.button.deleteLead,[NO TRANSLATION] leads.button.deleteLead
+button.deleteLeadConfirm,[NO TRANSLATION] leads.button.deleteLeadConfirm,[NO TRANSLATION] leads.button.deleteLeadConfirm
+button.firstPage,[NO TRANSLATION] leads.button.firstPage,[NO TRANSLATION] leads.button.firstPage
+button.lastPage,[NO TRANSLATION] leads.button.lastPage,[NO TRANSLATION] leads.button.lastPage
+button.nextPage,[NO TRANSLATION] leads.button.nextPage,[NO TRANSLATION] leads.button.nextPage
+button.pageSize,[NO TRANSLATION] leads.button.pageSize,[NO TRANSLATION] leads.button.pageSize
+button.previousPage,[NO TRANSLATION] leads.button.previousPage,[NO TRANSLATION] leads.button.previousPage
+search.placeholder,[NO TRANSLATION] leads.search.placeholder,[NO TRANSLATION] leads.search.placeholder

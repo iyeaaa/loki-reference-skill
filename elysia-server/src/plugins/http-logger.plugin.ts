@@ -28,29 +28,38 @@ const shouldSkipLogging = (path: string): boolean =>
 const requestTimes = new WeakMap<Request, number>()
 
 export const httpLogger = new Elysia({ name: "http-logger" })
-  .onRequest(({ request }) => {
+  .derive(({ request }) => {
     requestTimes.set(request, Date.now())
+    return {}
   })
-  .onAfterHandle({ as: "global" }, (ctx) => {
-    const { method, url } = ctx.request
+  .mapResponse(({ request, set }) => {
+    const { method, url } = request
     const path = new URL(url).pathname
 
-    if (shouldSkipLogging(path)) return
+    if (shouldSkipLogging(path)) {
+      requestTimes.delete(request)
+      return
+    }
 
-    const startTime = requestTimes.get(ctx.request) || Date.now()
+    const startTime = requestTimes.get(request) || Date.now()
     const duration = Date.now() - startTime
-    const status = typeof ctx.set.status === "number" ? ctx.set.status : 200
+    const status = typeof set.status === "number" ? set.status : 200
 
     logger.info(
       { method, path, status, duration },
       `${getStatusMarker(status)} ${method} ${path} - ${status} (${duration}ms)`,
     )
 
-    requestTimes.delete(ctx.request)
+    requestTimes.delete(request)
   })
-  .onError((ctx) => {
+  .onError({ as: "global" }, (ctx) => {
     const { method, url } = ctx.request
     const path = new URL(url).pathname
+
+    if (shouldSkipLogging(path)) {
+      requestTimes.delete(ctx.request)
+      return
+    }
 
     const startTime = requestTimes.get(ctx.request) || Date.now()
     const duration = Date.now() - startTime

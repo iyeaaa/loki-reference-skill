@@ -26,6 +26,9 @@ const TailwindTestPage = lazy(() => import("../pages/tailwind-test/TailwindTestP
 const LeadImportPage = lazy(() => import("../pages/lead-import"))
 const BulkEmailCSVPage = lazy(() => import("../pages/bulk-email-csv"))
 const FilterComponentsTest = lazy(() => import("../pages/test/FilterComponentsTest"))
+const SSETestPage = lazy(() =>
+  import("../pages/settings/SSETestPage").then((m) => ({ default: m.SSETestPage })),
+)
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>
@@ -127,6 +130,10 @@ export const router = createBrowserRouter([
           {
             path: "test/filters",
             element: <FilterComponentsTest />,
+          },
+          {
+            path: "test/sse",
+            element: <SSETestPage />,
           },
         ],
       },

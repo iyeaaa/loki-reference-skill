@@ -1,6 +1,6 @@
 /**
  * Lead Import Service
- * Excel 파일 업로드 및 리드 임포트 관련 API 호출
+ * Excel/CSV 파일 업로드 및 리드 임포트 관련 API 호출
  */
 
 import { API_BASE_URL, apiFetch, getToken } from "../client"
@@ -11,8 +11,18 @@ export interface SheetNamesResponse {
   error?: string
 }
 
+export interface SkippedLeadInfo {
+  rowNumber: number
+  companyName: string | null
+  websiteUrl: string | null
+  reason: string
+  existingLeadId?: string
+}
+
 export interface ImportProgress {
-  type: "progress" | "complete" | "error"
+  type: "init" | "progress" | "complete" | "error"
+  message?: string
+  timestamp?: string
   total?: number
   processed?: number
   success?: number
@@ -20,6 +30,7 @@ export interface ImportProgress {
   failed?: number
   currentRow?: number
   currentCompanyName?: string
+  skippedLeads?: SkippedLeadInfo[]
   result?: ImportResult
   error?: string
 }
@@ -39,6 +50,7 @@ export interface ImportResult {
     industriesCreated: number
     groupMembersCreated: number
   }
+  skippedLeads: SkippedLeadInfo[]
   errors: Array<{
     row: number
     companyName: string | null
@@ -50,8 +62,18 @@ export interface ImportResult {
 
 /**
  * Excel 파일에서 시트 이름 목록 가져오기
+ * CSV 파일의 경우 빈 배열 반환
  */
 export async function fetchSheetNames(file: File): Promise<SheetNamesResponse> {
+  // CSV 파일인 경우 즉시 빈 배열 반환 (API 호출 불필요)
+  const fileName = file.name.toLowerCase()
+  if (fileName.endsWith(".csv")) {
+    return {
+      success: true,
+      sheetNames: [],
+    }
+  }
+
   const formData = new FormData()
   formData.append("file", file)
 
@@ -62,7 +84,7 @@ export async function fetchSheetNames(file: File): Promise<SheetNamesResponse> {
 }
 
 /**
- * Excel 파일 업로드 및 리드 임포트 (SSE)
+ * Excel 또는 CSV 파일 업로드 및 리드 임포트 (SSE)
  * Note: SSE는 apiFetch를 사용할 수 없으므로 직접 fetch 사용
  */
 export async function uploadLeadsFile(params: {
@@ -77,7 +99,14 @@ export async function uploadLeadsFile(params: {
   const formData = new FormData()
   formData.append("file", file)
   formData.append("workspaceId", workspaceId)
-  formData.append("sheetName", sheetName)
+
+  // CSV 파일이 아닌 경우에만 sheetName 전달
+  const fileName = file.name.toLowerCase()
+  const isCSV = fileName.endsWith(".csv")
+  if (!isCSV && sheetName) {
+    formData.append("sheetName", sheetName)
+  }
+
   if (customerGroupId) {
     formData.append("customerGroupId", customerGroupId)
   }
@@ -99,72 +128,105 @@ export async function uploadLeadsFile(params: {
     throw new Error(errorData.error || `서버 오류 (${response.status})`)
   }
 
-  // SSE 스트림 처리
+  // SSE 스트림 처리 (SSE 테스트 패턴 적용)
   const reader = response.body?.getReader()
-  const decoder = new TextDecoder()
-
   if (!reader) {
     throw new Error("응답 스트림을 읽을 수 없습니다")
   }
 
+  const decoder = new TextDecoder()
+  console.log("[Lead Import] Starting SSE stream reading...")
+
+  let streamCompleted = false
   let buffer = ""
   let finalResult: ImportResult | null = null
 
-  console.log("Starting SSE stream reading...")
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
 
-  while (true) {
-    const { done, value } = await reader.read()
+      if (done) {
+        console.log("[Lead Import] Stream reading completed")
+        streamCompleted = true
+        break
+      }
 
-    console.log("SSE chunk received:", { done, valueLength: value?.length })
+      // 청크 디코딩 및 버퍼에 추가
+      buffer += decoder.decode(value, { stream: true })
 
-    if (done) {
-      console.log("SSE stream completed")
-      break
+      // 완전한 이벤트 처리 (이벤트는 \n\n으로 종료)
+      const events = buffer.split("\n\n")
+
+      // 마지막 불완전한 이벤트는 버퍼에 유지
+      buffer = events.pop() || ""
+
+      // 완전한 이벤트 처리 (better-sse 패턴)
+      for (const eventStr of events) {
+        if (!eventStr.trim()) continue
+
+        // Heartbeat 무시
+        if (eventStr.trim().startsWith(":")) continue
+
+        // 이벤트 파싱: event: <type>\ndata: <json> 형식
+        const lines = eventStr.split("\n")
+        let eventType: string | undefined
+        let eventData: string | undefined
+
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            eventType = line.slice(7).trim()
+          } else if (line.startsWith("data: ")) {
+            eventData = line.slice(6)
+          }
+        }
+
+        // data 필드가 있는 경우만 처리
+        if (eventData) {
+          try {
+            const data = JSON.parse(eventData)
+            console.log(`[Lead Import] Received event: ${eventType || data.type}`, data)
+
+            // 이벤트 타입별 처리
+            const type = data.type || eventType
+            if (type === "init") {
+              console.log("[Lead Import] Stream initialized", data)
+              // init 이벤트는 정보만 표시
+            } else if (type === "progress") {
+              onProgress?.(data)
+            } else if (type === "complete") {
+              console.log("[Lead Import] Import complete!", data.result)
+              onProgress?.(data)
+              finalResult = data.result || null
+              streamCompleted = true
+            } else if (type === "error") {
+              throw new Error(data.error || "임포트 중 오류가 발생했습니다")
+            }
+          } catch (parseError) {
+            console.error("[Lead Import] Failed to parse event:", parseError, eventData)
+          }
+        }
+      }
     }
 
-    buffer += decoder.decode(value, { stream: true })
-    console.log("Current buffer:", buffer.substring(0, 200))
-
-    // SSE 메시지 파싱 (data: {...}\n\n 형식)
-    const messages = buffer.split("\n\n")
-    buffer = messages.pop() || "" // 마지막 불완전한 메시지는 버퍼에 남김
-
-    console.log("Messages to process:", messages.length)
-
-    for (const message of messages) {
-      if (!message.trim()) continue
-
-      // "data: " 접두사 제거
-      const dataStr = message.replace(/^data:\s*/, "")
-      if (!dataStr) continue
-
-      console.log("Parsing SSE message:", dataStr.substring(0, 100))
-
-      try {
-        const progress: ImportProgress = JSON.parse(dataStr)
-        console.log("Parsed progress:", progress.type, progress)
-
-        if (progress.type === "progress") {
-          onProgress?.(progress)
-        } else if (progress.type === "complete") {
-          console.log("Import complete!", progress.result)
-          onProgress?.(progress)
-          finalResult = progress.result || null
-        } else if (progress.type === "error") {
-          throw new Error(progress.error || "임포트 중 오류가 발생했습니다")
-        }
-      } catch (parseError) {
-        console.error("Failed to parse SSE message:", parseError)
-        console.error("Raw message:", dataStr)
-        // JSON 파싱 에러가 발생해도 계속 진행
-      }
+    if (streamCompleted) {
+      console.log("[Lead Import] Stream completed successfully")
+    }
+  } catch (error) {
+    console.error("[Lead Import] Stream error:", error)
+    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred"
+    throw new Error(errorMessage)
+  } finally {
+    // Reader 해제
+    try {
+      reader.releaseLock()
+      console.log("[Lead Import] Reader released")
+    } catch (_releaseError) {
+      console.debug("[Lead Import] Reader already released")
     }
   }
 
-  console.log("Final result:", finalResult)
-
   if (!finalResult) {
-    console.error("No final result received. Buffer remaining:", buffer)
+    console.error("[Lead Import] No final result received. Buffer remaining:", buffer)
     throw new Error("임포트 결과를 받지 못했습니다")
   }
 

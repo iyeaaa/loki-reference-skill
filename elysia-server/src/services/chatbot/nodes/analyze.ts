@@ -1,6 +1,6 @@
 import { ChatOpenAI } from "@langchain/openai"
 import { chatbotLogger } from "../../../utils/logger"
-import { getAnalysisPrompt } from "../prompts"
+import { getAnalysisPrompt, getAnalysisPromptWithCSV } from "../prompts"
 import { getRelevantSchema } from "../schema-context"
 import type { ChatbotState } from "../state"
 
@@ -20,7 +20,18 @@ export async function analyzeQuestion(state: ChatbotState): Promise<Partial<Chat
   })
 
   try {
-    const prompt = getAnalysisPrompt(state.currentQuestion, state.workspaceId, state.messages)
+    // Check if CSV data is present
+    const hasCSV = !!state.csvData && state.csvData.rowCount > 0
+
+    const prompt =
+      hasCSV && state.csvData
+        ? getAnalysisPromptWithCSV(
+            state.currentQuestion,
+            state.workspaceId,
+            state.csvData,
+            state.messages,
+          )
+        : getAnalysisPrompt(state.currentQuestion, state.workspaceId, state.messages)
 
     const response = await llm.invoke(prompt)
     const content = response.content as string

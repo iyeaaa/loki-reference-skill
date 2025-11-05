@@ -54,12 +54,25 @@ export interface ChatbotState {
   needsConfirmation: boolean
   confirmationMessage: string
   isConfirmed: boolean
+
+  // CSV/File Processing
+  csvData?: {
+    headers: string[]
+    rows: Record<string, string>[]
+    rowCount: number
+  }
 }
 
 export interface ChatMessage {
   role: "user" | "assistant" | "system"
   content: string
   timestamp: Date
+  attachment?: {
+    fileName: string
+    fileSize: number
+    fileType: string
+    content?: string // Raw CSV or file content
+  }
   metadata?: {
     sql?: string
     result?: unknown[]
@@ -209,5 +222,16 @@ export const ChatbotStateAnnotation = Annotation.Root({
   sequentialResults: Annotation<unknown[][]>({
     reducer: (prev, next) => [...prev, ...next],
     default: () => [],
+  }),
+  csvData: Annotation<
+    | {
+        headers: string[]
+        rows: Record<string, string>[]
+        rowCount: number
+      }
+    | undefined
+  >({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => undefined,
   }),
 })

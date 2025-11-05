@@ -283,7 +283,7 @@ stepsList.title,시퀀스 스텝,Sequence Steps
 stepsList.addStep,스텝 추가,Add Step
 stepsList.createSequenceFirst,시퀀스를 생성한 후 스텝을 추가할 수 있습니다.,You can add steps after creating a sequence.
 stepsList.warning.setCustomerGroupFirst,⚠️ 고객 그룹을 먼저 설정해주세요,⚠️ Please set customer group first
-stepsList.warning.customerGroupRequired,"스텝을 추가하려면 시퀀스에 고객 그룹이 반드시 필요합니다. 위의 시퀀스 정보를 수정하여 고객 그룹을 선택해주세요.","Customer group is required to add steps. Please edit the sequence information above to select a customer group."
+stepsList.warning.customerGroupRequired,스텝을 추가하려면 시퀀스에 고객 그룹이 반드시 필요합니다. 위의 시퀀스 정보를 수정하여 고객 그룹을 선택해주세요.,Customer group is required to add steps. Please edit the sequence information above to select a customer group.
 stepsList.loading,로딩 중...,Loading...
 stepsList.noSteps,아직 생성된 스텝이 없습니다.,No steps created yet.
 stepsList.addFirstStep,첫 스텝 추가,Add First Step
@@ -442,3 +442,4 @@ toast.workflowSavedAlt,[NO TRANSLATION] sequences.toast.workflowSavedAlt,[NO TRA
 지정안됨,[NO TRANSLATION] sequences.지정안됨,[NO TRANSLATION] sequences.지정안됨
 템플릿선택선택사항,[NO TRANSLATION] sequences.템플릿선택선택사항,[NO TRANSLATION] sequences.템플릿선택선택사항
 특정고객선택,[NO TRANSLATION] sequences.특정고객선택,[NO TRANSLATION] sequences.특정고객선택
+table.status.noResponse,[NO TRANSLATION] sequences.table.status.noResponse,[NO TRANSLATION] sequences.table.status.noResponse

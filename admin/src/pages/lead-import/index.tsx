@@ -670,12 +670,8 @@ export default function LeadImportPage() {
                         <div className="font-medium">
                           Row {skipped.rowNumber}: {skipped.companyName || "N/A"}
                         </div>
-                        <div className="text-muted-foreground text-xs">
-                          {skipped.websiteUrl}
-                        </div>
-                        <div className="text-yellow-700 dark:text-yellow-300">
-                          {skipped.reason}
-                        </div>
+                        <div className="text-muted-foreground text-xs">{skipped.websiteUrl}</div>
+                        <div className="text-yellow-700 dark:text-yellow-300">{skipped.reason}</div>
                       </div>
                     ))}
                   </div>

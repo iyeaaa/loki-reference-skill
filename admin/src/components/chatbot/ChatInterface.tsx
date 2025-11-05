@@ -10,11 +10,11 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { type ChatMessage, useChatbotHistory, useChatbotMutation } from "@/lib/api/hooks/chatbot"
 import { chatbotApi } from "@/lib/api/services/chatbot"
+import type { PreviewLeadData } from "@/lib/api/services/lead-import"
 import type {
   FileAttachment as FileAttachmentType,
   NodeProgressUpdate,
 } from "@/lib/api/types/chatbot"
-import { readFileAsText } from "@/lib/utils/csv"
 import { DataArtifact } from "./DataArtifact"
 import { FileAttachment } from "./FileAttachment"
 import { MessageBubble } from "./MessageBubble"
@@ -38,6 +38,16 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [nodeProgress, setNodeProgress] = useState<NodeProgress[]>([])
   const [selectedArtifact, setSelectedArtifact] = useState<ChatMessage | null>(null)
+  const [leadPreviewData, setLeadPreviewData] = useState<{
+    totalRows: number
+    previewRows: number
+    leads: PreviewLeadData[]
+    sheetName: string
+    file: File
+  } | null>(null)
+  const [leadImportProgress, setLeadImportProgress] = useState<
+    import("@/lib/api/services/lead-import").ImportProgress | null
+  >(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isProcessingFileRef = useRef(false)
@@ -153,186 +163,109 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleFileChange = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0]
-      if (!file) return
+  const handleFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
 
-      // Prevent duplicate processing
-      if (isProcessingFileRef.current) {
-        console.log("[ChatInterface] File already being processed, skipping duplicate")
-        return
+    // Prevent duplicate processing
+    if (isProcessingFileRef.current) {
+      console.log("[ChatInterface] File already being processed, skipping duplicate")
+      return
+    }
+
+    // Accept only XLSX, XLS files
+    const fileName = file.name.toLowerCase()
+    if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls")) {
+      alert("Only XLSX or XLS files are allowed.")
+      return
+    }
+
+    try {
+      // Mark as processing
+      isProcessingFileRef.current = true
+
+      // All files are Excel files now (xlsx/xls only)
+      // Step 1: Preview the data
+      const fileAttachment: FileAttachmentType = {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
       }
 
-      // Accept CSV, XLSX, XLS files
-      const fileName = file.name.toLowerCase()
-      if (!fileName.endsWith(".csv") && !fileName.endsWith(".xlsx") && !fileName.endsWith(".xls")) {
-        alert("Only CSV, XLSX, or XLS files are allowed.")
-        return
+      // Display user message about xlsx upload
+      const userMessage: ChatMessage = {
+        role: "user",
+        content: "리드 데이터 파일을 업로드했습니다",
+        timestamp: new Date(),
+        attachment: fileAttachment,
       }
+
+      setMessages((prev) => [...prev, userMessage])
+      setIsProcessing(true)
+
+      // Initialize streaming message for preview
+      setStreamingMessage({
+        role: "assistant",
+        content: "파일을 분석하는 중입니다...",
+        timestamp: new Date(),
+      })
+
+      // Import preview service
+      const { previewLeadsFile } = await import("@/lib/api/services/lead-import")
 
       try {
-        // Mark as processing
-        isProcessingFileRef.current = true
+        const previewResult = await previewLeadsFile({
+          file,
+          sheetName: "", // Will auto-select first sheet
+        })
 
-        // Check file type: xlsx/xls vs csv
-        const isExcelFile = fileName.endsWith(".xlsx") || fileName.endsWith(".xls")
-
-        if (isExcelFile) {
-          // Excel file: Use lead-import API
-          const fileAttachment: FileAttachmentType = {
-            fileName: file.name,
-            fileSize: file.size,
-            fileType: file.type,
-          }
-
-          setAttachedFile(fileAttachment)
-
-          // Display user message about xlsx upload
-          const userMessage: ChatMessage = {
-            role: "user",
-            content: "리드 데이터 임포트를 시작합니다",
-            timestamp: new Date(),
-            attachment: fileAttachment,
-          }
-
-          setMessages((prev) => [...prev, userMessage])
-          setAttachedFile(null)
-          setIsProcessing(true)
-
-          // Initialize streaming message for import progress
-          setStreamingMessage({
-            role: "assistant",
-            content: "임포트를 시작합니다...",
-            timestamp: new Date(),
-          })
-
-          // Import lead-import service dynamically
-          const { uploadLeadsFile } = await import("@/lib/api/services/lead-import")
-
-          try {
-            const result = await uploadLeadsFile({
-              file,
-              workspaceId,
-              sheetName: "", // Will auto-select first sheet
-              onProgress: (progress) => {
-                // Update streaming message with progress
-                const progressMsg = `임포트 진행 중: ${progress.processed || 0} / ${progress.total || 0}\n성공: ${progress.success || 0}, 스킵: ${progress.skipped || 0}, 실패: ${progress.failed || 0}`
-
-                setStreamingMessage({
-                  role: "assistant",
-                  content: progressMsg,
-                  timestamp: new Date(),
-                  metadata: {
-                    importProgress: progress,
-                  },
-                })
-              },
-            })
-
-            // Final success message with artifact
-            const finalMessage: ChatMessage = {
-              role: "assistant",
-              content: `임포트가 완료되었습니다!\n\n- 총 처리: ${result.total}건\n- 성공: ${result.success}건\n- 스킵: ${result.skipped}건\n- 실패: ${result.failed}건`,
-              timestamp: new Date(),
-              metadata: {
-                importResult: result,
-              },
-            }
-
-            setMessages((prev) => [...prev, finalMessage])
-            setStreamingMessage(null)
-          } catch (error) {
-            console.error("Lead import failed:", error)
-            const errorMessage: ChatMessage = {
-              role: "assistant",
-              content: `임포트 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
-              timestamp: new Date(),
-            }
-            setMessages((prev) => [...prev, errorMessage])
-            setStreamingMessage(null)
-          } finally {
-            setIsProcessing(false)
-            isProcessingFileRef.current = false
-          }
-        } else {
-          // CSV file: Use chatbot API (existing logic)
-          const fileContent = await readFileAsText(file)
-
-          // OPTIMIZATION: Don't parse CSV to verbose text format
-          // Send raw CSV data - server will handle it more efficiently
-          const fileAttachment: FileAttachmentType = {
-            fileName: file.name,
-            fileSize: file.size,
-            fileType: file.type,
-            content: fileContent, // Raw CSV content, not parsed text
-          }
-
-          setAttachedFile(fileAttachment)
-
-          // Auto-submit with custom prompt when CSV is uploaded
-          const autoPrompt =
-            "Create customer groups and leads, then design optimal sequences from attached CSV data"
-
-          // Submit immediately with the auto prompt
-          setIsProcessing(true)
-
-          // Send ONLY the prompt, CSV data will be in attachment
-          const finalContent = autoPrompt
-
-          const userMessage: ChatMessage = {
-            role: "user",
-            content: finalContent,
-            timestamp: new Date(),
-            attachment: fileAttachment,
-          }
-
-          // Add user message to the list
-          setMessages((prev) => [...prev, userMessage])
-          setAttachedFile(null)
-
-          // Initialize streaming message
-          setStreamingMessage({
-            role: "assistant",
-            content: "",
-            timestamp: new Date(),
-          })
-
-          // Use TanStack Query mutation
-          const convId = conversationId || `conv_${Date.now()}`
-          setCurrentConversationId(convId)
-
-          // CRITICAL FIX: Don't call API inside setState
-          // Call API directly with the updated messages
-          try {
-            await chatbotMutation.mutateAsync({
-              question: finalContent,
-              workspaceId,
-              conversationId: convId,
-              messages: [...messages, userMessage], // Use computed messages
-            })
-          } catch (error) {
-            // Error is already handled in onError callback
-            console.error("Submit error:", error)
-          } finally {
-            // Reset processing flag after completion
-            isProcessingFileRef.current = false
-          }
+        if (!previewResult.success || !previewResult.data) {
+          throw new Error(previewResult.error || "미리보기 실패")
         }
-      } catch (error) {
-        console.error("Failed to process file:", error)
-        alert("Failed to process file.")
-        isProcessingFileRef.current = false
-        setIsProcessing(false)
-      }
 
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""
+        // Show preview message
+        const previewMessage: ChatMessage = {
+          role: "assistant",
+          content: `엑셀 파일을 분석했습니다.\n\n총 ${previewResult.data.totalRows}개의 리드 데이터를 찾았습니다.\n아래 미리보기를 확인하고 임포트를 승인해주세요.`,
+          timestamp: new Date(),
+          metadata: {
+            leadPreview: previewResult.data,
+          },
+        }
+
+        setMessages((prev) => [...prev, previewMessage])
+        setStreamingMessage(null)
+
+        // Store preview data for later approval
+        setLeadPreviewData({
+          ...previewResult.data,
+          file,
+        })
+      } catch (error) {
+        console.error("Lead preview failed:", error)
+        const errorMessage: ChatMessage = {
+          role: "assistant",
+          content: `파일 분석 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
+          timestamp: new Date(),
+        }
+        setMessages((prev) => [...prev, errorMessage])
+        setStreamingMessage(null)
+      } finally {
+        setIsProcessing(false)
+        isProcessingFileRef.current = false
       }
-    },
-    [conversationId, workspaceId, chatbotMutation, messages],
-  )
+    } catch (error) {
+      console.error("Failed to process file:", error)
+      alert("Failed to process file.")
+      isProcessingFileRef.current = false
+      setIsProcessing(false)
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }, [])
 
   const handleRemoveFile = useCallback(() => {
     setAttachedFile(null)
@@ -427,6 +360,86 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       }, 0)
     },
     [handleSubmit],
+  )
+
+  const handleLeadImportApproval = useCallback(
+    async (approved: boolean) => {
+      if (!approved || !leadPreviewData) {
+        // User rejected
+        const rejectionMessage: ChatMessage = {
+          role: "assistant",
+          content: "리드 추가를 취소했습니다.",
+          timestamp: new Date(),
+        }
+        setMessages((prev) => [...prev, rejectionMessage])
+        setLeadPreviewData(null)
+        return
+      }
+
+      // User approved - start actual import
+      setIsProcessing(true)
+
+      // Show approval message
+      const approvalMessage: ChatMessage = {
+        role: "user",
+        content: "리드 추가를 승인했습니다",
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, approvalMessage])
+
+      // Clear lead preview and show progress UI
+      setLeadPreviewData(null)
+
+      // Import upload service
+      const { uploadLeadsFile } = await import("@/lib/api/services/lead-import")
+
+      try {
+        const result = await uploadLeadsFile({
+          file: leadPreviewData.file,
+          workspaceId,
+          sheetName: leadPreviewData.sheetName,
+          onProgress: (progress) => {
+            // Update lead import progress state for real-time UI
+            setLeadImportProgress(progress)
+          },
+        })
+
+        // Show final complete progress
+        setLeadImportProgress({
+          type: "complete",
+          message: "리드 추가가 완료되었습니다!",
+          timestamp: new Date().toISOString(),
+          total: result.total,
+          processed: result.total,
+          success: result.success,
+          skipped: result.skipped,
+          failed: result.failed,
+          result,
+        })
+
+        // Keep progress visible for a moment, then clear
+        setTimeout(() => {
+          setLeadImportProgress(null)
+          setIsProcessing(false)
+        }, 5000)
+      } catch (error) {
+        console.error("Lead import failed:", error)
+
+        // Show error in progress UI
+        setLeadImportProgress({
+          type: "error",
+          error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+          timestamp: new Date().toISOString(),
+        })
+
+        // Keep error visible for a moment
+        setTimeout(() => {
+          setLeadImportProgress(null)
+          setIsProcessing(false)
+        }, 5000)
+      }
+    },
+    [leadPreviewData, workspaceId],
   )
 
   const handleConfirmation = useCallback(
@@ -569,10 +582,15 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   // Check if any message has artifact data (for split view)
   const hasAnyArtifact =
     messages.some(
-      (msg) => (msg.metadata?.insights && msg.metadata.insights.length > 0) || !!msg.metadata?.sql,
+      (msg) =>
+        (msg.metadata?.insights && msg.metadata.insights.length > 0) ||
+        !!msg.metadata?.sql ||
+        !!msg.metadata?.leadPreview,
     ) ||
     (streamingMessage?.metadata?.insights && streamingMessage.metadata.insights.length > 0) ||
-    !!streamingMessage?.metadata?.sql
+    !!streamingMessage?.metadata?.sql ||
+    !!streamingMessage?.metadata?.leadPreview ||
+    !!leadPreviewData
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -580,7 +598,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       <input
         ref={fileInputRef}
         type="file"
-        accept=".csv,.xlsx,.xls"
+        accept=".xlsx,.xls"
         onChange={handleFileChange}
         onClick={(e) => {
           if (isProcessingFileRef.current) {
@@ -667,7 +685,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                       className="gap-2 cursor-pointer"
                     >
                       <FileText className="h-4 w-4" />
-                      Upload Excel/CSV File
+                      Upload Excel File
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -818,7 +836,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                             className="gap-2 cursor-pointer"
                           >
                             <FileText className="h-4 w-4" />
-                            Upload Excel/CSV File
+                            Upload Excel File
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -866,6 +884,14 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                   const userMessages = messages.filter((m) => m.role === "user")
                   return userMessages[userMessages.length - 1]?.content || undefined
                 })()}
+                leadPreview={
+                  leadPreviewData ||
+                  selectedArtifact?.metadata?.leadPreview ||
+                  streamingMessage?.metadata?.leadPreview ||
+                  messages[messages.length - 1]?.metadata?.leadPreview
+                }
+                leadImportProgress={leadImportProgress || undefined}
+                onLeadImportApproval={handleLeadImportApproval}
               />
             </div>
           )}

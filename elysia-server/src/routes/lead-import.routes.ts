@@ -21,13 +21,12 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
   .post(
     "/upload",
     async ({ body, set }) => {
-      const { file, workspaceId, sheetName, customerGroupId } = body
+      const { file, workspaceId, sheetName } = body
 
       logger.info(
         {
           workspaceId,
           sheetName,
-          customerGroupId,
           fileSize: file.size,
           fileName: file.name,
         },
@@ -45,6 +44,56 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
           success: false,
           error: "Excel 파일(.xlsx, .xls) 또는 CSV 파일(.csv)만 업로드 가능합니다",
         }
+      }
+
+      // 파일명에서 확장자 제거하여 그룹명 생성
+      const fileNameWithoutExt = file.name.replace(/\.(xlsx?|xls|csv)$/i, "")
+
+      // Customer Group 생성 (이미 존재하면 기존 그룹 사용)
+      const { db } = await import("../db")
+      const { customerGroups } = await import("../db/schema")
+      const { eq, and } = await import("drizzle-orm")
+
+      let customerGroupId: string
+
+      // 같은 workspace에 같은 이름의 그룹이 있는지 확인
+      const existingGroup = await db.query.customerGroups.findFirst({
+        where: and(
+          eq(customerGroups.workspaceId, workspaceId),
+          eq(customerGroups.name, fileNameWithoutExt),
+        ),
+      })
+
+      if (existingGroup) {
+        customerGroupId = existingGroup.id
+        logger.info(
+          { groupId: customerGroupId, groupName: fileNameWithoutExt },
+          "Using existing customer group",
+        )
+      } else {
+        // 새 그룹 생성
+        const [newGroup] = await db
+          .insert(customerGroups)
+          .values({
+            workspaceId,
+            name: fileNameWithoutExt,
+            description: `${file.name} 파일에서 자동 생성된 그룹`,
+          })
+          .returning()
+
+        if (!newGroup) {
+          set.status = 500
+          return {
+            success: false,
+            error: "Failed to create customer group",
+          }
+        }
+
+        customerGroupId = newGroup.id
+        logger.info(
+          { groupId: customerGroupId, groupName: fileNameWithoutExt },
+          "Created new customer group",
+        )
       }
 
       try {
@@ -163,19 +212,21 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
                 event: "connected",
                 data: {
                   type: "init",
-                  message: "Lead import stream started",
+                  message: `고객 그룹 '${fileNameWithoutExt}'에 리드를 임포트합니다`,
                   timestamp: new Date().toISOString(),
                   total: parsedLeads.length,
+                  customerGroupId,
+                  customerGroupName: fileNameWithoutExt,
                 },
               })
               logger.info("[Lead Import] Sent init event")
 
-              // 임포트 시작
+              // 임포트 시작 (자동 생성된 customerGroupId 사용)
               const result = await importLeadsBatch(
                 workspaceId,
                 parsedLeads,
                 null, // createdBy는 인증 구현 후 추가
-                customerGroupId || null, // 고객 그룹 ID (선택사항)
+                customerGroupId, // 파일명으로 생성된 그룹 ID
                 (progress: ImportProgress) => {
                   if (session.closed) return
 
@@ -267,7 +318,7 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
         tags: ["admin", "lead-import"],
         summary: "Excel 또는 CSV 파일로 리드 일괄 임포트 (SSE)",
         description:
-          "Excel 또는 CSV 파일을 업로드하여 여러 리드를 일괄 임포트합니다. 실시간 진행상황을 SSE로 전송합니다. CSV 파일의 경우 UTF-8 BOM이 자동으로 제거됩니다. 중복 이메일 방지: (1) 파일 내부의 중복 이메일과 (2) Workspace 내 기존 데이터베이스의 중복 이메일이 자동으로 감지되어 스킵되며, 완료 시 중복 이메일 목록(existingLeadId, rowNumber, companyName 포함)이 반환됩니다. 선택적으로 고객 그룹에 자동 추가할 수 있으며, 그룹 할당 정보(groupId, groupName, membersAdded)가 결과에 포함됩니다.",
+          "Excel 또는 CSV 파일을 업로드하여 여러 리드를 일괄 임포트합니다. 파일명(확장자 제외)으로 자동으로 고객 그룹을 생성하고 리드를 연결합니다. 같은 이름의 그룹이 이미 있으면 기존 그룹을 사용합니다. 실시간 진행상황을 SSE로 전송합니다. CSV 파일의 경우 UTF-8 BOM이 자동으로 제거됩니다. 중복 이메일 방지: (1) 파일 내부의 중복 이메일과 (2) Workspace 내 기존 데이터베이스의 중복 이메일이 자동으로 감지되어 스킵되며, 완료 시 중복 이메일 목록(existingLeadId, rowNumber, companyName 포함)이 반환됩니다.",
       },
     },
   )
@@ -333,6 +384,121 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
         summary: "Excel 또는 CSV 파일의 시트 이름 목록 조회",
         description:
           "Excel 파일을 업로드하여 포함된 시트 이름 목록을 조회합니다. CSV 파일의 경우 빈 배열이 반환됩니다.",
+      },
+    },
+  )
+
+  /**
+   * POST /api/v1/admin/lead-import/preview
+   * Excel 파일 데이터 미리보기 (DB 저장 전)
+   */
+  .post(
+    "/preview",
+    async ({ body, set }) => {
+      const { file, sheetName } = body
+
+      logger.info(
+        {
+          fileSize: file.size,
+          fileName: file.name,
+          sheetName,
+        },
+        "Starting lead preview",
+      )
+
+      // 파일 확장자 검증
+      const fileName = file.name.toLowerCase()
+      const isExcel = fileName.endsWith(".xlsx") || fileName.endsWith(".xls")
+
+      if (!isExcel) {
+        set.status = 400
+        return {
+          success: false,
+          error: "Excel 파일(.xlsx, .xls)만 업로드 가능합니다",
+        }
+      }
+
+      try {
+        // 파일을 ArrayBuffer로 읽기
+        const arrayBuffer = await file.arrayBuffer()
+        const workbook = XLSX.read(arrayBuffer, { type: "buffer" })
+
+        // 시트 선택
+        const selectedSheetName = sheetName || workbook.SheetNames[0]
+
+        if (!selectedSheetName) {
+          set.status = 400
+          return {
+            success: false,
+            error: "No sheets found in the workbook",
+          }
+        }
+
+        const sheet = workbook.Sheets[selectedSheetName]
+
+        if (!sheet) {
+          set.status = 400
+          return {
+            success: false,
+            error: "Sheet not found",
+          }
+        }
+
+        // 데이터를 JSON으로 변환
+        const rawData = XLSX.utils.sheet_to_json(sheet, {
+          defval: null,
+          raw: false,
+          dateNF: "yyyy-mm-dd",
+        })
+
+        logger.info({ rowCount: rawData.length }, "File preview parsed")
+
+        if (rawData.length === 0) {
+          set.status = 400
+          return {
+            success: false,
+            error: "No data found in the sheet",
+          }
+        }
+
+        // 데이터 파싱 (전체 데이터 미리보기)
+        const parsedLeads = (rawData as Record<string, unknown>[]).map((row, index) => ({
+          rowNumber: index + 2, // Excel row number (1-based, +1 for header)
+          ...parseExcelRowToLeadData(row),
+        }))
+
+        return {
+          success: true,
+          data: {
+            totalRows: rawData.length,
+            previewRows: parsedLeads.length,
+            leads: parsedLeads,
+            sheetName: selectedSheetName,
+            availableSheets: workbook.SheetNames,
+          },
+        }
+      } catch (error: unknown) {
+        logger.error({ error }, "Failed to preview Excel file")
+
+        set.status = 500
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Failed to preview Excel file",
+        }
+      }
+    },
+    {
+      body: t.Object({
+        file: t.File({
+          maxSize: 50 * 1024 * 1024,
+        }),
+        sheetName: t.Optional(t.String()),
+      }),
+      detail: {
+        tags: ["admin", "lead-import"],
+        summary: "Excel 파일 데이터 미리보기",
+        description:
+          "Excel 파일을 업로드하여 DB에 저장하기 전 데이터를 미리 확인합니다. 전체 데이터를 미리보기로 제공합니다.",
       },
     },
   )

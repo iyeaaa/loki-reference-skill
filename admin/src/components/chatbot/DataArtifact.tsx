@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { Badge } from "@/components/ui/badge"
+import type { ImportProgress, PreviewLeadData } from "@/lib/api/services/lead-import"
 import type { Insight } from "@/lib/api/types/chatbot"
+import { LeadImportProgress } from "./LeadImportProgress"
+import { LeadPreviewArtifact } from "./LeadPreviewArtifact"
 
 // Claude-style syntax highlighting theme
 const claudeTheme = {
@@ -94,6 +97,14 @@ interface DataArtifactProps {
   data?: unknown[]
   isStreaming?: boolean
   question?: string
+  leadPreview?: {
+    totalRows: number
+    previewRows: number
+    leads: PreviewLeadData[]
+    sheetName: string
+  }
+  leadImportProgress?: ImportProgress
+  onLeadImportApproval?: (approved: boolean) => void
 }
 
 /**
@@ -107,9 +118,13 @@ export function DataArtifact({
   data = [],
   isStreaming = false,
   question,
+  leadPreview,
+  leadImportProgress,
+  onLeadImportApproval,
 }: DataArtifactProps) {
-  const hasAnyContent = sql || insights.length > 0
+  const hasAnyContent = sql || insights.length > 0 || !!leadPreview || !!leadImportProgress
   const [mounted, setMounted] = useState(false)
+  const [isProcessingLead, setIsProcessingLead] = useState(false)
 
   // Debug logging
   useEffect(() => {
@@ -130,6 +145,46 @@ export function DataArtifact({
       setTimeout(() => setMounted(true), 50)
     }
   }, [hasAnyContent])
+
+  // Reset processing state when new lead preview is loaded
+  useEffect(() => {
+    if (leadPreview) {
+      setIsProcessingLead(false)
+    }
+  }, [leadPreview])
+
+  // Show lead import progress if available
+  if (leadImportProgress) {
+    return (
+      <div className="h-full overflow-auto p-6">
+        <LeadImportProgress progress={leadImportProgress} />
+      </div>
+    )
+  }
+
+  // Show lead preview if available
+  if (leadPreview && onLeadImportApproval) {
+    const handleApprove = () => {
+      setIsProcessingLead(true)
+      onLeadImportApproval(true)
+    }
+
+    const handleReject = () => {
+      setIsProcessingLead(true)
+      onLeadImportApproval(false)
+    }
+
+    return (
+      <div className="h-full overflow-auto p-6">
+        <LeadPreviewArtifact
+          data={leadPreview}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          isProcessing={isProcessingLead}
+        />
+      </div>
+    )
+  }
 
   if (!hasAnyContent) {
     return (

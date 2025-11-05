@@ -1,3 +1,5 @@
+import type { PreviewLeadData } from "../services/lead-import"
+
 export interface FileAttachment {
   fileName: string
   fileSize: number
@@ -54,6 +56,13 @@ export interface ChatMessage {
     importResult?: unknown
     importProgress?: unknown
     chatbotProgress?: ChatbotProgress
+    leadPreview?: {
+      totalRows: number
+      previewRows: number
+      leads: PreviewLeadData[]
+      sheetName: string
+      availableSheets: string[]
+    }
   }
 }
 

@@ -33,6 +33,8 @@ export interface ImportProgress {
   skippedLeads?: SkippedLeadInfo[]
   result?: ImportResult
   error?: string
+  customerGroupId?: string
+  customerGroupName?: string
 }
 
 export interface ImportResult {
@@ -58,6 +60,45 @@ export interface ImportResult {
     error: string
   }>
   duration: number
+}
+
+export interface PreviewLeadData {
+  rowNumber: number
+  // Lead 메인 정보
+  companyName: string | null
+  websiteUrl: string | null
+  address: string | null
+  description: string | null
+  employeeCount: string | null
+  foundedYear: number | null
+
+  // 연락처 (배열)
+  phoneNumbers: string[]
+  emails: string[]
+
+  // 소셜 미디어
+  facebookUrl: string | null
+  instagramUrl: string | null
+  twitterUrl: string | null
+  linkedinUrl: string | null
+
+  // 관계형 데이터 (배열)
+  products: string[]
+  businessSectors: string[]
+  productCategories: string[]
+  industryTypes: string[]
+}
+
+export interface PreviewResponse {
+  success: boolean
+  data?: {
+    totalRows: number
+    previewRows: number
+    leads: PreviewLeadData[]
+    sheetName: string
+    availableSheets: string[]
+  }
+  error?: string
 }
 
 /**
@@ -231,4 +272,25 @@ export async function uploadLeadsFile(params: {
   }
 
   return finalResult
+}
+
+/**
+ * Excel 파일 미리보기 (DB 저장 전)
+ */
+export async function previewLeadsFile(params: {
+  file: File
+  sheetName?: string
+}): Promise<PreviewResponse> {
+  const { file, sheetName } = params
+
+  const formData = new FormData()
+  formData.append("file", file)
+  if (sheetName) {
+    formData.append("sheetName", sheetName)
+  }
+
+  return apiFetch<PreviewResponse>("/api/v1/admin/lead-import/preview", {
+    method: "POST",
+    body: formData,
+  })
 }

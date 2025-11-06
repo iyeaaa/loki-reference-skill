@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "prepare": "husky",
-    "postinstall": "husky install && chmod +x .husky/pre-commit && chmod +x .husky/pre-push && git config core.hooksPath .husky || true",
+    "postinstall": "husky install || true",
     "install:all": "cd admin && yarn install && cd ../elysia-server && bun install",
     "dev:admin": "cd admin && yarn dev",
     "dev:server": "cd elysia-server && bun run dev",

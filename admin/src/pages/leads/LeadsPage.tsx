@@ -868,7 +868,7 @@ export default function LeadsPage() {
               <TabsList className="inline-flex h-auto items-center justify-start gap-2 bg-transparent p-0 w-auto">
                 <TabsTrigger
                   value="all"
-                  className="text-xs h-9 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground data-[state=active]:bg-violet-600 data-[state=active]:text-white data-[state=active]:hover:bg-violet-700"
+                  className="text-xs h-9 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:hover:bg-blue-700 data-[state=active]:hover:text-white"
                 >
                   {t("leads.group.all")}
                   {!selectedCustomerGroup && totalLeadsCount > 0 && (
@@ -881,7 +881,11 @@ export default function LeadsPage() {
                       <ContextMenuTrigger asChild>
                         <TabsTrigger
                           value={group.id}
-                          className={`text-xs h-9 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground ${selectedCustomerGroup === group.id ? "bg-violet-600 text-white hover:bg-violet-700" : ""}`}
+                          className={`text-xs h-9 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground ${
+                            selectedCustomerGroup === group.id
+                              ? "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                              : ""
+                          }`}
                         >
                           <Users className="h-3 w-3 mr-1" />
                           {group.name}
@@ -1007,7 +1011,9 @@ export default function LeadsPage() {
                 variant={isSelectAllMode ? "default" : "outline"}
                 size="sm"
                 onClick={toggleSelectAllMode}
-                className={isSelectAllMode ? "bg-violet-600 hover:bg-violet-700" : ""}
+                className={
+                  isSelectAllMode ? "bg-blue-600 hover:bg-blue-700 text-white hover:text-white" : ""
+                }
               >
                 {isSelectAllMode
                   ? t("leads.button.exitSelectAllMode")
@@ -1177,7 +1183,7 @@ export default function LeadsPage() {
                       name="groupType"
                       checked={!isNewGroup}
                       onChange={() => setIsNewGroup(false)}
-                      className="h-4 w-4 text-violet-600"
+                      className="h-4 w-4 text-blue-600"
                     />
                     <Label htmlFor={existingGroupId} className="text-sm font-medium">
                       {t("leads.group.addToExisting")}
@@ -1190,7 +1196,7 @@ export default function LeadsPage() {
                       name="groupType"
                       checked={isNewGroup}
                       onChange={() => setIsNewGroup(true)}
-                      className="h-4 w-4 text-violet-600"
+                      className="h-4 w-4 text-blue-600"
                     />
                     <Label htmlFor={newGroupId} className="text-sm font-medium">
                       {t("leads.group.createNew")}
@@ -1567,7 +1573,7 @@ export default function LeadsPage() {
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <div className="grid gap-4">
                   <Card
-                    className="cursor-pointer hover:border-violet-500 hover:bg-violet-50/50 transition-all hover:scale-[1.02] hover:shadow-md animate-in fade-in slide-in-from-bottom-2 duration-500"
+                    className="cursor-pointer hover:border-blue-500 hover:bg-blue-50/50 transition-all hover:scale-[1.02] hover:shadow-md animate-in fade-in slide-in-from-bottom-2 duration-500"
                     onClick={() => {
                       setAddLeadMode("upload")
                       setAddLeadStep(2)
@@ -1582,8 +1588,8 @@ export default function LeadsPage() {
                   >
                     <CardHeader>
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-violet-100 rounded-lg transition-transform group-hover:scale-110">
-                          <Upload className="h-6 w-6 text-violet-600" />
+                        <div className="p-2 bg-blue-100 rounded-lg transition-transform group-hover:scale-110">
+                          <Upload className="h-6 w-6 text-blue-600" />
                         </div>
                         <div>
                           <h3 className="font-semibold">CSV/XLSX 파일 업로드</h3>
@@ -1596,7 +1602,7 @@ export default function LeadsPage() {
                   </Card>
 
                   <Card
-                    className="cursor-pointer hover:border-violet-500 hover:bg-violet-50/50 transition-all hover:scale-[1.02] hover:shadow-md animate-in fade-in slide-in-from-bottom-2 duration-500 delay-75"
+                    className="cursor-pointer hover:border-blue-500 hover:bg-blue-50/50 transition-all hover:scale-[1.02] hover:shadow-md animate-in fade-in slide-in-from-bottom-2 duration-500 delay-75"
                     onClick={() => {
                       setAddLeadMode("manual")
                       setAddLeadStep(2)
@@ -1637,7 +1643,7 @@ export default function LeadsPage() {
                           name="groupType"
                           checked={!isNewGroup}
                           onChange={() => setIsNewGroup(false)}
-                          className="h-4 w-4 text-violet-600"
+                          className="h-4 w-4 text-blue-600"
                         />
                         <Label htmlFor={existingGroupId} className="text-sm font-medium">
                           {t("leads.group.addToExisting")}
@@ -1650,7 +1656,7 @@ export default function LeadsPage() {
                           name="groupType"
                           checked={isNewGroup}
                           onChange={() => setIsNewGroup(true)}
-                          className="h-4 w-4 text-violet-600"
+                          className="h-4 w-4 text-blue-600"
                         />
                         <Label htmlFor={newGroupId} className="text-sm font-medium">
                           {t("leads.group.createNew")}
@@ -1699,7 +1705,9 @@ export default function LeadsPage() {
                                 title="그룹명 재생성"
                               >
                                 <RefreshCw
-                                  className={`h-3 w-3 ${isGeneratingGroupName ? "animate-spin" : ""}`}
+                                  className={`h-3 w-3 ${
+                                    isGeneratingGroupName ? "animate-spin" : ""
+                                  }`}
                                 />
                               </Button>
                             </div>
@@ -1973,9 +1981,7 @@ export default function LeadsPage() {
                         <CardContent className="pt-4 space-y-4">
                           {/* 기본 정보 */}
                           <div>
-                            <h4 className="text-sm font-semibold mb-2 text-violet-600">
-                              기본 정보
-                            </h4>
+                            <h4 className="text-sm font-semibold mb-2 text-blue-600">기본 정보</h4>
                             <div className="grid grid-cols-2 gap-3 text-sm">
                               <div className="space-y-1">
                                 <span className="text-muted-foreground">회사명</span>
@@ -2003,7 +2009,7 @@ export default function LeadsPage() {
                             previewLeadData.city ||
                             previewLeadData.address) && (
                             <div className="border-t pt-4">
-                              <h4 className="text-sm font-semibold mb-2 text-violet-600">
+                              <h4 className="text-sm font-semibold mb-2 text-blue-600">
                                 위치 정보
                               </h4>
                               <div className="grid grid-cols-2 gap-3 text-sm">
@@ -2032,7 +2038,7 @@ export default function LeadsPage() {
                           {/* 연락처 정보 */}
                           {previewLeadData.contacts && previewLeadData.contacts.length > 0 && (
                             <div className="border-t pt-4">
-                              <h4 className="text-sm font-semibold mb-2 text-violet-600">
+                              <h4 className="text-sm font-semibold mb-2 text-blue-600">
                                 연락처 정보
                               </h4>
                               <div className="space-y-2">
@@ -2065,7 +2071,7 @@ export default function LeadsPage() {
                           {previewLeadData.socialMedia &&
                             previewLeadData.socialMedia.length > 0 && (
                               <div className="border-t pt-4">
-                                <h4 className="text-sm font-semibold mb-2 text-violet-600">
+                                <h4 className="text-sm font-semibold mb-2 text-blue-600">
                                   소셜 미디어
                                 </h4>
                                 <div className="space-y-2">
@@ -2087,7 +2093,7 @@ export default function LeadsPage() {
                           {/* 추가 정보 */}
                           {(previewLeadData.description || previewLeadData.notes) && (
                             <div className="border-t pt-4">
-                              <h4 className="text-sm font-semibold mb-2 text-violet-600">
+                              <h4 className="text-sm font-semibold mb-2 text-blue-600">
                                 추가 정보
                               </h4>
                               {previewLeadData.description && (

@@ -1,5 +1,7 @@
 import { ArrowUp, FileText, Plus, Search, Square } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
+import TextPlus from "@/assets/text-plus.svg"
+import TextRinda from "@/assets/text-rinda.svg"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -612,8 +614,11 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         // Empty state - Everything centered vertically and horizontally
         <div className="flex-1 flex flex-col items-center px-4 pt-[20vh] pb-8">
           <div className="mx-auto w-full space-y-8" style={{ maxWidth: "670px" }}>
-            {/* Title */}
-            <h1 className="text-3xl font-medium tracking-tight text-center">Ask RINDA anything</h1>
+            {/* Logo */}
+            <div className="flex justify-center items-center gap-2">
+              <img src={TextRinda} alt="RINDA" className="h-10 w-auto" />
+              <img src={TextPlus} alt="Plus" className="h-10 w-auto" />
+            </div>
 
             {/* File attachment preview */}
             {attachedFile && (

@@ -9,6 +9,7 @@ import {
   LineChart,
   Pie,
   PieChart,
+  type PieLabelRenderProps,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -170,7 +171,10 @@ export const VisualizationDisplay = React.memo(function VisualizationDisplay({
                 cx="50%"
                 cy="50%"
                 labelLine={true}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                label={(props: PieLabelRenderProps) => {
+                  const percent = typeof props.percent === "number" ? props.percent : 0
+                  return `${props.name}: ${(percent * 100).toFixed(1)}%`
+                }}
                 outerRadius={100}
                 innerRadius={60}
                 fill="#8884d8"

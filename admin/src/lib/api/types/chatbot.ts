@@ -1,4 +1,9 @@
-import type { ImportProgress, ImportResult, PreviewLeadData, ProgressLog } from "../services/lead-import"
+import type {
+  ImportProgress,
+  ImportResult,
+  PreviewLeadData,
+  ProgressLog,
+} from "../services/lead-import"
 
 export interface FileAttachment {
   fileName: string

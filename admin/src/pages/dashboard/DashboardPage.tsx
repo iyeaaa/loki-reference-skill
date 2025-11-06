@@ -409,12 +409,12 @@ export default function DashboardPage() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-4 flex justify-center items-center flex-col">
+              <div className="space-y-4 max-w-[400px]">
                 <Calendar
                   mode="single"
                   selected={selectedDate}
                   onSelect={setSelectedDate}
-                  className="rounded-md border w-[50%]"
+                  className="rounded-md border w-full [--cell-size:1rem]"
                   modifiers={{
                     scheduled: Array.from(followupsByDate.keys()).map(
                       (dateStr) => new Date(dateStr),

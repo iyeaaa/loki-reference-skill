@@ -19,7 +19,7 @@ interface AdvancedSearchInputProps {
 export function AdvancedSearchInput({
   tokens,
   onChange,
-  placeholder = "필드를 선택하여 검색하세요...",
+  placeholder = "필드 선택 후 값을 입력한 뒤, Enter 키를 눌러 검색하세요. (예: @회사명:그린다)",
 }: AdvancedSearchInputProps) {
   const [inputValue, setInputValue] = useState("")
   const [showFieldSelector, setShowFieldSelector] = useState(false)

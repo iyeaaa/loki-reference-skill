@@ -147,3 +147,77 @@ export function useBulkDeleteEmailReplies() {
     },
   })
 }
+
+/**
+ * Hook to update email reply intent and sentiment manually
+ */
+export function useUpdateEmailReply() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string
+      data: {
+        intent?:
+          | "meeting_request"
+          | "question"
+          | "objection"
+          | "out_of_office"
+          | "not_interested"
+          | "positive_interest"
+          | "neutral"
+          | null
+        sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
+      }
+    }) => emailRepliesApi.update(id, data),
+    onSuccess: () => {
+      // Invalidate related queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: [EMAIL_REPLIES_QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
+      queryClient.invalidateQueries({ queryKey: ["thread-emails"] })
+      queryClient.invalidateQueries({ queryKey: ["intent-counts"] })
+      toast.success("태그가 업데이트되었습니다.")
+    },
+    onError: (error: Error) => {
+      toast.error(`태그 업데이트 실패: ${error.message}`)
+    },
+  })
+}
+
+/**
+ * Hook to reclassify email reply using AI
+ */
+export function useReclassifyEmailReply() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => emailRepliesApi.reclassify(id),
+    onSuccess: (response) => {
+      // Invalidate related queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: [EMAIL_REPLIES_QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
+      toast.success(
+        `AI 분류 완료: ${response.data.classification.intent} (신뢰도: ${Math.round(response.data.classification.confidence * 100)}%)`,
+      )
+    },
+    onError: (error: Error) => {
+      toast.error(`AI 분류 실패: ${error.message}`)
+    },
+  })
+}
+
+/**
+ * Hook to get intent counts for a workspace
+ */
+export function useIntentCounts(workspaceId: string) {
+  return useQuery({
+    queryKey: ["intent-counts", workspaceId],
+    queryFn: () => emailRepliesApi.getIntentCounts(workspaceId),
+    enabled: !!workspaceId,
+    staleTime: 30 * 1000, // Cache for 30 seconds
+    gcTime: 5 * 60 * 1000, // 5 minutes
+  })
+}

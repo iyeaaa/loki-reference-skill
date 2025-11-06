@@ -13,12 +13,12 @@ button.processing,처리 중...,Processing...
 button.downloading,다운로드 중...,Downloading...
 button.uploading,업로드 중...,Uploading...
 button.selectFile,파일 선택 (CSV/XLSX),Select File (CSV/XLSX)
-button.selectAllMode,전체 선택 모드,Select All Mode
-button.exitSelectAllMode,전체 선택 모드 해제,Exit Select All Mode
+button.selectAllMode,모든 고객 선택,Select All Leads
+button.exitSelectAllMode,모든 고객 선택 해제,Unselect All Leads
 button.selectAll,모든 리드를 선택하려면 클릭하세요,Click to select all leads
 button.changeStatus,상태 변경,Change Status
 button.changeBusinessType,업종 변경,Change Business Type
-button.copyToGroup,그룹에 복사,Copy to Group
+button.copyToGroup,다른 그룹에 복사,Copy to Other Group
 button.downloadSelected,선택된 리드 다운로드,Download Selected Leads
 button.downloadAll,전체 리드 다운로드,Download All Leads
 button.downloadTemplate,템플릿 다운로드,Download Template
@@ -263,11 +263,11 @@ form.city,도시,City
 form.leadScore,리드 점수,Lead Score
 form.leadScorePlaceholder,리드 점수 입력 (선택사항),Enter lead score (optional)
 form.leadSource,리드 출처,Lead Source
-button.deleteLead,[NO TRANSLATION] leads.button.deleteLead,[NO TRANSLATION] leads.button.deleteLead
-button.deleteLeadConfirm,[NO TRANSLATION] leads.button.deleteLeadConfirm,[NO TRANSLATION] leads.button.deleteLeadConfirm
-button.firstPage,[NO TRANSLATION] leads.button.firstPage,[NO TRANSLATION] leads.button.firstPage
-button.lastPage,[NO TRANSLATION] leads.button.lastPage,[NO TRANSLATION] leads.button.lastPage
-button.nextPage,[NO TRANSLATION] leads.button.nextPage,[NO TRANSLATION] leads.button.nextPage
-button.pageSize,[NO TRANSLATION] leads.button.pageSize,[NO TRANSLATION] leads.button.pageSize
-button.previousPage,[NO TRANSLATION] leads.button.previousPage,[NO TRANSLATION] leads.button.previousPage
-search.placeholder,[NO TRANSLATION] leads.search.placeholder,[NO TRANSLATION] leads.search.placeholder
+button.pageSize,페이지 크기,Page Size
+search.placeholder,"필드 선택 후 값을 입력한 뒤, Enter 키를 눌러 검색하세요. (예: @회사명:그린다)","Select a field and enter a value, then press Enter to search. (e.g., @Company:Grinda)"
+button.deleteLead,고객 정보 삭제,Delete Lead
+button.firstPage,처음,First
+button.lastPage,마지막,Last
+button.nextPage,다음,Next
+button.previousPage,이전,Previous
+button.deleteLeadConfirm,고객 정보 삭제하기,Delete Lead

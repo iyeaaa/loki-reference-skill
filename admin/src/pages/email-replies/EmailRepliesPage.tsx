@@ -6,11 +6,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { useBulkDeleteEmailReplies } from "@/lib/api/hooks/email-replies"
+import { useBulkDeleteEmailReplies, useIntentCounts } from "@/lib/api/hooks/email-replies"
 import { useEmail } from "@/lib/api/hooks/emails"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { ConfirmDialog } from "./ConfirmDialog"
-import { RepliedEmailsTableWithPagination } from "./RepliedEmailsTableWithPagination"
+import { RepliedEmailsList } from "./RepliedEmailsList"
+import { StatsCards } from "./StatsCards"
 import { ThreadDetailPanel } from "./ThreadDetailPanel"
 
 export default function EmailRepliesPage() {
@@ -21,11 +22,37 @@ export default function EmailRepliesPage() {
 
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedIntent, setSelectedIntent] = useState<string>("all")
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
   const [leftWidth, setLeftWidth] = useState(50) // percentage
   const [isResizing, setIsResizing] = useState(false)
   const [selectedThreads, setSelectedThreads] = useState<string[]>([])
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+
+  // Fetch real category counts from API
+  const { data: intentCounts } = useIntentCounts(selectedWorkspace?.id || "all")
+
+  // Transform API data to category format
+  const categories = [
+    { id: "all", label: "All", count: intentCounts?.all || 0 },
+    { id: "out_of_office", label: "Auto Messages", count: intentCounts?.out_of_office || 0 },
+    {
+      id: "positive_interest",
+      label: "Positive",
+      count: intentCounts?.positive_interest || 0,
+    },
+    {
+      id: "not_interested",
+      label: "Negative",
+      count: intentCounts?.not_interested || 0,
+    },
+    { id: "neutral", label: "Other", count: intentCounts?.neutral || 0 },
+    {
+      id: "unclassified",
+      label: "Unclassified",
+      count: intentCounts?.unclassified || 0,
+    },
+  ]
 
   // emailId가 있으면 해당 이메일 정보를 가져와서 threadId 설정
   const { data: emailData } = useEmail(emailId || "", !!emailId)
@@ -117,16 +144,27 @@ export default function EmailRepliesPage() {
   }, [isResizing, containerId])
 
   return (
-    <div className="flex flex-col" style={{ height: "calc(100vh - 120px)" }}>
+    <div className="flex flex-col gap-4" style={{ height: "calc(100vh - 120px)" }}>
       {/* Workspace 선택 안내 */}
       {!selectedWorkspace && (
-        <Alert className="mb-4">
+        <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>{t("email-replies.alert.selectWorkspace.title")}</AlertTitle>
           <AlertDescription>
             {t("email-replies.alert.selectWorkspace.description")}
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Stats Cards at the top */}
+      {selectedWorkspace && (
+        <div className="flex-shrink-0">
+          <StatsCards
+            categories={categories}
+            selectedCategory={selectedIntent}
+            onSelectCategory={setSelectedIntent}
+          />
+        </div>
       )}
 
       {/* Gmail-style Split View */}
@@ -197,13 +235,14 @@ export default function EmailRepliesPage() {
                 </div>
               )}
 
-              {/* Thread List Table */}
+              {/* Thread List */}
               <div className="flex-1 overflow-auto">
                 {selectedWorkspace ? (
-                  <RepliedEmailsTableWithPagination
+                  <RepliedEmailsList
                     workspaceId={selectedWorkspace.id}
                     searchQuery={searchQuery}
                     selectedStatuses={[]}
+                    selectedIntent={selectedIntent}
                     selectedThreadId={selectedThreadId}
                     onThreadSelect={setSelectedThreadId}
                     selectedThreads={selectedThreads}

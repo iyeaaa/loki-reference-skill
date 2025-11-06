@@ -379,6 +379,7 @@ export function SequenceForm({
               <SelectItem value="paused">{t("sequences.form.status.paused")}</SelectItem>
               <SelectItem value="archived">{t("sequences.form.status.archived")}</SelectItem>
               <SelectItem value="completed">{t("sequences.form.status.completed")}</SelectItem>
+              <SelectItem value="no_response">{t("sequences.table.status.noResponse")}</SelectItem>
             </SelectContent>
           </Select>
           {stepsCount > 0 && formData.status !== "active" && (

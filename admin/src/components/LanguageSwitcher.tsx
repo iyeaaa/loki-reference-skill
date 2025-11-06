@@ -10,13 +10,18 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { SidebarContext } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 
 const languages = [
   { code: "ko", name: "한국어", flag: "🇰🇷" },
   { code: "en", name: "English", flag: "🇺🇸" },
 ]
 
-export function LanguageSwitcher() {
+interface LanguageSwitcherProps {
+  className?: string
+}
+
+export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   const { i18n } = useTranslation()
   const sidebarContext = useContext(SidebarContext)
   const state = sidebarContext?.state
@@ -34,7 +39,10 @@ export function LanguageSwitcher() {
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start h-10 px-3 py-2 hover:bg-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2"
+          className={cn(
+            "justify-start h-10 px-3 py-2 hover:bg-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2",
+            className,
+          )}
         >
           <Globe className="h-4 w-4 text-muted-foreground group-data-[collapsible=icon]:mr-0 mr-3 shrink-0" />
           <span className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">

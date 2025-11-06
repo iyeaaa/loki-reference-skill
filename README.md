@@ -144,7 +144,13 @@ git clone git@github.com:CheolheeLee0/send-grid-test.git
 cd send-grid-test
 ```
 
-##### 2. Environment Setup
+##### 2. Setup Git Hooks (Required)
+```bash
+./setup-husky-lint-ci.sh  # Auto-setup in 1 minute
+```
+See [GIT_HOOKS_GUIDE.md](./GIT_HOOKS_GUIDE.md) for details.
+
+##### 3. Environment Setup
 ```bash
 cp .env.example .env
 ```

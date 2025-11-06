@@ -95,4 +95,64 @@ export const emailRepliesApi = {
       body: JSON.stringify({ replyIds }),
     })
   },
+
+  /**
+   * Update email reply intent and sentiment
+   */
+  update: async (
+    id: string,
+    data: {
+      intent?:
+        | "meeting_request"
+        | "question"
+        | "objection"
+        | "out_of_office"
+        | "not_interested"
+        | "positive_interest"
+        | "neutral"
+        | null
+      sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
+    },
+  ): Promise<{
+    id: string
+    intent: string | null
+    sentiment: string | null
+  }> => {
+    return apiFetch(`/api/v1/email-replies/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    })
+  },
+
+  /**
+   * Reclassify email reply using AI
+   */
+  reclassify: async (
+    id: string,
+  ): Promise<{
+    success: boolean
+    data: {
+      id: string
+      intent: string | null
+      sentiment: string | null
+      classification: {
+        intent: string
+        sentiment: string
+        confidence: number
+        reasoning: string
+      }
+    }
+    message: string
+  }> => {
+    return apiFetch(`/api/v1/email-replies/${id}/reclassify`, {
+      method: "POST",
+    })
+  },
+
+  /**
+   * Get intent counts for a workspace
+   */
+  getIntentCounts: async (workspaceId: string): Promise<Record<string, number>> => {
+    return apiFetch(`/api/v1/email-replies/stats/by-intent?workspaceId=${workspaceId}`)
+  },
 }

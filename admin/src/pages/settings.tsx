@@ -1,6 +1,7 @@
 import {
   Activity,
   Building2,
+  FileSpreadsheet,
   FileText,
   FileUp,
   Loader2,
@@ -53,6 +54,12 @@ export default function SettingsPage() {
       description: t("settings.system.import.desc"),
       url: "/lead-import",
       icon: FileUp,
+    },
+    {
+      title: t("settings.system.bulkEmailCSV.title"),
+      description: t("settings.system.bulkEmailCSV.desc"),
+      url: "/bulk-email-csv",
+      icon: FileSpreadsheet,
     },
   ]
 

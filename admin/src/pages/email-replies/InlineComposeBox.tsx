@@ -56,9 +56,15 @@ export function InlineComposeBox({
       return
     }
 
-    if (!workspaceId || workspaceId === "") {
+    const effectiveWorkspaceId = originalEmail.workspaceId || workspaceId
+
+    if (!effectiveWorkspaceId || effectiveWorkspaceId === "" || effectiveWorkspaceId === "all") {
       toast.error("워크스페이스가 선택되지 않았습니다")
-      console.error("❌ workspaceId is empty:", { workspaceId, user: user.id })
+      console.error("❌ workspaceId is invalid:", {
+        workspaceId,
+        originalEmailWorkspaceId: originalEmail.workspaceId,
+        user: user.id,
+      })
       return
     }
 
@@ -75,7 +81,7 @@ export function InlineComposeBox({
     }
 
     const payload = {
-      workspaceId,
+      workspaceId: effectiveWorkspaceId,
       userId: user.id,
       toEmail: recipients[0], // 첫 번째 수신자
       ccEmails: cc ? parseEmailList(cc) : undefined,
@@ -91,7 +97,7 @@ export function InlineComposeBox({
 
     console.log("📧 Sending email with payload:", {
       ...payload,
-      workspaceId: workspaceId || "EMPTY",
+      workspaceId: effectiveWorkspaceId,
       userId: user.id || "EMPTY",
       hasMessageId: !!originalEmail.messageId,
     })

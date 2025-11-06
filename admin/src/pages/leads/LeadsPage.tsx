@@ -18,7 +18,7 @@ import { AdvancedSearchInput } from "@/components/search/AdvancedSearchInput"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   ContextMenu,
@@ -37,6 +37,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   customerGroupKeys,
   useBulkAddGroupMembers,
@@ -101,6 +110,12 @@ export default function LeadsPage() {
   const [isSelectAllMode, setIsSelectAllMode] = useState(false)
   const [allLeadsSelected, setAllLeadsSelected] = useState(false)
 
+  // 통합 Sheet 상태
+  const [showAddLeadSheet, setShowAddLeadSheet] = useState(false)
+  const [addLeadStep, setAddLeadStep] = useState<1 | 2 | 3>(1) // 1: 선택, 2: 입력, 3: 미리보기
+  const [addLeadMode, setAddLeadMode] = useState<"upload" | "manual" | null>(null)
+  const [previewLeadData, setPreviewLeadData] = useState<Lead | null>(null)
+
   // CSV 업로드 관련 상태
   const [showCSVUpload, setShowCSVUpload] = useState(false)
   const [csvData, setCsvData] = useState<LeadCSVData[] | null>(null)
@@ -132,6 +147,13 @@ export default function LeadsPage() {
 
   // 현재 로드된 리드 데이터 저장
   const [currentLeadsData, setCurrentLeadsData] = useState<Lead[]>([])
+  const [totalLeadsCount, setTotalLeadsCount] = useState<number>(0)
+
+  // 페이지 크기 상태
+  const [pageSize, setPageSize] = useState(() => {
+    const saved = localStorage.getItem("leadsPageSize")
+    return saved ? parseInt(saved, 10) : 100
+  })
 
   // 확인 다이얼로그 상태
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false)
@@ -405,6 +427,14 @@ export default function LeadsPage() {
       setAllLeadsSelected(true)
     }
   }, [isSelectAllMode])
+
+  // 페이지 크기 변경 핸들러
+  const handlePageSizeChange = useCallback((newSize: number) => {
+    if (newSize >= 1 && newSize <= 10000) {
+      setPageSize(newSize)
+      localStorage.setItem("leadsPageSize", String(newSize))
+    }
+  }, [])
 
   // 전체 리드 선택/해제
   const handleSelectAllLeads = useCallback(() => {
@@ -828,117 +858,41 @@ export default function LeadsPage() {
       {/* Leads Table */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">{t("leads.title.leadManagement")}</CardTitle>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  // 선택된 고객 그룹이 있다면 기본값으로 설정
-                  if (selectedCustomerGroup) {
-                    setGroupName(selectedCustomerGroup)
-                    setIsNewGroup(false)
-                  } else {
-                    setIsNewGroup(true)
-                  }
-                  setNewGroupName("")
-                  setGroupDescription("")
-                  setShowCSVUpload(true)
-                }}
-              >
-                <Upload className="h-4 w-4 mr-1" />
-                {t("leads.button.csvUpload")}
-              </Button>
-              <Button onClick={() => setShowCreateDialog(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                {t("leads.button.createLead")}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* 고객 그룹 선택 - 최상단으로 이동 */}
-          {selectedWorkspaceId !== "all" && (
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-700">
-                    {t("leads.filter.customerGroup")}
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  {/* 시퀀스 이메일 발송 버튼 - 특정 그룹 선택 시에만 표시 */}
-                  {selectedCustomerGroup && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const group = customerGroups?.find((g) => g.id === selectedCustomerGroup)
-                        if (group) {
-                          setSequenceLaunchGroup(group)
-                          setShowSequenceLaunchModal(true)
-                        }
-                      }}
-                    >
-                      <Send className="h-4 w-4 mr-1" />
-                      시퀀스 이메일 발송
-                    </Button>
+          {/* 고객 그룹 선택 - 탭 형태 */}
+          <div className="flex items-center justify-between mb-4">
+            <Tabs
+              value={selectedCustomerGroup || "all"}
+              onValueChange={(value) => setSelectedCustomerGroup(value === "all" ? "" : value)}
+              className="flex-1"
+            >
+              <TabsList className="inline-flex h-auto items-center justify-start gap-2 bg-transparent p-0 w-auto">
+                <TabsTrigger
+                  value="all"
+                  className="text-xs h-9 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:hover:bg-blue-700 data-[state=active]:hover:text-white"
+                >
+                  {t("leads.group.all")}
+                  {!selectedCustomerGroup && totalLeadsCount > 0 && (
+                    <span className="ml-1.5 text-xs opacity-70">({totalLeadsCount})</span>
                   )}
-                  <CreateGroupModal
-                    workspaces={workspaces}
-                    selectedWorkspaceId={selectedWorkspaceId}
-                    selectedLeadIds={selectedLeads}
-                    currentLeadsData={currentLeadsData.map((lead: Lead) => ({
-                      id: lead.id,
-                      companyName: lead.companyName || "",
-                    }))}
-                    onSuccess={(groupId) => {
-                      // 생성된 그룹을 자동으로 선택
-                      setSelectedCustomerGroup(groupId)
-                      // 선택된 리드들 초기화
-                      setSelectedLeads([])
-                    }}
-                  />
-                </div>
-              </div>
-              {customerGroups && customerGroups.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedCustomerGroup("")}
-                    className={`text-xs ${
-                      selectedCustomerGroup === ""
-                        ? "bg-[#2563EB]/10 border-[#2563EB] text-[#2563EB] font-medium"
-                        : "hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50"
-                    }`}
-                  >
-                    {t("leads.group.all")}
-                  </Button>
-                  {customerGroups.map((group) => (
+                </TabsTrigger>
+                {selectedWorkspaceId !== "all" &&
+                  customerGroups?.map((group) => (
                     <ContextMenu key={group.id}>
                       <ContextMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedCustomerGroup(group.id)}
-                          className={`text-xs ${
+                        <TabsTrigger
+                          value={group.id}
+                          className={`text-xs h-9 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground ${
                             selectedCustomerGroup === group.id
-                              ? "bg-[#2563EB]/10 border-[#2563EB] text-[#2563EB] font-medium"
-                              : "hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50"
+                              ? "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                              : ""
                           }`}
                         >
-                          <Users
-                            className={`h-3 w-3 mr-1 ${
-                              selectedCustomerGroup === group.id ? "text-[#2563EB]" : ""
-                            }`}
-                          />
+                          <Users className="h-3 w-3 mr-1" />
                           {group.name}
                           {group.leadCount !== undefined && (
                             <span className="ml-1.5 text-xs opacity-70">({group.leadCount})</span>
                           )}
-                        </Button>
+                        </TabsTrigger>
                       </ContextMenuTrigger>
                       <ContextMenuContent className="w-48">
                         <ContextMenuItem
@@ -959,32 +913,107 @@ export default function LeadsPage() {
                       </ContextMenuContent>
                     </ContextMenu>
                   ))}
-                </div>
-              ) : (
-                <div className="text-sm text-muted-foreground text-center py-4 bg-gray-50 rounded-md">
-                  {t("leads.group.noGroups")}
-                </div>
-              )}
+                <CreateGroupModal
+                  workspaces={workspaces}
+                  selectedWorkspaceId={selectedWorkspaceId}
+                  selectedLeadIds={selectedLeads}
+                  currentLeadsData={currentLeadsData.map((lead: Lead) => ({
+                    id: lead.id,
+                    companyName: lead.companyName || "",
+                  }))}
+                  onSuccess={(groupId) => {
+                    // 생성된 그룹을 자동으로 선택
+                    setSelectedCustomerGroup(groupId)
+                    // 선택된 리드들 초기화
+                    setSelectedLeads([])
+                  }}
+                />
+              </TabsList>
+            </Tabs>
+            {selectedWorkspaceId !== "all" && (
+              <div className="flex gap-2 ml-4">
+                {/* 시퀀스 이메일 발송 버튼 - 특정 그룹 선택 시에만 표시 */}
+                {selectedCustomerGroup && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const group = customerGroups?.find((g) => g.id === selectedCustomerGroup)
+                      if (group) {
+                        setSequenceLaunchGroup(group)
+                        setShowSequenceLaunchModal(true)
+                      }
+                    }}
+                  >
+                    <Send className="h-4 w-4 mr-1" />
+                    시퀀스 이메일 발송
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+          {selectedWorkspaceId !== "all" && customerGroups && customerGroups.length === 0 && (
+            <div className="text-sm text-muted-foreground text-center py-4 bg-gray-50 rounded-md mb-4">
+              {t("leads.group.noGroups")}
             </div>
           )}
-
-          {/* 고급 검색 */}
-          <div className="mb-6">
-            <AdvancedSearchInput
-              tokens={searchTokens}
-              onChange={setSearchTokens}
-              placeholder="필드를 선택하여 검색하세요..."
-            />
+          <div className="flex items-center justify-between gap-2">
+            {/* 고급 검색 */}
+            <div className="flex-auto">
+              <AdvancedSearchInput
+                tokens={searchTokens}
+                onChange={setSearchTokens}
+                placeholder={t("leads.search.placeholder")}
+              />
+            </div>
+            <div className="gap-2">
+              <Button
+                onClick={() => {
+                  setShowAddLeadSheet(true)
+                  setAddLeadStep(1)
+                  setAddLeadMode(null)
+                  setPreviewLeadData(null)
+                  setCsvData(null)
+                }}
+                className="transition-all duration-200 hover:scale-105 active:scale-95"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                리드 추가
+              </Button>
+            </div>
           </div>
+        </CardHeader>
+        <CardContent>
           {/* 전체 선택 및 Bulk Actions */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
+              {/* 페이지 크기 설정 */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">{t("leads.button.pageSize")}</span>
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => handlePageSizeChange(Number(value))}
+                >
+                  <SelectTrigger className="w-[100px] h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                    <SelectItem value="500">500</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* 전체 선택 버튼 */}
               <Button
                 variant={isSelectAllMode ? "default" : "outline"}
                 size="sm"
                 onClick={toggleSelectAllMode}
-                className={isSelectAllMode ? "bg-violet-600 hover:bg-violet-700" : ""}
+                className={
+                  isSelectAllMode ? "bg-blue-600 hover:bg-blue-700 text-white hover:text-white" : ""
+                }
               >
                 {isSelectAllMode
                   ? t("leads.button.exitSelectAllMode")
@@ -1066,6 +1095,8 @@ export default function LeadsPage() {
             onEditLead={setEditingLead}
             onManageGroups={handleManageLeadGroups}
             onLeadsDataChange={setCurrentLeadsData}
+            onTotalChange={setTotalLeadsCount}
+            pageSize={pageSize}
             isSelectAllMode={isSelectAllMode}
             allLeadsSelected={allLeadsSelected}
             onToggleSelectAll={handleSelectAllLeads}
@@ -1152,7 +1183,7 @@ export default function LeadsPage() {
                       name="groupType"
                       checked={!isNewGroup}
                       onChange={() => setIsNewGroup(false)}
-                      className="h-4 w-4 text-violet-600"
+                      className="h-4 w-4 text-blue-600"
                     />
                     <Label htmlFor={existingGroupId} className="text-sm font-medium">
                       {t("leads.group.addToExisting")}
@@ -1165,7 +1196,7 @@ export default function LeadsPage() {
                       name="groupType"
                       checked={isNewGroup}
                       onChange={() => setIsNewGroup(true)}
-                      className="h-4 w-4 text-violet-600"
+                      className="h-4 w-4 text-blue-600"
                     />
                     <Label htmlFor={newGroupId} className="text-sm font-medium">
                       {t("leads.group.createNew")}
@@ -1501,6 +1532,674 @@ export default function LeadsPage() {
         customerGroup={sequenceLaunchGroup}
         workspaceId={selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id || ""}
       />
+
+      {/* Add Lead Sheet - 통합 리드 추가 Sheet */}
+      <Sheet
+        open={showAddLeadSheet}
+        onOpenChange={(open) => {
+          setShowAddLeadSheet(open)
+          if (!open) {
+            // Sheet 닫을 때 초기화
+            setAddLeadStep(1)
+            setAddLeadMode(null)
+            setPreviewLeadData(null)
+            setCsvData(null)
+            setCsvFileName("")
+            setCsvFileSize(0)
+            setCsvErrors([])
+            setGroupName("")
+            setGroupDescription("")
+            setIsNewGroup(false)
+            setNewGroupName("")
+          }
+        }}
+      >
+        <SheetContent className="sm:max-w-2xl overflow-y-auto">
+          <SheetHeader className="animate-in fade-in slide-in-from-top-2 duration-300">
+            <SheetTitle>리드 추가</SheetTitle>
+            <SheetDescription>
+              {addLeadStep === 1 && "리드를 추가할 방법을 선택하세요."}
+              {addLeadStep === 2 &&
+                addLeadMode === "upload" &&
+                "CSV 또는 XLSX 파일을 업로드하세요."}
+              {addLeadStep === 2 && addLeadMode === "manual" && "리드 정보를 입력하세요."}
+              {addLeadStep === 3 && "추가할 리드 정보를 확인하세요."}
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-6">
+            {/* Step 1: 방식 선택 */}
+            {addLeadStep === 1 && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <div className="grid gap-4">
+                  <Card
+                    className="cursor-pointer hover:border-blue-500 hover:bg-blue-50/50 transition-all hover:scale-[1.02] hover:shadow-md animate-in fade-in slide-in-from-bottom-2 duration-500"
+                    onClick={() => {
+                      setAddLeadMode("upload")
+                      setAddLeadStep(2)
+                      // 선택된 고객 그룹이 있다면 기본값으로 설정
+                      if (selectedCustomerGroup) {
+                        setGroupName(selectedCustomerGroup)
+                        setIsNewGroup(false)
+                      } else {
+                        setIsNewGroup(true)
+                      }
+                    }}
+                  >
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 rounded-lg transition-transform group-hover:scale-110">
+                          <Upload className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">CSV/XLSX 파일 업로드</h3>
+                          <p className="text-sm text-muted-foreground">
+                            여러 리드를 한 번에 추가할 수 있습니다
+                          </p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </Card>
+
+                  <Card
+                    className="cursor-pointer hover:border-blue-500 hover:bg-blue-50/50 transition-all hover:scale-[1.02] hover:shadow-md animate-in fade-in slide-in-from-bottom-2 duration-500 delay-75"
+                    onClick={() => {
+                      setAddLeadMode("manual")
+                      setAddLeadStep(2)
+                    }}
+                  >
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 rounded-lg transition-transform group-hover:scale-110">
+                          <Plus className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">수동으로 리드 생성 (임시)</h3>
+                          <p className="text-sm text-muted-foreground">
+                            개별 리드 정보를 직접 입력합니다
+                          </p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: 데이터 입력 - CSV 업로드 */}
+            {addLeadStep === 2 && addLeadMode === "upload" && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                {/* 그룹 정보 입력 */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">{t("leads.group.groupInfo")}</h3>
+
+                  {/* 그룹 생성 방식 선택 */}
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id={existingGroupId}
+                          name="groupType"
+                          checked={!isNewGroup}
+                          onChange={() => setIsNewGroup(false)}
+                          className="h-4 w-4 text-blue-600"
+                        />
+                        <Label htmlFor={existingGroupId} className="text-sm font-medium">
+                          {t("leads.group.addToExisting")}
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id={newGroupId}
+                          name="groupType"
+                          checked={isNewGroup}
+                          onChange={() => setIsNewGroup(true)}
+                          className="h-4 w-4 text-blue-600"
+                        />
+                        <Label htmlFor={newGroupId} className="text-sm font-medium">
+                          {t("leads.group.createNew")}
+                        </Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    {!isNewGroup ? (
+                      // 기존 그룹 선택
+                      <div className="space-y-2">
+                        <Label htmlFor={groupSelectId}>{t("leads.group.selectGroup")}</Label>
+                        <Select value={groupName} onValueChange={setGroupName}>
+                          <SelectTrigger id={groupSelectId}>
+                            <SelectValue placeholder={t("leads.group.selectGroupPlaceholder")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {customerGroups?.map((group) => (
+                              <SelectItem key={group.id} value={group.id}>
+                                {group.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      // 새 그룹 이름 입력
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor={newGroupNameId}>{t("leads.group.newGroupName")}</Label>
+                          {csvData && csvData.length > 0 && (
+                            <div className="flex items-center gap-2">
+                              {isAutoGeneratedGroupName && (
+                                <Badge variant="secondary" className="text-xs">
+                                  자동 생성됨
+                                </Badge>
+                              )}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={generateGroupNameFromCSV}
+                                disabled={isGeneratingGroupName}
+                                className="h-6 px-2"
+                                title="그룹명 재생성"
+                              >
+                                <RefreshCw
+                                  className={`h-3 w-3 ${
+                                    isGeneratingGroupName ? "animate-spin" : ""
+                                  }`}
+                                />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        <Input
+                          id={newGroupNameId}
+                          value={newGroupName}
+                          onChange={(e) => {
+                            setNewGroupName(e.target.value)
+                            setIsAutoGeneratedGroupName(false)
+                          }}
+                          disabled={isGeneratingGroupName}
+                          placeholder={
+                            isGeneratingGroupName
+                              ? "그룹명 생성 중..."
+                              : t("leads.group.newGroupNamePlaceholder")
+                          }
+                        />
+                        {isAutoGeneratedGroupName && (
+                          <p className="text-xs text-muted-foreground">
+                            업로드된 리드 데이터를 기반으로 자동 생성된 이름입니다. 원하시면 직접
+                            수정할 수 있습니다.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label htmlFor={groupDescriptionId}>
+                        {t("leads.group.groupDescription")}
+                      </Label>
+                      <Input
+                        id={groupDescriptionId}
+                        value={groupDescription}
+                        onChange={(e) => setGroupDescription(e.target.value)}
+                        placeholder={t("leads.group.groupDescriptionPlaceholder")}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 파일 업로드 섹션 */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium">{t("leads.file.upload")} (CSV/XLSX)</h3>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadTemplate("csv")}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        {t("leads.button.csvTemplate")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadTemplate("xlsx")}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        {t("leads.button.xlsxTemplate")}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* 필수 필드 안내 */}
+                  <Card className="bg-blue-50 border-blue-200">
+                    <CardContent className="pt-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                          !
+                        </div>
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-blue-900">
+                            {t("leads.file.requiredFields")}
+                          </h4>
+                          <div className="text-sm text-blue-800">
+                            <p className="mb-2">
+                              <strong>{t("leads.file.requiredFieldsDescription")}</strong>
+                            </p>
+                            <p className="mb-2">
+                              <strong>{t("leads.file.optionalFields")}</strong>
+                            </p>
+                            <p className="text-xs text-blue-600">
+                              💡 {t("leads.file.templateTip")}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {!csvData ? (
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                          <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                          <div className="space-y-2">
+                            <h4 className="text-lg font-medium">{t("leads.file.upload")}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {t("leads.file.uploadDescription")}
+                            </p>
+                            <div className="pt-4">
+                              <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".csv,.xlsx,.xls"
+                                onChange={handleFileUpload}
+                                className="hidden"
+                              />
+                              <Button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isProcessingCSV}
+                              >
+                                {isProcessingCSV
+                                  ? t("leads.button.processing")
+                                  : t("leads.button.selectFile")}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-blue-500" />
+                            <div>
+                              <p className="font-medium">{csvFileName}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {(csvFileSize / 1024).toFixed(1)} KB
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setCsvData(null)
+                              setCsvFileName("")
+                              setCsvFileSize(0)
+                              setCsvErrors([])
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">
+                              {csvData.length}
+                              {t("leads.file.leadsCount")}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {t("leads.file.parsingComplete")}
+                            </span>
+                          </div>
+
+                          {csvErrors.length > 0 && (
+                            <Alert>
+                              <AlertDescription>
+                                <div className="space-y-1">
+                                  <p className="font-medium">{t("leads.error.fixErrors")}</p>
+                                  <ul className="list-disc list-inside space-y-1">
+                                    {csvErrors.map((error) => (
+                                      <li key={error} className="text-sm">
+                                        {error}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: 데이터 입력 - 수동 생성 */}
+            {addLeadStep === 2 && addLeadMode === "manual" && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                <LeadForm
+                  isEdit={false}
+                  workspaceId={
+                    selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id
+                  }
+                  customerGroups={customerGroups || []}
+                  selectedGroup={selectedGroupForNewLead}
+                  onGroupChange={(value) =>
+                    setSelectedGroupForNewLead(value === "none" ? "" : value)
+                  }
+                  onSave={(leadData) => {
+                    setPreviewLeadData(leadData as Lead)
+                    setAddLeadStep(3)
+                  }}
+                  onCancel={() => {
+                    setAddLeadStep(1)
+                    setAddLeadMode(null)
+                  }}
+                  submitButtonText="다음"
+                  cancelButtonText="이전"
+                />
+              </div>
+            )}
+
+            {/* Step 3: 미리보기 */}
+            {addLeadStep === 3 && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                {addLeadMode === "upload" && csvData ? (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">업로드할 리드 미리보기</h3>
+                    <Card>
+                      <CardContent className="pt-4">
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium">
+                                총 {csvData.length}개의 리드를 추가할 예정입니다
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {isNewGroup
+                                  ? `새 그룹 "${newGroupName || "자동 생성"}"에 추가됩니다`
+                                  : `기존 그룹에 추가됩니다`}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="max-h-96 overflow-y-auto space-y-2">
+                            {csvData.slice(0, 10).map((lead, index) => (
+                              <div
+                                key={`${lead.companyName}-${lead.primaryEmail}-${index}`}
+                                className="p-3 bg-gray-50 rounded-lg text-sm animate-in fade-in slide-in-from-left-2 duration-300"
+                                style={{ animationDelay: `${index * 50}ms` }}
+                              >
+                                <div className="font-medium">{lead.companyName}</div>
+                                <div className="text-muted-foreground text-xs">
+                                  {lead.primaryEmail || t("leads.file.noEmail")} •{" "}
+                                  {lead.contactName || "이름 없음"}
+                                </div>
+                              </div>
+                            ))}
+                            {csvData.length > 10 && (
+                              <p className="text-sm text-muted-foreground text-center py-2 animate-in fade-in duration-300 delay-500">
+                                ... 외 {csvData.length - 10}개
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ) : (
+                  previewLeadData && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium animate-in fade-in duration-300">
+                        추가할 리드 정보
+                      </h3>
+                      <Card className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <CardContent className="pt-4 space-y-4">
+                          {/* 기본 정보 */}
+                          <div>
+                            <h4 className="text-sm font-semibold mb-2 text-blue-600">기본 정보</h4>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div className="space-y-1">
+                                <span className="text-muted-foreground">회사명</span>
+                                <p className="font-medium">{previewLeadData.companyName || "-"}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <span className="text-muted-foreground">담당자</span>
+                                <p className="font-medium">{previewLeadData.contactName || "-"}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <span className="text-muted-foreground">웹사이트</span>
+                                <p className="font-medium break-all">
+                                  {previewLeadData.websiteUrl || "-"}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <span className="text-muted-foreground">업종</span>
+                                <p className="font-medium">{previewLeadData.businessType || "-"}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 위치 정보 */}
+                          {(previewLeadData.country ||
+                            previewLeadData.city ||
+                            previewLeadData.address) && (
+                            <div className="border-t pt-4">
+                              <h4 className="text-sm font-semibold mb-2 text-blue-600">
+                                위치 정보
+                              </h4>
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                {previewLeadData.country && (
+                                  <div className="space-y-1">
+                                    <span className="text-muted-foreground">국가</span>
+                                    <p className="font-medium">{previewLeadData.country}</p>
+                                  </div>
+                                )}
+                                {previewLeadData.city && (
+                                  <div className="space-y-1">
+                                    <span className="text-muted-foreground">도시</span>
+                                    <p className="font-medium">{previewLeadData.city}</p>
+                                  </div>
+                                )}
+                                {previewLeadData.address && (
+                                  <div className="space-y-1 col-span-2">
+                                    <span className="text-muted-foreground">주소</span>
+                                    <p className="font-medium">{previewLeadData.address}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 연락처 정보 */}
+                          {previewLeadData.contacts && previewLeadData.contacts.length > 0 && (
+                            <div className="border-t pt-4">
+                              <h4 className="text-sm font-semibold mb-2 text-blue-600">
+                                연락처 정보
+                              </h4>
+                              <div className="space-y-2">
+                                {previewLeadData.contacts.map((contact, index) => (
+                                  <div
+                                    key={`${contact.contactType}-${contact.contactValue}-${index}`}
+                                    className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded"
+                                  >
+                                    <Badge variant="outline" className="text-xs">
+                                      {contact.contactType}
+                                    </Badge>
+                                    <span className="font-medium">{contact.contactValue}</span>
+                                    {contact.contactName && (
+                                      <span className="text-muted-foreground">
+                                        ({contact.contactName})
+                                      </span>
+                                    )}
+                                    {contact.isPrimary && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        주 연락처
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 소셜 미디어 */}
+                          {previewLeadData.socialMedia &&
+                            previewLeadData.socialMedia.length > 0 && (
+                              <div className="border-t pt-4">
+                                <h4 className="text-sm font-semibold mb-2 text-blue-600">
+                                  소셜 미디어
+                                </h4>
+                                <div className="space-y-2">
+                                  {previewLeadData.socialMedia.map((social, index) => (
+                                    <div
+                                      key={`${social.platform}-${social.url}-${index}`}
+                                      className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded"
+                                    >
+                                      <Badge variant="outline" className="text-xs">
+                                        {social.platform}
+                                      </Badge>
+                                      <span className="font-medium break-all">{social.url}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                          {/* 추가 정보 */}
+                          {(previewLeadData.description || previewLeadData.notes) && (
+                            <div className="border-t pt-4">
+                              <h4 className="text-sm font-semibold mb-2 text-blue-600">
+                                추가 정보
+                              </h4>
+                              {previewLeadData.description && (
+                                <div className="space-y-1 mb-3">
+                                  <span className="text-sm text-muted-foreground">설명</span>
+                                  <p className="text-sm bg-gray-50 p-2 rounded">
+                                    {previewLeadData.description}
+                                  </p>
+                                </div>
+                              )}
+                              {previewLeadData.notes && (
+                                <div className="space-y-1">
+                                  <span className="text-sm text-muted-foreground">메모</span>
+                                  <p className="text-sm bg-gray-50 p-2 rounded">
+                                    {previewLeadData.notes}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+
+          <SheetFooter className="mt-6 animate-in fade-in slide-in-from-bottom-2 duration-300 delay-150">
+            {addLeadStep === 1 && (
+              <Button
+                variant="outline"
+                onClick={() => setShowAddLeadSheet(false)}
+                className="transition-all duration-200 hover:scale-105 active:scale-95"
+              >
+                취소
+              </Button>
+            )}
+
+            {addLeadStep === 2 && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setAddLeadStep(1)
+                    setAddLeadMode(null)
+                    setCsvData(null)
+                  }}
+                  className="transition-all duration-200 hover:scale-105 active:scale-95"
+                >
+                  이전
+                </Button>
+                {addLeadMode === "upload" && (
+                  <Button
+                    onClick={() => {
+                      if (csvData && csvData.length > 0) {
+                        setAddLeadStep(3)
+                      }
+                    }}
+                    disabled={
+                      !csvData ||
+                      csvErrors.length > 0 ||
+                      (!isNewGroup && !groupName) ||
+                      (isNewGroup && !newGroupName.trim())
+                    }
+                    className="transition-all duration-200 hover:scale-105 active:scale-95"
+                  >
+                    다음
+                  </Button>
+                )}
+              </>
+            )}
+
+            {addLeadStep === 3 && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setAddLeadStep(2)
+                    setPreviewLeadData(null)
+                  }}
+                  className="transition-all duration-200 hover:scale-105 active:scale-95"
+                >
+                  이전
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (addLeadMode === "upload") {
+                      await handleCSVUpload()
+                      setShowAddLeadSheet(false)
+                    } else if (previewLeadData) {
+                      await handleCreateLead(previewLeadData)
+                      setShowAddLeadSheet(false)
+                    }
+                  }}
+                  disabled={isUploadingLeads || createLead.isPending}
+                  className="transition-all duration-200 hover:scale-105 active:scale-95"
+                >
+                  {isUploadingLeads || createLead.isPending ? "처리 중..." : "리드 추가"}
+                </Button>
+              </>
+            )}
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

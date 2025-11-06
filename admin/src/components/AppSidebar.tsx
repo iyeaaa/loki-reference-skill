@@ -208,7 +208,7 @@ export function AppSidebar({
         {/* Language and Settings */}
         <SidebarMenu className="gap-0.5 group-data-[collapsible=icon]:gap-8 group-data-[collapsible=icon]:items-center">
           <SidebarMenuItem>
-            <LanguageSwitcher />
+            <LanguageSwitcher className="w-full" />
           </SidebarMenuItem>
           <CustomMenuItem
             title={t("sidebar.menu.settings")}

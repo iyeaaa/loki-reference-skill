@@ -1,6 +1,7 @@
 import { AlertCircle, Mail, Users } from "lucide-react"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -44,6 +45,7 @@ interface EnrollLeadsDialogProps {
 }
 
 export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsDialogProps) {
+  const { t } = useTranslation()
   const [selectedEmailAccount, setSelectedEmailAccount] = useState<string>("")
 
   // 이메일 계정 목록 조회
@@ -177,12 +179,14 @@ export function EnrollLeadsDialog({ open, onOpenChange, sequence }: EnrollLeadsD
                   className="text-xs"
                 >
                   {sequence.status === "active"
-                    ? "활성"
+                    ? t("sequences.table.status.active")
                     : sequence.status === "draft"
-                      ? "초안"
+                      ? t("sequences.table.status.draft")
                       : sequence.status === "paused"
-                        ? "일시정지"
-                        : "보관됨"}
+                        ? t("sequences.table.status.paused")
+                        : sequence.status === "no_response"
+                          ? t("sequences.table.status.noResponse")
+                          : t("sequences.table.status.archived")}
                 </Badge>
               </div>
             </div>

@@ -39,6 +39,8 @@ interface LeadFormProps {
   onGroupChange?: (groupId: string) => void
   onSave: (leadData: LeadFormData) => Promise<void> | void
   onCancel: () => void
+  submitButtonText?: string
+  cancelButtonText?: string
 }
 
 export function LeadForm({
@@ -50,6 +52,8 @@ export function LeadForm({
   onGroupChange,
   onSave,
   onCancel,
+  submitButtonText,
+  cancelButtonText,
 }: LeadFormProps) {
   const { t } = useTranslation()
   const companyNameId = useId()
@@ -567,10 +571,10 @@ export function LeadForm({
 
       <div className="flex justify-end gap-3 pt-4 border-t">
         <Button type="button" variant="outline" onClick={onCancel}>
-          {t("leads.form.cancel")}
+          {cancelButtonText || t("leads.form.cancel")}
         </Button>
         <Button type="submit" className="min-w-[100px]">
-          {isEdit ? t("leads.form.update") : t("leads.form.save")}
+          {submitButtonText || (isEdit ? t("leads.form.update") : t("leads.form.save"))}
         </Button>
       </div>
     </form>

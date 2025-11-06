@@ -1,9 +1,9 @@
 key,ko,en
-step.condition.always,[NO TRANSLATION] sequence.step.condition.always,[NO TRANSLATION] sequence.step.condition.always
-step.condition.custom,[NO TRANSLATION] sequence.step.condition.custom,[NO TRANSLATION] sequence.step.condition.custom
-step.condition.negativeResponse,[NO TRANSLATION] sequence.step.condition.negativeResponse,[NO TRANSLATION] sequence.step.condition.negativeResponse
-step.condition.noResponse,[NO TRANSLATION] sequence.step.condition.noResponse,[NO TRANSLATION] sequence.step.condition.noResponse
-step.condition.positiveResponse,[NO TRANSLATION] sequence.step.condition.positiveResponse,[NO TRANSLATION] sequence.step.condition.positiveResponse
-step.sendCondition,[NO TRANSLATION] sequence.step.sendCondition,[NO TRANSLATION] sequence.step.sendCondition
-step.sendConditionLabel,[NO TRANSLATION] sequence.step.sendConditionLabel,[NO TRANSLATION] sequence.step.sendConditionLabel
-step.sendConditionPlaceholder,[NO TRANSLATION] sequence.step.sendConditionPlaceholder,[NO TRANSLATION] sequence.step.sendConditionPlaceholder
+step.condition.always,항상 발송,Always Send
+step.condition.custom,사용자 정의 조건,Custom Condition
+step.condition.negativeResponse,이전 단계에서 부정적 응답,Negative Response from Previous Step
+step.condition.noResponse,이전 단계에서 응답 없음,No Response from Previous Step
+step.condition.positiveResponse,이전 단계에서 긍정적 응답,Positive Response from Previous Step
+step.sendCondition,발송 조건,Send Condition
+step.sendConditionLabel,발송 조건,Send Condition
+step.sendConditionPlaceholder,발송 조건을 선택하세요,Select send condition

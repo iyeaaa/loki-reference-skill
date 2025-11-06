@@ -205,6 +205,7 @@ export const emailsApi = {
     leadId?: string
     sequenceId?: string
     search?: string
+    intent?: string
   }) => {
     const searchParams = new URLSearchParams()
 
@@ -220,6 +221,7 @@ export const emailsApi = {
     if (params.leadId) searchParams.append("leadId", params.leadId)
     if (params.sequenceId) searchParams.append("sequenceId", params.sequenceId)
     if (params.search) searchParams.append("search", params.search)
+    if (params.intent && params.intent !== "all") searchParams.append("intent", params.intent)
 
     const query = searchParams.toString()
     return apiFetch<{

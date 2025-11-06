@@ -1,5 +1,6 @@
 import {
   type ColumnFiltersState,
+  type ColumnSizingState,
   flexRender,
   getCoreRowModel,
   type RowSelectionState,
@@ -7,7 +8,8 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import { ChevronLeft, ChevronRight, Edit, Trash2, Users } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { FilterSummaryPanel } from "@/components/leads/filters/FilterSummaryPanel"
 import { leadsColumns } from "@/components/leads/LeadsTableColumns"
 import { Button } from "@/components/ui/button"
@@ -19,7 +21,6 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
-import { Input } from "@/components/ui/input"
 import { useDeleteLead, useLeads } from "@/lib/api/hooks/leads"
 import type { Lead, LeadsParams } from "@/lib/api/types/lead"
 import type { ColumnFilter } from "@/lib/api/types/lead-filters"
@@ -40,6 +41,8 @@ interface LeadsTableWithPaginationProps {
   onEditLead: (lead: Lead) => void
   onManageGroups: (lead: Lead) => void
   onLeadsDataChange?: (leads: Lead[]) => void
+  onTotalChange?: (total: number) => void
+  pageSize?: number
   isSelectAllMode?: boolean
   allLeadsSelected?: boolean
   onToggleSelectAll?: () => void
@@ -54,18 +57,17 @@ export function LeadsTableWithPagination({
   onEditLead,
   onManageGroups,
   onLeadsDataChange,
+  onTotalChange,
+  pageSize: propsPageSize,
   isSelectAllMode = false,
   allLeadsSelected = false,
   onToggleSelectAll,
 }: LeadsTableWithPaginationProps) {
+  const { t } = useTranslation()
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageInputValue, setPageInputValue] = useState("1")
-  const [pageSize, setPageSize] = useState(() => {
-    const saved = localStorage.getItem("leadsPageSize")
-    return saved ? parseInt(saved, 10) : 100
-  })
-  const [pageSizeInput, setPageSizeInput] = useState(String(pageSize))
+  const pageSize = propsPageSize || 100
   const limit = pageSize
 
   // Workspace state
@@ -77,10 +79,23 @@ export function LeadsTableWithPagination({
   const [visibleColumns, setVisibleColumns] = useState<string[]>(() => getVisibleColumns())
   const [columnOrder, setColumnOrder] = useState<string[]>(() => getColumnOrder())
 
+  // Column sizing state - auto-calculate initially, then restore from localStorage
+  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>(() => {
+    const saved = localStorage.getItem("leadsColumnSizing")
+    return saved ? JSON.parse(saved) : {}
+  })
+  const [isInitialAutoSize, setIsInitialAutoSize] = useState(() => {
+    const saved = localStorage.getItem("leadsColumnSizing")
+    return !saved // If no saved sizes, we're in initial auto-size mode
+  })
+
   // TanStack Table state
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+
+  // Ref for table element to measure content
+  const tableRef = useRef<HTMLTableElement>(null)
 
   // Filter state for column filters
   const [activeColumnFilters, setActiveColumnFilters] = useState<ColumnFilter[]>([])
@@ -91,6 +106,85 @@ export function LeadsTableWithPagination({
     id: string
     name: string
   } | null>(null)
+
+  // Constants for auto-sizing
+  const MAX_COLUMN_WIDTH = 400
+  const MIN_COLUMN_WIDTH = 80
+
+  // Save column sizing to localStorage whenever it changes
+  useEffect(() => {
+    if (Object.keys(columnSizing).length > 0) {
+      localStorage.setItem("leadsColumnSizing", JSON.stringify(columnSizing))
+      setIsInitialAutoSize(false)
+    }
+  }, [columnSizing])
+
+  // Auto-size function for a specific column
+  const autoSizeColumn = useCallback((columnId: string) => {
+    if (!tableRef.current) return
+
+    const cells = tableRef.current.querySelectorAll(`[data-column-id="${columnId}"]`)
+    let maxWidth = MIN_COLUMN_WIDTH
+
+    cells.forEach((cell) => {
+      const element = cell as HTMLElement
+      // Create a temporary element to measure text width
+      const temp = document.createElement("span")
+      temp.style.visibility = "hidden"
+      temp.style.position = "absolute"
+      temp.style.whiteSpace = "nowrap"
+      temp.style.fontSize = window.getComputedStyle(element).fontSize
+      temp.style.fontFamily = window.getComputedStyle(element).fontFamily
+      temp.textContent = element.textContent || ""
+      document.body.appendChild(temp)
+      const width = temp.offsetWidth + 32 // Add padding
+      document.body.removeChild(temp)
+      maxWidth = Math.max(maxWidth, width)
+    })
+
+    const finalWidth = Math.min(maxWidth, MAX_COLUMN_WIDTH)
+
+    setColumnSizing((prev) => ({
+      ...prev,
+      [columnId]: finalWidth,
+    }))
+  }, [])
+
+  // Auto-size all columns
+  const autoSizeAllColumns = useCallback(() => {
+    if (!tableRef.current) return
+
+    const newSizing: ColumnSizingState = {}
+    const columns = tableRef.current.querySelectorAll("th[data-column-id]")
+
+    columns.forEach((header) => {
+      const columnId = (header as HTMLElement).getAttribute("data-column-id")
+      if (!columnId || columnId === "select" || columnId === "columnActions") return
+
+      const cells = tableRef.current?.querySelectorAll(`[data-column-id="${columnId}"]`)
+      let maxWidth = MIN_COLUMN_WIDTH
+
+      cells?.forEach((cell) => {
+        const element = cell as HTMLElement
+        const temp = document.createElement("span")
+        temp.style.visibility = "hidden"
+        temp.style.position = "absolute"
+        temp.style.whiteSpace = "nowrap"
+        temp.style.fontSize = window.getComputedStyle(element).fontSize
+        temp.style.fontFamily = window.getComputedStyle(element).fontFamily
+        temp.textContent = element.textContent || ""
+        document.body.appendChild(temp)
+        const width = temp.offsetWidth + 32
+        document.body.removeChild(temp)
+        maxWidth = Math.max(maxWidth, width)
+      })
+
+      const finalWidth = Math.min(maxWidth, MAX_COLUMN_WIDTH)
+      newSizing[columnId] = finalWidth
+    })
+
+    setColumnSizing(newSizing)
+  }, [])
 
   // localStorage change detection
   useEffect(() => {
@@ -138,12 +232,30 @@ export function LeadsTableWithPagination({
   // Delete mutation
   const deleteLead = useDeleteLead()
 
+  // Auto-size on initial load if no saved sizes
+  useEffect(() => {
+    if (isInitialAutoSize && leads.length > 0 && tableRef.current) {
+      // Wait for table to render
+      const timer = setTimeout(() => {
+        autoSizeAllColumns()
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [isInitialAutoSize, leads, autoSizeAllColumns])
+
   // Notify parent of data changes
   useEffect(() => {
     if (onLeadsDataChange && leads.length > 0) {
       onLeadsDataChange(leads)
     }
   }, [leads, onLeadsDataChange])
+
+  // Notify parent of total changes
+  useEffect(() => {
+    if (onTotalChange) {
+      onTotalChange(total)
+    }
+  }, [total, onTotalChange])
 
   // Sync row selection with parent component
   useEffect(() => {
@@ -216,15 +328,19 @@ export function LeadsTableWithPagination({
       sorting,
       columnFilters,
       rowSelection,
+      columnSizing,
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onRowSelectionChange: setRowSelection,
+    onColumnSizingChange: setColumnSizing,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualSorting: true,
     manualFiltering: true,
     pageCount: totalPages,
+    columnResizeMode: "onChange",
+    enableColumnResizing: true,
     meta: {
       onToggleLead,
       onToggleAll: handleToggleAll,
@@ -242,37 +358,14 @@ export function LeadsTableWithPagination({
       onAddColumn: handleAddColumn,
       onRemoveColumn: handleRemoveColumn,
       onReorderColumns: handleReorderColumns,
+      // Auto-sizing
+      onAutoSizeColumn: autoSizeColumn,
     },
   })
 
   // Pagination handlers
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
-    setPageInputValue(page.toString())
-  }
-
-  const handlePageInputChange = (value: string) => {
-    setPageInputValue(value)
-  }
-
-  const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      const page = parseInt(pageInputValue, 10)
-      if (page >= 1 && page <= totalPages) {
-        setCurrentPage(page)
-      } else {
-        setPageInputValue(currentPage.toString())
-      }
-    }
-  }
-
-  const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10)
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page)
-    } else {
-      setPageInputValue(currentPage.toString())
-    }
   }
 
   const getPageNumbers = () => {
@@ -310,41 +403,6 @@ export function LeadsTableWithPagination({
 
   const handleClearAllFilters = () => {
     setActiveColumnFilters([])
-  }
-
-  // Page size handlers
-  const handlePageSizeChange = (newSize: number) => {
-    if (newSize >= 1 && newSize <= 10000) {
-      setPageSize(newSize)
-      setPageSizeInput(String(newSize))
-      setCurrentPage(1) // Reset to first page
-      setPageInputValue("1")
-      localStorage.setItem("leadsPageSize", String(newSize))
-    }
-  }
-
-  const handlePageSizeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPageSizeInput(e.target.value)
-  }
-
-  const handlePageSizeInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      const value = parseInt(pageSizeInput, 10)
-      if (!Number.isNaN(value) && value >= 1 && value <= 10000) {
-        handlePageSizeChange(value)
-      } else {
-        setPageSizeInput(String(pageSize))
-      }
-    }
-  }
-
-  const handlePageSizeInputBlur = () => {
-    const value = parseInt(pageSizeInput, 10)
-    if (!Number.isNaN(value) && value >= 1 && value <= 10000) {
-      handlePageSizeChange(value)
-    } else {
-      setPageSizeInput(String(pageSize))
-    }
   }
 
   // Drag and drop state
@@ -408,172 +466,178 @@ export function LeadsTableWithPagination({
       )}
 
       {/* Leads Table */}
-      <div className="rounded-md border">
-        <div
-          className="overflow-x-auto overflow-y-visible"
+      <div className="rounded-md border overflow-x-auto">
+        <table
+          ref={tableRef}
+          className="border-collapse"
           style={{
-            scrollbarGutter: "stable",
-            WebkitOverflowScrolling: "touch",
+            width: table.getTotalSize(),
           }}
         >
-          <table className="w-full" style={{ tableLayout: "auto" }}>
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    const isDraggable = header.id !== "select" && header.id !== "columnActions"
-                    const isDragging = draggedColumnId === header.id
+          <thead className="bg-gray-50 dark:bg-gray-700">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  const isDraggable = header.id !== "select" && header.id !== "columnActions"
+                  const isDragging = draggedColumnId === header.id
+                  const canResize = header.id !== "select" && header.id !== "columnActions"
 
-                    return (
-                      <th
-                        key={header.id}
-                        draggable={isDraggable}
-                        onDragStart={(e) => isDraggable && handleDragStart(e, header.id)}
-                        onDragOver={handleDragOver}
-                        onDrop={(e) => isDraggable && handleDrop(e, header.id)}
-                        onDragEnd={handleDragEnd}
-                        className={
-                          header.id === "select"
-                            ? "sticky left-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
-                            : `p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${
-                                isDragging ? "opacity-50" : ""
-                              } ${isDraggable ? "cursor-move" : ""}`
-                        }
-                        style={
-                          header.id === "select"
-                            ? { width: "1%", whiteSpace: "nowrap" }
-                            : { minWidth: "120px" }
-                        }
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </th>
-                    )
-                  })}
-                </tr>
-              ))}
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {table.getRowModel().rows.map((row) => {
-                const lead = row.original
-                return (
-                  <ContextMenu key={row.id}>
-                    <ContextMenuTrigger asChild>
-                      <tr className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group/row relative">
-                        {row.getVisibleCells().map((cell) => (
+                  return (
+                    <th
+                      key={header.id}
+                      data-column-id={header.id}
+                      draggable={isDraggable}
+                      onDragStart={(e) => isDraggable && handleDragStart(e, header.id)}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => isDraggable && handleDrop(e, header.id)}
+                      onDragEnd={handleDragEnd}
+                      onDoubleClick={() => canResize && autoSizeColumn(header.id)}
+                      className={
+                        header.id === "select"
+                          ? "sticky left-0 z-10 p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700"
+                          : `relative p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${
+                              isDragging ? "opacity-50" : ""
+                            } ${isDraggable ? "cursor-move" : ""}`
+                      }
+                      style={{
+                        width: header.id === "select" ? 50 : header.getSize(),
+                        minWidth: header.id === "select" ? 50 : MIN_COLUMN_WIDTH,
+                        maxWidth: header.id === "select" ? 50 : MAX_COLUMN_WIDTH,
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 overflow-hidden text-ellipsis">
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </div>
+                        {canResize && (
+                          // biome-ignore lint/a11y/noStaticElementInteractions: Column resize handle is a standard table interaction pattern
+                          <div
+                            onMouseDown={(e) => {
+                              e.stopPropagation()
+                              e.preventDefault()
+                              header.getResizeHandler()(e)
+                            }}
+                            onTouchStart={(e) => {
+                              e.stopPropagation()
+                              e.preventDefault()
+                              header.getResizeHandler()(e)
+                            }}
+                            className={`absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none bg-transparent hover:bg-blue-500 ${
+                              header.column.getIsResizing() ? "bg-blue-500" : ""
+                            }`}
+                            style={{
+                              transform: header.column.getIsResizing()
+                                ? `translateX(${table.getState().columnSizingInfo.deltaOffset ?? 0}px)`
+                                : "",
+                            }}
+                          />
+                        )}
+                      </div>
+                    </th>
+                  )
+                })}
+              </tr>
+            ))}
+          </thead>
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            {table.getRowModel().rows.map((row) => {
+              const lead = row.original
+              return (
+                <ContextMenu key={row.id}>
+                  <ContextMenuTrigger asChild>
+                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group/row relative">
+                      {row.getVisibleCells().map((cell) => {
+                        const canResize =
+                          cell.column.id !== "select" && cell.column.id !== "columnActions"
+                        // Get the header for this column to access resize handler
+                        const header = table
+                          .getHeaderGroups()[0]
+                          ?.headers.find((h) => h.column.id === cell.column.id)
+
+                        return (
                           <td
                             key={cell.id}
+                            data-column-id={cell.column.id}
                             className={
                               cell.column.id === "select"
-                                ? "sticky left-0 z-10 p-2 whitespace-nowrap text-sm bg-white dark:bg-gray-800 group-hover/row:bg-gray-50 dark:group-hover/row:bg-gray-700"
-                                : "p-2 text-sm text-gray-900 dark:text-gray-100"
+                                ? "sticky left-0 z-10 p-2 text-sm bg-white dark:bg-gray-800 group-hover/row:bg-gray-50 dark:group-hover/row:bg-gray-700"
+                                : "relative p-2 text-sm text-gray-900 dark:text-gray-100"
                             }
+                            style={{
+                              width: cell.column.id === "select" ? 50 : cell.column.getSize(),
+                              maxWidth: cell.column.id === "select" ? 50 : cell.column.getSize(),
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
                           >
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            <div className="overflow-hidden text-ellipsis whitespace-nowrap">
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </div>
+                            {canResize && header && (
+                              // biome-ignore lint/a11y/noStaticElementInteractions: Column resize handle is a standard table interaction pattern
+                              <div
+                                onMouseDown={(e) => {
+                                  e.stopPropagation()
+                                  e.preventDefault()
+                                  header.getResizeHandler()(e)
+                                }}
+                                onTouchStart={(e) => {
+                                  e.stopPropagation()
+                                  e.preventDefault()
+                                  header.getResizeHandler()(e)
+                                }}
+                                className={`absolute right-0 top-0 h-full w-1 cursor-col-resize select-none touch-none bg-transparent hover:bg-blue-500 ${
+                                  cell.column.getIsResizing() ? "bg-blue-500" : ""
+                                }`}
+                                style={{
+                                  transform: cell.column.getIsResizing()
+                                    ? `translateX(${table.getState().columnSizingInfo.deltaOffset ?? 0}px)`
+                                    : "",
+                                }}
+                              />
+                            )}
                           </td>
-                        ))}
-                      </tr>
-                    </ContextMenuTrigger>
-                    <ContextMenuContent className="w-48">
-                      <ContextMenuItem onClick={() => onEditLead(lead)} className="cursor-pointer">
-                        <Edit className="mr-2 h-4 w-4" />
-                        리드 편집
-                      </ContextMenuItem>
-                      <ContextMenuItem
-                        onClick={() => onManageGroups(lead)}
-                        className="cursor-pointer"
-                      >
-                        <Users className="mr-2 h-4 w-4" />
-                        그룹 관리
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem
-                        onClick={() =>
-                          handleDeleteLead(
-                            lead.id,
-                            lead.companyName || lead.foundCompanyName || "이름 없음",
-                          )
-                        }
-                        className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        리드 삭제
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                        )
+                      })}
+                    </tr>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent className="w-48">
+                    <ContextMenuItem onClick={() => onEditLead(lead)} className="cursor-pointer">
+                      <Edit className="mr-2 h-4 w-4" />
+                      리드 편집
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      onClick={() => onManageGroups(lead)}
+                      className="cursor-pointer"
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      그룹 관리
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem
+                      onClick={() =>
+                        handleDeleteLead(
+                          lead.id,
+                          lead.companyName || lead.foundCompanyName || "이름 없음",
+                        )
+                      }
+                      className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      리드 삭제
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
 
       {/* Pagination */}
       <div className="mt-6 space-y-4">
-        {/* Page Size Control */}
-        <div className="flex items-center justify-center gap-3">
-          <span className="text-sm text-muted-foreground">페이지 크기:</span>
-          <Input
-            type="text"
-            value={pageSizeInput}
-            onChange={handlePageSizeInputChange}
-            onKeyDown={handlePageSizeInputKeyDown}
-            onBlur={handlePageSizeInputBlur}
-            className="w-20 h-8 text-sm text-center"
-            disabled={isFetching}
-            placeholder="100"
-          />
-          <div className="flex gap-1">
-            <Button
-              onClick={() => handlePageSizeChange(10)}
-              variant={pageSize === 10 ? "default" : "outline"}
-              size="sm"
-              disabled={isFetching}
-            >
-              10
-            </Button>
-            <Button
-              onClick={() => handlePageSizeChange(50)}
-              variant={pageSize === 50 ? "default" : "outline"}
-              size="sm"
-              disabled={isFetching}
-            >
-              50
-            </Button>
-            <Button
-              onClick={() => handlePageSizeChange(100)}
-              variant={pageSize === 100 ? "default" : "outline"}
-              size="sm"
-              disabled={isFetching}
-            >
-              100
-            </Button>
-            <Button
-              onClick={() => handlePageSizeChange(500)}
-              variant={pageSize === 500 ? "default" : "outline"}
-              size="sm"
-              disabled={isFetching}
-            >
-              500
-            </Button>
-          </div>
-        </div>
-
-        {/* Pagination Info */}
-        <div className="flex items-center justify-center">
-          <div className="text-sm text-muted-foreground">
-            {total > 0 ? (
-              <>
-                {(currentPage - 1) * limit + 1}-{Math.min(currentPage * limit, total)} /{" "}
-                {total.toLocaleString()}개 표시
-              </>
-            ) : (
-              "0개 표시"
-            )}
-          </div>
-        </div>
-
         {/* Pagination Controls */}
         <div className="flex items-center justify-center gap-1">
           {/* First Page */}
@@ -584,7 +648,7 @@ export function LeadsTableWithPagination({
             size="sm"
             className="px-3"
           >
-            처음
+            {t("leads.button.firstPage")}
           </Button>
 
           {/* Previous Page */}
@@ -596,7 +660,7 @@ export function LeadsTableWithPagination({
             className="px-3"
           >
             <ChevronLeft className="h-4 w-4" />
-            이전
+            {t("leads.button.previousPage")}
           </Button>
 
           {/* Page Numbers */}
@@ -621,7 +685,7 @@ export function LeadsTableWithPagination({
             size="sm"
             className="px-3"
           >
-            다음
+            {t("leads.button.nextPage")}
             <ChevronRight className="h-4 w-4" />
           </Button>
 
@@ -633,25 +697,8 @@ export function LeadsTableWithPagination({
             size="sm"
             className="px-3"
           >
-            마지막
+            {t("leads.button.lastPage")}
           </Button>
-        </div>
-
-        {/* Page Jump */}
-        <div className="flex items-center justify-center gap-2">
-          <span className="text-sm text-muted-foreground">페이지:</span>
-          <Input
-            type="number"
-            min="1"
-            max={totalPages || 1}
-            value={pageInputValue}
-            onChange={(e) => handlePageInputChange(e.target.value)}
-            onKeyDown={handlePageInputKeyDown}
-            onBlur={handlePageInputBlur}
-            className="w-20 h-8 text-sm text-center"
-            disabled={isFetching}
-          />
-          <span className="text-sm text-muted-foreground">/ {totalPages || 1}</span>
         </div>
       </div>
 
@@ -659,12 +706,10 @@ export function LeadsTableWithPagination({
       <ConfirmDialog
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
-        title="리드 삭제"
-        description={`"${
-          leadToDelete?.name || ""
-        }" 리드를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`}
-        confirmText="삭제"
-        cancelText="취소"
+        title={t("leads.button.deleteLead")}
+        description={`"${leadToDelete?.name || ""}" ${t("leads.button.deleteLeadConfirm")}`}
+        confirmText={t("leads.button.delete")}
+        cancelText={t("leads.button.cancel")}
         onConfirm={confirmDelete}
         variant="destructive"
       />

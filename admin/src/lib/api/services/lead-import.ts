@@ -5,6 +5,14 @@
 
 import { API_BASE_URL, apiFetch, getToken } from "../client"
 
+export interface ProgressLog {
+  timestamp: number
+  message: string
+  type: "info" | "success" | "warning" | "error"
+  processed?: number
+  total?: number
+}
+
 export interface SheetNamesResponse {
   success: boolean
   sheetNames: string[]

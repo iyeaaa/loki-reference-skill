@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { Badge } from "@/components/ui/badge"
-import type { ImportProgress, PreviewLeadData } from "@/lib/api/services/lead-import"
+import type { ImportProgress, ImportResult, PreviewLeadData } from "@/lib/api/services/lead-import"
 import type { Insight } from "@/lib/api/types/chatbot"
-import { LeadImportProgress } from "./LeadImportProgress"
 import { LeadPreviewArtifact } from "./LeadPreviewArtifact"
+import { LeadProgressSection } from "./LeadProgressSection"
+import { LeadResultSection } from "./LeadResultSection"
+import type { ProgressLog } from "./ProgressLogger"
+import { SectionHeader } from "./SectionHeader"
 
 // Claude-style syntax highlighting theme
 const claudeTheme = {
@@ -104,6 +107,9 @@ interface DataArtifactProps {
     sheetName: string
   }
   leadImportProgress?: ImportProgress
+  leadImportResult?: ImportResult
+  progressLogs?: ProgressLog[]
+  startTime?: number
   onLeadImportApproval?: (approved: boolean) => void
 }
 
@@ -120,9 +126,13 @@ export function DataArtifact({
   question,
   leadPreview,
   leadImportProgress,
+  leadImportResult,
+  progressLogs,
+  startTime,
   onLeadImportApproval,
 }: DataArtifactProps) {
-  const hasAnyContent = sql || insights.length > 0 || !!leadPreview || !!leadImportProgress
+  const hasAnyContent =
+    sql || insights.length > 0 || !!leadPreview || !!leadImportProgress || !!leadImportResult
   const [mounted, setMounted] = useState(false)
   const [isProcessingLead, setIsProcessingLead] = useState(false)
 
@@ -153,39 +163,22 @@ export function DataArtifact({
     }
   }, [leadPreview])
 
-  // Show lead import progress if available
-  if (leadImportProgress) {
-    return (
-      <div className="h-full overflow-auto p-6">
-        <LeadImportProgress progress={leadImportProgress} />
-      </div>
-    )
-  }
-
-  // Show lead preview if available
-  if (leadPreview && onLeadImportApproval) {
-    const handleApprove = () => {
+  // Prepare lead preview handlers
+  const handleApprove = () => {
+    if (onLeadImportApproval) {
       setIsProcessingLead(true)
       onLeadImportApproval(true)
     }
+  }
 
-    const handleReject = () => {
+  const handleReject = () => {
+    if (onLeadImportApproval) {
       setIsProcessingLead(true)
       onLeadImportApproval(false)
     }
-
-    return (
-      <div className="h-full overflow-auto p-6">
-        <LeadPreviewArtifact
-          data={leadPreview}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          isProcessing={isProcessingLead}
-        />
-      </div>
-    )
   }
 
+  // Show empty state if no content
   if (!hasAnyContent) {
     return (
       <div className="h-full flex items-center justify-center p-8">
@@ -196,14 +189,20 @@ export function DataArtifact({
     )
   }
 
+  // Determine the main title based on what content is available
+  const getTitle = () => {
+    if (leadImportProgress) return "리드 추가 진행 중"
+    if (leadImportResult) return "리드 추가 완료"
+    if (leadPreview) return "리드 미리보기"
+    return question || "Analysis Results"
+  }
+
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header with streaming indicator */}
       <div className="border-b border-border px-6 py-4 bg-muted/30 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">
-            {question || "Analysis Results"}
-          </h3>
+          <h3 className="text-sm font-semibold text-foreground">{getTitle()}</h3>
           {isStreaming && (
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
@@ -215,7 +214,28 @@ export function DataArtifact({
 
       {/* Content area with full-height scroll */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {/* SQL Query - First section */}
+        {/* Lead Preview Section */}
+        {leadPreview && onLeadImportApproval && (
+          <LeadPreviewArtifact
+            data={leadPreview}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            isProcessing={isProcessingLead}
+          />
+        )}
+
+        {/* Lead Import Progress Section */}
+        {leadImportProgress && <LeadProgressSection progress={leadImportProgress} />}
+
+        {/* Lead Import Result Section */}
+        {leadImportResult && (
+          <LeadResultSection
+            result={leadImportResult}
+            progressLogs={progressLogs}
+            startTime={startTime}
+          />
+        )}
+        {/* SQL Query Section */}
         {sql && (
           <div
             className={`
@@ -223,12 +243,7 @@ export function DataArtifact({
               ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
             `}
           >
-            <div className="flex items-center gap-2">
-              <div className="h-1 w-1 rounded-full bg-cyan-500" />
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Executed Query
-              </span>
-            </div>
+            <SectionHeader title="Executed Query" />
             <div className="rounded-lg border border-border bg-muted/50">
               <SyntaxHighlighter
                 language="sql"
@@ -250,7 +265,7 @@ export function DataArtifact({
           </div>
         )}
 
-        {/* Insights - One card per row */}
+        {/* Insights Section */}
         {insights.length > 0 && (
           <div
             className={`
@@ -259,12 +274,7 @@ export function DataArtifact({
             `}
             style={{ transitionDelay: sql ? "100ms" : "0ms" }}
           >
-            <div className="flex items-center gap-2">
-              <div className="h-1 w-1 rounded-full bg-green-500" />
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Key Insights
-              </span>
-            </div>
+            <SectionHeader title="Key Insights" />
             <div className="space-y-3">
               {insights.map((insight, i) => (
                 <div

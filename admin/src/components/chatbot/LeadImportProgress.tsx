@@ -1,8 +1,10 @@
 import { CheckCircle2, FileSpreadsheet, XCircle } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
 import type { ImportProgress } from "@/lib/api/services/lead-import"
+import { EnhancedProgressBar } from "./EnhancedProgressBar"
+import { type ProgressLog, ProgressLogger } from "./ProgressLogger"
 import { StarSpinner } from "./StarSpinner"
 
 interface LeadImportProgressProps {
@@ -10,14 +12,72 @@ interface LeadImportProgressProps {
 }
 
 export function LeadImportProgress({ progress }: LeadImportProgressProps) {
-  const percentage =
-    progress.total && progress.processed
-      ? Math.round((progress.processed / progress.total) * 100)
-      : 0
+  const [logs, setLogs] = useState<ProgressLog[]>([])
+  const [startTime, setStartTime] = useState<number>(Date.now())
+  const prevProgressRef = useRef<ImportProgress | null>(null)
 
   const isComplete = progress.type === "complete"
   const isError = progress.type === "error"
   const isInit = progress.type === "init"
+  const isInProgress = progress.type === "progress"
+
+  // Track logs from progress updates
+  useEffect(() => {
+    const prev = prevProgressRef.current
+
+    // Initialize start time on first progress
+    if (!prev || prev.type === "init") {
+      setStartTime(Date.now())
+    }
+
+    // Add log entry for significant changes
+    if (progress.type === "progress") {
+      const newLog: ProgressLog = {
+        timestamp: Date.now(),
+        message: progress.currentCompanyName
+          ? `처리 중: ${progress.currentCompanyName}${progress.currentRow ? ` (행 #${progress.currentRow})` : ""}`
+          : progress.message || "처리 중...",
+        type: "info",
+        processed: progress.processed,
+        total: progress.total,
+      }
+
+      // Only add if it's a new entry (avoid duplicates)
+      if (
+        !prev ||
+        prev.processed !== progress.processed ||
+        prev.currentCompanyName !== progress.currentCompanyName
+      ) {
+        setLogs((prevLogs) => {
+          // Keep last 50 logs to prevent memory issues
+          const newLogs = [...prevLogs, newLog]
+          return newLogs.slice(-50)
+        })
+      }
+    } else if (progress.type === "complete") {
+      setLogs((prevLogs) => [
+        ...prevLogs,
+        {
+          timestamp: Date.now(),
+          message: `완료: 성공 ${progress.success}건, 스킵 ${progress.skipped}건, 실패 ${progress.failed}건`,
+          type: "success",
+          processed: progress.total,
+          total: progress.total,
+        },
+      ])
+    } else if (progress.type === "error") {
+      setLogs((prevLogs) => [
+        ...prevLogs,
+        {
+          timestamp: Date.now(),
+          message: progress.error || "오류가 발생했습니다",
+          type: "error",
+        },
+      ])
+    }
+
+    prevProgressRef.current = progress
+  }, [progress])
 
   return (
     <Card className="w-full">
@@ -65,24 +125,24 @@ export function LeadImportProgress({ progress }: LeadImportProgressProps) {
             )}
           </div>
 
-          {/* Progress Bar */}
+          {/* Enhanced Progress Bar */}
           {!isInit && !isError && progress.total !== undefined && progress.total > 0 && (
-            <div className="space-y-2">
-              <Progress value={percentage} className="h-2" />
-              <p className="text-xs text-muted-foreground text-right">{percentage}%</p>
-            </div>
+            <EnhancedProgressBar
+              value={progress.processed || 0}
+              max={progress.total}
+              animated={isInProgress}
+            />
           )}
 
-          {/* Current Processing Info */}
-          {!isInit && !isComplete && !isError && progress.currentCompanyName && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <FileSpreadsheet className="h-4 w-4" />
-              <span className="truncate">
-                처리 중:{" "}
-                <span className="font-medium text-foreground">{progress.currentCompanyName}</span>
-              </span>
-              {progress.currentRow && <span className="text-xs">(행 #{progress.currentRow})</span>}
-            </div>
+          {/* Progress Logger with Stats */}
+          {!isInit && !isError && logs.length > 0 && (
+            <ProgressLogger
+              logs={logs}
+              startTime={startTime}
+              currentProgress={progress.processed || 0}
+              totalItems={progress.total || 0}
+              isComplete={isComplete}
+            />
           )}
 
           {/* Stats Grid */}

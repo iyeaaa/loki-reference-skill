@@ -1,4 +1,4 @@
-import type { PreviewLeadData } from "../services/lead-import"
+import type { ImportProgress, ImportResult, PreviewLeadData, ProgressLog } from "../services/lead-import"
 
 export interface FileAttachment {
   fileName: string
@@ -53,8 +53,8 @@ export interface ChatMessage {
     insights?: Insight[]
     visualization?: VisualizationSuggestion[]
     followUpQuestions?: string[]
-    importResult?: unknown
-    importProgress?: unknown
+    importResult?: ImportResult
+    importProgress?: ImportProgress
     chatbotProgress?: ChatbotProgress
     leadPreview?: {
       totalRows: number
@@ -63,6 +63,8 @@ export interface ChatMessage {
       sheetName: string
       availableSheets: string[]
     }
+    progressLogs?: ProgressLog[]
+    startTime?: number
   }
 }
 

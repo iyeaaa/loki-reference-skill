@@ -206,4 +206,25 @@
       height: 0;
     }
   }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes pulse-subtle {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.95;
+    }
+  }
+
+  --animate-shimmer: shimmer 2s infinite linear;
+  --animate-pulse-subtle: pulse-subtle 2s infinite ease-in-out;
 }

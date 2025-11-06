@@ -51,6 +51,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     import("@/lib/api/services/lead-import").ImportProgress | null
   >(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const lastUserMessageRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isProcessingFileRef = useRef(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -158,12 +159,17 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     }
   }, [historyData])
 
-  // Auto-scroll when messages or thinking state changes
+  // Auto-scroll when new user message is added
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: "smooth" })
-    // Dependency array is intentionally empty to avoid infinite scrolling
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    // Only scroll when a new user message is added (not during streaming)
+    if (messages.length > 0 && messages[messages.length - 1].role === "user") {
+      // Scroll to the latest user message, positioning it near the top
+      lastUserMessageRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      })
+    }
+  }, [messages.length, messages[messages.length - 1]?.role])
 
   const handleFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -395,6 +401,16 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       // Import upload service
       const { uploadLeadsFile } = await import("@/lib/api/services/lead-import")
 
+      // Track progress logs and timing
+      const progressLogs: Array<{
+        timestamp: number
+        message: string
+        type: "info" | "success" | "warning" | "error"
+        processed?: number
+        total?: number
+      }> = []
+      const startTime = Date.now()
+
       try {
         const result = await uploadLeadsFile({
           file: leadPreviewData.file,
@@ -403,7 +419,27 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
           onProgress: (progress) => {
             // Update lead import progress state for real-time UI
             setLeadImportProgress(progress)
+
+            // Collect progress logs
+            if (progress.type === "progress" && progress.currentCompanyName) {
+              progressLogs.push({
+                timestamp: Date.now(),
+                message: `처리 중: ${progress.currentCompanyName}${progress.currentRow ? ` (행 #${progress.currentRow})` : ""}`,
+                type: "info",
+                processed: progress.processed,
+                total: progress.total,
+              })
+            }
           },
+        })
+
+        // Add completion log
+        progressLogs.push({
+          timestamp: Date.now(),
+          message: `완료: 성공 ${result.success}건, 스킵 ${result.skipped}건, 실패 ${result.failed}건`,
+          type: "success",
+          processed: result.total,
+          total: result.total,
         })
 
         // Show final complete progress
@@ -419,11 +455,24 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
           result,
         })
 
-        // Keep progress visible for a moment, then clear
+        // Save result as a message with metadata for artifact display
+        const completionMessage: ChatMessage = {
+          role: "assistant",
+          content: `리드 추가가 완료되었습니다!\n\n- 성공: ${result.success}건\n- 스킵: ${result.skipped}건\n- 실패: ${result.failed}건\n\n상세 결과를 확인하려면 아래 아티팩트를 클릭하세요.`,
+          timestamp: new Date(),
+          metadata: {
+            importResult: result,
+            progressLogs,
+            startTime,
+          },
+        }
+
+        // Keep progress visible for a moment, then add message and clear
         setTimeout(() => {
+          setMessages((prev) => [...prev, completionMessage])
           setLeadImportProgress(null)
           setIsProcessing(false)
-        }, 5000)
+        }, 2000)
       } catch (error) {
         console.error("Lead import failed:", error)
 
@@ -581,18 +630,50 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     )
   }
 
+  // Helper functions to get latest data from messages
+  const getLatestSql = () => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].metadata?.sql) {
+        return messages[i].metadata?.sql
+      }
+    }
+    return undefined
+  }
+
+  const getLatestInsights = () => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const insights = messages[i].metadata?.insights
+      if (insights && insights.length > 0) {
+        return insights
+      }
+    }
+    return undefined
+  }
+
+  const getLatestResult = () => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].metadata?.result) {
+        return messages[i].metadata?.result
+      }
+    }
+    return undefined
+  }
+
   // Check if any message has artifact data (for split view)
   const hasAnyArtifact =
     messages.some(
       (msg) =>
         (msg.metadata?.insights && msg.metadata.insights.length > 0) ||
         !!msg.metadata?.sql ||
-        !!msg.metadata?.leadPreview,
+        !!msg.metadata?.leadPreview ||
+        !!msg.metadata?.importResult,
     ) ||
     (streamingMessage?.metadata?.insights && streamingMessage.metadata.insights.length > 0) ||
     !!streamingMessage?.metadata?.sql ||
     !!streamingMessage?.metadata?.leadPreview ||
-    !!leadPreviewData
+    !!streamingMessage?.metadata?.importResult ||
+    !!leadPreviewData ||
+    !!leadImportProgress
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -745,9 +826,14 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                       }
                     }
 
+                    // Determine if this is the last user message
+                    const isLastUserMessage =
+                      message.role === "user" && index === messages.length - 1
+
                     return (
                       <MessageBubble
                         key={`msg-${index}-${message.timestamp?.getTime() || index}`}
+                        ref={isLastUserMessage ? lastUserMessageRef : null}
                         message={message}
                         isStreaming={false}
                         hideArtifact={hasAnyArtifact}
@@ -859,17 +945,17 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                 sql={
                   selectedArtifact?.metadata?.sql ||
                   streamingMessage?.metadata?.sql ||
-                  messages[messages.length - 1]?.metadata?.sql
+                  getLatestSql()
                 }
                 insights={
                   selectedArtifact?.metadata?.insights ||
                   streamingMessage?.metadata?.insights ||
-                  messages[messages.length - 1]?.metadata?.insights
+                  getLatestInsights()
                 }
                 data={
                   selectedArtifact?.metadata?.result ||
                   streamingMessage?.metadata?.result ||
-                  messages[messages.length - 1]?.metadata?.result
+                  getLatestResult()
                 }
                 isStreaming={!selectedArtifact && isProcessing}
                 question={(() => {
@@ -896,6 +982,24 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                   messages[messages.length - 1]?.metadata?.leadPreview
                 }
                 leadImportProgress={leadImportProgress || undefined}
+                leadImportResult={
+                  selectedArtifact?.metadata?.importResult ||
+                  streamingMessage?.metadata?.importResult ||
+                  messages[messages.length - 1]?.metadata?.importResult ||
+                  undefined
+                }
+                progressLogs={
+                  selectedArtifact?.metadata?.progressLogs ||
+                  streamingMessage?.metadata?.progressLogs ||
+                  messages[messages.length - 1]?.metadata?.progressLogs ||
+                  undefined
+                }
+                startTime={
+                  selectedArtifact?.metadata?.startTime ||
+                  streamingMessage?.metadata?.startTime ||
+                  messages[messages.length - 1]?.metadata?.startTime ||
+                  undefined
+                }
                 onLeadImportApproval={handleLeadImportApproval}
               />
             </div>

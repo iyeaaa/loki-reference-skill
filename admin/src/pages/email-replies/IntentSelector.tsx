@@ -55,7 +55,6 @@ export function IntentSelector({ emailReplyId, currentIntent, size = "md" }: Int
 
   return (
     // biome-ignore lint/a11y/useSemanticElements: wrapper for event propagation control
-    // biome-ignore lint/a11y/noStaticElementInteractions: wrapper for event propagation control
     <div
       className="flex items-center gap-1.5"
       onClick={(e) => e.stopPropagation()}

@@ -94,10 +94,17 @@ export function SequenceMetrics({
   }
 
   const formatPercentage = (rate: number) => {
+    if (Number.isNaN(rate) || !Number.isFinite(rate)) {
+      return "0.0%"
+    }
     return `${rate.toFixed(1)}%`
   }
 
   const getRateColor = (rate: number, type: "positive" | "negative" = "positive") => {
+    if (Number.isNaN(rate) || !Number.isFinite(rate)) {
+      return "text-gray-500"
+    }
+
     if (type === "negative") {
       if (rate > 5) return "text-red-600"
       if (rate > 2) return "text-orange-600"

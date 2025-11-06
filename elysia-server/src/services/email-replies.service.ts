@@ -467,6 +467,28 @@ export async function getIntentCounts(workspaceId: string) {
 }
 
 /**
+ * Update email reply intent and sentiment manually
+ */
+export async function updateEmailReply(
+  replyId: string,
+  data: {
+    intent?: string | null
+    sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
+  },
+) {
+  const [updated] = await db
+    .update(emailReplies)
+    .set({
+      ...(data.intent !== undefined && { intent: data.intent }),
+      ...(data.sentiment !== undefined && { sentiment: data.sentiment }),
+    })
+    .where(eq(emailReplies.id, replyId))
+    .returning()
+
+  return updated
+}
+
+/**
  * Reclassify email reply using AI
  */
 export async function reclassifyEmailReply(replyId: string) {

@@ -294,6 +294,10 @@ export interface ThreadEmail {
   openCount: number
   clickCount: number
   stepOrder?: number | null
+  // Reply classification fields
+  emailReplyId?: string | null
+  replyIntent?: EmailIntent | null
+  replySentiment?: EmailReplySentiment | null
 }
 
 export interface ThreadGroupedEmail {

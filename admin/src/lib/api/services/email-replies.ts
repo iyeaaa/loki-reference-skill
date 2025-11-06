@@ -97,6 +97,34 @@ export const emailRepliesApi = {
   },
 
   /**
+   * Update email reply intent and sentiment
+   */
+  update: async (
+    id: string,
+    data: {
+      intent?:
+        | "meeting_request"
+        | "question"
+        | "objection"
+        | "out_of_office"
+        | "not_interested"
+        | "positive_interest"
+        | "neutral"
+        | null
+      sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
+    },
+  ): Promise<{
+    id: string
+    intent: string | null
+    sentiment: string | null
+  }> => {
+    return apiFetch(`/api/v1/email-replies/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    })
+  },
+
+  /**
    * Reclassify email reply using AI
    */
   reclassify: async (

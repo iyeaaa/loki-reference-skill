@@ -525,7 +525,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             and(
               eq(userEmailAccounts.workspaceId, body.workspaceId),
               eq(userEmailAccounts.userId, body.userId),
-              eq(userEmailAccounts.status, "active")
+              eq(userEmailAccounts.status, "active"),
             ),
           )
           .limit(1)
@@ -1443,10 +1443,15 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           openCount: emails.openCount,
           clickCount: emails.clickCount,
           stepOrder: sequenceSteps.stepOrder,
+          // Reply classification from email_replies
+          emailReplyId: emailReplies.id,
+          replyIntent: emailReplies.intent,
+          replySentiment: emailReplies.sentiment,
         })
         .from(emails)
         .leftJoin(sequences, eq(emails.sequenceId, sequences.id))
         .leftJoin(sequenceSteps, eq(emails.stepId, sequenceSteps.id))
+        .leftJoin(emailReplies, eq(emailReplies.replyEmailId, emails.id))
         .where(and(...conditions))
         .orderBy(asc(emails.createdAt))
 

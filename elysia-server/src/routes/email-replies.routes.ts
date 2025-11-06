@@ -122,6 +122,56 @@ export const emailRepliesRoutes = new Elysia({ prefix: "/api/v1/email-replies" }
     },
   )
 
+  // Update email reply (intent and sentiment)
+  .patch(
+    "/:id",
+    async ({ params: { id }, body, set }) => {
+      try {
+        const reply = await emailRepliesService.updateEmailReply(id, body)
+        if (!reply) {
+          set.status = 404
+          return errorResponse("답장을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+        }
+        return reply
+      } catch (error) {
+        set.status = 500
+        return errorResponse(
+          error instanceof Error ? error.message : "답장 업데이트 중 오류가 발생했습니다.",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      body: t.Object({
+        intent: t.Optional(
+          t.Union([
+            t.Literal("meeting_request"),
+            t.Literal("question"),
+            t.Literal("objection"),
+            t.Literal("out_of_office"),
+            t.Literal("not_interested"),
+            t.Literal("positive_interest"),
+            t.Literal("neutral"),
+            t.Null(),
+          ]),
+        ),
+        sentiment: t.Optional(
+          t.Union([
+            t.Literal("positive"),
+            t.Literal("neutral"),
+            t.Literal("negative"),
+            t.Literal("interested"),
+            t.Literal("not_interested"),
+            t.Null(),
+          ]),
+        ),
+      }),
+    },
+  )
+
   // Bulk mark as read
   .put(
     "/bulk/read",

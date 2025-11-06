@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { ThreadEmail } from "@/lib/api/types/email"
 import { formatKoreanDateTime } from "@/lib/date-utils"
 import { EmailBody } from "./EmailBody"
+import { IntentSelector } from "./IntentSelector"
 import { getDomain, getInitials, getName } from "./utils"
 
 interface EmailItemProps {
@@ -235,6 +236,17 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
             </div>
           </div>
         </button>
+
+        {/* Intent Badge for inbound emails */}
+        {email.direction === "inbound" && email.emailReplyId && (
+          <div className="ml-13 mt-2 flex items-center gap-2">
+            <IntentSelector
+              emailReplyId={email.emailReplyId}
+              currentIntent={email.replyIntent}
+              size="sm"
+            />
+          </div>
+        )}
 
         {/* Email body - only show when expanded, 선택 가능 */}
         {isExpanded && (

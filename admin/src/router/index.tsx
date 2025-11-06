@@ -13,6 +13,7 @@ import RepliedEmailsPage from "../pages/email-replies/EmailRepliesPage"
 import LoginPage from "../pages/LoginPage"
 import LeadsPage from "../pages/leads"
 import SequencesPage from "../pages/sequences"
+import SequenceEditPage from "../pages/sequences/SequenceEditPage"
 import SettingsPage from "../pages/settings"
 
 // 부가 페이지 - Lazy Loading (덜 자주 사용하는 페이지)
@@ -79,6 +80,10 @@ export const router = createBrowserRouter([
           {
             path: "sequences",
             element: <SequencesPage />,
+          },
+          {
+            path: "sequences/edit",
+            element: <SequenceEditPage />,
           },
           {
             path: "sequences/:id/designer",

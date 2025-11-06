@@ -2,6 +2,7 @@ import { Play, Plus, Search, Trash2, X } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
+import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -10,29 +11,26 @@ import {
   useBulkDeleteSequences,
   useBulkUpdateSequenceStatus,
   useCreateSequence,
-  useUpdateSequence,
 } from "@/lib/api/hooks/sequences"
 import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence"
 import { BulkActionModal } from "./BulkActionModal"
-import { SequenceDetailTabs } from "./SequenceDetailTabs"
 import { SequenceFilters } from "./SequenceFilters"
 import { SequenceForm } from "./SequenceForm"
 import { SequencesTableWithPagination } from "./SequencesTableWithPagination"
 
 export default function SequencesPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
 
   const [isCreating, setIsCreating] = useState(false)
-  const [editingSequence, setEditingSequence] = useState<Sequence | null>(null)
   const [selectedSequences, setSelectedSequences] = useState<string[]>([])
   const [showBulkActionModal, setShowBulkActionModal] = useState(false)
   const [bulkActionType, setBulkActionType] = useState<"status" | "delete" | null>(null)
 
   const createSequence = useCreateSequence()
-  const updateSequence = useUpdateSequence()
   const bulkUpdateStatus = useBulkUpdateSequenceStatus()
   const bulkDeleteSequences = useBulkDeleteSequences()
 
@@ -61,23 +59,8 @@ export default function SequencesPage() {
     )
   }
 
-  const handleUpdateSequence = async (sequenceData: unknown) => {
-    if (!editingSequence) return
-    updateSequence.mutate(
-      {
-        sequenceId: editingSequence.id,
-        data: sequenceData as {
-          name: string
-          description?: string
-          status: SequenceStatus
-        },
-      },
-      {
-        onSuccess: () => {
-          setEditingSequence(null)
-        },
-      },
-    )
+  const handleEditSequence = (sequence: Sequence) => {
+    navigate(`/sequences/edit?id=${sequence.id}`)
   }
 
   const handleBulkDelete = async () => {
@@ -221,7 +204,7 @@ export default function SequencesPage() {
             selectedSequences={selectedSequences}
             onToggleSequence={toggleSequenceSelection}
             onToggleAll={toggleAllSequences}
-            onEditSequence={setEditingSequence}
+            onEditSequence={handleEditSequence}
           />
         </CardContent>
       </Card>
@@ -240,33 +223,6 @@ export default function SequencesPage() {
               onSave={handleCreateSequence}
               onCancel={() => setIsCreating(false)}
             />
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Sequence Dialog */}
-      <Dialog open={!!editingSequence} onOpenChange={() => setEditingSequence(null)}>
-        <DialogContent className="max-w-5xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">
-              {t("sequences.dialog.sequenceManagement")}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
-            {editingSequence && (
-              <div className="space-y-6">
-                <SequenceForm
-                  sequence={editingSequence}
-                  isEdit={true}
-                  onSave={handleUpdateSequence}
-                  onCancel={() => setEditingSequence(null)}
-                  stepsCount={editingSequence.stepsCount || 0}
-                />
-                <div className="border-t pt-6">
-                  <SequenceDetailTabs sequenceId={editingSequence.id} />
-                </div>
-              </div>
-            )}
           </div>
         </DialogContent>
       </Dialog>

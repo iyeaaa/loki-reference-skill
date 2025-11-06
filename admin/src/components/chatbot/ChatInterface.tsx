@@ -1,4 +1,4 @@
-import { ArrowUp, FileText, Plus, Search, Square } from "lucide-react"
+import { ArrowUp, FileText, Plus, Search, Sparkles, Square } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import TextPlus from "@/assets/text-plus.svg"
 import TextRinda from "@/assets/text-rinda.svg"
@@ -21,6 +21,7 @@ import { DataArtifact } from "./DataArtifact"
 import { FileAttachment } from "./FileAttachment"
 import { MessageBubble } from "./MessageBubble"
 import type { NodeProgress } from "./NodeProgressTracker"
+import { SequenceGeneratorModal } from "./SequenceGeneratorModal"
 import { StreamingMessageContainer } from "./StreamingMessageContainer"
 
 interface ChatInterfaceProps {
@@ -50,6 +51,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   const [leadImportProgress, setLeadImportProgress] = useState<
     import("@/lib/api/services/lead-import").ImportProgress | null
   >(null)
+  const [isSequenceModalOpen, setIsSequenceModalOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const lastUserMessageRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -560,6 +562,17 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     [streamingMessage, currentConversationId],
   )
 
+  const handleSequenceGeneration = useCallback(
+    (data: { customerGroupId: string; prompt: string }) => {
+      // Format the question to include both customer group and requirements
+      const question = `고객 그룹 ID ${data.customerGroupId}에 대해 다음 요구사항으로 시퀀스를 자동 생성해줘:\n\n${data.prompt}`
+
+      // Submit the question through the chatbot
+      handleSubmit(question)
+    },
+    [handleSubmit],
+  )
+
   // Auto-resize textarea based on content
   useEffect(() => {
     const adjustHeight = (textarea: HTMLTextAreaElement | null) => {
@@ -691,6 +704,14 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         className="hidden"
       />
 
+      {/* Sequence Generator Modal */}
+      <SequenceGeneratorModal
+        open={isSequenceModalOpen}
+        onOpenChange={setIsSequenceModalOpen}
+        workspaceId={workspaceId}
+        onSubmit={handleSequenceGeneration}
+      />
+
       {messages.length === 0 ? (
         // Empty state - Everything centered vertically and horizontally
         <div className="flex-1 flex flex-col items-center px-4 pt-[20vh] pb-8">
@@ -772,6 +793,14 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                     >
                       <FileText className="h-4 w-4" />
                       Upload Excel File
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setIsSequenceModalOpen(true)}
+                      disabled={isProcessing}
+                      className="gap-2 cursor-pointer"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      시퀀스 자동 생성
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -928,6 +957,14 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                           >
                             <FileText className="h-4 w-4" />
                             Upload Excel File
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setIsSequenceModalOpen(true)}
+                            disabled={isProcessing}
+                            className="gap-2 cursor-pointer"
+                          >
+                            <Sparkles className="h-4 w-4" />
+                            시퀀스 자동 생성
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

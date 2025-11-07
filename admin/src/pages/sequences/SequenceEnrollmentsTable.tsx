@@ -337,7 +337,11 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
         icon: LucideIcon
       }
     > = {
-      active: { label: t("sequences.enrollments.status.active"), variant: "default", icon: Clock },
+      active: {
+        label: t("sequences.enrollments.status.active"),
+        variant: "default",
+        icon: Clock,
+      },
       paused: {
         label: t("sequences.enrollments.status.paused"),
         variant: "secondary",
@@ -399,7 +403,9 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
           <CardTitle className="flex items-center justify-between">
             <span>{t("sequences.enrollments.title")}</span>
             <Badge variant="secondary">
-              {t("sequences.enrollments.totalEnrolled", { count: enrollmentsData?.total || 0 })}
+              {t("sequences.enrollments.totalEnrolled", {
+                count: enrollmentsData?.total || 0,
+              })}
             </Badge>
           </CardTitle>
         </CardHeader>

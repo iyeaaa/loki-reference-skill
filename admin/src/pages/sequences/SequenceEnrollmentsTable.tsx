@@ -3,6 +3,8 @@ import {
   Calendar,
   CheckCircle,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Clock,
   Eye,
   Mail,
@@ -28,10 +30,122 @@ import {
 } from "@/components/ui/table"
 import {
   useEnrollmentMetrics,
+  useEnrollmentStepExecutions,
   useSequenceEnrollments,
   useSequenceSteps,
 } from "@/lib/api/hooks/sequences"
 import type { EnrollmentStatus } from "@/lib/api/types/sequence"
+
+// StepExecutionDetails - 스텝 실행 상세 정보 표시
+function StepExecutionDetails({
+  sequenceId,
+  enrollmentId,
+}: {
+  sequenceId: string
+  enrollmentId: string
+}) {
+  const { t } = useTranslation()
+  const {
+    data: executions,
+    isLoading,
+    error,
+  } = useEnrollmentStepExecutions(sequenceId, enrollmentId, true)
+
+  console.log("StepExecutionDetails Debug:", {
+    sequenceId,
+    enrollmentId,
+    executions,
+    isLoading,
+    error,
+  })
+
+  if (isLoading) {
+    return (
+      <div className="p-4 text-sm text-muted-foreground">
+        {t("sequences.enrollments.stepExecutions.loading")}
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 text-sm text-red-600">
+        에러: {error instanceof Error ? error.message : "알 수 없는 에러"}
+      </div>
+    )
+  }
+
+  if (!executions || executions.length === 0) {
+    return (
+      <div className="p-4 text-sm text-muted-foreground">
+        {t("sequences.enrollments.stepExecutions.noSteps")}
+        <div className="text-xs mt-2">
+          (sequenceId: {sequenceId}, enrollmentId: {enrollmentId})
+        </div>
+      </div>
+    )
+  }
+
+  const getStatusBadge = (status: string) => {
+    if (status === "sent") {
+      return <Badge className="bg-green-600">발송완료</Badge>
+    }
+    if (status === "pending") {
+      return <Badge variant="secondary">대기</Badge>
+    }
+    if (status === "failed") {
+      return <Badge variant="destructive">실패</Badge>
+    }
+    return <Badge variant="outline">{status}</Badge>
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+  }
+
+  return (
+    <div className="p-4 bg-muted/30">
+      <h4 className="text-sm font-semibold mb-3">📋 스텝별 발송 일정</h4>
+      <div className="space-y-2">
+        {executions.map((execution) => (
+          <div
+            key={execution.id}
+            className="flex items-center justify-between p-3 bg-background border rounded-lg text-sm"
+          >
+            <div className="flex-1">
+              <div className="font-medium mb-1">
+                스텝 {execution.stepOrder}: {execution.emailSubject}
+              </div>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  예정: {formatDate(execution.scheduledAt)}
+                </span>
+                {execution.executedAt && (
+                  <span className="flex items-center gap-1 text-green-600">
+                    <CheckCircle className="w-3 h-3" />
+                    발송: {formatDate(execution.executedAt)}
+                  </span>
+                )}
+              </div>
+              {execution.errorMessage && (
+                <div className="text-xs text-red-600 mt-1">{execution.errorMessage}</div>
+              )}
+            </div>
+            <div>{getStatusBadge(execution.status)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 // EnrollmentOpenStatus - 실제 오픈 상태를 표시하는 컴포넌트
 function EnrollmentOpenStatus({ enrollmentId }: { enrollmentId: string }) {
@@ -182,6 +296,7 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null)
   const [showMetricsModal, setShowMetricsModal] = useState(false)
+  const [expandedEnrollmentId, setExpandedEnrollmentId] = useState<string | null>(null)
   const limit = 10
 
   const { data: enrollmentsData, isLoading: enrollmentsLoading } = useSequenceEnrollments(
@@ -327,96 +442,128 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                         setShowMetricsModal(true)
                       }
 
+                      const isExpanded = expandedEnrollmentId === enrollment.id
+                      const toggleExpand = () => {
+                        setExpandedEnrollmentId(isExpanded ? null : enrollment.id)
+                      }
+
                       return (
-                        <TableRow key={enrollment.id} className="cursor-pointer hover:bg-muted/50">
-                          <TableCell className="font-medium">
-                            <div className="flex flex-col gap-1">
-                              <span>
-                                {enrollment.leadCompanyName ||
-                                  t("sequences.enrollments.companyNameUnknown")}
-                              </span>
-                              {enrollment.emailAccountAddress && (
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <>
+                          <TableRow key={enrollment.id} className="hover:bg-muted/50">
+                            <TableCell className="font-medium">
+                              <div className="flex flex-col gap-1">
+                                <span>
+                                  {enrollment.leadCompanyName ||
+                                    t("sequences.enrollments.companyNameUnknown")}
+                                </span>
+                                {enrollment.emailAccountAddress && (
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Mail className="w-3 h-3" />
+                                    {enrollment.emailAccountAddress}
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>{getStatusBadge(enrollment.status)}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-2 min-w-[120px]">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">
+                                    {t("sequences.enrollments.progress.step", {
+                                      current: enrollment.currentStepOrder,
+                                      total: totalSteps,
+                                    })}
+                                  </span>
+                                  <span className="font-medium">{progress}%</span>
+                                </div>
+                                <Progress value={progress} className="h-2" />
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {hasEmailsSent ? (
+                                <div className="flex items-center gap-1 text-sm text-blue-600">
                                   <Mail className="w-3 h-3" />
-                                  {enrollment.emailAccountAddress}
+                                  <span className="font-medium">
+                                    {t("sequences.enrollments.sent.count", {
+                                      count: enrollment.currentStepOrder,
+                                    })}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">
+                                  {t("sequences.enrollments.sent.waiting")}
                                 </span>
                               )}
-                            </div>
-                          </TableCell>
-                          <TableCell>{getStatusBadge(enrollment.status)}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-2 min-w-[120px]">
-                              <div className="flex items-center justify-between text-sm">
+                            </TableCell>
+                            <TableCell>
+                              <EnrollmentDeliveryStatus enrollmentId={enrollment.id} />
+                            </TableCell>
+                            <TableCell>
+                              <EnrollmentOpenStatus enrollmentId={enrollment.id} />
+                            </TableCell>
+                            <TableCell>
+                              <EnrollmentClickStatus enrollmentId={enrollment.id} />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1 text-sm">
+                                <Calendar className="w-3 h-3 text-muted-foreground" />
+                                {formatDate(enrollment.enrolledAt)}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {hasLastEmailSent ? (
+                                <div className="flex items-center gap-1 text-green-600">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  {formatDate(enrollment.lastEmailSentAt)}
+                                </div>
+                              ) : hasEmailsSent ? (
                                 <span className="text-muted-foreground">
-                                  {t("sequences.enrollments.progress.step", {
-                                    current: enrollment.currentStepOrder,
-                                    total: totalSteps,
-                                  })}
+                                  {t("sequences.enrollments.lastSent.sending")}
                                 </span>
-                                <span className="font-medium">{progress}%</span>
-                              </div>
-                              <Progress value={progress} className="h-2" />
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {hasEmailsSent ? (
-                              <div className="flex items-center gap-1 text-sm text-blue-600">
-                                <Mail className="w-3 h-3" />
-                                <span className="font-medium">
-                                  {t("sequences.enrollments.sent.count", {
-                                    count: enrollment.currentStepOrder,
-                                  })}
+                              ) : (
+                                <span className="text-muted-foreground">
+                                  {t("sequences.enrollments.lastSent.waiting")}
                                 </span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={toggleExpand}
+                                  className="flex items-center gap-1"
+                                >
+                                  {isExpanded ? (
+                                    <ChevronUp className="w-3 h-3" />
+                                  ) : (
+                                    <ChevronDown className="w-3 h-3" />
+                                  )}
+                                  스텝 일정
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleViewDetails}
+                                  className="flex items-center gap-1"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  {t("sequences.enrollments.viewDetailsButton")}
+                                </Button>
                               </div>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">
-                                {t("sequences.enrollments.sent.waiting")}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <EnrollmentDeliveryStatus enrollmentId={enrollment.id} />
-                          </TableCell>
-                          <TableCell>
-                            <EnrollmentOpenStatus enrollmentId={enrollment.id} />
-                          </TableCell>
-                          <TableCell>
-                            <EnrollmentClickStatus enrollmentId={enrollment.id} />
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1 text-sm">
-                              <Calendar className="w-3 h-3 text-muted-foreground" />
-                              {formatDate(enrollment.enrolledAt)}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {hasLastEmailSent ? (
-                              <div className="flex items-center gap-1 text-green-600">
-                                <CheckCircle2 className="w-3 h-3" />
-                                {formatDate(enrollment.lastEmailSentAt)}
-                              </div>
-                            ) : hasEmailsSent ? (
-                              <span className="text-muted-foreground">
-                                {t("sequences.enrollments.lastSent.sending")}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">
-                                {t("sequences.enrollments.lastSent.waiting")}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleViewDetails}
-                              className="flex items-center gap-1"
-                            >
-                              <Eye className="w-3 h-3" />
-                              {t("sequences.enrollments.viewDetailsButton")}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                            </TableCell>
+                          </TableRow>
+                          {isExpanded && (
+                            <TableRow>
+                              <TableCell colSpan={10} className="p-0">
+                                <StepExecutionDetails
+                                  sequenceId={sequenceId}
+                                  enrollmentId={enrollment.id}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
                       )
                     })}
                   </TableBody>

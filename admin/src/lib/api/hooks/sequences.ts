@@ -77,6 +77,20 @@ export function useSequencesByWorkspace(workspaceId: string, enabled = true) {
   })
 }
 
+export function useEnrollmentStepExecutions(
+  sequenceId: string,
+  enrollmentId: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...sequenceKeys.enrollments(sequenceId), "executions", enrollmentId],
+    queryFn: () => sequencesApi.getEnrollmentStepExecutions(sequenceId, enrollmentId),
+    enabled,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+  })
+}
+
 // Mutations
 export function useCreateSequence() {
   const queryClient = useQueryClient()

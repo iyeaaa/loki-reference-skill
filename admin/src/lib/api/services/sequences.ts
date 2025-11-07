@@ -154,6 +154,22 @@ export const sequencesApi = {
     )
   },
 
+  getEnrollmentStepExecutions: (sequenceId: string, enrollmentId: string) => {
+    return apiFetch<
+      {
+        id: string
+        stepId: string
+        stepOrder: number
+        status: string
+        scheduledAt: string
+        executedAt: string | null
+        emailId: string | null
+        errorMessage: string | null
+        emailSubject: string
+      }[]
+    >(`/api/v1/sequences/${sequenceId}/enrollments/${enrollmentId}/step-executions`)
+  },
+
   // Bulk operations
   bulkUpdateStatus: (data: BulkUpdateSequenceStatusRequest) => {
     return apiFetch<{ updatedCount: number }>("/api/v1/admin/sequences/bulk/status", {

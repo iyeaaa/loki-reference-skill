@@ -741,6 +741,21 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
     },
   )
 
+  // Get enrollment step executions
+  .get(
+    "/:id/enrollments/:enrollmentId/step-executions",
+    async ({ params: { enrollmentId } }) => {
+      const executions = await sequenceService.getEnrollmentStepExecutions(enrollmentId)
+      return successResponse(executions)
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+        enrollmentId: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
   // SEQUENCE METRICS ROUTES
   // ====================================
 

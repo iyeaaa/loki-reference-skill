@@ -1446,6 +1446,28 @@ export async function getLeadsWithEmails(leadIds: string[]) {
   return result
 }
 
+// GetEnrollmentStepExecutions - Get all step executions for an enrollment
+export async function getEnrollmentStepExecutions(enrollmentId: string) {
+  const result = await db
+    .select({
+      id: sequenceStepExecutions.id,
+      stepId: sequenceStepExecutions.stepId,
+      stepOrder: sequenceStepExecutions.stepOrder,
+      status: sequenceStepExecutions.status,
+      scheduledAt: sequenceStepExecutions.scheduledAt,
+      executedAt: sequenceStepExecutions.executedAt,
+      emailId: sequenceStepExecutions.emailId,
+      errorMessage: sequenceStepExecutions.errorMessage,
+      emailSubject: sequenceSteps.emailSubject,
+    })
+    .from(sequenceStepExecutions)
+    .innerJoin(sequenceSteps, eq(sequenceStepExecutions.stepId, sequenceSteps.id))
+    .where(eq(sequenceStepExecutions.enrollmentId, enrollmentId))
+    .orderBy(sequenceStepExecutions.stepOrder)
+
+  return result
+}
+
 // GetPendingStepExecutions - Get step executions that need to be sent
 export async function getPendingStepExecutions(limit: number = 100) {
   const { default: logger } = await import("../utils/logger")

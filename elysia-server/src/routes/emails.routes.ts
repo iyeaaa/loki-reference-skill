@@ -509,7 +509,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           "Looking for email account",
         )
 
-        // Find user's email account by workspaceId and userId
+        // Find active email account by workspaceId only (workspace-shared account)
         const [emailAccount] = await db
           .select({
             id: userEmailAccounts.id,
@@ -524,7 +524,6 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           .where(
             and(
               eq(userEmailAccounts.workspaceId, body.workspaceId),
-              eq(userEmailAccounts.userId, body.userId),
               eq(userEmailAccounts.status, "active"),
             ),
           )
@@ -534,13 +533,12 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           logger.error(
             {
               workspaceId: body.workspaceId,
-              userId: body.userId,
             },
             "Active email account not found",
           )
           set.status = 404
           return errorResponse(
-            "해당 워크스페이스와 사용자에 대한 활성화된 이메일 계정을 찾을 수 없습니다.",
+            "해당 워크스페이스에 활성화된 이메일 계정을 찾을 수 없습니다.",
             ResponseCode.NOT_FOUND,
           )
         }

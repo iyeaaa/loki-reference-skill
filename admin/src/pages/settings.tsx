@@ -1,10 +1,9 @@
 import {
-  Activity,
   Building2,
   FileSpreadsheet,
   FileText,
   FileUp,
-  Loader2,
+  Globe,
   Settings as SettingsIcon,
   User,
   Users,
@@ -60,6 +59,12 @@ export default function SettingsPage() {
       description: t("settings.system.bulkEmailCSV.desc"),
       url: "/bulk-email-csv",
       icon: FileSpreadsheet,
+    },
+    {
+      title: "웹 데이터 추출",
+      description: "웹사이트에서 회사 정보 및 연락처를 자동으로 추출합니다",
+      url: "/settings/web-extraction",
+      icon: Globe,
     },
   ]
 
@@ -197,53 +202,6 @@ export default function SettingsPage() {
                   <p className="text-sm text-muted-foreground">{item.description}</p>
                 </button>
               ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 개발 도구 / Development Tools */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Development Tools</CardTitle>
-            <CardDescription>Tools for testing and debugging application features</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <button
-                type="button"
-                onClick={() => navigate("/test/sse")}
-                className="flex flex-col items-start gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-accent hover:border-[#2563EB]"
-              >
-                <div className="flex items-center gap-3 w-full">
-                  <div className="rounded-lg bg-blue-100 dark:bg-blue-900/20 p-2">
-                    <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">SSE Test</h3>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Test Server-Sent Events functionality with real-time streaming
-                </p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/settings/spinner-test")}
-                className="flex flex-col items-start gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-accent hover:border-[#2563EB]"
-              >
-                <div className="flex items-center gap-3 w-full">
-                  <div className="rounded-lg bg-purple-100 dark:bg-purple-900/20 p-2">
-                    <Loader2 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">Spinner Test</h3>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Test various loading spinner animations for LLM responses
-                </p>
-              </button>
             </div>
           </CardContent>
         </Card>

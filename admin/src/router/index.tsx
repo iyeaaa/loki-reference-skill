@@ -31,6 +31,7 @@ const SSETestPage = lazy(() =>
   import("../pages/settings/SSETestPage").then((m) => ({ default: m.SSETestPage })),
 )
 const SpinnerTestPage = lazy(() => import("../pages/settings/SpinnerTestPage"))
+const WebDataExtraction = lazy(() => import("../pages/settings/WebDataExtraction"))
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>
@@ -144,6 +145,10 @@ export const router = createBrowserRouter([
           {
             path: "settings/spinner-test",
             element: <SpinnerTestPage />,
+          },
+          {
+            path: "settings/web-extraction",
+            element: <WebDataExtraction />,
           },
         ],
       },

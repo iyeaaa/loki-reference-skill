@@ -47,7 +47,9 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+.env.local.db
 .env.production
+.env.remote
 .env.development
 client/.env.local
 client/.env.production
@@ -62,3 +64,5 @@ next-env.d.ts
 
 sh
 elysia-server/index
+
+tmp

@@ -23,9 +23,11 @@ import { adminEmailRoutes, emailRoutes } from "./routes/emails.routes"
 import { healthRoutes } from "./routes/health.routes"
 import { leadImportRoutes } from "./routes/lead-import.routes"
 import { adminLeadRoutes, leadRoutes } from "./routes/leads.routes"
+import { openaiApiKeysRoutes } from "./routes/openai-api-keys.routes"
 import { adminSequenceRoutes, sequenceRoutes } from "./routes/sequences.routes"
 import { sseTestRoutes } from "./routes/sse-test.routes"
 import { adminUserRoutes, userRoutes } from "./routes/users.routes"
+import { webExtractionRoutes } from "./routes/web-extraction.routes"
 import { webhookRoutes } from "./routes/webhook.routes"
 import { workflowEmailRoutes } from "./routes/workflow-emails.routes"
 import { workflowExecutionRoutes } from "./routes/workflow-execution.routes"
@@ -159,6 +161,8 @@ const app = new Elysia()
   .use(workflowExecutionRoutes)
   .use(activityLogRoutes)
   .use(leadImportRoutes)
+  .use(openaiApiKeysRoutes)
+  .use(webExtractionRoutes)
 
   .listen(config.port)
 

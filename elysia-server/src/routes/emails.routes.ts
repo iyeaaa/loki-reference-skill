@@ -960,9 +960,6 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       const sequenceIdFilter = query.sequenceId
       const searchFilter = query.search
       const intentFilter = query.intent
-      const sentimentFilter = query.sentiment
-      const categoryFilter = query.category
-      const priorityFilter = query.priority
 
       if (!workspaceId) {
         return {
@@ -984,9 +981,6 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           sequenceIdFilter,
           searchFilter,
           intentFilter,
-          sentimentFilter,
-          categoryFilter,
-          priorityFilter,
         },
       })
 
@@ -998,75 +992,17 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       }
 
       // Build the query for finding replied threads
-      // Handle filters by building the appropriate query
+      // Handle intent filter by building the appropriate query
       let repliedThreadIds: { threadId: string | null }[]
-      const needsEmailRepliesJoin =
-        (intentFilter && intentFilter !== "all") ||
-        sentimentFilter ||
-        categoryFilter ||
-        priorityFilter
 
-      if (needsEmailRepliesJoin) {
+      if (intentFilter && intentFilter !== "all") {
         // Add intent filter conditions
-        if (intentFilter && intentFilter !== "all") {
-          if (intentFilter === "unclassified") {
-            // Filter for threads with unclassified replies (intent IS NULL)
-            inboundConditions.push(sql`${emailReplies.intent} IS NULL`)
-          } else {
-            // Filter for specific intent
-            inboundConditions.push(eq(emailReplies.intent, intentFilter))
-          }
-        }
-
-        if (sentimentFilter) {
-          const sentiments = sentimentFilter.split(",").filter(Boolean)
-          if (sentiments.length > 0) {
-            if (sentiments.includes("unclassified")) {
-              const otherSentiments = sentiments.filter((s: string) => s !== "unclassified")
-              if (otherSentiments.length > 0) {
-                inboundConditions.push(
-                  sql`(${emailReplies.sentiment} IN (${sql.raw(otherSentiments.map((s: string) => `'${s}'`).join(","))}) OR ${emailReplies.sentiment} IS NULL)`,
-                )
-              } else {
-                inboundConditions.push(sql`${emailReplies.sentiment} IS NULL`)
-              }
-            } else {
-              inboundConditions.push(
-                sql`${emailReplies.sentiment} IN (${sql.raw(sentiments.map((s: string) => `'${s}'`).join(","))})`,
-              )
-            }
-          }
-        }
-
-        // Add category filter (comma-separated values)
-        // Note: category maps to intent in the database
-        if (categoryFilter) {
-          const categories = categoryFilter.split(",").filter(Boolean)
-          if (categories.length > 0) {
-            // Map frontend category names to backend intent values
-            const categoryMap: Record<string, string> = {
-              meeting_request: "meeting_request",
-              question: "question",
-              auto: "out_of_office",
-              other: "neutral",
-            }
-            const mappedCategories = categories.map((c: string) => categoryMap[c] || c)
-            inboundConditions.push(
-              sql`${emailReplies.intent} IN (${sql.raw(mappedCategories.map((c: string) => `'${c}'`).join(","))})`,
-            )
-          }
-        }
-
-        // Add priority filter (comma-separated values)
-        // Note: Priority is based on leadScore which is in the leads table, not email_replies
-        // For now, we'll skip this filter as it requires joining with leads table
-        // TODO: Add proper join with leads table to filter by leadScore
-        if (priorityFilter) {
-          logger.info({
-            msg: "⚠️ Priority filter requested but not yet implemented (requires leads table join)",
-            priorityFilter,
-          })
-          // Priority filtering will be implemented in a future update
+        if (intentFilter === "unclassified") {
+          // Filter for threads with unclassified replies (intent IS NULL)
+          inboundConditions.push(sql`${emailReplies.intent} IS NULL`)
+        } else {
+          // Filter for specific intent
+          inboundConditions.push(eq(emailReplies.intent, intentFilter))
         }
 
         // Build query with join
@@ -1415,9 +1351,6 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         sequenceId: t.Optional(t.String({ format: "uuid" })),
         search: t.Optional(t.String()),
         intent: t.Optional(t.String()), // Intent filter (e.g., "meeting_request", "positive_interest", "unclassified")
-        sentiment: t.Optional(t.String()), // Sentiment filter (comma-separated: "positive,negative,neutral,question")
-        category: t.Optional(t.String()), // Category filter (comma-separated: "meeting_request,question,auto,other")
-        priority: t.Optional(t.String()), // Priority filter (comma-separated: "high,medium,low")
       }),
     },
   )

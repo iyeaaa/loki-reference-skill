@@ -1,11 +1,11 @@
-import { AlertCircle, Trash2 } from "lucide-react"
+import { AlertCircle, Search, Trash2, X } from "lucide-react"
 import { useCallback, useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useParams } from "react-router-dom"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { type FilterConfig, FilterPanel } from "@/components/ui/filter-panel"
+import { Input } from "@/components/ui/input"
 import { useBulkDeleteEmailReplies, useIntentCounts } from "@/lib/api/hooks/email-replies"
 import { useEmail } from "@/lib/api/hooks/emails"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
@@ -20,20 +20,14 @@ export default function EmailRepliesPage() {
   const { emailId } = useParams<{ emailId?: string }>()
   const containerId = useId()
 
+  const [searchInput, setSearchInput] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
   const [selectedIntent, setSelectedIntent] = useState<string>("all")
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
   const [leftWidth, setLeftWidth] = useState(50) // percentage
   const [isResizing, setIsResizing] = useState(false)
   const [selectedThreads, setSelectedThreads] = useState<string[]>([])
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-
-  // Filter state from FilterPanel
-  const [filters, setFilters] = useState<FilterConfig>({
-    search: "",
-    sentiment: [],
-    category: [],
-    priority: [],
-  })
 
   // Fetch real category counts from API
   const { data: intentCounts } = useIntentCounts(selectedWorkspace?.id || "all")
@@ -72,6 +66,21 @@ export default function EmailRepliesPage() {
       setSelectedThreadId(emailData.threadId)
     }
   }, [emailData])
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      setSearchQuery(searchInput)
+    }
+  }
 
   // Thread selection handlers
   const toggleThreadSelection = useCallback((threadId: string) => {
@@ -177,12 +186,31 @@ export default function EmailRepliesPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col overflow-hidden pt-0">
-              {/* Filter Panel */}
+              {/* Search input */}
               <div className="mb-3 flex-shrink-0">
-                <FilterPanel
-                  placeholder={t("email-replies.search.placeholder")}
-                  onFilterChange={setFilters}
-                />
+                <div className="relative w-full">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={t("email-replies.search.placeholder")}
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                    className="pl-10 pr-10 w-full h-9"
+                    disabled={!selectedWorkspace}
+                  />
+                  {searchInput && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchInput("")
+                        setSearchQuery("")
+                      }}
+                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Bulk Actions */}
@@ -212,7 +240,7 @@ export default function EmailRepliesPage() {
                 {selectedWorkspace ? (
                   <RepliedEmailsList
                     workspaceId={selectedWorkspace.id}
-                    searchQuery={filters.search}
+                    searchQuery={searchQuery}
                     selectedStatuses={[]}
                     selectedIntent={selectedIntent}
                     selectedThreadId={selectedThreadId}
@@ -220,9 +248,6 @@ export default function EmailRepliesPage() {
                     selectedThreads={selectedThreads}
                     onToggleThread={toggleThreadSelection}
                     onToggleAll={toggleAllThreads}
-                    filterSentiment={filters.sentiment}
-                    filterCategory={filters.category}
-                    filterPriority={filters.priority}
                   />
                 ) : (
                   <div className="py-12 text-center text-muted-foreground">

@@ -1933,6 +1933,8 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
   const enrollmentResult = await db
     .select({
       id: sequenceEnrollments.id,
+      sequenceId: sequenceEnrollments.sequenceId,
+      leadId: sequenceEnrollments.leadId,
       companyName: leads.companyName,
       emailAddress: userEmailAccounts.emailAddress,
       status: sequenceEnrollments.status,
@@ -1965,60 +1967,69 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
 
   const totalSteps = stepsResult[0]?.count || 0
 
-  // 3. Get total emails sent for this enrollment (from sequence_step_executions)
-  const emailsSentResult = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(sequenceStepExecutions)
-    .innerJoin(emailsTable, eq(sequenceStepExecutions.emailId, emailsTable.id))
-    .where(eq(sequenceStepExecutions.enrollmentId, enrollmentId))
+  // 3. Get total emails sent - use emails table directly for accuracy
+  // emails 테이블에 레코드가 있으면 발송된 것으로 간주
+  const emailsSentFromTable = await db
+    .select({ count: sql<number>`COUNT(*)::int` })
+    .from(emailsTable)
+    .where(
+      and(
+        eq(emailsTable.sequenceId, enrollment.sequenceId),
+        eq(emailsTable.leadId, enrollment.leadId),
+      ),
+    )
 
-  const emailsSent = emailsSentResult[0]?.count || 0
+  const emailsSent = emailsSentFromTable[0]?.count || 0
 
-  // 4. Get email event statistics for this enrollment
-  // For open and click events, count unique emails (not total events)
-  const emailStats = await db
+  logger.info(
+    {
+      enrollmentId,
+      emailsSent,
+      leadId: enrollment.leadId,
+      sequenceId: enrollment.sequenceId,
+    },
+    "🔍 [DEBUG] Emails sent count from emails table",
+  )
+
+  // 4. Get email statistics directly from emails table
+  // Use sequenceId and leadId to find emails for this enrollment
+  // (since sequence_step_executions.emailId might be null)
+  const emailStatsResult = await db
     .select({
-      eventType: emailEvents.eventType,
-      count: sql<number>`
-        CASE 
-          WHEN ${emailEvents.eventType} IN ('open', 'click') 
-          THEN COUNT(DISTINCT ${emailEvents.emailId})::int
-          ELSE COUNT(*)::int
-        END
-      `,
+      totalEmails: sql<number>`COUNT(*)::int`,
+      delivered: sql<number>`COUNT(CASE WHEN ${emailsTable.deliveredAt} IS NOT NULL THEN 1 END)::int`,
+      opened: sql<number>`COUNT(CASE WHEN ${emailsTable.openedAt} IS NOT NULL THEN 1 END)::int`,
+      clicked: sql<number>`COUNT(CASE WHEN ${emailsTable.clickedAt} IS NOT NULL THEN 1 END)::int`,
+      bounced: sql<number>`COUNT(CASE WHEN ${emailsTable.bounceType} IS NOT NULL THEN 1 END)::int`,
+      failed: sql<number>`COUNT(CASE WHEN ${emailsTable.status} IN ('failed', 'spam') THEN 1 END)::int`,
     })
-    .from(emailEvents)
-    .innerJoin(emailsTable, eq(emailEvents.emailId, emailsTable.id))
-    .innerJoin(sequenceStepExecutions, eq(emailsTable.id, sequenceStepExecutions.emailId))
-    .where(eq(sequenceStepExecutions.enrollmentId, enrollmentId))
-    .groupBy(emailEvents.eventType)
+    .from(emailsTable)
+    .where(
+      and(
+        eq(emailsTable.sequenceId, enrollment.sequenceId),
+        eq(emailsTable.leadId, enrollment.leadId),
+      ),
+    )
+
+  const emailStatsFromTable = emailStatsResult[0] || {
+    totalEmails: 0,
+    delivered: 0,
+    opened: 0,
+    clicked: 0,
+    bounced: 0,
+    failed: 0,
+  }
 
   // Process email statistics
   const emailCounts = {
     emailsSent: emailsSent, // Use actual sent count from sequence_step_executions
-    emailsDelivered: 0,
-    emailsOpened: 0,
-    emailsClicked: 0,
-    emailsReplied: 0,
-    emailsBounced: 0,
+    emailsDelivered: emailStatsFromTable.delivered,
+    emailsOpened: emailStatsFromTable.opened,
+    emailsClicked: emailStatsFromTable.clicked,
+    emailsReplied: 0, // TODO: Implement reply detection
+    emailsBounced: emailStatsFromTable.bounced,
+    emailsFailed: emailStatsFromTable.failed,
   }
-
-  emailStats.forEach((stat) => {
-    switch (stat.eventType) {
-      case "delivered":
-        emailCounts.emailsDelivered = stat.count
-        break
-      case "open":
-        emailCounts.emailsOpened = stat.count
-        break
-      case "click":
-        emailCounts.emailsClicked = stat.count
-        break
-      case "bounce":
-        emailCounts.emailsBounced = stat.count
-        break
-    }
-  })
 
   // Calculate rates
   // delivered 이벤트가 없을 경우 emailsSent를 기준으로 계산
@@ -2045,6 +2056,7 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
     emailsClicked: emailCounts.emailsClicked,
     emailsReplied: emailCounts.emailsReplied,
     emailsBounced: emailCounts.emailsBounced,
+    emailsFailed: emailCounts.emailsFailed,
 
     // 성과 지표
     openRate: Math.round(openRate * 10) / 10,

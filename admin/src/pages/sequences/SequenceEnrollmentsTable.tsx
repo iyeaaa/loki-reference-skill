@@ -200,12 +200,23 @@ function EnrollmentDeliveryStatus({ enrollmentId }: { enrollmentId: string }) {
     return <span className="text-sm text-muted-foreground">-</span>
   }
 
-  const { emailsSent, emailsDelivered } = metricsData.data
+  const { emailsSent, emailsDelivered, emailsBounced, emailsFailed } = metricsData.data
 
   if (emailsSent === 0) {
     return <span className="text-sm text-muted-foreground">-</span>
   }
 
+  // 발송 실패 (bounced, failed, spam, dropped)
+  if (emailsBounced > 0 || (emailsFailed && emailsFailed > 0)) {
+    return (
+      <div className="flex items-center gap-1 text-sm text-red-600">
+        <XCircle className="w-3 h-3" />
+        <span className="font-medium">{t("sequences.enrollments.delivery.failed")}</span>
+      </div>
+    )
+  }
+
+  // 전달 완료
   if (emailsDelivered > 0) {
     return (
       <div className="flex items-center gap-1 text-sm text-green-600">
@@ -215,6 +226,7 @@ function EnrollmentDeliveryStatus({ enrollmentId }: { enrollmentId: string }) {
     )
   }
 
+  // 발송 중 (전달 대기)
   return (
     <div className="flex items-center gap-1 text-sm text-blue-600">
       <Mail className="w-3 h-3" />

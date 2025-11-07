@@ -457,3 +457,4 @@ enrollments.column.nextScheduled,[NO TRANSLATION] sequences.enrollments.column.n
 enrollments.nextScheduled.completed,[NO TRANSLATION] sequences.enrollments.nextScheduled.completed,[NO TRANSLATION] sequences.enrollments.nextScheduled.completed
 enrollments.stepExecutions.loading,[NO TRANSLATION] sequences.enrollments.stepExecutions.loading,[NO TRANSLATION] sequences.enrollments.stepExecutions.loading
 enrollments.stepExecutions.noSteps,[NO TRANSLATION] sequences.enrollments.stepExecutions.noSteps,[NO TRANSLATION] sequences.enrollments.stepExecutions.noSteps
+enrollments.delivery.failed,발송 실패,Failed

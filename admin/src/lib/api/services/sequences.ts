@@ -290,6 +290,7 @@ export const sequencesApi = {
         emailsClicked: number
         emailsReplied: number
         emailsBounced: number
+        emailsFailed: number
 
         // 성과 지표
         openRate: number

@@ -228,6 +228,9 @@ export interface RepliedEmailsParams {
   sequenceId?: string
   search?: string
   intent?: string
+  sentiment?: string
+  category?: string
+  priority?: string
 }
 
 export function useRepliedEmails(params: RepliedEmailsParams) {

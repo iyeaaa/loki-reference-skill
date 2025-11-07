@@ -17,6 +17,9 @@ interface RepliedEmailsListProps {
   selectedThreads: string[]
   onToggleThread: (threadId: string) => void
   onToggleAll: (threadIds: string[]) => void
+  filterSentiment?: string[]
+  filterCategory?: string[]
+  filterPriority?: string[]
 }
 
 export function RepliedEmailsList({
@@ -29,6 +32,9 @@ export function RepliedEmailsList({
   selectedThreads,
   onToggleThread,
   onToggleAll,
+  filterSentiment = [],
+  filterCategory = [],
+  filterPriority = [],
 }: RepliedEmailsListProps) {
   const { t } = useTranslation()
   const [currentPage, setCurrentPage] = useState(1)
@@ -49,8 +55,20 @@ export function RepliedEmailsList({
             : undefined,
       search: searchQuery || undefined,
       intent: selectedIntent && selectedIntent !== "all" ? selectedIntent : undefined,
+      sentiment: filterSentiment.length > 0 ? filterSentiment.join(",") : undefined,
+      category: filterCategory.length > 0 ? filterCategory.join(",") : undefined,
+      priority: filterPriority.length > 0 ? filterPriority.join(",") : undefined,
     }),
-    [workspaceId, currentPage, selectedStatuses, searchQuery, selectedIntent],
+    [
+      workspaceId,
+      currentPage,
+      selectedStatuses,
+      searchQuery,
+      selectedIntent,
+      filterSentiment,
+      filterCategory,
+      filterPriority,
+    ],
   )
 
   // Use React Query hook

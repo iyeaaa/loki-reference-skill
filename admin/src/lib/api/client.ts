@@ -1,5 +1,7 @@
 // API Configuration
-export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001"
+// In development, use empty string to use Vite proxy
+// In production, set VITE_API_URL environment variable
+export const API_BASE_URL = import.meta.env.VITE_API_URL || ""
 
 // Token Management
 const TOKEN_KEY = "authToken"

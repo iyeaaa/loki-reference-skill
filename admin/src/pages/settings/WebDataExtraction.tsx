@@ -1,21 +1,22 @@
-import {
-  Activity,
-  AlertCircle,
-  ChevronDown,
-  ChevronUp,
-  Download,
-  FileUp,
-  Key,
-  Plus,
-  Save,
-  Trash2,
-  Upload,
-  X,
-} from "lucide-react"
-import { useId, useRef, useState } from "react"
+import { motion } from "framer-motion"
+import { AlertCircle, Download, FileUp, Key, RotateCcw, Save, X } from "lucide-react"
+import type React from "react"
+import { useEffect, useId, useRef, useState } from "react"
+import toast from "react-hot-toast"
+import * as XLSX from "xlsx"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -25,29 +26,43 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { WebExtractionProgress } from "@/components/web-extraction/WebExtractionProgress"
+import { ApiKeyManagementModal } from "@/components/web-extraction/ApiKeyManagementModal"
+import { DataTable } from "@/components/web-extraction/DataTable"
+import { EmptyState } from "@/components/web-extraction/EmptyState"
+import { FileUploadModal } from "@/components/web-extraction/FileUploadModal"
+import { ProgressPanel } from "@/components/web-extraction/ProgressPanel"
+import { useWebExtractionData } from "@/hooks/useWebExtractionData"
 import {
   useCreateApiKey,
   useDeleteApiKey,
   useOpenAIApiKeys,
   useUpdateApiKey,
 } from "@/lib/api/hooks/openai-api-keys"
-import {
-  useCleanupResults,
-  useDownloadResults,
-  useWebExtraction,
-} from "@/lib/api/hooks/web-extraction"
+import { useCleanupResults, useWebExtraction } from "@/lib/api/hooks/web-extraction"
 import type { ApiKey } from "@/lib/api/types/openai-api-keys"
+import type { ExtractionResult } from "@/lib/api/types/web-extraction"
+import { formatFileSize, validateAndCountUrls } from "@/utils/web-extraction.utils"
 
 export function WebDataExtraction() {
   const keyNameId = useId()
   const apiKeyId = useId()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [isApiKeySectionOpen, setIsApiKeySectionOpen] = useState(false)
+  const [urlCount, setUrlCount] = useState<number | null>(null)
+  const [isValidatingFile, setIsValidatingFile] = useState(false)
+  const [isApiKeyManagementModalOpen, setIsApiKeyManagementModalOpen] = useState(false)
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false)
+  const [isFileUploadModalOpen, setIsFileUploadModalOpen] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [isPanelVisible, setIsPanelVisible] = useState(false)
+  const [panelWidth, setPanelWidth] = useState(320)
+  const [isResizing, setIsResizing] = useState(false)
+  const [isClearDataDialogOpen, setIsClearDataDialogOpen] = useState(false)
+  const [isDownloadConfirmDialogOpen, setIsDownloadConfirmDialogOpen] = useState(false)
+  const [isClosePanelDialogOpen, setIsClosePanelDialogOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const resizeRef = useRef<HTMLDivElement>(null)
+  const isInitialMountRef = useRef(true)
 
   const workspaceId = localStorage.getItem("selectedWorkspace") || ""
 
@@ -56,24 +71,138 @@ export function WebDataExtraction() {
     apiKey: "",
   })
 
-  // Use TanStack Query hooks for API keys
-  const { data: apiKeys = [] } = useOpenAIApiKeys(workspaceId)
+  // API hooks
+  const { data: apiKeys = [], isLoading: isLoadingApiKeys } = useOpenAIApiKeys(workspaceId)
   const createApiKeyMutation = useCreateApiKey()
   const deleteApiKeyMutation = useDeleteApiKey()
   const updateApiKeyMutation = useUpdateApiKey()
 
-  // Use TanStack Query hooks for web extraction
   const { progress, jobId, isProcessing, upload, reset } = useWebExtraction()
-  const downloadMutation = useDownloadResults()
   const cleanupMutation = useCleanupResults()
+
+  // Use custom hook for data management
+  const {
+    data,
+    displayProgress,
+    totalTimeSaved,
+    clearSavedProgress,
+    clearAllData,
+    setCompletedProgress,
+  } = useWebExtractionData(progress, jobId)
 
   const activeApiKeysCount = apiKeys.filter((k) => k.isActive).length
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Auto-show panel when processing starts
+  useEffect(() => {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false
+      return
+    }
+
+    if (displayProgress && !isPanelVisible) {
+      if (displayProgress.status === "processing") {
+        setIsPanelVisible(true)
+      }
+    }
+  }, [displayProgress, isPanelVisible])
+
+  // Auto-open API key dialog if no API keys are set
+  useEffect(() => {
+    const hasShownApiKeyPrompt = sessionStorage.getItem("webExtractionApiKeyPromptShown")
+    if (
+      !isLoadingApiKeys &&
+      workspaceId &&
+      apiKeys.length === 0 &&
+      !isApiKeyDialogOpen &&
+      !hasShownApiKeyPrompt
+    ) {
+      setIsApiKeyDialogOpen(true)
+      sessionStorage.setItem("webExtractionApiKeyPromptShown", "true")
+    }
+  }, [isLoadingApiKeys, workspaceId, apiKeys.length, isApiKeyDialogOpen])
+
+  // Auto-open close panel dialog when extraction is completed
+  useEffect(() => {
+    if (
+      progress?.status === "completed" &&
+      jobId &&
+      Array.isArray(data) &&
+      data.length > 0 &&
+      !isClosePanelDialogOpen &&
+      !isDownloadConfirmDialogOpen
+    ) {
+      const shownKey = `webExtractionCompletedShown_${jobId}`
+      const hasShown = sessionStorage.getItem(shownKey)
+
+      if (!hasShown) {
+        if (progress) {
+          setCompletedProgress(progress)
+        }
+        setIsClosePanelDialogOpen(true)
+        sessionStorage.setItem(shownKey, "true")
+      }
+    }
+  }, [
+    progress?.status,
+    jobId,
+    data,
+    isClosePanelDialogOpen,
+    isDownloadConfirmDialogOpen,
+    progress,
+    setCompletedProgress,
+  ])
+
+  // Download template Excel file
+  const handleDownloadTemplate = () => {
+    try {
+      const templateData = [["website_url"], ["https://example.com"]]
+      const worksheet = XLSX.utils.aoa_to_sheet(templateData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")
+      const fileName = `web-extraction-template-${new Date().toISOString().split("T")[0]}.xlsx`
+      XLSX.writeFile(workbook, fileName)
+      toast.success("템플릿 파일을 다운로드했어요")
+    } catch (error) {
+      console.error("Template download error:", error)
+      toast.error("템플릿 다운로드 중 오류가 발생했어요")
+    }
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      setSelectedFile(file)
       setError(null)
+      setUrlCount(null)
+
+      const maxSize = 50 * 1024 * 1024 // 50MB
+      if (file.size > maxSize) {
+        setError(`파일 크기가 너무 큽니다. 최대 ${formatFileSize(maxSize)}까지 업로드 가능합니다.`)
+        setSelectedFile(null)
+        return
+      }
+
+      const fileName = file.name.toLowerCase()
+      if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls") && !fileName.endsWith(".csv")) {
+        setError("Excel (.xlsx, .xls) 또는 CSV 파일만 업로드 가능합니다")
+        setSelectedFile(null)
+        return
+      }
+
+      setSelectedFile(file)
+      setIsValidatingFile(true)
+      const { count, error: validationError } = await validateAndCountUrls(file)
+      setIsValidatingFile(false)
+
+      if (validationError) {
+        setError(validationError)
+        setSelectedFile(null)
+        setUrlCount(null)
+      } else {
+        setUrlCount(count)
+        if (count === 0) {
+          setError("유효한 URL이 없습니다. website_url 컬럼에 데이터가 있는지 확인해주세요.")
+        }
+      }
     }
   }
 
@@ -87,18 +216,43 @@ export function WebDataExtraction() {
     setIsDragOver(false)
   }
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragOver(false)
 
     const file = e.dataTransfer.files?.[0]
     if (file) {
+      setError(null)
+      setUrlCount(null)
+
+      const maxSize = 50 * 1024 * 1024
+      if (file.size > maxSize) {
+        setError(`파일 크기가 너무 큽니다. 최대 ${formatFileSize(maxSize)}까지 업로드 가능합니다.`)
+        setSelectedFile(null)
+        return
+      }
+
       const fileName = file.name.toLowerCase()
-      if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".csv")) {
-        setSelectedFile(file)
-        setError(null)
-      } else {
+      if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls") && !fileName.endsWith(".csv")) {
         setError("Excel (.xlsx, .xls) 또는 CSV 파일만 업로드 가능합니다")
+        setSelectedFile(null)
+        return
+      }
+
+      setSelectedFile(file)
+      setIsValidatingFile(true)
+      const { count, error: validationError } = await validateAndCountUrls(file)
+      setIsValidatingFile(false)
+
+      if (validationError) {
+        setError(validationError)
+        setSelectedFile(null)
+        setUrlCount(null)
+      } else {
+        setUrlCount(count)
+        if (count === 0) {
+          setError("유효한 URL이 없습니다. website_url 컬럼에 데이터가 있는지 확인해주세요.")
+        }
       }
     }
   }
@@ -109,16 +263,99 @@ export function WebDataExtraction() {
       return
     }
 
+    if (urlCount === null || urlCount === 0) {
+      setError("유효한 URL이 없습니다. 파일을 다시 확인해주세요.")
+      return
+    }
+
+    // API 키 체크 - 활성화된 키가 없으면 모달 강제 오픈
+    if (activeApiKeysCount === 0) {
+      setError("API 키를 먼저 등록해주세요")
+      setIsApiKeyManagementModalOpen(true)
+      toast.error("웹 데이터 추출을 위해 OpenAI API 키가 필요합니다")
+      return
+    }
+
     setError(null)
+    clearSavedProgress()
     upload({
       file: selectedFile,
       workspaceId,
     })
   }
 
-  const handleDownload = () => {
-    if (jobId) {
-      downloadMutation.mutate(jobId)
+  const handleDownload = (splitEmails: boolean = false) => {
+    if (!Array.isArray(data) || data.length === 0) {
+      setError("다운로드할 데이터가 없습니다")
+      return
+    }
+
+    try {
+      let excelData: unknown[]
+
+      const createRowData = (item: ExtractionResult, emailValue: string = "") => ({
+        "Website URL": item.website_url || "",
+        "Found Company": item.found_company_name || "",
+        Email: emailValue,
+        Description: item.description || "",
+        Address: item.address || "",
+        Country: item.country || "",
+        City: item.city || "",
+        State: item.state || "",
+        Founded: item.founded_year || "",
+        Phone: item.phone_number || "",
+        Facebook: item.facebook_url || "",
+        Instagram: item.instagram_url || "",
+        Twitter: item.twitter_url || "",
+        LinkedIn: item.linkedin_url || "",
+        Employees: item.employee_count || "",
+        Products: item.products || "",
+        Sectors: item.business_sectors || "",
+        Categories: item.product_categories || "",
+        Industries: item.industry_types || "",
+        "Crawl Time": item.crawl_time_seconds ? `${item.crawl_time_seconds}s` : "",
+        "GPT Time": item.gpt_time_seconds ? `${item.gpt_time_seconds}s` : "",
+        "Collected At": item.collected_at || "",
+        Error: item.error_message || "",
+      })
+
+      if (splitEmails) {
+        excelData = []
+        data.forEach((item) => {
+          const emails = item.email
+            ? item.email
+                .split(/[,;]/)
+                .map((e) => e.trim())
+                .filter((e) => e.length > 0)
+            : [""]
+
+          if (emails.length === 0) {
+            excelData.push(createRowData(item, ""))
+          } else {
+            emails.forEach((email) => {
+              excelData.push(createRowData(item, email))
+            })
+          }
+        })
+      } else {
+        excelData = data.map((item) => createRowData(item, item.email || ""))
+      }
+
+      const worksheet = XLSX.utils.json_to_sheet(excelData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Results")
+
+      const timestamp = new Date().toISOString().split("T")[0]
+      const filename = `web_extraction_results_${timestamp}.xlsx`
+
+      XLSX.writeFile(workbook, filename)
+
+      toast.success(
+        `${excelData.length}개 항목이 엑셀 파일로 다운로드되었습니다${splitEmails ? " (이메일 분리됨)" : ""}`,
+      )
+    } catch (error) {
+      console.error("Failed to download Excel:", error)
+      setError("엑셀 파일 다운로드 중 오류가 발생했습니다")
     }
   }
 
@@ -133,10 +370,33 @@ export function WebDataExtraction() {
     }
   }
 
+  const handleClearLocalStorage = () => {
+    try {
+      clearAllData()
+      toast.success("로컬스토리지 데이터가 초기화되었습니다")
+      setIsClearDataDialogOpen(false)
+    } catch (error) {
+      console.error("Failed to clear local storage:", error)
+      toast.error("데이터 초기화 중 오류가 발생했습니다")
+    }
+  }
+
   const handleAddApiKey = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!workspaceId || !apiKeyFormData.name.trim() || !apiKeyFormData.apiKey.trim()) {
+      return
+    }
+
+    // 최소한의 유효성 검사
+    const apiKey = apiKeyFormData.apiKey.trim()
+    if (!apiKey.startsWith("sk-")) {
+      toast.error("OpenAI API 키는 'sk-'로 시작해야 합니다")
+      return
+    }
+
+    if (apiKey.length < 20) {
+      toast.error("API 키가 너무 짧습니다")
       return
     }
 
@@ -152,7 +412,6 @@ export function WebDataExtraction() {
 
   const handleDeleteApiKey = async (id: string) => {
     if (!confirm("이 API 키를 삭제하시겠습니까?")) return
-
     await deleteApiKeyMutation.mutateAsync({ id, workspaceId })
   }
 
@@ -166,388 +425,235 @@ export function WebDataExtraction() {
     })
   }
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "사용 안함"
-    const date = new Date(dateString)
-    return date.toLocaleString("ko-KR", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
+  // Handle panel resizing
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return
+
+      const newWidth = window.innerWidth - e.clientX
+      const minWidth = 200
+      const maxWidth = 800
+
+      if (newWidth >= minWidth && newWidth <= maxWidth) {
+        setPanelWidth(newWidth)
+      }
+    }
+
+    const handleMouseUp = () => {
+      setIsResizing(false)
+    }
+
+    if (isResizing) {
+      document.addEventListener("mousemove", handleMouseMove)
+      document.addEventListener("mouseup", handleMouseUp)
+      document.body.style.cursor = "col-resize"
+      document.body.style.userSelect = "none"
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove)
+      document.removeEventListener("mouseup", handleMouseUp)
+      document.body.style.cursor = ""
+      document.body.style.userSelect = ""
+    }
+  }, [isResizing])
+
+  const hasData = Array.isArray(data) && data.length > 0
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-6 max-w-7xl">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">웹 데이터 추출</h1>
-        <p className="text-muted-foreground">
-          엑셀 파일의 웹사이트 URL에서 회사 정보 및 연락처를 자동으로 추출합니다
-        </p>
-      </div>
-
-      {/* Error Alert */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>오류</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Step 1: API Key Management */}
-      <Card>
-        <CardHeader
-          className="cursor-pointer hover:bg-accent/50 transition-colors"
-          onClick={() => setIsApiKeySectionOpen(!isApiKeySectionOpen)}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-blue-100 dark:bg-blue-900/20 p-2">
-                <Key className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">1단계: API 키 설정</CardTitle>
-                <CardDescription>
-                  {activeApiKeysCount > 0 ? (
-                    <span className="text-green-600 dark:text-green-400 font-medium">
-                      {activeApiKeysCount}개 활성 · 동시 처리 {activeApiKeysCount * 20}개
-                    </span>
-                  ) : (
-                    <span className="text-orange-600 dark:text-orange-400">
-                      API 키를 추가하여 처리 속도를 높이세요
-                    </span>
-                  )}
-                </CardDescription>
-              </div>
-            </div>
-            {isApiKeySectionOpen ? (
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+    <div className="h-[calc(100vh-4rem)] flex flex-col">
+      {/* Main Content Area */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left: Main Content */}
+        {hasData ? (
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+            {/* Error Alert */}
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>오류</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
-          </div>
-        </CardHeader>
 
-        {isApiKeySectionOpen && (
-          <CardContent className="space-y-4">
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>💡 처리 속도를 높이려면?</AlertTitle>
-              <AlertDescription className="text-sm space-y-1">
-                <p>
-                  OpenAI 계정 1개당 동시에 20개씩 처리할 수 있어요. 마치 식당에 계산대가 여러 개
-                  있으면 손님을 더 빨리 받을 수 있는 것처럼, OpenAI 계정을 여러 개 만들어서{" "}
-                  <span className="font-semibold text-blue-600 dark:text-blue-400">
-                    각 계정의 API 키를 따로 등록
-                  </span>
-                  하면 더 많은 웹사이트를 한꺼번에 처리할 수 있어요!
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  예: 5개 계정 = 100개 동시 처리 (5배 빠름!)
-                </p>
-              </AlertDescription>
-            </Alert>
-
-            <div className="flex justify-end">
-              <Button onClick={() => setIsApiKeyDialogOpen(true)} size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                API 키 추가
-              </Button>
-            </div>
-
-            {apiKeys.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                <Key className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="font-medium">등록된 API 키가 없습니다</p>
-                <p className="text-sm mt-2">서버의 환경 변수에 설정된 기본 키가 사용됩니다</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {apiKeys.map((key, index) => (
-                  <div
-                    key={key.id}
-                    className={`border rounded-lg p-4 transition-all ${
-                      key.isActive
-                        ? "bg-background border-primary/20"
-                        : "bg-muted/30 opacity-60 border-muted"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-semibold">
-                            {index + 1}
-                          </span>
-                          <h3 className="font-semibold truncate">{key.name}</h3>
-                          {key.isActive ? (
-                            <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded-full whitespace-nowrap">
-                              활성
-                            </span>
-                          ) : (
-                            <span className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 px-2 py-0.5 rounded-full whitespace-nowrap">
-                              비활성
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="text-sm font-mono text-muted-foreground mb-2 truncate">
-                          {key.apiKey}
-                        </div>
-
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                          <div>
-                            <span className="font-medium">마지막 사용:</span>{" "}
-                            {formatDate(key.lastUsedAt)}
-                          </div>
-                          <div>
-                            <span className="font-medium">사용:</span> {key.usageCount}회
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-1 flex-shrink-0">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleToggleActive(key)}
-                          title={key.isActive ? "비활성화" : "활성화"}
-                          disabled={updateApiKeyMutation.isPending}
-                        >
-                          {key.isActive ? "비활성화" : "활성화"}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteApiKey(key.id)}
-                          title="삭제"
-                          disabled={deleteApiKeyMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
+            {/* Results Header */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <motion.img
+                  src="/images/web-extraction-logo.webp"
+                  alt="웹데추"
+                  className="h-10 w-10 object-contain rounded-lg border border-border cursor-pointer"
+                  whileHover={{ scale: 1.1, rotate: 6 }}
+                  whileTap={{ scale: 1.8 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                  style={{ boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)" }}
+                  onClick={() => {
+                    toast.success("웹데추! 🎉")
+                  }}
+                />
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-semibold">웹데추</h2>
+                    <span className="text-xs text-muted-foreground">v1.0.0.20251108</span>
                   </div>
-                ))}
+                  <p className="text-sm text-muted-foreground">
+                    {progress?.status === "processing"
+                      ? "지금 추출 중이에요"
+                      : "웹사이트에서 추출한 데이터를 확인해보세요"}
+                  </p>
+                </div>
               </div>
-            )}
-          </CardContent>
-        )}
-      </Card>
 
-      {/* Step 2: File Upload */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-green-100 dark:bg-green-900/20 p-2">
-              <FileUp className="h-5 w-5 text-green-600 dark:text-green-400" />
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsApiKeyManagementModalOpen(true)}
+                  disabled={isProcessing}
+                >
+                  <Key className="mr-2 h-4 w-4" />
+                  API 키 관리
+                  {apiKeys.length > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {apiKeys.length}
+                    </Badge>
+                  )}
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (activeApiKeysCount === 0) {
+                      setIsApiKeyManagementModalOpen(true)
+                      toast.error("파일을 업로드하려면 API 키를 먼저 등록해주세요.")
+                    } else {
+                      setIsFileUploadModalOpen(true)
+                    }
+                  }}
+                >
+                  <FileUp className="mr-2 h-4 w-4" />
+                  파일 업로드
+                </Button>
+                <Button
+                  onClick={() => setIsDownloadConfirmDialogOpen(true)}
+                  variant="outline"
+                  disabled={!Array.isArray(data) || data.length === 0}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  웹데추 결과 다운로드 ({data.length}개)
+                </Button>
+                {progress?.status === "completed" && jobId && (
+                  <Button
+                    onClick={handleCleanup}
+                    variant="outline"
+                    disabled={cleanupMutation.isPending}
+                  >
+                    초기화
+                  </Button>
+                )}
+                <Button
+                  onClick={() => setIsClearDataDialogOpen(true)}
+                  variant="outline"
+                  className="text-destructive hover:text-destructive"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  웹데추 데이터 초기화
+                </Button>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-lg">2단계: 파일 업로드</CardTitle>
-              <CardDescription>
-                Excel 또는 CSV 파일을 업로드하세요 (website_url 컬럼 필수)
-              </CardDescription>
-            </div>
+
+            {/* Results Table */}
+            <DataTable data={data} />
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Drag & Drop Zone */}
-          {/* biome-ignore lint/a11y/useSemanticElements: drag & drop zone requires div for proper styling and DnD functionality */}
-          <div
-            role="button"
-            tabIndex={0}
+        ) : (
+          <EmptyState
+            selectedFile={selectedFile}
+            urlCount={urlCount}
+            isValidatingFile={isValidatingFile}
+            isProcessing={isProcessing}
+            isDragOver={isDragOver}
+            activeApiKeysCount={activeApiKeysCount}
+            fileInputRef={fileInputRef}
+            onFileChange={handleFileChange}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault()
-                fileInputRef.current?.click()
-              }
+            onRemoveFile={() => {
+              setSelectedFile(null)
+              setUrlCount(null)
+              setError(null)
             }}
-            className={`
-              border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
-              transition-all duration-200 ease-in-out
-              ${
-                isDragOver
-                  ? "border-primary bg-primary/5 scale-[1.02]"
-                  : "border-muted-foreground/25 hover:border-primary/50 hover:bg-accent/50"
-              }
-              ${isProcessing ? "opacity-50 pointer-events-none" : ""}
-            `}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={handleFileChange}
-              className="hidden"
-              disabled={isProcessing}
-            />
+            onUpload={handleUpload}
+            onDownloadTemplate={handleDownloadTemplate}
+            onAddApiKey={() => setIsApiKeyManagementModalOpen(true)}
+          />
+        )}
 
-            <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+        {/* Right: Progress Panel */}
+        <ProgressPanel
+          progress={displayProgress}
+          isPanelVisible={isPanelVisible}
+          panelWidth={panelWidth}
+          isResizing={isResizing}
+          activeApiKeysCount={activeApiKeysCount}
+          totalTimeSaved={totalTimeSaved}
+          onTogglePanel={setIsPanelVisible}
+          onStartResize={() => setIsResizing(true)}
+          resizeRef={resizeRef}
+        />
+      </div>
 
-            {selectedFile ? (
-              <div className="space-y-2">
-                <p className="text-lg font-semibold text-primary">{selectedFile.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                </p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setSelectedFile(null)
-                  }}
-                  className="mt-2"
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  파일 제거
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-lg font-semibold">
-                  파일을 드래그하여 놓거나 클릭하여 선택하세요
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Excel (.xlsx, .xls) 또는 CSV 파일을 지원합니다
-                </p>
-              </div>
-            )}
-          </div>
+      {/* Modals */}
+      <ApiKeyManagementModal
+        isOpen={isApiKeyManagementModalOpen}
+        onOpenChange={setIsApiKeyManagementModalOpen}
+        apiKeys={apiKeys}
+        activeApiKeysCount={activeApiKeysCount}
+        isProcessing={isProcessing}
+        onToggleActive={handleToggleActive}
+        onDeleteApiKey={handleDeleteApiKey}
+        onAddApiKey={() => setIsApiKeyDialogOpen(true)}
+        isUpdating={updateApiKeyMutation.isPending}
+        isDeleting={deleteApiKeyMutation.isPending}
+      />
 
-          {/* Upload Button */}
-          <div className="flex gap-2">
-            <Button
-              onClick={handleUpload}
-              disabled={!selectedFile || isProcessing}
-              size="lg"
-              className="flex-1"
-            >
-              {isProcessing ? (
-                <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  추출 중...
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  추출 시작
-                </>
-              )}
-            </Button>
+      <FileUploadModal
+        isOpen={isFileUploadModalOpen}
+        onOpenChange={setIsFileUploadModalOpen}
+        selectedFile={selectedFile}
+        urlCount={urlCount}
+        isValidatingFile={isValidatingFile}
+        isProcessing={isProcessing}
+        isDragOver={isDragOver}
+        fileInputRef={fileInputRef}
+        onFileChange={handleFileChange}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onRemoveFile={() => {
+          setSelectedFile(null)
+          setUrlCount(null)
+          setError(null)
+        }}
+        onUpload={handleUpload}
+        onDownloadTemplate={handleDownloadTemplate}
+      />
 
-            {progress?.status === "completed" && jobId && (
-              <>
-                <Button
-                  onClick={handleDownload}
-                  variant="outline"
-                  size="lg"
-                  disabled={downloadMutation.isPending}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  결과 다운로드
-                </Button>
-                <Button
-                  onClick={handleCleanup}
-                  variant="outline"
-                  size="lg"
-                  disabled={cleanupMutation.isPending}
-                >
-                  초기화
-                </Button>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Step 3: Progress */}
-      {progress && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-purple-100 dark:bg-purple-900/20 p-2">
-              <Activity className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold">3단계: 추출 진행 상황</h2>
-              <p className="text-sm text-muted-foreground">실시간으로 진행 상황을 확인하세요</p>
-            </div>
-          </div>
-          <WebExtractionProgress progress={progress} />
-        </div>
-      )}
-
-      {/* Help Section */}
-      <Card className="bg-muted/30">
-        <CardHeader>
-          <CardTitle className="text-base">사용 방법</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3 text-sm">
-            <div className="flex gap-3">
-              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex-shrink-0">
-                1
-              </span>
-              <div>
-                <p className="font-medium">API 키를 설정하세요 (선택사항)</p>
-                <p className="text-muted-foreground text-xs">
-                  OpenAI 계정을 여러 개 사용하면 처리 속도가 빨라집니다
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex-shrink-0">
-                2
-              </span>
-              <div>
-                <p className="font-medium">Excel 또는 CSV 파일을 준비하세요</p>
-                <p className="text-muted-foreground text-xs">
-                  <code className="bg-muted px-1 py-0.5 rounded">website_url</code> 컬럼이
-                  필수입니다
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex-shrink-0">
-                3
-              </span>
-              <div>
-                <p className="font-medium">파일을 업로드하고 추출을 시작하세요</p>
-                <p className="text-muted-foreground text-xs">
-                  평균 10-30초/건 소요 (웹사이트 응답 속도에 따라 다름)
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="text-xs">
-              <div className="space-y-1">
-                <p className="font-medium">추출되는 정보:</p>
-                <p className="text-muted-foreground">
-                  회사명, 설명, 이메일, 전화번호, 주소, SNS (Facebook, Instagram, Twitter,
-                  LinkedIn), 설립년도, 직원 수, 제품/서비스 등
-                </p>
-              </div>
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-
-      {/* API Key Dialog */}
-      <Dialog open={isApiKeyDialogOpen} onOpenChange={setIsApiKeyDialogOpen}>
+      {/* API Key Add Dialog */}
+      <Dialog
+        open={isApiKeyDialogOpen}
+        onOpenChange={(open) => {
+          if (!isProcessing) {
+            setIsApiKeyDialogOpen(open)
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>API 키 추가</DialogTitle>
             <DialogDescription>
-              OpenAI 플랫폼에서 발급받은 API 키를 추가하세요. 여러 계정의 키를 등록하면 처리 속도가
-              빨라집니다.
+              OpenAI 플랫폼에서 발급받은 API 키를 추가하세요.{" "}
+              <span className="font-medium">
+                OPENAI 정책상 계정별로 구분된 API KEY가 필요합니다.
+              </span>
             </DialogDescription>
           </DialogHeader>
 
@@ -567,11 +673,12 @@ export function WebDataExtraction() {
               <Label htmlFor={apiKeyId}>API 키</Label>
               <Input
                 id={apiKeyId}
-                type="password"
+                type="text"
                 value={apiKeyFormData.apiKey}
                 onChange={(e) => setApiKeyFormData({ ...apiKeyFormData, apiKey: e.target.value })}
                 placeholder="sk-..."
                 required
+                className="font-mono text-xs"
               />
               <p className="text-xs text-muted-foreground">
                 <a
@@ -599,6 +706,126 @@ export function WebDataExtraction() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Clear Data Confirmation Dialog */}
+      <AlertDialog open={isClearDataDialogOpen} onOpenChange={setIsClearDataDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>웹데추 데이터 초기화 확인</AlertDialogTitle>
+            <AlertDialogDescription>
+              로컬스토리지에 저장된 웹데추 결과 데이터를 모두 삭제하시겠습니까?
+              <br />
+              <span className="font-medium text-destructive">이 작업은 되돌릴 수 없습니다.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleClearLocalStorage}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              초기화
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Close Panel Confirmation Dialog */}
+      <AlertDialog open={isClosePanelDialogOpen} onOpenChange={setIsClosePanelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>추출이 끝났어요</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">결과 패널을 닫을까요?</span>
+              <span className="block text-xs text-muted-foreground">
+                닫아도 언제든지 다시 열 수 있어요
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setIsClosePanelDialogOpen(false)
+                if (progress?.status === "completed" && Array.isArray(data) && data.length > 0) {
+                  setIsDownloadConfirmDialogOpen(true)
+                }
+              }}
+            >
+              유지할게요
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setIsPanelVisible(false)
+                setIsClosePanelDialogOpen(false)
+                setTimeout(() => {
+                  if (progress?.status === "completed" && Array.isArray(data) && data.length > 0) {
+                    setIsDownloadConfirmDialogOpen(true)
+                  }
+                }, 100)
+              }}
+            >
+              닫을게요
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Download Confirmation Dialog */}
+      <AlertDialog open={isDownloadConfirmDialogOpen} onOpenChange={setIsDownloadConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>다운로드 옵션 선택</AlertDialogTitle>
+            <AlertDialogDescription>
+              총 <span className="font-semibold">{data.length}개</span>의 결과가 있습니다.
+              <br />
+              다운로드 방식을 선택해주세요.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-4">
+            <Button
+              variant="outline"
+              className="w-full justify-start h-auto py-3 px-4"
+              onClick={() => {
+                handleDownload(false)
+                setIsDownloadConfirmDialogOpen(false)
+              }}
+            >
+              <div className="flex flex-col items-start gap-1">
+                <div className="flex items-center gap-2">
+                  <Download className="h-4 w-4" />
+                  <span className="font-semibold">기존 형태로 다운로드</span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  이메일이 여러 개 있어도 하나의 행으로 유지됩니다
+                </span>
+              </div>
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start h-auto py-3 px-4"
+              onClick={() => {
+                handleDownload(true)
+                setIsDownloadConfirmDialogOpen(false)
+              }}
+            >
+              <div className="flex flex-col items-start gap-1">
+                <div className="flex items-center gap-2">
+                  <Download className="h-4 w-4" />
+                  <span className="font-semibold">이메일 분리하여 다운로드</span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  이메일이 여러 개인 경우 각 이메일마다 별도의 행으로 생성됩니다
+                  <br />
+                  예: cs@example.com,sales@example.com → 2개 행 생성
+                </span>
+              </div>
+            </Button>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>나중에</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

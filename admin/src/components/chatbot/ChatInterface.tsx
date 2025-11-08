@@ -17,6 +17,7 @@ import type {
   FileAttachment as FileAttachmentType,
   NodeProgressUpdate,
 } from "@/lib/api/types/chatbot"
+import { ActionCards } from "./ActionCards"
 import { DataArtifact } from "./DataArtifact"
 import { FileAttachment } from "./FileAttachment"
 import { MessageBubble } from "./MessageBubble"
@@ -774,36 +775,6 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                     <ArrowUp className="h-4 w-4" />
                   )}
                 </Button>
-                {/* Plus button with dropdown - Bottom left */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="absolute bottom-3 left-3 h-8 w-8 rounded-lg"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent side="top" align="start" className="w-56">
-                    <DropdownMenuItem
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={!!attachedFile || isProcessing}
-                      className="gap-2 cursor-pointer"
-                    >
-                      <FileText className="h-4 w-4" />
-                      Upload Excel File
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setIsSequenceModalOpen(true)}
-                      disabled={isProcessing}
-                      className="gap-2 cursor-pointer"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      시퀀스 자동 생성
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
 
               {/* Suggested questions below input */}
@@ -829,6 +800,16 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Action Cards - Bottom of empty state */}
+            <div className="mx-auto w-full mt-6" style={{ maxWidth: "670px" }}>
+              <ActionCards
+                onUploadClick={() => fileInputRef.current?.click()}
+                onSequenceClick={() => setIsSequenceModalOpen(true)}
+                isProcessing={isProcessing}
+                hasAttachedFile={!!attachedFile}
+              />
             </div>
           </div>
         </div>

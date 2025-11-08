@@ -36,18 +36,26 @@ function decryptApiKey(encrypted: string): string {
 }
 
 /**
- * Workspace의 모든 활성 API 키 조회
+ * Workspace의 모든 API 키 조회 (활성/비활성 모두)
  */
 export async function getApiKeys(workspaceId: string) {
   const keys = await db.query.openaiApiKeys.findMany({
-    where: and(eq(openaiApiKeys.workspaceId, workspaceId), eq(openaiApiKeys.isActive, true)),
+    where: eq(openaiApiKeys.workspaceId, workspaceId),
     orderBy: [asc(openaiApiKeys.orderIndex)],
   })
 
-  return keys.map((key) => ({
-    ...key,
-    apiKey: `${key.apiKey.substring(0, 7)}...${key.apiKey.substring(key.apiKey.length - 4)}`, // 마스킹
-  }))
+  return keys.map((key) => {
+    const decryptedKey = decryptApiKey(key.apiKey)
+    // 마스킹: 앞 10자와 뒤 10자만 표시
+    const maskedKey =
+      decryptedKey.length > 20
+        ? `${decryptedKey.substring(0, 10)}${"•".repeat(Math.max(0, decryptedKey.length - 20))}${decryptedKey.substring(decryptedKey.length - 10)}`
+        : decryptedKey
+    return {
+      ...key,
+      apiKey: maskedKey,
+    }
+  })
 }
 
 /**
@@ -84,9 +92,9 @@ export async function getNextApiKey(workspaceId: string): Promise<string | null>
   })
 
   if (keys.length === 0) {
-    // workspace에 설정된 API 키가 없으면 환경 변수에서 가져오기
-    logger.warn({ workspaceId }, "No API keys configured for workspace, using default from env")
-    return process.env.OPENAI_API_KEY || null
+    // workspace에 설정된 API 키가 없으면 null 반환
+    logger.warn({ workspaceId }, "No API keys configured for workspace")
+    return null
   }
 
   // Round-robin: lastUsedAt이 가장 오래된 키 선택
@@ -158,9 +166,15 @@ export async function createApiKey(data: {
     "API key created",
   )
 
+  // 마스킹: 앞 10자와 뒤 10자만 표시
+  const maskedKey =
+    data.apiKey.length > 20
+      ? `${data.apiKey.substring(0, 10)}${"•".repeat(Math.max(0, data.apiKey.length - 20))}${data.apiKey.substring(data.apiKey.length - 10)}`
+      : data.apiKey
+
   return {
     ...newKey,
-    apiKey: `${data.apiKey.substring(0, 7)}...${data.apiKey.substring(data.apiKey.length - 4)}`,
+    apiKey: maskedKey,
   }
 }
 
@@ -198,11 +212,19 @@ export async function updateApiKey(
 
   logger.info({ workspaceId, keyId: id }, "API key updated")
 
+  // 마스킹: 앞 10자와 뒤 10자만 표시
+  let maskedKey = updatedKey.apiKey
+  if (updatedKey.apiKey) {
+    const decryptedKey = decryptApiKey(updatedKey.apiKey)
+    maskedKey =
+      decryptedKey.length > 20
+        ? `${decryptedKey.substring(0, 10)}${"•".repeat(Math.max(0, decryptedKey.length - 20))}${decryptedKey.substring(decryptedKey.length - 10)}`
+        : decryptedKey
+  }
+
   return {
     ...updatedKey,
-    apiKey: updatedKey.apiKey
-      ? `${updatedKey.apiKey.substring(0, 7)}...${updatedKey.apiKey.substring(updatedKey.apiKey.length - 4)}`
-      : updatedKey.apiKey,
+    apiKey: maskedKey,
   }
 }
 

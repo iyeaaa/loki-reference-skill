@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "@/lib/api/client"
 import type {
+  ExtractionProgress,
   WebExtractionProgressCallback,
   WebExtractionUploadRequest,
 } from "../types/web-extraction"
@@ -37,6 +38,7 @@ export const webExtractionApi = {
 
       const decoder = new TextDecoder()
       let buffer = ""
+      let lastProgress: ExtractionProgress | null = null // 마지막 progress 데이터 저장
 
       try {
         while (true) {
@@ -71,8 +73,8 @@ export const webExtractionApi = {
                 const type = data.type || eventType
 
                 if (type === "init") {
-                  onProgress({
-                    status: "processing",
+                  const initProgress = {
+                    status: "processing" as const,
                     total: data.total || 0,
                     processed: 0,
                     success: 0,
@@ -87,11 +89,16 @@ export const webExtractionApi = {
                     estimatedTimeRemaining: 0,
                     itemsPerSecond: 0,
                     message: data.message,
-                  })
+                  }
+                  lastProgress = initProgress
+                  onProgress(initProgress)
                 } else if (type === "progress") {
+                  lastProgress = data
                   onProgress(data)
                 } else if (type === "complete") {
+                  // 마지막 progress 데이터와 complete 데이터 병합
                   const completeProgress = {
+                    ...(lastProgress || {}),
                     ...data,
                     status: "completed" as const,
                   }
@@ -138,6 +145,26 @@ export const webExtractionApi = {
     }
 
     return response.blob()
+  },
+
+  /**
+   * Get extraction results as JSON
+   */
+  getResults: async (jobId: string): Promise<unknown[]> => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/admin/web-extraction/results/${jobId}/json`,
+    )
+
+    if (!response.ok) {
+      throw new Error("결과를 가져오는데 실패했습니다")
+    }
+
+    const data = await response.json()
+    if (!data.success) {
+      throw new Error(data.error || "결과를 가져오는데 실패했습니다")
+    }
+
+    return data.data || []
   },
 
   /**

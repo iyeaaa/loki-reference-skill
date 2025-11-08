@@ -6,17 +6,19 @@ import { AuthProvider } from "@/lib/auth-provider"
 // Layouts - 즉시 로드 (모든 페이지에서 필요)
 import DashboardLayout from "../layouts/DashboardLayout"
 import RootLayout from "../layouts/RootLayout"
-import ChatbotPage from "../pages/ChatbotPage"
-import DashboardPage from "../pages/dashboard/DashboardPage"
-import RepliedEmailsPage from "../pages/email-replies/EmailRepliesPage"
-// 주요 페이지 - 즉시 로드 (자주 사용하는 페이지)
+// 로그인 페이지만 즉시 로드 (첫 진입점)
 import LoginPage from "../pages/LoginPage"
-import LeadsPage from "../pages/leads"
-import SequencesPage from "../pages/sequences"
-import SequenceEditPage from "../pages/sequences/SequenceEditPage"
-import SettingsPage from "../pages/settings"
 
-// 부가 페이지 - Lazy Loading (덜 자주 사용하는 페이지)
+// 모든 페이지 - Lazy Loading (성능 최적화)
+const ChatbotPage = lazy(() => import("../pages/ChatbotPage"))
+const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"))
+const RepliedEmailsPage = lazy(() => import("../pages/email-replies/EmailRepliesPage"))
+const LeadsPage = lazy(() => import("../pages/leads"))
+const SequencesPage = lazy(() => import("../pages/sequences"))
+const SequenceEditPage = lazy(() => import("../pages/sequences/SequenceEditPage"))
+const SettingsPage = lazy(() => import("../pages/settings"))
+
+// 부가 페이지 - Lazy Loading
 const CustomerGroupsPage = lazy(() => import("../pages/customer-groups"))
 const EmailSendTestPage = lazy(() => import("../pages/email-send-test"))
 const EmailTemplatesPage = lazy(() => import("../pages/email-templates"))
@@ -32,6 +34,7 @@ const SSETestPage = lazy(() =>
 )
 const SpinnerTestPage = lazy(() => import("../pages/settings/SpinnerTestPage"))
 const WebDataExtraction = lazy(() => import("../pages/settings/WebDataExtraction"))
+const ExaWebSetTest = lazy(() => import("../pages/settings/ExaWebSetTest"))
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>
@@ -149,6 +152,10 @@ export const router = createBrowserRouter([
           {
             path: "settings/web-extraction",
             element: <WebDataExtraction />,
+          },
+          {
+            path: "settings/exa-webset-test",
+            element: <ExaWebSetTest />,
           },
         ],
       },

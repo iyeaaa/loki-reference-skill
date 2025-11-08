@@ -5,13 +5,9 @@
 
 export interface CompanyRecord {
   websiteUrl: string
-  businessType?: string
-  companyName?: string
   finalUrl?: string
   httpStatus?: number
   foundCompanyName?: string
-  nameUrlMatch?: string
-  isBusinessTypeMatched?: string
   description?: string
   address?: string
   country?: string
@@ -41,6 +37,25 @@ export interface CompanyRecord {
   errorMessage?: string
 }
 
+export interface ProgressLog {
+  timestamp: number
+  message: string
+  type: "info" | "success" | "warning" | "error"
+  processed?: number
+  total?: number
+}
+
+// GPT API 비용 계산 상수 (GPT-4o-mini 기준)
+export const GPT_COST_PER_REQUEST = {
+  // 평균 입력 토큰: 웹사이트 콘텐츠(7000) + 시스템 프롬프트(100) + 사용자 프롬프트(900) = 약 8000 토큰
+  INPUT_TOKENS: 8000,
+  // 평균 출력 토큰: JSON 응답 약 800 토큰
+  OUTPUT_TOKENS: 800,
+  // GPT-4o-mini 가격 (2024년 기준)
+  INPUT_PRICE_PER_MILLION: 0.15, // $0.15 per 1M tokens
+  OUTPUT_PRICE_PER_MILLION: 0.6, // $0.60 per 1M tokens
+}
+
 export interface ExtractionProgress {
   type?: "init" | "progress" | "complete" | "error" // SSE 이벤트 타입
   status: "processing" | "completed" | "error"
@@ -63,6 +78,9 @@ export interface ExtractionProgress {
   timestamp?: string // SSE 타임스탬프
   jobId?: string // 작업 ID (완료 시 포함)
   totalRecords?: number // 완료 시 총 레코드 수
+  logs?: ProgressLog[] // 실시간 로그
+  latestResult?: CompanyRecord // 최신 처리된 결과
+  estimatedCost?: number // 예상 GPT API 비용 (USD)
 }
 
 export interface ExtractionJob {
@@ -89,10 +107,7 @@ export interface FetchResult {
 }
 
 export interface ExtractedContacts {
-  companyName?: string
   foundCompanyName?: string
-  nameUrlMatch?: string
-  isBusinessTypeMatched?: string
   description?: string
   address?: string
   country?: string
@@ -138,6 +153,6 @@ export const DEFAULT_EXTRACTION_CONFIG: WebExtractionConfig = {
   crawlDepth: 1,
   deduplicateByUrl: true,
   expandEmailsToRows: true,
-  randomDelayMin: 1000,
-  randomDelayMax: 3000,
+  randomDelayMin: 3000,
+  randomDelayMax: 6000,
 }

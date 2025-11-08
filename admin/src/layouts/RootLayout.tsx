@@ -1,6 +1,18 @@
-import React from "react"
+import React, { Suspense } from "react"
 import { Toaster } from "react-hot-toast"
 import { Outlet } from "react-router-dom"
+
+// Loading fallback component
+function PageLoadingFallback() {
+  return (
+    <div className="flex h-screen items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
+        <p className="text-sm text-gray-500">Loading...</p>
+      </div>
+    </div>
+  )
+}
 
 export default function RootLayout() {
   React.useEffect(() => {
@@ -49,7 +61,9 @@ export default function RootLayout() {
           },
         }}
       />
-      <Outlet />
+      <Suspense fallback={<PageLoadingFallback />}>
+        <Outlet />
+      </Suspense>
     </div>
   )
 }

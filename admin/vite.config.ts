@@ -14,6 +14,13 @@ export default defineConfig({
       ".ngrok-free.app", // 모든 ngrok 호스트 허용
       ".ngrok.io", // 기존 ngrok 도메인도 허용
     ],
+    proxy: {
+      "/api": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   resolve: {
     alias: {
@@ -72,7 +79,7 @@ export default defineConfig({
             }
 
             // 데이터 페칭
-            if (id.includes("@tanstack/react-query")) {
+            if (id.includes("@tanstack/react-query") || id.includes("@tanstack/react-table")) {
               return "query-vendor";
             }
 
@@ -81,12 +88,66 @@ export default defineConfig({
               return "flow-vendor";
             }
 
+            // 차트 라이브러리
+            if (id.includes("recharts") || id.includes("d3-")) {
+              return "chart-vendor";
+            }
+
+            // 마크다운 및 syntax highlighting
+            if (
+              id.includes("marked") ||
+              id.includes("react-markdown") ||
+              id.includes("react-syntax-highlighter") ||
+              id.includes("highlight.js") ||
+              id.includes("shiki") ||
+              id.includes("prism")
+            ) {
+              return "markdown-vendor";
+            }
+
+            // 엑셀 라이브러리
+            if (id.includes("xlsx") || id.includes("papaparse")) {
+              return "excel-vendor";
+            }
+
+            // 애니메이션
+            if (id.includes("framer-motion")) {
+              return "animation-vendor";
+            }
+
+            // 국제화
+            if (id.includes("i18next") || id.includes("react-i18next")) {
+              return "i18n-vendor";
+            }
+
+            // AI/OpenAI
+            if (id.includes("openai")) {
+              return "ai-vendor";
+            }
+
+            // Date 관련
+            if (id.includes("date-fns") || id.includes("react-day-picker")) {
+              return "date-vendor";
+            }
+
+            // 캐러셀
+            if (id.includes("embla-carousel")) {
+              return "carousel-vendor";
+            }
+
+            // 아이콘 (큰 라이브러리)
+            if (id.includes("lucide-react")) {
+              return "icon-vendor";
+            }
+
             // 기타 유틸리티
             if (
               id.includes("clsx") ||
               id.includes("class-variance-authority") ||
               id.includes("tailwind-merge") ||
-              id.includes("lucide-react")
+              id.includes("dompurify") ||
+              id.includes("encoding-japanese") ||
+              id.includes("utf8")
             ) {
               return "utils-vendor";
             }

@@ -93,8 +93,6 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
         // CompanyRecord 배열로 변환
         const records: CompanyRecord[] = jsonData.map((row) => ({
           websiteUrl: String(row.website_url || row.websiteUrl || row.website || ""),
-          businessType: row.business_type ? String(row.business_type) : undefined,
-          companyName: row.company_name ? String(row.company_name) : undefined,
         }))
 
         // 빈 URL 제거
@@ -108,15 +106,15 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
           }
         }
 
-        // API 키 개수에 따른 동시성 계산 (키 개수 * 20)
-        const apiKeyCount = await getActiveApiKeyCount(workspaceId)
-        const calculatedConcurrency = apiKeyCount > 0 ? apiKeyCount * 20 : 20
+        // API 키 개수에 따른 동시성 설정
+        const activeApiKeyCount = await getActiveApiKeyCount(workspaceId)
+        const defaultConcurrency = activeApiKeyCount > 0 ? activeApiKeyCount * 20 : 20
 
         logger.info(
           {
             workspaceId,
-            apiKeyCount,
-            calculatedConcurrency,
+            activeApiKeyCount,
+            defaultConcurrency,
           },
           "Calculated concurrency based on API key count",
         )
@@ -125,7 +123,7 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
         const extractionConfig = {
           ...DEFAULT_EXTRACTION_CONFIG,
           ...config,
-          maxConcurrent: config?.maxConcurrent ?? calculatedConcurrency, // config에 명시적으로 설정되지 않으면 계산된 값 사용
+          maxConcurrent: config?.maxConcurrent ?? defaultConcurrency,
         }
         let finalRecords = validRecords
 
@@ -182,14 +180,63 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
                   if (session.closed) return
 
                   try {
-                    // 진행상황을 SSE로 전송
+                    // 진행상황을 SSE로 전송 (최신 결과 포함)
+                    const progressData: Record<string, unknown> = {
+                      type: "progress",
+                      timestamp: new Date().toISOString(),
+                      status: progress.status,
+                      total: progress.total,
+                      processed: progress.processed,
+                      success: progress.success,
+                      errors: progress.errors,
+                      emailFound: progress.emailFound,
+                      phoneFound: progress.phoneFound,
+                      addressFound: progress.addressFound,
+                      socialFound: progress.socialFound,
+                      gptRequests: progress.gptRequests,
+                      percentage: progress.percentage,
+                      currentCompany: progress.currentCompany,
+                      elapsedTime: progress.elapsedTime,
+                      estimatedTimeRemaining: progress.estimatedTimeRemaining,
+                      itemsPerSecond: progress.itemsPerSecond,
+                      logs: progress.logs,
+                      estimatedCost: progress.estimatedCost || 0, // 예상 GPT API 비용
+                    }
+
+                    // 최신 결과가 있으면 포함
+                    if (progress.latestResult) {
+                      progressData.latestResult = {
+                        website_url: progress.latestResult.websiteUrl,
+                        final_url: progress.latestResult.finalUrl || null,
+                        http_status: progress.latestResult.httpStatus || null,
+                        found_company_name: progress.latestResult.foundCompanyName || null,
+                        description: progress.latestResult.description || null,
+                        address: progress.latestResult.address || null,
+                        country: progress.latestResult.country || null,
+                        city: progress.latestResult.city || null,
+                        state: progress.latestResult.state || null,
+                        founded_year: progress.latestResult.foundedYear || null,
+                        phone_number: progress.latestResult.phoneNumber || null,
+                        email: progress.latestResult.email || null,
+                        facebook_url: progress.latestResult.facebookUrl || null,
+                        instagram_url: progress.latestResult.instagramUrl || null,
+                        twitter_url: progress.latestResult.twitterUrl || null,
+                        linkedin_url: progress.latestResult.linkedinUrl || null,
+                        employee_count: progress.latestResult.employeeCount || null,
+                        products: progress.latestResult.products || null,
+                        business_sectors: progress.latestResult.businessSectors || null,
+                        product_categories: progress.latestResult.productCategories || null,
+                        industry_types: progress.latestResult.industryTypes || null,
+                        crawl_time_seconds: progress.latestResult.crawlTimeSeconds || null,
+                        gpt_time_seconds: progress.latestResult.gptTimeSeconds || null,
+                        collected_at: progress.latestResult.collectedAt || null,
+                        error_message: progress.latestResult.errorMessage || null,
+                      }
+                    }
+
                     session.push({
                       event: "progress",
-                      data: {
-                        type: "progress",
-                        timestamp: new Date().toISOString(),
-                        ...progress,
-                      },
+                      data: progressData,
                     })
                     logger.debug(
                       { processed: progress.processed, total: progress.total },
@@ -264,12 +311,7 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
     {
       body: t.Object({
         file: t.File({
-          type: [
-            "text/csv",
-            "application/vnd.ms-excel",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          ],
-          maxSize: 50 * 1024 * 1024, // 50MB
+          maxSize: 50 * 1024 * 1024, // 50MB (MIME 타입 제한 제거 - 브라우저별로 다를 수 있음)
         }),
         workspaceId: t.String(),
         config: t.Optional(
@@ -318,13 +360,9 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
         const worksheet = XLSX.utils.json_to_sheet(
           results.map((r) => ({
             website_url: r.websiteUrl,
-            business_type: r.businessType || "",
-            company_name: r.companyName || "",
             final_url: r.finalUrl || "",
             http_status: r.httpStatus || "",
             found_company_name: r.foundCompanyName || "",
-            name_url_match: r.nameUrlMatch || "",
-            is_business_type_matched: r.isBusinessTypeMatched || "",
             description: r.description || "",
             address: r.address || "",
             country: r.country || "",
@@ -367,6 +405,63 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
           success: false,
           error: "Excel 파일 생성 실패",
         }
+      }
+    },
+    {
+      params: t.Object({
+        jobId: t.String(),
+      }),
+    },
+  )
+
+  /**
+   * GET /api/v1/admin/web-extraction/results/:jobId/json
+   * 추출 결과 조회 (JSON)
+   */
+  .get(
+    "/results/:jobId/json",
+    async ({ params, set }) => {
+      const { jobId } = params
+
+      const results = resultsMap.get(jobId)
+
+      if (!results) {
+        set.status = 404
+        return {
+          success: false,
+          error: "결과를 찾을 수 없습니다",
+        }
+      }
+
+      return {
+        success: true,
+        data: results.map((r) => ({
+          website_url: r.websiteUrl,
+          final_url: r.finalUrl || null,
+          http_status: r.httpStatus || null,
+          found_company_name: r.foundCompanyName || null,
+          description: r.description || null,
+          address: r.address || null,
+          country: r.country || null,
+          city: r.city || null,
+          state: r.state || null,
+          founded_year: r.foundedYear || null,
+          phone_number: r.phoneNumber || null,
+          email: r.email || null,
+          facebook_url: r.facebookUrl || null,
+          instagram_url: r.instagramUrl || null,
+          twitter_url: r.twitterUrl || null,
+          linkedin_url: r.linkedinUrl || null,
+          employee_count: r.employeeCount || null,
+          products: r.products || null,
+          business_sectors: r.businessSectors || null,
+          product_categories: r.productCategories || null,
+          industry_types: r.industryTypes || null,
+          crawl_time_seconds: r.crawlTimeSeconds || null,
+          gpt_time_seconds: r.gptTimeSeconds || null,
+          collected_at: r.collectedAt || null,
+          error_message: r.errorMessage || null,
+        })),
       }
     },
     {

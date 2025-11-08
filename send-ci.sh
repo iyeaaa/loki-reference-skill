@@ -1,15 +1,15 @@
 #!/bin/bash
 # 색상 정의 (Docker 스타일)
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
-GRAY='\033[0;90m'
-WHITE='\033[0;37m'
-BOLD='\033[1m'
-NC='\033[0m'
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+YELLOW=$'\033[0;33m'
+BLUE=$'\033[0;34m'
+MAGENTA=$'\033[0;35m'
+CYAN=$'\033[0;36m'
+GRAY=$'\033[0;90m'
+WHITE=$'\033[0;37m'
+BOLD=$'\033[1m'
+NC=$'\033[0m'
 
 # 프로젝트별 색상 정의 (Docker Compose 스타일)
 ADMIN_COLOR=$CYAN
@@ -24,31 +24,31 @@ log_prefix() {
 }
 
 log_admin() {
-  echo -e "$(log_prefix "admin" "$ADMIN_COLOR") $1"
+  printf "%s\n" "$(log_prefix "admin" "$ADMIN_COLOR") $1"
 }
 
 log_server() {
-  echo -e "$(log_prefix "elysia-server" "$SERVER_COLOR") $1"
+  printf "%s\n" "$(log_prefix "elysia-server" "$SERVER_COLOR") $1"
 }
 
 log_system() {
-  echo -e "$(log_prefix "sendci" "$YELLOW") $1"
+  printf "%s\n" "$(log_prefix "sendci" "$YELLOW") $1"
 }
 
 log_success() {
-  echo -e "${GREEN}✓${NC} $1"
+  printf "%s\n" "${GREEN}✓${NC} $1"
 }
 
 log_error() {
-  echo -e "${RED}✗${NC} $1"
+  printf "%s\n" "${RED}✗${NC} $1"
 }
 
 log_info() {
-  echo -e "${GRAY}→${NC} $1"
+  printf "%s\n" "${GRAY}→${NC} $1"
 }
 
 log_skip() {
-  echo -e "${GRAY}⊘${NC} $1"
+  printf "%s\n" "${GRAY}⊘${NC} $1"
 }
 
 # 실시간 로그 출력 함수
@@ -64,7 +64,7 @@ stream_logs() {
     "$@" 2>&1
     echo $? > "$tmp_exit"
   } | while IFS= read -r line; do
-    echo -e "$(log_prefix "$project" "$color") ${GRAY}$line${NC}"
+    printf "%s\n" "$(log_prefix "$project" "$color") ${GRAY}$line${NC}"
   done
 
   local exit_code=$(cat "$tmp_exit")
@@ -74,18 +74,18 @@ stream_logs() {
 
 # 사용법 출력
 usage() {
-  echo -e "${BOLD}Usage:${NC} ./send-ci.sh [option] [flags]"
+  printf "%s\n" "${BOLD}Usage:${NC} ./send-ci.sh [option] [flags]"
   echo ""
-  echo -e "${BOLD}Options:${NC}"
+  printf "%s\n" "${BOLD}Options:${NC}"
   echo "  fast    - Lint + Type check only (5-10초)"
   echo "  full    - Lint + Type check + Build (1-2분)"
   echo "  (none)  - Same as 'full' (default)"
   echo ""
-  echo -e "${BOLD}Flags:${NC}"
+  printf "%s\n" "${BOLD}Flags:${NC}"
   echo "  --only-changed  - Check only changed projects (staged files)"
   echo "  --quiet         - Minimal output (no banner)"
   echo ""
-  echo -e "${BOLD}Examples:${NC}"
+  printf "%s\n" "${BOLD}Examples:${NC}"
   echo "  ./send-ci.sh                      # 전체 빌드"
   echo "  ./send-ci.sh fast                 # 빠른 검사"
   echo "  ./send-ci.sh fast --only-changed  # 변경된 프로젝트만 빠른 검사"

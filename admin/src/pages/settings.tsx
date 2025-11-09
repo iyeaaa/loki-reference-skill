@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useCurrentUser, useUpdateProfileMutation } from "@/lib/api/hooks/auth"
 import { EmailSignatureManagement } from "./settings/EmailSignatureManagement"
+import { WorkspaceSettings } from "./settings/WorkspaceSettings"
 
 export default function SettingsPage() {
   const { t } = useTranslation()
@@ -27,6 +28,10 @@ export default function SettingsPage() {
 
   const { data: currentUser, isLoading } = useCurrentUser()
   const updateProfileMutation = useUpdateProfileMutation()
+
+  // Get selected workspace from localStorage
+  const selectedWorkspace = localStorage.getItem("selectedWorkspace") || "all"
+  const showWorkspaceSettings = selectedWorkspace && selectedWorkspace !== "all"
 
   const systemManagementItems = [
     {
@@ -171,6 +176,9 @@ export default function SettingsPage() {
             </form>
           </CardContent>
         </Card>
+
+        {/* 워크스페이스 설정 (특정 워크스페이스 선택 시에만 표시) */}
+        {showWorkspaceSettings && <WorkspaceSettings workspaceId={selectedWorkspace} />}
 
         {/* 이메일 서명 관리 */}
         <EmailSignatureManagement />

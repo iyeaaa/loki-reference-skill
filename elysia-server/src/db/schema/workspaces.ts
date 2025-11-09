@@ -35,6 +35,16 @@ export const workspaces = pgTable(
     ownerId: uuid("owner_id")
       .notNull()
       .references(() => users.id),
+
+    // Company information
+    companyName: varchar("company_name", { length: 255 }),
+    companyWebsite: varchar("company_website", { length: 500 }),
+    companyPhone: varchar("company_phone", { length: 50 }),
+    industry: varchar("industry", { length: 100 }),
+    companySize: varchar("company_size", { length: 50 }),
+    companyAddress: text("company_address"),
+    companyDescription: text("company_description"),
+
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     isActive: boolean("is_active").notNull().default(true),

@@ -7,6 +7,13 @@ const workspaceSchema = t.Object({
   description: t.Optional(t.String()),
   ownerId: t.String({ format: "uuid" }),
   isActive: t.Optional(t.Boolean()),
+  companyName: t.Optional(t.String({ maxLength: 255 })),
+  companyWebsite: t.Optional(t.String({ maxLength: 500 })),
+  companyPhone: t.Optional(t.String({ maxLength: 50 })),
+  industry: t.Optional(t.String({ maxLength: 100 })),
+  companySize: t.Optional(t.String({ maxLength: 50 })),
+  companyAddress: t.Optional(t.String()),
+  companyDescription: t.Optional(t.String()),
 })
 
 const updateWorkspaceSchema = t.Object({
@@ -14,6 +21,13 @@ const updateWorkspaceSchema = t.Object({
   description: t.Optional(t.String()),
   ownerId: t.Optional(t.String({ format: "uuid" })),
   isActive: t.Boolean(),
+  companyName: t.Optional(t.String({ maxLength: 255 })),
+  companyWebsite: t.Optional(t.String({ maxLength: 500 })),
+  companyPhone: t.Optional(t.String({ maxLength: 50 })),
+  industry: t.Optional(t.String({ maxLength: 100 })),
+  companySize: t.Optional(t.String({ maxLength: 50 })),
+  companyAddress: t.Optional(t.String()),
+  companyDescription: t.Optional(t.String()),
 })
 
 const _workspaceMemberSchema = t.Object({

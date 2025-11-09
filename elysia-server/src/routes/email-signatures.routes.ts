@@ -36,10 +36,11 @@ export const emailSignatureRoutes = new Elysia({
           return errorResponse("workspaceId and userId are required", ResponseCode.BAD_REQUEST)
         }
 
-        const conditions = [
-          eq(emailSignatures.workspaceId, workspaceId),
-          eq(emailSignatures.userId, userId),
-        ]
+        const conditions = [eq(emailSignatures.userId, userId)]
+
+        if (workspaceId && workspaceId !== "all") {
+          conditions.push(eq(emailSignatures.workspaceId, workspaceId))
+        }
 
         if (!includeInactive) {
           conditions.push(eq(emailSignatures.isActive, true))

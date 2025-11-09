@@ -1,8 +1,12 @@
 import { AnimatePresence, motion } from "framer-motion"
-import { Download, FileUp, Save, Upload, X } from "lucide-react"
+import { Check, Download, Edit2, FileUp, Plus, Save, Upload, X } from "lucide-react"
 import type React from "react"
+import { useState } from "react"
 import toast from "react-hot-toast"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 import { formatFileSize } from "@/utils/web-extraction.utils"
 import { SpeedBoostBanner } from "./SpeedBoostBanner"
@@ -23,6 +27,8 @@ interface EmptyStateProps {
   onUpload: () => void
   onDownloadTemplate: () => void
   onAddApiKey: () => void
+  searchCriteria: string[]
+  onSearchCriteriaChange: (criteria: string[]) => void
 }
 
 /**
@@ -44,16 +50,51 @@ export function EmptyState({
   onUpload,
   onDownloadTemplate,
   onAddApiKey,
+  searchCriteria,
+  onSearchCriteriaChange,
 }: EmptyStateProps) {
+  const [newCriterion, setNewCriterion] = useState("")
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editingValue, setEditingValue] = useState("")
+
+  const predefinedCriteria = [
+    "b2b 납품을 하는가?",
+    "한국 기업인가?",
+    "대기업인가?",
+    "브랜드사인가?",
+  ]
+
+  const handleStartEdit = (index: number, value: string) => {
+    setEditingIndex(index)
+    setEditingValue(value)
+  }
+
+  const handleSaveEdit = (index: number) => {
+    if (editingValue.trim() && !searchCriteria.includes(editingValue.trim())) {
+      const newCriteria = [...searchCriteria]
+      newCriteria[index] = editingValue.trim()
+      onSearchCriteriaChange(newCriteria)
+      setEditingIndex(null)
+      setEditingValue("")
+    } else if (editingValue.trim() === searchCriteria[index]) {
+      setEditingIndex(null)
+      setEditingValue("")
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingIndex(null)
+    setEditingValue("")
+  }
   return (
-    <div className="flex-1 flex flex-col items-center px-4 pt-[20vh] pb-8">
-      <div className="mx-auto w-full space-y-8" style={{ maxWidth: "670px" }}>
+    <div className="flex-1 flex flex-col items-center px-4 py-8 overflow-y-auto">
+      <div className="mx-auto w-full space-y-6" style={{ maxWidth: "670px" }}>
         {/* Logo - Centered at top */}
-        <div className="flex flex-col justify-center items-center gap-3">
+        <div className="flex flex-col justify-center items-center gap-2.5">
           <motion.img
             src="/images/web-extraction-logo.webp"
             alt="웹데추"
-            className="h-[100px] w-[100px] object-contain rounded-lg cursor-pointer"
+            className="h-[80px] w-[80px] object-contain rounded-lg cursor-pointer"
             whileHover={{ scale: 1.1, rotate: 6 }}
             whileTap={{ scale: 1.5 }}
             transition={{ type: "spring", stiffness: 400, damping: 15 }}
@@ -63,7 +104,7 @@ export function EmptyState({
             }}
           />
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-semibold">웹데추</h2>
+            <h2 className="text-xl font-semibold">웹데추</h2>
             <span className="text-xs text-muted-foreground">v1.0.0.20251108</span>
           </div>
         </div>
@@ -253,6 +294,197 @@ export function EmptyState({
               <Download className="mr-1.5 h-3.5 w-3.5" />
               템플릿 다운로드
             </Button>
+          </div>
+        </div>
+
+        {/* Search Criteria Section */}
+        <div className="border rounded-lg p-4 space-y-3 bg-card">
+          <div>
+            <Label className="text-sm font-semibold">검색 조건 (선택사항)</Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              추가 검색 조건을 입력하면 각 웹사이트에서 해당 조건에 대한 true/false 결과가
+              추가됩니다
+            </p>
+          </div>
+
+          {/* Selected Criteria - Display at top */}
+          {searchCriteria.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-primary">
+                  선택된 조건 ({searchCriteria.length}개)
+                </Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs"
+                  onClick={() => onSearchCriteriaChange([])}
+                  disabled={isProcessing}
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  전체 삭제
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {searchCriteria.map((criterion, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.8, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {editingIndex === index ? (
+                      <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
+                        <Input
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleSaveEdit(index)
+                            } else if (e.key === "Escape") {
+                              handleCancelEdit()
+                            }
+                          }}
+                          className="h-7 text-xs w-[200px]"
+                          autoFocus
+                          disabled={isProcessing}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => handleSaveEdit(index)}
+                          disabled={isProcessing}
+                        >
+                          <Check className="h-3 w-3 text-green-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={handleCancelEdit}
+                          disabled={isProcessing}
+                        >
+                          <X className="h-3 w-3 text-red-600" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Badge
+                        variant="secondary"
+                        className="pl-3 pr-1 py-1.5 gap-2 text-xs hover:bg-secondary/80 transition-colors"
+                      >
+                        <span className="max-w-[200px] truncate">{criterion}</span>
+                        <div className="flex items-center gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 w-5 p-0 hover:bg-primary/20"
+                            onClick={() => handleStartEdit(index, criterion)}
+                            disabled={isProcessing}
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 w-5 p-0 hover:bg-destructive/20"
+                            onClick={() => {
+                              onSearchCriteriaChange(searchCriteria.filter((_, i) => i !== index))
+                            }}
+                            disabled={isProcessing}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </Badge>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Divider */}
+          {searchCriteria.length > 0 && <div className="border-t" />}
+
+          {/* Predefined criteria cards */}
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">빠른 선택</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {predefinedCriteria.map((predefinedCriterion) => {
+                const isAdded = searchCriteria.includes(predefinedCriterion)
+                return (
+                  <Button
+                    key={predefinedCriterion}
+                    variant={isAdded ? "default" : "outline"}
+                    size="sm"
+                    className={cn(
+                      "justify-start text-left h-auto py-2.5 px-3 transition-all relative",
+                      isAdded && "bg-primary text-primary-foreground hover:bg-primary/90",
+                    )}
+                    onClick={() => {
+                      if (isAdded) {
+                        onSearchCriteriaChange(
+                          searchCriteria.filter((c) => c !== predefinedCriterion),
+                        )
+                      } else {
+                        onSearchCriteriaChange([...searchCriteria, predefinedCriterion])
+                      }
+                    }}
+                    disabled={isProcessing}
+                  >
+                    <span className="text-xs">{predefinedCriterion}</span>
+                    {isAdded && <Check className="h-3 w-3 absolute top-1 right-1" />}
+                  </Button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Add new criterion */}
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">직접 입력</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="예: 이 회사는 B2C를 하는가?"
+                value={newCriterion}
+                onChange={(e) => setNewCriterion(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newCriterion.trim()) {
+                    e.preventDefault()
+                    if (!searchCriteria.includes(newCriterion.trim())) {
+                      onSearchCriteriaChange([...searchCriteria, newCriterion.trim()])
+                      setNewCriterion("")
+                      toast.success("검색 조건이 추가되었습니다")
+                    } else {
+                      toast.error("이미 추가된 조건입니다")
+                    }
+                  }
+                }}
+                disabled={isProcessing}
+                className="text-sm"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (newCriterion.trim()) {
+                    if (!searchCriteria.includes(newCriterion.trim())) {
+                      onSearchCriteriaChange([...searchCriteria, newCriterion.trim()])
+                      setNewCriterion("")
+                      toast.success("검색 조건이 추가되었습니다")
+                    } else {
+                      toast.error("이미 추가된 조건입니다")
+                    }
+                  }
+                }}
+                disabled={isProcessing || !newCriterion.trim()}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                추가
+              </Button>
+            </div>
           </div>
         </div>
 

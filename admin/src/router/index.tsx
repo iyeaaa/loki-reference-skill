@@ -34,7 +34,6 @@ const SSETestPage = lazy(() =>
 )
 const SpinnerTestPage = lazy(() => import("../pages/settings/SpinnerTestPage"))
 const WebDataExtraction = lazy(() => import("../pages/settings/WebDataExtraction"))
-const ExaWebSetTest = lazy(() => import("../pages/settings/ExaWebSetTest"))
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>
@@ -152,10 +151,6 @@ export const router = createBrowserRouter([
           {
             path: "settings/web-extraction",
             element: <WebDataExtraction />,
-          },
-          {
-            path: "settings/exa-webset-test",
-            element: <ExaWebSetTest />,
           },
         ],
       },

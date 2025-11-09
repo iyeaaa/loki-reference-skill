@@ -1,6 +1,8 @@
 import { ExternalLink } from "lucide-react"
 import type React from "react"
+import { useMemo } from "react"
 import toast from "react-hot-toast"
+import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Table,
@@ -22,6 +24,18 @@ interface DataTableProps {
  * Data table component for displaying extraction results
  */
 export function DataTable({ data }: DataTableProps) {
+  // Collect all unique custom search criteria keys
+  const customCriteriaKeys = useMemo(() => {
+    const keysSet = new Set<string>()
+    data.forEach((item) => {
+      if (item.custom_search_results) {
+        Object.keys(item.custom_search_results).forEach((key) => {
+          keysSet.add(key)
+        })
+      }
+    })
+    return Array.from(keysSet)
+  }, [data])
   // Handle website link click safely
   const handleWebsiteClick = (
     e: React.MouseEvent<HTMLAnchorElement>,
@@ -73,6 +87,17 @@ export function DataTable({ data }: DataTableProps) {
                 <TableHead className="min-w-[180px] border-r p-1">Sectors</TableHead>
                 <TableHead className="min-w-[180px] border-r p-1">Categories</TableHead>
                 <TableHead className="min-w-[150px] border-r p-1">Industries</TableHead>
+                {/* Dynamic custom search criteria columns */}
+                {customCriteriaKeys.map((key) => (
+                  <>
+                    <TableHead key={`${key}-result`} className="min-w-[120px] border-r p-1">
+                      {key}
+                    </TableHead>
+                    <TableHead key={`${key}-reasons`} className="min-w-[300px] border-r p-1">
+                      {key} (근거)
+                    </TableHead>
+                  </>
+                ))}
                 <TableHead className="min-w-[100px] border-r p-1">Crawl Time</TableHead>
                 <TableHead className="min-w-[100px] border-r p-1">GPT Time</TableHead>
                 <TableHead className="min-w-[150px] border-r p-1">Collected At</TableHead>
@@ -256,6 +281,47 @@ export function DataTable({ data }: DataTableProps) {
                       </div>
                     </TooltipCell>
                   </TableCell>
+                  {/* Dynamic custom search criteria cells */}
+                  {customCriteriaKeys.map((key) => {
+                    const criteriaResult = item.custom_search_results?.[key]
+                    const result = criteriaResult?.result || "-"
+                    const reasons = criteriaResult?.reasons || []
+                    const isTrue = result.toLowerCase() === "true"
+                    const isFalse = result.toLowerCase() === "false"
+
+                    return (
+                      <>
+                        <TableCell key={`${key}-result`} className="border-r p-1 text-center">
+                          <TooltipCell content={result}>
+                            {isTrue ? (
+                              <Badge variant="default" className="bg-green-600">
+                                true
+                              </Badge>
+                            ) : isFalse ? (
+                              <Badge variant="secondary">false</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">{result}</span>
+                            )}
+                          </TooltipCell>
+                        </TableCell>
+                        <TableCell key={`${key}-reasons`} className="border-r p-1">
+                          <TooltipCell content={reasons.join(" | ")}>
+                            <div className="text-xs space-y-1">
+                              {reasons.length > 0 ? (
+                                reasons.map((reason, idx) => (
+                                  <div key={idx} className="line-clamp-1 break-words">
+                                    {idx + 1}. {reason}
+                                  </div>
+                                ))
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </div>
+                          </TooltipCell>
+                        </TableCell>
+                      </>
+                    )
+                  })}
                   <TableCell className="border-r p-1 text-right">
                     <TooltipCell
                       content={item.crawl_time_seconds ? `${item.crawl_time_seconds}s` : null}

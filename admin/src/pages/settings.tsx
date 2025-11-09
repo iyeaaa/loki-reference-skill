@@ -3,8 +3,6 @@ import {
   FileSpreadsheet,
   FileText,
   FileUp,
-  Globe,
-  Search,
   Settings as SettingsIcon,
   User,
   Users,
@@ -31,6 +29,12 @@ export default function SettingsPage() {
   const updateProfileMutation = useUpdateProfileMutation()
 
   const systemManagementItems = [
+    {
+      title: "웹 데이터 추출",
+      description: "웹사이트에서 회사 정보 및 연락처를 자동으로 추출합니다",
+      url: "/settings/web-extraction",
+      iconImage: "/images/web-extraction-logo.webp",
+    },
     {
       title: t("settings.system.workspaces.title"),
       description: t("settings.system.workspaces.desc"),
@@ -60,18 +64,6 @@ export default function SettingsPage() {
       description: t("settings.system.bulkEmailCSV.desc"),
       url: "/bulk-email-csv",
       icon: FileSpreadsheet,
-    },
-    {
-      title: "웹 데이터 추출",
-      description: "웹사이트에서 회사 정보 및 연락처를 자동으로 추출합니다",
-      url: "/settings/web-extraction",
-      icon: Globe,
-    },
-    {
-      title: "Exa WebSet UI Test",
-      description: "Exa 웹 데이터 추출 테스트 인터페이스",
-      url: "/settings/exa-webset-test",
-      icon: Search,
     },
   ]
 
@@ -200,7 +192,15 @@ export default function SettingsPage() {
                 >
                   <div className="flex items-center gap-3 w-full">
                     <div className="rounded-lg bg-violet-100 dark:bg-violet-900/20 p-2">
-                      <item.icon className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                      {"iconImage" in item ? (
+                        <img
+                          src={item.iconImage}
+                          alt={item.title}
+                          className="h-5 w-5 object-contain"
+                        />
+                      ) : (
+                        <item.icon className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                      )}
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold">{item.title}</h3>

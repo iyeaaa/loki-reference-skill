@@ -28,11 +28,29 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
     async ({ body, set }) => {
       const { file, workspaceId, config } = body
 
+      // Parse searchCriteria from JSON string if it exists
+      let searchCriteria: string[] | undefined
+      if (body.searchCriteria) {
+        try {
+          searchCriteria =
+            typeof body.searchCriteria === "string"
+              ? JSON.parse(body.searchCriteria)
+              : body.searchCriteria
+        } catch (error) {
+          logger.error(
+            { error, searchCriteria: body.searchCriteria },
+            "Failed to parse searchCriteria",
+          )
+          searchCriteria = undefined
+        }
+      }
+
       logger.info(
         {
           workspaceId,
           fileSize: file.size,
           fileName: file.name,
+          searchCriteriaCount: searchCriteria?.length || 0,
         },
         "Starting web data extraction",
       )
@@ -227,6 +245,7 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
                         business_sectors: progress.latestResult.businessSectors || null,
                         product_categories: progress.latestResult.productCategories || null,
                         industry_types: progress.latestResult.industryTypes || null,
+                        custom_search_results: progress.latestResult.customSearchResults || null,
                         crawl_time_seconds: progress.latestResult.crawlTimeSeconds || null,
                         gpt_time_seconds: progress.latestResult.gptTimeSeconds || null,
                         collected_at: progress.latestResult.collectedAt || null,
@@ -247,6 +266,7 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
                   }
                 },
                 workspaceId,
+                searchCriteria,
               )
 
               if (session.closed) return
@@ -314,6 +334,7 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
           maxSize: 50 * 1024 * 1024, // 50MB (MIME 타입 제한 제거 - 브라우저별로 다를 수 있음)
         }),
         workspaceId: t.String(),
+        searchCriteria: t.Optional(t.Union([t.String(), t.Array(t.String())])), // Accept both string (JSON) and array
         config: t.Optional(
           t.Object({
             maxConcurrent: t.Optional(t.Number()),
@@ -358,33 +379,52 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
       try {
         // Excel 생성
         const worksheet = XLSX.utils.json_to_sheet(
-          results.map((r) => ({
-            website_url: r.websiteUrl,
-            final_url: r.finalUrl || "",
-            http_status: r.httpStatus || "",
-            found_company_name: r.foundCompanyName || "",
-            description: r.description || "",
-            address: r.address || "",
-            country: r.country || "",
-            city: r.city || "",
-            state: r.state || "",
-            founded_year: r.foundedYear || "",
-            phone_number: r.phoneNumber || "",
-            email: r.email || "",
-            facebook_url: r.facebookUrl || "",
-            instagram_url: r.instagramUrl || "",
-            twitter_url: r.twitterUrl || "",
-            linkedin_url: r.linkedinUrl || "",
-            employee_count: r.employeeCount || "",
-            products: r.products || "",
-            business_sectors: r.businessSectors || "",
-            product_categories: r.productCategories || "",
-            industry_types: r.industryTypes || "",
-            crawl_time_seconds: r.crawlTimeSeconds || "",
-            gpt_time_seconds: r.gptTimeSeconds || "",
-            collected_at: r.collectedAt || "",
-            error_message: r.errorMessage || "",
-          })),
+          results.map((r) => {
+            const baseData: Record<string, unknown> = {
+              website_url: r.websiteUrl,
+              final_url: r.finalUrl || "",
+              http_status: r.httpStatus || "",
+              found_company_name: r.foundCompanyName || "",
+              description: r.description || "",
+              address: r.address || "",
+              country: r.country || "",
+              city: r.city || "",
+              state: r.state || "",
+              founded_year: r.foundedYear || "",
+              phone_number: r.phoneNumber || "",
+              email: r.email || "",
+              facebook_url: r.facebookUrl || "",
+              instagram_url: r.instagramUrl || "",
+              twitter_url: r.twitterUrl || "",
+              linkedin_url: r.linkedinUrl || "",
+              employee_count: r.employeeCount || "",
+              products: r.products || "",
+              business_sectors: r.businessSectors || "",
+              product_categories: r.productCategories || "",
+              industry_types: r.industryTypes || "",
+            }
+
+            // Add custom search results as separate columns
+            if (r.customSearchResults) {
+              for (const [key, value] of Object.entries(r.customSearchResults)) {
+                if (value && typeof value === "object" && "result" in value) {
+                  baseData[`${key} (결과)`] = value.result || ""
+                  baseData[`${key} (근거)`] =
+                    value.reasons && Array.isArray(value.reasons) ? value.reasons.join(" | ") : ""
+                } else {
+                  // Fallback for old format
+                  baseData[key] = String(value) || ""
+                }
+              }
+            }
+
+            baseData.crawl_time_seconds = r.crawlTimeSeconds || ""
+            baseData.gpt_time_seconds = r.gptTimeSeconds || ""
+            baseData.collected_at = r.collectedAt || ""
+            baseData.error_message = r.errorMessage || ""
+
+            return baseData
+          }),
         )
 
         const workbook = XLSX.utils.book_new()
@@ -457,6 +497,7 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
           business_sectors: r.businessSectors || null,
           product_categories: r.productCategories || null,
           industry_types: r.industryTypes || null,
+          custom_search_results: r.customSearchResults || null,
           crawl_time_seconds: r.crawlTimeSeconds || null,
           gpt_time_seconds: r.gptTimeSeconds || null,
           collected_at: r.collectedAt || null,

@@ -50,6 +50,7 @@ export function WebDataExtraction() {
   const [error, setError] = useState<string | null>(null)
   const [urlCount, setUrlCount] = useState<number | null>(null)
   const [isValidatingFile, setIsValidatingFile] = useState(false)
+  const [searchCriteria, setSearchCriteria] = useState<string[]>([])
   const [isApiKeyManagementModalOpen, setIsApiKeyManagementModalOpen] = useState(false)
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false)
   const [isFileUploadModalOpen, setIsFileUploadModalOpen] = useState(false)
@@ -281,6 +282,7 @@ export function WebDataExtraction() {
     upload({
       file: selectedFile,
       workspaceId,
+      searchCriteria: searchCriteria.filter((c) => c.trim().length > 0),
     })
   }
 
@@ -293,31 +295,46 @@ export function WebDataExtraction() {
     try {
       let excelData: unknown[]
 
-      const createRowData = (item: ExtractionResult, emailValue: string = "") => ({
-        "Website URL": item.website_url || "",
-        "Found Company": item.found_company_name || "",
-        Email: emailValue,
-        Description: item.description || "",
-        Address: item.address || "",
-        Country: item.country || "",
-        City: item.city || "",
-        State: item.state || "",
-        Founded: item.founded_year || "",
-        Phone: item.phone_number || "",
-        Facebook: item.facebook_url || "",
-        Instagram: item.instagram_url || "",
-        Twitter: item.twitter_url || "",
-        LinkedIn: item.linkedin_url || "",
-        Employees: item.employee_count || "",
-        Products: item.products || "",
-        Sectors: item.business_sectors || "",
-        Categories: item.product_categories || "",
-        Industries: item.industry_types || "",
-        "Crawl Time": item.crawl_time_seconds ? `${item.crawl_time_seconds}s` : "",
-        "GPT Time": item.gpt_time_seconds ? `${item.gpt_time_seconds}s` : "",
-        "Collected At": item.collected_at || "",
-        Error: item.error_message || "",
-      })
+      const createRowData = (item: ExtractionResult, emailValue: string = "") => {
+        const baseData: Record<string, string> = {
+          "Website URL": item.website_url || "",
+          "Found Company": item.found_company_name || "",
+          Email: emailValue,
+          Description: item.description || "",
+          Address: item.address || "",
+          Country: item.country || "",
+          City: item.city || "",
+          State: item.state || "",
+          Founded: item.founded_year || "",
+          Phone: item.phone_number || "",
+          Facebook: item.facebook_url || "",
+          Instagram: item.instagram_url || "",
+          Twitter: item.twitter_url || "",
+          LinkedIn: item.linkedin_url || "",
+          Employees: item.employee_count || "",
+          Products: item.products || "",
+          Sectors: item.business_sectors || "",
+          Categories: item.product_categories || "",
+          Industries: item.industry_types || "",
+        }
+
+        // Add custom search results as separate columns
+        if (item.custom_search_results) {
+          for (const [key, value] of Object.entries(item.custom_search_results)) {
+            if (value && typeof value === "object" && "result" in value) {
+              baseData[`${key} (결과)`] = value.result || ""
+              baseData[`${key} (근거)`] = value.reasons?.join(" | ") || ""
+            }
+          }
+        }
+
+        baseData["Crawl Time"] = item.crawl_time_seconds ? `${item.crawl_time_seconds}s` : ""
+        baseData["GPT Time"] = item.gpt_time_seconds ? `${item.gpt_time_seconds}s` : ""
+        baseData["Collected At"] = item.collected_at || ""
+        baseData.Error = item.error_message || ""
+
+        return baseData
+      }
 
       if (splitEmails) {
         excelData = []
@@ -584,6 +601,8 @@ export function WebDataExtraction() {
             onUpload={handleUpload}
             onDownloadTemplate={handleDownloadTemplate}
             onAddApiKey={() => setIsApiKeyManagementModalOpen(true)}
+            searchCriteria={searchCriteria}
+            onSearchCriteriaChange={setSearchCriteria}
           />
         )}
 
@@ -635,6 +654,8 @@ export function WebDataExtraction() {
         }}
         onUpload={handleUpload}
         onDownloadTemplate={handleDownloadTemplate}
+        searchCriteria={searchCriteria}
+        onSearchCriteriaChange={setSearchCriteria}
       />
 
       {/* API Key Add Dialog */}

@@ -1,3 +1,8 @@
+export interface SearchCriteriaResult {
+  result: string // "true" or "false"
+  reasons: string[] // 3 specific reasons
+}
+
 export interface ExtractionResult {
   website_url: string
   final_url?: string | null
@@ -20,6 +25,7 @@ export interface ExtractionResult {
   business_sectors?: string | null
   product_categories?: string | null
   industry_types?: string | null
+  custom_search_results?: Record<string, SearchCriteriaResult> | null
   crawl_time_seconds?: number | null
   gpt_time_seconds?: number | null
   collected_at?: string | null
@@ -53,6 +59,7 @@ export interface ExtractionProgress {
 export interface WebExtractionUploadRequest {
   file: File
   workspaceId: string
+  searchCriteria?: string[]
 }
 
 export interface WebExtractionProgressCallback {

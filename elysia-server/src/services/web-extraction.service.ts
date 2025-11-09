@@ -192,6 +192,7 @@ export async function extractContactsWithGPT(
   pagesContent: Map<string, string>,
   gptTimeout: number,
   workspaceId?: string,
+  searchCriteria?: string[],
 ): Promise<ExtractedContacts> {
   try {
     // 모든 페이지 내용 합치기
@@ -203,10 +204,36 @@ export async function extractContactsWithGPT(
       }
     }
 
+    // Build dynamic prompt with search criteria
+    let customSearchFields = ""
+    if (searchCriteria && searchCriteria.length > 0) {
+      customSearchFields = "\n\n추가 검색 조건:\n"
+      customSearchFields += searchCriteria
+        .map(
+          (criterion, index) =>
+            `${index + 1}. "${criterion}" - 이 조건에 해당하는지 판단하고 "true" 또는 "false"로 답변해주세요. 또한 판단의 근거가 되는 구체적인 사실 3가지를 제시해주세요. 근거는 반드시 웹사이트 콘텐츠에서 실제로 발견된 구체적인 텍스트, 데이터, 또는 정보를 인용하여 작성해주세요.`,
+        )
+        .join("\n")
+    }
+
+    let customSearchJson = ""
+    if (searchCriteria && searchCriteria.length > 0) {
+      customSearchJson = ',\n  "customSearchResults": {\n'
+      customSearchJson += searchCriteria
+        .map(
+          (criterion) => `    "${criterion}": {
+      "result": "true 또는 false",
+      "reasons": ["근거1", "근거2", "근거3"]
+    }`,
+        )
+        .join(",\n")
+      customSearchJson += "\n  }"
+    }
+
     const prompt = `다음 웹사이트 콘텐츠에서 회사 정보와 연락처를 추출해주세요.
 
 웹사이트 콘텐츠:
-${combinedContent.substring(0, 15000)}
+${combinedContent.substring(0, 15000)}${customSearchFields}
 
 다음 정보를 JSON 형식으로 추출해주세요 (찾을 수 없는 필드는 빈 문자열로):
 {
@@ -227,10 +254,18 @@ ${combinedContent.substring(0, 15000)}
   "products": "주요 제품/서비스 (쉼표로 구분)",
   "businessSectors": "비즈니스 섹터 (쉼표로 구분)",
   "productCategories": "제품 카테고리 (쉼표로 구분)",
-  "industryTypes": "산업 유형 (쉼표로 구분)"
+  "industryTypes": "산업 유형 (쉼표로 구분)"${customSearchJson}
 }
 
-중요: 반드시 유효한 JSON만 반환하고, 추가 설명은 포함하지 마세요.`
+중요: 반드시 유효한 JSON만 반환하고, 추가 설명은 포함하지 마세요.
+
+customSearchResults의 각 검색 조건에 대해서는:
+1. result 필드에 "true" 또는 "false"를 입력
+2. reasons 배열에 구체적인 근거 3가지를 입력해주세요
+3. 각 근거는 웹사이트에서 실제로 발견된 내용을 기반으로 작성해야 합니다
+4. 근거 작성 시 실제 텍스트, 숫자, 제품명, 회사명 등 구체적인 정보를 포함해주세요
+5. 예시: "홈페이지에 '기업 고객 대상 솔루션 제공'이라는 문구가 있음", "제품 목록에 산업용 장비 3종(A-100, B-200, C-300)이 나열됨", "회사 소개에 '1987년 설립된 대한민국 대표 기업'이라고 명시됨"
+6. 추상적이거나 일반적인 근거가 아닌, 페이지에서 확인 가능한 구체적인 증거를 제시해주세요`
 
     // Workspace에 설정된 API 키 가져오기 (round-robin)
     const apiKey = workspaceId ? await getNextApiKey(workspaceId) : null
@@ -315,6 +350,7 @@ export async function processCompanyRecord(
   record: CompanyRecord,
   config: WebExtractionConfig,
   workspaceId?: string,
+  searchCriteria?: string[],
 ): Promise<CompanyRecord> {
   const startTime = Date.now()
 
@@ -356,7 +392,12 @@ export async function processCompanyRecord(
 
     // GPT로 연락처 추출
     const gptStartTime = Date.now()
-    const contacts = await extractContactsWithGPT(pagesContent, config.gptTimeout, workspaceId)
+    const contacts = await extractContactsWithGPT(
+      pagesContent,
+      config.gptTimeout,
+      workspaceId,
+      searchCriteria,
+    )
     const gptElapsed = (Date.now() - gptStartTime) / 1000
 
     // 결과 병합
@@ -390,6 +431,7 @@ export async function processBatch(
   config: WebExtractionConfig,
   progressCallback: (progress: ExtractionProgress) => void,
   workspaceId?: string,
+  searchCriteria?: string[],
 ): Promise<CompanyRecord[]> {
   const startTime = Date.now()
   const results: CompanyRecord[] = []
@@ -436,7 +478,7 @@ export async function processBatch(
         // 처리 시작 로그
         addLog(`[${recordIndex}/${records.length}] ${displayName} 처리 시작...`, "info")
 
-        const result = await processCompanyRecord(record, config, workspaceId)
+        const result = await processCompanyRecord(record, config, workspaceId, searchCriteria)
         processed++
 
         // 에러가 발생한 경우 결과에 포함하지 않음

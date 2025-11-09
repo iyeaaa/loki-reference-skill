@@ -3,6 +3,11 @@
  * 웹사이트에서 회사 정보 및 연락처를 추출하는 기능 관련 타입
  */
 
+export interface SearchCriteriaResult {
+  result: string // "true" or "false"
+  reasons: string[] // 3 specific reasons
+}
+
 export interface CompanyRecord {
   websiteUrl: string
   finalUrl?: string
@@ -31,6 +36,7 @@ export interface CompanyRecord {
   beddingBrandOwnerReason?: string
   isDistributor?: string
   distributorReason?: string
+  customSearchResults?: Record<string, SearchCriteriaResult> // Dynamic search criteria results with reasons
   crawlTimeSeconds?: number
   gptTimeSeconds?: number
   collectedAt?: string
@@ -131,6 +137,7 @@ export interface ExtractedContacts {
   beddingBrandOwnerReason?: string
   isDistributor?: string
   distributorReason?: string
+  customSearchResults?: Record<string, SearchCriteriaResult> // Dynamic search criteria results with reasons
   httpStatus?: number
   errorMessage?: string
 }

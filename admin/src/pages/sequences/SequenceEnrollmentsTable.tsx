@@ -72,7 +72,10 @@ function StepExecutionDetails({
   if (error) {
     return (
       <div className="p-4 text-sm text-red-600">
-        에러: {error instanceof Error ? error.message : "알 수 없는 에러"}
+        {t("sequences.enrollments.stepExecutions.error")}{" "}
+        {error instanceof Error
+          ? error.message
+          : t("sequences.enrollments.stepExecutions.unknownError")}
       </div>
     )
   }
@@ -90,13 +93,25 @@ function StepExecutionDetails({
 
   const getStatusBadge = (status: string) => {
     if (status === "sent") {
-      return <Badge className="bg-green-600">발송완료</Badge>
+      return (
+        <Badge className="bg-green-600">
+          {t("sequences.enrollments.stepExecutions.status.sent")}
+        </Badge>
+      )
     }
     if (status === "pending") {
-      return <Badge variant="secondary">대기</Badge>
+      return (
+        <Badge variant="secondary">
+          {t("sequences.enrollments.stepExecutions.status.pending")}
+        </Badge>
+      )
     }
     if (status === "failed") {
-      return <Badge variant="destructive">실패</Badge>
+      return (
+        <Badge variant="destructive">
+          {t("sequences.enrollments.stepExecutions.status.failed")}
+        </Badge>
+      )
     }
     return <Badge variant="outline">{status}</Badge>
   }
@@ -114,7 +129,9 @@ function StepExecutionDetails({
 
   return (
     <div className="p-4 bg-muted/30">
-      <h4 className="text-sm font-semibold mb-3">📋 스텝별 발송 일정</h4>
+      <h4 className="text-sm font-semibold mb-3">
+        {t("sequences.enrollments.stepExecutions.title")}
+      </h4>
       <div className="space-y-2">
         {executions.map((execution) => (
           <div
@@ -123,17 +140,22 @@ function StepExecutionDetails({
           >
             <div className="flex-1">
               <div className="font-medium mb-1">
-                스텝 {execution.stepOrder}: {execution.emailSubject}
+                {t("sequences.enrollments.stepExecutions.step", {
+                  order: execution.stepOrder,
+                })}
+                : {execution.emailSubject}
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  예정: {formatDate(execution.scheduledAt)}
+                  {t("sequences.enrollments.stepExecutions.scheduled")}{" "}
+                  {formatDate(execution.scheduledAt)}
                 </span>
                 {execution.executedAt && (
                   <span className="flex items-center gap-1 text-green-600">
                     <CheckCircle className="w-3 h-3" />
-                    발송: {formatDate(execution.executedAt)}
+                    {t("sequences.enrollments.stepExecutions.executed")}{" "}
+                    {formatDate(execution.executedAt)}
                   </span>
                 )}
               </div>
@@ -604,7 +626,7 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                                   ) : (
                                     <ChevronDown className="w-3 h-3" />
                                   )}
-                                  스텝 일정
+                                  {t("sequences.enrollments.stepSchedule")}
                                 </Button>
                                 <Button
                                   variant="outline"

@@ -455,8 +455,8 @@ stepsList.scheduledTime,[NO TRANSLATION] sequences.stepsList.scheduledTime,[NO T
 stepsList.sent,[NO TRANSLATION] sequences.stepsList.sent,[NO TRANSLATION] sequences.stepsList.sent
 enrollments.column.nextScheduled,[NO TRANSLATION] sequences.enrollments.column.nextScheduled,[NO TRANSLATION] sequences.enrollments.column.nextScheduled
 enrollments.nextScheduled.completed,[NO TRANSLATION] sequences.enrollments.nextScheduled.completed,[NO TRANSLATION] sequences.enrollments.nextScheduled.completed
-enrollments.stepExecutions.loading,[NO TRANSLATION] sequences.enrollments.stepExecutions.loading,[NO TRANSLATION] sequences.enrollments.stepExecutions.loading
-enrollments.stepExecutions.noSteps,[NO TRANSLATION] sequences.enrollments.stepExecutions.noSteps,[NO TRANSLATION] sequences.enrollments.stepExecutions.noSteps
+enrollments.stepExecutions.loading,로딩 중...,Loading...
+enrollments.stepExecutions.noSteps,예정된 스텝이 없습니다,No scheduled steps
 enrollments.delivery.failed,발송 실패,Failed
 enrollments.delivery.failureReason,실패 이유:,Failure Reason:
 enrollments.column.replied,답장,Reply
@@ -484,3 +484,13 @@ metrics.activeEnrollments,진행 중,In Progress
 metrics.completedEnrollments,완료,Completed
 metrics.pausedEnrollments,일시정지,Paused
 metrics.overallProgress,전체 진행률,Overall Progress
+enrollments.stepSchedule,스텝 일정,Step Schedule
+enrollments.stepExecutions.title,📋 스텝별 발송 일정,📋 Step-by-Step Schedule
+enrollments.stepExecutions.error,에러:,Error:
+enrollments.stepExecutions.unknownError,알 수 없는 에러,Unknown error
+enrollments.stepExecutions.status.sent,발송완료,Sent
+enrollments.stepExecutions.status.pending,대기,Pending
+enrollments.stepExecutions.status.failed,실패,Failed
+enrollments.stepExecutions.step,스텝 {{order}},Step {{order}}
+enrollments.stepExecutions.scheduled,예정:,Scheduled:
+enrollments.stepExecutions.executed,발송:,Sent:

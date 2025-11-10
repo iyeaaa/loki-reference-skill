@@ -458,3 +458,6 @@ enrollments.nextScheduled.completed,[NO TRANSLATION] sequences.enrollments.nextS
 enrollments.stepExecutions.loading,[NO TRANSLATION] sequences.enrollments.stepExecutions.loading,[NO TRANSLATION] sequences.enrollments.stepExecutions.loading
 enrollments.stepExecutions.noSteps,[NO TRANSLATION] sequences.enrollments.stepExecutions.noSteps,[NO TRANSLATION] sequences.enrollments.stepExecutions.noSteps
 enrollments.delivery.failed,발송 실패,Failed
+enrollments.column.replied,답장,Reply
+enrollments.reply.notReplied,답장 없음,No Reply
+enrollments.reply.replied,답장함,Replied

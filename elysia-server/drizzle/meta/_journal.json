@@ -99,6 +99,13 @@
       "when": 1762521154917,
       "tag": "0013_burly_jimmy_woo",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1762691903424,
+      "tag": "0014_free_hellfire_club",
+      "breakpoints": true
     }
   ]
 }

@@ -13,13 +13,18 @@ export const webExtractionApi = {
     request: WebExtractionUploadRequest,
     callbacks: WebExtractionProgressCallback,
   ): Promise<void> => {
-    const { file, workspaceId } = request
+    const { file, workspaceId, searchCriteria } = request
     const { onProgress, onComplete, onError } = callbacks
 
     try {
       const formData = new FormData()
       formData.append("file", file)
       formData.append("workspaceId", workspaceId)
+
+      // Add search criteria if provided
+      if (searchCriteria && searchCriteria.length > 0) {
+        formData.append("searchCriteria", JSON.stringify(searchCriteria))
+      }
 
       const response = await fetch(`${API_BASE_URL}/api/v1/admin/web-extraction/upload`, {
         method: "POST",

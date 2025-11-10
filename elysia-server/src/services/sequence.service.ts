@@ -2,7 +2,7 @@ import { and, desc, eq, ilike, lte, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { customerGroups } from "../db/schema/customer-groups"
 import { userEmailAccounts } from "../db/schema/email-accounts"
-import { emailEvents, emails as emailsTable } from "../db/schema/emails"
+import { emailEvents, emailReplies, emails as emailsTable } from "../db/schema/emails"
 import { leadContacts } from "../db/schema/lead-details"
 import { leads } from "../db/schema/leads"
 import {
@@ -1795,6 +1795,17 @@ export async function getSequenceMetrics(sequenceId: string) {
     .orderBy(desc(emailsTable.sentAt))
     .limit(1)
 
+  // 5. Get replied emails count from email_replies table
+  const repliedCountResult = await db
+    .select({
+      count: sql<number>`COUNT(DISTINCT ${emailReplies.originalEmailId})::int`,
+    })
+    .from(emailReplies)
+    .innerJoin(emailsTable, eq(emailReplies.originalEmailId, emailsTable.id))
+    .where(and(eq(emailsTable.direction, "outbound"), eq(emailsTable.sequenceId, sequenceId)))
+
+  const repliedCount = repliedCountResult[0]?.count || 0
+
   // Process enrollment statistics
   const enrollmentCounts = {
     total: 0,
@@ -1850,6 +1861,7 @@ export async function getSequenceMetrics(sequenceId: string) {
   const deliveredCount = emailCounts.delivered > 0 ? emailCounts.delivered : emailCounts.totalSent
   const openRate = deliveredCount > 0 ? (emailCounts.opened / deliveredCount) * 100 : 0
   const clickRate = deliveredCount > 0 ? (emailCounts.clicked / deliveredCount) * 100 : 0
+  const replyRate = deliveredCount > 0 ? (repliedCount / deliveredCount) * 100 : 0
   const bounceRate =
     emailCounts.totalSent > 0 ? (emailCounts.bounced / emailCounts.totalSent) * 100 : 0
 
@@ -1862,11 +1874,13 @@ export async function getSequenceMetrics(sequenceId: string) {
         delivered: emailCounts.delivered,
         opened: emailCounts.opened,
         clicked: emailCounts.clicked,
+        replied: repliedCount,
         bounced: emailCounts.bounced,
       },
       calculatedRates: {
         openRate,
         clickRate,
+        replyRate,
         bounceRate,
       },
       calculationDetails: {
@@ -1887,13 +1901,13 @@ export async function getSequenceMetrics(sequenceId: string) {
     // 참여 통계
     opened: emailCounts.opened,
     clicked: emailCounts.clicked,
-    replied: 0, // TODO: Implement reply detection
+    replied: repliedCount,
     unsubscribed: emailCounts.unsubscribed,
 
     // 성과 지표
     openRate: Math.round(openRate * 10) / 10,
     clickRate: Math.round(clickRate * 10) / 10,
-    replyRate: 0, // TODO: Implement reply detection
+    replyRate: Math.round(replyRate * 10) / 10,
     bounceRate: Math.round(bounceRate * 10) / 10,
 
     // 시퀀스 진행도
@@ -1914,6 +1928,8 @@ export async function getSequenceMetrics(sequenceId: string) {
         delivered: metrics.delivered,
         openRate: metrics.openRate,
         clickRate: metrics.clickRate,
+        replyRate: metrics.replyRate,
+        replied: metrics.replied,
         totalEnrollments: metrics.totalEnrollments,
       },
     },
@@ -2020,13 +2036,30 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
     failed: 0,
   }
 
+  // 5. Get replied emails count for this enrollment
+  const repliedCountResult = await db
+    .select({
+      count: sql<number>`COUNT(DISTINCT ${emailReplies.originalEmailId})::int`,
+    })
+    .from(emailReplies)
+    .innerJoin(emailsTable, eq(emailReplies.originalEmailId, emailsTable.id))
+    .where(
+      and(
+        eq(emailsTable.direction, "outbound"),
+        eq(emailsTable.sequenceId, enrollment.sequenceId),
+        eq(emailsTable.leadId, enrollment.leadId),
+      ),
+    )
+
+  const repliedCount = repliedCountResult[0]?.count || 0
+
   // Process email statistics
   const emailCounts = {
     emailsSent: emailsSent, // Use actual sent count from sequence_step_executions
     emailsDelivered: emailStatsFromTable.delivered,
     emailsOpened: emailStatsFromTable.opened,
     emailsClicked: emailStatsFromTable.clicked,
-    emailsReplied: 0, // TODO: Implement reply detection
+    emailsReplied: repliedCount,
     emailsBounced: emailStatsFromTable.bounced,
     emailsFailed: emailStatsFromTable.failed,
   }
@@ -2037,6 +2070,7 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
     emailCounts.emailsDelivered > 0 ? emailCounts.emailsDelivered : emailCounts.emailsSent
   const openRate = deliveredCount > 0 ? (emailCounts.emailsOpened / deliveredCount) * 100 : 0
   const clickRate = deliveredCount > 0 ? (emailCounts.emailsClicked / deliveredCount) * 100 : 0
+  const replyRate = deliveredCount > 0 ? (repliedCount / deliveredCount) * 100 : 0
   const bounceRate =
     emailCounts.emailsSent > 0 ? (emailCounts.emailsBounced / emailCounts.emailsSent) * 100 : 0
 
@@ -2061,7 +2095,7 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
     // 성과 지표
     openRate: Math.round(openRate * 10) / 10,
     clickRate: Math.round(clickRate * 10) / 10,
-    replyRate: 0, // TODO: Implement reply detection
+    replyRate: Math.round(replyRate * 10) / 10,
     bounceRate: Math.round(bounceRate * 10) / 10,
 
     // 시간 통계
@@ -2077,8 +2111,10 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
       enrollmentId,
       companyName: metrics.companyName,
       emailsSent: metrics.emailsSent,
+      emailsReplied: metrics.emailsReplied,
       openRate: metrics.openRate,
       clickRate: metrics.clickRate,
+      replyRate: metrics.replyRate,
     },
     "📊 [METRICS] Enrollment metrics calculated",
   )

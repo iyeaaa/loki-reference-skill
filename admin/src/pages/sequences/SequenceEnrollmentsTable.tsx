@@ -273,6 +273,44 @@ function EnrollmentClickStatus({ enrollmentId }: { enrollmentId: string }) {
   )
 }
 
+// EnrollmentReplyStatus - 실제 답장 상태를 표시하는 컴포넌트
+function EnrollmentReplyStatus({ enrollmentId }: { enrollmentId: string }) {
+  const { t } = useTranslation()
+  const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId)
+
+  if (isLoading) {
+    return (
+      <span className="text-sm text-muted-foreground">{t("sequences.enrollments.loading")}</span>
+    )
+  }
+
+  if (!metricsData?.data) {
+    return <span className="text-sm text-muted-foreground">-</span>
+  }
+
+  const { emailsSent, emailsReplied } = metricsData.data
+
+  if (emailsSent === 0) {
+    return <span className="text-sm text-muted-foreground">-</span>
+  }
+
+  if (emailsReplied > 0) {
+    return (
+      <div className="flex items-center gap-1 text-sm text-green-600">
+        <CheckCircle2 className="w-3 h-3" />
+        <span className="font-medium">{t("sequences.enrollments.reply.replied")}</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1 text-sm text-gray-600">
+      <CheckCircle2 className="w-3 h-3" />
+      <span className="font-medium">{t("sequences.enrollments.reply.notReplied")}</span>
+    </div>
+  )
+}
+
 // CompanyMetricsModalWithData - 실제 API 데이터를 사용하는 모달 컴포넌트
 interface CompanyMetricsModalWithDataProps {
   isOpen: boolean
@@ -439,8 +477,8 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                       <TableHead>{t("sequences.enrollments.column.delivered")}</TableHead>
                       <TableHead>{t("sequences.enrollments.column.opened")}</TableHead>
                       <TableHead>{t("sequences.enrollments.column.clicked")}</TableHead>
+                      <TableHead>{t("sequences.enrollments.column.replied")}</TableHead>
                       <TableHead>{t("sequences.enrollments.column.enrolledAt")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.lastEmailSent")}</TableHead>
                       <TableHead>{t("sequences.enrollments.column.viewDetails")}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -453,7 +491,6 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
 
                       // 실제 데이터 기반 간단한 상태 표시
                       const hasEmailsSent = enrollment.currentStepOrder > 0
-                      const hasLastEmailSent = enrollment.lastEmailSentAt !== null
 
                       const handleViewDetails = () => {
                         setSelectedEnrollmentId(enrollment.id)
@@ -523,26 +560,13 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                               <EnrollmentClickStatus enrollmentId={enrollment.id} />
                             </TableCell>
                             <TableCell>
+                              <EnrollmentReplyStatus enrollmentId={enrollment.id} />
+                            </TableCell>
+                            <TableCell>
                               <div className="flex items-center gap-1 text-sm">
                                 <Calendar className="w-3 h-3 text-muted-foreground" />
                                 {formatDate(enrollment.enrolledAt)}
                               </div>
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {hasLastEmailSent ? (
-                                <div className="flex items-center gap-1 text-green-600">
-                                  <CheckCircle2 className="w-3 h-3" />
-                                  {formatDate(enrollment.lastEmailSentAt)}
-                                </div>
-                              ) : hasEmailsSent ? (
-                                <span className="text-muted-foreground">
-                                  {t("sequences.enrollments.lastSent.sending")}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground">
-                                  {t("sequences.enrollments.lastSent.waiting")}
-                                </span>
-                              )}
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-2">
@@ -573,7 +597,7 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                           </TableRow>
                           {isExpanded && (
                             <TableRow>
-                              <TableCell colSpan={10} className="p-0">
+                              <TableCell colSpan={9} className="p-0">
                                 <StepExecutionDetails
                                   sequenceId={sequenceId}
                                   enrollmentId={enrollment.id}

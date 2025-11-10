@@ -23,9 +23,8 @@ function generateTokenId(): string {
 /**
  * Create a search token from field and value
  */
-export function createToken(field: string, value: string): SearchToken {
+export function createToken(field: string, fieldLabel: string, value: string): SearchToken {
   const fieldConfig = getFieldConfig(field)
-  const fieldLabel = fieldConfig?.label || field
 
   // Determine operator based on field type
   let operator: FilterOperator = "contains"
@@ -34,8 +33,8 @@ export function createToken(field: string, value: string): SearchToken {
   if (fieldConfig?.type === "enum") {
     operator = "equals"
     // Find label for enum value
-    const option = fieldConfig.options?.find((opt) => opt.value === value)
-    displayValue = option?.label || value
+    // const option = fieldConfig.options?.find((opt) => opt === value)
+    displayValue = fieldLabel
   } else if (fieldConfig?.type === "number") {
     operator = "equals"
   } else if (fieldConfig?.type === "date") {
@@ -114,13 +113,6 @@ export function parseTokenInput(input: string): { field: string; value: string }
   if (!field || !value) return null
 
   return { field: field.trim(), value: value.trim() }
-}
-
-/**
- * Format token for display
- */
-export function formatTokenDisplay(token: SearchToken): string {
-  return `@${token.fieldLabel}: ${token.displayValue}`
 }
 
 /**

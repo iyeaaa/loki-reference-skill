@@ -225,7 +225,7 @@ const getPageName = (pathname: string, t: (key: string) => string) => {
 export default function DashboardLayout() {
   return (
     <div className="h-screen flex overflow-hidden bg-background">
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={false}>
         <DashboardContent />
       </SidebarProvider>
     </div>

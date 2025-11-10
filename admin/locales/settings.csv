@@ -20,3 +20,29 @@ system.emailTemplates.title,이메일 템플릿 관리,Email Template Management
 system.emailTemplates.desc,이메일 템플릿을 생성하고 관리합니다,Create and manage email templates
 system.bulkEmailCSV.title,CSV 대량 메일 발송,CSV Bulk Email Sending
 system.bulkEmailCSV.desc,CSV 파일로 여러 수신자에게 이메일을 한 번에 발송합니다,Send emails to multiple recipients at once via CSV file
+workspace.title,워크스페이스 정보,Workspace Information
+workspace.description,현재 워크스페이스의 회사 정보를 관리합니다,Manage company information for the current workspace
+workspace.companyName,회사명,Company Name
+workspace.companyWebsite,회사 웹사이트,Company Website
+workspace.companyPhone,회사 전화번호,Company Phone
+workspace.industry,업종,Industry
+workspace.companySize,회사 규모,Company Size
+workspace.companyAddress,회사 주소,Company Address
+workspace.companyDescription,회사 설명,Company Description
+workspace.saving,저장 중...,Saving...
+workspace.saveChanges,변경사항 저장,Save Changes
+signature.title,이메일 서명 관리,Email Signature Management
+signature.add,[NO TRANSLATION] settings.signature.add,[NO TRANSLATION] settings.signature.add
+signature.addDescription,[NO TRANSLATION] settings.signature.addDescription,[NO TRANSLATION] settings.signature.addDescription
+signature.addSignature,[NO TRANSLATION] settings.signature.addSignature,[NO TRANSLATION] settings.signature.addSignature
+signature.createdAt,[NO TRANSLATION] settings.signature.createdAt,[NO TRANSLATION] settings.signature.createdAt
+signature.default,[NO TRANSLATION] settings.signature.default,[NO TRANSLATION] settings.signature.default
+signature.deleteConfirm,[NO TRANSLATION] settings.signature.deleteConfirm,[NO TRANSLATION] settings.signature.deleteConfirm
+signature.description,[NO TRANSLATION] settings.signature.description,[NO TRANSLATION] settings.signature.description
+signature.edit,[NO TRANSLATION] settings.signature.edit,[NO TRANSLATION] settings.signature.edit
+signature.loading,[NO TRANSLATION] settings.signature.loading,[NO TRANSLATION] settings.signature.loading
+signature.name,[NO TRANSLATION] settings.signature.name,[NO TRANSLATION] settings.signature.name
+signature.namePlaceholder,[NO TRANSLATION] settings.signature.namePlaceholder,[NO TRANSLATION] settings.signature.namePlaceholder
+signature.noSignatures,[NO TRANSLATION] settings.signature.noSignatures,[NO TRANSLATION] settings.signature.noSignatures
+signature.setDefault,[NO TRANSLATION] settings.signature.setDefault,[NO TRANSLATION] settings.signature.setDefault
+signature.updatedAt,[NO TRANSLATION] settings.signature.updatedAt,[NO TRANSLATION] settings.signature.updatedAt

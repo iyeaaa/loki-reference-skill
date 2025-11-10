@@ -716,7 +716,116 @@ export async function deleteSequenceStep(id: string) {
 // ====================================
 
 // GetSequenceEnrollments :many
-export async function getSequenceEnrollments(sequenceId: string, limit: number, offset: number) {
+export async function getSequenceEnrollments(
+  sequenceId: string,
+  limit: number,
+  offset: number,
+  filters?: {
+    companyName?: string
+    opened?: boolean
+    clicked?: boolean
+    replied?: boolean
+    delivered?: boolean
+  },
+) {
+  // 이메일 관련 필터가 있는 경우, 서브쿼리로 처리
+  if (
+    filters?.opened !== undefined ||
+    filters?.clicked !== undefined ||
+    filters?.replied !== undefined ||
+    filters?.delivered !== undefined
+  ) {
+    // 먼저 필터 조건에 맞는 leadId 목록을 가져옴
+    const leadIdsQuery = db
+      .selectDistinct({ leadId: emailsTable.leadId })
+      .from(emailsTable)
+      .where(
+        and(
+          eq(emailsTable.sequenceId, sequenceId),
+          eq(emailsTable.direction, "outbound"),
+          filters?.opened !== undefined
+            ? filters.opened
+              ? sql`${emailsTable.openedAt} IS NOT NULL`
+              : sql`${emailsTable.openedAt} IS NULL`
+            : undefined,
+          filters?.clicked !== undefined
+            ? filters.clicked
+              ? sql`${emailsTable.clickedAt} IS NOT NULL`
+              : sql`${emailsTable.clickedAt} IS NULL`
+            : undefined,
+          filters?.replied !== undefined
+            ? filters.replied
+              ? sql`${emailsTable.repliedAt} IS NOT NULL`
+              : sql`${emailsTable.repliedAt} IS NULL`
+            : undefined,
+          filters?.delivered !== undefined
+            ? filters.delivered
+              ? sql`${emailsTable.deliveredAt} IS NOT NULL`
+              : sql`${emailsTable.deliveredAt} IS NULL`
+            : undefined,
+        ),
+      )
+
+    const leadIds = await leadIdsQuery
+    const validLeadIds = leadIds.map((row) => row.leadId).filter((id): id is string => id !== null)
+
+    // 조건에 맞는 enrollment가 없으면 빈 배열 반환
+    if (validLeadIds.length === 0) {
+      return []
+    }
+
+    // Build where conditions
+    const conditions = [
+      eq(sequenceEnrollments.sequenceId, sequenceId),
+      sql`${sequenceEnrollments.leadId} IN (${sql.join(
+        validLeadIds.map((id) => sql`${id}`),
+        sql`, `,
+      )})`,
+    ]
+
+    // Search by company name
+    if (filters?.companyName) {
+      conditions.push(ilike(leads.companyName, `%${filters.companyName}%`))
+    }
+
+    const result = await db
+      .select({
+        id: sequenceEnrollments.id,
+        sequenceId: sequenceEnrollments.sequenceId,
+        leadId: sequenceEnrollments.leadId,
+        userEmailAccountId: sequenceEnrollments.userEmailAccountId,
+        currentStepOrder: sequenceEnrollments.currentStepOrder,
+        status: sequenceEnrollments.status,
+        enrolledBy: sequenceEnrollments.enrolledBy,
+        enrolledAt: sequenceEnrollments.enrolledAt,
+        firstEmailSentAt: sequenceEnrollments.firstEmailSentAt,
+        lastEmailSentAt: sequenceEnrollments.lastEmailSentAt,
+        completedAt: sequenceEnrollments.completedAt,
+        stoppedAt: sequenceEnrollments.stoppedAt,
+        nextStepScheduledAt: sequenceEnrollments.nextStepScheduledAt,
+        leadCompanyName: leads.companyName,
+        leadEmail: leads.websiteUrl,
+        emailAccountAddress: userEmailAccounts.emailAddress,
+      })
+      .from(sequenceEnrollments)
+      .leftJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
+      .leftJoin(userEmailAccounts, eq(sequenceEnrollments.userEmailAccountId, userEmailAccounts.id))
+      .where(and(...conditions))
+      .orderBy(desc(sequenceEnrollments.enrolledAt))
+      .limit(limit)
+      .offset(offset)
+
+    return result
+  }
+
+  // 이메일 필터가 없으면 기존 로직
+  const conditions = [eq(sequenceEnrollments.sequenceId, sequenceId)]
+
+  // Search by company name
+  if (filters?.companyName) {
+    conditions.push(ilike(leads.companyName, `%${filters.companyName}%`))
+  }
+
   const result = await db
     .select({
       id: sequenceEnrollments.id,
@@ -739,7 +848,7 @@ export async function getSequenceEnrollments(sequenceId: string, limit: number, 
     .from(sequenceEnrollments)
     .leftJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
     .leftJoin(userEmailAccounts, eq(sequenceEnrollments.userEmailAccountId, userEmailAccounts.id))
-    .where(eq(sequenceEnrollments.sequenceId, sequenceId))
+    .where(and(...conditions))
     .orderBy(desc(sequenceEnrollments.enrolledAt))
     .limit(limit)
     .offset(offset)
@@ -860,11 +969,98 @@ export async function countSequencesWithFilters(filters?: {
 }
 
 // CountEnrollments :one
-export async function countEnrollments(sequenceId: string) {
+export async function countEnrollments(
+  sequenceId: string,
+  filters?: {
+    companyName?: string
+    opened?: boolean
+    clicked?: boolean
+    replied?: boolean
+    delivered?: boolean
+  },
+) {
+  // 이메일 관련 필터가 있는 경우, 서브쿼리로 처리
+  if (
+    filters?.opened !== undefined ||
+    filters?.clicked !== undefined ||
+    filters?.replied !== undefined ||
+    filters?.delivered !== undefined
+  ) {
+    // 먼저 필터 조건에 맞는 enrollmentId 목록을 가져옴
+    const leadIdsQuery = db
+      .selectDistinct({ leadId: emailsTable.leadId })
+      .from(emailsTable)
+      .where(
+        and(
+          eq(emailsTable.sequenceId, sequenceId),
+          eq(emailsTable.direction, "outbound"),
+          filters?.opened !== undefined
+            ? filters.opened
+              ? sql`${emailsTable.openedAt} IS NOT NULL`
+              : sql`${emailsTable.openedAt} IS NULL`
+            : undefined,
+          filters?.clicked !== undefined
+            ? filters.clicked
+              ? sql`${emailsTable.clickedAt} IS NOT NULL`
+              : sql`${emailsTable.clickedAt} IS NULL`
+            : undefined,
+          filters?.replied !== undefined
+            ? filters.replied
+              ? sql`${emailsTable.repliedAt} IS NOT NULL`
+              : sql`${emailsTable.repliedAt} IS NULL`
+            : undefined,
+          filters?.delivered !== undefined
+            ? filters.delivered
+              ? sql`${emailsTable.deliveredAt} IS NOT NULL`
+              : sql`${emailsTable.deliveredAt} IS NULL`
+            : undefined,
+        ),
+      )
+
+    const leadIds = await leadIdsQuery
+    const validLeadIds = leadIds.map((row) => row.leadId).filter((id): id is string => id !== null)
+
+    // 조건에 맞는 enrollment가 없으면 0 반환
+    if (validLeadIds.length === 0) {
+      return 0
+    }
+
+    // Build where conditions
+    const conditions = [
+      eq(sequenceEnrollments.sequenceId, sequenceId),
+      sql`${sequenceEnrollments.leadId} IN (${sql.join(
+        validLeadIds.map((id) => sql`${id}`),
+        sql`, `,
+      )})`,
+    ]
+
+    // Search by company name
+    if (filters?.companyName) {
+      conditions.push(ilike(leads.companyName, `%${filters.companyName}%`))
+    }
+
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(sequenceEnrollments)
+      .leftJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
+      .where(and(...conditions))
+
+    return result[0]?.count ?? 0
+  }
+
+  // 이메일 필터가 없으면 기존 로직
+  const conditions = [eq(sequenceEnrollments.sequenceId, sequenceId)]
+
+  // Search by company name
+  if (filters?.companyName) {
+    conditions.push(ilike(leads.companyName, `%${filters.companyName}%`))
+  }
+
   const result = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(sequenceEnrollments)
-    .where(eq(sequenceEnrollments.sequenceId, sequenceId))
+    .leftJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
+    .where(and(...conditions))
 
   return result[0]?.count ?? 0
 }

@@ -22,8 +22,18 @@ export const sequenceKeys = {
   enrollmentMetrics: (enrollmentId: string) =>
     [...sequenceKeys.all, "enrollment-metrics", enrollmentId] as const,
   enrollments: (sequenceId: string) => [...sequenceKeys.all, "enrollments", sequenceId] as const,
-  enrollmentsList: (sequenceId: string, page?: number, limit?: number) =>
-    [...sequenceKeys.enrollments(sequenceId), page, limit] as const,
+  enrollmentsList: (
+    sequenceId: string,
+    page?: number,
+    limit?: number,
+    filters?: {
+      companyName?: string
+      opened?: boolean
+      clicked?: boolean
+      replied?: boolean
+      delivered?: boolean
+    },
+  ) => [...sequenceKeys.enrollments(sequenceId), page, limit, filters] as const,
   workspace: (workspaceId: string) => [...sequenceKeys.all, "workspace", workspaceId] as const,
 }
 
@@ -57,10 +67,22 @@ export function useSequenceSteps(sequenceId: string, enabled = true) {
   })
 }
 
-export function useSequenceEnrollments(sequenceId: string, page = 1, limit = 10, enabled = true) {
+export function useSequenceEnrollments(
+  sequenceId: string,
+  page = 1,
+  limit = 10,
+  enabled = true,
+  filters?: {
+    companyName?: string
+    opened?: boolean
+    clicked?: boolean
+    replied?: boolean
+    delivered?: boolean
+  },
+) {
   return useQuery({
-    queryKey: sequenceKeys.enrollmentsList(sequenceId, page, limit),
-    queryFn: () => sequencesApi.getEnrollments(sequenceId, page, limit),
+    queryKey: sequenceKeys.enrollmentsList(sequenceId, page, limit, filters),
+    queryFn: () => sequencesApi.getEnrollments(sequenceId, page, limit, filters),
     enabled,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,

@@ -7,19 +7,23 @@ import {
   ChevronUp,
   Clock,
   Eye,
+  Filter,
   Info,
   Mail,
   MousePointer,
   Pause,
+  Search,
   StopCircle,
+  X,
   XCircle,
 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { CompanyMetricsModal } from "@/components/CompanyMetricsModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import {
   Table,
@@ -392,13 +396,36 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
   const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null)
   const [showMetricsModal, setShowMetricsModal] = useState(false)
   const [expandedEnrollmentId, setExpandedEnrollmentId] = useState<string | null>(null)
+  const [showFilters, setShowFilters] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filters, setFilters] = useState<{
+    companyName?: string
+    opened?: boolean
+    clicked?: boolean
+    replied?: boolean
+    delivered?: boolean
+  }>({})
   const limit = 10
+
+  // 검색어 디바운싱 (500ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilters((prev) => ({
+        ...prev,
+        companyName: searchQuery || undefined,
+      }))
+      setCurrentPage(1)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   const { data: enrollmentsData, isLoading: enrollmentsLoading } = useSequenceEnrollments(
     sequenceId,
     currentPage,
     limit,
     !!sequenceId,
+    filters,
   )
 
   const { data: steps = [] } = useSequenceSteps(sequenceId, !!sequenceId)
@@ -422,6 +449,8 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
 
   const enrollments = enrollmentsData?.enrollments || []
   const totalPages = enrollmentsData?.totalPages || 1
+  const hasActiveFilters =
+    searchQuery.trim() !== "" || Object.values(filters).some((v) => v !== undefined && v !== "")
 
   const getStatusBadge = (status: EnrollmentStatus) => {
     const statusConfig: Record<
@@ -497,14 +526,117 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>{t("sequences.enrollments.title")}</span>
-            <Badge variant="secondary">
-              {t("sequences.enrollments.totalEnrolled", {
-                count: enrollmentsData?.total || 0,
-              })}
-            </Badge>
+            <div className="flex gap-2">
+              {hasActiveFilters && (
+                <Badge variant="default">필터링: {enrollmentsData?.total || 0}개</Badge>
+              )}
+              {!hasActiveFilters && (
+                <Badge variant="secondary">
+                  {t("sequences.enrollments.totalEnrolled", {
+                    count: enrollmentsData?.total || 0,
+                  })}
+                </Badge>
+              )}
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* 필터 UI */}
+          <div className="mb-4 space-y-4">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="회사명 검색..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button
+                variant={showFilters ? "default" : "outline"}
+                size="default"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2"
+              >
+                <Filter className="w-4 h-4" />
+                필터
+              </Button>
+            </div>
+
+            {showFilters && (
+              <div className="flex flex-wrap gap-2 p-4 bg-muted/50 rounded-md">
+                <Button
+                  variant={filters.opened === true ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setFilters({
+                      ...filters,
+                      opened: filters.opened === true ? undefined : true,
+                    })
+                    setCurrentPage(1)
+                  }}
+                >
+                  오픈함
+                </Button>
+                <Button
+                  variant={filters.clicked === true ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setFilters({
+                      ...filters,
+                      clicked: filters.clicked === true ? undefined : true,
+                    })
+                    setCurrentPage(1)
+                  }}
+                >
+                  클릭함
+                </Button>
+                <Button
+                  variant={filters.replied === true ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setFilters({
+                      ...filters,
+                      replied: filters.replied === true ? undefined : true,
+                    })
+                    setCurrentPage(1)
+                  }}
+                >
+                  답장함
+                </Button>
+                <Button
+                  variant={filters.delivered === true ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setFilters({
+                      ...filters,
+                      delivered: filters.delivered === true ? undefined : true,
+                    })
+                    setCurrentPage(1)
+                  }}
+                >
+                  발송완료
+                </Button>
+                {hasActiveFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSearchQuery("")
+                      setFilters({})
+                      setCurrentPage(1)
+                    }}
+                    className="flex items-center gap-1"
+                  >
+                    <X className="w-3 h-3" />
+                    필터 초기화
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
           {enrollments.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {t("sequences.enrollments.noEnrollments")}

@@ -114,12 +114,40 @@ export const sequencesApi = {
   },
 
   // Enrollments
-  getEnrollments: (sequenceId: string, page = 1, limit = 10) => {
+  getEnrollments: (
+    sequenceId: string,
+    page = 1,
+    limit = 10,
+    filters?: {
+      companyName?: string
+      opened?: boolean
+      clicked?: boolean
+      replied?: boolean
+      delivered?: boolean
+    },
+  ) => {
     const offset = (page - 1) * limit
     const searchParams = new URLSearchParams({
       limit: limit.toString(),
       offset: offset.toString(),
     })
+
+    // 필터 추가
+    if (filters?.companyName) {
+      searchParams.append("companyName", filters.companyName)
+    }
+    if (filters?.opened !== undefined) {
+      searchParams.append("opened", filters.opened.toString())
+    }
+    if (filters?.clicked !== undefined) {
+      searchParams.append("clicked", filters.clicked.toString())
+    }
+    if (filters?.replied !== undefined) {
+      searchParams.append("replied", filters.replied.toString())
+    }
+    if (filters?.delivered !== undefined) {
+      searchParams.append("delivered", filters.delivered.toString())
+    }
 
     return apiFetch<{
       data: SequenceEnrollment[]

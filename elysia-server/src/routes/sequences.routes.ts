@@ -673,8 +673,17 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
       const limit = parseInt(query.limit || "10", 10)
       const offset = parseInt(query.offset || "0", 10)
 
-      const enrollments = await sequenceService.getSequenceEnrollments(id, limit, offset)
-      const total = await sequenceService.countEnrollments(id)
+      const filters = {
+        companyName: query.companyName,
+        opened: query.opened === "true" ? true : query.opened === "false" ? false : undefined,
+        clicked: query.clicked === "true" ? true : query.clicked === "false" ? false : undefined,
+        replied: query.replied === "true" ? true : query.replied === "false" ? false : undefined,
+        delivered:
+          query.delivered === "true" ? true : query.delivered === "false" ? false : undefined,
+      }
+
+      const enrollments = await sequenceService.getSequenceEnrollments(id, limit, offset, filters)
+      const total = await sequenceService.countEnrollments(id, filters)
 
       return {
         data: enrollments,
@@ -690,6 +699,11 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
       query: t.Object({
         limit: t.Optional(t.String()),
         offset: t.Optional(t.String()),
+        companyName: t.Optional(t.String()),
+        opened: t.Optional(t.String()),
+        clicked: t.Optional(t.String()),
+        replied: t.Optional(t.String()),
+        delivered: t.Optional(t.String()),
       }),
     },
   )

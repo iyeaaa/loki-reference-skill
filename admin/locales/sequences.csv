@@ -494,3 +494,10 @@ enrollments.stepExecutions.status.failed,실패,Failed
 enrollments.stepExecutions.step,스텝 {{order}},Step {{order}}
 enrollments.stepExecutions.scheduled,예정:,Scheduled:
 enrollments.stepExecutions.executed,발송:,Sent:
+enrollments.filter.button,[NO TRANSLATION] sequences.enrollments.filter.button,[NO TRANSLATION] sequences.enrollments.filter.button
+enrollments.filter.clear,[NO TRANSLATION] sequences.enrollments.filter.clear,[NO TRANSLATION] sequences.enrollments.filter.clear
+enrollments.filter.clicked,[NO TRANSLATION] sequences.enrollments.filter.clicked,[NO TRANSLATION] sequences.enrollments.filter.clicked
+enrollments.filter.delivered,[NO TRANSLATION] sequences.enrollments.filter.delivered,[NO TRANSLATION] sequences.enrollments.filter.delivered
+enrollments.filter.opened,[NO TRANSLATION] sequences.enrollments.filter.opened,[NO TRANSLATION] sequences.enrollments.filter.opened
+enrollments.filter.replied,[NO TRANSLATION] sequences.enrollments.filter.replied,[NO TRANSLATION] sequences.enrollments.filter.replied
+enrollments.search.placeholder,[NO TRANSLATION] sequences.enrollments.search.placeholder,[NO TRANSLATION] sequences.enrollments.search.placeholder

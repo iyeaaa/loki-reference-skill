@@ -1,18 +1,6 @@
-import {
-  Building2,
-  FileSpreadsheet,
-  FileText,
-  FileUp,
-  Mail,
-  Menu,
-  Upload,
-  User,
-  Users,
-  X,
-} from "lucide-react"
+import { Building2, FileText, Mail, Menu, Upload, User, Users, X } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { useNavigate } from "react-router-dom"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,12 +8,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SettingsSidebar } from "@/components/ui/settings-sidebar"
 import { useCurrentUser, useUpdateProfileMutation } from "@/lib/api/hooks/auth"
+import EmailTemplatesPage from "./email-templates/EmailTemplatesPage"
+import LeadImportPage from "./lead-import/index"
 import { EmailSignatureManagement } from "./settings/EmailSignatureManagement"
-import { WorkspaceSettings } from "./settings/WorkspaceSettings"
+import UsersPage from "./users/UsersPage"
+import WorkspacesPage from "./workspaces/WorkspacesPage"
 
 export default function SettingsPage() {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const nameId = useId()
   const emailId = useId()
   const employeeIdInput = useId()
@@ -34,49 +24,6 @@ export default function SettingsPage() {
   const updateProfileMutation = useUpdateProfileMutation()
   const [activeTab, setActiveTab] = useState("profile")
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-
-  // Get selected workspace from localStorage
-  const selectedWorkspace = localStorage.getItem("selectedWorkspace") || "all"
-  const showWorkspaceSettings = selectedWorkspace && selectedWorkspace !== "all"
-
-  const systemManagementItems = [
-    {
-      title: "웹 데이터 추출",
-      description: "웹사이트에서 회사 정보 및 연락처를 자동으로 추출합니다",
-      url: "/settings/web-extraction",
-      iconImage: "/images/web-extraction-logo.webp",
-    },
-    {
-      title: t("settings.system.workspaces.title"),
-      description: t("settings.system.workspaces.desc"),
-      url: "/workspaces",
-      icon: Building2,
-    },
-    {
-      title: t("settings.system.users.title"),
-      description: t("settings.system.users.desc"),
-      url: "/users",
-      icon: Users,
-    },
-    {
-      title: t("settings.system.emailTemplates.title"),
-      description: t("settings.system.emailTemplates.desc"),
-      url: "/email-templates",
-      icon: FileText,
-    },
-    {
-      title: t("settings.system.import.title"),
-      description: t("settings.system.import.desc"),
-      url: "/lead-import",
-      icon: FileUp,
-    },
-    {
-      title: t("settings.system.bulkEmailCSV.title"),
-      description: t("settings.system.bulkEmailCSV.desc"),
-      url: "/bulk-email-csv",
-      icon: FileSpreadsheet,
-    },
-  ]
 
   const [formData, setFormData] = useState({
     username: "",
@@ -122,25 +69,21 @@ export default function SettingsPage() {
       id: "workspace",
       label: t("settings.system.workspaces.title"),
       icon: <Building2 className="h-4 w-4" />,
-      onClick: () => navigate("/workspaces"),
     },
     {
       id: "admin",
       label: t("settings.system.users.title"),
       icon: <Users className="h-4 w-4" />,
-      onClick: () => navigate("/users"),
     },
     {
       id: "email-templates",
       label: t("settings.system.emailTemplates.title"),
       icon: <FileText className="h-4 w-4" />,
-      onClick: () => navigate("/email-templates"),
     },
     {
       id: "bulk-lead-import",
       label: t("settings.system.import.title"),
       icon: <Upload className="h-4 w-4" />,
-      onClick: () => navigate("/lead-import"),
     },
   ]
 
@@ -213,6 +156,14 @@ export default function SettingsPage() {
         )
       case "signature":
         return <EmailSignatureManagement />
+      case "workspace":
+        return <WorkspacesPage />
+      case "admin":
+        return <UsersPage />
+      case "email-templates":
+        return <EmailTemplatesPage />
+      case "bulk-lead-import":
+        return <LeadImportPage />
       default:
         return null
     }
@@ -245,11 +196,7 @@ export default function SettingsPage() {
           items={sidebarItems}
           activeItemId={activeTab}
           onItemClick={(id) => {
-            // Only set active tab for profile and signature
-            // Other items will navigate via their onClick handlers
-            if (id === "profile" || id === "signature") {
-              setActiveTab(id)
-            }
+            setActiveTab(id)
             // Close sidebar on mobile after selection
             setIsSidebarOpen(false)
           }}
@@ -274,49 +221,6 @@ export default function SettingsPage() {
 
           <div className="flex-1 p-6">{renderContent()}</div>
         </div>
-        {/* 워크스페이스 설정 (특정 워크스페이스 선택 시에만 표시) */}
-        {showWorkspaceSettings && <WorkspaceSettings workspaceId={selectedWorkspace} />}
-
-        {/* 이메일 서명 관리 */}
-        <EmailSignatureManagement />
-
-        {/* 시스템 관리 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("settings.system.title")}</CardTitle>
-            <CardDescription>{t("settings.system.description")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {systemManagementItems.map((item) => (
-                <button
-                  key={item.url}
-                  type="button"
-                  onClick={() => navigate(item.url)}
-                  className="flex flex-col items-start gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-accent hover:border-[#2563EB]"
-                >
-                  <div className="flex items-center gap-3 w-full">
-                    <div className="rounded-lg bg-violet-100 dark:bg-violet-900/20 p-2">
-                      {"iconImage" in item ? (
-                        <img
-                          src={item.iconImage}
-                          alt={item.title}
-                          className="h-5 w-5 object-contain"
-                        />
-                      ) : (
-                        <item.icon className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{item.title}</h3>
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{item.description}</p>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )

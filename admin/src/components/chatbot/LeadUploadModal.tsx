@@ -205,23 +205,23 @@ export function LeadUploadModal({ open, onOpenChange, onFileSelect }: LeadUpload
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[540px]">
+      <DialogContent className="sm:max-w-[680px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-primary" />
-            Drop Your Leads Here
+            Import Your Lead List
           </DialogTitle>
           <DialogDescription>
-            Upload your leads file to automatically generate a personalized email sequence.
+            I'll research each prospect, write personalized sequences, and automate follow-ups for every lead in your file.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
           {/* Template Download Section */}
           <div className="space-y-3">
-            <h4 className="text-sm font-medium">Step 1: Download Template</h4>
+            <h4 className="text-sm font-medium">Step 1: Get the Template (Optional)</h4>
             <p className="text-sm text-muted-foreground">
-              Start with our template to ensure your data is formatted correctly.
+              Use this format so I can work with your data instantly.
             </p>
             <Button
               variant="outline"
@@ -229,7 +229,7 @@ export function LeadUploadModal({ open, onOpenChange, onFileSelect }: LeadUpload
               className="w-full justify-start"
             >
               <Download className="mr-2 h-4 w-4" />
-              Download Template (CSV)
+              Download Template
             </Button>
           </div>
 
@@ -244,7 +244,7 @@ export function LeadUploadModal({ open, onOpenChange, onFileSelect }: LeadUpload
 
           {/* File Upload Section */}
           <div className="space-y-3">
-            <h4 className="text-sm font-medium">Step 2: Upload Your File</h4>
+            <h4 className="text-sm font-medium">Step 2: Upload Your Leads</h4>
             <input
               ref={fileInputRef}
               type="file"
@@ -272,9 +272,9 @@ export function LeadUploadModal({ open, onOpenChange, onFileSelect }: LeadUpload
                 className={`h-10 w-10 mb-3 ${isDragging ? "text-primary" : "text-muted-foreground"}`}
               />
               <p className="text-sm font-medium mb-1">
-                {isDragging ? "Drop your file here" : "Click to upload or drag and drop"}
+                {isDragging ? "Drop your file here" : "Drop your file here or click to browse"}
               </p>
-              <p className="text-xs text-muted-foreground">XLSX or XLS files only</p>
+              <p className="text-xs text-muted-foreground">Accepts .xlsx or .xls files</p>
             </button>
           </div>
         </div>

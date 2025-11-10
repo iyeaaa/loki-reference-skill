@@ -261,7 +261,7 @@ export function LeadUploadModal({ open, onOpenChange, onFileSelect }: LeadUpload
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
               className={`
-                relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center cursor-pointer transition-colors
+                relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 min-h-[240px] text-center cursor-pointer transition-colors w-full
                 ${
                   isDragging
                     ? "border-primary bg-primary/5"

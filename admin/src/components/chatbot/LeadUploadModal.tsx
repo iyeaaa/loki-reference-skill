@@ -46,11 +46,11 @@ export function LeadUploadModal({ open, onOpenChange, onFileSelect }: LeadUpload
       if (files.length > 0) {
         const file = files[0]
         const fileName = file.name.toLowerCase()
-        if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+        if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".csv")) {
           onFileSelect(file)
           onOpenChange(false)
         } else {
-          alert("Only XLSX or XLS files are allowed.")
+          alert("Only XLSX, XLS, or CSV files are allowed.")
         }
       }
     },
@@ -63,11 +63,11 @@ export function LeadUploadModal({ open, onOpenChange, onFileSelect }: LeadUpload
       if (!file) return
 
       const fileName = file.name.toLowerCase()
-      if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+      if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".csv")) {
         onFileSelect(file)
         onOpenChange(false)
       } else {
-        alert("Only XLSX or XLS files are allowed.")
+        alert("Only XLSX, XLS, or CSV files are allowed.")
       }
 
       // Reset input
@@ -249,7 +249,7 @@ export function LeadUploadModal({ open, onOpenChange, onFileSelect }: LeadUpload
             <input
               ref={fileInputRef}
               type="file"
-              accept=".xlsx,.xls"
+              accept=".xlsx,.xls,.csv"
               onChange={handleFileChange}
               className="hidden"
             />
@@ -275,7 +275,7 @@ export function LeadUploadModal({ open, onOpenChange, onFileSelect }: LeadUpload
               <p className="text-sm font-medium mb-1">
                 {isDragging ? "Drop your file here" : "Drop your file here or click to browse"}
               </p>
-              <p className="text-xs text-muted-foreground">Accepts .xlsx or .xls files</p>
+              <p className="text-xs text-muted-foreground">Accepts .xlsx, .xls, or .csv files</p>
             </button>
           </div>
         </div>

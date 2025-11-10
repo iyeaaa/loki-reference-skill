@@ -202,7 +202,7 @@ export function SequenceMetrics({
               {formatPercentage(metrics.openRate)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {metrics.opened} / {metrics.totalSent} 오픈
+              {metrics.opened} / {metrics.delivered} 오픈
             </p>
             <Progress value={metrics.openRate} className="mt-2 h-2" />
           </CardContent>

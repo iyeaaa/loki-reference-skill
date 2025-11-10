@@ -6,7 +6,6 @@ import {
   Mail,
   Menu,
   Upload,
-  Settings as SettingsIcon,
   User,
   Users,
   X,

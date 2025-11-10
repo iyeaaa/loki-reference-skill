@@ -31,3 +31,4 @@ workspace.companyAddress,회사 주소,Company Address
 workspace.companyDescription,회사 설명,Company Description
 workspace.saving,저장 중...,Saving...
 workspace.saveChanges,변경사항 저장,Save Changes
+signature.title,이메일 서명 관리,Email Signature Management

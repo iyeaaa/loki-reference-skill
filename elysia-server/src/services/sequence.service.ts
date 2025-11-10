@@ -1775,7 +1775,7 @@ export async function getSequenceMetrics(sequenceId: string) {
       unsubscribed: sql<number>`COUNT(CASE WHEN ${emailsTable.status} = 'unsubscribed' THEN 1 END)::int`,
     })
     .from(emailsTable)
-    .where(eq(emailsTable.sequenceId, sequenceId))
+    .where(and(eq(emailsTable.sequenceId, sequenceId), eq(emailsTable.direction, "outbound")))
 
   const emailStats = emailStatsResult[0] || {
     totalSent: 0,
@@ -1791,7 +1791,7 @@ export async function getSequenceMetrics(sequenceId: string) {
   const lastSentResult = await db
     .select({ lastSentAt: emailsTable.sentAt })
     .from(emailsTable)
-    .where(eq(emailsTable.sequenceId, sequenceId))
+    .where(and(eq(emailsTable.sequenceId, sequenceId), eq(emailsTable.direction, "outbound")))
     .orderBy(desc(emailsTable.sentAt))
     .limit(1)
 
@@ -1969,6 +1969,7 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
       and(
         eq(emailsTable.sequenceId, enrollment.sequenceId),
         eq(emailsTable.leadId, enrollment.leadId),
+        eq(emailsTable.direction, "outbound"),
       ),
     )
 
@@ -2001,6 +2002,7 @@ export async function getEnrollmentMetrics(enrollmentId: string) {
       and(
         eq(emailsTable.sequenceId, enrollment.sequenceId),
         eq(emailsTable.leadId, enrollment.leadId),
+        eq(emailsTable.direction, "outbound"),
       ),
     )
 

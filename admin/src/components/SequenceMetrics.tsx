@@ -167,7 +167,7 @@ export function SequenceMetrics({
             <div className={`text-2xl font-bold ${getRateColor(metrics.bounceRate, "negative")}`}>
               {formatPercentage(metrics.bounceRate)}
             </div>
-            <p className="text-xs text-muted-foreground">{metrics.bounced} 반송됨</p>
+            <p className="text-xs text-muted-foreground">{metrics.bounced} 반송됨 (발송 후 실패)</p>
           </CardContent>
         </Card>
 
@@ -185,7 +185,7 @@ export function SequenceMetrics({
             >
               {formatPercentage((metrics.dropped / metrics.totalSent) * 100)}
             </div>
-            <p className="text-xs text-muted-foreground">{metrics.dropped} 드롭됨</p>
+            <p className="text-xs text-muted-foreground">{metrics.dropped} 드롭됨 (발송 전 차단)</p>
           </CardContent>
         </Card>
       </div>

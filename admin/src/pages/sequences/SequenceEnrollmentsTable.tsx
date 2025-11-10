@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react"
+import type { LucideIcon } from "lucide-react";
 import {
   Calendar,
   CheckCircle,
@@ -12,14 +12,14 @@ import {
   Pause,
   StopCircle,
   XCircle,
-} from "lucide-react"
-import { useState } from "react"
-import { useTranslation } from "react-i18next"
-import { CompanyMetricsModal } from "@/components/CompanyMetricsModal"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
+} from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { CompanyMetricsModal } from "@/components/CompanyMetricsModal";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -27,29 +27,29 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   useEnrollmentMetrics,
   useEnrollmentStepExecutions,
   useSequenceEnrollments,
   useSequenceSteps,
-} from "@/lib/api/hooks/sequences"
-import type { EnrollmentStatus } from "@/lib/api/types/sequence"
+} from "@/lib/api/hooks/sequences";
+import type { EnrollmentStatus } from "@/lib/api/types/sequence";
 
 // StepExecutionDetails - 스텝 실행 상세 정보 표시
 function StepExecutionDetails({
   sequenceId,
   enrollmentId,
 }: {
-  sequenceId: string
-  enrollmentId: string
+  sequenceId: string;
+  enrollmentId: string;
 }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
   const {
     data: executions,
     isLoading,
     error,
-  } = useEnrollmentStepExecutions(sequenceId, enrollmentId, true)
+  } = useEnrollmentStepExecutions(sequenceId, enrollmentId, true);
 
   console.log("StepExecutionDetails Debug:", {
     sequenceId,
@@ -57,14 +57,14 @@ function StepExecutionDetails({
     executions,
     isLoading,
     error,
-  })
+  });
 
   if (isLoading) {
     return (
       <div className="p-4 text-sm text-muted-foreground">
         {t("sequences.enrollments.stepExecutions.loading")}
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -72,7 +72,7 @@ function StepExecutionDetails({
       <div className="p-4 text-sm text-red-600">
         에러: {error instanceof Error ? error.message : "알 수 없는 에러"}
       </div>
-    )
+    );
   }
 
   if (!executions || executions.length === 0) {
@@ -83,21 +83,21 @@ function StepExecutionDetails({
           (sequenceId: {sequenceId}, enrollmentId: {enrollmentId})
         </div>
       </div>
-    )
+    );
   }
 
   const getStatusBadge = (status: string) => {
     if (status === "sent") {
-      return <Badge className="bg-green-600">발송완료</Badge>
+      return <Badge className="bg-green-600">발송완료</Badge>;
     }
     if (status === "pending") {
-      return <Badge variant="secondary">대기</Badge>
+      return <Badge variant="secondary">대기</Badge>;
     }
     if (status === "failed") {
-      return <Badge variant="destructive">실패</Badge>
+      return <Badge variant="destructive">실패</Badge>;
     }
-    return <Badge variant="outline">{status}</Badge>
-  }
+    return <Badge variant="outline">{status}</Badge>;
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("ko-KR", {
@@ -107,8 +107,8 @@ function StepExecutionDetails({
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
-    })
-  }
+    });
+  };
 
   return (
     <div className="p-4 bg-muted/30">
@@ -136,7 +136,9 @@ function StepExecutionDetails({
                 )}
               </div>
               {execution.errorMessage && (
-                <div className="text-xs text-red-600 mt-1">{execution.errorMessage}</div>
+                <div className="text-xs text-red-600 mt-1">
+                  {execution.errorMessage}
+                </div>
               )}
             </div>
             <div>{getStatusBadge(execution.status)}</div>
@@ -144,66 +146,75 @@ function StepExecutionDetails({
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 // EnrollmentOpenStatus - 실제 오픈 상태를 표시하는 컴포넌트
 function EnrollmentOpenStatus({ enrollmentId }: { enrollmentId: string }) {
-  const { t } = useTranslation()
-  const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId)
+  const { t } = useTranslation();
+  const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId);
 
   if (isLoading) {
     return (
-      <span className="text-sm text-muted-foreground">{t("sequences.enrollments.loading")}</span>
-    )
+      <span className="text-sm text-muted-foreground">
+        {t("sequences.enrollments.loading")}
+      </span>
+    );
   }
 
   if (!metricsData?.data) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-sm text-muted-foreground">-</span>;
   }
 
-  const { emailsSent, emailsOpened } = metricsData.data
+  const { emailsSent, emailsOpened } = metricsData.data;
 
   if (emailsSent === 0) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-sm text-muted-foreground">-</span>;
   }
 
   if (emailsOpened > 0) {
     return (
       <div className="flex items-center gap-1 text-sm text-green-600">
         <Eye className="w-3 h-3" />
-        <span className="font-medium">{t("sequences.enrollments.open.opened")}</span>
+        <span className="font-medium">
+          {t("sequences.enrollments.open.opened")}
+        </span>
       </div>
-    )
+    );
   }
 
   return (
     <div className="flex items-center gap-1 text-sm text-gray-600">
       <Eye className="w-3 h-3" />
-      <span className="font-medium">{t("sequences.enrollments.open.notOpened")}</span>
+      <span className="font-medium">
+        {t("sequences.enrollments.open.notOpened")}
+      </span>
     </div>
-  )
+  );
 }
 
 // EnrollmentDeliveryStatus - 발송완료 상태를 표시하는 컴포넌트
 function EnrollmentDeliveryStatus({ enrollmentId }: { enrollmentId: string }) {
-  const { t } = useTranslation()
-  const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId)
+  const { t } = useTranslation();
+  const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId);
 
   if (isLoading) {
     return (
-      <span className="text-sm text-muted-foreground">{t("sequences.enrollments.loading")}</span>
-    )
+      <span className="text-sm text-muted-foreground">
+        {t("sequences.enrollments.loading")}
+      </span>
+    );
   }
 
   if (!metricsData?.data) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-sm text-muted-foreground">-</span>;
   }
 
-  const { emailsSent, emailsDelivered, emailsBounced, emailsFailed } = metricsData.data
+  const { emailsSent, emailsDelivered, emailsBounced, emailsFailed } =
+    metricsData.data;
 
   if (emailsSent === 0) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-sm text-muted-foreground">-</span>;
   }
 
   // 발송 실패 (bounced, failed, spam, dropped)
@@ -211,9 +222,11 @@ function EnrollmentDeliveryStatus({ enrollmentId }: { enrollmentId: string }) {
     return (
       <div className="flex items-center gap-1 text-sm text-red-600">
         <XCircle className="w-3 h-3" />
-        <span className="font-medium">{t("sequences.enrollments.delivery.failed")}</span>
+        <span className="font-medium">
+          {t("sequences.enrollments.delivery.failed")}
+        </span>
       </div>
-    )
+    );
   }
 
   // 전달 완료
@@ -221,101 +234,117 @@ function EnrollmentDeliveryStatus({ enrollmentId }: { enrollmentId: string }) {
     return (
       <div className="flex items-center gap-1 text-sm text-green-600">
         <CheckCircle className="w-3 h-3" />
-        <span className="font-medium">{t("sequences.enrollments.delivery.completed")}</span>
+        <span className="font-medium">
+          {t("sequences.enrollments.delivery.completed")}
+        </span>
       </div>
-    )
+    );
   }
 
   // 발송 중 (전달 대기)
   return (
     <div className="flex items-center gap-1 text-sm text-blue-600">
       <Mail className="w-3 h-3" />
-      <span className="font-medium">{t("sequences.enrollments.delivery.sending")}</span>
+      <span className="font-medium">
+        {t("sequences.enrollments.delivery.sending")}
+      </span>
     </div>
-  )
+  );
 }
 
 // EnrollmentClickStatus - 실제 클릭 상태를 표시하는 컴포넌트
 function EnrollmentClickStatus({ enrollmentId }: { enrollmentId: string }) {
-  const { t } = useTranslation()
-  const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId)
+  const { t } = useTranslation();
+  const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId);
 
   if (isLoading) {
     return (
-      <span className="text-sm text-muted-foreground">{t("sequences.enrollments.loading")}</span>
-    )
+      <span className="text-sm text-muted-foreground">
+        {t("sequences.enrollments.loading")}
+      </span>
+    );
   }
 
   if (!metricsData?.data) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-sm text-muted-foreground">-</span>;
   }
 
-  const { emailsSent, emailsClicked } = metricsData.data
+  const { emailsSent, emailsClicked } = metricsData.data;
 
   if (emailsSent === 0) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-sm text-muted-foreground">-</span>;
   }
 
   if (emailsClicked > 0) {
     return (
       <div className="flex items-center gap-1 text-sm text-green-600">
         <MousePointer className="w-3 h-3" />
-        <span className="font-medium">{t("sequences.enrollments.click.clicked")}</span>
+        <span className="font-medium">
+          {t("sequences.enrollments.click.clicked")}
+        </span>
       </div>
-    )
+    );
   }
 
   return (
     <div className="flex items-center gap-1 text-sm text-gray-600">
       <MousePointer className="w-3 h-3" />
-      <span className="font-medium">{t("sequences.enrollments.click.notClicked")}</span>
+      <span className="font-medium">
+        {t("sequences.enrollments.click.notClicked")}
+      </span>
     </div>
-  )
+  );
 }
 
 // EnrollmentReplyStatus - 실제 답장 상태를 표시하는 컴포넌트
 function EnrollmentReplyStatus({ enrollmentId }: { enrollmentId: string }) {
-  const { t } = useTranslation()
-  const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId)
+  const { t } = useTranslation();
+  const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId);
 
   if (isLoading) {
     return (
-      <span className="text-sm text-muted-foreground">{t("sequences.enrollments.loading")}</span>
-    )
+      <span className="text-sm text-muted-foreground">
+        {t("sequences.enrollments.loading")}
+      </span>
+    );
   }
 
   if (!metricsData?.data) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-sm text-muted-foreground">-</span>;
   }
 
-  const { emailsSent, emailsReplied } = metricsData.data
+  const { emailsSent, emailsReplied } = metricsData.data;
 
   if (emailsSent === 0) {
-    return <span className="text-sm text-muted-foreground">-</span>
+    return <span className="text-sm text-muted-foreground">-</span>;
   }
 
   if (emailsReplied > 0) {
     return (
       <div className="flex items-center gap-1 text-sm text-green-600">
         <CheckCircle2 className="w-3 h-3" />
-        <span className="font-medium">{t("sequences.enrollments.reply.replied")}</span>
+        <span className="font-medium">
+          {t("sequences.enrollments.reply.replied")}
+        </span>
       </div>
-    )
+    );
   }
 
   return (
     <div className="flex items-center gap-1 text-sm text-gray-600">
       <CheckCircle2 className="w-3 h-3" />
-      <span className="font-medium">{t("sequences.enrollments.reply.notReplied")}</span>
+      <span className="font-medium">
+        {t("sequences.enrollments.reply.notReplied")}
+      </span>
     </div>
-  )
+  );
 }
 
 // CompanyMetricsModalWithData - 실제 API 데이터를 사용하는 모달 컴포넌트
 interface CompanyMetricsModalWithDataProps {
-  isOpen: boolean
-  onClose: () => void
-  enrollmentId: string
+  isOpen: boolean;
+  onClose: () => void;
+  enrollmentId: string;
 }
 
 function CompanyMetricsModalWithData({
@@ -323,9 +352,9 @@ function CompanyMetricsModalWithData({
   onClose,
   enrollmentId,
 }: CompanyMetricsModalWithDataProps) {
-  const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId)
+  const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId);
 
-  console.log("metricsData", metricsData)
+  console.log("metricsData", metricsData);
 
   return (
     <CompanyMetricsModal
@@ -334,31 +363,33 @@ function CompanyMetricsModalWithData({
       companyData={metricsData?.data}
       isLoading={isLoading}
     />
-  )
+  );
 }
 
 interface SequenceEnrollmentsTableProps {
-  sequenceId: string
+  sequenceId: string;
 }
 
-export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTableProps) {
-  const { t } = useTranslation()
-  const [currentPage, setCurrentPage] = useState(1)
-  const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null)
-  const [showMetricsModal, setShowMetricsModal] = useState(false)
-  const [expandedEnrollmentId, setExpandedEnrollmentId] = useState<string | null>(null)
-  const limit = 10
+export function SequenceEnrollmentsTable({
+  sequenceId,
+}: SequenceEnrollmentsTableProps) {
+  const { t } = useTranslation();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<
+    string | null
+  >(null);
+  const [showMetricsModal, setShowMetricsModal] = useState(false);
+  const [expandedEnrollmentId, setExpandedEnrollmentId] = useState<
+    string | null
+  >(null);
+  const limit = 10;
 
-  const { data: enrollmentsData, isLoading: enrollmentsLoading } = useSequenceEnrollments(
-    sequenceId,
-    currentPage,
-    limit,
-    !!sequenceId,
-  )
+  const { data: enrollmentsData, isLoading: enrollmentsLoading } =
+    useSequenceEnrollments(sequenceId, currentPage, limit, !!sequenceId);
 
-  const { data: steps = [] } = useSequenceSteps(sequenceId, !!sequenceId)
+  const { data: steps = [] } = useSequenceSteps(sequenceId, !!sequenceId);
 
-  const totalSteps = steps.length
+  const totalSteps = steps.length;
 
   if (enrollmentsLoading) {
     return (
@@ -372,19 +403,19 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
-  const enrollments = enrollmentsData?.enrollments || []
-  const totalPages = enrollmentsData?.totalPages || 1
+  const enrollments = enrollmentsData?.enrollments || [];
+  const totalPages = enrollmentsData?.totalPages || 1;
 
   const getStatusBadge = (status: EnrollmentStatus) => {
     const statusConfig: Record<
       EnrollmentStatus,
       {
-        label: string
-        variant: "default" | "secondary" | "destructive" | "outline"
-        icon: LucideIcon
+        label: string;
+        variant: "default" | "secondary" | "destructive" | "outline";
+        icon: LucideIcon;
       }
     > = {
       active: {
@@ -417,34 +448,34 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
         variant: "destructive",
         icon: XCircle,
       },
-    }
+    };
 
-    const config = statusConfig[status]
-    const Icon = config.icon
+    const config = statusConfig[status];
+    const Icon = config.icon;
 
     return (
       <Badge variant={config.variant} className="flex items-center gap-1 w-fit">
         <Icon className="w-3 h-3" />
         {config.label}
       </Badge>
-    )
-  }
+    );
+  };
 
   const getProgressPercentage = (currentStep: number, totalSteps: number) => {
-    if (totalSteps === 0) return 0
-    return Math.round((currentStep / totalSteps) * 100)
-  }
+    if (totalSteps === 0) return 0;
+    return Math.round((currentStep / totalSteps) * 100);
+  };
 
   const formatDate = (dateString?: string | null) => {
-    if (!dateString) return "-"
+    if (!dateString) return "-";
     return new Date(dateString).toLocaleString("ko-KR", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
-    })
-  }
+    });
+  };
 
   return (
     <>
@@ -470,46 +501,73 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t("sequences.enrollments.column.companyName")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.status")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.progress")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.sent")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.delivered")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.opened")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.clicked")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.replied")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.enrolledAt")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.viewDetails")}</TableHead>
+                      <TableHead>
+                        {t("sequences.enrollments.column.companyName")}
+                      </TableHead>
+                      <TableHead>
+                        {t("sequences.enrollments.column.status")}
+                      </TableHead>
+                      <TableHead>
+                        {t("sequences.enrollments.column.progress")}
+                      </TableHead>
+                      <TableHead>
+                        {t("sequences.enrollments.column.sent")}
+                      </TableHead>
+                      <TableHead>
+                        {t("sequences.enrollments.column.delivered")}
+                      </TableHead>
+                      <TableHead>
+                        {t("sequences.enrollments.column.opened")}
+                      </TableHead>
+                      <TableHead>
+                        {t("sequences.enrollments.column.clicked")}
+                      </TableHead>
+                      <TableHead>
+                        {t("sequences.enrollments.column.replied")}
+                      </TableHead>
+                      <TableHead>
+                        {t("sequences.enrollments.column.enrolledAt")}
+                      </TableHead>
+                      <TableHead>
+                        {t("sequences.enrollments.column.viewDetails")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {enrollments.map((enrollment) => {
                       const progress = getProgressPercentage(
                         enrollment.currentStepOrder,
-                        totalSteps,
-                      )
+                        totalSteps
+                      );
 
                       // 실제 데이터 기반 간단한 상태 표시
-                      const hasEmailsSent = enrollment.currentStepOrder > 0
+                      const hasEmailsSent = enrollment.currentStepOrder > 0;
 
                       const handleViewDetails = () => {
-                        setSelectedEnrollmentId(enrollment.id)
-                        setShowMetricsModal(true)
-                      }
+                        setSelectedEnrollmentId(enrollment.id);
+                        setShowMetricsModal(true);
+                      };
 
-                      const isExpanded = expandedEnrollmentId === enrollment.id
+                      const isExpanded = expandedEnrollmentId === enrollment.id;
                       const toggleExpand = () => {
-                        setExpandedEnrollmentId(isExpanded ? null : enrollment.id)
-                      }
+                        setExpandedEnrollmentId(
+                          isExpanded ? null : enrollment.id
+                        );
+                      };
 
                       return (
                         <>
-                          <TableRow key={enrollment.id} className="hover:bg-muted/50">
+                          <TableRow
+                            key={enrollment.id}
+                            className="hover:bg-muted/50"
+                          >
                             <TableCell className="font-medium">
                               <div className="flex flex-col gap-1">
                                 <span>
                                   {enrollment.leadCompanyName ||
-                                    t("sequences.enrollments.companyNameUnknown")}
+                                    t(
+                                      "sequences.enrollments.companyNameUnknown"
+                                    )}
                                 </span>
                                 {enrollment.emailAccountAddress && (
                                   <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -519,7 +577,9 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell>{getStatusBadge(enrollment.status)}</TableCell>
+                            <TableCell>
+                              {getStatusBadge(enrollment.status)}
+                            </TableCell>
                             <TableCell>
                               <div className="flex flex-col gap-2 min-w-[120px]">
                                 <div className="flex items-center justify-between text-sm">
@@ -529,7 +589,9 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                                       total: totalSteps,
                                     })}
                                   </span>
-                                  <span className="font-medium">{progress}%</span>
+                                  <span className="font-medium">
+                                    {progress}%
+                                  </span>
                                 </div>
                                 <Progress value={progress} className="h-2" />
                               </div>
@@ -551,16 +613,24 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                               )}
                             </TableCell>
                             <TableCell>
-                              <EnrollmentDeliveryStatus enrollmentId={enrollment.id} />
+                              <EnrollmentDeliveryStatus
+                                enrollmentId={enrollment.id}
+                              />
                             </TableCell>
                             <TableCell>
-                              <EnrollmentOpenStatus enrollmentId={enrollment.id} />
+                              <EnrollmentOpenStatus
+                                enrollmentId={enrollment.id}
+                              />
                             </TableCell>
                             <TableCell>
-                              <EnrollmentClickStatus enrollmentId={enrollment.id} />
+                              <EnrollmentClickStatus
+                                enrollmentId={enrollment.id}
+                              />
                             </TableCell>
                             <TableCell>
-                              <EnrollmentReplyStatus enrollmentId={enrollment.id} />
+                              <EnrollmentReplyStatus
+                                enrollmentId={enrollment.id}
+                              />
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1 text-sm">
@@ -606,7 +676,7 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                             </TableRow>
                           )}
                         </>
-                      )
+                      );
                     })}
                   </TableBody>
                 </Table>
@@ -625,7 +695,9 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.max(1, prev - 1))
+                      }
                       disabled={currentPage === 1}
                     >
                       {t("sequences.enrollments.pagination.previous")}
@@ -633,7 +705,9 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                      }
                       disabled={currentPage === totalPages}
                     >
                       {t("sequences.enrollments.pagination.next")}
@@ -651,12 +725,12 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
         <CompanyMetricsModalWithData
           isOpen={showMetricsModal}
           onClose={() => {
-            setShowMetricsModal(false)
-            setSelectedEnrollmentId(null)
+            setShowMetricsModal(false);
+            setSelectedEnrollmentId(null);
           }}
           enrollmentId={selectedEnrollmentId}
         />
       )}
     </>
-  )
+  );
 }

@@ -76,7 +76,7 @@ export interface ChatbotState {
   generatedSequenceId?: string
   isSequenceGenerationRequest?: boolean // Flag to bypass SQL generation
 
-  // AI-Generated Sequence Strategy
+  // AI-Generated Sequence Strategy (Dynamic Steps)
   sequenceStrategy?: {
     dominant_business_type: string
     avg_company_size: number
@@ -84,10 +84,23 @@ export interface ChatbotState {
     avg_lead_score: number
     business_type_focus: string
     samples_analyzed: number
-    email_strategy: {
-      step1: { subject: string; body: string; delay_days: number; timing: string }
-      step2: { subject: string; body: string; delay_days: number; timing: string }
-      step3: { subject: string; body: string; delay_days: number; timing: string }
+    strategy_summary: string
+    timezone: string
+    recommended_steps: number
+    email_steps: Array<{
+      step_order: number
+      delay_days: number
+      scheduled_hour: number
+      scheduled_minute: number
+      email_subject: string
+      email_body: string
+      strategy_note?: string
+    }>
+    personalization_tips?: string[]
+    expected_performance?: {
+      estimated_open_rate: string
+      estimated_response_rate: string
+      reasoning: string
     }
   }
 }
@@ -294,10 +307,23 @@ export const ChatbotStateAnnotation = Annotation.Root({
         avg_lead_score: number
         business_type_focus: string
         samples_analyzed: number
-        email_strategy: {
-          step1: { subject: string; body: string; delay_days: number; timing: string }
-          step2: { subject: string; body: string; delay_days: number; timing: string }
-          step3: { subject: string; body: string; delay_days: number; timing: string }
+        strategy_summary: string
+        timezone: string
+        recommended_steps: number
+        email_steps: Array<{
+          step_order: number
+          delay_days: number
+          scheduled_hour: number
+          scheduled_minute: number
+          email_subject: string
+          email_body: string
+          strategy_note?: string
+        }>
+        personalization_tips?: string[]
+        expected_performance?: {
+          estimated_open_rate: string
+          estimated_response_rate: string
+          reasoning: string
         }
       }
     | undefined

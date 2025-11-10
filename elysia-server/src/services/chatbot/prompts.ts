@@ -477,3 +477,135 @@ If analysis shows "50 leads, 30 new, 20 returning":
 
 Return ONLY a JSON array with 5 questions: ["Question 1", "Question 2", "Question 3", "Question 4", "Question 5"]`
 }
+
+/**
+ * AI-Powered Sequence Strategy Generation Prompt
+ *
+ * Generates a complete email sequence strategy based on analyzed lead data.
+ * The AI will determine:
+ * - Number of email steps (2-5)
+ * - Email subject and body for each step
+ * - Optimal timing (delay_days, scheduled_hour/minute)
+ * - Timezone based on lead locations
+ */
+export function getAISequenceStrategyPrompt(leadAnalysis: {
+  samples: Array<{
+    company_name: string | null
+    business_type: string | null
+    employee_count: string | null
+    lead_score: number | null
+    city: string | null
+    country: string | null
+  }>
+  avgLeadScore: number
+  dominantBusinessType: string
+  avgCompanySize: number
+  companySizeCategory: string
+  businessTypeFocus: string
+  customerGroupName: string
+  totalMembers: number
+}) {
+  return `You are an expert email marketing strategist specializing in B2B sales sequences.
+
+**Your Task:**
+Analyze the provided lead data and generate a highly personalized, data-driven email sequence strategy.
+
+**Lead Analysis Summary:**
+- Customer Group: "${leadAnalysis.customerGroupName}"
+- Total Leads: ${leadAnalysis.totalMembers}
+- Average Lead Score: ${leadAnalysis.avgLeadScore.toFixed(1)}/100
+- Dominant Business Type: ${leadAnalysis.dominantBusinessType}
+- Average Company Size: ${Math.round(leadAnalysis.avgCompanySize)} employees
+- Company Size Category: ${leadAnalysis.companySizeCategory}
+- Business Type Focus: ${leadAnalysis.businessTypeFocus}
+- Samples Analyzed: ${leadAnalysis.samples.length}
+
+**Sample Leads (for context):**
+${JSON.stringify(leadAnalysis.samples.slice(0, 5), null, 2)}
+
+**Requirements:**
+
+1. **Number of Steps:** Determine optimal number of emails (2-5 steps)
+   - High lead score (>70): Use 2-3 steps (they're warm, don't over-communicate)
+   - Medium lead score (40-70): Use 3-4 steps (standard nurture sequence)
+   - Low lead score (<40): Use 4-5 steps (need more touchpoints)
+
+2. **Email Content:** For each step, create:
+   - **Subject Line:** Compelling, personalized, 40-60 characters
+   - **Email Body:** Professional, value-focused, 150-250 words
+   - Use personalization variables: {{contact_name}}, {{company_name}}
+   - Match tone to business type and company size
+
+3. **Timing Strategy:** For each step, determine:
+   - **delay_days:** Days after previous step
+     * CRITICAL: Step 1 MUST always be 0
+     * Short cycle (high score): 2-3 days between emails
+     * Standard cycle: 3-5 days between emails
+     * Long cycle (low score): 5-7 days between emails
+   - **scheduled_hour:** Best time to send (0-23 in 24h format, KST)
+     * B2B: Typically 9-11 AM or 2-4 PM KST
+     * Consider business type and region
+     * NOTE: For Step 1, this will be AUTOMATICALLY overridden to (current KST time + 2 minutes)
+   - **scheduled_minute:** Usually 0, 15, 30, or 45
+     * NOTE: For Step 1, this will be AUTOMATICALLY overridden to (current KST time + 2 minutes)
+   - **timezone:** Use "Asia/Seoul" for KST (Korean Standard Time)
+     * All times are based on KST timezone
+
+**IMPORTANT: Step 1 Timing Override**
+- The system will AUTOMATICALLY calculate and set Step 1's scheduled_hour and scheduled_minute
+- Calculation: Current KST time + 2 minutes
+- Your suggested timing for Step 1 will be ignored (you can set it to 9:00 as a placeholder)
+- Step 2+ timings will use your recommendations
+
+4. **Email Sequence Pattern:**
+   - Step 1: Introduction + Value Proposition
+   - Step 2: Social Proof / Case Study / Problem-Solution
+   - Step 3: Educational Content / Industry Insights
+   - Step 4 (if needed): Urgency / Limited Offer
+   - Step 5 (if needed): Final Touch / Breakup Email
+
+5. **Tone Matching:**
+   - Large Enterprise (>500 employees): Formal, data-driven, ROI-focused
+   - Mid-sized (100-500): Professional yet approachable, results-focused
+   - Small Business (<100): Friendly, solution-oriented, quick value
+
+**Output Format (JSON):**
+
+\`\`\`json
+{
+  "strategy_summary": "Brief 1-2 sentence description of the overall strategy",
+  "recommended_steps": 3,
+  "timezone": "Asia/Seoul",
+  "steps": [
+    {
+      "step_order": 1,
+      "delay_days": 0,
+      "scheduled_hour": 9,
+      "scheduled_minute": 0,
+      "email_subject": "Compelling subject with {{company_name}} personalization",
+      "email_body": "Professional email body with {{contact_name}} and {{company_name}} variables.\\n\\nUse \\\\n for line breaks.\\n\\nInclude clear CTA.",
+      "strategy_note": "Brief explanation of this step's purpose"
+    }
+  ],
+  "personalization_tips": [
+    "Specific tips for personalizing this sequence"
+  ],
+  "expected_performance": {
+    "estimated_open_rate": "35-45%",
+    "estimated_response_rate": "8-12%",
+    "reasoning": "Why these estimates based on the lead data"
+  }
+}
+\`\`\`
+
+**Critical Rules:**
+- ALL email bodies must use \\n for line breaks (will be converted to E'...' in SQL)
+- ALWAYS include {{contact_name}} and {{company_name}} variables
+- Keep subjects under 60 characters for mobile optimization
+- Each step should build on the previous one
+- Include clear CTAs (call to action) in each email
+- Maintain professional tone throughout
+- Base recommendations on the ACTUAL lead data provided
+
+Generate the complete sequence strategy now:`
+}

@@ -1,8 +1,16 @@
 import { Command, END } from "@langchain/langgraph"
+import { ChatOpenAI } from "@langchain/openai"
 import { sql } from "drizzle-orm"
 import { db } from "../../../db/drizzle"
 import { chatbotLogger } from "../../../utils/logger"
+import { getAISequenceStrategyPrompt } from "../prompts"
 import type { ChatbotState } from "../state"
+
+// LLM for AI-powered sequence strategy generation
+const strategyLLM = new ChatOpenAI({
+  model: "gpt-4o-mini",
+  temperature: 0.7, // More creative for marketing content
+})
 
 /**
  * Node: handleSequenceGenerationRequest
@@ -60,7 +68,7 @@ export async function handleSequenceGenerationRequest(state: ChatbotState): Prom
   if (state._emitter) {
     state._emitter.progress(
       "handleSequenceGenerationRequest",
-      `🚀 Starting AI-powered sequence generation for "${customerGroupName}" (${membersCount} leads)...`,
+      `Starting AI-powered sequence generation for "${customerGroupName}" (${membersCount} leads)...`,
     )
   }
 
@@ -123,7 +131,7 @@ export async function analyzeLeadsAndGenerateStrategy(state: ChatbotState): Prom
   if (state._emitter) {
     state._emitter.progress(
       "analyzeLeadsAndGenerateStrategy",
-      `📊 Analyzing ${membersCount} leads to generate optimal sequence strategy...`,
+      `Analyzing ${membersCount} leads to generate optimal sequence strategy...`,
     )
   }
 
@@ -193,10 +201,7 @@ export async function analyzeLeadsAndGenerateStrategy(state: ChatbotState): Prom
     // STEP 2: AI Analysis - Extract Lead Characteristics
     // ==================================================================================
     if (state._emitter) {
-      state._emitter.progress(
-        "analyzeLeadsAndGenerateStrategy",
-        "🤖 Analyzing lead data with AI...",
-      )
+      state._emitter.progress("analyzeLeadsAndGenerateStrategy", "Analyzing lead data with AI...")
     }
 
     // Calculate average lead score
@@ -240,38 +245,117 @@ export async function analyzeLeadsAndGenerateStrategy(state: ChatbotState): Prom
     })
 
     // ==================================================================================
-    // STEP 3: Generate AI-Powered Email Sequence Strategy
+    // STEP 3: Generate AI-Powered Email Sequence Strategy with LLM
     // ==================================================================================
     if (state._emitter) {
       state._emitter.progress(
         "analyzeLeadsAndGenerateStrategy",
-        "✨ Generating personalized email sequence strategy...",
+        "AI is generating personalized email sequence strategy...",
       )
     }
 
-    // For now, use a simple strategy based on analysis
-    // TODO: Later integrate with LLM for more sophisticated strategy generation
-    const emailStrategy = {
-      step1: {
-        subject: `Transform Your ${dominantBusinessType} Business with AI Solutions`,
-        body: `Hi {{contact_name}},\n\nI noticed {{company_name}} is a ${companySizeCategory} company in the ${dominantBusinessType} industry.\n\nWe specialize in helping companies like yours leverage AI to achieve breakthrough results and operational excellence.\n\nWould you be interested in a brief 15-minute call next week to discuss how we can help {{company_name}} achieve its goals?\n\nBest regards`,
-        delay_days: 0,
-        timing: "9:00 AM",
-      },
-      step2: {
-        subject: `Case Study: How ${dominantBusinessType} Leaders Achieve 40% Growth`,
-        body: `Hi {{contact_name}},\n\nI wanted to share a recent case study that might interest {{company_name}}.\n\nWe recently helped a ${companySizeCategory} ${dominantBusinessType} company achieve 40% revenue growth in just 6 months by implementing our AI-powered automation platform.\n\nTheir challenges were similar to what many ${dominantBusinessType} companies face:\n• Manual processes consuming valuable time\n• Difficulty scaling operations\n• Limited visibility into key metrics\n\nWould you like to see the full case study? I can send it over right away.\n\nBest regards`,
-        delay_days: 3,
-        timing: "10:00 AM",
-      },
-      step3: {
-        subject: `Last Chance: Exclusive Workshop for ${dominantBusinessType} Leaders`,
-        body: `Hi {{contact_name}},\n\nThis is my final email to you about our exclusive opportunity.\n\nWe are hosting a private workshop for top ${dominantBusinessType} leaders next month where we will share:\n• Advanced AI strategies that are working RIGHT NOW\n• Live demonstrations of real-world implementations\n• Exclusive networking with industry peers\n\nOnly 10 spots are available, and we are already at 7 confirmed attendees.\n\nWould {{company_name}} like to join us?\n\nPlease reply by Friday to secure your spot!\n\nBest regards`,
-        delay_days: 5,
-        timing: "2:00 PM",
-      },
+    chatbotLogger.info("[Sequence Strategy] Invoking LLM for strategy generation")
+
+    // Prepare lead analysis data for AI prompt
+    const leadAnalysisData = {
+      samples: leadSamples,
+      avgLeadScore,
+      dominantBusinessType,
+      avgCompanySize,
+      companySizeCategory,
+      businessTypeFocus,
+      customerGroupName,
+      totalMembers: membersCount,
     }
 
+    const strategyPrompt = getAISequenceStrategyPrompt(leadAnalysisData)
+
+    let aiStrategyResponse: string
+    try {
+      const response = await strategyLLM.invoke(strategyPrompt)
+      aiStrategyResponse = response.content as string
+      chatbotLogger.info("[Sequence Strategy] LLM response received")
+    } catch (llmError) {
+      const llmErrorMessage = llmError instanceof Error ? llmError.message : String(llmError)
+      chatbotLogger.error(`[Sequence Strategy] LLM invocation failed: ${llmErrorMessage}`)
+      throw new Error(`AI strategy generation failed: ${llmErrorMessage}`)
+    }
+
+    // Parse AI response (handle markdown code blocks)
+    const jsonMatch =
+      aiStrategyResponse.match(/```json\n?([\s\S]*?)\n?```/) ||
+      aiStrategyResponse.match(/(\{[\s\S]*\})/)
+    const jsonStr = jsonMatch?.[1] || aiStrategyResponse
+
+    interface AIStrategyResponse {
+      strategy_summary: string
+      recommended_steps: number
+      timezone: string
+      steps: Array<{
+        step_order: number
+        delay_days: number
+        scheduled_hour: number
+        scheduled_minute: number
+        email_subject: string
+        email_body: string
+        strategy_note: string
+      }>
+      personalization_tips: string[]
+      expected_performance: {
+        estimated_open_rate: string
+        estimated_response_rate: string
+        reasoning: string
+      }
+    }
+
+    let aiStrategy: AIStrategyResponse
+    try {
+      aiStrategy = JSON.parse(jsonStr.trim())
+      chatbotLogger.info(
+        `[Sequence Strategy] AI generated ${aiStrategy.recommended_steps} steps strategy`,
+      )
+      chatbotLogger.nodeDetail("ai-strategy", {
+        steps_count: aiStrategy.steps.length,
+        strategy_summary: aiStrategy.strategy_summary,
+        timezone: aiStrategy.timezone,
+        expected_open_rate: aiStrategy.expected_performance.estimated_open_rate,
+      })
+    } catch (_parseError) {
+      chatbotLogger.error(`[Sequence Strategy] Failed to parse AI response:\n${aiStrategyResponse}`)
+      throw new Error("Failed to parse AI-generated strategy. Invalid JSON format.")
+    }
+
+    // Validate AI strategy
+    if (!aiStrategy.steps || aiStrategy.steps.length < 2 || aiStrategy.steps.length > 5) {
+      throw new Error(
+        `Invalid number of steps generated: ${aiStrategy.steps?.length || 0}. Expected 2-5 steps.`,
+      )
+    }
+
+    // ==================================================================================
+    // CRITICAL: Override Step 1 timing to be 2 minutes from now (KST)
+    // ==================================================================================
+    // Calculate current KST time + 2 minutes
+    const now = new Date()
+    const kstOffset = 9 * 60 * 60 * 1000 // KST is UTC+9
+    const kstNow = new Date(now.getTime() + kstOffset)
+    const kstPlus2Min = new Date(kstNow.getTime() + 2 * 60 * 1000) // Add 2 minutes
+
+    const step1Hour = kstPlus2Min.getUTCHours()
+    const step1Minute = kstPlus2Min.getUTCMinutes()
+
+    chatbotLogger.info(
+      `[Sequence Strategy] Setting Step 1 timing to KST ${step1Hour}:${step1Minute.toString().padStart(2, "0")} (2 minutes from now)`,
+    )
+
+    // Override Step 1 timing
+    if (aiStrategy.steps[0]) {
+      aiStrategy.steps[0].scheduled_hour = step1Hour
+      aiStrategy.steps[0].scheduled_minute = step1Minute
+      aiStrategy.steps[0].delay_days = 0 // Always 0 for Step 1
+    }
+
+    // Convert AI strategy to internal format
     const sequenceStrategy = {
       dominant_business_type: dominantBusinessType,
       avg_company_size: Math.round(avgCompanySize),
@@ -279,7 +363,12 @@ export async function analyzeLeadsAndGenerateStrategy(state: ChatbotState): Prom
       avg_lead_score: Number.parseFloat(avgLeadScore.toFixed(1)),
       business_type_focus: businessTypeFocus,
       samples_analyzed: leadSamples.length,
-      email_strategy: emailStrategy,
+      strategy_summary: aiStrategy.strategy_summary,
+      timezone: aiStrategy.timezone || "Asia/Seoul",
+      recommended_steps: aiStrategy.recommended_steps,
+      email_steps: aiStrategy.steps, // Use AI-generated steps with overridden Step 1 timing
+      personalization_tips: aiStrategy.personalization_tips,
+      expected_performance: aiStrategy.expected_performance,
     }
 
     const duration = Date.now() - startTime
@@ -405,7 +494,7 @@ export async function generateSequenceWithStrategy(state: ChatbotState): Promise
   if (state._emitter) {
     state._emitter.progress(
       "generateSequenceWithStrategy",
-      `🚀 Creating sequence with AI-generated strategy...`,
+      `Creating sequence with AI-generated strategy...`,
     )
   }
 
@@ -477,42 +566,59 @@ export async function generateSequenceWithStrategy(state: ChatbotState): Promise
       if (state._emitter) {
         state._emitter.progress(
           "generateSequenceWithStrategy",
-          "💾 Executing CTE query to create sequence...",
+          "Executing CTE query to create sequence...",
         )
       }
 
-      // Escape email content for SQL injection prevention
-      const escapedStep1Subject = strategy.email_strategy.step1.subject.replace(/'/g, "''")
-      const escapedStep1Body = strategy.email_strategy.step1.body.replace(/'/g, "''")
-      const escapedStep2Subject = strategy.email_strategy.step2.subject.replace(/'/g, "''")
-      const escapedStep2Body = strategy.email_strategy.step2.body.replace(/'/g, "''")
-      const escapedStep3Subject = strategy.email_strategy.step3.subject.replace(/'/g, "''")
-      const escapedStep3Body = strategy.email_strategy.step3.body.replace(/'/g, "''")
+      // Extract and escape email steps from AI-generated strategy
+      const emailSteps = strategy.email_steps || []
+      if (!emailSteps || emailSteps.length === 0) {
+        throw new Error("No email steps found in strategy")
+      }
 
-      // Log all escaped strings for debugging
-      chatbotLogger.nodeDetail("escaped-email-content", {
-        step1_subject_length: escapedStep1Subject.length,
-        step1_body_length: escapedStep1Body.length,
-        step2_subject_length: escapedStep2Subject.length,
-        step2_body_length: escapedStep2Body.length,
-        step3_subject_length: escapedStep3Subject.length,
-        step3_body_length: escapedStep3Body.length,
-        has_newlines: {
-          step1: escapedStep1Body.includes("\n"),
-          step2: escapedStep2Body.includes("\n"),
-          step3: escapedStep3Body.includes("\n"),
-        },
+      chatbotLogger.info(
+        `[Sequence Generation] Building dynamic CTE query for ${emailSteps.length} steps`,
+      )
+
+      // Escape email content for SQL injection prevention
+      const escapedSteps = emailSteps.map((step, index) => {
+        const escapedSubject = step.email_subject.replace(/'/g, "''")
+        const escapedBody = step.email_body.replace(/'/g, "''")
+
+        chatbotLogger.nodeDetail(`escaped-step-${index + 1}`, {
+          step_order: step.step_order,
+          subject_length: escapedSubject.length,
+          body_length: escapedBody.length,
+          delay_days: step.delay_days,
+          scheduled_hour: step.scheduled_hour,
+          scheduled_minute: step.scheduled_minute,
+          has_newlines: escapedBody.includes("\n"),
+        })
+
+        return {
+          step_order: step.step_order,
+          delay_days: step.delay_days,
+          scheduled_hour: step.scheduled_hour,
+          scheduled_minute: step.scheduled_minute,
+          email_subject: escapedSubject,
+          email_body: escapedBody,
+        }
       })
 
-      chatbotLogger.info("[Sequence Generation] Building CTE query with strategy data")
+      // ==================================================================================
+      // Build Dynamic CTE Query
+      // ==================================================================================
+      // Generate CTE for each email step dynamically based on AI strategy
+      // ==================================================================================
 
-      const sequenceGenerationQuery = sql.raw(`
+      const timezone = strategy.timezone || "Asia/Seoul"
+      const strategySummary = strategy.strategy_summary || "AI-optimized email sequence"
+
+      // Generate CTE for sequence creation
+      let cteQuery = `
 WITH
 -- ==================================================================================
 -- CTE 1: Create Sequence (ACTIVE)
--- ==================================================================================
--- Creates the main sequence record linked to the customer group
--- Status is set to 'active' directly (no need for separate activation step)
 -- ==================================================================================
 new_sequence AS (
   INSERT INTO sequences (
@@ -529,22 +635,25 @@ new_sequence AS (
     '${workspaceId}',
     '${customerGroupId}',
     'AI-Generated Sequence for ${escapedGroupName}',
-    'AI-optimized sequence for ${companySizeCategory} ${escapedBusinessType} companies (avg score: ${avgLeadScore.toFixed(1)}, ${samplesAnalyzed} samples analyzed)',
+    '${strategySummary.replace(/'/g, "''")} (${samplesAnalyzed} samples analyzed)',
     'active',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
   )
   RETURNING *
-),
+)`
+
+      // Generate CTE for each email step
+      escapedSteps.forEach((step, index) => {
+        const stepNumber = index + 1
+        const cteName = `new_sequence_step_${stepNumber}`
+
+        cteQuery += `,
 
 -- ==================================================================================
--- CTE 2: Create Sequence Step 1 - Initial Contact (Day 0)
+-- CTE ${stepNumber + 1}: Create Sequence Step ${stepNumber}
 -- ==================================================================================
--- First touch: Introduction and value proposition
--- Timing: Send at 9 AM (optimal open rate based on industry data)
--- Personalization: Uses {{contact_name}} and {{company_name}} variables
--- ==================================================================================
-new_sequence_step_1 AS (
+${cteName} AS (
   INSERT INTO sequence_steps (
     id,
     sequence_id,
@@ -559,109 +668,42 @@ new_sequence_step_1 AS (
     updated_at
   ) SELECT
     gen_random_uuid(),
-    id,                               -- References new_sequence.id
-    1,                                -- First step in sequence
-    ${strategy.email_strategy.step1.delay_days},  -- Delay from strategy
-    9,                                -- 9 AM (default)
-    0,                                -- :00 minutes
-    'Asia/Seoul',                     -- KST timezone
-    '${escapedStep1Subject}',
-    E'${escapedStep1Body.replace(/\n/g, "\\n")}',
-    CURRENT_TIMESTAMP,
-    CURRENT_TIMESTAMP
-  FROM new_sequence
-  RETURNING *
-),
-
--- ==================================================================================
--- CTE 3: Create Sequence Step 2 - Value Demonstration (Day 3)
--- ==================================================================================
--- Second touch: Case study and social proof
--- Timing: 3 days after step 1, sent at 10 AM (mid-morning engagement)
--- Content: Industry-specific case study to build credibility
--- ==================================================================================
-new_sequence_step_2 AS (
-  INSERT INTO sequence_steps (
     id,
-    sequence_id,
-    step_order,
-    delay_days,
-    scheduled_hour,
-    scheduled_minute,
-    timezone,
-    email_subject,
-    email_body_text,
-    created_at,
-    updated_at
-  ) SELECT
-    gen_random_uuid(),
-    id,                               -- References new_sequence.id
-    2,                                -- Second step in sequence
-    ${strategy.email_strategy.step2.delay_days},  -- Delay from strategy
-    10,                               -- 10 AM (default)
-    0,
-    'Asia/Seoul',
-    '${escapedStep2Subject}',
-    E'${escapedStep2Body.replace(/\n/g, "\\n")}',
+    ${step.step_order},
+    ${step.delay_days},
+    ${step.scheduled_hour},
+    ${step.scheduled_minute},
+    '${timezone}',
+    '${step.email_subject}',
+    E'${step.email_body.replace(/\n/g, "\\n")}',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
   FROM new_sequence
   RETURNING *
-),
+)`
+      })
 
--- ==================================================================================
--- CTE 4: Create Sequence Step 3 - Urgency & Final CTA (Day 8)
--- ==================================================================================
--- Third touch: Create urgency with limited-time opportunity
--- Timing: 5 days after step 2 (8 days total), sent at 2 PM (post-lunch)
--- Content: Exclusive offer to create FOMO and drive action
--- ==================================================================================
-new_sequence_step_3 AS (
-  INSERT INTO sequence_steps (
-    id,
-    sequence_id,
-    step_order,
-    delay_days,
-    scheduled_hour,
-    scheduled_minute,
-    timezone,
-    email_subject,
-    email_body_text,
-    created_at,
-    updated_at
-  ) SELECT
-    gen_random_uuid(),
-    id,                               -- References new_sequence.id
-    3,                                -- Third and final step
-    ${strategy.email_strategy.step3.delay_days},  -- Delay from strategy
-    14,                               -- 2 PM (default)
-    0,
-    'Asia/Seoul',
-    '${escapedStep3Subject}',
-    E'${escapedStep3Body.replace(/\n/g, "\\n")}',
-    CURRENT_TIMESTAMP,
-    CURRENT_TIMESTAMP
-  FROM new_sequence
-  RETURNING *
-)
+      // Generate final SELECT with UNION ALL for all steps
+      const unionAllSteps = escapedSteps
+        .map((_, index) => {
+          const stepNumber = index + 1
+          return `SELECT * FROM new_sequence_step_${stepNumber}`
+        })
+        .join("\n      UNION ALL ")
+
+      cteQuery += `
 
 -- ==================================================================================
 -- Final SELECT: Return Comprehensive Summary
--- ==================================================================================
--- Returns a JSON object with all created data for verification and logging
--- Sequence is created with 'active' status directly (no separate activation needed)
--- No enrollments are created (sequence is only linked to customer group)
 -- ==================================================================================
 SELECT json_build_object(
   'sequence', (SELECT row_to_json(new_sequence.*) FROM new_sequence),
   'steps', (
     SELECT json_agg(row_to_json(steps.*) ORDER BY steps.step_order) FROM (
-      SELECT * FROM new_sequence_step_1
-      UNION ALL SELECT * FROM new_sequence_step_2
-      UNION ALL SELECT * FROM new_sequence_step_3
+      ${unionAllSteps}
     ) steps
   ),
-  'total_steps', 3,
+  'total_steps', ${escapedSteps.length},
   'status', 'active',
   'linked_to_group', true,
   'customer_group_id', '${customerGroupId}',
@@ -673,11 +715,14 @@ SELECT json_build_object(
     'avg_company_size', ${Math.round(avgCompanySize)},
     'company_size_category', '${companySizeCategory}',
     'business_type_focus', '${businessTypeFocus}',
-    'samples_analyzed', ${samplesAnalyzed}
+    'samples_analyzed', ${samplesAnalyzed},
+    'strategy_summary', '${strategySummary.replace(/'/g, "''")}'
   ),
   'created_at', CURRENT_TIMESTAMP
 ) as result
-      `)
+`
+
+      const sequenceGenerationQuery = sql.raw(cteQuery)
 
       interface SequenceResult {
         result: {
@@ -709,6 +754,7 @@ SELECT json_build_object(
             company_size_category: string
             business_type_focus: string
             samples_analyzed: number
+            strategy_summary: string
           }
         }
       }
@@ -791,12 +837,13 @@ SELECT json_build_object(
       }
 
       // Validation: Check if steps were created
-      if (!sequenceData.steps || sequenceData.steps.length !== 3) {
+      const expectedSteps = escapedSteps.length
+      if (!sequenceData.steps || sequenceData.steps.length !== expectedSteps) {
         chatbotLogger.error(
-          `[Sequence Generation] Expected 3 steps but got ${sequenceData.steps?.length || 0}`,
+          `[Sequence Generation] Expected ${expectedSteps} steps but got ${sequenceData.steps?.length || 0}`,
         )
         throw new Error(
-          `Failed to create all sequence steps. Expected 3 steps but created ${sequenceData.steps?.length || 0}.`,
+          `Failed to create all sequence steps. Expected ${expectedSteps} steps but created ${sequenceData.steps?.length || 0}.`,
         )
       }
 
@@ -835,7 +882,21 @@ SELECT json_build_object(
       )
     }
 
-    // Format detailed success message
+    // Format detailed success message with AI strategy info
+    const strategySummary = result.ai_analysis.strategy_summary || "AI-optimized strategy"
+    const expectedPerformance = strategy.expected_performance
+      ? `\n\n**Expected Performance (AI Prediction):**
+- **Estimated Open Rate:** ${strategy.expected_performance.estimated_open_rate}
+- **Estimated Response Rate:** ${strategy.expected_performance.estimated_response_rate}
+- **Reasoning:** ${strategy.expected_performance.reasoning}`
+      : ""
+
+    const personalizationTips =
+      strategy.personalization_tips && strategy.personalization_tips.length > 0
+        ? `\n\n**Personalization Tips:**
+${strategy.personalization_tips.map((tip) => `• ${tip}`).join("\n")}`
+        : ""
+
     const successMessage = `
 🎉 **AI-Optimized Sequence Created Successfully!**
 
@@ -844,6 +905,11 @@ SELECT json_build_object(
 - **Status:** ✅ ${result.sequence.status.toUpperCase()}
 - **ID:** ${result.sequence.id}
 - **Linked to Group:** ${result.customer_group_name} (${result.total_leads_in_group} leads)
+
+**AI Strategy:**
+- **Summary:** ${strategySummary}
+- **Steps Generated:** ${result.total_steps} emails
+${expectedPerformance}
 
 **AI Analysis:**
 - **Average Lead Score:** ${result.ai_analysis.avg_lead_score}
@@ -864,11 +930,12 @@ ${result.steps
     return `- Step ${step.step_order}: ${dayLabel} (${hour}:${minute} ${step.timezone || "Asia/Seoul"})`
   })
   .join("\n")}
+${personalizationTips}
 
 **Next Steps:**
 ✅ Your sequence is now **ACTIVE** and ready to use
 ✅ Enroll leads from the "${result.customer_group_name}" group to start sending
-✅ Email content is optimized based on AI analysis of ${result.ai_analysis.samples_analyzed} sample leads
+✅ Email content is AI-optimized based on analysis of ${result.ai_analysis.samples_analyzed} sample leads
 ✅ Monitor performance metrics as emails are sent
     `.trim()
 

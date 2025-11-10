@@ -87,7 +87,11 @@ export interface ImportResult {
 }
 
 /**
- * 중복 체크: workspace_id와 website_url 조합으로 확인
+ * 중복 체크: Workspace ID와 Website URL 조합으로 확인
+ *
+ * @param workspaceId - Workspace ID (각 workspace는 독립적으로 중복 체크됨)
+ * @param websiteUrl - 체크할 Website URL
+ * @returns 중복 여부 (true: 중복, false: 유니크)
  */
 export async function checkDuplicate(
   workspaceId: string,
@@ -198,13 +202,23 @@ export async function importSingleLead(
         stats.contactsCreated += phoneContacts.length
       }
 
-      // 3. Contacts 생성 (이메일) - 중복 이메일 필터링
+      // 3. Contacts 생성 (이메일) - Workspace 기준 중복 이메일 필터링
       if (data.emails.length > 0) {
         // 중복되지 않은 이메일만 필터링
         const uniqueEmails = data.emails.filter((email) => {
           if (duplicateEmails.has(email)) {
             skippedEmails.push(email)
-            logger.debug({ email, leadId }, "Skipping duplicate email")
+            const existingLeadId = duplicateEmails.get(email)
+            logger.debug(
+              {
+                email,
+                currentLeadId: leadId,
+                existingLeadId,
+                companyName: data.companyName,
+                workspaceId,
+              },
+              "Skipping duplicate email - 이메일은 제외되지만 리드는 생성됨 (Workspace 기준 중복)",
+            )
             return false
           }
           return true
@@ -354,6 +368,10 @@ function truncateString(value: string | null, maxLength: number): string | null 
 /**
  * 배치 임포트용 중복 체크 (여러 URL을 청크로 나누어 조회)
  * PostgreSQL의 바인드 파라미터 제한을 고려하여 청크 단위로 처리
+ *
+ * @param workspaceId - Workspace ID (각 workspace는 독립적으로 중복 체크됨)
+ * @param websiteUrls - 체크할 Website URL 배열
+ * @returns 중복된 URL의 Set
  */
 async function checkDuplicateBatch(
   workspaceId: string,
@@ -459,8 +477,13 @@ async function checkDuplicateEmailsInWorkspace(
     }
 
     logger.info(
-      { total: emails.length, duplicates: emailToLeadIdMap.size },
-      "Email duplicate check completed",
+      {
+        total: emails.length,
+        duplicates: emailToLeadIdMap.size,
+        workspaceId,
+        uniqueEmails: emails.length - emailToLeadIdMap.size,
+      },
+      "Workspace-scoped email duplicate check completed - 중복된 이메일은 제외되지만 리드는 생성됩니다",
     )
 
     return emailToLeadIdMap
@@ -472,6 +495,17 @@ async function checkDuplicateEmailsInWorkspace(
 
 /**
  * 배치 임포트 (여러 리드를 순차적으로 처리)
+ *
+ * **워크스페이스 기준 중복 처리**:
+ * 1. Website URL 중복: 워크스페이스 내에 동일한 URL이 존재하면 리드 전체가 스킵됩니다
+ * 2. 이메일 중복: 파일 내부 중복 + 워크스페이스 내 DB 중복을 감지하여 제외하지만, 리드 자체는 생성됩니다
+ *
+ * @param workspaceId - Workspace ID (각 workspace는 독립적으로 중복 체크됨)
+ * @param leadsData - 임포트할 리드 데이터 배열
+ * @param createdBy - 생성자 ID (optional)
+ * @param customerGroupId - 고객 그룹 ID (optional, 지정 시 모든 리드를 해당 그룹에 추가)
+ * @param onProgress - 진행 상황 콜백 함수 (optional)
+ * @returns 임포트 결과 (성공/스킵/실패 카운트, 중복 이메일 정보 포함)
  */
 export async function importLeadsBatch(
   workspaceId: string,
@@ -520,7 +554,7 @@ export async function importLeadsBatch(
 
   // 1-2. 이메일 중복 체크 (두 단계):
   // Step 1: CSV 내부 중복 체크
-  logger.info({ total: leadsData.length }, "Starting within-CSV email duplicate check")
+  logger.info({ total: leadsData.length, workspaceId }, "Starting within-CSV email duplicate check")
   const emailToFirstOccurrence = new Map<string, number>() // email -> first row index
   const csvDuplicates = new Map<string, string>() // email -> "CSV_DUPLICATE" marker
 
@@ -538,25 +572,36 @@ export async function importLeadsBatch(
         // CSV 내 중복 발견
         csvDuplicates.set(email, "CSV_DUPLICATE")
         logger.debug(
-          { email, firstRow: emailToFirstOccurrence.get(email), currentRow: i },
-          "Found duplicate email within CSV",
+          { email, firstRow: emailToFirstOccurrence.get(email), currentRow: i, workspaceId },
+          "Found duplicate email within CSV (리드는 생성되지만 중복 이메일만 제외됨)",
         )
       }
     }
   }
 
   logger.info(
-    { csvDuplicateCount: csvDuplicates.size, totalEmails: emailToFirstOccurrence.size },
-    "Within-CSV duplicate check completed",
+    {
+      csvDuplicateCount: csvDuplicates.size,
+      totalEmails: emailToFirstOccurrence.size,
+      workspaceId,
+    },
+    "Within-CSV duplicate check completed (중복 이메일만 제외, 리드는 생성됨)",
   )
 
-  // Step 2: DB에 이미 존재하는 이메일들을 조회
-  logger.info({ total: leadsData.length }, "Starting database email duplicate check")
+  // Step 2: Workspace 내 DB에 이미 존재하는 이메일들을 조회
+  logger.info(
+    { total: leadsData.length, workspaceId },
+    "Starting workspace-scoped email duplicate check in database",
+  )
   const allEmails = leadsData.flatMap((lead) => lead.emails).filter((email) => email !== "")
   const dbDuplicateEmailMap = await checkDuplicateEmailsInWorkspace(workspaceId, allEmails)
   logger.info(
-    { dbDuplicateEmailCount: dbDuplicateEmailMap.size, totalEmails: allEmails.length },
-    "Database email duplicate check completed",
+    {
+      dbDuplicateEmailCount: dbDuplicateEmailMap.size,
+      totalEmails: allEmails.length,
+      workspaceId,
+    },
+    "Workspace-scoped email duplicate check completed (중복 이메일만 제외, 리드는 생성됨)",
   )
 
   // 두 중복 맵을 합치기: CSV 중복은 "CSV_DUPLICATE"로, DB 중복은 lead ID로
@@ -637,7 +682,7 @@ export async function importLeadsBatch(
         details.industriesCreated += result.stats.industriesCreated
         details.groupMembersCreated += result.stats.groupMembersCreated
 
-        // 스킵된 이메일 추적
+        // 스킵된 이메일 추적 (Workspace 기준)
         if (result.skippedEmails.length > 0) {
           for (const email of result.skippedEmails) {
             const duplicateInfo = duplicateEmailMap.get(email)
@@ -649,6 +694,17 @@ export async function importLeadsBatch(
                 companyName: leadData.companyName,
               })
               progress.emailsSkipped++
+
+              logger.debug(
+                {
+                  email,
+                  rowNumber: originalIndex + 1,
+                  companyName: leadData.companyName,
+                  existingLeadId: duplicateInfo,
+                  workspaceId,
+                },
+                "Email skipped - Workspace 내 중복 (리드는 정상 생성됨)",
+              )
             }
           }
         }

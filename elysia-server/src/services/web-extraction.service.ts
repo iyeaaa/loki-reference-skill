@@ -6,6 +6,7 @@
 import { createOpenAI } from "@ai-sdk/openai"
 import { generateText } from "ai"
 import * as cheerio from "cheerio"
+import type { AnyNode, Element } from "domhandler"
 import pLimit from "p-limit"
 import type {
   CompanyRecord,
@@ -56,7 +57,7 @@ export async function fetchWebsiteContent(
     $("script, style, noscript").remove()
     $("*")
       .contents()
-      .filter(function () {
+      .filter(function (this: AnyNode) {
         return this.type === "comment"
       })
       .remove()
@@ -124,7 +125,7 @@ export async function fetchWithDepth(
     $("script, style, noscript").remove()
     $("*")
       .contents()
-      .filter(function () {
+      .filter(function (this: AnyNode) {
         return this.type === "comment"
       })
       .remove()
@@ -145,7 +146,7 @@ export async function fetchWithDepth(
     const targetKeywords = ["contact", "about", "company", "team"]
     const links: string[] = []
 
-    $("a[href]").each((_, element) => {
+    $("a[href]").each((_: number, element: Element) => {
       const href = $(element).attr("href")
       const text = $(element).text().toLowerCase()
 

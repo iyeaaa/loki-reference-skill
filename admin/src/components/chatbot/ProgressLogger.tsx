@@ -41,7 +41,7 @@ function formatETA(ms: number): string {
   if (seconds > 0) {
     return `~${seconds}s`
   }
-  return "곧 완료"
+  return "Almost done"
 }
 
 function calculateSpeed(processed: number, elapsedMs: number): number {
@@ -125,14 +125,14 @@ export function ProgressLogger({
       {/* Stats Bar - Hugging Face Style */}
       <div className="flex items-center gap-4 text-xs font-mono bg-muted/30 rounded-lg px-4 py-2.5 border">
         <div className="flex items-center gap-1.5">
-          <span className="text-muted-foreground">경과:</span>
+          <span className="text-muted-foreground">Elapsed:</span>
           <span className="font-semibold text-foreground">{formatElapsedTime(elapsedTime)}</span>
         </div>
 
         <div className="h-4 w-px bg-border" />
 
         <div className="flex items-center gap-1.5">
-          <span className="text-muted-foreground">속도:</span>
+          <span className="text-muted-foreground">Speed:</span>
           <span className="font-semibold text-foreground">
             {speed > 0 ? `${speed.toFixed(2)}/s` : "-"}
           </span>
@@ -141,9 +141,9 @@ export function ProgressLogger({
         <div className="h-4 w-px bg-border" />
 
         <div className="flex items-center gap-1.5">
-          <span className="text-muted-foreground">예상 남은 시간:</span>
+          <span className="text-muted-foreground">Est. remaining:</span>
           <span className="font-semibold text-foreground">
-            {currentProgress < totalItems ? formatETA(estimatedTimeMs) : "완료"}
+            {currentProgress < totalItems ? formatETA(estimatedTimeMs) : "Complete"}
           </span>
         </div>
       </div>
@@ -153,8 +153,8 @@ export function ProgressLogger({
         <div className="rounded-lg border bg-muted/20">
           <div className="border-b bg-muted/50 px-3 py-2">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground">처리 로그</span>
-              <span className="text-xs text-muted-foreground/60">({logs.length}개 항목)</span>
+              <span className="text-xs font-medium text-muted-foreground">Processing Log</span>
+              <span className="text-xs text-muted-foreground/60">({logs.length} entries)</span>
             </div>
           </div>
           <div className="max-h-64 overflow-y-auto px-2 py-1">

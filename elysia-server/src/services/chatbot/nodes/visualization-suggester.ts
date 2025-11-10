@@ -10,16 +10,16 @@ const llm = new ChatOpenAI({
 export async function suggestVisualizations(state: ChatbotState): Promise<Partial<ChatbotState>> {
   const emitter = state._emitter
 
-  // 노드 시작 이벤트
+  // Node start event
   if (emitter) {
-    emitter.nodeStart("suggestVisualizations", "그래프 만드는 중...")
+    emitter.nodeStart("suggestVisualizations", "Creating visualizations...")
   }
 
   try {
-    // 결과가 없는 경우 시각화 생략
+    // Skip visualization if no results
     if (state.queryResult.length === 0) {
       if (emitter) {
-        emitter.nodeComplete("suggestVisualizations", "시각화 제안 생략 (결과 없음)")
+        emitter.nodeComplete("suggestVisualizations", "Visualization skipped (no results)")
       }
       return {
         visualizationSuggestions: [],
@@ -30,7 +30,7 @@ export async function suggestVisualizations(state: ChatbotState): Promise<Partia
 
     if (!prompt) {
       if (emitter) {
-        emitter.nodeComplete("suggestVisualizations", "시각화 제안 생략 (프롬프트 없음)")
+        emitter.nodeComplete("suggestVisualizations", "Visualization skipped (no prompt)")
       }
       return {
         visualizationSuggestions: [],
@@ -49,8 +49,8 @@ export async function suggestVisualizations(state: ChatbotState): Promise<Partia
     if (emitter) {
       emitter.nodeComplete(
         "suggestVisualizations",
-        `시각화 제안 생성 완료 (${Array.isArray(suggestions) ? suggestions.length : 0}개)`,
-        { visualizationSuggestions: Array.isArray(suggestions) ? suggestions : [] }, // 즉시 프론트엔드로 전송
+        `Generated ${Array.isArray(suggestions) ? suggestions.length : 0} visualization${Array.isArray(suggestions) && suggestions.length !== 1 ? "s" : ""}`,
+        { visualizationSuggestions: Array.isArray(suggestions) ? suggestions : [] }, // Send to frontend immediately
       )
     }
 
@@ -58,7 +58,7 @@ export async function suggestVisualizations(state: ChatbotState): Promise<Partia
       visualizationSuggestions: Array.isArray(suggestions) ? suggestions : [],
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류"
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
     if (emitter) {
       emitter.error("suggestVisualizations", errorMessage)
     }

@@ -161,6 +161,40 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
               // ⭐ Create SSE emitter for nodes to use
               const emitter = createNodeEmitter(session)
 
+              // Extract sequence generation request from last message metadata
+              const lastMessageMetadata = body.messages?.[body.messages.length - 1]?.metadata
+              let sequenceGenerationRequest:
+                | {
+                    customerGroupId: string
+                    customerGroupName: string
+                    membersCount: number
+                  }
+                | undefined
+
+              if (lastMessageMetadata && typeof lastMessageMetadata === "object") {
+                const metadata = lastMessageMetadata as Record<string, unknown>
+                if (
+                  metadata.sequenceGenerationRequest &&
+                  typeof metadata.sequenceGenerationRequest === "object"
+                ) {
+                  const req = metadata.sequenceGenerationRequest as Record<string, unknown>
+                  if (
+                    typeof req.customerGroupId === "string" &&
+                    typeof req.customerGroupName === "string" &&
+                    typeof req.membersCount === "number"
+                  ) {
+                    sequenceGenerationRequest = {
+                      customerGroupId: req.customerGroupId,
+                      customerGroupName: req.customerGroupName,
+                      membersCount: req.membersCount,
+                    }
+                    chatbotLogger.info(
+                      `[Sequence Generation] Request detected: ${req.customerGroupName} (${req.membersCount} members)`,
+                    )
+                  }
+                }
+              }
+
               // 스트리밍 실행
               const initialState: Partial<ChatbotState> = {
                 currentQuestion: body.question,
@@ -185,6 +219,8 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
                 clarificationQuestion: "",
                 csvData, // Add parsed CSV data to state
                 _emitter: emitter, // ⭐ Inject emitter into state for nodes to use
+                sequenceGenerationRequest, // ⭐ Add sequence generation request if present
+                pendingSequenceGeneration: !!sequenceGenerationRequest,
               }
 
               let currentState: ChatbotState | null = null

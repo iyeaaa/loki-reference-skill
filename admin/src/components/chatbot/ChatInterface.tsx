@@ -206,7 +206,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       // Display user message about xlsx upload
       const userMessage: ChatMessage = {
         role: "user",
-        content: "리드 데이터 파일을 업로드했습니다",
+        content: "Here's my contact list!",
         timestamp: new Date(),
         attachment: fileAttachment,
       }
@@ -214,12 +214,8 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       setMessages((prev) => [...prev, userMessage])
       setIsProcessing(true)
 
-      // Initialize streaming message for preview
-      setStreamingMessage({
-        role: "assistant",
-        content: "파일을 분석하는 중입니다...",
-        timestamp: new Date(),
-      })
+      // Show thinking indicator with star spinner
+      setCurrentThinking("Reading your file...")
 
       // Import preview service
       const { previewLeadsFile } = await import("@/lib/api/services/lead-import")
@@ -231,17 +227,17 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         })
 
         if (!previewResult.success || !previewResult.data) {
-          throw new Error(previewResult.error || "미리보기 실패")
+          throw new Error(previewResult.error || "Preview failed")
         }
 
         // Show preview message with AI analysis
-        let messageContent = `엑셀 파일을 분석했습니다.\n\n총 ${previewResult.data.totalRows}개의 리드 데이터를 찾았습니다.`
+        let messageContent = `Perfect! We found ${previewResult.data.totalRows} leads in your file.\n\nYour contacts are ready to import.`
 
         if (previewResult.data.aiAnalysis) {
-          messageContent += `\n\n## 📊 AI 분석 결과\n\n${previewResult.data.aiAnalysis}`
+          messageContent += `\n\n## Data Analysis Report\n\n${previewResult.data.aiAnalysis}`
         }
 
-        messageContent += `\n\n아래 미리보기를 확인하고 임포트를 승인해주세요.`
+        messageContent += `\n\nPlease review the preview below and confirm to proceed with the import.`
 
         const previewMessage: ChatMessage = {
           role: "assistant",
@@ -253,7 +249,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         }
 
         setMessages((prev) => [...prev, previewMessage])
-        setStreamingMessage(null)
+        setCurrentThinking(null)
 
         // Store preview data for later approval
         setLeadPreviewData({
@@ -264,11 +260,11 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         console.error("Lead preview failed:", error)
         const errorMessage: ChatMessage = {
           role: "assistant",
-          content: `파일 분석 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
+          content: `File analysis failed: ${error instanceof Error ? error.message : "Unknown error"}`,
           timestamp: new Date(),
         }
         setMessages((prev) => [...prev, errorMessage])
-        setStreamingMessage(null)
+        setCurrentThinking(null)
       } finally {
         setIsProcessing(false)
         isProcessingFileRef.current = false
@@ -358,12 +354,12 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
 
   // Suggested questions for empty state
   const suggestedQuestions = [
-    "이번 달 이메일 성과는 어때?",
-    "오픈율이 가장 높은 이메일 제목은?",
-    "클릭률이 낮은 이메일의 공통점은?",
-    "지난 주 대비 이번 주 응답률 변화는?",
-    "반응이 좋은 발송 시간대는?",
-    "이탈률이 높은 시퀀스는?",
+    "How's this month's email performance?",
+    "Which email subjects have the highest open rate?",
+    "What do low click-rate emails have in common?",
+    "How has response rate changed from last week?",
+    "What sending times get the best engagement?",
+    "Which sequences have high drop-off rates?",
   ]
 
   // Use previous questions if available, otherwise use suggested questions
@@ -387,7 +383,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         // User rejected
         const rejectionMessage: ChatMessage = {
           role: "assistant",
-          content: "리드 추가를 취소했습니다.",
+          content: "Lead import cancelled.",
           timestamp: new Date(),
         }
         setMessages((prev) => [...prev, rejectionMessage])
@@ -401,7 +397,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       // Show approval message
       const approvalMessage: ChatMessage = {
         role: "user",
-        content: "리드 추가를 승인했습니다",
+        content: "Approved lead import",
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, approvalMessage])
@@ -435,7 +431,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
             if (progress.type === "progress" && progress.currentCompanyName) {
               progressLogs.push({
                 timestamp: Date.now(),
-                message: `처리 중: ${progress.currentCompanyName}${progress.currentRow ? ` (행 #${progress.currentRow})` : ""}`,
+                message: `Processing: ${progress.currentCompanyName}${progress.currentRow ? ` (row #${progress.currentRow})` : ""}`,
                 type: "info",
                 processed: progress.processed,
                 total: progress.total,
@@ -447,7 +443,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         // Add completion log
         progressLogs.push({
           timestamp: Date.now(),
-          message: `완료: 성공 ${result.success}건, 스킵 ${result.skipped}건, 실패 ${result.failed}건`,
+          message: `Complete: ${result.success} succeeded, ${result.skipped} skipped, ${result.failed} failed`,
           type: "success",
           processed: result.total,
           total: result.total,
@@ -456,7 +452,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         // Show final complete progress
         setLeadImportProgress({
           type: "complete",
-          message: "리드 추가가 완료되었습니다!",
+          message: "Lead import complete!",
           timestamp: new Date().toISOString(),
           total: result.total,
           processed: result.total,
@@ -469,7 +465,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         // Save result as a message with metadata for artifact display
         const completionMessage: ChatMessage = {
           role: "assistant",
-          content: `리드 추가가 완료되었습니다!\n\n- 성공: ${result.success}건\n- 스킵: ${result.skipped}건\n- 실패: ${result.failed}건\n\n상세 결과를 확인하려면 아래 아티팩트를 클릭하세요.`,
+          content: `Lead import complete!\n\n- Succeeded: ${result.success}\n- Skipped: ${result.skipped}\n- Failed: ${result.failed}\n\nClick the artifact below to view detailed results.`,
           timestamp: new Date(),
           metadata: {
             importResult: result,
@@ -490,7 +486,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         // Show error in progress UI
         setLeadImportProgress({
           type: "error",
-          error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다",
+          error: error instanceof Error ? error.message : "An unknown error occurred",
           timestamp: new Date().toISOString(),
         })
 
@@ -574,12 +570,53 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   const handleSequenceGeneration = useCallback(
     (data: { customerGroupId: string; prompt: string }) => {
       // Format the question to include both customer group and requirements
-      const question = `고객 그룹 ID ${data.customerGroupId}에 대해 다음 요구사항으로 시퀀스를 자동 생성해줘:\n\n${data.prompt}`
+      const question = `Please automatically generate a sequence for customer group ID ${data.customerGroupId} with the following requirements:\n\n${data.prompt}`
 
       // Submit the question through the chatbot
       handleSubmit(question)
     },
     [handleSubmit],
+  )
+
+  const handleGenerateSequenceFromImport = useCallback(
+    (groupId: string, groupName: string, membersAdded: number) => {
+      // Create a user message with sequence generation request metadata
+      const userMessage: ChatMessage = {
+        role: "user",
+        content: `Generate an optimal email sequence for customer group "${groupName}"`,
+        timestamp: new Date(),
+        metadata: {
+          sequenceGenerationRequest: {
+            customerGroupId: groupId,
+            customerGroupName: groupName,
+            membersCount: membersAdded,
+          },
+        },
+      }
+
+      // Add message and trigger chatbot
+      setMessages((prev) => [...prev, userMessage])
+      setIsProcessing(true)
+
+      // Initialize streaming message
+      setStreamingMessage({
+        role: "assistant",
+        content: "",
+        timestamp: new Date(),
+      })
+
+      // Call chatbot API with the sequence generation request
+      const convId = conversationId || `conv_${Date.now()}`
+      setCurrentConversationId(convId)
+
+      chatbotMutation.mutateAsync({
+        question: userMessage.content,
+        workspaceId,
+        conversationId: convId,
+        messages: [...messages, userMessage],
+      })
+    },
+    [messages, chatbotMutation, workspaceId, conversationId],
   )
 
   // Auto-resize textarea based on content
@@ -953,7 +990,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                             className="gap-2 cursor-pointer"
                           >
                             <Sparkles className="h-4 w-4" />
-                            시퀀스 자동 생성
+                            Auto-generate Sequence
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1027,6 +1064,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                   undefined
                 }
                 onLeadImportApproval={handleLeadImportApproval}
+                onGenerateSequence={handleGenerateSequenceFromImport}
               />
             </div>
           )}

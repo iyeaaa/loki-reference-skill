@@ -151,27 +151,27 @@ export async function executeSequential(state: ChatbotState): Promise<Partial<Ch
     let userFriendlyMessage = ""
 
     if (errorMessage.includes("violates not-null constraint") || dbErrorCode === "23502") {
-      const columnName = dbErrorColumn || "항목"
-      userFriendlyMessage = `'${columnName}' 항목은 반드시 입력해야 해요. (${currentQueryIndex + 1}/${queries.length} 단계에서 문제 발생)`
+      const columnName = dbErrorColumn || "field"
+      userFriendlyMessage = `The '${columnName}' field is required. (Error at step ${currentQueryIndex + 1}/${queries.length})`
     } else if (errorMessage.includes("violates unique constraint") || dbErrorCode === "23505") {
-      userFriendlyMessage = `이미 동일한 데이터가 존재해요. 중복된 데이터는 저장할 수 없어요. (${currentQueryIndex + 1}/${queries.length} 단계에서 문제 발생)`
+      userFriendlyMessage = `This data already exists. Duplicate data cannot be saved. (Error at step ${currentQueryIndex + 1}/${queries.length})`
     } else if (
       errorMessage.includes("violates foreign key constraint") ||
       dbErrorCode === "23503"
     ) {
-      userFriendlyMessage = `연결된 데이터를 찾을 수 없어요. 먼저 필요한 데이터가 있는지 확인해주세요. (${currentQueryIndex + 1}/${queries.length} 단계에서 문제 발생)`
+      userFriendlyMessage = `Related data not found. Please check if the required data exists first. (Error at step ${currentQueryIndex + 1}/${queries.length})`
     } else if (errorMessage.includes("violates check constraint") || dbErrorCode === "23514") {
-      userFriendlyMessage = `입력하신 값이 올바르지 않아요. 다시 확인해주세요. (${currentQueryIndex + 1}/${queries.length} 단계에서 문제 발생)`
+      userFriendlyMessage = `The value you entered is invalid. Please check again. (Error at step ${currentQueryIndex + 1}/${queries.length})`
     } else if (errorMessage.includes("value too long") || dbErrorCode === "22001") {
       const match = errorMessage.match(/column "(\w+)"/)
-      const columnName = match ? match[1] : "텍스트"
-      userFriendlyMessage = `${columnName} 항목의 내용이 너무 길어요. 좀 더 짧게 입력해주세요. (${currentQueryIndex + 1}/${queries.length} 단계에서 문제 발생)`
+      const columnName = match ? match[1] : "text"
+      userFriendlyMessage = `The ${columnName} field content is too long. Please enter a shorter value. (Error at step ${currentQueryIndex + 1}/${queries.length})`
     } else if (errorMessage.includes("syntax error") || dbErrorCode === "42601") {
-      userFriendlyMessage = `처리 중 오류가 발생했어요. 다시 시도해볼게요. (${currentQueryIndex + 1}/${queries.length} 단계)`
+      userFriendlyMessage = `An error occurred during processing. Let me try again. (Step ${currentQueryIndex + 1}/${queries.length})`
     } else if (errorMessage.includes("does not exist")) {
-      userFriendlyMessage = `요청하신 데이터 항목을 찾을 수 없어요. (${currentQueryIndex + 1}/${queries.length} 단계에서 문제 발생)`
+      userFriendlyMessage = `Cannot find the requested data field. (Error at step ${currentQueryIndex + 1}/${queries.length})`
     } else {
-      userFriendlyMessage = `${currentQueryIndex + 1}/${queries.length} 단계에서 문제가 발생했어요: ${errorMessage}`
+      userFriendlyMessage = `An error occurred at step ${currentQueryIndex + 1}/${queries.length}: ${errorMessage}`
     }
 
     // Comprehensive error logging with box formatting

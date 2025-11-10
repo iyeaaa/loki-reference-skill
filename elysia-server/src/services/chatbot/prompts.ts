@@ -423,57 +423,57 @@ Generate 5 highly contextual, natural follow-up questions that a real user would
 
 **Question Categories (pick diverse types):**
 1. **Time Comparison**: Compare different time periods based on current data
-   - Examples: "저번 주랑 비교하면?", "월별 추이 보여줘", "어제랑 차이 얼마나?"
+   - Examples: "How does this compare to last week?", "Show me monthly trends", "What's the difference from yesterday?"
 
 2. **Deep Dive**: Drill down into specific aspects of the data
-   - Examples: "오픈률 낮은 이유 뭐야?", "어느 시간대가 제일 좋아?", "반응 없는 리드 특징은?"
+   - Examples: "Why is the open rate low?", "What time period works best?", "What are common traits of unresponsive leads?"
 
 3. **Segment Analysis**: Break down by categories or attributes
-   - Examples: "업종별로 나눠봐", "지역별 차이 있어?", "신규랑 기존 고객 비교"
+   - Examples: "Break down by industry", "Any regional differences?", "Compare new vs existing customers"
 
 4. **Performance Optimization**: Ask how to improve metrics
-   - Examples: "오픈률 올리려면?", "전환율 개선 방법은?", "어떤 제목이 효과적이야?"
+   - Examples: "How to increase open rate?", "Ways to improve conversion?", "Which subject lines are effective?"
 
 5. **Related Insights**: Explore connected data or patterns
-   - Examples: "답장 많이 오는 패턴은?", "이탈 시점 언제야?", "성과 좋은 날 공통점은?"
+   - Examples: "What patterns get more replies?", "When do people drop off?", "Common factors on high-performing days?"
 
 **Critical Requirements:**
 - Use the ACTUAL data from the analysis result to create specific questions
 - Keep questions VERY SHORT (3-8 words max)
-- Use CASUAL, CONVERSATIONAL Korean (반말 or 존댓말 without ~할 수 있나요?)
+- Use CASUAL, CONVERSATIONAL English (simple, direct language)
 - Make questions ACTIONABLE and DATA-DRIVEN
 - Base questions on what was JUST revealed in the analysis
 - NO generic questions - be specific to the data shown
 
 **Style Guide:**
 ✅ Good (natural, specific, short):
-- "이번 달 성과 어때?"
-- "오픈률 10% 왜 이래?"
-- "전환율 높은 업종은?"
-- "가장 반응 좋은 시간대는?"
-- "리드 점수 낮은 이유는?"
+- "How's this month's performance?"
+- "Why is open rate only 10%?"
+- "Which industry has highest conversion?"
+- "Best time for engagement?"
+- "Why are lead scores low?"
 
 ❌ Bad (too formal, generic, long):
-- "세그먼트별로 분석이 가능할까요?"
-- "다른 지표도 같이 확인해볼 수 있나요?"
-- "추가로 궁금한 사항이 있으신가요?"
-- "상세 분석을 원하시나요?"
+- "Would it be possible to analyze by segment?"
+- "Can we check other metrics as well?"
+- "Do you have any additional questions?"
+- "Would you like a detailed analysis?"
 
 **Context-Aware Examples:**
 
-If analysis mentions "이메일 100건 발송, 오픈율 45%":
-→ "클릭률은 몇 퍼센트야?"
-→ "지난주 오픈율은 얼마였어?"
-→ "오픈 안 한 55명 특징은?"
-→ "오픈율 45% 업계 평균 대비 어때?"
-→ "답장 온 건 몇 개야?"
+If analysis mentions "100 emails sent, 45% open rate":
+→ "What's the click rate?"
+→ "What was last week's open rate?"
+→ "Who are the 55 non-openers?"
+→ "How does 45% compare to average?"
+→ "How many replies received?"
 
-If analysis shows "리드 50개, 신규 30개, 재방문 20개":
-→ "신규랑 재방문 전환율 차이는?"
-→ "어떤 채널에서 들어왔어?"
-→ "리드 점수 높은 순으로 보여줘"
-→ "이번 달 리드 증가 추세는?"
-→ "업종별로 나눠봐"
+If analysis shows "50 leads, 30 new, 20 returning":
+→ "Conversion difference: new vs returning?"
+→ "Which channels brought them?"
+→ "Show leads by score"
+→ "Lead growth trend this month?"
+→ "Break down by industry"
 
 Return ONLY a JSON array with 5 questions: ["Question 1", "Question 2", "Question 3", "Question 4", "Question 5"]`
 }

@@ -16,7 +16,7 @@ export async function analyzeResults(state: ChatbotState): Promise<Partial<Chatb
 
   // Emit node start event
   if (emitter) {
-    emitter.nodeStart("analyzeResults", "결과를 정리하고 있어요...")
+    emitter.nodeStart("analyzeResults", "Organizing results...")
   }
 
   chatbotLogger.nodeStart("analyzeResults")
@@ -51,22 +51,26 @@ export async function analyzeResults(state: ChatbotState): Promise<Partial<Chatb
         else if (sqlLower.includes("insert")) operationType = "created"
 
         const operationText =
-          operationType === "created" ? "저장" : operationType === "updated" ? "수정" : "삭제"
-        const message = `✅ ${affectedRows || 1}건의 데이터를 ${operationText}했어요.\n\n데이터베이스에 성공적으로 반영되었습니다.`
+          operationType === "created"
+            ? "saved"
+            : operationType === "updated"
+              ? "updated"
+              : "deleted"
+        const message = `✅ Successfully ${operationText} ${affectedRows || 1} record(s).\n\nChanges have been applied to the database.`
 
         if (emitter) {
-          emitter.nodeComplete("analyzeResults", "작업 완료", { analysis: message })
+          emitter.nodeComplete("analyzeResults", "Operation complete", { analysis: message })
         }
 
         return { analysis: message }
       }
 
-      // SELECT 쿼리인데 결과가 없는 경우
+      // SELECT query with no results
       chatbotLogger.nodeSuccess("analyzeResults (no results)", duration)
 
-      const message = "조회된 결과가 없어요. 다른 조건으로 검색해보세요."
+      const message = "No results found. Try searching with different criteria."
       if (emitter) {
-        emitter.nodeComplete("analyzeResults", "조회 완료", { analysis: message })
+        emitter.nodeComplete("analyzeResults", "Query complete", { analysis: message })
       }
 
       return { analysis: message }
@@ -94,11 +98,11 @@ export async function analyzeResults(state: ChatbotState): Promise<Partial<Chatb
           : `\n\n**${state.queryResult.length} records ${operationType}**`
 
       const operationText =
-        operationType === "created" ? "저장" : operationType === "updated" ? "수정" : "삭제"
-      const message = `✅ ${state.queryResult.length}건의 데이터를 ${operationText}했어요.${resultSummary}`
+        operationType === "created" ? "saved" : operationType === "updated" ? "updated" : "deleted"
+      const message = `✅ Successfully ${operationText} ${state.queryResult.length} record(s).${resultSummary}`
 
       if (emitter) {
-        emitter.nodeComplete("analyzeResults", "작업 완료", { analysis: message })
+        emitter.nodeComplete("analyzeResults", "Operation complete", { analysis: message })
       }
 
       return { analysis: message }
@@ -106,7 +110,7 @@ export async function analyzeResults(state: ChatbotState): Promise<Partial<Chatb
 
     // Stream LLM response with progress updates
     if (emitter) {
-      emitter.progress("analyzeResults", "결과를 분석하고 있어요...")
+      emitter.progress("analyzeResults", "Analyzing results...")
     }
 
     const prompt = getAnalysisResultPrompt(
@@ -122,7 +126,7 @@ export async function analyzeResults(state: ChatbotState): Promise<Partial<Chatb
       const stream = await llm.stream(prompt)
       analysis = await streamLLMResponse(emitter, "analyzeResults", stream, {
         onComplete: () => {
-          emitter.progress("analyzeResults", "분석 완료")
+          emitter.progress("analyzeResults", "Analysis complete")
         },
       })
     } else {
@@ -135,7 +139,7 @@ export async function analyzeResults(state: ChatbotState): Promise<Partial<Chatb
     chatbotLogger.nodeSuccess("analyzeResults", duration)
 
     if (emitter) {
-      emitter.nodeComplete("analyzeResults", "분석 완료")
+      emitter.nodeComplete("analyzeResults", "Analysis complete")
     }
 
     return { analysis }
@@ -149,7 +153,7 @@ export async function analyzeResults(state: ChatbotState): Promise<Partial<Chatb
     }
 
     return {
-      analysis: "결과를 분석하는 중 문제가 발생했어요.",
+      analysis: "An error occurred while analyzing the results.",
       error: errorMessage,
     }
   }

@@ -111,6 +111,7 @@ interface DataArtifactProps {
   progressLogs?: ProgressLog[]
   startTime?: number
   onLeadImportApproval?: (approved: boolean) => void
+  onGenerateSequence?: (groupId: string, groupName: string, membersAdded: number) => void
 }
 
 /**
@@ -130,6 +131,7 @@ export function DataArtifact({
   progressLogs,
   startTime,
   onLeadImportApproval,
+  onGenerateSequence,
 }: DataArtifactProps) {
   const hasAnyContent =
     sql || insights.length > 0 || !!leadPreview || !!leadImportProgress || !!leadImportResult
@@ -191,9 +193,9 @@ export function DataArtifact({
 
   // Determine the main title based on what content is available
   const getTitle = () => {
-    if (leadImportProgress) return "리드 추가 진행 중"
-    if (leadImportResult) return "리드 추가 완료"
-    if (leadPreview) return "리드 미리보기"
+    if (leadImportProgress) return "Lead Import in Progress"
+    if (leadImportResult) return "Lead Import Complete"
+    if (leadPreview) return "Lead Preview"
     return question || "Analysis Results"
   }
 
@@ -233,6 +235,7 @@ export function DataArtifact({
             result={leadImportResult}
             progressLogs={progressLogs}
             startTime={startTime}
+            onGenerateSequence={onGenerateSequence}
           />
         )}
         {/* SQL Query Section */}

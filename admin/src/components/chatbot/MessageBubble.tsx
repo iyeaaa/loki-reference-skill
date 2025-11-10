@@ -36,22 +36,22 @@ export const MessageBubble = React.memo(
 
     const handleLike = () => {
       setFeedback("like")
-      toast.success("피드백 주셔서 감사합니다!")
+      toast.success("Thank you for your feedback!")
     }
 
     const handleDislike = () => {
       setFeedback("dislike")
-      toast.success("피드백 주셔서 감사합니다!")
+      toast.success("Thank you for your feedback!")
     }
 
     const handleCopy = async () => {
       try {
         await navigator.clipboard.writeText(message.content)
         setCopied(true)
-        toast.success("복사되었습니다!")
+        toast.success("Copied!")
         setTimeout(() => setCopied(false), 2000)
       } catch (_err) {
-        toast.error("복사에 실패했습니다.")
+        toast.error("Failed to copy.")
       }
     }
 
@@ -199,7 +199,7 @@ export const MessageBubble = React.memo(
                   size="sm"
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
-                  ✓ 계속 진행
+                  ✓ Continue
                 </Button>
                 <Button
                   onClick={() => onConfirm(false)}
@@ -207,7 +207,7 @@ export const MessageBubble = React.memo(
                   variant="outline"
                   className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
                 >
-                  ✗ 취소
+                  ✗ Cancel
                 </Button>
               </div>
             )}
@@ -226,19 +226,19 @@ export const MessageBubble = React.memo(
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-foreground truncate">
                       {message.metadata?.importResult
-                        ? "리드 임포트 결과"
-                        : questionText || "아티팩트 보기"}
+                        ? "Lead Import Results"
+                        : questionText || "View Artifact"}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {message.metadata?.importResult
-                        ? `성공 ${message.metadata.importResult.success}건 · 스킵 ${message.metadata.importResult.skipped}건 · 실패 ${message.metadata.importResult.failed}건`
+                        ? `${message.metadata.importResult.success} succeeded · ${message.metadata.importResult.skipped} skipped · ${message.metadata.importResult.failed} failed`
                         : message.metadata?.sql &&
                             message.metadata?.insights?.length &&
                             message.metadata.insights.length > 0
-                          ? `SQL 쿼리 및 ${message.metadata.insights.length}개의 인사이트`
+                          ? `SQL query and ${message.metadata.insights.length} insights`
                           : message.metadata?.sql
-                            ? "SQL 쿼리"
-                            : `${message.metadata?.insights?.length || 0}개의 인사이트`}
+                            ? "SQL query"
+                            : `${message.metadata?.insights?.length || 0} insights`}
                     </div>
                   </div>
                 </div>

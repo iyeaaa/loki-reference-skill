@@ -212,14 +212,18 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
                 event: "connected",
                 data: {
                   type: "init",
-                  message: `고객 그룹 '${fileNameWithoutExt}'에 리드를 임포트합니다`,
+                  message: `Importing leads to customer group '${fileNameWithoutExt}' (workspace-scoped duplicate detection)`,
                   timestamp: new Date().toISOString(),
                   total: parsedLeads.length,
                   customerGroupId,
                   customerGroupName: fileNameWithoutExt,
+                  workspaceId,
                 },
               })
-              logger.info("[Lead Import] Sent init event")
+              logger.info(
+                { workspaceId, customerGroupId, total: parsedLeads.length },
+                "[Lead Import] Sent init event with workspace-scoped duplicate detection",
+              )
 
               // 임포트 시작 (자동 생성된 customerGroupId 사용)
               const result = await importLeadsBatch(
@@ -318,7 +322,7 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
         tags: ["admin", "lead-import"],
         summary: "Excel 또는 CSV 파일로 리드 일괄 임포트 (SSE)",
         description:
-          "Excel 또는 CSV 파일을 업로드하여 여러 리드를 일괄 임포트합니다. 파일명(확장자 제외)으로 자동으로 고객 그룹을 생성하고 리드를 연결합니다. 같은 이름의 그룹이 이미 있으면 기존 그룹을 사용합니다. 실시간 진행상황을 SSE로 전송합니다. CSV 파일의 경우 UTF-8 BOM이 자동으로 제거됩니다. 중복 이메일 방지: (1) 파일 내부의 중복 이메일과 (2) Workspace 내 기존 데이터베이스의 중복 이메일이 자동으로 감지되어 스킵되며, 완료 시 중복 이메일 목록(existingLeadId, rowNumber, companyName 포함)이 반환됩니다.",
+          "Excel 또는 CSV 파일을 업로드하여 여러 리드를 일괄 임포트합니다. 파일명(확장자 제외)으로 자동으로 고객 그룹을 생성하고 리드를 연결합니다. 같은 이름의 그룹이 이미 있으면 기존 그룹을 사용합니다. 실시간 진행상황을 SSE로 전송합니다. CSV 파일의 경우 UTF-8 BOM이 자동으로 제거됩니다. \n\n**워크스페이스 기준 중복 처리**: (1) Website URL 중복: 워크스페이스 내에 동일한 URL이 존재하면 리드 전체가 스킵됩니다. (2) 이메일 중복: 파일 내부의 중복 이메일과 워크스페이스 내 기존 DB의 중복 이메일이 자동으로 감지되어 제외되지만, 리드 자체는 생성됩니다. 완료 시 중복 이메일 목록(existingLeadId, rowNumber, companyName 포함)이 반환됩니다.",
       },
     },
   )
@@ -492,38 +496,37 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
           // 컬럼 정보 추출
           const columns = Object.keys(rawData[0] || {})
 
-          const analysisPrompt = `다음은 업로드된 엑셀 파일의 리드 데이터입니다.
+          const analysisPrompt = `You are a professional sales analyst. Analyze the following lead data from an uploaded Excel file and provide a comprehensive sales intelligence report.
 
-총 ${rawData.length}개의 행이 있으며, 그 중 ${sampleSize}개를 랜덤으로 샘플링하여 분석합니다.
+**Dataset Overview:**
+- Total Records: ${rawData.length}
+- Sample Size Analyzed: ${sampleSize} rows (randomly selected)
+- Available Columns: ${columns.join(", ")}
 
-**컬럼 정보:**
-${columns.join(", ")}
-
-**샘플 데이터 (${sampleSize}행):**
+**Sample Data:**
 ${JSON.stringify(sampleData, null, 2)}
 
-이 데이터를 분석하여 다음 내용을 **구체적인 사례를 들어** 작성해주세요:
+**Instructions:**
+Generate a professional sales analysis report with the following sections. Use a business-formal tone suitable for executive presentation.
 
-### 1. 📊 데이터 개요
-- 어떤 종류의 리드 데이터인지 (업종, 특성 등)
-- **구체적 사례 최소 3개 포함** (예: "샘플 중 '○○회사'는 뷰티 업종, '△△회사'는 식품 업종...")
+### 1. Executive Summary
+Provide a high-level overview of the lead dataset. Identify the primary industry sectors represented and key characteristics. Include at least 3 specific company examples with their industry classifications (e.g., "XYZ Corporation operates in the manufacturing sector, ABC Inc. specializes in B2B software...").
 
-### 2. ✅ 데이터 품질 분석
-- 필수 정보(회사명, 웹사이트, 연락처 등)의 완성도
-- **구체적 통계와 사례 최소 3개** (예: "20개 중 18개(90%)에 이메일 존재, 단 '○○회사', '△△회사'는 누락...")
+### 2. Data Completeness Assessment
+Evaluate the quality and completeness of critical sales fields (company name, website URL, email addresses, phone numbers, contact information). Provide quantitative metrics with specific examples (e.g., "85% (17 of 20) records contain valid email addresses. Notable gaps exist for Company X and Company Y, requiring data enrichment...").
 
-### 3. 🔍 주요 특징 및 패턴
-- 데이터에서 눈에 띄는 패턴이나 특성
-- **구체적 패턴과 사례 최소 3개** (예: "인스타그램 계정 보유율 80%, 특히 '○○', '△△', '××'는 팔로워 1만+...")
+### 3. Market Intelligence Insights
+Identify significant patterns, trends, or characteristics that could inform sales strategy. Include at least 3 data-driven observations with concrete examples (e.g., "40% of leads maintain active LinkedIn corporate pages with 500+ connections, notably Company A, Company B, and Company C, indicating strong digital presence...").
 
-### 4. 💡 활용 권장사항
-- 이 데이터를 활용할 때 주의할 점이나 제안
-- **실행 가능한 구체적 제안 최소 3개** (예: "이메일 누락 2건은 웹사이트에서 수집 필요...")
+### 4. Sales Action Recommendations
+Provide strategic recommendations for lead engagement and data optimization. Include at least 3 specific, actionable steps (e.g., "Priority 1: Enrich 15% of records missing contact emails through LinkedIn prospecting or website contact forms. Priority 2: Segment leads by company size for targeted outreach...").
 
-**중요:**
-- 각 섹션마다 **실제 데이터의 구체적인 회사명이나 수치를 인용**하여 근거를 명확히 제시
-- 단순히 "일부", "대부분" 같은 모호한 표현 대신 **정확한 개수와 비율** 사용
-- 총 500-700자 정도로 작성하되, 구체성을 최우선으로`
+**Report Requirements:**
+- Maintain professional business language throughout
+- Reference specific company names and exact figures from the dataset
+- Use precise percentages and counts (avoid vague terms like "several" or "many")
+- Target length: 500-700 words
+- Focus on actionable sales intelligence rather than generic observations`
 
           const response = await llm.invoke(analysisPrompt)
           aiAnalysis = response.content as string

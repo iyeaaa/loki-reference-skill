@@ -12,7 +12,7 @@ export function LeadProgressSection({ progress }: LeadProgressSectionProps) {
     <div className="space-y-3">
       <SectionHeader
         icon={<Activity className="h-3.5 w-3.5 text-blue-500" />}
-        title="리드 추가 진행 상황"
+        title="Lead Import Progress"
       />
       <LeadImportProgress progress={progress} />
     </div>

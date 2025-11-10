@@ -6,6 +6,11 @@ import { generateFollowUpQuestions } from "./nodes/follow-up-generator"
 import { generateInsights } from "./nodes/insight-generator"
 import { executeQuery } from "./nodes/query-executor"
 import { analyzeResults } from "./nodes/result-analyzer"
+import {
+  analyzeLeadsAndGenerateStrategy,
+  generateSequenceWithStrategy,
+  handleSequenceGenerationRequest,
+} from "./nodes/sequence-generation"
 import { executeSequential } from "./nodes/sequential-executor"
 import { generateSQL } from "./nodes/sql-generator"
 import { validateSQL } from "./nodes/sql-validator"
@@ -26,6 +31,9 @@ const NODE_NAMES = {
   FORMAT_RESPONSE: "formatResponse",
   HANDLE_ERROR: "handleError",
   ASK_CLARIFICATION: "askClarification",
+  HANDLE_SEQUENCE_GENERATION_REQUEST: "handleSequenceGenerationRequest",
+  ANALYZE_LEADS_AND_GENERATE_STRATEGY: "analyzeLeadsAndGenerateStrategy",
+  GENERATE_SEQUENCE_WITH_STRATEGY: "generateSequenceWithStrategy",
 } as const
 
 type NodeName = (typeof NODE_NAMES)[keyof typeof NODE_NAMES]
@@ -37,7 +45,8 @@ async function handleError(state: ChatbotState): Promise<Partial<ChatbotState>> 
 
   const result = {
     analysis:
-      state.error || "예상치 못한 문제가 발생했어요. 다른 방식으로 질문해주시거나 문의해주세요.",
+      state.error ||
+      "An unexpected error occurred. Please try rephrasing your question or contact support.",
   }
 
   const duration = Date.now() - startTime
@@ -138,8 +147,8 @@ async function askConfirmation(state: ChatbotState): Promise<Command> {
   return new Command({
     goto: NODE_NAMES.HANDLE_ERROR,
     update: {
-      error: "작업을 취소했어요.",
-      analysis: "작업을 취소했어요.",
+      error: "Operation cancelled.",
+      analysis: "Operation cancelled.",
     },
   })
 }
@@ -183,6 +192,17 @@ function routeAfterAnalysis(state: ChatbotState): NodeName {
     chatbotLogger.routeDecision(NODE_NAMES.ANALYZE, NODE_NAMES.HANDLE_ERROR, "error occurred")
     return NODE_NAMES.HANDLE_ERROR
   }
+
+  // PRIORITY: Check for sequence generation request first
+  if (state.isSequenceGenerationRequest || state.sequenceGenerationRequest) {
+    chatbotLogger.routeDecision(
+      NODE_NAMES.ANALYZE,
+      NODE_NAMES.HANDLE_SEQUENCE_GENERATION_REQUEST,
+      "sequence generation detected - bypassing SQL generation",
+    )
+    return NODE_NAMES.HANDLE_SEQUENCE_GENERATION_REQUEST
+  }
+
   if (state.needsClarification) {
     chatbotLogger.routeDecision(
       NODE_NAMES.ANALYZE,
@@ -310,12 +330,26 @@ export function createChatbotGraph() {
   workflow.addNode(NODE_NAMES.FORMAT_RESPONSE, formatResponse)
   workflow.addNode(NODE_NAMES.HANDLE_ERROR, handleError)
   workflow.addNode(NODE_NAMES.ASK_CLARIFICATION, askClarification)
+  workflow.addNode(NODE_NAMES.HANDLE_SEQUENCE_GENERATION_REQUEST, handleSequenceGenerationRequest, {
+    ends: [END, NODE_NAMES.ANALYZE_LEADS_AND_GENERATE_STRATEGY],
+  })
+  workflow.addNode(
+    NODE_NAMES.ANALYZE_LEADS_AND_GENERATE_STRATEGY,
+    analyzeLeadsAndGenerateStrategy,
+    {
+      ends: [END, NODE_NAMES.GENERATE_SEQUENCE_WITH_STRATEGY],
+    },
+  )
+  workflow.addNode(NODE_NAMES.GENERATE_SEQUENCE_WITH_STRATEGY, generateSequenceWithStrategy, {
+    ends: [END],
+  })
 
   // 엣지 정의
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
   workflow.addConditionalEdges(NODE_NAMES.ANALYZE, routeAfterAnalysis, {
     [NODE_NAMES.HANDLE_ERROR]: NODE_NAMES.HANDLE_ERROR,
     [NODE_NAMES.ASK_CLARIFICATION]: NODE_NAMES.ASK_CLARIFICATION,
+    [NODE_NAMES.HANDLE_SEQUENCE_GENERATION_REQUEST]: NODE_NAMES.HANDLE_SEQUENCE_GENERATION_REQUEST,
     [NODE_NAMES.GENERATE_SQL]: NODE_NAMES.GENERATE_SQL,
   })
 
@@ -370,8 +404,15 @@ export function createChatbotGraph() {
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
   workflow.addEdge(NODE_NAMES.GENERATE_FOLLOW_UPS, NODE_NAMES.FORMAT_RESPONSE)
 
+  // Format response routes to sequence generation request handler
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
-  workflow.addEdge(NODE_NAMES.FORMAT_RESPONSE, END)
+  workflow.addEdge(NODE_NAMES.FORMAT_RESPONSE, NODE_NAMES.HANDLE_SEQUENCE_GENERATION_REQUEST)
+
+  // handleSequenceGenerationRequest returns Command, so no edges needed
+  // It will route to either END or generateSequenceForGroup based on user decision
+
+  // generateSequenceForGroup returns Command routing back to analyze
+  // No edges needed - Command handles routing automatically
 
   // 진입점 설정
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions

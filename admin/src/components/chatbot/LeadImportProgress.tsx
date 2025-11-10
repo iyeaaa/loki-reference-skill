@@ -216,6 +216,43 @@ export function LeadImportProgress({ progress }: LeadImportProgressProps) {
             </div>
           )}
 
+          {/* Duplicate Emails Info (Workspace-scoped) */}
+          {isComplete &&
+            progress.result?.duplicateEmails &&
+            progress.result.duplicateEmails.length > 0 && (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20 p-4">
+                <div className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                  워크스페이스 내 중복 이메일 (
+                  {progress.result.emailsSkipped || progress.result.duplicateEmails.length}건)
+                </div>
+                <div className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+                  ℹ️ 해당 리드는 생성되었지만 중복된 이메일은 제외되었습니다
+                </div>
+                <div className="space-y-1 max-h-32 overflow-y-auto text-xs">
+                  {progress.result.duplicateEmails.slice(0, 5).map((item, idx) => (
+                    <div key={idx} className="text-blue-800 dark:text-blue-200">
+                      #{item.rowNumber}: {item.email} ({item.companyName || "이름 없음"})
+                      {item.existingLeadId !== "CSV_DUPLICATE" && (
+                        <span className="text-blue-600 dark:text-blue-400 ml-1">
+                          - 기존 리드 ID: {item.existingLeadId.substring(0, 8)}...
+                        </span>
+                      )}
+                      {item.existingLeadId === "CSV_DUPLICATE" && (
+                        <span className="text-blue-600 dark:text-blue-400 ml-1">
+                          - 파일 내 중복
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                  {progress.result.duplicateEmails.length > 5 && (
+                    <div className="text-blue-700 dark:text-blue-300 italic">
+                      외 {progress.result.duplicateEmails.length - 5}건...
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
           {/* Skipped Leads Info */}
           {isComplete &&
             progress.result?.skippedLeads &&
@@ -223,6 +260,9 @@ export function LeadImportProgress({ progress }: LeadImportProgressProps) {
               <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-4">
                 <div className="text-sm font-medium text-amber-900 dark:text-amber-100 mb-2">
                   중복으로 스킵된 리드 ({progress.result.skippedLeads.length}건)
+                </div>
+                <div className="text-xs text-amber-700 dark:text-amber-300 mb-2">
+                  ℹ️ Website URL이 이미 워크스페이스에 존재하여 리드 전체가 스킵되었습니다
                 </div>
                 <div className="space-y-1 max-h-32 overflow-y-auto text-xs">
                   {progress.result.skippedLeads.slice(0, 5).map((lead, idx) => (

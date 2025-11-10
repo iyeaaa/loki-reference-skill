@@ -10,16 +10,16 @@ const llm = new ChatOpenAI({
 export async function generateInsights(state: ChatbotState): Promise<Partial<ChatbotState>> {
   const emitter = state._emitter
 
-  // 노드 시작 이벤트
+  // Node start event
   if (emitter) {
-    emitter.nodeStart("generateInsights", "중요한 내용을 정리하고 있어요...")
+    emitter.nodeStart("generateInsights", "Summarizing key insights...")
   }
 
   try {
-    // 결과가 없는 경우에만 인사이트 생략 (1개 행도 인사이트 생성 가능)
+    // Skip insights only if there are no results (can generate insights even for 1 row)
     if (state.queryResult.length === 0) {
       if (emitter) {
-        emitter.nodeComplete("generateInsights", "데이터 인사이트 생략 (결과 없음)", {
+        emitter.nodeComplete("generateInsights", "Data insights skipped (no results)", {
           insights: [],
         })
       }
@@ -46,8 +46,8 @@ export async function generateInsights(state: ChatbotState): Promise<Partial<Cha
     if (emitter) {
       emitter.nodeComplete(
         "generateInsights",
-        `핵심 내용 정리 완료 (${Array.isArray(insights) ? insights.length : 0}개)`,
-        { insights: Array.isArray(insights) ? insights : [] }, // 즉시 프론트엔드로 전송
+        `Summarized ${Array.isArray(insights) ? insights.length : 0} key insights`,
+        { insights: Array.isArray(insights) ? insights : [] }, // Send to frontend immediately
       )
     }
 
@@ -55,7 +55,7 @@ export async function generateInsights(state: ChatbotState): Promise<Partial<Cha
       insights: Array.isArray(insights) ? insights : [],
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류"
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
     if (emitter) {
       emitter.error("generateInsights", errorMessage)
     }

@@ -12,9 +12,9 @@ export async function generateFollowUpQuestions(
 ): Promise<Partial<ChatbotState>> {
   const emitter = state._emitter
 
-  // 노드 시작 이벤트
+  // Node start event
   if (emitter) {
-    emitter.nodeStart("generateFollowUpQuestions", "추가 질문 제안 중...")
+    emitter.nodeStart("generateFollowUpQuestions", "Generating follow-up questions...")
   }
 
   try {
@@ -32,8 +32,8 @@ export async function generateFollowUpQuestions(
     if (emitter) {
       emitter.nodeComplete(
         "generateFollowUpQuestions",
-        `후속 질문 생성 완료 (${Array.isArray(questions) ? questions.length : 0}개)`,
-        { followUpQuestions: Array.isArray(questions) ? questions : [] }, // 즉시 프론트엔드로 전송
+        `Generated ${Array.isArray(questions) ? questions.length : 0} follow-up questions`,
+        { followUpQuestions: Array.isArray(questions) ? questions : [] }, // Send to frontend immediately
       )
     }
 
@@ -41,7 +41,7 @@ export async function generateFollowUpQuestions(
       followUpQuestions: Array.isArray(questions) ? questions : [],
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류"
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
     if (emitter) {
       emitter.error("generateFollowUpQuestions", errorMessage)
     }

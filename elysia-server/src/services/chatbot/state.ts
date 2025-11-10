@@ -65,6 +65,31 @@ export interface ChatbotState {
     rows: Record<string, string>[]
     rowCount: number
   }
+
+  // Sequence Generation
+  sequenceGenerationRequest?: {
+    customerGroupId: string
+    customerGroupName: string
+    membersCount: number
+  }
+  pendingSequenceGeneration: boolean
+  generatedSequenceId?: string
+  isSequenceGenerationRequest?: boolean // Flag to bypass SQL generation
+
+  // AI-Generated Sequence Strategy
+  sequenceStrategy?: {
+    dominant_business_type: string
+    avg_company_size: number
+    company_size_category: string
+    avg_lead_score: number
+    business_type_focus: string
+    samples_analyzed: number
+    email_strategy: {
+      step1: { subject: string; body: string; delay_days: number; timing: string }
+      step2: { subject: string; body: string; delay_days: number; timing: string }
+      step3: { subject: string; body: string; delay_days: number; timing: string }
+    }
+  }
 }
 
 export interface ChatMessage {
@@ -232,6 +257,48 @@ export const ChatbotStateAnnotation = Annotation.Root({
         headers: string[]
         rows: Record<string, string>[]
         rowCount: number
+      }
+    | undefined
+  >({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => undefined,
+  }),
+  sequenceGenerationRequest: Annotation<
+    | {
+        customerGroupId: string
+        customerGroupName: string
+        membersCount: number
+      }
+    | undefined
+  >({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => undefined,
+  }),
+  pendingSequenceGeneration: Annotation<boolean>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => false,
+  }),
+  generatedSequenceId: Annotation<string | undefined>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => undefined,
+  }),
+  isSequenceGenerationRequest: Annotation<boolean | undefined>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => undefined,
+  }),
+  sequenceStrategy: Annotation<
+    | {
+        dominant_business_type: string
+        avg_company_size: number
+        company_size_category: string
+        avg_lead_score: number
+        business_type_focus: string
+        samples_analyzed: number
+        email_strategy: {
+          step1: { subject: string; body: string; delay_days: number; timing: string }
+          step2: { subject: string; body: string; delay_days: number; timing: string }
+          step3: { subject: string; body: string; delay_days: number; timing: string }
+        }
       }
     | undefined
   >({

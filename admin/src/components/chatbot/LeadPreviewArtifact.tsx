@@ -35,16 +35,18 @@ export function LeadPreviewArtifact({
     <div className="flex flex-col h-full">
       {/* Header Section */}
       <div className="flex-none px-2 pt-3 pb-2 space-y-2">
-        <h2 className="text-base font-semibold">리드 데이터 검토</h2>
+        <h2 className="text-base font-semibold">Review Lead Data</h2>
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="gap-1 text-xs font-medium">
             <FileSpreadsheet className="h-3 w-3" />
             {data.sheetName}
           </Badge>
           <Badge variant="outline" className="gap-1 text-xs font-medium">
-            총 {data.totalRows.toLocaleString()}건
+            Total {data.totalRows.toLocaleString()} records
           </Badge>
-          <span className="text-xs text-muted-foreground">• 중복 데이터는 자동으로 제외됩니다</span>
+          <span className="text-xs text-muted-foreground">
+            • Duplicate data will be automatically excluded
+          </span>
         </div>
       </div>
 
@@ -60,14 +62,14 @@ export function LeadPreviewArtifact({
                       <TableHead className="w-[50px] text-xs font-medium sticky left-0 bg-white dark:bg-background z-20 border-r">
                         #
                       </TableHead>
-                      <TableHead className="w-[120px] text-xs font-medium">회사명</TableHead>
-                      <TableHead className="w-[140px] text-xs font-medium">웹사이트</TableHead>
-                      <TableHead className="w-[160px] text-xs font-medium">이메일</TableHead>
-                      <TableHead className="w-[120px] text-xs font-medium">전화번호</TableHead>
-                      <TableHead className="w-[160px] text-xs font-medium">주소</TableHead>
-                      <TableHead className="w-[120px] text-xs font-medium">업종</TableHead>
-                      <TableHead className="w-[120px] text-xs font-medium">산업</TableHead>
-                      <TableHead className="w-[140px] text-xs font-medium">제품</TableHead>
+                      <TableHead className="w-[120px] text-xs font-medium">Company</TableHead>
+                      <TableHead className="w-[140px] text-xs font-medium">Website</TableHead>
+                      <TableHead className="w-[160px] text-xs font-medium">Email</TableHead>
+                      <TableHead className="w-[120px] text-xs font-medium">Phone</TableHead>
+                      <TableHead className="w-[160px] text-xs font-medium">Address</TableHead>
+                      <TableHead className="w-[120px] text-xs font-medium">Sector</TableHead>
+                      <TableHead className="w-[120px] text-xs font-medium">Industry</TableHead>
+                      <TableHead className="w-[140px] text-xs font-medium">Product</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -318,7 +320,7 @@ export function LeadPreviewArtifact({
             size="default"
           >
             <XCircle className="h-4 w-4" />
-            취소
+            Cancel
           </Button>
           <Button
             onClick={onApprove}
@@ -327,7 +329,7 @@ export function LeadPreviewArtifact({
             size="default"
           >
             <CheckCircle2 className="h-4 w-4" />
-            {isProcessing ? "처리 중..." : "승인"}
+            {isProcessing ? "Processing..." : "Approve"}
           </Button>
         </div>
       </div>

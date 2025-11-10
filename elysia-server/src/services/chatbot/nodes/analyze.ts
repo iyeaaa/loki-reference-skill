@@ -15,7 +15,7 @@ export async function analyzeQuestion(state: ChatbotState): Promise<Partial<Chat
 
   // Emit node start event
   if (emitter) {
-    emitter.nodeStart("analyzeQuestion", "요청하신 내용을 확인하고 있어요...")
+    emitter.nodeStart("analyzeQuestion", "Analyzing your request...")
   }
 
   chatbotLogger.nodeStart("analyzeQuestion")
@@ -28,6 +28,34 @@ export async function analyzeQuestion(state: ChatbotState): Promise<Partial<Chat
   })
 
   try {
+    // PRIORITY CHECK: Sequence generation request bypasses normal analysis
+    if (state.sequenceGenerationRequest) {
+      chatbotLogger.info(
+        `[Analyze] Detected sequence generation request for group: ${state.sequenceGenerationRequest.customerGroupName}`,
+      )
+
+      const duration = Date.now() - startTime
+      chatbotLogger.nodeSuccess("analyzeQuestion (sequence bypass)", duration)
+
+      if (emitter) {
+        emitter.nodeComplete("analyzeQuestion", "Sequence generation request detected", {
+          intent: "sequence_generation",
+          isSequenceGenerationRequest: true,
+        })
+      }
+
+      return {
+        metadata: {
+          intent: "sequence_generation",
+          operationType: "create",
+          requiredTables: ["sequences", "sequence_steps"],
+        },
+        isSequenceGenerationRequest: true,
+        schemaContext: "",
+        needsClarification: false,
+      }
+    }
+
     // Check if CSV data is present
     const hasCSV = !!state.csvData && state.csvData.rowCount > 0
 
@@ -68,7 +96,7 @@ export async function analyzeQuestion(state: ChatbotState): Promise<Partial<Chat
 
     // Emit node complete event
     if (emitter) {
-      emitter.nodeComplete("analyzeQuestion", "내용 확인 완료", {
+      emitter.nodeComplete("analyzeQuestion", "Analysis complete", {
         intent: analysis.intent,
         needsClarification: analysis.needsClarification || false,
       })
@@ -82,16 +110,16 @@ export async function analyzeQuestion(state: ChatbotState): Promise<Partial<Chat
     }
   } catch (error) {
     const duration = Date.now() - startTime
-    const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류"
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
     chatbotLogger.nodeError("analyzeQuestion", errorMessage, duration)
 
     // Emit error event
     if (emitter) {
-      emitter.error("analyzeQuestion", `내용을 이해하는데 문제가 생겼어요: ${errorMessage}`)
+      emitter.error("analyzeQuestion", `Failed to analyze request: ${errorMessage}`)
     }
 
     return {
-      error: `요청하신 내용을 확인하는 중 문제가 발생했어요. 다시 한 번 시도해주세요.`,
+      error: `An error occurred while analyzing your request. Please try again.`,
       needsClarification: false,
     }
   }

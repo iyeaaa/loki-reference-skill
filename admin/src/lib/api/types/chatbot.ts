@@ -70,6 +70,11 @@ export interface ChatMessage {
     }
     progressLogs?: ProgressLog[]
     startTime?: number
+    sequenceGenerationRequest?: {
+      customerGroupId: string
+      customerGroupName: string
+      membersCount: number
+    }
   }
 }
 

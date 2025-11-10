@@ -70,37 +70,38 @@ export function SequenceGeneratorModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            시퀀스 자동 생성
+            Auto-Generate Sequence
           </DialogTitle>
           <DialogDescription>
-            고객 그룹을 선택하고 요구사항을 입력하면 AI가 자동으로 시퀀스를 생성합니다.
+            Select a customer group and describe your requirements. AI will automatically generate a
+            sequence for you.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           {/* Customer Group Selection */}
           <div className="space-y-2">
-            <Label htmlFor={customerGroupId}>고객 그룹</Label>
+            <Label htmlFor={customerGroupId}>Customer Group</Label>
             {isLoadingGroups ? (
               <div className="flex items-center gap-2 px-3 py-2 border rounded-md text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                고객 그룹 불러오는 중...
+                Loading customer groups...
               </div>
             ) : (
               <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
                 <SelectTrigger id={customerGroupId}>
-                  <SelectValue placeholder="고객 그룹을 선택하세요" />
+                  <SelectValue placeholder="Select a customer group" />
                 </SelectTrigger>
                 <SelectContent>
                   {customerGroups?.map((group) => (
                     <SelectItem key={group.id} value={group.id}>
                       {group.name}
-                      {group.leadCount !== undefined && ` (${group.leadCount}명)`}
+                      {group.leadCount !== undefined && ` (${group.leadCount} leads)`}
                     </SelectItem>
                   ))}
                   {(!customerGroups || customerGroups.length === 0) && (
                     <div className="px-2 py-3 text-sm text-muted-foreground text-center">
-                      생성된 고객 그룹이 없습니다
+                      No customer groups available
                     </div>
                   )}
                 </SelectContent>
@@ -110,23 +111,23 @@ export function SequenceGeneratorModal({
 
           {/* Prompt Input */}
           <div className="space-y-2">
-            <Label htmlFor={promptId}>요구사항</Label>
+            <Label htmlFor={promptId}>Requirements</Label>
             <Textarea
               id={promptId}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="예: B2B SaaS 기업을 위한 5단계 육성 시퀀스를 만들어줘. 첫 이메일은 회사 소개, 이후에는 제품 소개와 케이스 스터디를 포함해줘."
+              placeholder="Example: Create a 5-step nurturing sequence for B2B SaaS companies. Start with company introduction, then include product demos and case studies in follow-ups."
               className="min-h-[120px] resize-none"
             />
             <p className="text-xs text-muted-foreground">
-              생성하고 싶은 시퀀스의 목적, 단계, 내용 등을 자세히 설명해주세요.
+              Describe the purpose, steps, and content of the sequence you want to create.
             </p>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-            취소
+            Cancel
           </Button>
           <Button
             onClick={handleSubmit}
@@ -135,12 +136,12 @@ export function SequenceGeneratorModal({
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                생성 중...
+                Generating...
               </>
             ) : (
               <>
                 <Sparkles className="mr-2 h-4 w-4" />
-                생성하기
+                Generate
               </>
             )}
           </Button>

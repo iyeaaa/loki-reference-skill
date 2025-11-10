@@ -14,7 +14,7 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
 
   // Emit node start event
   if (emitter) {
-    emitter.nodeStart("generateSQL", "필요한 데이터를 찾고 있어요...")
+    emitter.nodeStart("generateSQL", "Finding the data you need...")
   }
 
   chatbotLogger.nodeStart("generateSQL")
@@ -66,7 +66,7 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
 
         // Emit node complete event
         if (emitter) {
-          emitter.nodeComplete("generateSQL", `데이터 준비 완료 (${result.queries.length}단계)`, {
+          emitter.nodeComplete("generateSQL", `Data ready (${result.queries.length} steps)`, {
             queryCount: result.queries.length,
           })
         }
@@ -92,7 +92,7 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
 
         // Emit node complete event
         if (emitter) {
-          emitter.nodeComplete("generateSQL", "데이터 준비 완료")
+          emitter.nodeComplete("generateSQL", "Data ready")
         }
 
         return {
@@ -111,7 +111,7 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
 
     // Emit node complete event
     if (emitter) {
-      emitter.nodeComplete("generateSQL", "데이터 준비 완료")
+      emitter.nodeComplete("generateSQL", "Data ready")
     }
 
     return {
@@ -124,10 +124,10 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
     const errorMessage = error instanceof Error ? error.message : "Unknown error"
 
     // More specific error message for JSON parsing errors
-    let userFriendlyError = `데이터를 찾는 중 문제가 발생했어요: ${errorMessage}`
+    let userFriendlyError = `An error occurred while fetching data: ${errorMessage}`
     if (errorMessage.includes("JSON") || errorMessage.includes("parse")) {
       userFriendlyError =
-        "요청하신 내용을 처리하지 못했어요. 질문을 조금 더 구체적으로 바꿔서 다시 시도해주세요."
+        "Unable to process your request. Please try rephrasing your question more specifically."
     }
 
     chatbotLogger.nodeError("generateSQL", errorMessage, duration)

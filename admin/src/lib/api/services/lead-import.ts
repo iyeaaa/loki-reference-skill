@@ -19,6 +19,13 @@ export interface SheetNamesResponse {
   error?: string
 }
 
+export interface DuplicateEmailInfo {
+  email: string
+  existingLeadId: string
+  rowNumber: number
+  companyName: string | null
+}
+
 export interface SkippedLeadInfo {
   rowNumber: number
   companyName: string | null
@@ -60,7 +67,14 @@ export interface ImportResult {
     industriesCreated: number
     groupMembersCreated: number
   }
+  duplicateEmails: DuplicateEmailInfo[]
+  emailsSkipped: number
   skippedLeads: SkippedLeadInfo[]
+  groupAssignment: {
+    groupId: string
+    groupName: string
+    membersAdded: number
+  } | null
   errors: Array<{
     row: number
     companyName: string | null

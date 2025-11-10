@@ -212,7 +212,8 @@ export function LeadUploadModal({ open, onOpenChange, onFileSelect }: LeadUpload
             Import Your Lead List
           </DialogTitle>
           <DialogDescription>
-            I'll research each prospect, write personalized sequences, and automate follow-ups for every lead in your file.
+            I'll research each prospect, write personalized sequences, and automate follow-ups for
+            every lead in your file.
           </DialogDescription>
         </DialogHeader>
 

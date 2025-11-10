@@ -2,13 +2,14 @@ import { format } from "date-fns"
 import { ko } from "date-fns/locale"
 import { Calendar as CalendarIcon, Search, X } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { SEARCHABLE_LEAD_FIELDS } from "@/lib/api/types/lead-filters"
+import { keyOfField, SEARCHABLE_LEAD_FIELDS } from "@/lib/api/types/lead-filters"
 import type { SearchToken } from "@/lib/utils/search-tokens"
-import { createToken, formatTokenDisplay } from "@/lib/utils/search-tokens"
+import { createToken } from "@/lib/utils/search-tokens"
 
 interface AdvancedSearchInputProps {
   tokens: SearchToken[]
@@ -21,6 +22,8 @@ export function AdvancedSearchInput({
   onChange,
   placeholder = "필드 선택 후 값을 입력한 뒤, Enter 키를 눌러 검색하세요. (예: @회사명:그린다)",
 }: AdvancedSearchInputProps) {
+  const { t } = useTranslation()
+
   const [inputValue, setInputValue] = useState("")
   const [showFieldSelector, setShowFieldSelector] = useState(false)
   const [selectedField, setSelectedField] = useState<string | null>(null)
@@ -33,30 +36,33 @@ export function AdvancedSearchInput({
   const fieldRefs = useRef<(HTMLButtonElement | null)[]>([])
 
   // Handle field selection
-  const handleFieldSelect = useCallback((field: string) => {
-    setSelectedField(field)
-    const fieldConfig = SEARCHABLE_LEAD_FIELDS.find((f) => f.field === field)
-    const fieldLabel = fieldConfig?.label || field
+  const handleFieldSelect = useCallback(
+    (field: string) => {
+      setSelectedField(field)
+      const fieldConfig = SEARCHABLE_LEAD_FIELDS.find((f) => f.field === field)
+      const fieldLabel = t(keyOfField(field))
 
-    // If it's a date field, show date picker instead
-    if (fieldConfig?.type === "date") {
-      setCurrentDateField(field)
-      setShowDatePicker(true)
-      setShowFieldSelector(false)
-      setDateRange({}) // Reset date range
-    } else {
-      const newValue = `@${fieldLabel}:`
-      setInputValue(newValue)
-      setShowFieldSelector(false)
-      // Focus input after selection and move cursor to end
-      setTimeout(() => {
-        if (inputRef.current) {
-          inputRef.current.focus()
-          inputRef.current.setSelectionRange(newValue.length, newValue.length)
-        }
-      }, 0)
-    }
-  }, [])
+      // If it's a date field, show date picker instead
+      if (fieldConfig?.type === "date") {
+        setCurrentDateField(field)
+        setShowDatePicker(true)
+        setShowFieldSelector(false)
+        setDateRange({}) // Reset date range
+      } else {
+        const newValue = `@${fieldLabel}:`
+        setInputValue(newValue)
+        setShowFieldSelector(false)
+        // Focus input after selection and move cursor to end
+        setTimeout(() => {
+          if (inputRef.current) {
+            inputRef.current.focus()
+            inputRef.current.setSelectionRange(newValue.length, newValue.length)
+          }
+        }, 0)
+      }
+    },
+    [t],
+  )
 
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,11 +93,13 @@ export function AdvancedSearchInput({
     if (!value.trim()) return
 
     // Find field by label
-    const fieldConfig = SEARCHABLE_LEAD_FIELDS.find((f) => f.label === fieldLabel.trim())
+    const fieldConfig = SEARCHABLE_LEAD_FIELDS.find(
+      (f) => t(keyOfField(f.field)) === fieldLabel.trim(),
+    )
     if (!fieldConfig) return
 
     // Create token
-    const newToken = createToken(fieldConfig.field, value.trim())
+    const newToken = createToken(fieldConfig.field, t(keyOfField(fieldConfig.field)), value.trim())
     onChange([...tokens, newToken])
 
     // Reset input and state
@@ -104,7 +112,7 @@ export function AdvancedSearchInput({
         inputRef.current.focus()
       }
     }, 0)
-  }, [inputValue, tokens, onChange])
+  }, [inputValue, tokens, onChange, t])
 
   // Handle date range confirmation
   const handleDateRangeConfirm = useCallback(() => {
@@ -131,7 +139,7 @@ export function AdvancedSearchInput({
       newToken = {
         id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         field: currentDateField,
-        fieldLabel: fieldConfig.label,
+        fieldLabel: t(keyOfField(currentDateField)),
         operator: "between",
         value: JSON.stringify({
           from: format(dateRange.from, "yyyy-MM-dd"),
@@ -145,7 +153,7 @@ export function AdvancedSearchInput({
       newToken = {
         id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         field: currentDateField,
-        fieldLabel: fieldConfig.label,
+        fieldLabel: t(keyOfField(currentDateField)),
         operator: "gte",
         value: format(dateRange.from, "yyyy-MM-dd"),
         displayValue,
@@ -156,7 +164,7 @@ export function AdvancedSearchInput({
       newToken = {
         id: `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         field: currentDateField,
-        fieldLabel: fieldConfig.label,
+        fieldLabel: t(keyOfField(currentDateField)),
         operator: "lte",
         value: format(dateRange.to, "yyyy-MM-dd"),
         displayValue,
@@ -180,7 +188,7 @@ export function AdvancedSearchInput({
         inputRef.current.focus()
       }
     }, 0)
-  }, [currentDateField, dateRange, tokens, onChange])
+  }, [currentDateField, dateRange, tokens, onChange, t])
 
   // No automatic token conversion - only manual via Enter key
 
@@ -288,7 +296,10 @@ export function AdvancedSearchInput({
                 variant="secondary"
                 className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50"
               >
-                <span className="text-xs font-medium">{formatTokenDisplay(token)}</span>
+                {/* <span className="text-xs font-medium">{formatTokenDisplay(token)}</span> */}
+                <span className="text-xs font-medium">
+                  @{t(keyOfField(token.field))}: {token.displayValue}
+                </span>
                 <button
                   type="button"
                   onClick={() => removeToken(token.id)}
@@ -333,7 +344,7 @@ export function AdvancedSearchInput({
             <div className="rounded-md border border-input bg-background shadow-lg">
               <div className="p-3">
                 <p className="text-xs text-muted-foreground mb-2 font-medium">
-                  검색할 필드를 선택하세요:
+                  {t("search.fieldSelector.title")}:
                 </p>
                 <div className="max-h-[300px] overflow-y-auto">
                   <div className="grid grid-cols-2 gap-1">
@@ -352,7 +363,8 @@ export function AdvancedSearchInput({
                             : "hover:bg-accent hover:text-accent-foreground"
                         }`}
                       >
-                        {field.label}
+                        {/* {field.label} */}
+                        {t(keyOfField(field.field))}
                       </button>
                     ))}
                   </div>
@@ -366,7 +378,9 @@ export function AdvancedSearchInput({
       {/* Active filters display */}
       {tokens.length > 0 && (
         <div className="text-xs text-muted-foreground">
-          <span className="font-medium">{tokens.length}개의 검색 조건이 적용되었습니다.</span>
+          <span className="font-medium">
+            {t("search.activeFilters.count", { count: tokens.length })}
+          </span>
         </div>
       )}
 
@@ -375,7 +389,7 @@ export function AdvancedSearchInput({
         <div className="mt-3 p-4 border border-input rounded-md bg-background">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-medium">
-              {SEARCHABLE_LEAD_FIELDS.find((f) => f.field === currentDateField)?.label} 범위 선택
+              {t(keyOfField(currentDateField))} {t("search.dateRange.selectRange")}
             </h4>
             <Button
               variant="ghost"
@@ -393,7 +407,7 @@ export function AdvancedSearchInput({
           <div className="grid grid-cols-2 gap-4">
             {/* From Date */}
             <div className="space-y-2">
-              <div className="text-sm font-medium">시작일</div>
+              <div className="text-sm font-medium">{t("search.dateRange.startDate")}</div>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start text-left font-normal">
@@ -401,7 +415,9 @@ export function AdvancedSearchInput({
                     {dateRange.from ? (
                       format(dateRange.from, "yyyy년 MM월 dd일", { locale: ko })
                     ) : (
-                      <span className="text-muted-foreground">무한대</span>
+                      <span className="text-muted-foreground">
+                        {t("search.dateRange.infinite")}
+                      </span>
                     )}
                   </Button>
                 </PopoverTrigger>
@@ -421,7 +437,7 @@ export function AdvancedSearchInput({
                         onClick={() => setDateRange((prev) => ({ ...prev, from: undefined }))}
                         className="w-full"
                       >
-                        초기화
+                        {t("search.dateRange.reset")}
                       </Button>
                     </div>
                   )}
@@ -431,7 +447,7 @@ export function AdvancedSearchInput({
 
             {/* To Date */}
             <div className="space-y-2">
-              <div className="text-sm font-medium">종료일</div>
+              <div className="text-sm font-medium">{t("search.dateRange.endDate")}</div>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start text-left font-normal">
@@ -439,7 +455,9 @@ export function AdvancedSearchInput({
                     {dateRange.to ? (
                       format(dateRange.to, "yyyy년 MM월 dd일", { locale: ko })
                     ) : (
-                      <span className="text-muted-foreground">무한대</span>
+                      <span className="text-muted-foreground">
+                        {t("search.dateRange.infinite")}
+                      </span>
                     )}
                   </Button>
                 </PopoverTrigger>
@@ -459,7 +477,7 @@ export function AdvancedSearchInput({
                         onClick={() => setDateRange((prev) => ({ ...prev, to: undefined }))}
                         className="w-full"
                       >
-                        초기화
+                        {t("search.dateRange.reset")}
                       </Button>
                     </div>
                   )}
@@ -477,9 +495,9 @@ export function AdvancedSearchInput({
                 setDateRange({})
               }}
             >
-              취소
+              {t("search.dateRange.cancel")}
             </Button>
-            <Button onClick={handleDateRangeConfirm}>적용</Button>
+            <Button onClick={handleDateRangeConfirm}>{t("search.dateRange.apply")}</Button>
           </div>
         </div>
       )}

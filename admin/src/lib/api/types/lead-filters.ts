@@ -66,10 +66,8 @@ export interface FilterPreset {
  */
 export interface SearchableField {
   field: string
-  label: string
   type: "string" | "number" | "date" | "enum"
-  options?: { value: string; label: string }[]
-  placeholder?: string
+  options?: string[]
 }
 
 /**
@@ -78,140 +76,92 @@ export interface SearchableField {
 export const SEARCHABLE_LEAD_FIELDS: SearchableField[] = [
   {
     field: "companyName",
-    label: "회사명",
     type: "string",
-    placeholder: "회사명을 입력하세요...",
   },
   {
     field: "contactName",
-    label: "담당자명",
     type: "string",
-    placeholder: "담당자명을 입력하세요...",
   },
   {
     field: "websiteUrl",
-    label: "웹사이트",
     type: "string",
-    placeholder: "웹사이트 URL을 입력하세요...",
   },
   {
     field: "country",
-    label: "국가",
     type: "string",
-    placeholder: "국가를 입력하세요...",
   },
   {
     field: "city",
-    label: "도시",
     type: "string",
-    placeholder: "도시를 입력하세요...",
   },
   {
     field: "state",
-    label: "주/도",
     type: "string",
-    placeholder: "주/도를 입력하세요...",
   },
   {
     field: "businessType",
-    label: "비즈니스 타입",
     type: "string",
-    placeholder: "비즈니스 타입을 입력하세요...",
   },
   {
     field: "leadStatus",
-    label: "상태",
     type: "enum",
-    options: [
-      { value: "new", label: "신규" },
-      { value: "contacted", label: "연락됨" },
-      { value: "qualified", label: "적격" },
-      { value: "unqualified", label: "부적격" },
-      { value: "converted", label: "전환됨" },
-      { value: "lost", label: "실패" },
-      { value: "unsubscribed", label: "구독취소" },
-    ],
+    options: ["new", "contacted", "qualified", "unqualified", "converted", "lost", "unsubscribed"],
   },
   {
     field: "leadSource",
-    label: "리드 소스",
     type: "string",
-    placeholder: "리드 소스를 입력하세요...",
   },
   {
     field: "leadScore",
-    label: "리드 점수",
     type: "number",
-    placeholder: "리드 점수를 입력하세요...",
   },
   {
     field: "foundedYear",
-    label: "설립연도",
     type: "number",
-    placeholder: "설립연도를 입력하세요...",
   },
   {
     field: "employeeCount",
-    label: "직원수",
     type: "string",
-    placeholder: "직원수를 입력하세요...",
   },
   {
     field: "address",
-    label: "주소",
     type: "string",
-    placeholder: "주소를 입력하세요...",
   },
   {
     field: "description",
-    label: "설명",
     type: "string",
-    placeholder: "설명을 입력하세요...",
   },
   {
     field: "notes",
-    label: "메모",
     type: "string",
-    placeholder: "메모를 입력하세요...",
   },
   {
     field: "createdBy",
-    label: "생성자",
     type: "string",
-    placeholder: "생성자를 입력하세요...",
   },
   {
     field: "createdAt",
-    label: "생성일",
     type: "date",
-    placeholder: "날짜를 선택하세요...",
   },
   {
     field: "updatedAt",
-    label: "수정일",
     type: "date",
-    placeholder: "날짜를 선택하세요...",
   },
   {
     field: "lastContactedAt",
-    label: "마지막 연락일",
     type: "date",
-    placeholder: "날짜를 선택하세요...",
   },
 ]
+
+export function keyOfField(field: string): string {
+  return `search.fieldSelector.field.${field}`
+}
 
 /**
  * Get field configuration by field name
  */
 export function getFieldConfig(field: string): SearchableField | undefined {
   return SEARCHABLE_LEAD_FIELDS.find((f) => f.field === field)
-}
-
-/**
- * Get field label by field name
- */
-export function getFieldLabel(field: string): string {
-  return getFieldConfig(field)?.label || field
 }
 
 /**

@@ -32,3 +32,17 @@ workspace.companyDescription,회사 설명,Company Description
 workspace.saving,저장 중...,Saving...
 workspace.saveChanges,변경사항 저장,Save Changes
 signature.title,이메일 서명 관리,Email Signature Management
+signature.add,[NO TRANSLATION] settings.signature.add,[NO TRANSLATION] settings.signature.add
+signature.addDescription,[NO TRANSLATION] settings.signature.addDescription,[NO TRANSLATION] settings.signature.addDescription
+signature.addSignature,[NO TRANSLATION] settings.signature.addSignature,[NO TRANSLATION] settings.signature.addSignature
+signature.createdAt,[NO TRANSLATION] settings.signature.createdAt,[NO TRANSLATION] settings.signature.createdAt
+signature.default,[NO TRANSLATION] settings.signature.default,[NO TRANSLATION] settings.signature.default
+signature.deleteConfirm,[NO TRANSLATION] settings.signature.deleteConfirm,[NO TRANSLATION] settings.signature.deleteConfirm
+signature.description,[NO TRANSLATION] settings.signature.description,[NO TRANSLATION] settings.signature.description
+signature.edit,[NO TRANSLATION] settings.signature.edit,[NO TRANSLATION] settings.signature.edit
+signature.loading,[NO TRANSLATION] settings.signature.loading,[NO TRANSLATION] settings.signature.loading
+signature.name,[NO TRANSLATION] settings.signature.name,[NO TRANSLATION] settings.signature.name
+signature.namePlaceholder,[NO TRANSLATION] settings.signature.namePlaceholder,[NO TRANSLATION] settings.signature.namePlaceholder
+signature.noSignatures,[NO TRANSLATION] settings.signature.noSignatures,[NO TRANSLATION] settings.signature.noSignatures
+signature.setDefault,[NO TRANSLATION] settings.signature.setDefault,[NO TRANSLATION] settings.signature.setDefault
+signature.updatedAt,[NO TRANSLATION] settings.signature.updatedAt,[NO TRANSLATION] settings.signature.updatedAt

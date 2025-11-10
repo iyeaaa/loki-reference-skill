@@ -234,10 +234,18 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
           throw new Error(previewResult.error || "미리보기 실패")
         }
 
-        // Show preview message
+        // Show preview message with AI analysis
+        let messageContent = `엑셀 파일을 분석했습니다.\n\n총 ${previewResult.data.totalRows}개의 리드 데이터를 찾았습니다.`
+
+        if (previewResult.data.aiAnalysis) {
+          messageContent += `\n\n## 📊 AI 분석 결과\n\n${previewResult.data.aiAnalysis}`
+        }
+
+        messageContent += `\n\n아래 미리보기를 확인하고 임포트를 승인해주세요.`
+
         const previewMessage: ChatMessage = {
           role: "assistant",
-          content: `엑셀 파일을 분석했습니다.\n\n총 ${previewResult.data.totalRows}개의 리드 데이터를 찾았습니다.\n아래 미리보기를 확인하고 임포트를 승인해주세요.`,
+          content: messageContent,
           timestamp: new Date(),
           metadata: {
             leadPreview: previewResult.data,

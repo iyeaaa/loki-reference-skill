@@ -105,6 +105,7 @@ export interface PreviewResponse {
     leads: PreviewLeadData[]
     sheetName: string
     availableSheets: string[]
+    aiAnalysis?: string | null // AI 분석 결과 (최대 10행 분석)
   }
   error?: string
 }

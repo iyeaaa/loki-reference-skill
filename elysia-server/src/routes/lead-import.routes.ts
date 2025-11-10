@@ -467,6 +467,73 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
           ...parseExcelRowToLeadData(row),
         }))
 
+        // AI 분석 (최대 20행 랜덤 샘플링)
+        let aiAnalysis: string | null = null
+        try {
+          const { ChatOpenAI } = await import("@langchain/openai")
+          const llm = new ChatOpenAI({
+            model: "gpt-4o-mini",
+            temperature: 0.7,
+          })
+
+          // 최대 20행 랜덤 샘플링
+          const sampleSize = Math.min(20, parsedLeads.length)
+          let sampleData: typeof parsedLeads
+
+          if (parsedLeads.length <= 20) {
+            // 20개 이하면 전체 사용
+            sampleData = parsedLeads
+          } else {
+            // 20개 초과면 랜덤으로 샘플링
+            const shuffled = [...parsedLeads].sort(() => Math.random() - 0.5)
+            sampleData = shuffled.slice(0, sampleSize)
+          }
+
+          // 컬럼 정보 추출
+          const columns = Object.keys(rawData[0] || {})
+
+          const analysisPrompt = `다음은 업로드된 엑셀 파일의 리드 데이터입니다.
+
+총 ${rawData.length}개의 행이 있으며, 그 중 ${sampleSize}개를 랜덤으로 샘플링하여 분석합니다.
+
+**컬럼 정보:**
+${columns.join(", ")}
+
+**샘플 데이터 (${sampleSize}행):**
+${JSON.stringify(sampleData, null, 2)}
+
+이 데이터를 분석하여 다음 내용을 **구체적인 사례를 들어** 작성해주세요:
+
+### 1. 📊 데이터 개요
+- 어떤 종류의 리드 데이터인지 (업종, 특성 등)
+- **구체적 사례 최소 3개 포함** (예: "샘플 중 '○○회사'는 뷰티 업종, '△△회사'는 식품 업종...")
+
+### 2. ✅ 데이터 품질 분석
+- 필수 정보(회사명, 웹사이트, 연락처 등)의 완성도
+- **구체적 통계와 사례 최소 3개** (예: "20개 중 18개(90%)에 이메일 존재, 단 '○○회사', '△△회사'는 누락...")
+
+### 3. 🔍 주요 특징 및 패턴
+- 데이터에서 눈에 띄는 패턴이나 특성
+- **구체적 패턴과 사례 최소 3개** (예: "인스타그램 계정 보유율 80%, 특히 '○○', '△△', '××'는 팔로워 1만+...")
+
+### 4. 💡 활용 권장사항
+- 이 데이터를 활용할 때 주의할 점이나 제안
+- **실행 가능한 구체적 제안 최소 3개** (예: "이메일 누락 2건은 웹사이트에서 수집 필요...")
+
+**중요:**
+- 각 섹션마다 **실제 데이터의 구체적인 회사명이나 수치를 인용**하여 근거를 명확히 제시
+- 단순히 "일부", "대부분" 같은 모호한 표현 대신 **정확한 개수와 비율** 사용
+- 총 500-700자 정도로 작성하되, 구체성을 최우선으로`
+
+          const response = await llm.invoke(analysisPrompt)
+          aiAnalysis = response.content as string
+
+          logger.info({ sampleSize, totalRows: rawData.length }, "AI analysis completed")
+        } catch (error) {
+          logger.error({ error }, "Failed to generate AI analysis")
+          // AI 분석 실패해도 미리보기는 계속 진행
+        }
+
         return {
           success: true,
           data: {
@@ -475,6 +542,7 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
             leads: parsedLeads,
             sheetName: selectedSheetName,
             availableSheets: workbook.SheetNames,
+            aiAnalysis, // AI 분석 결과 추가
           },
         }
       } catch (error: unknown) {
@@ -498,7 +566,7 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
         tags: ["admin", "lead-import"],
         summary: "Excel 파일 데이터 미리보기",
         description:
-          "Excel 파일을 업로드하여 DB에 저장하기 전 데이터를 미리 확인합니다. 전체 데이터를 미리보기로 제공합니다.",
+          "Excel 파일을 업로드하여 DB에 저장하기 전 데이터를 미리 확인합니다. 전체 데이터를 미리보기로 제공하며, 최대 10행을 샘플링하여 AI 분석 결과도 함께 제공합니다.",
       },
     },
   )

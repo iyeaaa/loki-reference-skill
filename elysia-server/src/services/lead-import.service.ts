@@ -217,7 +217,7 @@ export async function importSingleLead(
                 companyName: data.companyName,
                 workspaceId,
               },
-              "Skipping duplicate email - 이메일은 제외되지만 리드는 생성됨 (Workspace 기준 중복)",
+              "Skipping duplicate email - email excluded but lead is created (workspace-scoped duplicate)",
             )
             return false
           }
@@ -483,7 +483,7 @@ async function checkDuplicateEmailsInWorkspace(
         workspaceId,
         uniqueEmails: emails.length - emailToLeadIdMap.size,
       },
-      "Workspace-scoped email duplicate check completed - 중복된 이메일은 제외되지만 리드는 생성됩니다",
+      "Workspace-scoped email duplicate check completed - duplicate emails excluded but leads will be created",
     )
 
     return emailToLeadIdMap
@@ -573,7 +573,7 @@ export async function importLeadsBatch(
         csvDuplicates.set(email, "CSV_DUPLICATE")
         logger.debug(
           { email, firstRow: emailToFirstOccurrence.get(email), currentRow: i, workspaceId },
-          "Found duplicate email within CSV (리드는 생성되지만 중복 이메일만 제외됨)",
+          "Found duplicate email within CSV (lead will be created but duplicate email excluded)",
         )
       }
     }
@@ -585,7 +585,7 @@ export async function importLeadsBatch(
       totalEmails: emailToFirstOccurrence.size,
       workspaceId,
     },
-    "Within-CSV duplicate check completed (중복 이메일만 제외, 리드는 생성됨)",
+    "Within-CSV duplicate check completed (duplicate emails excluded, leads created)",
   )
 
   // Step 2: Workspace 내 DB에 이미 존재하는 이메일들을 조회
@@ -601,7 +601,7 @@ export async function importLeadsBatch(
       totalEmails: allEmails.length,
       workspaceId,
     },
-    "Workspace-scoped email duplicate check completed (중복 이메일만 제외, 리드는 생성됨)",
+    "Workspace-scoped email duplicate check completed (duplicate emails excluded, leads created)",
   )
 
   // 두 중복 맵을 합치기: CSV 중복은 "CSV_DUPLICATE"로, DB 중복은 lead ID로
@@ -703,7 +703,7 @@ export async function importLeadsBatch(
                   existingLeadId: duplicateInfo,
                   workspaceId,
                 },
-                "Email skipped - Workspace 내 중복 (리드는 정상 생성됨)",
+                "Email skipped - workspace duplicate (lead created normally)",
               )
             }
           }

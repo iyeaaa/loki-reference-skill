@@ -42,7 +42,7 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
         set.status = 400
         return {
           success: false,
-          error: "Excel 파일(.xlsx, .xls) 또는 CSV 파일(.csv)만 업로드 가능합니다",
+          error: "Only Excel (.xlsx, .xls) or CSV (.csv) files are allowed",
         }
       }
 
@@ -77,7 +77,7 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
           .values({
             workspaceId,
             name: fileNameWithoutExt,
-            description: `${file.name} 파일에서 자동 생성된 그룹`,
+            description: `Group auto-generated from ${file.name}`,
           })
           .returning()
 
@@ -346,7 +346,7 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
         set.status = 400
         return {
           success: false,
-          error: "Excel 파일(.xlsx, .xls) 또는 CSV 파일(.csv)만 업로드 가능합니다",
+          error: "Only Excel (.xlsx, .xls) or CSV (.csv) files are allowed",
         }
       }
 
@@ -418,7 +418,7 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
         set.status = 400
         return {
           success: false,
-          error: "Excel 파일(.xlsx, .xls)만 업로드 가능합니다",
+          error: "Only Excel (.xlsx, .xls) files are allowed",
         }
       }
 

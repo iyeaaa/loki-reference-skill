@@ -7,6 +7,7 @@ import {
   ChevronUp,
   Clock,
   Eye,
+  Info,
   Mail,
   MousePointer,
   Pause,
@@ -28,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   useEnrollmentMetrics,
   useEnrollmentStepExecutions,
@@ -200,7 +202,8 @@ function EnrollmentDeliveryStatus({ enrollmentId }: { enrollmentId: string }) {
     return <span className="text-sm text-muted-foreground">-</span>
   }
 
-  const { emailsSent, emailsDelivered, emailsBounced, emailsFailed } = metricsData.data
+  const { emailsSent, emailsDelivered, emailsBounced, emailsFailed, emailHistory } =
+    metricsData.data
 
   if (emailsSent === 0) {
     return <span className="text-sm text-muted-foreground">-</span>
@@ -208,11 +211,31 @@ function EnrollmentDeliveryStatus({ enrollmentId }: { enrollmentId: string }) {
 
   // 발송 실패 (bounced, failed, spam, dropped)
   if (emailsBounced > 0 || (emailsFailed && emailsFailed > 0)) {
+    // 실패한 이메일의 이유 찾기
+    const failedEmail = emailHistory?.find(
+      (email) => email.status === "bounced" || email.status === "failed" || email.status === "spam",
+    )
+
+    const failureReason =
+      failedEmail?.bounceReason ||
+      failedEmail?.errorMessage ||
+      (failedEmail?.bounceType && `Bounce Type: ${failedEmail.bounceType}`) ||
+      "이유 없음"
+
     return (
-      <div className="flex items-center gap-1 text-sm text-red-600">
-        <XCircle className="w-3 h-3" />
-        <span className="font-medium">{t("sequences.enrollments.delivery.failed")}</span>
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-1 text-sm text-red-600 cursor-help hover:underline decoration-dotted">
+            <XCircle className="w-3 h-3" />
+            <span className="font-medium">{t("sequences.enrollments.delivery.failed")}</span>
+            <Info className="w-3 h-3 opacity-70" />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          <p className="text-sm font-medium">{t("sequences.enrollments.delivery.failureReason")}</p>
+          <p className="text-xs text-muted-foreground">{failureReason}</p>
+        </TooltipContent>
+      </Tooltip>
     )
   }
 

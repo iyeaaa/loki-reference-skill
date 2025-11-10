@@ -53,10 +53,24 @@ interface CompanyMetricsModalProps {
       stepOrder: number
       subject: string
       sentAt: string
-      status: "sent" | "delivered" | "opened" | "clicked" | "replied" | "bounced"
+      status:
+        | "sent"
+        | "delivered"
+        | "opened"
+        | "clicked"
+        | "replied"
+        | "bounced"
+        | "failed"
+        | "spam"
       openCount: number
       clickCount: number
-      replyAt?: string
+      deliveredAt?: string
+      openedAt?: string
+      clickedAt?: string
+      repliedAt?: string
+      bounceType?: string | null
+      bounceReason?: string | null
+      errorMessage?: string | null
     }>
   }
 }
@@ -332,7 +346,7 @@ export function CompanyMetricsModal({
                       <div className="flex items-center gap-1">
                         <Reply className="w-3 h-3 text-green-600" />
                         <span>
-                          {email.replyAt ? `${formatDate(email.replyAt)} 답장` : "답장 없음"}
+                          {email.repliedAt ? `${formatDate(email.repliedAt)} 답장` : "답장 없음"}
                         </span>
                       </div>
                     </div>

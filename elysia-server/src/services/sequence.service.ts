@@ -2119,6 +2119,9 @@ async function getEmailHistoryForEnrollment(enrollmentId: string) {
       openedAt: emailsTable.openedAt,
       clickedAt: emailsTable.clickedAt,
       repliedAt: emailsTable.repliedAt,
+      bounceType: emailsTable.bounceType,
+      bounceReason: emailsTable.bounceReason,
+      errorMessage: emailsTable.errorMessage,
     })
     .from(sequenceStepExecutions)
     .innerJoin(emailsTable, eq(sequenceStepExecutions.emailId, emailsTable.id))
@@ -2136,5 +2139,8 @@ async function getEmailHistoryForEnrollment(enrollmentId: string) {
     openedAt: email.openedAt?.toISOString(),
     clickedAt: email.clickedAt?.toISOString(),
     repliedAt: email.repliedAt?.toISOString(),
+    bounceType: email.bounceType,
+    bounceReason: email.bounceReason,
+    errorMessage: email.errorMessage,
   }))
 }

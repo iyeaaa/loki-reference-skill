@@ -307,10 +307,24 @@ export const sequencesApi = {
           stepOrder: number
           subject: string
           sentAt: string
-          status: "sent" | "delivered" | "opened" | "clicked" | "replied" | "bounced"
+          status:
+            | "sent"
+            | "delivered"
+            | "opened"
+            | "clicked"
+            | "replied"
+            | "bounced"
+            | "failed"
+            | "spam"
           openCount: number
           clickCount: number
-          replyAt?: string
+          deliveredAt?: string
+          openedAt?: string
+          clickedAt?: string
+          repliedAt?: string
+          bounceType?: string | null
+          bounceReason?: string | null
+          errorMessage?: string | null
         }>
       }
     }>(`/api/v1/sequences/enrollments/${enrollmentId}/metrics`)

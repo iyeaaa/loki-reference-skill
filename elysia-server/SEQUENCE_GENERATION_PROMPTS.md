@@ -210,8 +210,8 @@ AI가 생성한 실제 이메일 예시 (SaaS 업종, 중소기업 타겟):
       "scheduled_hour": 9,
       "scheduled_minute": 0,
       "email_subject": "Quick Win: Automate Your {{company_name}} Sales Process",
-      "email_body": "Hi {{contact_name}},\n\nI noticed {{company_name}} is in the SaaS space and wanted to share a quick automation win that's helping similar companies close 30% more deals.\n\nWould you have 10 minutes this week for a quick demo?\n\nBest regards",
-      "strategy_note": "Direct value proposition with specific metric"
+      "email_body": "Hi {{contact_name}},\n\nI noticed {{company_name}} is in the SaaS space and wanted to share a quick automation win that's helping similar companies close 30% more deals.\n\nWould you have 10 minutes this week for a quick demo?\n\nLooking forward to connecting!",
+      "strategy_note": "Direct value proposition with specific metric, ends naturally without signature"
     },
     {
       "step_order": 2,
@@ -219,8 +219,8 @@ AI가 생성한 실제 이메일 예시 (SaaS 업종, 중소기업 타겟):
       "scheduled_hour": 10,
       "scheduled_minute": 30,
       "email_subject": "Case Study: How [Similar Company] Scaled Revenue 3x",
-      "email_body": "Hi {{contact_name}},\n\nFollowing up on my previous email about automation for {{company_name}}.\n\nI wanted to share how a mid-sized SaaS company similar to yours used our platform to:\n• Reduce manual work by 15 hours/week\n• Increase lead conversion by 45%\n• Scale to 3x revenue in 8 months\n\nInterested in seeing how this applies to {{company_name}}?\n\nBest regards",
-      "strategy_note": "Social proof with detailed metrics"
+      "email_body": "Hi {{contact_name}},\n\nFollowing up on my previous email about automation for {{company_name}}.\n\nI wanted to share how a mid-sized SaaS company similar to yours used our platform to:\n• Reduce manual work by 15 hours/week\n• Increase lead conversion by 45%\n• Scale to 3x revenue in 8 months\n\nInterested in seeing how this applies to {{company_name}}?\n\nThanks for your time!",
+      "strategy_note": "Social proof with detailed metrics, ends naturally"
     },
     {
       "step_order": 3,
@@ -228,8 +228,8 @@ AI가 생성한 실제 이메일 예시 (SaaS 업종, 중소기업 타겟):
       "scheduled_hour": 14,
       "scheduled_minute": 0,
       "email_subject": "Last note: Free SaaS Growth Playbook",
-      "email_body": "Hi {{contact_name}},\n\nThis is my final email, but I wanted to leave you with something valuable.\n\nI've put together a free playbook specifically for mid-sized SaaS companies showing the exact automation framework that's working in 2024.\n\nNo strings attached - just practical tactics you can implement this week.\n\nWant me to send it over?\n\nBest regards",
-      "strategy_note": "Soft breakup email with free value offer"
+      "email_body": "Hi {{contact_name}},\n\nThis is my final email, but I wanted to leave you with something valuable.\n\nI've put together a free playbook specifically for mid-sized SaaS companies showing the exact automation framework that's working in 2024.\n\nNo strings attached - just practical tactics you can implement this week.\n\nWant me to send it over?\n\nHope this helps!",
+      "strategy_note": "Soft breakup email with free value offer, ends naturally"
     }
   ],
   "personalization_tips": [
@@ -251,6 +251,17 @@ AI가 자동으로 삽입하는 변수:
 - `{{contact_name}}`: 담당자 이름
 - `{{company_name}}`: 회사명
 - 업종, 규모, 리드 스코어를 반영한 맞춤 내용
+
+### 2.5 이메일 서명 정책
+
+⚠️ **중요: 서명 플레이스홀더 금지**
+- 이메일 본문에 **[Your Name], [Your Position], [Your Company], [Your Contact Information]** 등의 서명 플레이스홀더를 **절대 포함하지 않습니다**
+- 대신 자연스러운 맺음말 사용:
+  - ✅ "Looking forward to hearing from you"
+  - ✅ "Best regards"
+  - ✅ "Thanks"
+  - ✅ "Hope to connect soon"
+- 발신자 정보는 시스템에서 자동으로 추가됨
 
 ---
 

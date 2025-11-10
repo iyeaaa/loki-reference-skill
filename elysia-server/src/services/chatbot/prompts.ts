@@ -535,6 +535,8 @@ ${JSON.stringify(leadAnalysis.samples.slice(0, 5), null, 2)}
    - **Email Body:** Professional, value-focused, 150-250 words
    - Use personalization variables: {{contact_name}}, {{company_name}}
    - Match tone to business type and company size
+   - **CRITICAL: Do NOT include signature placeholders like [Your Name], [Your Position], [Your Company], [Your Contact Information]**
+   - End emails naturally without formal signatures or contact details
 
 3. **Timing Strategy:** For each step, determine:
    - **delay_days:** Days after previous step
@@ -606,6 +608,8 @@ ${JSON.stringify(leadAnalysis.samples.slice(0, 5), null, 2)}
 - Include clear CTAs (call to action) in each email
 - Maintain professional tone throughout
 - Base recommendations on the ACTUAL lead data provided
+- **NEVER include signature placeholders like [Your Name], [Your Position], [Your Company], [Contact Info]**
+- End emails naturally (e.g., "Looking forward to hearing from you", "Best regards", "Thanks")
 
 Generate the complete sequence strategy now:`
 }

@@ -458,3 +458,6 @@ enrollments.nextScheduled.completed,[NO TRANSLATION] sequences.enrollments.nextS
 enrollments.stepExecutions.loading,[NO TRANSLATION] sequences.enrollments.stepExecutions.loading,[NO TRANSLATION] sequences.enrollments.stepExecutions.loading
 enrollments.stepExecutions.noSteps,[NO TRANSLATION] sequences.enrollments.stepExecutions.noSteps,[NO TRANSLATION] sequences.enrollments.stepExecutions.noSteps
 enrollments.delivery.failed,발송 실패,Failed
+enrollments.column.replied,[NO TRANSLATION] sequences.enrollments.column.replied,[NO TRANSLATION] sequences.enrollments.column.replied
+enrollments.reply.notReplied,[NO TRANSLATION] sequences.enrollments.reply.notReplied,[NO TRANSLATION] sequences.enrollments.reply.notReplied
+enrollments.reply.replied,[NO TRANSLATION] sequences.enrollments.reply.replied,[NO TRANSLATION] sequences.enrollments.reply.replied

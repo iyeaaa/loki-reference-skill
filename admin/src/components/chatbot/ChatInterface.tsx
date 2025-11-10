@@ -1,14 +1,8 @@
-import { ArrowUp, FileText, Plus, Search, Square } from "lucide-react"
+import { ArrowUp, Search, Square } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import TextPlus from "@/assets/text-plus.svg"
 import TextRinda from "@/assets/text-rinda.svg"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Textarea } from "@/components/ui/textarea"
 import { type ChatMessage, useChatbotHistory, useChatbotMutation } from "@/lib/api/hooks/chatbot"
 import { chatbotApi } from "@/lib/api/services/chatbot"
@@ -17,9 +11,9 @@ import type {
   FileAttachment as FileAttachmentType,
   NodeProgressUpdate,
 } from "@/lib/api/types/chatbot"
-import { ActionCards } from "./ActionCards"
 import { DataArtifact } from "./DataArtifact"
 import { FileAttachment } from "./FileAttachment"
+import { LeadUploadModal } from "./LeadUploadModal"
 import { MessageBubble } from "./MessageBubble"
 import type { NodeProgress } from "./NodeProgressTracker"
 import { StreamingMessageContainer } from "./StreamingMessageContainer"
@@ -51,9 +45,9 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   const [leadImportProgress, setLeadImportProgress] = useState<
     import("@/lib/api/services/lead-import").ImportProgress | null
   >(null)
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const lastUserMessageRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const isProcessingFileRef = useRef(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const textareaEmptyStateRef = useRef<HTMLTextAreaElement>(null)
@@ -172,20 +166,10 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     }
   }, [messages.length, messages[messages.length - 1]?.role])
 
-  const handleFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
+  const handleFileSelect = useCallback(async (file: File) => {
     // Prevent duplicate processing
     if (isProcessingFileRef.current) {
       console.log("[ChatInterface] File already being processed, skipping duplicate")
-      return
-    }
-
-    // Accept only XLSX, XLS files
-    const fileName = file.name.toLowerCase()
-    if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls")) {
-      alert("Only XLSX or XLS files are allowed.")
       return
     }
 
@@ -272,11 +256,6 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       alert("Failed to process file.")
       isProcessingFileRef.current = false
       setIsProcessing(false)
-    }
-
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
     }
   }, [])
 
@@ -723,18 +702,11 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
 
   return (
     <div className="flex h-full flex-col bg-background">
-      {/* Hidden file input - shared across all states */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".xlsx,.xls"
-        onChange={handleFileChange}
-        onClick={(e) => {
-          if (isProcessingFileRef.current) {
-            e.preventDefault()
-          }
-        }}
-        className="hidden"
+      {/* Lead Upload Modal */}
+      <LeadUploadModal
+        open={isUploadModalOpen}
+        onOpenChange={setIsUploadModalOpen}
+        onFileSelect={handleFileSelect}
       />
 
       {messages.length === 0 ? (
@@ -782,7 +754,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                       handleSubmit()
                     }
                   }}
-                  placeholder="Ask a question about your data..."
+                  placeholder="Who should I reach out to? Describe your ideal customer or drop a lead list..."
                   className="min-h-[64px] resize-none pl-4 pr-12 pt-4 pb-12 text-[15px] leading-relaxed border-0 focus-visible:ring-0 focus-visible:ring-offset-0 overflow-y-auto bg-transparent rounded-2xl placeholder:text-muted-foreground/60"
                   style={{ maxHeight: "400px" }}
                 />
@@ -798,6 +770,15 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                   ) : (
                     <ArrowUp className="h-4 w-4" />
                   )}
+                </Button>
+                {/* Drop Your Leads Here button - Bottom left */}
+                <Button
+                  variant="outline"
+                  onClick={() => setIsUploadModalOpen(true)}
+                  disabled={!!attachedFile || isProcessing}
+                  className="absolute bottom-3 left-3 h-8 px-3 rounded-lg text-sm font-medium"
+                >
+                  Drop Your Leads Here
                 </Button>
               </div>
 
@@ -824,15 +805,6 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Action Cards - Bottom of empty state */}
-            <div className="mx-auto w-full mt-6" style={{ maxWidth: "670px" }}>
-              <ActionCards
-                onUploadClick={() => fileInputRef.current?.click()}
-                isProcessing={isProcessing}
-                hasAttachedFile={!!attachedFile}
-              />
             </div>
           </div>
         </div>
@@ -925,7 +897,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                             handleSubmit()
                           }
                         }}
-                        placeholder="Ask a question about your data..."
+                        placeholder="Who should I reach out to? Describe your ideal customer or drop a lead list..."
                         className="min-h-[56px] resize-none pl-4 pr-12 pt-3 pb-11 text-[15px] leading-relaxed border-0 focus-visible:ring-0 focus-visible:ring-offset-0 overflow-y-auto bg-transparent rounded-2xl placeholder:text-muted-foreground/60"
                         style={{ maxHeight: "400px" }}
                       />
@@ -942,28 +914,15 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                           <ArrowUp className="h-4 w-4" />
                         )}
                       </Button>
-                      {/* Plus button with dropdown - Bottom left */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="outline"
-                            className="absolute bottom-2 left-2 h-8 w-8 rounded-lg"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent side="top" align="start" className="w-56">
-                          <DropdownMenuItem
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={!!attachedFile || isProcessing}
-                            className="gap-2 cursor-pointer"
-                          >
-                            <FileText className="h-4 w-4" />
-                            Upload Excel File
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {/* Drop Your Leads Here button - Bottom left */}
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsUploadModalOpen(true)}
+                        disabled={!!attachedFile || isProcessing}
+                        className="absolute bottom-2 left-2 h-8 px-3 rounded-lg text-sm font-medium"
+                      >
+                        Drop Your Leads Here
+                      </Button>
                     </div>
                   </div>
                 </div>

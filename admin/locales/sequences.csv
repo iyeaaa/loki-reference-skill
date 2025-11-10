@@ -462,3 +462,25 @@ enrollments.delivery.failureReason,실패 이유:,Failure Reason:
 enrollments.column.replied,답장,Reply
 enrollments.reply.notReplied,답장 없음,No Reply
 enrollments.reply.replied,답장함,Replied
+metrics.loading,메트릭스 데이터를 불러오는 중...,Loading metrics data...
+metrics.title,시퀀스 성과 지표,Sequence Performance Metrics
+metrics.totalSent,총 발송,Total Sent
+metrics.delivered,전달됨,Delivered
+metrics.deliveryRate,전달률,Delivery Rate
+metrics.bounceRate,반송률,Bounce Rate
+metrics.bouncedDesc,반송됨 (발송 후 실패),Bounced (failed after sending)
+metrics.dropRate,드롭률,Drop Rate
+metrics.droppedDesc,드롭됨 (발송 전 차단),Dropped (blocked before sending)
+metrics.openRate,오픈률,Open Rate
+metrics.opened,오픈,Opened
+metrics.clickRate,클릭률,Click Rate
+metrics.clicked,클릭,Clicked
+metrics.replyRate,답장률,Reply Rate
+metrics.replied,답장,Replied
+metrics.unsubscribed,구독취소,Unsubscribed
+metrics.progressTitle,시퀀스 진행 현황,Sequence Progress Status
+metrics.totalEnrollments,총 등록,Total Enrollments
+metrics.activeEnrollments,진행 중,In Progress
+metrics.completedEnrollments,완료,Completed
+metrics.pausedEnrollments,일시정지,Paused
+metrics.overallProgress,전체 진행률,Overall Progress

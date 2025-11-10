@@ -9,6 +9,7 @@ import {
   Users,
   XCircle,
 } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -55,6 +56,8 @@ export function SequenceMetrics({
   metrics,
   isLoading = false,
 }: SequenceMetricsProps) {
+  const { t } = useTranslation()
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -79,7 +82,7 @@ export function SequenceMetrics({
         <CardContent className="flex items-center justify-center py-8">
           <div className="text-center text-muted-foreground">
             <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>메트릭스 데이터를 불러오는 중...</p>
+            <p>{t("sequences.metrics.loading")}</p>
           </div>
         </CardContent>
       </Card>
@@ -123,7 +126,7 @@ export function SequenceMetrics({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">{sequenceName}</h2>
-          <p className="text-muted-foreground">시퀀스 성과 지표</p>
+          <p className="text-muted-foreground">{t("sequences.metrics.title")}</p>
         </div>
         <Badge variant="outline" className="text-sm">
           ID: {sequenceId.slice(0, 8)}...
@@ -134,18 +137,24 @@ export function SequenceMetrics({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 발송</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("sequences.metrics.totalSent")}
+            </CardTitle>
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatNumber(metrics.totalSent)}</div>
-            <p className="text-xs text-muted-foreground">{metrics.delivered} 전달됨</p>
+            <p className="text-xs text-muted-foreground">
+              {metrics.delivered} {t("sequences.metrics.delivered")}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">전달률</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("sequences.metrics.deliveryRate")}
+            </CardTitle>
             <CheckCircle2 className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
@@ -160,20 +169,24 @@ export function SequenceMetrics({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">반송률</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("sequences.metrics.bounceRate")}
+            </CardTitle>
             <XCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${getRateColor(metrics.bounceRate, "negative")}`}>
               {formatPercentage(metrics.bounceRate)}
             </div>
-            <p className="text-xs text-muted-foreground">{metrics.bounced} 반송됨 (발송 후 실패)</p>
+            <p className="text-xs text-muted-foreground">
+              {metrics.bounced} {t("sequences.metrics.bouncedDesc")}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">드롭률</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("sequences.metrics.dropRate")}</CardTitle>
             <AlertTriangle className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
@@ -185,7 +198,9 @@ export function SequenceMetrics({
             >
               {formatPercentage((metrics.dropped / metrics.totalSent) * 100)}
             </div>
-            <p className="text-xs text-muted-foreground">{metrics.dropped} 드롭됨 (발송 전 차단)</p>
+            <p className="text-xs text-muted-foreground">
+              {metrics.dropped} {t("sequences.metrics.droppedDesc")}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -194,7 +209,7 @@ export function SequenceMetrics({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">오픈률</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("sequences.metrics.openRate")}</CardTitle>
             <MailOpen className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
@@ -202,7 +217,7 @@ export function SequenceMetrics({
               {formatPercentage(metrics.openRate)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {metrics.opened} / {metrics.delivered} 오픈
+              {metrics.opened} / {metrics.delivered} {t("sequences.metrics.opened")}
             </p>
             <Progress value={metrics.openRate} className="mt-2 h-2" />
           </CardContent>
@@ -210,7 +225,9 @@ export function SequenceMetrics({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">클릭률</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("sequences.metrics.clickRate")}
+            </CardTitle>
             <MousePointer className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
@@ -218,7 +235,7 @@ export function SequenceMetrics({
               {formatPercentage(metrics.clickRate)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {metrics.clicked} / {metrics.delivered} 클릭
+              {metrics.clicked} / {metrics.delivered} {t("sequences.metrics.clicked")}
             </p>
             <Progress value={metrics.clickRate} className="mt-2 h-2" />
           </CardContent>
@@ -226,7 +243,9 @@ export function SequenceMetrics({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">답장률</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("sequences.metrics.replyRate")}
+            </CardTitle>
             <Reply className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
@@ -234,7 +253,7 @@ export function SequenceMetrics({
               {formatPercentage(metrics.replyRate)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {metrics.replied} / {metrics.delivered} 답장
+              {metrics.replied} / {metrics.delivered} {t("sequences.metrics.replied")}
             </p>
             <Progress value={metrics.replyRate} className="mt-2 h-2" />
           </CardContent>
@@ -242,7 +261,9 @@ export function SequenceMetrics({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">구독취소</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("sequences.metrics.unsubscribed")}
+            </CardTitle>
             <Users className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
@@ -256,7 +277,9 @@ export function SequenceMetrics({
                 metrics.delivered > 0 ? (metrics.unsubscribed / metrics.delivered) * 100 : 0,
               )}
             </div>
-            <p className="text-xs text-muted-foreground">{metrics.unsubscribed} 구독취소</p>
+            <p className="text-xs text-muted-foreground">
+              {metrics.unsubscribed} {t("sequences.metrics.unsubscribed")}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -266,34 +289,42 @@ export function SequenceMetrics({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            시퀀스 진행 현황
+            {t("sequences.metrics.progressTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{metrics.totalEnrollments}</div>
-              <p className="text-sm text-muted-foreground">총 등록</p>
+              <p className="text-sm text-muted-foreground">
+                {t("sequences.metrics.totalEnrollments")}
+              </p>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">{metrics.activeEnrollments}</div>
-              <p className="text-sm text-muted-foreground">진행 중</p>
+              <p className="text-sm text-muted-foreground">
+                {t("sequences.metrics.activeEnrollments")}
+              </p>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
                 {metrics.completedEnrollments}
               </div>
-              <p className="text-sm text-muted-foreground">완료</p>
+              <p className="text-sm text-muted-foreground">
+                {t("sequences.metrics.completedEnrollments")}
+              </p>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-orange-600">{metrics.pausedEnrollments}</div>
-              <p className="text-sm text-muted-foreground">일시정지</p>
+              <p className="text-sm text-muted-foreground">
+                {t("sequences.metrics.pausedEnrollments")}
+              </p>
             </div>
           </div>
 
           <div className="mt-4">
             <div className="flex justify-between text-sm mb-2">
-              <span>전체 진행률</span>
+              <span>{t("sequences.metrics.overallProgress")}</span>
               <span>
                 {formatPercentage((metrics.completedEnrollments / metrics.totalEnrollments) * 100)}
               </span>

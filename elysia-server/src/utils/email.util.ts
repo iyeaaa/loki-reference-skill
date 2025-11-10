@@ -242,6 +242,94 @@ export function removeQuotedReply(text: string): string {
  * @param emailContent - Full RFC 822 email content
  * @returns { text: string | undefined, html: string | undefined }
  */
+/**
+ * Parse multipart email by finding all text/plain and text/html parts
+ * Handles nested multipart by extracting all parts regardless of nesting level
+ */
+function parseMultipartRecursive(
+  content: string,
+  _boundary: string,
+): {
+  text: string | undefined
+  html: string | undefined
+} {
+  let text: string | undefined
+  let html: string | undefined
+
+  // Find all text/plain parts
+  // Pattern: Content-Type: text/plain ... [headers] ... \r\n\r\n [body] \r\n--
+  const textPlainRegex = /Content-Type:\s*text\/plain[\s\S]*?\r?\n\r?\n([\s\S]*?)(?=\r?\n--)/gi
+  const textPlainMatches = Array.from(content.matchAll(textPlainRegex))
+
+  for (const match of textPlainMatches) {
+    if (!match.index) continue
+
+    // Find the header section (from Content-Type to blank line)
+    let headerEndOffset = match[0].indexOf("\r\n\r\n")
+    if (headerEndOffset < 0) {
+      headerEndOffset = match[0].indexOf("\n\n")
+    }
+    if (headerEndOffset < 0) continue
+
+    const headers = match[0].substring(0, headerEndOffset)
+
+    // Extract charset and encoding from headers
+    const charsetMatch = headers.match(/charset=["']?([^"'\s;]+)["']?/i)
+    const charset = charsetMatch?.[1]?.trim()
+
+    const encodingMatch = headers.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i)
+    const encoding = encodingMatch?.[1]?.trim().toLowerCase()
+
+    // Get body content (capture group 1)
+    const bodyContent = match[1]
+    if (!bodyContent) continue
+
+    // Remove any trailing boundary markers
+    const cleanContent = bodyContent.replace(/\r?\n--[^\r\n]*$/g, "").trim()
+
+    if (cleanContent && !text) {
+      text = decodeContent(cleanContent, encoding, charset)
+    }
+  }
+
+  // Find all text/html parts
+  const textHtmlRegex = /Content-Type:\s*text\/html[\s\S]*?\r?\n\r?\n([\s\S]*?)(?=\r?\n--)/gi
+  const textHtmlMatches = Array.from(content.matchAll(textHtmlRegex))
+
+  for (const match of textHtmlMatches) {
+    if (!match.index) continue
+
+    // Find the header section (from Content-Type to blank line)
+    let headerEndOffset = match[0].indexOf("\r\n\r\n")
+    if (headerEndOffset < 0) {
+      headerEndOffset = match[0].indexOf("\n\n")
+    }
+    if (headerEndOffset < 0) continue
+
+    const headers = match[0].substring(0, headerEndOffset)
+
+    // Extract charset and encoding from headers
+    const charsetMatch = headers.match(/charset=["']?([^"'\s;]+)["']?/i)
+    const charset = charsetMatch?.[1]?.trim()
+
+    const encodingMatch = headers.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i)
+    const encoding = encodingMatch?.[1]?.trim().toLowerCase()
+
+    // Get body content (capture group 1)
+    const bodyContent = match[1]
+    if (!bodyContent) continue
+
+    // Remove any trailing boundary markers
+    const cleanContent = bodyContent.replace(/\r?\n--[^\r\n]*$/g, "").trim()
+
+    if (cleanContent && !html) {
+      html = decodeContent(cleanContent, encoding, charset)
+    }
+  }
+
+  return { text, html }
+}
+
 export function parseEmailBody(emailContent: string): {
   text: string | undefined
   html: string | undefined
@@ -258,54 +346,10 @@ export function parseEmailBody(emailContent: string): {
   const boundary = boundaryMatch ? boundaryMatch[1] : null
 
   if (boundary) {
-    // Multipart email
-    const parts = emailContent.split(`--${boundary}`)
-
-    for (const part of parts) {
-      // Check for plain text part
-      if (part.includes("Content-Type: text/plain")) {
-        // Extract charset
-        const charsetMatch = part.match(/charset=["']?([^"'\s;]+)["']?/i)
-        const charset = charsetMatch?.[1]?.trim()
-
-        // Extract encoding
-        const encodingMatch = part.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i)
-        const encoding = encodingMatch?.[1]?.trim().toLowerCase()
-
-        // This ensures we don't include MIME headers in the body
-        const headerEndMatch = part.match(/\r?\n\r?\n/)
-        if (headerEndMatch && headerEndMatch.index !== undefined) {
-          const contentStart = headerEndMatch.index + headerEndMatch[0].length
-          const content = part.substring(contentStart)
-          // Remove boundary markers at the end
-          const cleanContent = content.replace(/\r?\n--[^\r\n]*$/, "").trim()
-          if (cleanContent) {
-            text = decodeContent(cleanContent, encoding, charset)
-          }
-        }
-      }
-
-      // Check for HTML part
-      if (part.includes("Content-Type: text/html")) {
-        // Extract charset
-        const charsetMatch = part.match(/charset=["']?([^"'\s;]+)["']?/i)
-        const charset = charsetMatch?.[1]?.trim()
-
-        // Extract encoding
-        const encodingMatch = part.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i)
-        const encoding = encodingMatch?.[1]?.trim().toLowerCase()
-
-        const headerEndMatch = part.match(/\r?\n\r?\n/)
-        if (headerEndMatch && headerEndMatch.index !== undefined) {
-          const contentStart = headerEndMatch.index + headerEndMatch[0].length
-          const content = part.substring(contentStart)
-          const cleanContent = content.replace(/\r?\n--[^\r\n]*$/, "").trim()
-          if (cleanContent) {
-            html = decodeContent(cleanContent, encoding, charset)
-          }
-        }
-      }
-    }
+    // Multipart email - 재귀적으로 파싱
+    const result = parseMultipartRecursive(emailContent, boundary)
+    text = result.text
+    html = result.html
   } else {
     // Simple email - try to find body after headers
     const headersPart = emailContent.split(/\r?\n\r?\n/)[0] || ""

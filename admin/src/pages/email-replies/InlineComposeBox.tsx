@@ -1,6 +1,7 @@
 import { Loader2, Maximize2, Minimize2, Send, X } from "lucide-react"
 import { useState } from "react"
 import toast from "react-hot-toast"
+import { FileAttachment } from "@/components/FileAttachment"
 import { RecipientInput } from "@/components/RecipientInput"
 import { SimpleTextEditor } from "@/components/SimpleTextEditor"
 import { Button } from "@/components/ui/button"
@@ -46,6 +47,7 @@ export function InlineComposeBox({
   const [bcc, setBcc] = useState("")
   const [subject, setSubject] = useState(() => generateReplySubject(originalEmail.subject))
   const [body, setBody] = useState(() => generateQuotedText(originalEmail))
+  const [files, setFiles] = useState<File[]>([])
 
   const [showCc, setShowCc] = useState(false)
   const [showBcc, setShowBcc] = useState(false)
@@ -93,6 +95,8 @@ export function InlineComposeBox({
       references: originalEmail.messageId ? [originalEmail.messageId] : undefined,
       // 서명 포함 (기본값: true)
       includeSignature: true,
+      // 첨부 파일
+      files: files.length > 0 ? files : undefined,
     }
 
     console.log("📧 Sending email with payload:", {
@@ -106,6 +110,7 @@ export function InlineComposeBox({
       await sendEmail.mutateAsync(payload)
 
       // 성공 시 초기화 및 닫기
+      setFiles([]) // 파일 초기화
       onSent?.()
       onClose()
     } catch (error) {
@@ -175,6 +180,14 @@ export function InlineComposeBox({
             placeholder="제목"
             className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-2 h-8"
           />
+        </div>
+
+        {/* 첨부 파일 */}
+        <div className="flex items-start gap-2">
+          <span className="text-sm text-gray-600 w-16 flex-shrink-0 pt-1">첨부</span>
+          <div className="flex-1">
+            <FileAttachment files={files} onFilesChange={setFiles} maxSize={20 * 1024 * 1024} />
+          </div>
         </div>
       </div>
 

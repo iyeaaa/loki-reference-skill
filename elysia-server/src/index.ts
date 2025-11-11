@@ -29,6 +29,7 @@ import { sseTestRoutes } from "./routes/sse-test.routes"
 import { adminUserRoutes, userRoutes } from "./routes/users.routes"
 import { webExtractionRoutes } from "./routes/web-extraction.routes"
 import { webhookRoutes } from "./routes/webhook.routes"
+import { websetRoutes } from "./routes/websets.routes"
 import { workflowEmailRoutes } from "./routes/workflow-emails.routes"
 import { workflowExecutionRoutes } from "./routes/workflow-execution.routes"
 import { adminWorkspaceRoutes, workspaceRoutes } from "./routes/workspaces.routes"
@@ -163,6 +164,7 @@ const app = new Elysia()
   .use(leadImportRoutes)
   .use(openaiApiKeysRoutes)
   .use(webExtractionRoutes)
+  .use(websetRoutes)
 
   .listen(config.port)
 

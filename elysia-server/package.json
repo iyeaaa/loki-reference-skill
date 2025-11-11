@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "dev:local": "docker compose -f compose.db.yml up -d && bun --watch src/index.ts",
+    "mastra:dev": "PORT=${MASTRA_PORT:-4000} mastra dev",
     "start": "bun src/index.ts",
     "build": "biome check ./src && bun type-check && bun build src/index.ts --target bun --outdir dist",
     "type-check": "tsc --noEmit",
@@ -52,6 +53,10 @@
     "@langchain/core": "^1.0.1",
     "@langchain/langgraph": "^1.0.1",
     "@langchain/openai": "^1.0.0",
+    "@mastra/core": "^0.24.0",
+    "@mastra/libsql": "^0.16.2",
+    "@mastra/memory": "^0.15.11",
+    "@mastra/pg": "^0.17.8",
     "@sendgrid/mail": "^8.1.6",
     "@types/bcrypt": "^6.0.0",
     "@types/busboy": "^1.5.4",
@@ -69,6 +74,7 @@
     "iconv-lite": "^0.7.0",
     "jsonwebtoken": "^9.0.2",
     "marked": "^16.4.0",
+    "mastra": "^0.18.0",
     "p-limit": "^5.0.0",
     "pg": "^8.16.3",
     "pino": "^10.0.0",
@@ -76,6 +82,6 @@
     "postgres": "^3.4.7",
     "tsx": "^4.20.5",
     "xlsx": "^0.18.5",
-    "zod": "^4.1.11"
+    "zod": "^4.1.12"
   }
 }

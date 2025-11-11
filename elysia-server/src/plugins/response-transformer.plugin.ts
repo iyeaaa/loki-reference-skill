@@ -18,6 +18,11 @@ export const responseTransformer = (app: Elysia) =>
       return response
     }
 
+    // Skip transformation for websets endpoints (returns typed response)
+    if (request.url.includes("/api/v1/websets")) {
+      return response
+    }
+
     // Skip transformation for SSE streams (text/event-stream)
     if (set.headers?.["content-type"]?.includes("text/event-stream")) {
       return response

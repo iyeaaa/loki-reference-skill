@@ -101,6 +101,11 @@ export const config = {
   monitoring: {
     sentryDsn: process.env.SENTRY_DSN,
   },
+
+  // OpenAI (for Mastra)
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY || "",
+  },
 } as const
 
 // Log configuration on startup (only in development)

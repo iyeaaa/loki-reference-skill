@@ -43,3 +43,5 @@ backups/
 
 # Docker
 compose.db.override.yml
+
+.mastra

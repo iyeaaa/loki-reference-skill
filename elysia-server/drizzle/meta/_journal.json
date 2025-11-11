@@ -127,6 +127,13 @@
       "when": 1762844612338,
       "tag": "0017_marvelous_skin",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1762851079647,
+      "tag": "0018_wooden_ravenous",
+      "breakpoints": true
     }
   ]
 }

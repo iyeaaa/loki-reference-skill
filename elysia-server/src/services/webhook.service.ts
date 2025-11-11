@@ -801,6 +801,90 @@ class WebhookService {
           msg: "✅ [WEBHOOK] Original email repliedAt updated",
           originalEmailId: originalEmail.id,
         })
+
+        // 답장을 받은 경우, 해당 리드의 모든 active 시퀀스 enrollment를 중단
+        if (inboundEmail.leadId) {
+          try {
+            const { sequenceEnrollments } = await import("../db/schema")
+
+            // 1. 해당 리드의 모든 active enrollment 조회
+            const activeEnrollments = await db
+              .select({
+                id: sequenceEnrollments.id,
+                sequenceId: sequenceEnrollments.sequenceId,
+              })
+              .from(sequenceEnrollments)
+              .where(
+                and(
+                  eq(sequenceEnrollments.leadId, inboundEmail.leadId),
+                  eq(sequenceEnrollments.status, "active"),
+                ),
+              )
+
+            if (activeEnrollments.length > 0) {
+              logger.info({
+                msg: "🛑 [WEBHOOK] Stopping all active enrollments for lead (reply received)",
+                leadId: inboundEmail.leadId,
+                leadName: inboundEmail.leadName,
+                activeEnrollmentsCount: activeEnrollments.length,
+                enrollmentIds: activeEnrollments.map((e) => e.id),
+              })
+
+              // 2. 모든 active enrollment를 stopped 상태로 변경
+              await db
+                .update(sequenceEnrollments)
+                .set({
+                  status: "stopped",
+                  stoppedAt: new Date(),
+                })
+                .where(
+                  and(
+                    eq(sequenceEnrollments.leadId, inboundEmail.leadId),
+                    eq(sequenceEnrollments.status, "active"),
+                  ),
+                )
+
+              logger.info({
+                msg: "✅ [WEBHOOK] All active enrollments stopped successfully",
+                leadId: inboundEmail.leadId,
+                stoppedCount: activeEnrollments.length,
+              })
+
+              // 3. 대기 중인 step executions도 스킵 처리
+              const { sequenceStepExecutions } = await import("../db/schema")
+              for (const enrollment of activeEnrollments) {
+                await db
+                  .update(sequenceStepExecutions)
+                  .set({
+                    status: "skipped",
+                    errorMessage: "Skipped due to reply received",
+                  })
+                  .where(
+                    and(
+                      eq(sequenceStepExecutions.enrollmentId, enrollment.id),
+                      eq(sequenceStepExecutions.status, "pending"),
+                    ),
+                  )
+              }
+
+              logger.info({
+                msg: "✅ [WEBHOOK] Pending step executions skipped",
+                leadId: inboundEmail.leadId,
+              })
+            } else {
+              logger.debug({
+                msg: "ℹ️  [WEBHOOK] No active enrollments found for this lead",
+                leadId: inboundEmail.leadId,
+              })
+            }
+          } catch (error) {
+            logger.error({
+              err: error,
+              leadId: inboundEmail.leadId,
+              msg: "❌ [WEBHOOK] Failed to stop active enrollments, but email was still processed",
+            })
+          }
+        }
       } else {
         logger.warn({
           msg: "❌ [WEBHOOK] Original email NOT found - email_replies record NOT created",

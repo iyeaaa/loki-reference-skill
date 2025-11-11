@@ -346,6 +346,44 @@ export async function updateLead(
     }
   }
 
+  // If lead status changed to unsubscribed, stop all active enrollments
+  if (data.leadStatus === "unsubscribed") {
+    const { sequenceEnrollments, sequenceStepExecutions } = await import("../db/schema/sequences")
+
+    // Find all active enrollments for this lead
+    const activeEnrollments = await db
+      .select({ id: sequenceEnrollments.id })
+      .from(sequenceEnrollments)
+      .where(and(eq(sequenceEnrollments.leadId, id), eq(sequenceEnrollments.status, "active")))
+
+    if (activeEnrollments.length > 0) {
+      // Stop all active enrollments
+      await db
+        .update(sequenceEnrollments)
+        .set({
+          status: "stopped",
+          stoppedAt: new Date(),
+        })
+        .where(and(eq(sequenceEnrollments.leadId, id), eq(sequenceEnrollments.status, "active")))
+
+      // Skip all pending step executions
+      for (const enrollment of activeEnrollments) {
+        await db
+          .update(sequenceStepExecutions)
+          .set({
+            status: "skipped",
+            errorMessage: "Lead unsubscribed",
+          })
+          .where(
+            and(
+              eq(sequenceStepExecutions.enrollmentId, enrollment.id),
+              eq(sequenceStepExecutions.status, "pending"),
+            ),
+          )
+      }
+    }
+  }
+
   return updatedLead
 }
 

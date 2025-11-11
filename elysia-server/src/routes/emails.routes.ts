@@ -67,9 +67,11 @@ const sendEmailSchema = t.Object({
   stepId: t.Optional(t.String({ format: "uuid" })),
   replyTo: t.Optional(t.String({ format: "email" })),
   inReplyTo: t.Optional(t.String()),
-  references: t.Optional(t.Array(t.String())),
+  // FormData로 전송 시 string이 될 수 있음
+  references: t.Optional(t.Union([t.Array(t.String()), t.String()])),
   scheduledAt: t.Optional(t.String()), // ISO 8601 datetime for scheduled sending
-  includeSignature: t.Optional(t.Boolean()), // 서명 포함 여부 (기본값: true)
+  // FormData로 전송 시 string이 될 수 있음
+  includeSignature: t.Optional(t.Union([t.Boolean(), t.String()])),
   files: t.Optional(t.Files()), // 첨부 파일
   // Required fields for user_email_accounts integration
   workspaceId: t.String({ format: "uuid" }),
@@ -708,6 +710,20 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         }
 
         // Send email via SendGrid
+        // FormData로 전송 시 타입 변환 처리
+        const references = body.references
+          ? typeof body.references === "string"
+            ? [body.references] // string을 array로 변환
+            : body.references
+          : undefined
+
+        const includeSignature =
+          body.includeSignature !== undefined
+            ? typeof body.includeSignature === "string"
+              ? body.includeSignature === "true" // string "true"를 boolean으로 변환
+              : body.includeSignature
+            : undefined
+
         logger.info(
           {
             fromEmail,
@@ -730,9 +746,9 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           bccEmails: body.bccEmails,
           replyTo: body.replyTo,
           inReplyTo: body.inReplyTo,
-          references: body.references,
+          references: references,
           attachments: attachments,
-          includeSignature: body.includeSignature,
+          includeSignature: includeSignature,
           userId: body.userId,
           workspaceId: body.workspaceId,
           apiKey: apiKey,

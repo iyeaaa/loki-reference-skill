@@ -4,21 +4,21 @@ import { iterationStep } from "./run-webset-workflow/iteration.step"
 
 /**
  * Main Run Webset Workflow
- * Orchestrates: generate query → search → enrich → validate → check quota loop
+ * Orchestrates a loop with per-company pipeline processing
  *
  * Flow per iteration:
- * 1. Generate unique search query (avoids duplicates)
- * 2. Search companies using query
- * 3. Enrich missing company fields
- * 4. Validate companies against criteria
- * 5. Check if quota is satisfied
+ * 1. Check for unvalidated companies
+ * 2. If none exist: generate unique search query → search companies
+ * 3. For each unvalidated company: enrich → validate (sequential pipeline)
+ * 4. Check if quota is satisfied
  *
  * Loops until target validated rows are met or max iterations reached.
+ * Each company goes through enrichment immediately followed by validation.
  */
 export const runWebsetWorkflow = createWorkflow({
   id: "run-webset",
   description:
-    "Execute webset: generate query, search companies, enrich missing fields, validate criteria - repeat until quota fulfilled",
+    "Execute webset: optionally search, then process each company (enrich → validate pipeline) - repeat until quota fulfilled",
   inputSchema: z.object({
     websetId: z.string().uuid().describe("The ID of the webset to run"),
   }),

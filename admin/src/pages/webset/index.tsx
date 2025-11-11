@@ -10,7 +10,7 @@ export default function WebsetPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (query.trim()) {
-      navigate(`/webset/criteria?query=${encodeURIComponent(query)}`)
+      navigate(`/websets/criteria?query=${encodeURIComponent(query)}`)
     }
   }
 

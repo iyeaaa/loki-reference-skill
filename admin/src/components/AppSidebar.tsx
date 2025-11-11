@@ -112,7 +112,7 @@ const getMainMenuItems = (t: (key: string) => string) => [
   },
   // {
   //   title: t("sidebar.menu.webset"),
-  //   url: "/webset",
+  //   url: "/websets",
   //   icon: Search,
   // },
 ]

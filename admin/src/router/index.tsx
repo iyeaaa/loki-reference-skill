@@ -161,11 +161,11 @@ export const router = createBrowserRouter([
             element: <WebDataExtraction />,
           },
           {
-            path: "webset",
+            path: "websets",
             element: <WebsetPage />,
           },
           {
-            path: "webset/criteria",
+            path: "websets/criteria",
             element: <WebsetCriteriaPage />,
           },
           {

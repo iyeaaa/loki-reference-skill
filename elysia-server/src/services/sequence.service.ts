@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, lte, or, sql } from "drizzle-orm"
+import { and, desc, eq, ilike, lte, ne, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { customerGroups } from "../db/schema/customer-groups"
 import { userEmailAccounts } from "../db/schema/email-accounts"
@@ -470,7 +470,11 @@ export async function createSequenceStep(data: {
   emailBodyText?: string
   emailBodyHtml?: string
   emailTemplateId?: string
-  attachments?: Array<{ filename: string; type: string; content: string }> | null
+  attachments?: Array<{
+    filename: string
+    type: string
+    content: string
+  }> | null
 }) {
   // Markdown을 HTML로 변환
   const { markdownToHtml } = await import("../utils/markdown")
@@ -522,7 +526,11 @@ export async function updateSequenceStep(
     emailBodyText?: string
     emailBodyHtml?: string
     emailTemplateId?: string
-    attachments?: Array<{ filename: string; type: string; content: string }> | null
+    attachments?: Array<{
+      filename: string
+      type: string
+      content: string
+    }> | null
   },
 ) {
   const { default: logger } = await import("../utils/logger")
@@ -1717,6 +1725,7 @@ export async function getPendingStepExecutions(limit: number = 100) {
         lte(sequenceStepExecutions.scheduledAt, now),
         eq(sequenceEnrollments.status, "active"),
         eq(sequences.status, "active"),
+        ne(leads.leadStatus, "unsubscribed"), // Exclude unsubscribed leads
       ),
     )
     .orderBy(sequenceStepExecutions.scheduledAt)

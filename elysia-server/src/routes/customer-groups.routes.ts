@@ -287,6 +287,7 @@ export const customerGroupRoutes = new Elysia({
         id: member.leadId,
         name: member.companyName,
         email: member.primaryEmail,
+        hasReplied: member.hasReplied,
       }))
       return transformedMembers
     },

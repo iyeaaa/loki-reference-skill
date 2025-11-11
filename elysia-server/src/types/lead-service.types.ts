@@ -46,6 +46,7 @@ export type LeadSearchResultRuntime = {
   createdAt: Date // Date object from Drizzle
   updatedAt: Date // Date object from Drizzle
   lastContactedAt: Date | null // Date object from Drizzle
+  hasReplied: boolean // true if lead has inbound emails (actual replies)
   // Related data
   contacts: LeadContact[]
   socialMedia: LeadSocialMedia[]
@@ -93,6 +94,7 @@ export type LeadSearchResult = {
   createdAt: string // ISO 8601 date-time string
   updatedAt: string // ISO 8601 date-time string
   lastContactedAt: string | null // ISO 8601 date-time string
+  hasReplied: boolean // true if lead has inbound emails (actual replies)
   // Related data
   contacts: LeadContact[]
   socialMedia: LeadSocialMedia[]

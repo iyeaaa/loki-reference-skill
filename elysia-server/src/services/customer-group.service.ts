@@ -1,6 +1,7 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { customerGroupMembers, customerGroups } from "../db/schema/customer-groups"
+import { emails } from "../db/schema/emails"
 import { leadContacts } from "../db/schema/lead-details"
 import { leads } from "../db/schema/leads"
 import { users } from "../db/schema/users"
@@ -660,6 +661,11 @@ export async function getGroupMembersWithEmails(groupId: string) {
          LIMIT 1),
         LOWER(REPLACE(${leads.companyName}, ' ', '.')) || '@example.com'
       )`.as("primaryEmail"),
+      hasReplied: sql<boolean>`EXISTS (
+        SELECT 1 FROM ${emails}
+        WHERE ${emails.leadId} = ${leads.id}
+        AND ${emails.direction} = 'inbound'
+      )`,
     })
     .from(customerGroupMembers)
     .innerJoin(leads, eq(customerGroupMembers.leadId, leads.id))

@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, ilike, inArray, or, type SQL, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { customerGroupMembers } from "../db/schema/customer-groups"
+import { emails } from "../db/schema/emails"
 import {
   leadBusinessSectors,
   leadContacts,
@@ -586,6 +587,11 @@ export async function listLeadsWithFilters(
       createdAt: leads.createdAt,
       updatedAt: leads.updatedAt,
       lastContactedAt: leads.lastContactedAt,
+      hasReplied: sql<boolean>`EXISTS (
+        SELECT 1 FROM ${emails}
+        WHERE ${emails.leadId} = ${leads.id}
+        AND ${emails.direction} = 'inbound'
+      )`,
     })
     .from(leads)
     .innerJoin(workspaces, eq(leads.workspaceId, workspaces.id))

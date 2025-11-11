@@ -93,14 +93,87 @@ export const sequencesApi = {
     return apiFetch<SequenceStep[]>(`/api/v1/sequences/${sequenceId}/steps`)
   },
 
-  createStep: (sequenceId: string, data: CreateSequenceStepRequest) => {
+  createStep: (sequenceId: string, data: CreateSequenceStepRequest, files?: File[]) => {
+    console.log("📎 API - createStep called with files:", files)
+    console.log("📎 API - Files count:", files?.length || 0)
+
+    // If files are provided, use FormData
+    if (files && files.length > 0) {
+      console.log("📎 API - Using FormData for file upload")
+      const formData = new FormData()
+
+      // Append all data fields
+      formData.append("stepOrder", data.stepOrder.toString())
+      formData.append("delayDays", data.delayDays.toString())
+      if (data.scheduledHour !== undefined) {
+        formData.append("scheduledHour", data.scheduledHour.toString())
+      }
+      if (data.scheduledMinute !== undefined) {
+        formData.append("scheduledMinute", data.scheduledMinute.toString())
+      }
+      if (data.timezone) formData.append("timezone", data.timezone)
+      formData.append("emailSubject", data.emailSubject)
+      if (data.emailBodyText) formData.append("emailBodyText", data.emailBodyText)
+      if (data.emailBodyHtml) formData.append("emailBodyHtml", data.emailBodyHtml)
+      if (data.emailTemplateId) formData.append("emailTemplateId", data.emailTemplateId)
+
+      // Append files
+      for (const file of files) {
+        formData.append("files", file)
+      }
+
+      return apiFetch<SequenceStep>(`/api/v1/sequences/${sequenceId}/steps`, {
+        method: "POST",
+        body: formData,
+        headers: {}, // Let browser set Content-Type with boundary
+      })
+    }
+
+    // No files, use JSON
     return apiFetch<SequenceStep>(`/api/v1/sequences/${sequenceId}/steps`, {
       method: "POST",
       body: JSON.stringify(data),
     })
   },
 
-  updateStep: (sequenceId: string, stepId: string, data: CreateSequenceStepRequest) => {
+  updateStep: (
+    sequenceId: string,
+    stepId: string,
+    data: CreateSequenceStepRequest,
+    files?: File[],
+  ) => {
+    // If files are provided, use FormData
+    if (files && files.length > 0) {
+      const formData = new FormData()
+
+      // Append all data fields
+      formData.append("stepOrder", data.stepOrder.toString())
+      formData.append("delayDays", data.delayDays.toString())
+      if (data.scheduledHour !== undefined) {
+        formData.append("scheduledHour", data.scheduledHour.toString())
+      }
+      if (data.scheduledMinute !== undefined) {
+        formData.append("scheduledMinute", data.scheduledMinute.toString())
+      }
+      if (data.timezone) formData.append("timezone", data.timezone)
+      formData.append("emailSubject", data.emailSubject)
+      if (data.emailBodyText) formData.append("emailBodyText", data.emailBodyText)
+      if (data.emailBodyHtml) formData.append("emailBodyHtml", data.emailBodyHtml)
+      if (data.emailTemplateId) formData.append("emailTemplateId", data.emailTemplateId)
+
+      // Append files
+      for (const file of files) {
+        formData.append("files", file)
+      }
+
+      return apiFetch<SequenceStep>(`/api/v1/sequences/${sequenceId}/steps/${stepId}`, {
+        method: "PUT",
+        body: formData,
+        headers: {}, // Let browser set Content-Type with boundary
+      })
+    }
+
+    // No files, use JSON
     return apiFetch<SequenceStep>(`/api/v1/sequences/${sequenceId}/steps/${stepId}`, {
       method: "PUT",
       body: JSON.stringify(data),

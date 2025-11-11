@@ -18,6 +18,17 @@ export interface Attachment {
 }
 
 /**
+ * SendGrid Attachment format for outbound emails
+ */
+export interface SendGridAttachment {
+  content: string // Base64 encoded content
+  filename: string
+  type?: string // MIME type
+  disposition?: "attachment" | "inline"
+  content_id?: string // For inline images
+}
+
+/**
  * SendGrid Inbound Parse Webhook Payload
  *
  * Example data received from webhook:

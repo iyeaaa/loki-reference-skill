@@ -11,10 +11,12 @@ import {
   sequences,
 } from "../db/schema/sequences"
 import { workspaces } from "../db/schema/workspaces"
+import type { SendGridAttachment } from "../models/email.model"
 import { emailService } from "../services/email.service"
 import * as leadService from "../services/lead.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
 import { fixUtf8Encoding, parseEmailBody } from "../utils/email.util"
+import { convertFilesToAttachments, getTotalFileSize, validateFileSize } from "../utils/file.util"
 import logger from "../utils/logger"
 
 // Email Schema
@@ -68,6 +70,7 @@ const sendEmailSchema = t.Object({
   references: t.Optional(t.Array(t.String())),
   scheduledAt: t.Optional(t.String()), // ISO 8601 datetime for scheduled sending
   includeSignature: t.Optional(t.Boolean()), // 서명 포함 여부 (기본값: true)
+  files: t.Optional(t.Files()), // 첨부 파일
   // Required fields for user_email_accounts integration
   workspaceId: t.String({ format: "uuid" }),
   userId: t.String({ format: "uuid" }),
@@ -565,6 +568,57 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         const fromName = body.fromName || emailAccount.displayName || emailAccount.emailAddress
         const apiKey = emailAccount.apiKey
 
+        // Process attachments if files are provided
+        let attachments: SendGridAttachment[] | undefined
+        let attachmentMetadata: Array<{
+          filename: string
+          type: string
+          size: number
+        }> | null = null
+
+        if (body.files && body.files.length > 0) {
+          const files = Array.isArray(body.files) ? body.files : [body.files]
+
+          // Validate file size (SendGrid limit: 30MB total)
+          if (!validateFileSize(files, 30 * 1024 * 1024)) {
+            const totalSize = getTotalFileSize(files)
+            set.status = 400
+            return errorResponse(
+              `첨부 파일 총 크기가 30MB를 초과합니다. (현재: ${Math.round(
+                totalSize / 1024 / 1024,
+              )}MB)`,
+              ResponseCode.VALIDATION_ERROR,
+            )
+          }
+
+          // Convert files to SendGrid attachment format
+          try {
+            attachments = await convertFilesToAttachments(files)
+
+            // Save metadata for database
+            attachmentMetadata = files.map((file) => ({
+              filename: file.name,
+              type: file.type || "application/octet-stream",
+              size: file.size,
+            }))
+
+            logger.info(
+              {
+                fileCount: files.length,
+                totalSize: getTotalFileSize(files),
+              },
+              "Files converted to attachments",
+            )
+          } catch (error) {
+            logger.error({ err: error }, "Failed to process attachments")
+            set.status = 500
+            return errorResponse(
+              "첨부 파일 처리 중 오류가 발생했습니다.",
+              ResponseCode.INTERNAL_ERROR,
+            )
+          }
+        }
+
         logger.info(
           {
             from: `${fromName} <${fromEmail}>`,
@@ -572,6 +626,8 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             subject: body.subject,
             workspaceId: body.workspaceId,
             userId: body.userId,
+            hasAttachments: !!attachments,
+            attachmentCount: attachments?.length || 0,
           },
           "Sending email",
         )
@@ -595,6 +651,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
                 bodyHtml: body.bodyHtml || null,
                 ccEmails: body.ccEmails || null,
                 bccEmails: body.bccEmails || null,
+                attachments: attachmentMetadata || null,
                 status: "scheduled",
                 scheduledAt: new Date(body.scheduledAt),
                 leadId: body.leadId || null,
@@ -674,6 +731,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           replyTo: body.replyTo,
           inReplyTo: body.inReplyTo,
           references: body.references,
+          attachments: attachments,
           includeSignature: body.includeSignature,
           userId: body.userId,
           workspaceId: body.workspaceId,
@@ -746,6 +804,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
               bodyHtml: body.bodyHtml || null,
               ccEmails: body.ccEmails || null,
               bccEmails: body.bccEmails || null,
+              attachments: attachmentMetadata || null,
               status: "sent",
               sentAt: new Date(),
               messageId: sendResult.messageId,
@@ -999,7 +1058,11 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       // Handle filters by building the appropriate query
       type RepliedThreadId =
         | { threadId: string | null }
-        | { threadId: string | null; matchedEmailId: string; matchedCreatedAt: Date }
+        | {
+            threadId: string | null
+            matchedEmailId: string
+            matchedCreatedAt: Date
+          }
       let repliedThreadIds: RepliedThreadId[]
       const needsEmailRepliesJoin =
         (intentFilter && intentFilter !== "all") ||

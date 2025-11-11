@@ -1,6 +1,6 @@
 {
-  "id": "2035afbb-19dc-401e-b181-1f71b4f6ffb1",
-  "prevId": "5d097eb9-75be-4a85-8579-479433a92938",
+  "id": "fdb39a59-5bd4-4f9d-9ebe-ba1401bb462e",
+  "prevId": "ba6e65ae-0de8-40a4-ab52-35d6bc327cc0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1460,6 +1460,12 @@
         "raw_email": {
           "name": "raw_email",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attachments": {
+          "name": "attachments",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -3261,6 +3267,12 @@
         "email_template_id": {
           "name": "email_template_id",
           "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attachments": {
+          "name": "attachments",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },

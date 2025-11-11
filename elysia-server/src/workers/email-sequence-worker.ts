@@ -40,6 +40,7 @@ async function sendSequenceEmail(execution: {
   stepId: string
   workspaceId: string
   userId: string | null
+  attachments?: Array<{ filename: string; type: string; content: string }> | null
 }): Promise<EmailSendResult> {
   try {
     logger.debug(
@@ -308,6 +309,32 @@ async function sendSequenceEmail(execution: {
       "📤 [STEP-WORKER] Sending email via EmailService",
     )
 
+    // Prepare attachments for SendGrid (convert from stored format)
+    let sendGridAttachments:
+      | Array<{
+          content: string
+          filename: string
+          type: string
+          disposition: "attachment"
+        }>
+      | undefined
+    if (execution.attachments && execution.attachments.length > 0) {
+      sendGridAttachments = execution.attachments.map((att) => ({
+        content: att.content, // Base64 encoded content
+        filename: att.filename,
+        type: att.type,
+        disposition: "attachment" as const,
+      }))
+
+      logger.info(
+        {
+          executionId: execution.executionId,
+          attachmentCount: sendGridAttachments.length,
+        },
+        "📎 [STEP-WORKER] Including attachments in email",
+      )
+    }
+
     // Send email using EmailService (includes automatic signature)
     const sendResult = await emailService.sendEmail({
       fromEmail: emailAccount.emailAddress,
@@ -318,6 +345,7 @@ async function sendSequenceEmail(execution: {
       bodyHtml: personalizedBodyHtml || undefined,
       inReplyTo,
       references,
+      attachments: sendGridAttachments,
       includeSignature: false, // 시퀀스 이메일은 프론트엔드에서 이미 서명이 포함됨
       userId: execution.userId || undefined,
       workspaceId: execution.workspaceId,

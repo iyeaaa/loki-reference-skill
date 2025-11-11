@@ -113,6 +113,20 @@
       "when": 1762823338280,
       "tag": "0015_wooden_domino",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1762844178187,
+      "tag": "0016_vengeful_raider",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1762844612338,
+      "tag": "0017_marvelous_skin",
+      "breakpoints": true
     }
   ]
 }

@@ -42,15 +42,22 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
   const updateStep = useUpdateSequenceStep(sequenceId)
   const deleteStep = useDeleteSequenceStep(sequenceId)
 
-  const handleCreateStep = (stepData: {
-    stepOrder: number
-    delayDays: number
-    scheduledHour?: number
-    scheduledMinute?: number
-    timezone?: string
-    emailSubject: string
-    emailBodyText?: string
-  }) => {
+  const handleCreateStep = (
+    stepData: {
+      stepOrder: number
+      delayDays: number
+      scheduledHour?: number
+      scheduledMinute?: number
+      timezone?: string
+      emailSubject: string
+      emailBodyText?: string
+    },
+    files?: File[],
+  ) => {
+    // 디버깅: 파일 확인
+    console.log("📎 SequenceStepList - Received files:", files)
+    console.log("📎 SequenceStepList - Files count:", files?.length || 0)
+
     const createData: SequenceStepCreateInput = {
       stepOrder: stepData.stepOrder,
       delayDays: stepData.delayDays,
@@ -60,22 +67,28 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
       emailSubject: stepData.emailSubject,
       emailBodyText: stepData.emailBodyText || "",
     }
-    createStep.mutate(createData, {
-      onSuccess: () => {
-        setIsCreating(false)
+    createStep.mutate(
+      { data: createData, files },
+      {
+        onSuccess: () => {
+          setIsCreating(false)
+        },
       },
-    })
+    )
   }
 
-  const handleUpdateStep = (stepData: {
-    stepOrder: number
-    delayDays: number
-    scheduledHour?: number
-    scheduledMinute?: number
-    timezone?: string
-    emailSubject: string
-    emailBodyText?: string
-  }) => {
+  const handleUpdateStep = (
+    stepData: {
+      stepOrder: number
+      delayDays: number
+      scheduledHour?: number
+      scheduledMinute?: number
+      timezone?: string
+      emailSubject: string
+      emailBodyText?: string
+    },
+    files?: File[],
+  ) => {
     if (!editingStep) return
     const updateData: SequenceStepUpdateInput = {
       stepOrder: stepData.stepOrder,
@@ -87,7 +100,7 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
       emailBodyText: stepData.emailBodyText || "",
     }
     updateStep.mutate(
-      { stepId: editingStep.id, data: updateData },
+      { stepId: editingStep.id, data: updateData, files },
       {
         onSuccess: () => {
           setEditingStep(null)

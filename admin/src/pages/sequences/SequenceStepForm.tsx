@@ -2,6 +2,7 @@ import { ChevronDown, Mail, Sparkles } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
+import { FileAttachment } from "@/components/FileAttachment"
 import { SignatureEditorModal } from "@/components/SignatureEditorModal"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -113,19 +114,22 @@ interface SequenceStepFormProps {
   stepOrder: number
   workspaceId?: string
   customerGroupId?: string
-  onSave: (stepData: {
-    stepOrder: number
-    delayDays: number
-    scheduledHour?: number
-    scheduledMinute?: number
-    timezone?: string
-    emailSubject: string
-    emailBodyText?: string
-    emailBodyHtml?: string
-    conditionType?: StepConditionType
-    conditionConfig?: string
-    previousStepId?: string
-  }) => void
+  onSave: (
+    stepData: {
+      stepOrder: number
+      delayDays: number
+      scheduledHour?: number
+      scheduledMinute?: number
+      timezone?: string
+      emailSubject: string
+      emailBodyText?: string
+      emailBodyHtml?: string
+      conditionType?: StepConditionType
+      conditionConfig?: string
+      previousStepId?: string
+    },
+    files?: File[],
+  ) => void
   onCancel: () => void
 }
 
@@ -192,6 +196,9 @@ export function SequenceStepForm({
   // 서명 편집 모달 상태
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false)
 
+  // 첨부 파일 상태
+  const [files, setFiles] = useState<File[]>([])
+
   // DB에서 서명이 로드되면 초기 서명 설정 (새 스텝 생성 시에만)
   useEffect(() => {
     if (!step && !formData.emailBodyText && defaultSignature) {
@@ -245,16 +252,30 @@ export function SequenceStepForm({
       return
     }
 
+    // 디버깅: 파일 확인
+    console.log("📎 SequenceStepForm - Files to save:", files)
+    console.log("📎 SequenceStepForm - Files count:", files.length)
+    if (files.length > 0) {
+      console.log("📎 First file:", {
+        name: files[0].name,
+        size: files[0].size,
+        type: files[0].type,
+      })
+    }
+
     // Markdown을 HTML로 변환
     const emailBodyHtml = formData.emailBodyText
       ? markdownToHtml(formData.emailBodyText)
       : undefined
 
-    onSave({
-      ...formData,
-      emailBodyHtml,
-      conditionType: formData.stepOrder === 1 ? "always" : formData.conditionType,
-    })
+    onSave(
+      {
+        ...formData,
+        emailBodyHtml,
+        conditionType: formData.stepOrder === 1 ? "always" : formData.conditionType,
+      },
+      files,
+    )
   }
 
   useEffect(() => {
@@ -577,6 +598,15 @@ export function SequenceStepForm({
           placeholder={`\n\n--\n${getUserSignature()}`}
           height="300px"
         />
+      </div>
+
+      {/* 파일 첨부 */}
+      <div className="space-y-2">
+        <Label>{t("sequences.stepForm.attachmentsLabel", "첨부 파일")}</Label>
+        <FileAttachment files={files} onFilesChange={setFiles} maxSize={30 * 1024 * 1024} />
+      </div>
+
+      <div className="space-y-2">
         <Collapsible className="mt-2">
           <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
             <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />

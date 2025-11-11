@@ -6,7 +6,7 @@ import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emailSignatures } from "../db/schema/email-signatures"
 import { departments, users } from "../db/schema/users"
 import { workspaces } from "../db/schema/workspaces"
-import type { Attachment } from "../models/email.model"
+import type { Attachment, SendGridAttachment } from "../models/email.model"
 import logger from "../utils/logger"
 
 class EmailService {
@@ -231,6 +231,7 @@ This email contains confidential information that is protected by law or under t
     replyTo?: string
     inReplyTo?: string
     references?: string[]
+    attachments?: SendGridAttachment[] // 첨부 파일 (Base64 인코딩된 파일)
     apiKey?: string // 특정 계정의 API Key 사용
     includeSignature?: boolean // 서명 포함 여부 (기본값: true)
     userId?: string // 서명 생성을 위한 사용자 ID
@@ -274,6 +275,7 @@ This email contains confidential information that is protected by law or under t
         cc: undefined as string[] | undefined,
         bcc: undefined as string[] | undefined,
         replyTo: undefined as string | undefined,
+        attachments: undefined as SendGridAttachment[] | undefined,
       }
 
       // Message-ID 헤더 추가 (답장 추적용)
@@ -351,6 +353,12 @@ This email contains confidential information that is protected by law or under t
       }
       if (data.references && data.references.length > 0) {
         msg.headers.References = data.references.join(" ")
+      }
+
+      // 첨부 파일 설정
+      if (data.attachments && data.attachments.length > 0) {
+        msg.attachments = data.attachments
+        logger.info({ attachmentCount: data.attachments.length }, "Sending email with attachments")
       }
 
       const response = await sgMail.send(msg as never)

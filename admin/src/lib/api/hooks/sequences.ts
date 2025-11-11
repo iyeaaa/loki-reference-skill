@@ -167,13 +167,29 @@ export function useCreateSequenceStep(sequenceId?: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: CreateSequenceStepRequest & { sequenceId?: string }) => {
+    mutationFn: (
+      variables:
+        | { data: CreateSequenceStepRequest & { sequenceId?: string }; files?: File[] }
+        | (CreateSequenceStepRequest & { sequenceId?: string }),
+    ) => {
+      console.log("📎 Hook - mutationFn called with variables:", variables)
+      console.log("📎 Hook - Has 'data' property:", "data" in variables)
+
+      // Handle both old format (direct data) and new format (with files)
+      const data = "data" in variables ? variables.data : variables
+      const files = "data" in variables ? variables.files : undefined
+
+      console.log("📎 Hook - Extracted data:", data)
+      console.log("📎 Hook - Extracted files:", files)
+      console.log("📎 Hook - Files count:", files?.length || 0)
+
       const id = data.sequenceId || sequenceId
       if (!id) throw new Error("sequenceId is required")
-      return sequencesApi.createStep(id, data)
+      return sequencesApi.createStep(id, data, files)
     },
     onSuccess: (_, variables) => {
-      const id = variables.sequenceId || sequenceId
+      const data = "data" in variables ? variables.data : variables
+      const id = data.sequenceId || sequenceId
       if (id) {
         queryClient.invalidateQueries({ queryKey: sequenceKeys.steps(id) })
         queryClient.invalidateQueries({ queryKey: sequenceKeys.detail(id) })
@@ -191,18 +207,15 @@ export function useUpdateSequenceStep(sequenceId?: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({
-      sequenceId: seqId,
-      stepId,
-      data,
-    }: {
+    mutationFn: (variables: {
       sequenceId?: string
       stepId: string
       data: CreateSequenceStepRequest
+      files?: File[]
     }) => {
-      const id = seqId || sequenceId
+      const id = variables.sequenceId || sequenceId
       if (!id) throw new Error("sequenceId is required")
-      return sequencesApi.updateStep(id, stepId, data)
+      return sequencesApi.updateStep(id, variables.stepId, variables.data, variables.files)
     },
     onSuccess: (_, variables) => {
       const id = variables.sequenceId || sequenceId

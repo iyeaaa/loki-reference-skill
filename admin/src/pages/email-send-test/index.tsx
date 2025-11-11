@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import toast from "react-hot-toast"
+import { FileAttachment } from "@/components/FileAttachment"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -72,6 +73,7 @@ export default function EmailSendTestPage() {
   const [singleBodyHtml, setSingleBodyHtml] = useState("")
   const [singleCc, setSingleCc] = useState("")
   const [singleBcc, setSingleBcc] = useState("")
+  const [singleFiles, setSingleFiles] = useState<File[]>([])
 
   // 대량 발송 상태
   const [bulkRecipients, setBulkRecipients] = useState("")
@@ -222,6 +224,7 @@ export default function EmailSendTestPage() {
       ccEmails: singleCc ? singleCc.split(",").map((e) => e.trim()) : undefined,
       bccEmails: singleBcc ? singleBcc.split(",").map((e) => e.trim()) : undefined,
       fromName: fromName || undefined,
+      files: singleFiles.length > 0 ? singleFiles : undefined,
       includeSignature: true, // 서명 포함
     }
 
@@ -234,6 +237,7 @@ export default function EmailSendTestPage() {
       setSingleBodyHtml("")
       setSingleCc("")
       setSingleBcc("")
+      setSingleFiles([])
     } catch (error) {
       // 에러는 mutation에서 처리됨
       console.error("Failed to send email:", error)
@@ -305,6 +309,7 @@ export default function EmailSendTestPage() {
     setSingleBodyHtml("")
     setSingleCc("")
     setSingleBcc("")
+    setSingleFiles([])
   }
 
   const clearBulkForm = () => {
@@ -870,6 +875,14 @@ export default function EmailSendTestPage() {
                   placeholder="<p>HTML 형식의 이메일 본문</p>"
                   height="150px"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>첨부 파일</Label>
+                <FileAttachment files={singleFiles} onFilesChange={setSingleFiles} />
+                <p className="text-xs text-muted-foreground">
+                  최대 10개 파일, 총 30MB까지 첨부 가능
+                </p>
               </div>
 
               <div className="flex gap-2">

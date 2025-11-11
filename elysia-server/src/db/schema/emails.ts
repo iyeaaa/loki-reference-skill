@@ -70,9 +70,15 @@ export const emails = pgTable(
     userEmailAccountId: uuid("user_email_account_id")
       .notNull()
       .references(() => userEmailAccounts.id, { onDelete: "restrict" }),
-    leadId: uuid("lead_id").references(() => leads.id, { onDelete: "set null" }),
-    sequenceId: uuid("sequence_id").references(() => sequences.id, { onDelete: "set null" }),
-    stepId: uuid("step_id").references(() => sequenceSteps.id, { onDelete: "set null" }),
+    leadId: uuid("lead_id").references(() => leads.id, {
+      onDelete: "set null",
+    }),
+    sequenceId: uuid("sequence_id").references(() => sequences.id, {
+      onDelete: "set null",
+    }),
+    stepId: uuid("step_id").references(() => sequenceSteps.id, {
+      onDelete: "set null",
+    }),
 
     direction: emailDirectionEnum("direction").notNull(),
     fromEmail: varchar("from_email", { length: 255 }).notNull(),
@@ -84,6 +90,9 @@ export const emails = pgTable(
     bodyText: text("body_text"),
     bodyHtml: text("body_html"),
     rawEmail: text("raw_email"), // RFC 822 format raw email (for inbound emails)
+
+    // Attachments metadata (stored as JSONB array)
+    attachments: jsonb("attachments"), // Array of { filename, type, size }
 
     status: emailStatusEnum("status").notNull().default("draft"),
 

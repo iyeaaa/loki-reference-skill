@@ -16,6 +16,7 @@ interface EmailStep {
   emailSubject: string
   emailBodyText: string
   isDraft?: boolean
+  files?: File[]
 }
 
 interface CreateCampaignStep2Props {
@@ -72,16 +73,21 @@ export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props
     setShowStepEditor(true)
   }
 
-  const handleSaveStep = (stepData: {
-    stepOrder: number
-    delayDays: number
-    scheduledHour?: number
-    scheduledMinute?: number
-    timezone?: string
-    emailSubject: string
-    emailBodyText?: string
-  }) => {
+  const handleSaveStep = (
+    stepData: {
+      stepOrder: number
+      delayDays: number
+      scheduledHour?: number
+      scheduledMinute?: number
+      timezone?: string
+      emailSubject: string
+      emailBodyText?: string
+    },
+    files?: File[],
+  ) => {
     if (selectedStepIndex === null) return
+
+    console.log("📎 CreateCampaignStep2 - Saving files to local state:", files?.length || 0)
 
     const savedStep: EmailStep = {
       stepOrder: stepData.stepOrder,
@@ -91,6 +97,7 @@ export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props
       emailSubject: stepData.emailSubject,
       emailBodyText: stepData.emailBodyText || "",
       isDraft: false,
+      files: files, // 파일을 로컬 상태로 저장
     }
 
     const updatedSteps = [...steps]

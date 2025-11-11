@@ -18,6 +18,7 @@ interface EmailStep {
   scheduledMinute: number
   emailSubject: string
   emailBodyText: string
+  files?: File[] // 첨부 파일
 }
 
 interface CreateCampaignStep3Props {
@@ -78,14 +79,21 @@ export function CreateCampaignStep3({ data, onChange }: CreateCampaignStep3Props
           if (data.steps.length > 0) {
             try {
               for (const step of data.steps) {
+                console.log(
+                  "📎 CreateCampaignStep3 - Creating step with files:",
+                  step.files?.length || 0,
+                )
                 await createSequenceStep.mutateAsync({
-                  sequenceId: sequence.id,
-                  stepOrder: step.stepOrder,
-                  delayDays: step.delayDays,
-                  scheduledHour: step.scheduledHour,
-                  scheduledMinute: step.scheduledMinute,
-                  emailSubject: step.emailSubject,
-                  emailBodyText: step.emailBodyText,
+                  data: {
+                    sequenceId: sequence.id,
+                    stepOrder: step.stepOrder,
+                    delayDays: step.delayDays,
+                    scheduledHour: step.scheduledHour,
+                    scheduledMinute: step.scheduledMinute,
+                    emailSubject: step.emailSubject,
+                    emailBodyText: step.emailBodyText,
+                  },
+                  files: step.files,
                 })
               }
               toast.success("초안이 저장되었습니다")
@@ -127,14 +135,21 @@ export function CreateCampaignStep3({ data, onChange }: CreateCampaignStep3Props
           if (data.steps.length > 0) {
             try {
               for (const step of data.steps) {
+                console.log(
+                  "📎 CreateCampaignStep3 - Creating step (ready) with files:",
+                  step.files?.length || 0,
+                )
                 await createSequenceStep.mutateAsync({
-                  sequenceId: sequence.id,
-                  stepOrder: step.stepOrder,
-                  delayDays: step.delayDays,
-                  scheduledHour: step.scheduledHour,
-                  scheduledMinute: step.scheduledMinute,
-                  emailSubject: step.emailSubject,
-                  emailBodyText: step.emailBodyText,
+                  data: {
+                    sequenceId: sequence.id,
+                    stepOrder: step.stepOrder,
+                    delayDays: step.delayDays,
+                    scheduledHour: step.scheduledHour,
+                    scheduledMinute: step.scheduledMinute,
+                    emailSubject: step.emailSubject,
+                    emailBodyText: step.emailBodyText,
+                  },
+                  files: step.files,
                 })
               }
               toast.success("캠페인이 준비 상태로 저장되었습니다")

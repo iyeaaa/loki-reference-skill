@@ -38,6 +38,12 @@ export type EmailEventType =
   | "spam_report"
   | "unsubscribe"
 
+export interface EmailAttachment {
+  filename: string
+  type: string
+  size: number
+}
+
 export interface Email {
   id: string
   workspaceId: string
@@ -53,6 +59,7 @@ export interface Email {
   subject?: string | null
   bodyText?: string | null
   bodyHtml?: string | null
+  attachments?: EmailAttachment[] | null
   status: EmailStatus
   // Timing
   scheduledAt?: string | null
@@ -145,6 +152,7 @@ export interface SendEmailRequest {
   references?: string[]
   scheduledAt?: string // ISO 8601 datetime for scheduled sending
   includeSignature?: boolean // 서명 포함 여부 (기본값: true)
+  files?: File[] // 첨부 파일
   // Required fields for user_email_accounts integration
   workspaceId: string
   userId: string

@@ -148,6 +148,63 @@ export const emailsApi = {
   },
 
   send: (data: SendEmailRequest) => {
+    // If files are provided, use FormData, otherwise use JSON
+    if (data.files && data.files.length > 0) {
+      const formData = new FormData()
+
+      // Append all fields to FormData
+      formData.append("toEmail", data.toEmail)
+      formData.append("subject", data.subject)
+      formData.append("workspaceId", data.workspaceId)
+      formData.append("userId", data.userId)
+
+      if (data.bodyText) formData.append("bodyText", data.bodyText)
+      if (data.bodyHtml) formData.append("bodyHtml", data.bodyHtml)
+      if (data.fromName) formData.append("fromName", data.fromName)
+      if (data.leadId) formData.append("leadId", data.leadId)
+      if (data.sequenceId) formData.append("sequenceId", data.sequenceId)
+      if (data.stepId) formData.append("stepId", data.stepId)
+      if (data.replyTo) formData.append("replyTo", data.replyTo)
+      if (data.inReplyTo) formData.append("inReplyTo", data.inReplyTo)
+      if (data.scheduledAt) formData.append("scheduledAt", data.scheduledAt)
+      if (data.includeSignature !== undefined)
+        formData.append("includeSignature", String(data.includeSignature))
+
+      // Append arrays
+      if (data.ccEmails && data.ccEmails.length > 0) {
+        for (const email of data.ccEmails) {
+          formData.append("ccEmails", email)
+        }
+      }
+      if (data.bccEmails && data.bccEmails.length > 0) {
+        for (const email of data.bccEmails) {
+          formData.append("bccEmails", email)
+        }
+      }
+      if (data.references && data.references.length > 0) {
+        for (const ref of data.references) {
+          formData.append("references", ref)
+        }
+      }
+
+      // Append files
+      for (const file of data.files) {
+        formData.append("files", file)
+      }
+
+      return apiFetch<{
+        success: boolean
+        email: Email
+        message: string
+      }>("/api/v1/emails/send", {
+        method: "POST",
+        body: formData,
+        // Don't set Content-Type header, let browser set it with boundary
+        headers: {},
+      })
+    }
+
+    // No files, use JSON
     return apiFetch<{
       success: boolean
       email: Email

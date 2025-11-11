@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm"
 import {
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -90,6 +91,7 @@ export const sequenceSteps = pgTable(
     emailBodyText: text("email_body_text"),
     emailBodyHtml: text("email_body_html"),
     emailTemplateId: uuid("email_template_id"), // Reference to email_templates (we'll add this relation later)
+    attachments: jsonb("attachments"), // Array of { filename, type, size, content (base64) }
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

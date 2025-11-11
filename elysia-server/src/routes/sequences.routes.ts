@@ -6,6 +6,7 @@ import { getAITemplateGenerationService } from "../services/ai-template-generati
 import * as sequenceService from "../services/sequence.service"
 import * as workspaceService from "../services/workspace.service"
 import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
+import { convertFilesToAttachments } from "../utils/file.util"
 import logger from "../utils/logger"
 
 const sequenceSchema = t.Object({
@@ -45,15 +46,17 @@ const updateSequenceSchema = t.Object({
 })
 
 const sequenceStepSchema = t.Object({
-  stepOrder: t.Number(),
-  delayDays: t.Number(),
-  scheduledHour: t.Optional(t.Number({ minimum: 0, maximum: 23 })),
-  scheduledMinute: t.Optional(t.Number({ minimum: 0, maximum: 59 })),
+  // FormData로 전송되면 string이 되므로 union 타입 사용
+  stepOrder: t.Union([t.Number(), t.String()]),
+  delayDays: t.Union([t.Number(), t.String()]),
+  scheduledHour: t.Optional(t.Union([t.Number({ minimum: 0, maximum: 23 }), t.String()])),
+  scheduledMinute: t.Optional(t.Union([t.Number({ minimum: 0, maximum: 59 }), t.String()])),
   timezone: t.Optional(t.String({ maxLength: 50 })),
   emailSubject: t.String({ minLength: 1, maxLength: 500 }),
   emailBodyText: t.Optional(t.String()),
   emailBodyHtml: t.Optional(t.String()),
   emailTemplateId: t.Optional(t.String({ format: "uuid" })),
+  files: t.Optional(t.Files()), // 첨부 파일
 })
 
 const enrollmentSchema = t.Object({
@@ -630,10 +633,71 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
   .post(
     "/:id/steps",
     async ({ params: { id }, body }) => {
-      const step = await sequenceService.createSequenceStep({
+      logger.info(
+        {
+          sequenceId: id,
+          hasFiles: !!body.files,
+          filesCount: body.files ? (Array.isArray(body.files) ? body.files.length : 1) : 0,
+        },
+        "📎 [API] Creating sequence step",
+      )
+
+      // Process attachments if files are provided
+      let attachmentsData = null
+      if (body.files && body.files.length > 0) {
+        const files = Array.isArray(body.files) ? body.files : [body.files]
+
+        try {
+          const attachments = await convertFilesToAttachments(files)
+
+          // Save metadata with base64 content for later use
+          attachmentsData = attachments.map((att) => ({
+            filename: att.filename,
+            type: att.type || "application/octet-stream",
+            content: att.content, // Base64 encoded
+          }))
+
+          logger.info(
+            {
+              sequenceId: id,
+              fileCount: files.length,
+            },
+            "Files converted to attachments for sequence step",
+          )
+        } catch (error) {
+          logger.error({ err: error }, "Failed to process attachments")
+          throw new Error("첨부 파일 처리 중 오류가 발생했습니다.")
+        }
+      }
+
+      // FormData로 전송되면 숫자 필드가 문자열로 변환되므로 명시적으로 변환
+      const stepData = {
         sequenceId: id,
-        ...body,
-      })
+        stepOrder:
+          typeof body.stepOrder === "string" ? Number.parseInt(body.stepOrder) : body.stepOrder,
+        delayDays:
+          typeof body.delayDays === "string" ? Number.parseInt(body.delayDays) : body.delayDays,
+        scheduledHour:
+          body.scheduledHour !== undefined
+            ? typeof body.scheduledHour === "string"
+              ? Number.parseInt(body.scheduledHour)
+              : body.scheduledHour
+            : undefined,
+        scheduledMinute:
+          body.scheduledMinute !== undefined
+            ? typeof body.scheduledMinute === "string"
+              ? Number.parseInt(body.scheduledMinute)
+              : body.scheduledMinute
+            : undefined,
+        timezone: body.timezone,
+        emailSubject: body.emailSubject,
+        emailBodyText: body.emailBodyText,
+        emailBodyHtml: body.emailBodyHtml,
+        emailTemplateId: body.emailTemplateId,
+        attachments: attachmentsData,
+      }
+
+      const step = await sequenceService.createSequenceStep(stepData)
       return step
     },
     {
@@ -648,7 +712,61 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
   .put(
     "/:id/steps/:stepId",
     async ({ params: { stepId }, body, set }) => {
-      const step = await sequenceService.updateSequenceStep(stepId, body)
+      // Process attachments if files are provided
+      let attachmentsData = null
+      if (body.files && body.files.length > 0) {
+        const files = Array.isArray(body.files) ? body.files : [body.files]
+
+        try {
+          const attachments = await convertFilesToAttachments(files)
+
+          // Save metadata with base64 content for later use
+          attachmentsData = attachments.map((att) => ({
+            filename: att.filename,
+            type: att.type || "application/octet-stream",
+            content: att.content, // Base64 encoded
+          }))
+
+          logger.info(
+            {
+              stepId,
+              fileCount: files.length,
+            },
+            "Files converted to attachments for sequence step update",
+          )
+        } catch (error) {
+          logger.error({ err: error }, "Failed to process attachments")
+          throw new Error("첨부 파일 처리 중 오류가 발생했습니다.")
+        }
+      }
+
+      // FormData로 전송되면 숫자 필드가 문자열로 변환되므로 명시적으로 변환
+      const updateData = {
+        stepOrder:
+          typeof body.stepOrder === "string" ? Number.parseInt(body.stepOrder) : body.stepOrder,
+        delayDays:
+          typeof body.delayDays === "string" ? Number.parseInt(body.delayDays) : body.delayDays,
+        scheduledHour:
+          body.scheduledHour !== undefined
+            ? typeof body.scheduledHour === "string"
+              ? Number.parseInt(body.scheduledHour)
+              : body.scheduledHour
+            : undefined,
+        scheduledMinute:
+          body.scheduledMinute !== undefined
+            ? typeof body.scheduledMinute === "string"
+              ? Number.parseInt(body.scheduledMinute)
+              : body.scheduledMinute
+            : undefined,
+        timezone: body.timezone,
+        emailSubject: body.emailSubject,
+        emailBodyText: body.emailBodyText,
+        emailBodyHtml: body.emailBodyHtml,
+        emailTemplateId: body.emailTemplateId,
+        attachments: attachmentsData,
+      }
+
+      const step = await sequenceService.updateSequenceStep(stepId, updateData)
       if (!step) {
         set.status = 404
         return errorResponse("시퀀스 스텝을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)

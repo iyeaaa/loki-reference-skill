@@ -470,6 +470,7 @@ export async function createSequenceStep(data: {
   emailBodyText?: string
   emailBodyHtml?: string
   emailTemplateId?: string
+  attachments?: Array<{ filename: string; type: string; content: string }> | null
 }) {
   // Markdown을 HTML로 변환
   const { markdownToHtml } = await import("../utils/markdown")
@@ -489,6 +490,7 @@ export async function createSequenceStep(data: {
       emailBodyText: data.emailBodyText || null,
       emailBodyHtml: emailBodyHtml,
       emailTemplateId: data.emailTemplateId || null,
+      attachments: data.attachments || null,
     })
     .returning({
       id: sequenceSteps.id,
@@ -499,6 +501,7 @@ export async function createSequenceStep(data: {
       scheduledMinute: sequenceSteps.scheduledMinute,
       timezone: sequenceSteps.timezone,
       emailSubject: sequenceSteps.emailSubject,
+      attachments: sequenceSteps.attachments,
       createdAt: sequenceSteps.createdAt,
       updatedAt: sequenceSteps.updatedAt,
     })
@@ -519,6 +522,7 @@ export async function updateSequenceStep(
     emailBodyText?: string
     emailBodyHtml?: string
     emailTemplateId?: string
+    attachments?: Array<{ filename: string; type: string; content: string }> | null
   },
 ) {
   const { default: logger } = await import("../utils/logger")
@@ -599,6 +603,7 @@ export async function updateSequenceStep(
       scheduledHour: data.scheduledHour ?? 9,
       scheduledMinute: data.scheduledMinute ?? 0,
       timezone: data.timezone ?? "Asia/Seoul",
+      attachments: data.attachments || null,
       updatedAt: new Date(),
     })
     .where(eq(sequenceSteps.id, id))
@@ -611,6 +616,7 @@ export async function updateSequenceStep(
       scheduledMinute: sequenceSteps.scheduledMinute,
       timezone: sequenceSteps.timezone,
       emailSubject: sequenceSteps.emailSubject,
+      attachments: sequenceSteps.attachments,
       updatedAt: sequenceSteps.updatedAt,
     })
 
@@ -1687,6 +1693,11 @@ export async function getPendingStepExecutions(limit: number = 100) {
       emailSubject: sequenceSteps.emailSubject,
       emailBodyText: sequenceSteps.emailBodyText,
       emailBodyHtml: sequenceSteps.emailBodyHtml,
+      attachments: sql<Array<{
+        filename: string
+        type: string
+        content: string
+      }> | null>`${sequenceSteps.attachments}`,
       leadId: sequenceEnrollments.leadId,
       leadCompanyName: leads.companyName,
       emailAccountId: sequenceEnrollments.userEmailAccountId,

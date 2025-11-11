@@ -106,6 +106,24 @@ export const config = {
   openai: {
     apiKey: process.env.OPENAI_API_KEY || "",
   },
+
+  // External APIs
+  apis: {
+    jina: {
+      apiKey: getEnv("JINA_API_KEY"),
+    },
+    hasdata: {
+      apiKey: getEnv("HASDATA_API_KEY"),
+    },
+  },
+
+  // Mastra
+  mastra: {
+    model: getEnvOrDefault("MASTRA_MODEL", "gpt-4o-mini"),
+    maxTokens: getEnvInt("MASTRA_MAX_TOKENS", 1000),
+    temperature: Number.parseFloat(getEnvOrDefault("MASTRA_TEMPERATURE", "0.7")),
+    rindaLeadPgUrl: getEnv("RINDA_LEAD_PG_URL"),
+  },
 } as const
 
 // Log configuration on startup (only in development)

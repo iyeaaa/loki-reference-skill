@@ -1,7 +1,8 @@
 import { z } from "zod"
 
 /**
- * Mastra configuration validation schema
+ * @deprecated This schema is no longer used
+ * All env validation is now in @/config
  */
 export const MastraConfigSchema = z.object({
   openaiApiKey: z.string().min(1, "OpenAI API key is required"),
@@ -13,11 +14,14 @@ export const MastraConfigSchema = z.object({
   hasdataApiKey: z.string().min(1, "HasData API key is required"),
 })
 
+/**
+ * @deprecated Use config from @/config instead
+ */
 export type MastraConfig = z.infer<typeof MastraConfigSchema>
 
 /**
- * Validates Mastra configuration
- * Pure function - no side effects
+ * @deprecated This function is no longer used
+ * All env validation is now in @/config
  */
 export function validateMastraConfig(raw: unknown): MastraConfig {
   return MastraConfigSchema.parse(raw)

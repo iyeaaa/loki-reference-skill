@@ -134,6 +134,13 @@
       "when": 1762851079647,
       "tag": "0018_wooden_ravenous",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1762883643438,
+      "tag": "0019_amazing_black_bolt",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 import { createOpenAI } from "@ai-sdk/openai"
 import { createStep, createWorkflow } from "@mastra/core/workflows"
+import { generateObject } from "ai"
 import { z } from "zod"
 import { config } from "../../../../config"
 
@@ -7,93 +8,16 @@ const openai = createOpenAI({ apiKey: config.openai.apiKey })
 
 /**
  * Validate Criteria Workflow
- * Uses research agent to validate data against criteria and extracts structured validation result
+ * Validates data against criteria using direct LLM analysis
  * Shell layer - handles orchestration of validation operation
  */
 
-const researchValidationStep = createStep({
-  id: "research-validation-step",
-  description: "Research criteria and data using web research agent",
+const directValidationStep = createStep({
+  id: "direct-validation-step",
+  description: "Validate data against criteria using direct LLM analysis",
   inputSchema: z.object({
     criteria: z.string().describe("Validation criteria to check against"),
     data: z.string().describe("Data to be validated"),
-  }),
-  outputSchema: z.object({
-    researchResult: z.string(),
-    criteria: z.string(),
-    data: z.string(),
-    success: z.boolean(),
-    message: z.string(),
-  }),
-  execute: async ({ inputData, mastra }) => {
-    const { criteria, data } = inputData
-
-    try {
-      // Get the research agent from Mastra instance
-      const researchAgent = mastra.getAgent("researchAgent")
-
-      if (!researchAgent) {
-        return {
-          researchResult: "",
-          criteria,
-          data,
-          success: false,
-          message: "Research agent not found in Mastra instance",
-        }
-      }
-
-      // Construct the validation research prompt
-      const validationPrompt = `
-Validation Task:
-
-Criteria to Validate Against:
-${criteria}
-
-Data to Validate:
-${data}
-
-Please research and analyze whether the provided data meets the specified criteria.
-Use web search to gather relevant information if needed to make an informed validation decision.
-Provide a detailed analysis explaining why the data does or does not meet the criteria.
-`
-
-      // Call the research agent to analyze the validation
-      const response = await researchAgent.generate(validationPrompt, {
-        maxSteps: 5, // Allow multiple tool calls for thorough research
-      })
-
-      const researchResult = response.text
-
-      return {
-        researchResult,
-        criteria,
-        data,
-        success: true,
-        message: "Successfully completed research validation",
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
-
-      return {
-        researchResult: "",
-        criteria,
-        data,
-        success: false,
-        message: `Research validation failed: ${errorMessage}`,
-      }
-    }
-  },
-})
-
-const structuredExtractionStep = createStep({
-  id: "structured-extraction-step",
-  description: "Extract structured validation boolean from research result",
-  inputSchema: z.object({
-    researchResult: z.string(),
-    criteria: z.string(),
-    data: z.string(),
-    success: z.boolean(),
-    message: z.string(),
   }),
   outputSchema: z.object({
     isValidated: z.boolean(),
@@ -103,71 +27,72 @@ const structuredExtractionStep = createStep({
     success: z.boolean(),
     message: z.string(),
   }),
-  execute: async ({ inputData, mastra }) => {
-    const { researchResult, criteria, data, success, message } = inputData
-
-    // If research step failed, return false validation
-    if (!success) {
-      return {
-        isValidated: false,
-        criteria,
-        data,
-        researchResult,
-        success: false,
-        message,
-      }
-    }
+  execute: async ({ inputData }) => {
+    const { criteria, data } = inputData
 
     try {
-      // Get the research agent for structured extraction
-      const researchAgent = mastra.getAgent("researchAgent")
-
-      if (!researchAgent) {
-        return {
-          isValidated: false,
-          criteria,
-          data,
-          researchResult,
-          success: false,
-          message: "Research agent not found for structured extraction",
-        }
-      }
-
-      // Define the structured output schema
+      // Define the validation schema
       const validationSchema = z.object({
         isValidated: z.boolean().describe("Whether the data meets the criteria"),
         reasoning: z.string().describe("Brief explanation of the validation result"),
+        confidence: z
+          .enum(["high", "medium", "low"])
+          .describe("Confidence level in the validation decision"),
       })
 
-      // Use structured extraction to get validation boolean
-      const extractionPrompt = `
-Based on the following research analysis, determine if the data is valid according to the criteria.
+      // Direct validation prompt - analyze data against criteria
+      const validationPrompt = `
+You are a data validation assistant. Analyze the following data against the given criteria and determine if it meets the requirements.
 
-Research Analysis:
-${researchResult}
+Criteria:
+${criteria}
 
-Provide a structured response with:
-1. isValidated: boolean indicating if data meets criteria
-2. reasoning: brief explanation of your decision
+Data to Validate:
+${data}
+
+Instructions:
+1. Carefully read the criteria and understand what is being asked
+2. Examine the data provided and determine if it satisfies the criteria
+3. Base your decision ONLY on the information present in the data
+4. If the data clearly satisfies the criteria, set isValidated to true
+5. If the data does NOT satisfy the criteria or the information is not present, set isValidated to false
+6. Provide a brief reasoning for your decision
+7. Indicate your confidence level (high/medium/low)
+
+Important:
+- Be literal and straightforward in your interpretation
+- "Is X a Y?" should return true if X is indeed a Y based on the name/description
+- "Is the location in Z?" should return true if the location field mentions Z
+- Don't overthink simple questions - if it looks like a duck and quacks like a duck, it's a duck
+
+Provide your validation result:
 `
 
-      const response = await researchAgent.generate(extractionPrompt, {
-        maxSteps: 1,
-        structuredOutput: {
-          schema: validationSchema,
-          model: openai("gpt-4o-mini"),
-        },
+      const response = await generateObject({
+        model: openai("gpt-4o-mini"),
+        schema: validationSchema,
+        prompt: validationPrompt,
+        temperature: 0.1, // Low temperature for consistent validation
       })
 
-      const structuredOutput = response.object as z.infer<typeof validationSchema>
+      const validationResult = response.object
+
+      const researchResult = `
+Criteria: ${criteria}
+Data: ${data}
+
+Validation Result: ${validationResult.isValidated ? "✅ VALID" : "❌ INVALID"}
+Reasoning: ${validationResult.reasoning}
+Confidence: ${validationResult.confidence.toUpperCase()}
+`
 
       return {
-        isValidated: structuredOutput.isValidated,
+        isValidated: validationResult.isValidated,
         criteria,
         data,
-        researchResult: `${researchResult}\n\nValidation Decision: ${structuredOutput.reasoning}`,
+        researchResult,
         success: true,
-        message: `Validation complete: ${structuredOutput.isValidated ? "Valid" : "Invalid"}`,
+        message: `Validation complete: ${validationResult.isValidated ? "Valid" : "Invalid"} (${validationResult.confidence} confidence)`,
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
@@ -176,9 +101,9 @@ Provide a structured response with:
         isValidated: false,
         criteria,
         data,
-        researchResult,
+        researchResult: `Validation failed: ${errorMessage}`,
         success: false,
-        message: `Structured extraction failed: ${errorMessage}`,
+        message: `Validation failed: ${errorMessage}`,
       }
     }
   },
@@ -199,6 +124,5 @@ export const validateCriteriaWorkflow = createWorkflow({
     message: z.string(),
   }),
 })
-  .then(researchValidationStep)
-  .then(structuredExtractionStep)
+  .then(directValidationStep)
   .commit()

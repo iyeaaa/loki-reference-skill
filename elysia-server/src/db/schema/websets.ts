@@ -26,6 +26,7 @@ export const websets = pgTable(
     query: text("query").notNull(),
     criterias: text("criterias").array(), // Array of validation questions
     targetValidatedRows: integer("target_validated_rows"), // Target count of validated rows
+    usedQueries: text("used_queries").array().default([]), // Track search queries used to avoid duplicates
 
     // Audit fields
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

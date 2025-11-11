@@ -11,5 +11,4 @@ export { validateAgentInstructions, validateMastraConfig } from "./core/validate
 export { createGeneralAssistantAgent } from "./shell/agents/general-assistant"
 export { createResearchAgent } from "./shell/agents/web-research-agent"
 // Shell exports
-export { mastraConfig } from "./shell/config"
 export { mastra } from "./shell/mastra"

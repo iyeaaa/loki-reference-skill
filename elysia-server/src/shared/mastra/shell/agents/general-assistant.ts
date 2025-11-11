@@ -1,13 +1,13 @@
 import { createOpenAI } from "@ai-sdk/openai"
 import { Agent } from "@mastra/core/agent"
+import { config } from "../../../../config"
 import type { MastraConfig } from "../../core/validate"
-import { mastraConfig } from "../config"
 import { memory } from "../memory"
 import { dbEnrichCompanyTool } from "../tools/db-enrich-company"
 import { dbSearchCompanyTool } from "../tools/db-search-company"
 import { postgresQueryTool } from "../tools/postgres-query"
 
-const openai = createOpenAI({ apiKey: mastraConfig.openaiApiKey })
+const openai = createOpenAI({ apiKey: config.openai.apiKey })
 /**
  * Creates a general purpose AI assistant agent
  * Handles general queries, analysis, and multi-purpose tasks

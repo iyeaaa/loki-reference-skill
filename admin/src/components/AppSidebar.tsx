@@ -110,6 +110,11 @@ const getMainMenuItems = (t: (key: string) => string) => [
     url: "/replied-emails",
     icon: Mail,
   },
+  // {
+  //   title: t("sidebar.menu.webset"),
+  //   url: "/webset",
+  //   icon: Search,
+  // },
 ]
 
 interface AppSidebarProps {

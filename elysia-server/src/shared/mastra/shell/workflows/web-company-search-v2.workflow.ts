@@ -2,7 +2,7 @@ import { createOpenAI } from "@ai-sdk/openai"
 import { createStep, createWorkflow } from "@mastra/core/workflows"
 import { generateObject } from "ai"
 import { z } from "zod"
-import { mastraConfig } from "../config"
+import { config } from "../../../../config"
 import { enrichDataWorkflow } from "./enrich-data.workflow"
 import { googleSearch, jinaReader } from "./web-search/api-clients"
 import {
@@ -45,7 +45,7 @@ const generateQueriesStep = createStep({
     const { query, targetCount } = inputData
     const searchQueryCount = 5 // Always generate 5 queries
 
-    const openai = createOpenAI({ apiKey: mastraConfig.openaiApiKey })
+    const openai = createOpenAI({ apiKey: config.openai.apiKey })
     const startTime = new Date().toISOString()
 
     console.log("🚀 Web Company Search V2")
@@ -97,7 +97,7 @@ const searchAndExtractStep = createStep({
   execute: async ({ inputData }) => {
     const { queries, targetCount, startTime } = inputData
 
-    const openai = createOpenAI({ apiKey: mastraConfig.openaiApiKey })
+    const openai = createOpenAI({ apiKey: config.openai.apiKey })
 
     console.log("🔄 Processing queries concurrently...\n")
 
@@ -116,7 +116,7 @@ const searchAndExtractStep = createStep({
             query: searchQuery.query,
             location: searchQuery.location,
             language: searchQuery.language,
-            hasdataApiKey: mastraConfig.hasdataApiKey,
+            hasdataApiKey: config.apis.hasdata.apiKey,
           })
           querySerpCalls++
           console.log(`  Found ${searchResults.length} results`)
@@ -202,7 +202,7 @@ const searchAndExtractStep = createStep({
                   queryJinaReaderCalls++
                   const content = await jinaReader({
                     url: dir.link,
-                    jinaApiKey: mastraConfig.jinaApiKey,
+                    jinaApiKey: config.apis.jina.apiKey,
                   })
                   const truncated = content.length > 15_000 ? content.slice(0, 15_000) : content
 
@@ -286,7 +286,7 @@ const searchAndExtractStep = createStep({
                   queryJinaReaderCalls++
                   const content = await jinaReader({
                     url: page.link,
-                    jinaApiKey: mastraConfig.jinaApiKey,
+                    jinaApiKey: config.apis.jina.apiKey,
                   })
                   const truncated = content.length > 8000 ? content.slice(0, 8000) : content
 

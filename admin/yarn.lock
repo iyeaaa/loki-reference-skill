@@ -2420,7 +2420,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@standard-schema/spec@npm:^1.0.0":
+"@standard-schema/spec@npm:1.0.0, @standard-schema/spec@npm:^1.0.0":
   version: 1.0.0
   resolution: "@standard-schema/spec@npm:1.0.0"
   checksum: 10c0/a1ab9a8bdc09b5b47aa8365d0e0ec40cc2df6437be02853696a0e377321653b0d3ac6f079a8c67d5ddbe9821025584b1fb71d9cc041a6666a96f1fadf2ece15f
@@ -4225,8 +4225,10 @@ __metadata:
     marked: "npm:^16.4.0"
     next-themes: "npm:^0.4.6"
     node-cron: "npm:^4.2.1"
+    nuqs: "npm:^2.7.3"
     openai: "npm:^5.23.0"
     openapi-fetch: "npm:^0.15.0"
+    openapi-react-query: "npm:^0.5.1"
     openapi-typescript: "npm:^7.10.1"
     papaparse: "npm:^5.5.3"
     postcss: "npm:^8.5.6"
@@ -8704,6 +8706,33 @@ __metadata:
   languageName: node
   linkType: hard
 
+"nuqs@npm:^2.7.3":
+  version: 2.7.3
+  resolution: "nuqs@npm:2.7.3"
+  dependencies:
+    "@standard-schema/spec": "npm:1.0.0"
+  peerDependencies:
+    "@remix-run/react": ">=2"
+    "@tanstack/react-router": ^1
+    next: ">=14.2.0"
+    react: ">=18.2.0 || ^19.0.0-0"
+    react-router: ^6 || ^7
+    react-router-dom: ^6 || ^7
+  peerDependenciesMeta:
+    "@remix-run/react":
+      optional: true
+    "@tanstack/react-router":
+      optional: true
+    next:
+      optional: true
+    react-router:
+      optional: true
+    react-router-dom:
+      optional: true
+  checksum: 10c0/9be8b1a53deb8c3db26b689b6075b1a8a02e73a4fc1a3c5894f3f07c76bbf77eb1df8cf990dccfae3c6ea37170c166e6c5a070daf04735df1a04ba92dacda74b
+  languageName: node
+  linkType: hard
+
 "once@npm:^1.4.0":
   version: 1.4.0
   resolution: "once@npm:1.4.0"
@@ -8774,6 +8803,18 @@ __metadata:
   dependencies:
     openapi-typescript-helpers: "npm:^0.0.15"
   checksum: 10c0/f6b90276569fbe33c8eac3f235617e5c5cbf99d5ac1bb49deecb279babb3ae411b5c7a39262416154e9a7d3c332f215cab410f28e94ecad6390e09c4a70d96dd
+  languageName: node
+  linkType: hard
+
+"openapi-react-query@npm:^0.5.1":
+  version: 0.5.1
+  resolution: "openapi-react-query@npm:0.5.1"
+  dependencies:
+    openapi-typescript-helpers: "npm:^0.0.15"
+  peerDependencies:
+    "@tanstack/react-query": ^5.80.0
+    openapi-fetch: ^0.15.0
+  checksum: 10c0/23701d4e40fbd09ed6e848b075aec96f12a172bacc93b67b81c5e461f4e30e3889defb48d2c52d9c03471aceb73b5291b1c3756ede4fce11ab27e6237d9c8f53
   languageName: node
   linkType: hard
 

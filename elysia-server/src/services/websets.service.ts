@@ -1,8 +1,15 @@
+import { createOpenAI } from "@ai-sdk/openai"
+import { generateObject } from "ai"
 import { desc, eq } from "drizzle-orm"
+import { z } from "zod"
+import { config } from "../config"
 import { db } from "../db/index"
 import { websetRows, websets } from "../db/schema/websets"
 import { workspaces } from "../db/schema/workspaces"
 import { mastra } from "../shared/mastra/shell/mastra"
+
+// Initialize OpenAI provider
+const openai = createOpenAI({ apiKey: config.openai.apiKey })
 
 // ====================================
 // WEBSET CRUD OPERATIONS
@@ -29,15 +36,14 @@ export async function getAllWebsets(workspaceId: string, limit = 10, offset = 0)
     .limit(limit)
     .offset(offset)
 
-  const countResult = await db
-    .select({ count: db.$count(websets.id) })
-    .from(websets)
-    .where(eq(websets.workspaceId, workspaceId))
-
-  const count = countResult[0]?.count ?? 0
+  const count = await db.$count(websets, eq(websets.workspaceId, workspaceId))
 
   return {
-    data: results,
+    data: results.map((webset) => ({
+      ...webset,
+      createdAt: webset.createdAt.toISOString(),
+      updatedAt: webset.updatedAt.toISOString(),
+    })),
     total: Number(count),
     limit,
     offset,
@@ -59,11 +65,18 @@ export async function getWebset(id: string) {
       workspaceName: workspaces.name,
     })
     .from(websets)
-    .innerJoin(workspaces, eq(websets.workspaceId, workspaces.id))
+    .leftJoin(workspaces, eq(websets.workspaceId, workspaces.id))
     .where(eq(websets.id, id))
     .limit(1)
 
-  return result[0]
+  const webset = result[0]
+  if (!webset) return undefined
+
+  return {
+    ...webset,
+    createdAt: webset.createdAt.toISOString(),
+    updatedAt: webset.updatedAt.toISOString(),
+  }
 }
 
 // CreateWebset
@@ -94,7 +107,15 @@ export async function createWebset(data: {
       updatedAt: websets.updatedAt,
     })
 
-  return newWebset
+  if (!newWebset) {
+    throw new Error("Failed to create webset")
+  }
+
+  return {
+    ...newWebset,
+    createdAt: newWebset.createdAt.toISOString(),
+    updatedAt: newWebset.updatedAt.toISOString(),
+  }
 }
 
 // UpdateWebset
@@ -128,7 +149,15 @@ export async function updateWebset(
       updatedAt: websets.updatedAt,
     })
 
-  return updatedWebset
+  if (!updatedWebset) {
+    throw new Error("Failed to update webset")
+  }
+
+  return {
+    ...updatedWebset,
+    createdAt: updatedWebset.createdAt.toISOString(),
+    updatedAt: updatedWebset.updatedAt.toISOString(),
+  }
 }
 
 // DeleteWebset
@@ -157,16 +186,16 @@ export async function getAllWebsetRows(websetId: string, limit = 100, offset = 0
     .limit(limit)
     .offset(offset)
 
-  const countResult = await db
-    .select({ count: db.$count(websetRows.id) })
-    .from(websetRows)
-    .where(eq(websetRows.websetId, websetId))
-
-  const count = countResult[0]?.count ?? 0
+  const countResult = await db.$count(websetRows, eq(websetRows.websetId, websetId))
 
   return {
-    data: results,
-    total: Number(count),
+    rows: results.map((row) => ({
+      ...row,
+      data: row.data as Record<string, unknown>,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    })),
+    total: Number(countResult),
     limit,
     offset,
   }
@@ -194,7 +223,16 @@ export async function createWebsetRow(data: {
       updatedAt: websetRows.updatedAt,
     })
 
-  return newRow
+  if (!newRow) {
+    throw new Error("Failed to create webset row")
+  }
+
+  return {
+    ...newRow,
+    data: newRow.data as Record<string, unknown>,
+    createdAt: newRow.createdAt.toISOString(),
+    updatedAt: newRow.updatedAt.toISOString(),
+  }
 }
 
 // UpdateWebsetRow
@@ -222,12 +260,126 @@ export async function updateWebsetRow(
       updatedAt: websetRows.updatedAt,
     })
 
-  return updatedRow
+  if (!updatedRow) {
+    throw new Error("Failed to update webset row")
+  }
+
+  return {
+    ...updatedRow,
+    data: updatedRow.data as Record<string, unknown>,
+    createdAt: updatedRow.createdAt.toISOString(),
+    updatedAt: updatedRow.updatedAt.toISOString(),
+  }
 }
 
 // DeleteWebsetRow
 export async function deleteWebsetRow(id: string) {
   await db.delete(websetRows).where(eq(websetRows.id, id))
+}
+
+// ====================================
+// WEBSET CRITERIA OPERATIONS
+// ====================================
+
+// CreateWebsetCriteria - Generate validation criteria and rewritten query
+export async function createWebsetCriteria(query: string) {
+  // Step 1: Extract validation criteria from the original query
+  const criteriaExtractionSchema = z.object({
+    validationCriteria: z
+      .array(z.string())
+      .min(2)
+      .max(5)
+      .describe(
+        "2-5 yes/no questions that capture ONLY the requirements explicitly stated in the query",
+      ),
+  })
+
+  const criteriaResult = await generateObject({
+    model: openai(config.mastra.model),
+    schema: criteriaExtractionSchema,
+    schemaName: "CriteriaExtraction",
+    schemaDescription: "Extract validation criteria from the search query",
+    prompt: `Analyze this search query and extract 2-5 validation criteria: "${query}"
+
+CRITICAL RULES:
+- Only use information EXPLICITLY mentioned in the original query
+- Do NOT add assumptions, implications, or related concepts not stated in the query
+- Do NOT infer additional requirements beyond what is directly stated
+- Each criterion must directly map to something mentioned in the query
+- Generate only as many criteria as there are distinct requirements in the query (minimum 2, maximum 5)
+
+Generate 2-5 clear yes/no questions that validate the EXACT requirements stated in the query.
+
+For example:
+- Query: "AI companies in healthcare"
+  Valid criteria:
+  1. Does the company work with AI or artificial intelligence?
+  2. Does the company operate in the healthcare sector?
+
+  Invalid criteria (adding assumptions):
+  ✗ Does the company offer AI-powered healthcare solutions? (assumes "solutions", not in query)
+  ✗ Does the company have FDA approval? (assumes regulation, not in query)
+
+- Query: "B2B SaaS startups in fintech"
+  Valid criteria:
+  1. Does the company operate in a B2B model?
+  2. Is the company a SaaS (Software as a Service) company?
+  3. Is the company a startup?
+  4. Does the company operate in the fintech industry?
+
+  Invalid criteria:
+  ✗ Does the company have enterprise customers? (assumes "enterprise", not in query)
+  ✗ Is the company venture-backed? (assumes funding, not in query)
+
+Now extract criteria from: "${query}"`,
+    temperature: config.mastra.temperature,
+    maxRetries: 3,
+  })
+
+  // Step 2: Rewrite query incorporating the extracted criteria
+  const queryRewriteSchema = z.object({
+    rewrittenQuery: z
+      .string()
+      .describe(
+        "A rewritten search query that stays true to the original while being more search-optimized",
+      ),
+  })
+
+  const rewriteResult = await generateObject({
+    model: openai(config.mastra.model),
+    schema: queryRewriteSchema,
+    schemaName: "QueryRewrite",
+    schemaDescription: "Rewrite search query incorporating validation criteria",
+    prompt: `Original query: "${query}"
+
+Validation criteria extracted (based ONLY on what was in the original query):
+${criteriaResult.object.validationCriteria.map((c, i) => `${i + 1}. ${c}`).join("\n")}
+
+Rewrite the query to be more effective for web search while:
+1. Preserving the EXACT original intent - do not add new concepts or requirements
+2. Incorporating all the validation criteria naturally
+3. Making it optimized for search engines to find relevant companies
+4. Keeping it concise and searchable
+5. Using search-friendly language without changing the meaning
+
+CRITICAL: Do NOT add assumptions or concepts not in the original query. The rewritten query should only be a more search-optimized version of the exact same search intent.
+
+For example:
+- Original: "AI companies in healthcare"
+  Good rewrite: "artificial intelligence companies healthcare sector"
+  Bad rewrite: "AI-powered healthcare solutions providers" (adds "solutions" and "providers")
+
+- Original: "B2B SaaS startups"
+  Good rewrite: "B2B SaaS software startup companies"
+  Bad rewrite: "enterprise B2B SaaS startups with funding" (adds "enterprise" and "funding")`,
+    temperature: config.mastra.temperature,
+    maxRetries: 3,
+  })
+
+  return {
+    validationCriteria: criteriaResult.object.validationCriteria,
+    rewrittenQuery: rewriteResult.object.rewrittenQuery,
+  }
 }
 
 // ====================================

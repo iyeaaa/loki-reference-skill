@@ -674,19 +674,19 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
       const stepData = {
         sequenceId: id,
         stepOrder:
-          typeof body.stepOrder === "string" ? Number.parseInt(body.stepOrder) : body.stepOrder,
+          typeof body.stepOrder === "string" ? Number.parseInt(body.stepOrder, 10) : body.stepOrder,
         delayDays:
-          typeof body.delayDays === "string" ? Number.parseInt(body.delayDays) : body.delayDays,
+          typeof body.delayDays === "string" ? Number.parseInt(body.delayDays, 10) : body.delayDays,
         scheduledHour:
           body.scheduledHour !== undefined
             ? typeof body.scheduledHour === "string"
-              ? Number.parseInt(body.scheduledHour)
+              ? Number.parseInt(body.scheduledHour, 10)
               : body.scheduledHour
             : undefined,
         scheduledMinute:
           body.scheduledMinute !== undefined
             ? typeof body.scheduledMinute === "string"
-              ? Number.parseInt(body.scheduledMinute)
+              ? Number.parseInt(body.scheduledMinute, 10)
               : body.scheduledMinute
             : undefined,
         timezone: body.timezone,
@@ -743,19 +743,19 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
       // FormData로 전송되면 숫자 필드가 문자열로 변환되므로 명시적으로 변환
       const updateData = {
         stepOrder:
-          typeof body.stepOrder === "string" ? Number.parseInt(body.stepOrder) : body.stepOrder,
+          typeof body.stepOrder === "string" ? Number.parseInt(body.stepOrder, 10) : body.stepOrder,
         delayDays:
-          typeof body.delayDays === "string" ? Number.parseInt(body.delayDays) : body.delayDays,
+          typeof body.delayDays === "string" ? Number.parseInt(body.delayDays, 10) : body.delayDays,
         scheduledHour:
           body.scheduledHour !== undefined
             ? typeof body.scheduledHour === "string"
-              ? Number.parseInt(body.scheduledHour)
+              ? Number.parseInt(body.scheduledHour, 10)
               : body.scheduledHour
             : undefined,
         scheduledMinute:
           body.scheduledMinute !== undefined
             ? typeof body.scheduledMinute === "string"
-              ? Number.parseInt(body.scheduledMinute)
+              ? Number.parseInt(body.scheduledMinute, 10)
               : body.scheduledMinute
             : undefined,
         timezone: body.timezone,

@@ -52,6 +52,38 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/sse-test/stream": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiSse-testStream"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/sse-test/info": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiSse-testInfo"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/webhook/inbound": {
     parameters: {
       query?: never
@@ -110,6 +142,54 @@ export interface paths {
     get?: never
     put?: never
     post: operations["postApiAiEmail-draft"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/chatbot/ask": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiChatbotAsk"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/chatbot/history/{conversationId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiChatbotHistoryByConversationId"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/chatbot/confirm": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiChatbotConfirm"]
     delete?: never
     options?: never
     head?: never
@@ -1012,6 +1092,70 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/v1/email-signatures/": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiV1Email-signatures"]
+    put?: never
+    post: operations["postApiV1Email-signatures"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/email-signatures/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiV1Email-signaturesById"]
+    put: operations["putApiV1Email-signaturesById"]
+    post?: never
+    delete: operations["deleteApiV1Email-signaturesById"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/email-signatures/default": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiV1Email-signaturesDefault"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/email-signatures/{id}/set-default": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch: operations["patchApiV1Email-signaturesByIdSet-default"]
+    trace?: never
+  }
   "/api/v1/email-templates/search": {
     parameters: {
       query?: never
@@ -1444,6 +1588,22 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/v1/email-replies/stats/by-intent": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiV1Email-repliesStatsBy-intent"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/v1/email-replies/": {
     parameters: {
       query?: never
@@ -1473,7 +1633,7 @@ export interface paths {
     delete: operations["deleteApiV1Email-repliesById"]
     options?: never
     head?: never
-    patch?: never
+    patch: operations["patchApiV1Email-repliesById"]
     trace?: never
   }
   "/api/v1/email-replies/{id}/read": {
@@ -1534,6 +1694,22 @@ export interface paths {
     get?: never
     put: operations["putApiV1Email-repliesBulkUnread"]
     post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/email-replies/{id}/reclassify": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiV1Email-repliesByIdReclassify"]
     delete?: never
     options?: never
     head?: never
@@ -1900,6 +2076,22 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/v1/sequences/{id}/copy": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiV1SequencesByIdCopy"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/v1/sequences/{id}/activate-step-based": {
     parameters: {
       query?: never
@@ -1994,6 +2186,22 @@ export interface paths {
     options?: never
     head?: never
     patch: operations["patchApiV1SequencesByIdEnrollmentsByEnrollmentIdStatus"]
+    trace?: never
+  }
+  "/api/v1/sequences/{id}/enrollments/{enrollmentId}/step-executions": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiV1SequencesByIdEnrollmentsByEnrollmentIdStep-executions"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
     trace?: never
   }
   "/api/v1/sequences/{id}/metrics": {
@@ -2406,8 +2614,10 @@ export interface paths {
     get?: never
     put?: never
     /**
-     * Excel 파일로 리드 일괄 임포트 (SSE)
-     * @description Excel 파일을 업로드하여 여러 리드를 일괄 임포트합니다. 실시간 진행상황을 SSE로 전송합니다. 중복 이메일 방지: (1) CSV 파일 내부의 중복 이메일과 (2) Workspace 내 기존 데이터베이스의 중복 이메일이 자동으로 감지되어 스킵되며, 완료 시 중복 이메일 목록(existingLeadId, rowNumber, companyName 포함)이 반환됩니다. 선택적으로 고객 그룹에 자동 추가할 수 있으며, 그룹 할당 정보(groupId, groupName, membersAdded)가 결과에 포함됩니다.
+     * Excel 또는 CSV 파일로 리드 일괄 임포트 (SSE)
+     * @description Excel 또는 CSV 파일을 업로드하여 여러 리드를 일괄 임포트합니다. 파일명(확장자 제외)으로 자동으로 고객 그룹을 생성하고 리드를 연결합니다. 같은 이름의 그룹이 이미 있으면 기존 그룹을 사용합니다. 실시간 진행상황을 SSE로 전송합니다. CSV 파일의 경우 UTF-8 BOM이 자동으로 제거됩니다.
+     *
+     *     **워크스페이스 기준 중복 처리**: (1) Website URL 중복: 워크스페이스 내에 동일한 URL이 존재하면 리드 전체가 스킵됩니다. (2) 이메일 중복: 파일 내부의 중복 이메일과 워크스페이스 내 기존 DB의 중복 이메일이 자동으로 감지되어 제외되지만, 리드 자체는 생성됩니다. 완료 시 중복 이메일 목록(existingLeadId, rowNumber, companyName 포함)이 반환됩니다.
      */
     post: operations["postApiV1AdminLead-importUpload"]
     delete?: never
@@ -2426,10 +2636,258 @@ export interface paths {
     get?: never
     put?: never
     /**
-     * Excel 파일의 시트 이름 목록 조회
-     * @description Excel 파일을 업로드하여 포함된 시트 이름 목록을 조회합니다.
+     * Excel 또는 CSV 파일의 시트 이름 목록 조회
+     * @description Excel 파일을 업로드하여 포함된 시트 이름 목록을 조회합니다. CSV 파일의 경우 빈 배열이 반환됩니다.
      */
     post: operations["postApiV1AdminLead-importSheet-names"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/admin/lead-import/preview": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Excel 파일 데이터 미리보기
+     * @description Excel 파일을 업로드하여 DB에 저장하기 전 데이터를 미리 확인합니다. 전체 데이터를 미리보기로 제공하며, 최대 10행을 샘플링하여 AI 분석 결과도 함께 제공합니다.
+     */
+    post: operations["postApiV1AdminLead-importPreview"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/admin/openai-api-keys/{workspaceId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiV1AdminOpenai-api-keysByWorkspaceId"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/admin/openai-api-keys/": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiV1AdminOpenai-api-keys"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/admin/openai-api-keys/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["putApiV1AdminOpenai-api-keysById"]
+    post?: never
+    delete: operations["deleteApiV1AdminOpenai-api-keysById"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/admin/openai-api-keys/reorder": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiV1AdminOpenai-api-keysReorder"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/admin/web-extraction/upload": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Excel 또는 CSV 파일로 웹 데이터 추출 (SSE)
+     * @description Excel 또는 CSV 파일을 업로드하여 웹사이트에서 회사 정보 및 연락처를 추출합니다. 실시간 진행상황을 SSE로 전송합니다.
+     */
+    post: operations["postApiV1AdminWeb-extractionUpload"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/admin/web-extraction/results/{jobId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiV1AdminWeb-extractionResultsByJobId"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/admin/web-extraction/results/{jobId}/json": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiV1AdminWeb-extractionResultsByJobIdJson"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/admin/web-extraction/cleanup/{jobId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["deleteApiV1AdminWeb-extractionCleanupByJobId"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/websets/": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiV1Websets"]
+    put?: never
+    post: operations["postApiV1Websets"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/websets/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiV1WebsetsById"]
+    put: operations["putApiV1WebsetsById"]
+    post?: never
+    delete: operations["deleteApiV1WebsetsById"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/websets/{id}/rows": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiV1WebsetsByIdRows"]
+    put?: never
+    post: operations["postApiV1WebsetsByIdRows"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/websets/{id}/rows/{rowId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations["putApiV1WebsetsByIdRowsByRowId"]
+    post?: never
+    delete: operations["deleteApiV1WebsetsByIdRowsByRowId"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/websets/{id}/run": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiV1WebsetsByIdRun"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/websets/criteria": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiV1WebsetsCriteria"]
     delete?: never
     options?: never
     head?: never
@@ -2483,6 +2941,40 @@ export interface operations {
     }
   }
   getHealthApiHealth: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "getApiSse-testStream": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "getApiSse-testInfo": {
     parameters: {
       query?: never
       header?: never
@@ -2585,6 +3077,131 @@ export interface operations {
       }
     }
   }
+  postApiChatbotAsk: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          question: string
+          workspaceId: string
+          userId?: string
+          conversationId?: string
+          messages?: {
+            role: "user" | "assistant"
+            content: string
+            timestamp?: unknown
+            metadata?: unknown
+            attachment?: {
+              fileName: string
+              fileSize: number
+              fileType: string
+              content?: string
+            }
+          }[]
+        }
+        "multipart/form-data": {
+          question: string
+          workspaceId: string
+          userId?: string
+          conversationId?: string
+          messages?: {
+            role: "user" | "assistant"
+            content: string
+            timestamp?: unknown
+            metadata?: unknown
+            attachment?: {
+              fileName: string
+              fileSize: number
+              fileType: string
+              content?: string
+            }
+          }[]
+        }
+        "text/plain": {
+          question: string
+          workspaceId: string
+          userId?: string
+          conversationId?: string
+          messages?: {
+            role: "user" | "assistant"
+            content: string
+            timestamp?: unknown
+            metadata?: unknown
+            attachment?: {
+              fileName: string
+              fileSize: number
+              fileType: string
+              content?: string
+            }
+          }[]
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getApiChatbotHistoryByConversationId: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        conversationId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  postApiChatbotConfirm: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          conversationId: string
+          confirmed: boolean
+        }
+        "multipart/form-data": {
+          conversationId: string
+          confirmed: boolean
+        }
+        "text/plain": {
+          conversationId: string
+          confirmed: boolean
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   postApiV1AuthLogin: {
     parameters: {
       query?: never
@@ -2634,27 +3251,18 @@ export interface operations {
           /** Format: email */
           email: string
           password: string
-          /** Format: uuid */
-          departmentId: string
-          employeeId: string
         }
         "multipart/form-data": {
           username: string
           /** Format: email */
           email: string
           password: string
-          /** Format: uuid */
-          departmentId: string
-          employeeId: string
         }
         "text/plain": {
           username: string
           /** Format: email */
           email: string
           password: string
-          /** Format: uuid */
-          departmentId: string
-          employeeId: string
         }
       }
     }
@@ -2966,9 +3574,8 @@ export interface operations {
           email: string
           userRole: "admin" | "user"
           isActive: boolean
-          /** Format: uuid */
-          departmentId: string
-          employeeId: string
+          departmentId?: (string | null) | null
+          employeeId?: (string | null) | null
         }
         "multipart/form-data": {
           username: string
@@ -2976,9 +3583,8 @@ export interface operations {
           email: string
           userRole: "admin" | "user"
           isActive: boolean
-          /** Format: uuid */
-          departmentId: string
-          employeeId: string
+          departmentId?: (string | null) | null
+          employeeId?: (string | null) | null
         }
         "text/plain": {
           username: string
@@ -2986,9 +3592,8 @@ export interface operations {
           email: string
           userRole: "admin" | "user"
           isActive: boolean
-          /** Format: uuid */
-          departmentId: string
-          employeeId: string
+          departmentId?: (string | null) | null
+          employeeId?: (string | null) | null
         }
       }
     }
@@ -3409,6 +4014,13 @@ export interface operations {
           /** Format: uuid */
           ownerId?: string
           isActive: boolean
+          companyName?: string
+          companyWebsite?: string
+          companyPhone?: string
+          industry?: string
+          companySize?: string
+          companyAddress?: string
+          companyDescription?: string
         }
         "multipart/form-data": {
           name: string
@@ -3416,6 +4028,13 @@ export interface operations {
           /** Format: uuid */
           ownerId?: string
           isActive: boolean
+          companyName?: string
+          companyWebsite?: string
+          companyPhone?: string
+          industry?: string
+          companySize?: string
+          companyAddress?: string
+          companyDescription?: string
         }
         "text/plain": {
           name: string
@@ -3423,6 +4042,13 @@ export interface operations {
           /** Format: uuid */
           ownerId?: string
           isActive: boolean
+          companyName?: string
+          companyWebsite?: string
+          companyPhone?: string
+          industry?: string
+          companySize?: string
+          companyAddress?: string
+          companyDescription?: string
         }
       }
     }
@@ -3489,6 +4115,13 @@ export interface operations {
           /** Format: uuid */
           ownerId: string
           isActive?: boolean
+          companyName?: string
+          companyWebsite?: string
+          companyPhone?: string
+          industry?: string
+          companySize?: string
+          companyAddress?: string
+          companyDescription?: string
         }
         "multipart/form-data": {
           name: string
@@ -3496,6 +4129,13 @@ export interface operations {
           /** Format: uuid */
           ownerId: string
           isActive?: boolean
+          companyName?: string
+          companyWebsite?: string
+          companyPhone?: string
+          industry?: string
+          companySize?: string
+          companyAddress?: string
+          companyDescription?: string
         }
         "text/plain": {
           name: string
@@ -3503,6 +4143,13 @@ export interface operations {
           /** Format: uuid */
           ownerId: string
           isActive?: boolean
+          companyName?: string
+          companyWebsite?: string
+          companyPhone?: string
+          industry?: string
+          companySize?: string
+          companyAddress?: string
+          companyDescription?: string
         }
       }
     }
@@ -4705,6 +5352,204 @@ export interface operations {
       }
     }
   }
+  "getApiV1Email-signatures": {
+    parameters: {
+      query: {
+        workspaceId: string
+        userId: string
+        includeInactive?: boolean
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1Email-signatures": {
+    parameters: {
+      query: {
+        workspaceId: string
+        userId: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          name: string
+          signatureHtml: string
+          signatureText: string
+          isDefault?: boolean
+          isActive?: boolean
+        }
+        "multipart/form-data": {
+          name: string
+          signatureHtml: string
+          signatureText: string
+          isDefault?: boolean
+          isActive?: boolean
+        }
+        "text/plain": {
+          name: string
+          signatureHtml: string
+          signatureText: string
+          isDefault?: boolean
+          isActive?: boolean
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "getApiV1Email-signaturesById": {
+    parameters: {
+      query: {
+        workspaceId: string
+        userId: string
+      }
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "putApiV1Email-signaturesById": {
+    parameters: {
+      query: {
+        workspaceId: string
+        userId: string
+      }
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          name?: string
+          signatureHtml?: string
+          signatureText?: string
+          isDefault?: boolean
+          isActive?: boolean
+        }
+        "multipart/form-data": {
+          name?: string
+          signatureHtml?: string
+          signatureText?: string
+          isDefault?: boolean
+          isActive?: boolean
+        }
+        "text/plain": {
+          name?: string
+          signatureHtml?: string
+          signatureText?: string
+          isDefault?: boolean
+          isActive?: boolean
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "deleteApiV1Email-signaturesById": {
+    parameters: {
+      query: {
+        workspaceId: string
+        userId: string
+        hardDelete?: boolean
+      }
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "getApiV1Email-signaturesDefault": {
+    parameters: {
+      query: {
+        workspaceId: string
+        userId: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "patchApiV1Email-signaturesByIdSet-default": {
+    parameters: {
+      query: {
+        workspaceId: string
+        userId: string
+      }
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   "getApiV1Email-templatesSearch": {
     parameters: {
       query?: {
@@ -5195,9 +6040,11 @@ export interface operations {
           /** Format: email */
           replyTo?: string
           inReplyTo?: string
-          references?: string[]
+          references?: string[] | string
           scheduledAt?: string
-          includeSignature?: boolean
+          includeSignature?: boolean | string
+          /** @default Files */
+          files?: string[]
           /** Format: uuid */
           workspaceId: string
           /** Format: uuid */
@@ -5221,9 +6068,11 @@ export interface operations {
           /** Format: email */
           replyTo?: string
           inReplyTo?: string
-          references?: string[]
+          references?: string[] | string
           scheduledAt?: string
-          includeSignature?: boolean
+          includeSignature?: boolean | string
+          /** @default Files */
+          files?: string[]
           /** Format: uuid */
           workspaceId: string
           /** Format: uuid */
@@ -5247,9 +6096,11 @@ export interface operations {
           /** Format: email */
           replyTo?: string
           inReplyTo?: string
-          references?: string[]
+          references?: string[] | string
           scheduledAt?: string
-          includeSignature?: boolean
+          includeSignature?: boolean | string
+          /** @default Files */
+          files?: string[]
           /** Format: uuid */
           workspaceId: string
           /** Format: uuid */
@@ -5302,6 +6153,10 @@ export interface operations {
         leadId?: string
         sequenceId?: string
         search?: string
+        intent?: string
+        sentiment?: string
+        category?: string
+        priority?: string
       }
       header?: never
       path?: never
@@ -5772,6 +6627,25 @@ export interface operations {
       }
     }
   }
+  "getApiV1Email-repliesStatsBy-intent": {
+    parameters: {
+      query: {
+        workspaceId: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   "getApiV1Email-replies": {
     parameters: {
       query?: {
@@ -5826,6 +6700,64 @@ export interface operations {
       cookie?: never
     }
     requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "patchApiV1Email-repliesById": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          intent?:
+            | "meeting_request"
+            | "question"
+            | "objection"
+            | "out_of_office"
+            | "not_interested"
+            | "positive_interest"
+            | "neutral"
+            | null
+          sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
+        }
+        "multipart/form-data": {
+          intent?:
+            | "meeting_request"
+            | "question"
+            | "objection"
+            | "out_of_office"
+            | "not_interested"
+            | "positive_interest"
+            | "neutral"
+            | null
+          sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
+        }
+        "text/plain": {
+          intent?:
+            | "meeting_request"
+            | "question"
+            | "objection"
+            | "out_of_office"
+            | "not_interested"
+            | "positive_interest"
+            | "neutral"
+            | null
+          sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
+        }
+      }
+    }
     responses: {
       200: {
         headers: {
@@ -5922,6 +6854,25 @@ export interface operations {
         }
       }
     }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1Email-repliesByIdReclassify": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
     responses: {
       200: {
         headers: {
@@ -7475,7 +8426,7 @@ export interface operations {
         "application/json": {
           name?: string
           description?: string
-          status?: "draft" | "active" | "paused" | "archived"
+          status?: "draft" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           customerGroupId?: string
@@ -7484,7 +8435,7 @@ export interface operations {
         "multipart/form-data": {
           name?: string
           description?: string
-          status?: "draft" | "active" | "paused" | "archived"
+          status?: "draft" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           customerGroupId?: string
@@ -7493,7 +8444,7 @@ export interface operations {
         "text/plain": {
           name?: string
           description?: string
-          status?: "draft" | "active" | "paused" | "archived"
+          status?: "draft" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           customerGroupId?: string
@@ -7563,7 +8514,7 @@ export interface operations {
           workspaceId: string
           name: string
           description?: string
-          status?: "draft" | "active" | "paused" | "archived"
+          status?: "draft" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           createdBy?: string
@@ -7576,7 +8527,7 @@ export interface operations {
           workspaceId: string
           name: string
           description?: string
-          status?: "draft" | "active" | "paused" | "archived"
+          status?: "draft" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           createdBy?: string
@@ -7589,13 +8540,59 @@ export interface operations {
           workspaceId: string
           name: string
           description?: string
-          status?: "draft" | "active" | "paused" | "archived"
+          status?: "draft" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           createdBy?: string
           /** Format: uuid */
           customerGroupId?: string
           selectedLeadIds?: string[]
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  postApiV1SequencesByIdCopy: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          name?: string
+          /** Format: uuid */
+          customerGroupId?: string
+          selectedLeadIds?: string[]
+          /** Format: uuid */
+          createdBy?: string
+        }
+        "multipart/form-data": {
+          name?: string
+          /** Format: uuid */
+          customerGroupId?: string
+          selectedLeadIds?: string[]
+          /** Format: uuid */
+          createdBy?: string
+        }
+        "text/plain": {
+          name?: string
+          /** Format: uuid */
+          customerGroupId?: string
+          selectedLeadIds?: string[]
+          /** Format: uuid */
+          createdBy?: string
         }
       }
     }
@@ -7677,40 +8674,46 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": {
-          stepOrder: number
-          delayDays: number
-          scheduledHour?: number
-          scheduledMinute?: number
+          stepOrder: number | string
+          delayDays: number | string
+          scheduledHour?: number | string
+          scheduledMinute?: number | string
           timezone?: string
           emailSubject: string
           emailBodyText?: string
           emailBodyHtml?: string
           /** Format: uuid */
           emailTemplateId?: string
+          /** @default Files */
+          files?: string[]
         }
         "multipart/form-data": {
-          stepOrder: number
-          delayDays: number
-          scheduledHour?: number
-          scheduledMinute?: number
+          stepOrder: number | string
+          delayDays: number | string
+          scheduledHour?: number | string
+          scheduledMinute?: number | string
           timezone?: string
           emailSubject: string
           emailBodyText?: string
           emailBodyHtml?: string
           /** Format: uuid */
           emailTemplateId?: string
+          /** @default Files */
+          files?: string[]
         }
         "text/plain": {
-          stepOrder: number
-          delayDays: number
-          scheduledHour?: number
-          scheduledMinute?: number
+          stepOrder: number | string
+          delayDays: number | string
+          scheduledHour?: number | string
+          scheduledMinute?: number | string
           timezone?: string
           emailSubject: string
           emailBodyText?: string
           emailBodyHtml?: string
           /** Format: uuid */
           emailTemplateId?: string
+          /** @default Files */
+          files?: string[]
         }
       }
     }
@@ -7736,40 +8739,46 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": {
-          stepOrder: number
-          delayDays: number
-          scheduledHour?: number
-          scheduledMinute?: number
+          stepOrder: number | string
+          delayDays: number | string
+          scheduledHour?: number | string
+          scheduledMinute?: number | string
           timezone?: string
           emailSubject: string
           emailBodyText?: string
           emailBodyHtml?: string
           /** Format: uuid */
           emailTemplateId?: string
+          /** @default Files */
+          files?: string[]
         }
         "multipart/form-data": {
-          stepOrder: number
-          delayDays: number
-          scheduledHour?: number
-          scheduledMinute?: number
+          stepOrder: number | string
+          delayDays: number | string
+          scheduledHour?: number | string
+          scheduledMinute?: number | string
           timezone?: string
           emailSubject: string
           emailBodyText?: string
           emailBodyHtml?: string
           /** Format: uuid */
           emailTemplateId?: string
+          /** @default Files */
+          files?: string[]
         }
         "text/plain": {
-          stepOrder: number
-          delayDays: number
-          scheduledHour?: number
-          scheduledMinute?: number
+          stepOrder: number | string
+          delayDays: number | string
+          scheduledHour?: number | string
+          scheduledMinute?: number | string
           timezone?: string
           emailSubject: string
           emailBodyText?: string
           emailBodyHtml?: string
           /** Format: uuid */
           emailTemplateId?: string
+          /** @default Files */
+          files?: string[]
         }
       }
     }
@@ -7807,6 +8816,11 @@ export interface operations {
       query?: {
         limit?: string
         offset?: string
+        companyName?: string
+        opened?: string
+        clicked?: string
+        replied?: string
+        delivered?: string
       }
       header?: never
       path: {
@@ -7896,6 +8910,26 @@ export interface operations {
         }
       }
     }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "getApiV1SequencesByIdEnrollmentsByEnrollmentIdStep-executions": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+        enrollmentId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
     responses: {
       200: {
         headers: {
@@ -8279,6 +9313,7 @@ export interface operations {
           templateSubject?: string
           templateBody?: string
           templateBodyHtml?: string
+          incremental?: boolean
         }
         "multipart/form-data": {
           mode: "ai" | "manual"
@@ -8287,6 +9322,7 @@ export interface operations {
           templateSubject?: string
           templateBody?: string
           templateBodyHtml?: string
+          incremental?: boolean
         }
         "text/plain": {
           mode: "ai" | "manual"
@@ -8295,6 +9331,7 @@ export interface operations {
           templateSubject?: string
           templateBody?: string
           templateBodyHtml?: string
+          incremental?: boolean
         }
       }
     }
@@ -8858,6 +9895,1791 @@ export interface operations {
           [name: string]: unknown
         }
         content?: never
+      }
+    }
+  }
+  "postApiV1AdminLead-importPreview": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          /**
+           * Format: binary
+           * @default File
+           */
+          file: string
+          sheetName?: string
+        }
+        "multipart/form-data": {
+          /**
+           * Format: binary
+           * @default File
+           */
+          file: string
+          sheetName?: string
+        }
+        "text/plain": {
+          /**
+           * Format: binary
+           * @default File
+           */
+          file: string
+          sheetName?: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "getApiV1AdminOpenai-api-keysByWorkspaceId": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        workspaceId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1AdminOpenai-api-keys": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          workspaceId: string
+          name: string
+          apiKey: string
+          orderIndex?: number
+        }
+        "multipart/form-data": {
+          workspaceId: string
+          name: string
+          apiKey: string
+          orderIndex?: number
+        }
+        "text/plain": {
+          workspaceId: string
+          name: string
+          apiKey: string
+          orderIndex?: number
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "putApiV1AdminOpenai-api-keysById": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          workspaceId: string
+          name?: string
+          apiKey?: string
+          orderIndex?: number
+          isActive?: boolean
+        }
+        "multipart/form-data": {
+          workspaceId: string
+          name?: string
+          apiKey?: string
+          orderIndex?: number
+          isActive?: boolean
+        }
+        "text/plain": {
+          workspaceId: string
+          name?: string
+          apiKey?: string
+          orderIndex?: number
+          isActive?: boolean
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "deleteApiV1AdminOpenai-api-keysById": {
+    parameters: {
+      query: {
+        workspaceId: string
+      }
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1AdminOpenai-api-keysReorder": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          workspaceId: string
+          keyOrder: {
+            id: string
+            orderIndex: number
+          }[]
+        }
+        "multipart/form-data": {
+          workspaceId: string
+          keyOrder: {
+            id: string
+            orderIndex: number
+          }[]
+        }
+        "text/plain": {
+          workspaceId: string
+          keyOrder: {
+            id: string
+            orderIndex: number
+          }[]
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1AdminWeb-extractionUpload": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          /**
+           * Format: binary
+           * @default File
+           */
+          file: string
+          workspaceId: string
+          searchCriteria?: string | string[]
+          config?: {
+            maxConcurrent?: number
+            timeoutSeconds?: number
+            gptTimeout?: number
+            crawlDepth?: number
+            deduplicateByUrl?: boolean
+            expandEmailsToRows?: boolean
+            randomDelayMin?: number
+            randomDelayMax?: number
+          }
+        }
+        "multipart/form-data": {
+          /**
+           * Format: binary
+           * @default File
+           */
+          file: string
+          workspaceId: string
+          searchCriteria?: string | string[]
+          config?: {
+            maxConcurrent?: number
+            timeoutSeconds?: number
+            gptTimeout?: number
+            crawlDepth?: number
+            deduplicateByUrl?: boolean
+            expandEmailsToRows?: boolean
+            randomDelayMin?: number
+            randomDelayMax?: number
+          }
+        }
+        "text/plain": {
+          /**
+           * Format: binary
+           * @default File
+           */
+          file: string
+          workspaceId: string
+          searchCriteria?: string | string[]
+          config?: {
+            maxConcurrent?: number
+            timeoutSeconds?: number
+            gptTimeout?: number
+            crawlDepth?: number
+            deduplicateByUrl?: boolean
+            expandEmailsToRows?: boolean
+            randomDelayMin?: number
+            randomDelayMax?: number
+          }
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "getApiV1AdminWeb-extractionResultsByJobId": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        jobId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "getApiV1AdminWeb-extractionResultsByJobIdJson": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        jobId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "deleteApiV1AdminWeb-extractionCleanupByJobId": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        jobId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getApiV1Websets: {
+    parameters: {
+      query: {
+        workspaceId: string
+        limit?: string
+        offset?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              data: {
+                /** Format: uuid */
+                id: string
+                /** Format: uuid */
+                workspaceId: string
+                title?: (string | null) | null
+                query: string
+                criterias?: (string[] | null) | null
+                targetValidatedRows?: (number | null) | null
+                createdAt: string
+                updatedAt: string
+                workspaceName?: (string | null) | null
+              }[]
+              total: number
+              limit: number
+              offset: number
+            }
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              data: {
+                /** Format: uuid */
+                id: string
+                /** Format: uuid */
+                workspaceId: string
+                title?: (string | null) | null
+                query: string
+                criterias?: (string[] | null) | null
+                targetValidatedRows?: (number | null) | null
+                createdAt: string
+                updatedAt: string
+                workspaceName?: (string | null) | null
+              }[]
+              total: number
+              limit: number
+              offset: number
+            }
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              data: {
+                /** Format: uuid */
+                id: string
+                /** Format: uuid */
+                workspaceId: string
+                title?: (string | null) | null
+                query: string
+                criterias?: (string[] | null) | null
+                targetValidatedRows?: (number | null) | null
+                createdAt: string
+                updatedAt: string
+                workspaceName?: (string | null) | null
+              }[]
+              total: number
+              limit: number
+              offset: number
+            }
+            timestamp: string
+          }
+        }
+      }
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+    }
+  }
+  postApiV1Websets: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          /** Format: uuid */
+          workspaceId: string
+          title?: string
+          query: string
+          criterias?: string[]
+          targetValidatedRows?: number
+        }
+        "multipart/form-data": {
+          /** Format: uuid */
+          workspaceId: string
+          title?: string
+          query: string
+          criterias?: string[]
+          targetValidatedRows?: number
+        }
+        "text/plain": {
+          /** Format: uuid */
+          workspaceId: string
+          title?: string
+          query: string
+          criterias?: string[]
+          targetValidatedRows?: number
+        }
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              /** Format: uuid */
+              id: string
+              /** Format: uuid */
+              workspaceId: string
+              title?: (string | null) | null
+              query: string
+              criterias?: (string[] | null) | null
+              targetValidatedRows?: (number | null) | null
+              createdAt: string
+              updatedAt: string
+              workspaceName?: (string | null) | null
+            }
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              /** Format: uuid */
+              id: string
+              /** Format: uuid */
+              workspaceId: string
+              title?: (string | null) | null
+              query: string
+              criterias?: (string[] | null) | null
+              targetValidatedRows?: (number | null) | null
+              createdAt: string
+              updatedAt: string
+              workspaceName?: (string | null) | null
+            }
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              /** Format: uuid */
+              id: string
+              /** Format: uuid */
+              workspaceId: string
+              title?: (string | null) | null
+              query: string
+              criterias?: (string[] | null) | null
+              targetValidatedRows?: (number | null) | null
+              createdAt: string
+              updatedAt: string
+              workspaceName?: (string | null) | null
+            }
+            timestamp: string
+          }
+        }
+      }
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+    }
+  }
+  getApiV1WebsetsById: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              /** Format: uuid */
+              id: string
+              /** Format: uuid */
+              workspaceId: string
+              title?: (string | null) | null
+              query: string
+              criterias?: (string[] | null) | null
+              targetValidatedRows?: (number | null) | null
+              createdAt: string
+              updatedAt: string
+              workspaceName?: (string | null) | null
+            }
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              /** Format: uuid */
+              id: string
+              /** Format: uuid */
+              workspaceId: string
+              title?: (string | null) | null
+              query: string
+              criterias?: (string[] | null) | null
+              targetValidatedRows?: (number | null) | null
+              createdAt: string
+              updatedAt: string
+              workspaceName?: (string | null) | null
+            }
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              /** Format: uuid */
+              id: string
+              /** Format: uuid */
+              workspaceId: string
+              title?: (string | null) | null
+              query: string
+              criterias?: (string[] | null) | null
+              targetValidatedRows?: (number | null) | null
+              createdAt: string
+              updatedAt: string
+              workspaceName?: (string | null) | null
+            }
+            timestamp: string
+          }
+        }
+      }
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+    }
+  }
+  putApiV1WebsetsById: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          title?: string
+          query?: string
+          criterias?: string[]
+          targetValidatedRows?: number
+        }
+        "multipart/form-data": {
+          title?: string
+          query?: string
+          criterias?: string[]
+          targetValidatedRows?: number
+        }
+        "text/plain": {
+          title?: string
+          query?: string
+          criterias?: string[]
+          targetValidatedRows?: number
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              /** Format: uuid */
+              id: string
+              /** Format: uuid */
+              workspaceId: string
+              title?: (string | null) | null
+              query: string
+              criterias?: (string[] | null) | null
+              targetValidatedRows?: (number | null) | null
+              createdAt: string
+              updatedAt: string
+              workspaceName?: (string | null) | null
+            }
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              /** Format: uuid */
+              id: string
+              /** Format: uuid */
+              workspaceId: string
+              title?: (string | null) | null
+              query: string
+              criterias?: (string[] | null) | null
+              targetValidatedRows?: (number | null) | null
+              createdAt: string
+              updatedAt: string
+              workspaceName?: (string | null) | null
+            }
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              /** Format: uuid */
+              id: string
+              /** Format: uuid */
+              workspaceId: string
+              title?: (string | null) | null
+              query: string
+              criterias?: (string[] | null) | null
+              targetValidatedRows?: (number | null) | null
+              createdAt: string
+              updatedAt: string
+              workspaceName?: (string | null) | null
+            }
+            timestamp: string
+          }
+        }
+      }
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+    }
+  }
+  deleteApiV1WebsetsById: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: null
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: null
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: null
+            timestamp: string
+          }
+        }
+      }
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+    }
+  }
+  getApiV1WebsetsByIdRows: {
+    parameters: {
+      query?: {
+        limit?: string
+        offset?: string
+      }
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              rows: {
+                /** Format: uuid */
+                id: string
+                /** Format: uuid */
+                websetId: string
+                data: {
+                  [key: string]: unknown
+                }
+                criteriaAnswers?: (boolean[] | null) | null
+                createdAt: string
+                updatedAt: string
+              }[]
+              total: number
+              limit: number
+              offset: number
+            }
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              rows: {
+                /** Format: uuid */
+                id: string
+                /** Format: uuid */
+                websetId: string
+                data: {
+                  [key: string]: unknown
+                }
+                criteriaAnswers?: (boolean[] | null) | null
+                createdAt: string
+                updatedAt: string
+              }[]
+              total: number
+              limit: number
+              offset: number
+            }
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              rows: {
+                /** Format: uuid */
+                id: string
+                /** Format: uuid */
+                websetId: string
+                data: {
+                  [key: string]: unknown
+                }
+                criteriaAnswers?: (boolean[] | null) | null
+                createdAt: string
+                updatedAt: string
+              }[]
+              total: number
+              limit: number
+              offset: number
+            }
+            timestamp: string
+          }
+        }
+      }
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+    }
+  }
+  postApiV1WebsetsByIdRows: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          data: {
+            [key: string]: unknown
+          }
+          criteriaAnswers?: boolean[]
+        }
+        "multipart/form-data": {
+          data: {
+            [key: string]: unknown
+          }
+          criteriaAnswers?: boolean[]
+        }
+        "text/plain": {
+          data: {
+            [key: string]: unknown
+          }
+          criteriaAnswers?: boolean[]
+        }
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              /** Format: uuid */
+              id: string
+              /** Format: uuid */
+              websetId: string
+              data: {
+                [key: string]: unknown
+              }
+              criteriaAnswers?: (boolean[] | null) | null
+              createdAt: string
+              updatedAt: string
+            }
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              /** Format: uuid */
+              id: string
+              /** Format: uuid */
+              websetId: string
+              data: {
+                [key: string]: unknown
+              }
+              criteriaAnswers?: (boolean[] | null) | null
+              createdAt: string
+              updatedAt: string
+            }
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              /** Format: uuid */
+              id: string
+              /** Format: uuid */
+              websetId: string
+              data: {
+                [key: string]: unknown
+              }
+              criteriaAnswers?: (boolean[] | null) | null
+              createdAt: string
+              updatedAt: string
+            }
+            timestamp: string
+          }
+        }
+      }
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+    }
+  }
+  putApiV1WebsetsByIdRowsByRowId: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+        rowId: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          data?: {
+            [key: string]: unknown
+          }
+          criteriaAnswers?: boolean[]
+        }
+        "multipart/form-data": {
+          data?: {
+            [key: string]: unknown
+          }
+          criteriaAnswers?: boolean[]
+        }
+        "text/plain": {
+          data?: {
+            [key: string]: unknown
+          }
+          criteriaAnswers?: boolean[]
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              /** Format: uuid */
+              id: string
+              /** Format: uuid */
+              websetId: string
+              data: {
+                [key: string]: unknown
+              }
+              criteriaAnswers?: (boolean[] | null) | null
+              createdAt: string
+              updatedAt: string
+            }
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              /** Format: uuid */
+              id: string
+              /** Format: uuid */
+              websetId: string
+              data: {
+                [key: string]: unknown
+              }
+              criteriaAnswers?: (boolean[] | null) | null
+              createdAt: string
+              updatedAt: string
+            }
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              /** Format: uuid */
+              id: string
+              /** Format: uuid */
+              websetId: string
+              data: {
+                [key: string]: unknown
+              }
+              criteriaAnswers?: (boolean[] | null) | null
+              createdAt: string
+              updatedAt: string
+            }
+            timestamp: string
+          }
+        }
+      }
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+    }
+  }
+  deleteApiV1WebsetsByIdRowsByRowId: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+        rowId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: null
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: null
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: null
+            timestamp: string
+          }
+        }
+      }
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+    }
+  }
+  postApiV1WebsetsByIdRun: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              websetId: string
+              iterationCount: number
+              targetValidatedRows: number | null
+              currentValidatedRows: number
+              rowsWithoutValidation: number
+              targetSatisfied: boolean
+              totalCompaniesSearched: number
+              totalRowsAdded: number
+              totalRowsValidated: number
+              totalValidationErrors: number
+              status: string
+              message: string
+              success: boolean
+            }
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              websetId: string
+              iterationCount: number
+              targetValidatedRows: number | null
+              currentValidatedRows: number
+              rowsWithoutValidation: number
+              targetSatisfied: boolean
+              totalCompaniesSearched: number
+              totalRowsAdded: number
+              totalRowsValidated: number
+              totalValidationErrors: number
+              status: string
+              message: string
+              success: boolean
+            }
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              websetId: string
+              iterationCount: number
+              targetValidatedRows: number | null
+              currentValidatedRows: number
+              rowsWithoutValidation: number
+              targetSatisfied: boolean
+              totalCompaniesSearched: number
+              totalRowsAdded: number
+              totalRowsValidated: number
+              totalValidationErrors: number
+              status: string
+              message: string
+              success: boolean
+            }
+            timestamp: string
+          }
+        }
+      }
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
+      }
+    }
+  }
+  postApiV1WebsetsCriteria: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          query: string
+        }
+        "multipart/form-data": {
+          query: string
+        }
+        "text/plain": {
+          query: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              rewrittenQuery: string
+              validationCriteria: string[]
+            }
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              rewrittenQuery: string
+              validationCriteria: string[]
+            }
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: true
+            code: string
+            message: string
+            data: {
+              rewrittenQuery: string
+              validationCriteria: string[]
+            }
+            timestamp: string
+          }
+        }
+      }
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "multipart/form-data": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+          "text/plain": {
+            /** @constant */
+            success: false
+            code: string
+            message: string
+            timestamp: string
+          }
+        }
       }
     }
   }

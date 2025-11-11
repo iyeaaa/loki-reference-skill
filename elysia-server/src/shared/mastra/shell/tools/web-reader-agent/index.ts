@@ -1,18 +1,10 @@
-import { createOpenAI } from "@ai-sdk/openai"
 import { createTool } from "@mastra/core"
-import { generateText } from "ai"
 import { z } from "zod"
-import { config } from "../../../../../config"
-import { mastraConfig } from "../../config"
-import { jinaReader } from "../jina-reader/jina"
+import { executeWebReaderSummary } from "../../../../web-reader-summary"
 
-const openai = createOpenAI({
-  apiKey: config.openai.apiKey,
-})
 /**
  * Web Reader Agent Tool
- * Combines Jina Reader with LLM to answer queries based on web content
- * Shell layer - handles web scraping and LLM summarization
+ * Delegates to web-reader-summary shared slice for fetching and analyzing web content
  */
 
 export const WebReaderAgentParamsSchema = z.object({
@@ -37,58 +29,31 @@ export type WebReaderAgentResponse = z.infer<typeof WebReaderAgentResponseSchema
 
 /**
  * Reads a web page and answers a query using LLM
+ * Delegates to web-reader-summary shared slice
  */
 async function webReaderAgent(params: WebReaderAgentParams): Promise<WebReaderAgentResponse> {
-  try {
-    // Step 1: Fetch web page content using Jina Reader
-    const content = await jinaReader({ url: params.url })
+  // Call web-reader-summary shared slice which handles:
+  // 1. Fetching web content
+  // 2. LLM summarization with query
+  const result = await executeWebReaderSummary({
+    url: params.url,
+    query: params.query,
+  })
 
-    if (!content || typeof content !== "string") {
-      return {
-        success: false,
-        url: params.url,
-        query: params.query,
-        error: "Failed to fetch content from URL",
-      }
-    }
-
-    // Step 2: Use LLM to answer the query based on the content
-    const response = await generateText({
-      model: openai("gpt-4o-mini"),
-      temperature: mastraConfig.temperature,
-      system: `You are a helpful assistant that analyzes web page content and answers questions based on that content.
-
-Guidelines:
-- Answer the query based solely on the provided web page content
-- Be concise and accurate
-- If the content doesn't contain information to answer the query, clearly state that
-- Cite specific parts of the content when relevant
-- Use markdown formatting for better readability`,
-      prompt: `Web Page Content (from ${params.url}):
----
-${content}
----
-
-Query: ${params.query}
-
-Please answer the query based on the web page content above.`,
-    })
-
-    return {
-      success: true,
-      answer: response.text,
-      url: params.url,
-      query: params.query,
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
-
+  if (result.isErr()) {
     return {
       success: false,
       url: params.url,
       query: params.query,
-      error: errorMessage,
+      error: `${result.error.type}: ${result.error.message}`,
     }
+  }
+
+  return {
+    success: true,
+    answer: result.value,
+    url: params.url,
+    query: params.query,
   }
 }
 

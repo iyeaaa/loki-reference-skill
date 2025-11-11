@@ -1,7 +1,7 @@
 import { createTool } from "@mastra/core/tools"
 import { Client } from "pg"
 import { z } from "zod"
-import { mastraConfig } from "../config"
+import { config } from "../../../../config"
 
 /**
  * Database Company Search Tool
@@ -60,7 +60,7 @@ async function searchCompany(searchTerm: string): Promise<{
   rowCount: number
   executionTime: number
 }> {
-  const connectionConfig = parseConnectionUrl(mastraConfig.rindaLeadPgUrl)
+  const connectionConfig = parseConnectionUrl(config.mastra.rindaLeadPgUrl)
   const client = new Client(connectionConfig)
   const startTime = Date.now()
 

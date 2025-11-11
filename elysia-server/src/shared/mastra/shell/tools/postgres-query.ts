@@ -1,7 +1,7 @@
 import { createTool } from "@mastra/core/tools"
 import { Client } from "pg"
 import { z } from "zod"
-import { mastraConfig } from "../config"
+import { config } from "../../../../config"
 
 /**
  * PostgreSQL Read-Only Query Tool
@@ -36,7 +36,7 @@ async function executeReadOnlyQuery(query: string): Promise<{
   fields: Array<{ name: string; dataTypeID: number }>
   executionTime: number
 }> {
-  const connectionConfig = parseConnectionUrl(mastraConfig.rindaLeadPgUrl)
+  const connectionConfig = parseConnectionUrl(config.mastra.rindaLeadPgUrl)
   const client = new Client(connectionConfig)
   const startTime = Date.now()
 

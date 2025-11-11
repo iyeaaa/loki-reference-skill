@@ -1,6 +1,6 @@
 import { createTool } from "@mastra/core"
 import { z } from "zod"
-import { jinaReader } from "./jina"
+import { executeWebReader } from "../../../../web-reader"
 
 export const jinaReaderTool = createTool({
   id: "jina-reader",
@@ -10,6 +10,12 @@ export const jinaReaderTool = createTool({
   }),
   outputSchema: z.string().describe("The scraped results"),
   execute: async ({ context }) => {
-    return await jinaReader({ url: context.url })
+    const result = await executeWebReader({ url: context.url })
+
+    if (result.isErr()) {
+      throw new Error(`Web Reader failed: ${result.error.type} - ${result.error.message}`)
+    }
+
+    return result.value
   },
 })

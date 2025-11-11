@@ -31,27 +31,18 @@ if [ "$MIGRATION_COUNT" = "0" ]; then
 
   if [ "$TABLE_COUNT" -gt "0" ]; then
     echo "[!] Existing schema detected without migration tracking"
-    echo "[+] Initializing migration history..."
-
-    # Create migration table and mark current migration as applied
-    PGPASSWORD="${DB_PASSWORD:-postgres}" psql \
-      -h "${DB_HOST:-localhost}" \
-      -p "${DB_PORT:-5432}" \
-      -U "${DB_USER:-postgres}" \
-      -d "${DB_NAME:-postgres}" \
-      -c "CREATE TABLE IF NOT EXISTS __drizzle_migrations (id SERIAL PRIMARY KEY, hash text NOT NULL, created_at bigint);"
-
-    # Mark current migration as completed (timestamp from _journal.json)
-    PGPASSWORD="${DB_PASSWORD:-postgres}" psql \
-      -h "${DB_HOST:-localhost}" \
-      -p "${DB_PORT:-5432}" \
-      -U "${DB_USER:-postgres}" \
-      -d "${DB_NAME:-postgres}" \
-      -c "INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('0000_tan_santa_claus', 1760029328030) ON CONFLICT DO NOTHING;"
-
-    echo "[+] Migration history initialized - schema already in sync"
-    echo "[+] Migrations completed successfully"
-    exit 0
+    echo "[+] Initializing migration history from _journal.json..."
+    
+    # Use Bun script to safely parse JSON and initialize migration history
+    bun run ./scripts/init-migration-history.ts
+    
+    if [ $? -eq 0 ]; then
+      echo "[+] Migration history initialized - schema already in sync"
+      exit 0
+    else
+      echo "[!] Failed to initialize migration history"
+      echo "[+] Will try to run migrations normally (may fail if schema exists)"
+    fi
   else
     echo "[+] Fresh database detected - will apply migrations"
   fi

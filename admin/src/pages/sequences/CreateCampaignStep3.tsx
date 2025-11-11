@@ -52,10 +52,10 @@ export function CreateCampaignStep3({ data, onChange }: CreateCampaignStep3Props
   const recipientCount =
     data.selectedLeadIds.length > 0 ? data.selectedLeadIds.length : customerGroup?.leadCount || 0
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: adding onChange to dependencies will cause infinite loop
   useEffect(() => {
     onChange({ name, description, memo })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [name, description, memo, onChange])
+  }, [name, description, memo])
 
   const handleSaveDraft = async () => {
     if (!name.trim()) {
@@ -156,7 +156,7 @@ export function CreateCampaignStep3({ data, onChange }: CreateCampaignStep3Props
   }
 
   return (
-    <ScrollArea className="h-[600px]">
+    <ScrollArea className="h-[500px]">
       <div className="space-y-6 pr-4">
         {/* Campaign Name & Description */}
         <div className="space-y-4 rounded-lg border p-4">

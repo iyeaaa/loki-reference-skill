@@ -1,11 +1,12 @@
 import { AlertCircle, Clock, Edit, Plus, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Textarea } from "@/components/ui/textarea"
+import type { SequenceStep } from "@/lib/api/types/sequence"
 import { cn } from "@/lib/utils"
+import { SequenceStepForm } from "./SequenceStepForm"
 
 interface EmailStep {
   stepOrder: number
@@ -19,6 +20,8 @@ interface EmailStep {
 
 interface CreateCampaignStep2Props {
   data: {
+    workspaceId: string
+    customerGroupId: string
     steps: EmailStep[]
   }
   onChange: (data: { steps: EmailStep[] }) => void
@@ -32,64 +35,85 @@ export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props
     steps.length > 0 ? 0 : null,
   )
   const [editingStep, setEditingStep] = useState<EmailStep | null>(null)
+  const [showStepEditor, setShowStepEditor] = useState(false)
 
   // Auto-save with debounce
+  // biome-ignore lint/correctness/useExhaustiveDependencies: adding onChange to dependencies will cause infinite loop
   useEffect(() => {
     const timer = setTimeout(() => {
       onChange({ steps })
     }, 500)
 
     return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [steps, onChange])
+  }, [steps])
 
   const handleAddStep = () => {
     if (steps.length >= MAX_STEPS) {
       return
     }
 
-    const newStep: EmailStep = {
-      stepOrder: steps.length + 1,
-      delayDays: steps.length === 0 ? 0 : 1,
+    const newStepOrder = steps.length + 1
+    setSelectedStepIndex(steps.length)
+    setEditingStep({
+      stepOrder: newStepOrder,
+      delayDays: newStepOrder === 1 ? 0 : 1,
       scheduledHour: 9,
       scheduledMinute: 0,
       emailSubject: "",
       emailBodyText: "",
       isDraft: true,
-    }
-
-    const updatedSteps = [...steps, newStep]
-    setSteps(updatedSteps)
-    setSelectedStepIndex(updatedSteps.length - 1)
-    setEditingStep(newStep)
+    })
+    setShowStepEditor(true)
   }
 
   const handleEditStep = (index: number) => {
     setSelectedStepIndex(index)
     setEditingStep({ ...steps[index] })
+    setShowStepEditor(true)
   }
 
-  const handleSaveStep = () => {
-    if (!editingStep || selectedStepIndex === null) return
+  const handleSaveStep = (stepData: {
+    stepOrder: number
+    delayDays: number
+    scheduledHour?: number
+    scheduledMinute?: number
+    timezone?: string
+    emailSubject: string
+    emailBodyText?: string
+  }) => {
+    if (selectedStepIndex === null) return
 
-    if (!editingStep.emailSubject.trim()) {
-      alert("이메일 제목을 입력해주세요")
-      return
-    }
-
-    if (!editingStep.emailBodyText.trim()) {
-      alert("이메일 본문을 입력해주세요")
-      return
+    const savedStep: EmailStep = {
+      stepOrder: stepData.stepOrder,
+      delayDays: stepData.delayDays,
+      scheduledHour: stepData.scheduledHour ?? 9,
+      scheduledMinute: stepData.scheduledMinute ?? 0,
+      emailSubject: stepData.emailSubject,
+      emailBodyText: stepData.emailBodyText || "",
+      isDraft: false,
     }
 
     const updatedSteps = [...steps]
-    updatedSteps[selectedStepIndex] = { ...editingStep, isDraft: false }
+    if (selectedStepIndex >= updatedSteps.length) {
+      // New step
+      updatedSteps.push(savedStep)
+    } else {
+      // Update existing step
+      updatedSteps[selectedStepIndex] = savedStep
+    }
     setSteps(updatedSteps)
     setEditingStep(null)
+    setShowStepEditor(false)
+    setSelectedStepIndex(null)
   }
 
   const handleCancelEdit = () => {
+    // 새 스텝 추가 중 취소한 경우 selectedStepIndex가 steps 길이와 같으면 추가하지 않음
+    if (selectedStepIndex !== null && selectedStepIndex >= steps.length) {
+      setSelectedStepIndex(null)
+    }
     setEditingStep(null)
+    setShowStepEditor(false)
   }
 
   const handleDeleteStep = (index: number) => {
@@ -105,15 +129,10 @@ export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props
     setEditingStep(null)
   }
 
-  const handleUpdateEditingStep = (field: keyof EmailStep, value: string | number) => {
-    if (!editingStep) return
-    setEditingStep({ ...editingStep, [field]: value })
-  }
-
   const hasDraftSteps = steps.some((step) => step.isDraft)
 
   return (
-    <div className="grid grid-cols-2 gap-6 h-[600px]">
+    <div className="grid grid-cols-2 gap-6 h-[450px]">
       {/* Left Panel - Steps List */}
       <div className="space-y-4 border-r pr-6">
         <div className="flex items-center justify-between">
@@ -141,9 +160,9 @@ export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props
           </div>
         )}
 
-        <ScrollArea className="h-[480px]">
+        <ScrollArea className="h-[380px]">
           {steps.length === 0 ? (
-            <div className="flex h-[400px] items-center justify-center rounded-lg border-2 border-dashed">
+            <div className="flex h-[300px] items-center justify-center rounded-lg border-2 border-dashed">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-2">아직 스텝이 없습니다</p>
                 <p className="text-xs text-muted-foreground">
@@ -154,7 +173,7 @@ export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props
           ) : (
             <div className="space-y-2">
               {steps.map((step, index) => (
-                // biome-ignore lint/a11y/noStaticElementInteractions: why not?
+                // biome-ignore lint/a11y/noStaticElementInteractions: why not..?
                 <div
                   key={index}
                   className={cn(
@@ -163,16 +182,19 @@ export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props
                       ? "border-primary bg-primary/5"
                       : "hover:bg-muted/50",
                   )}
-                  onClick={() => !editingStep && setSelectedStepIndex(index)}
+                  onClick={() => !showStepEditor && setSelectedStepIndex(index)}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-semibold">Step {step.stepOrder}</span>
                         {step.isDraft && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+                          <Badge
+                            variant="secondary"
+                            className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
+                          >
                             작성 중
-                          </span>
+                          </Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
@@ -198,7 +220,7 @@ export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props
                           e.stopPropagation()
                           handleEditStep(index)
                         }}
-                        disabled={!!editingStep}
+                        disabled={showStepEditor}
                       >
                         <Edit className="h-3 w-3" />
                       </Button>
@@ -210,7 +232,7 @@ export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props
                           e.stopPropagation()
                           handleDeleteStep(index)
                         }}
-                        disabled={!!editingStep}
+                        disabled={showStepEditor}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -223,15 +245,50 @@ export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props
         </ScrollArea>
       </div>
 
-      {/* Right Panel - Email Editor */}
+      {/* Right Panel - Email Preview or Editor */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">이메일 에디터</h3>
+        <h3 className="text-lg font-semibold">
+          {showStepEditor && editingStep
+            ? editingStep.emailSubject
+              ? "스텝 수정"
+              : "새 스텝 추가"
+            : "이메일 미리보기"}
+        </h3>
 
-        {selectedStepIndex === null ? (
-          <div className="flex h-[520px] items-center justify-center rounded-lg border-2 border-dashed">
-            <p className="text-sm text-muted-foreground">좌측에서 스텝을 선택하거나 추가하세요</p>
+        {showStepEditor && editingStep ? (
+          <ScrollArea className="h-[420px]">
+            <div className="pr-4">
+              <SequenceStepForm
+                step={
+                  editingStep.emailSubject
+                    ? ({
+                        id: `temp-${editingStep.stepOrder}`,
+                        stepOrder: editingStep.stepOrder,
+                        delayDays: editingStep.delayDays,
+                        scheduledHour: editingStep.scheduledHour,
+                        scheduledMinute: editingStep.scheduledMinute,
+                        emailSubject: editingStep.emailSubject,
+                        emailBodyText: editingStep.emailBodyText,
+                      } as SequenceStep)
+                    : undefined
+                }
+                stepOrder={editingStep.stepOrder}
+                workspaceId={data.workspaceId}
+                customerGroupId={data.customerGroupId}
+                onSave={handleSaveStep}
+                onCancel={handleCancelEdit}
+              />
+            </div>
+          </ScrollArea>
+        ) : selectedStepIndex === null || selectedStepIndex >= steps.length ? (
+          <div className="flex h-[420px] items-center justify-center rounded-lg border-2 border-dashed">
+            <p className="text-sm text-muted-foreground">
+              {selectedStepIndex !== null && selectedStepIndex >= steps.length
+                ? "새 스텝을 작성하고 있습니다"
+                : "좌측에서 스텝을 선택하거나 추가하세요"}
+            </p>
           </div>
-        ) : !editingStep ? (
+        ) : (
           <div className="space-y-4">
             <div className="rounded-lg border p-4 bg-muted/30">
               <p className="text-sm text-muted-foreground mb-2">
@@ -257,101 +314,15 @@ export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">이메일 본문</Label>
-                  <p className="text-sm mt-1 whitespace-pre-wrap">
-                    {steps[selectedStepIndex].emailBodyText || "(본문 없음)"}
-                  </p>
+                  <ScrollArea className="h-[280px] mt-1 rounded-md border p-3 bg-background">
+                    <p className="text-sm whitespace-pre-wrap">
+                      {steps[selectedStepIndex].emailBodyText || "(본문 없음)"}
+                    </p>
+                  </ScrollArea>
                 </div>
               </div>
             </div>
           </div>
-        ) : (
-          <ScrollArea className="h-[520px]">
-            <div className="space-y-4 pr-4">
-              <div className="space-y-2">
-                <Label>발송 지연 (일)</Label>
-                <Input
-                  type="number"
-                  min={selectedStepIndex === 0 ? 0 : 1}
-                  value={editingStep.delayDays}
-                  onChange={(e) =>
-                    handleUpdateEditingStep("delayDays", Number.parseInt(e.target.value, 10) || 0)
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  {editingStep.delayDays === 0
-                    ? "즉시 발송됩니다"
-                    : `이전 이메일로부터 ${editingStep.delayDays}일 후 발송됩니다`}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <Label>발송 시간</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={23}
-                    value={editingStep.scheduledHour}
-                    onChange={(e) =>
-                      handleUpdateEditingStep(
-                        "scheduledHour",
-                        Number.parseInt(e.target.value, 10) || 0,
-                      )
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>분</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={59}
-                    value={editingStep.scheduledMinute}
-                    onChange={(e) =>
-                      handleUpdateEditingStep(
-                        "scheduledMinute",
-                        Number.parseInt(e.target.value, 10) || 0,
-                      )
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>이메일 제목 *</Label>
-                <Input
-                  value={editingStep.emailSubject}
-                  onChange={(e) => handleUpdateEditingStep("emailSubject", e.target.value)}
-                  placeholder="예: K-Beauty Partnership Opportunity with {{company_name}}"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>이메일 본문 *</Label>
-                <Textarea
-                  value={editingStep.emailBodyText}
-                  onChange={(e) => handleUpdateEditingStep("emailBodyText", e.target.value)}
-                  placeholder="이메일 본문을 입력하세요..."
-                  rows={12}
-                />
-                <p className="text-xs text-muted-foreground">
-                  변수 사용 가능: {"{"}
-                  {"{"} company_name {"}}"}
-                  {"}"}, {"{"}
-                  {"{"}
-                  website_url {"}"}
-                  {"}"} 등
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={handleCancelEdit}>
-                  취소
-                </Button>
-                <Button onClick={handleSaveStep}>저장</Button>
-              </div>
-            </div>
-          </ScrollArea>
         )}
       </div>
     </div>

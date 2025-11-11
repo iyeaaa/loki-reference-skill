@@ -1,5 +1,5 @@
 import { Check } from "lucide-react"
-import { useEffect, useId, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Combobox } from "@/components/ui/combobox"
@@ -57,6 +57,8 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
   const [customerGroupId, setCustomerGroupId] = useState(data.customerGroupId)
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>(data.selectedLeadIds)
   const [searchQuery, setSearchQuery] = useState("")
+  const prevWorkspaceId = useRef(workspaceId)
+  const prevCustomerGroupId = useRef(customerGroupId)
 
   const { data: customerGroups } = useCustomerGroupsByWorkspace(workspaceId, Boolean(workspaceId))
 
@@ -83,19 +85,24 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
       customerGroupId,
       selectedLeadIds,
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, customerGroupId, selectedLeadIds, onChange])
 
   // Reset selections when workspace changes
   useEffect(() => {
-    setCustomerGroupId("")
-    setSelectedLeadIds([])
-  }, [])
+    if (prevWorkspaceId.current !== workspaceId) {
+      setCustomerGroupId("")
+      setSelectedLeadIds([])
+      prevWorkspaceId.current = workspaceId
+    }
+  })
 
   // Reset lead selections when customer group changes
   useEffect(() => {
-    setSelectedLeadIds([])
-  }, [])
+    if (prevCustomerGroupId.current !== customerGroupId) {
+      setSelectedLeadIds([])
+      prevCustomerGroupId.current = customerGroupId
+    }
+  })
 
   const handleToggleAllLeads = () => {
     if (selectedLeadIds.length === filteredMembers.length) {
@@ -114,7 +121,7 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
   const selectedGroup = customerGroups?.find((g) => g.id === customerGroupId)
 
   return (
-    <div className="grid grid-cols-2 gap-6 h-[600px]">
+    <div className="grid grid-cols-2 gap-6 h-[450px]">
       {/* Left Panel - Workspace & Customer Group Selection */}
       <div className="space-y-4 border-r pr-6">
         <div>
@@ -200,11 +207,11 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
         </div>
 
         {!customerGroupId ? (
-          <div className="flex h-[500px] items-center justify-center rounded-lg border-2 border-dashed">
+          <div className="flex h-[400px] items-center justify-center rounded-lg border-2 border-dashed">
             <p className="text-sm text-muted-foreground">좌측에서 고객그룹을 선택하세요</p>
           </div>
         ) : members.length === 0 ? (
-          <div className="flex h-[500px] items-center justify-center rounded-lg border-2 border-dashed">
+          <div className="flex h-[400px] items-center justify-center rounded-lg border-2 border-dashed">
             <p className="text-sm text-muted-foreground">고객그룹에 리드가 없습니다</p>
           </div>
         ) : (
@@ -241,7 +248,7 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
               </div>
             </div>
 
-            <ScrollArea className="h-[400px] rounded-md border">
+            <ScrollArea className="h-[320px] rounded-md border">
               <div className="p-3 space-y-2">
                 {filteredMembers.map((member) => (
                   <div

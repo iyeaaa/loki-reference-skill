@@ -2,7 +2,6 @@ import { ArrowLeft, Check } from "lucide-react"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { CreateCampaignStep1 } from "./CreateCampaignStep1"
 import { CreateCampaignStep2 } from "./CreateCampaignStep2"
@@ -135,50 +134,50 @@ export default function CreateCampaignPage() {
 
       {/* Content Area */}
       <div className="flex-1 overflow-auto p-6">
-        <Card className="mx-auto max-w-6xl">
-          <CardContent className="p-6">
-            {currentStep === 1 && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Step 1: 고객 선택</h2>
-                <p className="text-muted-foreground">고객그룹과 수신자를 선택하세요</p>
-                <CreateCampaignStep1
-                  data={{
-                    workspaceId: campaignData.workspaceId,
-                    customerGroupId: campaignData.customerGroupId,
-                    selectedLeadIds: campaignData.selectedLeadIds,
-                  }}
-                  onChange={(data) => setCampaignData((prev) => ({ ...prev, ...data }))}
-                />
-              </div>
-            )}
-            {currentStep === 2 && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Step 2: 시나리오 생성</h2>
-                <p className="text-muted-foreground">이메일 스텝을 생성하세요 (최대 4개)</p>
-                <CreateCampaignStep2
-                  data={{ steps: campaignData.steps }}
-                  onChange={(data) => setCampaignData((prev) => ({ ...prev, ...data }))}
-                />
-              </div>
-            )}
-            {currentStep === 3 && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Step 3: 검토</h2>
-                <p className="text-muted-foreground">캠페인 설정을 확인하고 저장하세요</p>
-                <CreateCampaignStep3
-                  data={campaignData}
-                  onChange={(data) => setCampaignData((prev) => ({ ...prev, ...data }))}
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {currentStep === 1 && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Step 1: 고객 선택</h2>
+            <p className="text-muted-foreground">고객그룹과 수신자를 선택하세요</p>
+            <CreateCampaignStep1
+              data={{
+                workspaceId: campaignData.workspaceId,
+                customerGroupId: campaignData.customerGroupId,
+                selectedLeadIds: campaignData.selectedLeadIds,
+              }}
+              onChange={(data) => setCampaignData((prev) => ({ ...prev, ...data }))}
+            />
+          </div>
+        )}
+        {currentStep === 2 && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Step 2: 시나리오 생성</h2>
+            <p className="text-muted-foreground">이메일 스텝을 생성하세요 (최대 4개)</p>
+            <CreateCampaignStep2
+              data={{
+                workspaceId: campaignData.workspaceId,
+                customerGroupId: campaignData.customerGroupId,
+                steps: campaignData.steps,
+              }}
+              onChange={(data) => setCampaignData((prev) => ({ ...prev, ...data }))}
+            />
+          </div>
+        )}
+        {currentStep === 3 && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Step 3: 검토</h2>
+            <p className="text-muted-foreground">캠페인 설정을 확인하고 저장하세요</p>
+            <CreateCampaignStep3
+              data={campaignData}
+              onChange={(data) => setCampaignData((prev) => ({ ...prev, ...data }))}
+            />
+          </div>
+        )}
       </div>
 
       {/* Footer Navigation */}
       {currentStep < 3 && (
         <div className="border-t bg-background px-6 py-4">
-          <div className="mx-auto max-w-6xl flex justify-between">
+          <div className="flex justify-between">
             <Button variant="outline" onClick={handlePrevStep} disabled={currentStep === 1}>
               이전
             </Button>

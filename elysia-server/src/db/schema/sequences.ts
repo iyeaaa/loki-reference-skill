@@ -20,6 +20,7 @@ import { workspaces } from "./workspaces"
 // Enums
 export const sequenceStatusEnum = pgEnum("sequence_status_enum", [
   "draft",
+  "ready",
   "active",
   "paused",
   "archived",

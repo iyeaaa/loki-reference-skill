@@ -55,7 +55,7 @@ export async function createSequence(data: {
   customerGroupId?: string
   name: string
   description?: string
-  status?: "draft" | "active" | "paused" | "archived"
+  status?: "draft" | "ready" | "active" | "paused" | "archived"
   workflowData?: string
   selectedLeadIds?: string[] // Array of lead IDs to target
   createdBy?: string
@@ -95,7 +95,7 @@ export async function updateSequence(
   data: {
     name?: string
     description?: string
-    status?: "draft" | "active" | "paused" | "archived"
+    status?: "draft" | "ready" | "active" | "paused" | "archived"
     workflowData?: string
     customerGroupId?: string
     selectedLeadIds?: string[] // Array of lead IDs to target

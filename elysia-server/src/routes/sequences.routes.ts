@@ -13,7 +13,13 @@ const sequenceSchema = t.Object({
   name: t.String({ minLength: 1, maxLength: 255 }),
   description: t.Optional(t.String()),
   status: t.Optional(
-    t.Union([t.Literal("draft"), t.Literal("active"), t.Literal("paused"), t.Literal("archived")]),
+    t.Union([
+      t.Literal("draft"),
+      t.Literal("ready"),
+      t.Literal("active"),
+      t.Literal("paused"),
+      t.Literal("archived"),
+    ]),
   ),
   workflowData: t.Optional(t.String()),
   createdBy: t.Optional(t.String({ format: "uuid" })),
@@ -25,7 +31,13 @@ const updateSequenceSchema = t.Object({
   name: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
   description: t.Optional(t.String()),
   status: t.Optional(
-    t.Union([t.Literal("draft"), t.Literal("active"), t.Literal("paused"), t.Literal("archived")]),
+    t.Union([
+      t.Literal("draft"),
+      t.Literal("ready"),
+      t.Literal("active"),
+      t.Literal("paused"),
+      t.Literal("archived"),
+    ]),
   ),
   workflowData: t.Optional(t.String()),
   customerGroupId: t.Optional(t.String({ format: "uuid" })),
@@ -136,11 +148,16 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
         )
       }
 
-      // 생성 시 상태 검증 (draft 또는 paused만 허용)
-      if (body.status && body.status !== "draft" && body.status !== "paused") {
+      // 생성 시 상태 검증 (draft, ready, paused만 허용)
+      if (
+        body.status &&
+        body.status !== "draft" &&
+        body.status !== "ready" &&
+        body.status !== "paused"
+      ) {
         set.status = 400
         return errorResponse(
-          "시퀀스 생성 시 초안(draft) 또는 일시정지(paused) 상태만 가능합니다",
+          "시퀀스 생성 시 초안(draft), 준비(ready), 일시정지(paused) 상태만 가능합니다",
           ResponseCode.BAD_REQUEST,
         )
       }

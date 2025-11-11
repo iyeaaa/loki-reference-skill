@@ -2,6 +2,7 @@
 
 export type SequenceStatus =
   | "draft"
+  | "ready"
   | "active"
   | "paused"
   | "archived"

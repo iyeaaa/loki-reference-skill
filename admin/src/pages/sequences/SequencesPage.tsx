@@ -1,21 +1,17 @@
-import { Play, Plus, Search, Trash2, X } from "lucide-react"
+import { LayoutGrid, LayoutList, Plus, Search, Trash2, X } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import {
-  useBulkDeleteSequences,
-  useBulkUpdateSequenceStatus,
-  useCreateSequence,
-} from "@/lib/api/hooks/sequences"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { useBulkDeleteSequences, useBulkUpdateSequenceStatus } from "@/lib/api/hooks/sequences"
 import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence"
 import { BulkActionModal } from "./BulkActionModal"
+import { CampaignCardView } from "./CampaignCardView"
 import { SequenceFilters } from "./SequenceFilters"
-import { SequenceForm } from "./SequenceForm"
 import { SequencesTableWithPagination } from "./SequencesTableWithPagination"
 
 export default function SequencesPage() {
@@ -24,13 +20,12 @@ export default function SequencesPage() {
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
+  const [viewMode, setViewMode] = useState<"list" | "card">("list")
 
-  const [isCreating, setIsCreating] = useState(false)
   const [selectedSequences, setSelectedSequences] = useState<string[]>([])
   const [showBulkActionModal, setShowBulkActionModal] = useState(false)
   const [bulkActionType, setBulkActionType] = useState<"status" | "delete" | null>(null)
 
-  const createSequence = useCreateSequence()
   const bulkUpdateStatus = useBulkUpdateSequenceStatus()
   const bulkDeleteSequences = useBulkDeleteSequences()
 
@@ -43,20 +38,8 @@ export default function SequencesPage() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  const handleCreateSequence = async (sequenceData: unknown) => {
-    createSequence.mutate(
-      sequenceData as {
-        name: string
-        description?: string
-        workspaceId: string
-        status: SequenceStatus
-      },
-      {
-        onSuccess: () => {
-          setIsCreating(false)
-        },
-      },
-    )
+  const handleCreateCampaign = () => {
+    navigate("/sequences/create")
   }
 
   const handleEditSequence = (sequence: Sequence) => {
@@ -94,15 +77,6 @@ export default function SequencesPage() {
     }
   }
 
-  const openBulkActionModal = (type: "status" | "delete") => {
-    if (selectedSequences.length === 0) {
-      toast.error(t("sequences.toast.noSequencesSelected"))
-      return
-    }
-    setBulkActionType(type)
-    setShowBulkActionModal(true)
-  }
-
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       setSearchQuery(searchInput)
@@ -138,10 +112,26 @@ export default function SequencesPage() {
       <Card>
         <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-lg">{t("sequences.title.sequenceManagement")}</CardTitle>
-          <Button onClick={() => setIsCreating(true)} size="sm">
-            <Plus className="h-4 w-4 mr-1" />
-            {t("sequences.button.newSequence")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <ToggleGroup
+              type="single"
+              value={viewMode}
+              onValueChange={(value) => {
+                if (value) setViewMode(value as "list" | "card")
+              }}
+            >
+              <ToggleGroupItem value="list" aria-label="리스트 뷰">
+                <LayoutList className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="card" aria-label="카드 뷰">
+                <LayoutGrid className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <Button onClick={handleCreateCampaign} size="sm">
+              <Plus className="h-4 w-4 mr-1" />
+              {t("sequences.button.newSequence")}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {/* Search input - positioned below title */}
@@ -171,7 +161,7 @@ export default function SequencesPage() {
           </div>
 
           {/* Bulk Actions */}
-          {selectedSequences.length > 0 && (
+          {selectedSequences.length > 0 && viewMode === "list" && (
             <div className="flex items-center gap-4 mb-6">
               <div className="text-sm text-muted-foreground">
                 <span className="font-medium">
@@ -180,10 +170,6 @@ export default function SequencesPage() {
                 </span>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => openBulkActionModal("status")}>
-                  <Play className="h-4 w-4 mr-1" />
-                  {t("sequences.button.changeStatus")}
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -197,35 +183,25 @@ export default function SequencesPage() {
             </div>
           )}
 
-          {/* Sequences Table with Pagination */}
-          <SequencesTableWithPagination
-            searchQuery={searchQuery}
-            selectedStatuses={selectedStatuses}
-            selectedSequences={selectedSequences}
-            onToggleSequence={toggleSequenceSelection}
-            onToggleAll={toggleAllSequences}
-            onEditSequence={handleEditSequence}
-          />
+          {/* Sequences View */}
+          {viewMode === "list" ? (
+            <SequencesTableWithPagination
+              searchQuery={searchQuery}
+              selectedStatuses={selectedStatuses}
+              selectedSequences={selectedSequences}
+              onToggleSequence={toggleSequenceSelection}
+              onToggleAll={toggleAllSequences}
+              onEditSequence={handleEditSequence}
+            />
+          ) : (
+            <CampaignCardView
+              searchQuery={searchQuery}
+              selectedStatuses={selectedStatuses}
+              onEditSequence={handleEditSequence}
+            />
+          )}
         </CardContent>
       </Card>
-
-      {/* Create Sequence Dialog */}
-      <Dialog open={isCreating} onOpenChange={setIsCreating}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl font-semibold">
-              {t("sequences.dialog.createSequence")}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
-            <SequenceForm
-              isEdit={false}
-              onSave={handleCreateSequence}
-              onCancel={() => setIsCreating(false)}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Bulk Action Modal */}
       <BulkActionModal

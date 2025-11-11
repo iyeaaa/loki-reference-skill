@@ -1,18 +1,18 @@
 key,ko,en
-title.sequenceManagement,시퀀스 관리,Sequence Management
-button.newSequence,새 시퀀스,New Sequence
-search.placeholder,시퀀스명으로 검색...,Search by sequence name...
+title.sequenceManagement,캠페인 관리,Campaign Management
+button.newSequence,새 캠페인,New Campaign
+search.placeholder,캠페인명으로 검색...,Search by campaign name...
 status.selectedCount,개 선택됨,selected
 button.changeStatus,상태 변경,Change Status
 button.deleteSelected,선택 삭제,Delete Selected
-dialog.createSequence,새 시퀀스 생성,Create New Sequence
-dialog.sequenceManagement,시퀀스 관리,Sequence Management
-toast.noSequencesSelected,선택된 시퀀스가 없습니다.,No sequences selected
-confirm.deleteSequences,선택한 {{count}}개의 시퀀스를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.,Are you sure you want to delete the selected {{count}} sequences? This action cannot be undone.
-form.sequenceName,시퀀스명,Sequence Name
-form.sequenceNamePlaceholder,예: 신규 고객 온보딩 시퀀스,Ex: New Customer Onboarding Sequence
+dialog.createSequence,새 캠페인 생성,Create New Campaign
+dialog.sequenceManagement,캠페인 관리,Campaign Management
+toast.noSequencesSelected,선택된 캠페인이 없습니다.,No campaigns selected
+confirm.deleteSequences,선택한 {{count}}개의 캠페인을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.,Are you sure you want to delete the selected {{count}} campaigns? This action cannot be undone.
+form.sequenceName,캠페인명,Campaign Name
+form.sequenceNamePlaceholder,예: 신규 고객 온보딩 캠페인,Ex: New Customer Onboarding Campaign
 form.description,설명,Description
-form.descriptionPlaceholder,시퀀스에 대한 설명을 입력하세요...,Enter description for the sequence...
+form.descriptionPlaceholder,캠페인에 대한 설명을 입력하세요...,Enter description for the campaign...
 form.workspace,워크스페이스,Workspace
 form.workspacePlaceholder,워크스페이스 선택,Select workspace
 form.workspaceSearchPlaceholder,워크스페이스 검색...,Search workspace...
@@ -22,7 +22,7 @@ form.customerGroupPlaceholder,고객그룹 선택 (필수),Select customer group
 form.customerGroupEmptyText,고객그룹이 없습니다.,No customer groups available
 form.customerGroupRequired,먼저 워크스페이스를 선택하세요,Please select workspace first
 form.leadCount,개 리드,leads
-form.cannotChangeGroup,이미 실행 이력이 있는 시퀀스는 고객그룹을 변경할 수 없습니다,Sequences with execution history cannot change customer group
+form.cannotChangeGroup,이미 실행 이력이 있는 캠페인은 고객그룹을 변경할 수 없습니다,Campaigns with execution history cannot change customer group
 form.groupRequired,워크플로우 실행을 위해 고객그룹을 반드시 선택해야 합니다,Customer group must be selected for workflow execution
 form.emailTarget,이메일 대상 선택 (선택사항),Email Target Selection (Optional)
 form.specificCustomers,특정 고객 선택,Select Specific Customers
@@ -38,7 +38,7 @@ form.cancel,취소,Cancel
 form.save,생성,Create
 form.update,수정 완료,Update Complete
 toast.selectCustomerGroup,워크플로우 실행을 위해 고객그룹을 선택해주세요,Please select a customer group for workflow execution
-table.column.sequenceName,시퀀스명,Sequence Name
+table.column.sequenceName,캠페인명,Campaign Name
 table.column.description,설명,Description
 table.column.status,상태,Status
 table.column.workspace,워크스페이스,Workspace
@@ -49,6 +49,7 @@ table.column.createdAt,생성일,Created Date
 table.column.updatedAt,수정일,Updated Date
 table.column.actions,작업,Actions
 table.status.draft,초안,Draft
+table.status.ready,준비,Ready
 table.status.active,활성,Active
 table.status.paused,일시정지,Paused
 table.status.archived,보관됨,Archived
@@ -57,7 +58,7 @@ table.status.noResponse,답변 없음,No Response
 table.button.pause,일시정지,Pause
 table.button.activate,활성화,Activate
 table.button.editNodes,노드 편집,Edit Nodes
-table.button.editSequence,시퀀스 편집,Edit Sequence
+table.button.editSequence,캠페인 편집,Edit Campaign
 table.pagination.displaying,{{count}}개 표시,{{count}} displayed
 table.pagination.displayingZero,0개 표시,0 displayed
 table.pagination.first,처음,First
@@ -248,9 +249,9 @@ form.selectWorkspaceFirst,먼저 워크스페이스를 선택하세요,Please se
 form.noCustomerGroups,고객그룹이 없습니다.,No customer groups available.
 form.leadCount,{{name}} ({{count}}개 리드),{{name}} ({{count}} leads)
 form.warning.noCustomerGroupsInWorkspace,⚠️ 선택한 워크스페이스에 고객 그룹이 없습니다,⚠️ No customer groups in selected workspace
-form.warning.createCustomerGroupFirst,시퀀스를 생성하려면 먼저 고객 그룹을 만들어야 합니다.,You need to create a customer group first to create a sequence.
+form.warning.createCustomerGroupFirst,캠페인을 생성하려면 먼저 고객 그룹을 만들어야 합니다.,You need to create a customer group first to create a campaign.
 form.button.goToCreateCustomerGroup,고객 그룹 생성하러 가기,Go to Create Customer Group
-form.warning.cannotChangeCustomerGroup,⚠️ 이미 실행 이력이 있는 시퀀스는 고객그룹을 변경할 수 없습니다,⚠️ Cannot change customer group for sequences with execution history
+form.warning.cannotChangeCustomerGroup,⚠️ 이미 실행 이력이 있는 캠페인은 고객그룹을 변경할 수 없습니다,⚠️ Cannot change customer group for campaigns with execution history
 form.info.customerGroupRequired,💡 워크플로우 실행을 위해 고객그룹을 반드시 선택해야 합니다,💡 You must select a customer group to run the workflow
 form.leadSelection.title,이메일 대상 선택 (선택사항),Select Email Recipients (Optional)
 form.leadSelection.collapse,접기,Collapse
@@ -264,27 +265,28 @@ form.leadSelection.selectedNote,선택된 {{count}}명의 고객에게만 이메
 form.leadSelection.defaultNote2,고객을 선택하지 않으면 고객 그룹의 모든 리드에게 발송됩니다.,"If no customers are selected, email will be sent to all leads in the customer group."
 form.status.label,상태,Status
 form.status.draft,초안,Draft
+form.status.ready,준비,Ready
 form.status.active,활성,Active
 form.status.stepBasedNote,(스텝 기반은 토글 버튼 사용),(Use toggle button for step-based)
 form.status.paused,일시정지,Paused
 form.status.archived,보관됨,Archived
 form.status.completed,발송완료,Completed
-form.info.useToggleButton,💡 스텝 기반 시퀀스는 목록의 활성화 토글 버튼을 사용하세요,💡 Use the activation toggle button in the list for step-based sequences
+form.info.useToggleButton,💡 스텝 기반 캠페인은 목록의 활성화 토글 버튼을 사용하세요,💡 Use the activation toggle button in the list for step-based campaigns
 form.button.cancel,취소,Cancel
 form.button.editComplete,수정 완료,Save Changes
 form.button.create,생성,Create
-detail.title,시퀀스 상세,Sequence Details
-detail.button.runSequence,시퀀스 실행,Run Sequence
-detail.warning.hasCompletedEnrollments,⚠️ 이 시퀀스에는 이미 완료된 등록이 있습니다. 중복 실행을 방지하기 위해 실행 버튼이 비활성화되었습니다.,⚠️ This sequence has completed enrollments. The run button is disabled to prevent duplicate execution.
-detail.tabs.steps,시퀀스 스텝,Sequence Steps
+detail.title,캠페인 상세,Campaign Details
+detail.button.runSequence,캠페인 실행,Run Campaign
+detail.warning.hasCompletedEnrollments,⚠️ 이 캠페인에는 이미 완료된 등록이 있습니다. 중복 실행을 방지하기 위해 실행 버튼이 비활성화되었습니다.,⚠️ This campaign has completed enrollments. The run button is disabled to prevent duplicate execution.
+detail.tabs.steps,캠페인 스텝,Campaign Steps
 detail.tabs.metrics,성과 지표,Performance Metrics
 detail.tabs.enrollments,등록 현황,Enrollment Status
-detail.fallbackName,시퀀스,Sequence
-stepsList.title,시퀀스 스텝,Sequence Steps
+detail.fallbackName,캠페인,Campaign
+stepsList.title,캠페인 스텝,Campaign Steps
 stepsList.addStep,스텝 추가,Add Step
-stepsList.createSequenceFirst,시퀀스를 생성한 후 스텝을 추가할 수 있습니다.,You can add steps after creating a sequence.
+stepsList.createSequenceFirst,캠페인을 생성한 후 스텝을 추가할 수 있습니다.,You can add steps after creating a campaign.
 stepsList.warning.setCustomerGroupFirst,⚠️ 고객 그룹을 먼저 설정해주세요,⚠️ Please set customer group first
-stepsList.warning.customerGroupRequired,스텝을 추가하려면 시퀀스에 고객 그룹이 반드시 필요합니다. 위의 시퀀스 정보를 수정하여 고객 그룹을 선택해주세요.,Customer group is required to add steps. Please edit the sequence information above to select a customer group.
+stepsList.warning.customerGroupRequired,스텝을 추가하려면 캠페인에 고객 그룹이 반드시 필요합니다. 위의 캠페인 정보를 수정하여 고객 그룹을 선택해주세요.,Customer group is required to add steps. Please edit the campaign information above to select a customer group.
 stepsList.loading,로딩 중...,Loading...
 stepsList.noSteps,아직 생성된 스텝이 없습니다.,No steps created yet.
 stepsList.addFirstStep,첫 스텝 추가,Add First Step
@@ -389,7 +391,7 @@ title.commentNode_삭제,삭제,Delete
 title.commentNode_편집,편집,Edit
 title.sequenceStepList_새스텝추가,새 스텝 추가,Add New Step
 title.sequenceStepList_스텝수정,스텝 수정,Edit Step
-title.sequenceStepList_시퀀스스텝,시퀀스 스텝,Sequence Steps
+title.sequenceStepList_시퀀스스텝,캠페인 스텝,Campaign Steps
 title.timerNode_타이머설정,타이머 설정,Timer Settings
 title_template,제목 템플릿,Title Template
 toast.workflowSavedAlt,워크플로우가 저장되었습니다,Workflow has been saved
@@ -463,7 +465,7 @@ enrollments.column.replied,답장,Reply
 enrollments.reply.notReplied,답장 없음,No Reply
 enrollments.reply.replied,답장함,Replied
 metrics.loading,메트릭스 데이터를 불러오는 중...,Loading metrics data...
-metrics.title,시퀀스 성과 지표,Sequence Performance Metrics
+metrics.title,캠페인 성과 지표,Campaign Performance Metrics
 metrics.totalSent,총 발송,Total Sent
 metrics.delivered,전달됨,Delivered
 metrics.deliveryRate,전달률,Delivery Rate
@@ -478,7 +480,7 @@ metrics.clicked,클릭,Clicked
 metrics.replyRate,답장률,Reply Rate
 metrics.replied,답장,Replied
 metrics.unsubscribed,구독취소,Unsubscribed
-metrics.progressTitle,시퀀스 진행 현황,Sequence Progress Status
+metrics.progressTitle,캠페인 진행 현황,Campaign Progress Status
 metrics.totalEnrollments,총 등록,Total Enrollments
 metrics.activeEnrollments,진행 중,In Progress
 metrics.completedEnrollments,완료,Completed
@@ -501,3 +503,98 @@ enrollments.filter.delivered,[NO TRANSLATION] sequences.enrollments.filter.deliv
 enrollments.filter.opened,[NO TRANSLATION] sequences.enrollments.filter.opened,[NO TRANSLATION] sequences.enrollments.filter.opened
 enrollments.filter.replied,[NO TRANSLATION] sequences.enrollments.filter.replied,[NO TRANSLATION] sequences.enrollments.filter.replied
 enrollments.search.placeholder,[NO TRANSLATION] sequences.enrollments.search.placeholder,[NO TRANSLATION] sequences.enrollments.search.placeholder
+edit.title,캠페인 상세,Campaign Details
+edit.backButton,돌아가기,Back
+edit.menu.overview,개요,Overview
+edit.menu.customerSelection,고객 선택,Customer Selection
+edit.menu.scenario,시나리오,Scenario
+edit.menu.enrollment,발송현황,Sending Status
+edit.menu.memo,메모,Memo
+edit.loading,로딩 중...,Loading...
+edit.memo.placeholder,캠페인에 대한 메모를 입력하세요...,Enter memo for campaign...
+edit.memo.save,저장,Save
+edit.memo.comingSoon,메모 기능은 곧 추가될 예정입니다,Memo feature is coming soon
+create.title,새 캠페인 생성,Create New Campaign
+create.subtitle,3단계로 이메일 캠페인을 생성하세요,Create email campaign in 3 steps
+create.backButton,돌아가기,Back
+create.nextButton,다음,Next
+create.prevButton,이전,Previous
+create.step1.title,고객 선택,Customer Selection
+create.step1.description,고객그룹 및 수신자 선택,Select customer group and recipients
+create.step1.workspaceLabel,워크스페이스 *,Workspace *
+create.step1.workspacePlaceholder,워크스페이스 선택,Select workspace
+create.step1.workspaceSearch,워크스페이스 검색...,Search workspace...
+create.step1.workspaceEmpty,워크스페이스가 없습니다,No workspaces available
+create.step1.customerGroupLabel,고객그룹 *,Customer Group *
+create.step1.customerGroupPlaceholder,고객그룹 선택,Select customer group
+create.step1.customerGroupSelectFirst,먼저 워크스페이스를 선택하세요,Please select workspace first
+create.step1.customerGroupEmpty,고객그룹이 없습니다,No customer groups available
+create.step1.leadCountSuffix,개 리드,leads
+create.step1.recipientsTitle,수신자 선택,Select Recipients
+create.step1.selectedCount,{{count}}명 선택됨,{{count}} selected
+create.step1.selectAll,전체 선택 (기본),Select All (Default)
+create.step1.selectGroup,좌측에서 고객그룹을 선택하세요,Please select customer group from left
+create.step1.noLeads,고객그룹에 리드가 없습니다,No leads in customer group
+create.step1.searchPlaceholder,리드 검색...,Search leads...
+create.step1.selectAllCheckbox,전체 선택 ({{selected}}/{{total}}),Select All ({{selected}}/{{total}})
+create.step1.deselectAll,선택 해제,Deselect All
+create.step1.specificNote,선택된 {{count}}명의 고객에게만 이메일이 발송됩니다,Emails will be sent only to {{count}} selected customers
+create.step1.defaultNote,고객을 선택하지 않으면 고객 그룹의 모든 리드에게 발송됩니다,If no customers are selected emails will be sent to all leads in the group
+create.step2.title,시나리오 생성,Create Scenario
+create.step2.description,이메일 스텝 작성,Create email steps
+create.step2.stepsTitle,이메일 스텝,Email Steps
+create.step2.addStepButton,스텝 추가,Add Step
+create.step2.maxStepsWarning,최대 {{max}}개의 스텝까지 추가할 수 있습니다,You can add up to {{max}} steps
+create.step2.draftWarning,작성 중인 스텝이 있습니다. 모든 스텝을 저장한 후 다음 단계로 진행할 수 있습니다,There are draft steps. Please save all steps before proceeding
+create.step2.noSteps,아직 스텝이 없습니다,No steps yet
+create.step2.addFirstStep,"""스텝 추가"" 버튼을 눌러 첫 번째 이메일을 만들어보세요","Click ""Add Step"" button to create your first email"
+create.step2.stepNumber,Step {{order}},Step {{order}}
+create.step2.draftBadge,작성 중,Draft
+create.step2.sendImmediately,즉시 발송,Send Immediately
+create.step2.sendAfterDays,{{days}}일 후,After {{days}} days
+create.step2.noSubject,제목 없음,No subject
+create.step2.editorTitle,이메일 에디터,Email Editor
+create.step2.selectOrAdd,좌측에서 스텝을 선택하거나 추가하세요,Select or add step from left
+create.step2.editToModify,스텝을 수정하려면 편집 버튼을 클릭하세요,Click edit button to modify step
+create.step2.delayDaysLabel,발송 지연 (일),Delay (days)
+create.step2.delayDaysHelper,{{days}}일 후 발송됩니다,Will be sent after {{days}} days
+create.step2.sendTimeLabel,발송 시간,Send Time
+create.step2.minuteLabel,분,Minute
+create.step2.subjectLabel,이메일 제목 *,Email Subject *
+create.step2.subjectPlaceholder,예: K-Beauty Partnership Opportunity with {{company_name}},Ex: K-Beauty Partnership Opportunity with {{company_name}}
+create.step2.bodyLabel,이메일 본문 *,Email Body *
+create.step2.bodyPlaceholder,이메일 본문을 입력하세요...,Enter email body...
+create.step2.variablesHelper,변수 사용 가능: {{company_name}}{{website_url}} 등,Variables available: {{company_name}}{{website_url}} etc
+create.step2.cancelButton,취소,Cancel
+create.step2.saveButton,저장,Save
+create.step2.validation.workspaceRequired,워크스페이스와 고객그룹을 선택해주세요,Please select workspace and customer group
+create.step2.validation.needSteps,최소 1개 이상의 이메일 스텝을 추가해주세요,Please add at least 1 email step
+create.step2.validation.hasDraftSteps,작성 중인 스텝이 있습니다. 모든 스텝을 저장해주세요,There are draft steps. Please save all steps
+create.step2.validation.subjectRequired,이메일 제목을 입력해주세요,Please enter email subject
+create.step2.validation.bodyRequired,이메일 본문을 입력해주세요,Please enter email body
+create.step3.title,검토,Review
+create.step3.description,최종 검토 및 저장,Final review and save
+create.step3.campaignInfoTitle,캠페인 정보,Campaign Information
+create.step3.nameLabel,캠페인 이름 *,Campaign Name *
+create.step3.namePlaceholder,예: 신규 고객 온보딩 캠페인,Ex: New Customer Onboarding Campaign
+create.step3.descriptionLabel,설명,Description
+create.step3.descriptionPlaceholder,캠페인에 대한 설명을 입력하세요...,Enter campaign description...
+create.step3.recipientsSummary,수신자 요약,Recipients Summary
+create.step3.workspaceField,워크스페이스,Workspace
+create.step3.customerGroupField,고객그룹,Customer Group
+create.step3.recipientCount,수신자 수,Recipient Count
+create.step3.specificRecipients,특정 고객 {{count}}명에게만 발송됩니다,Will be sent to {{count}} specific customers only
+create.step3.scenarioSummary,시나리오 요약,Scenario Summary
+create.step3.totalSteps,총 {{count}}개의 이메일 스텝,Total {{count}} email steps
+create.step3.memoTitle,메모 (선택사항),Memo (Optional)
+create.step3.memoPlaceholder,캠페인에 대한 추가 메모를 입력하세요...,Enter additional memo for campaign...
+create.step3.saveDraftButton,초안 저장,Save as Draft
+create.step3.saveReadyButton,준비 완료,Ready
+create.step3.saving,저장 중...,Saving...
+create.step3.draftNote,캠페인이 초안 상태로 저장되며 나중에 수정할 수 있습니다,Campaign will be saved as draft and can be modified later
+create.step3.readyNote,캠페인이 준비 상태로 저장되며 바로 활성화할 수 있습니다,Campaign will be saved as ready and can be activated immediately
+create.step3.validation.nameRequired,캠페인 이름을 입력해주세요,Please enter campaign name
+create.step3.toast.draftSaved,초안이 저장되었습니다,Draft saved successfully
+create.step3.toast.readySaved,캠페인이 준비 상태로 저장되었습니다,Campaign saved as ready
+create.step3.toast.stepError,스텝 생성 오류: {{error}},Step creation error: {{error}}
+create.step3.toast.unknownError,알 수 없는 오류,Unknown error

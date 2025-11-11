@@ -83,14 +83,9 @@ export const processSingleCompanyStep = createStep({
                 updatedAt: new Date(),
               })
               .where(eq(websetRows.id, rowId))
-
-            if (enriched) {
-              console.log(`  ✅ Enriched "${company.name}": ${fieldsEnriched.join(", ")}`)
-            }
           }
         }
       } catch (_error) {
-        console.log(`  ⚠️  Failed to enrich company "${company.name}"`)
         enrichmentError = true
       }
     }
@@ -160,10 +155,7 @@ export const processSingleCompanyStep = createStep({
 
         validated = true
         validationError = hasError
-
-        console.log(`  ✅ Validated "${company.name}"`)
       } catch (_error) {
-        console.log(`  ⚠️  Failed to validate company "${company.name}"`)
         validationError = true
       }
     }

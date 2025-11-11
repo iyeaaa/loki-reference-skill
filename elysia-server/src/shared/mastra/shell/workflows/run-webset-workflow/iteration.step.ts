@@ -1,5 +1,6 @@
 import { createStep } from "@mastra/core/workflows"
 import { eq } from "drizzle-orm"
+import PQueue from "p-queue"
 import { z } from "zod"
 import { db } from "../../../../../db"
 import { websetRows, websets } from "../../../../../db/schema/websets"
@@ -42,10 +43,11 @@ export const iterationStep = createStep({
   execute: async (params) => {
     const { inputData } = params
 
-    // Get webset criterias for validation
+    // Get webset configuration and criterias
     const [webset] = await db
       .select({
         criterias: websets.criterias,
+        targetValidatedRows: websets.targetValidatedRows,
       })
       .from(websets)
       .where(eq(websets.id, inputData.websetId))
@@ -55,7 +57,8 @@ export const iterationStep = createStep({
       throw new Error("Webset not found")
     }
 
-    // Check if there are unvalidated rows
+    // ===== PROACTIVE STOP CHECK =====
+    // Check current state before processing
     const existingRows = await db
       .select({
         id: websetRows.id,
@@ -64,18 +67,49 @@ export const iterationStep = createStep({
       .from(websetRows)
       .where(eq(websetRows.websetId, inputData.websetId))
 
+    // Count validated rows (all criteria answers are true)
+    const validatedRows = existingRows.filter((row) => {
+      const answers = row.criteriaAnswers
+      if (!answers || answers.length === 0) return false
+      return answers.every((answer) => answer === true)
+    }).length
+
     const unvalidatedRows = existingRows.filter((row) => {
       const answers = row.criteriaAnswers
       return !answers || answers.length === 0
     })
+
+    // Check if target is already satisfied
+    const targetValidatedRows = webset.targetValidatedRows ?? null
+    const targetAlreadySatisfied =
+      targetValidatedRows !== null && validatedRows >= targetValidatedRows
+
+    if (targetAlreadySatisfied) {
+      return {
+        websetId: inputData.websetId,
+        iterationCount: inputData.iterationCount,
+        targetValidatedRows,
+        currentValidatedRows: validatedRows,
+        rowsWithoutValidation: unvalidatedRows.length,
+        rowsWithoutEnrichment: 0,
+        targetSatisfied: true,
+        totalCompaniesSearched: 0,
+        totalRowsAdded: 0,
+        totalRowsEnriched: 0,
+        totalRowsValidated: 0,
+        totalValidationErrors: 0,
+        message: `Target already satisfied (${validatedRows}/${targetValidatedRows})`,
+        success: true,
+      }
+    }
+
+    // ===== END PROACTIVE STOP CHECK =====
 
     let companiesSearched = 0
     let rowsAdded = 0
 
     // Step 1: Search companies only if no unvalidated rows exist
     if (unvalidatedRows.length === 0) {
-      console.log("🔍 No unvalidated companies found, searching for new companies...\n")
-
       // Generate query
       const queryResult = await generateQueryStep.execute({ ...params, inputData })
 
@@ -83,10 +117,6 @@ export const iterationStep = createStep({
       const searchResult = await searchCompaniesStep.execute({ ...params, inputData: queryResult })
       companiesSearched = searchResult.companiesSearched
       rowsAdded = searchResult.rowsAdded
-    } else {
-      console.log(
-        `  ⏭️  Skipping search step - ${unvalidatedRows.length} unvalidated companies already exist\n`,
-      )
     }
 
     // Step 2: Get all unvalidated rows (including newly added ones)
@@ -103,46 +133,81 @@ export const iterationStep = createStep({
       return !answers || answers.length === 0
     })
 
-    console.log(
-      `🔄 Processing ${rowsToProcess.length} companies through enrichment → validation pipeline...\n`,
-    )
+    // ===== CHECK BEFORE CONCURRENT PROCESSING =====
+    // Recheck if target is satisfied before starting expensive concurrent work
+    const revalidatedRows = allRows.filter((row) => {
+      const answers = row.criteriaAnswers
+      if (!answers || answers.length === 0) return false
+      return answers.every((answer) => answer === true)
+    }).length
 
-    // Step 3: Process each company sequentially through the pipeline
-    let rowsEnriched = 0
-    let rowsValidated = 0
-    let enrichmentErrors = 0
-    let validationErrors = 0
-
-    for (const row of rowsToProcess) {
-      try {
-        const result = await processSingleCompanyStep.execute({
-          ...params,
-          inputData: {
-            rowId: row.id,
-            criterias: webset.criterias,
-          },
-        })
-
-        if (result.enriched) rowsEnriched++
-        if (result.validated) rowsValidated++
-        if (result.enrichmentError) enrichmentErrors++
-        if (result.validationError) validationErrors++
-      } catch (_error) {
-        console.log(`  ❌ Failed to process row ${row.id}`)
-        // Assume it's a general error, count as validation error
-        validationErrors++
+    if (targetValidatedRows !== null && revalidatedRows >= targetValidatedRows) {
+      return {
+        websetId: inputData.websetId,
+        iterationCount: inputData.iterationCount,
+        targetValidatedRows,
+        currentValidatedRows: revalidatedRows,
+        rowsWithoutValidation: rowsToProcess.length,
+        rowsWithoutEnrichment: 0,
+        targetSatisfied: true,
+        totalCompaniesSearched: companiesSearched,
+        totalRowsAdded: rowsAdded,
+        totalRowsEnriched: 0,
+        totalRowsValidated: 0,
+        totalValidationErrors: 0,
+        message: `Target satisfied before processing (${revalidatedRows}/${targetValidatedRows})`,
+        success: true,
       }
     }
 
-    console.log(`  💾 Enriched ${rowsEnriched} companies`)
-    console.log(`  💾 Validated ${rowsValidated} companies`)
-    if (enrichmentErrors > 0) {
-      console.log(`  ⚠️  ${enrichmentErrors} enrichment errors`)
+    if (rowsToProcess.length === 0) {
+      return {
+        websetId: inputData.websetId,
+        iterationCount: inputData.iterationCount,
+        targetValidatedRows,
+        currentValidatedRows: revalidatedRows,
+        rowsWithoutValidation: 0,
+        rowsWithoutEnrichment: 0,
+        targetSatisfied: targetValidatedRows !== null && revalidatedRows >= targetValidatedRows,
+        totalCompaniesSearched: companiesSearched,
+        totalRowsAdded: rowsAdded,
+        totalRowsEnriched: 0,
+        totalRowsValidated: 0,
+        totalValidationErrors: 0,
+        message: "No companies to process",
+        success: true,
+      }
     }
-    if (validationErrors > 0) {
-      console.log(`  ⚠️  ${validationErrors} validation errors`)
-    }
-    console.log()
+
+    // Step 3: Process companies concurrently using p-queue (max 5 concurrent)
+    const queue = new PQueue({ concurrency: 5 })
+    let rowsEnriched = 0
+    let rowsValidated = 0
+    let validationErrors = 0
+
+    const processingTasks = rowsToProcess.map((row) =>
+      queue.add(async () => {
+        try {
+          const result = await processSingleCompanyStep.execute({
+            ...params,
+            inputData: {
+              rowId: row.id,
+              criterias: webset.criterias,
+            },
+          })
+
+          if (result.enriched) rowsEnriched++
+          if (result.validated) rowsValidated++
+          if (result.enrichmentError || result.validationError) validationErrors++
+        } catch (_error) {
+          // Assume it's a general error, count as validation error
+          validationErrors++
+        }
+      }),
+    )
+
+    // Wait for all tasks to complete
+    await Promise.all(processingTasks)
 
     // Step 4: Check quota
     const quotaResult = await checkQuotaStep.execute({

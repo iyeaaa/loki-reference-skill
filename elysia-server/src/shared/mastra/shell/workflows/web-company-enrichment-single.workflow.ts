@@ -226,13 +226,26 @@ Return the complete company object with enriched data.
         temperature: 0.2,
       })
 
-      // Build enriched company object, preserving original values where new data is null
+      // Helper to normalize website
+      const normalizeWebsite = (url: string | null | undefined): string | null => {
+        if (!url) return null
+        return url
+          .toLowerCase()
+          .trim()
+          .replace(/^https?:\/\//, "")
+          .replace(/\/$/, "")
+      }
+
+      // Build enriched company object, ONLY filling missing fields and lowercasing all text
       const enrichedCompany: CompanyInfo = {
-        name: object.name || company.name,
-        website: object.website ?? company.website,
-        email: object.email ?? company.email,
-        foundedYear: object.foundedYear ?? company.foundedYear,
-        location: object.location ?? company.location,
+        name: company.name, // Never modify existing name
+        // Only fill if original is null/undefined
+        website: company.website ? company.website : normalizeWebsite(object.website),
+        email: company.email ? company.email : (object.email?.trim()?.toLowerCase() ?? null),
+        foundedYear: company.foundedYear ? company.foundedYear : (object.foundedYear ?? null),
+        location: company.location
+          ? company.location
+          : (object.location?.trim()?.toLowerCase() ?? null),
         source: company.source,
         sourceType: company.sourceType,
         extractedAt: new Date().toISOString(),

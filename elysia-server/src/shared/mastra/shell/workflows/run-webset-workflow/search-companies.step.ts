@@ -127,17 +127,17 @@ export const searchCompaniesStep = createStep({
           )
 
           // Only insert new companies (with null criteriaAnswers to indicate not validated yet)
-          // Normalize data before saving
+          // Normalize and lowercase all data before saving
           const rowsToInsert = newCompanies.map((company) => ({
             websetId,
             data: {
-              name: company.name?.trim() || null,
-              website: company.website?.trim() || null,
+              name: company.name?.trim().toLowerCase() || null,
+              website: normalizeWebsite(company.website),
               email: company.email?.trim()?.toLowerCase() || null,
               foundedYear: company.foundedYear ?? null,
-              location: company.location?.trim() || null,
-              source: company.source,
-              sourceType: company.sourceType,
+              location: company.location?.trim().toLowerCase() || null,
+              source: company.source?.toLowerCase() || null,
+              sourceType: company.sourceType?.toLowerCase() || null,
               extractedAt: company.extractedAt,
             },
             criteriaAnswers: null, // Null indicates not validated yet

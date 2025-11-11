@@ -80,7 +80,7 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
 
   // Update parent when data changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: adding onChange to dependencies will cause infinite loop
-    useEffect(() => {
+  useEffect(() => {
     onChange({
       workspaceId,
       customerGroupId,

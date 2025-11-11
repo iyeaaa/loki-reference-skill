@@ -62,6 +62,16 @@ export function useCustomerGroupsByWorkspace(workspaceId: string, enabled = true
   })
 }
 
+export function useCustomerGroupMembersWithEmails(groupId: string, enabled = true) {
+  return useQuery({
+    queryKey: [...customerGroupKeys.members(groupId), "with-emails"],
+    queryFn: () => customerGroupsApi.getMembersWithEmails(groupId),
+    enabled,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+  })
+}
+
 export function useLeadGroups(leadId: string, enabled = true) {
   return useQuery({
     queryKey: customerGroupKeys.leadGroups(leadId),

@@ -1,4 +1,4 @@
-import { Check } from "lucide-react"
+import { Check, CheckCircle, ChevronDown, ChevronUp } from "lucide-react"
 import { useEffect, useId, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -14,11 +14,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  useCustomerGroupMembers,
+  useCustomerGroupMembersWithEmails,
   useCustomerGroupsByWorkspace,
 } from "@/lib/api/hooks/customer-groups"
 import { useSuspenseUserWorkspaces } from "@/lib/api/hooks/workspaces"
-import type { CustomerGroupMember } from "@/lib/api/types/customer-group"
 import { useAuth } from "@/lib/auth-provider"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 
@@ -35,15 +34,11 @@ interface CreateCampaignStep1Props {
   }) => void
 }
 
-interface CustomerGroupMemberWithLead extends CustomerGroupMember {
-  leadCompanyName?: string
-  leadBusinessType?: string
-}
-
 export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props) {
   const { user } = useAuth()
   const { selectedWorkspace } = useWorkspace()
   const selectAllId = useId()
+  const selectAllRepliedId = useId()
 
   const { data: allWorkspaces = [] } = useSuspenseUserWorkspaces(
     user?.id || "00000000-0000-0000-0000-000000000000",
@@ -57,26 +52,39 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
   const [customerGroupId, setCustomerGroupId] = useState(data.customerGroupId)
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>(data.selectedLeadIds)
   const [searchQuery, setSearchQuery] = useState("")
+  const [showRepliedSection, setShowRepliedSection] = useState(true)
   const prevWorkspaceId = useRef(workspaceId)
   const prevCustomerGroupId = useRef(customerGroupId)
 
   const { data: customerGroups } = useCustomerGroupsByWorkspace(workspaceId, Boolean(workspaceId))
 
-  const { data: membersData } = useCustomerGroupMembers(
+  const { data: members = [] } = useCustomerGroupMembersWithEmails(
     customerGroupId || "",
-    1,
-    1000,
     Boolean(customerGroupId),
   )
 
-  const members = (membersData?.members || []) as CustomerGroupMemberWithLead[]
+  // Separate replied and non-replied leads
+  const repliedLeads = members.filter((m) => m.hasReplied)
+  const nonRepliedLeads = members.filter((m) => !m.hasReplied)
 
-  const filteredMembers = members.filter(
+  const filteredRepliedLeads = repliedLeads.filter(
     (member) =>
       !searchQuery ||
-      member.leadCompanyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.leadBusinessType?.toLowerCase().includes(searchQuery.toLowerCase()),
+      member.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.email?.toLowerCase().includes(searchQuery.toLowerCase()),
   )
+
+  const filteredNonRepliedLeads = nonRepliedLeads.filter(
+    (member) =>
+      !searchQuery ||
+      member.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.email?.toLowerCase().includes(searchQuery.toLowerCase()),
+  )
+
+  const repliedCount = repliedLeads.length
+  const selectedRepliedCount = selectedLeadIds.filter((id) =>
+    repliedLeads.find((m) => m.id === id),
+  ).length
 
   // Update parent when data changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: adding onChange to dependencies will cause infinite loop
@@ -105,11 +113,35 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
     }
   })
 
-  const handleToggleAllLeads = () => {
-    if (selectedLeadIds.length === filteredMembers.length) {
-      setSelectedLeadIds([])
+  const handleToggleAllNonReplied = () => {
+    const nonRepliedIds = filteredNonRepliedLeads.map((m) => m.id)
+    const repliedIds = selectedLeadIds.filter((id) => repliedLeads.find((m) => m.id === id))
+
+    // Check if all non-replied are selected
+    const allNonRepliedSelected = nonRepliedIds.every((id) => selectedLeadIds.includes(id))
+
+    if (allNonRepliedSelected) {
+      // Deselect all non-replied, keep replied selections
+      setSelectedLeadIds(repliedIds)
     } else {
-      setSelectedLeadIds(filteredMembers.map((m) => m.leadId))
+      // Select all non-replied, keep replied selections
+      setSelectedLeadIds([...new Set([...repliedIds, ...nonRepliedIds])])
+    }
+  }
+
+  const handleToggleAllReplied = () => {
+    const repliedIds = filteredRepliedLeads.map((m) => m.id)
+    const nonRepliedIds = selectedLeadIds.filter((id) => nonRepliedLeads.find((m) => m.id === id))
+
+    // Check if all replied are selected
+    const allRepliedSelected = repliedIds.every((id) => selectedLeadIds.includes(id))
+
+    if (allRepliedSelected) {
+      // Deselect all replied, keep non-replied selections
+      setSelectedLeadIds(nonRepliedIds)
+    } else {
+      // Select all replied, keep non-replied selections
+      setSelectedLeadIds([...new Set([...nonRepliedIds, ...repliedIds])])
     }
   }
 
@@ -226,58 +258,157 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
               />
             </div>
 
-            <div className="rounded-md bg-muted/30 p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id={selectAllId}
-                    checked={
-                      filteredMembers.length > 0 &&
-                      selectedLeadIds.length === filteredMembers.length
-                    }
-                    onCheckedChange={handleToggleAllLeads}
-                  />
-                  <Label htmlFor={selectAllId} className="text-sm cursor-pointer">
-                    전체 선택 ({selectedLeadIds.length}/{filteredMembers.length})
-                  </Label>
-                </div>
-                {selectedLeadIds.length > 0 && (
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedLeadIds([])}>
-                    선택 해제
-                  </Button>
+            {selectedRepliedCount > 0 && (
+              <div className="rounded-md bg-amber-50 dark:bg-amber-950/20 p-3 border border-amber-200 dark:border-amber-800">
+                <p className="text-xs text-amber-900 dark:text-amber-200">
+                  ⚠️ 선택한 리드 중 {selectedRepliedCount}명은 이미 답장했습니다. 재등록 시
+                  주의하세요.
+                </p>
+              </div>
+            )}
+
+            {/* Replied Leads Section */}
+            {repliedCount > 0 && (
+              <div className="rounded-lg border border-amber-200 dark:border-amber-800 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setShowRepliedSection(!showRepliedSection)}
+                  className="w-full flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/20 hover:bg-amber-100 dark:hover:bg-amber-950/30 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+                    <span className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                      답장한 리드 ({selectedRepliedCount}/{repliedCount})
+                    </span>
+                  </div>
+                  {showRepliedSection ? (
+                    <ChevronUp className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+                  )}
+                </button>
+
+                {showRepliedSection && (
+                  <div className="bg-white dark:bg-gray-950">
+                    <div className="p-3 bg-muted/30 border-b">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id={selectAllRepliedId}
+                            checked={
+                              filteredRepliedLeads.length > 0 &&
+                              filteredRepliedLeads.every((m) => selectedLeadIds.includes(m.id))
+                            }
+                            onCheckedChange={handleToggleAllReplied}
+                          />
+                          <Label htmlFor={selectAllRepliedId} className="text-xs cursor-pointer">
+                            전체 선택
+                          </Label>
+                        </div>
+                        <span className="text-xs text-muted-foreground">재등록 시 주의 필요</span>
+                      </div>
+                    </div>
+                    <ScrollArea className="h-[140px]">
+                      <div className="p-3 space-y-2">
+                        {filteredRepliedLeads.map((member) => (
+                          <div
+                            key={member.id}
+                            className="flex items-center gap-2 rounded-sm p-2 bg-amber-50/30 dark:bg-amber-950/10 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-colors cursor-pointer"
+                          >
+                            <Checkbox
+                              id={member.id}
+                              checked={selectedLeadIds.includes(member.id)}
+                              onCheckedChange={() => handleToggleLead(member.id)}
+                            />
+                            <Label htmlFor={member.id} className="flex-1 text-sm cursor-pointer">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{member.name}</span>
+                              </div>
+                              {member.email && (
+                                <span className="text-xs text-muted-foreground block mt-0.5">
+                                  {member.email}
+                                </span>
+                              )}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
                 )}
               </div>
-            </div>
+            )}
 
-            <ScrollArea className="h-[320px] rounded-md border">
-              <div className="p-3 space-y-2">
-                {filteredMembers.map((member) => (
-                  <div
-                    key={member.leadId}
-                    className="flex items-center gap-2 rounded-sm p-2 hover:bg-muted/50 transition-colors"
-                  >
+            {/* Non-Replied Leads Section */}
+            <div className="space-y-2">
+              <div className="rounded-md bg-muted/30 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
                     <Checkbox
-                      id={member.leadId}
-                      checked={selectedLeadIds.includes(member.leadId)}
-                      onCheckedChange={() => handleToggleLead(member.leadId)}
+                      id={selectAllId}
+                      checked={
+                        filteredNonRepliedLeads.length > 0 &&
+                        filteredNonRepliedLeads.every((m) => selectedLeadIds.includes(m.id))
+                      }
+                      onCheckedChange={handleToggleAllNonReplied}
                     />
-                    <Label htmlFor={member.leadId} className="flex-1 text-sm cursor-pointer">
-                      <span className="font-medium">{member.leadCompanyName}</span>
-                      {member.leadBusinessType && (
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          ({member.leadBusinessType})
-                        </span>
-                      )}
+                    <Label htmlFor={selectAllId} className="text-sm cursor-pointer">
+                      일반 리드 전체 선택 (
+                      {
+                        selectedLeadIds.filter((id) => nonRepliedLeads.find((m) => m.id === id))
+                          .length
+                      }
+                      /{filteredNonRepliedLeads.length})
                     </Label>
                   </div>
-                ))}
+                  {selectedLeadIds.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedLeadIds([])}>
+                      선택 해제
+                    </Button>
+                  )}
+                </div>
               </div>
-            </ScrollArea>
+
+              <ScrollArea
+                className={
+                  repliedCount > 0 ? "h-[180px] rounded-md border" : "h-[340px] rounded-md border"
+                }
+              >
+                <div className="p-3 space-y-2">
+                  {filteredNonRepliedLeads.map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex items-center gap-2 rounded-sm p-2 hover:bg-muted/50 transition-colors cursor-pointer"
+                    >
+                      <Checkbox
+                        id={member.id}
+                        checked={selectedLeadIds.includes(member.id)}
+                        onCheckedChange={() => handleToggleLead(member.id)}
+                      />
+                      <Label htmlFor={member.id} className="flex-1 text-sm cursor-pointer">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{member.name}</span>
+                        </div>
+                        {member.email && (
+                          <span className="text-xs text-muted-foreground block mt-0.5">
+                            {member.email}
+                          </span>
+                        )}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
 
             <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-3">
               <p className="text-xs text-blue-900 dark:text-blue-200">
                 {selectedLeadIds.length > 0
-                  ? `선택된 ${selectedLeadIds.length}명의 고객에게만 이메일이 발송됩니다`
+                  ? `선택된 ${selectedLeadIds.length}명의 고객에게만 이메일이 발송됩니다${
+                      selectedRepliedCount > 0
+                        ? ` (답장한 리드 ${selectedRepliedCount}명 포함)`
+                        : ""
+                    }`
                   : "고객을 선택하지 않으면 고객 그룹의 모든 리드에게 발송됩니다"}
               </p>
             </div>

@@ -134,6 +134,18 @@ export const customerGroupsApi = {
     return apiFetch<CustomerGroup[]>(`/api/v1/customer-groups/lead/${leadId}/groups`)
   },
 
+  // Get group members with emails and reply status for sequence enrollment
+  getMembersWithEmails: (groupId: string) => {
+    return apiFetch<
+      Array<{
+        id: string
+        name: string
+        email: string
+        hasReplied: boolean
+      }>
+    >(`/api/v1/customer-groups/${groupId}/members-with-emails`)
+  },
+
   // 그룹에 리드 일괄 추가
   bulkAddMembers: (groupId: string, leadIds: string[]) => {
     return apiFetch<{ addedCount: number }>(

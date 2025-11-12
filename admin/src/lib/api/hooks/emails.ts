@@ -231,6 +231,8 @@ export interface RepliedEmailsParams {
   sentiment?: string
   category?: string
   priority?: string
+  dateFrom?: string // ISO 8601 date string
+  dateTo?: string // ISO 8601 date string
 }
 
 export function useRepliedEmails(params: RepliedEmailsParams) {

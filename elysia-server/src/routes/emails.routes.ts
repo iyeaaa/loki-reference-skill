@@ -1036,6 +1036,8 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       const sentimentFilter = query.sentiment
       const categoryFilter = query.category
       const priorityFilter = query.priority
+      const dateFrom = query.dateFrom
+      const dateTo = query.dateTo
 
       if (!workspaceId) {
         return {
@@ -1255,13 +1257,29 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       if (sequenceIdFilter) {
         conditions.push(eq(emails.sequenceId, sequenceIdFilter))
       }
+      // Date range filtering
+      if (dateFrom) {
+        conditions.push(sql`${emails.createdAt} >= ${new Date(dateFrom)}`)
+      }
+      if (dateTo) {
+        // Add one day to include the entire end date
+        const endDate = new Date(dateTo)
+        endDate.setDate(endDate.getDate() + 1)
+        conditions.push(sql`${emails.createdAt} < ${endDate}`)
+      }
       if (searchFilter) {
+        // Enhanced full-text search
+        // Supports Korean and English text search
         const searchCondition = or(
+          // Email metadata search
           ilike(emails.subject, `%${searchFilter}%`),
           ilike(emails.fromEmail, `%${searchFilter}%`),
           ilike(emails.toEmail, `%${searchFilter}%`),
           ilike(emails.leadName, `%${searchFilter}%`),
           ilike(emails.leadEmail, `%${searchFilter}%`),
+          // Body content search (full-text)
+          ilike(emails.bodyText, `%${searchFilter}%`),
+          ilike(emails.bodyHtml, `%${searchFilter}%`),
           // Search in related leads table
           sql`EXISTS (
             SELECT 1 FROM ${leads}
@@ -1564,6 +1582,8 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         sentiment: t.Optional(t.String()), // Sentiment filter (comma-separated: "positive,negative,neutral,question")
         category: t.Optional(t.String()), // Category filter (comma-separated: "meeting_request,question,auto,other")
         priority: t.Optional(t.String()), // Priority filter (comma-separated: "high,medium,low")
+        dateFrom: t.Optional(t.String()), // Date range start (ISO 8601 format)
+        dateTo: t.Optional(t.String()), // Date range end (ISO 8601 format)
       }),
     },
   )

@@ -20,6 +20,8 @@ interface RepliedEmailsListProps {
   filterSentiment?: string[]
   filterCategory?: string[]
   filterPriority?: string[]
+  dateFrom?: string
+  dateTo?: string
 }
 
 export function RepliedEmailsList({
@@ -35,6 +37,8 @@ export function RepliedEmailsList({
   filterSentiment = [],
   filterCategory = [],
   filterPriority = [],
+  dateFrom,
+  dateTo,
 }: RepliedEmailsListProps) {
   const { t } = useTranslation()
   const [currentPage, setCurrentPage] = useState(1)
@@ -58,6 +62,8 @@ export function RepliedEmailsList({
       sentiment: filterSentiment.length > 0 ? filterSentiment.join(",") : undefined,
       category: filterCategory.length > 0 ? filterCategory.join(",") : undefined,
       priority: filterPriority.length > 0 ? filterPriority.join(",") : undefined,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
     }),
     [
       workspaceId,
@@ -68,6 +74,8 @@ export function RepliedEmailsList({
       filterSentiment,
       filterCategory,
       filterPriority,
+      dateFrom,
+      dateTo,
     ],
   )
 
@@ -168,6 +176,7 @@ export function RepliedEmailsList({
                   e.stopPropagation()
                   if (email.threadId) onToggleThread(email.threadId)
                 }}
+                searchQuery={searchQuery}
               />
             ))}
           </div>

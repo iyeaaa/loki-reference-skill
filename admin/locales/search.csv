@@ -18,7 +18,6 @@ fieldSelector.field.source,리드 소스,Lead Source
 fieldSelector.field.score,리드 점수,Lead Score
 fieldSelector.field.foundedYear,설립연도,Founded Year
 fieldSelector.field.employeeCount,직원수,Employee Count
-fieldSelector.field.address,주소,Address
 fieldSelector.field.description,설명,Description
 fieldSelector.field.leadStatus,상태,Status
 fieldSelector.field.leadSource,리드 소스,Lead Source

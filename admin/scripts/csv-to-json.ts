@@ -8,11 +8,11 @@
 import { parse } from "csv-parse/sync"
 import { readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs"
 import { join, basename } from "node:path"
+import { getLanguages } from "./i18n-config.js"
 
 interface TranslationRow {
   key: string
-  ko: string
-  en: string
+  [lang: string]: string
 }
 
 const LOCALES_DIR = join(process.cwd(), "locales")
@@ -29,8 +29,8 @@ try {
     process.exit(0)
   }
 
-  // 언어별로 분류
-  const languages = ["ko", "en"]
+  // 언어별로 분류 (동적 언어 목록 사용)
+  const languages = getLanguages()
   const translations: Record<string, Record<string, any>> = {}
 
   for (const lang of languages) {

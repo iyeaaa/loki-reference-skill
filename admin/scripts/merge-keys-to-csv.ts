@@ -10,11 +10,11 @@ import { parse } from "csv-parse/sync"
 import { stringify } from "csv-stringify/sync"
 import { readFileSync, writeFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
+import { getLanguages } from "./i18n-config.js"
 
 interface TranslationRow {
   key: string
-  ko: string
-  en: string
+  [lang: string]: string
 }
 
 const LOCALES_DIR = join(process.cwd(), "locales")
@@ -83,20 +83,23 @@ try {
         newKeys.push(key)
         const namespace = csvFileName.replace(".csv", "")
         const fullKey = `${namespace}.${key}`
-        existingRows.push({
-          key,
-          ko: `[NO TRANSLATION] ${fullKey}`,
-          en: `[NO TRANSLATION] ${fullKey}`,
-        })
+        const languages = getLanguages()
+        const newRow: TranslationRow = { key }
+        for (const lang of languages) {
+          newRow[lang] = `[NO TRANSLATION] ${fullKey}`
+        }
+        existingRows.push(newRow)
         addedKeys.push(fullKey)
       }
     }
 
     // 새로운 키가 있으면 CSV 파일 업데이트
     if (newKeys.length > 0) {
+      const languages = getLanguages()
+      const columns = ["key", ...languages]
       const newCsvContent = stringify(existingRows, {
         header: true,
-        columns: ["key", "ko", "en"],
+        columns,
       })
 
       writeFileSync(csvPath, newCsvContent, "utf-8")

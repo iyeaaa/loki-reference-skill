@@ -1,6 +1,14 @@
 import { motion } from "framer-motion"
 import type { LucideIcon } from "lucide-react"
-import { BarChart3, GitBranch, Mail, MessageSquare, Search, Settings, UserCheck } from "lucide-react"
+import {
+  BarChart3,
+  GitBranch,
+  Mail,
+  MessageSquare,
+  Search,
+  Settings,
+  UserCheck,
+} from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Link, useLocation } from "react-router-dom"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"

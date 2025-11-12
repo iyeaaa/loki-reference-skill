@@ -19,7 +19,7 @@ export default function WebsetPage() {
       <div className="w-full max-w-2xl space-y-8">
         {/* Logo or Title */}
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">Web Search</h1>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-2">Webset Prototype</h1>
           <p className="text-gray-600 dark:text-gray-400">Search the web for information</p>
         </div>
 

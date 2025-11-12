@@ -228,7 +228,9 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
         // Treat as plain text with bracket formatting
         if (decodedHtml.includes("[") && decodedHtml.includes("]")) {
           console.log("🔍 Plain text has brackets, formatting...")
-          const formatted = formatBracketedContent(decodedHtml)
+          // Convert newlines to <br> tags BEFORE formatting brackets
+          const withLineBreaks = decodedHtml.replace(/\n/g, "<br>")
+          const formatted = formatBracketedContent(withLineBreaks)
           const cleaned = DOMPurify.sanitize(formatted, {
             ALLOWED_TAGS: ["a", "span", "br", "div", "p"],
             ALLOWED_ATTR: ["href", "target", "rel", "class"],
@@ -345,11 +347,17 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
       const decoded = decodeEncodedText(cleanedText)
       console.log("After decoding:", decoded.substring(0, 200))
       console.log("Has brackets?", decoded.includes("[") && decoded.includes("]"))
-      console.log("Has HTML tags?", decoded.includes("<") && decoded.includes(">"))
 
       // Check if bodyText actually contains HTML
       // (sometimes emails store HTML in bodyText field)
-      if (decoded.includes("<") && decoded.includes(">")) {
+      // Use strict HTML detection to avoid false positives
+      // This pattern matches actual HTML tags like <div>, <p>, <br>, etc.
+      // but excludes email addresses like <user@domain.com>
+      const htmlTagPattern = /<(?!https?:\/\/)(?![^@<>]+@[^@<>]+>)[a-z][a-z0-9]*(?:\s+[^>]*)?>/i
+      const hasHtmlTags = htmlTagPattern.test(decoded)
+      console.log("Has actual HTML tags?", hasHtmlTags)
+
+      if (hasHtmlTags) {
         console.log("📧 bodyText contains HTML tags, treating as HTML")
         // Debug: Log original text length
         console.log("bodyText contains HTML - length:", decoded.length)
@@ -444,7 +452,9 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
       // Plain text - check if it has bracketed content to format
       if (decoded.includes("[") && decoded.includes("]")) {
         console.log("🔍 Plain text has brackets, formatting...")
-        const formatted = formatBracketedContent(decoded)
+        // Convert newlines to <br> tags BEFORE formatting brackets
+        const withLineBreaks = decoded.replace(/\n/g, "<br>")
+        const formatted = formatBracketedContent(withLineBreaks)
         // Sanitize the formatted HTML
         const cleaned = DOMPurify.sanitize(formatted, {
           ALLOWED_TAGS: ["a", "span", "br", "div", "p"],
@@ -477,6 +487,11 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
     )
   }
 
-  // Plain text
-  return <div className="whitespace-pre-wrap break-words">{sanitizedContent.content}</div>
+  // Plain text - convert newlines to <br> for better rendering
+  // Use whitespace-pre-wrap to preserve spacing and line breaks
+  return (
+    <div className="whitespace-pre-wrap break-words leading-relaxed">
+      {sanitizedContent.content}
+    </div>
+  )
 }

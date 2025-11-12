@@ -20,7 +20,7 @@ export default function SequencesPage() {
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
-  const [viewMode, setViewMode] = useState<"list" | "card">("list")
+  const [viewMode, setViewMode] = useState<"list" | "card">("card")
 
   const [selectedSequences, setSelectedSequences] = useState<string[]>([])
   const [showBulkActionModal, setShowBulkActionModal] = useState(false)
@@ -111,7 +111,9 @@ export default function SequencesPage() {
       {/* Sequences Table */}
       <Card>
         <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-lg">{t("sequences.title.sequenceManagement")}</CardTitle>
+          <div className="flex flex-col">
+            <CardTitle className="text-lg">{t("sequences.title.sequenceManagement")}</CardTitle>
+          </div>
           <div className="flex items-center gap-2">
             <ToggleGroup
               type="single"
@@ -120,11 +122,11 @@ export default function SequencesPage() {
                 if (value) setViewMode(value as "list" | "card")
               }}
             >
-              <ToggleGroupItem value="list" aria-label="리스트 뷰">
-                <LayoutList className="h-4 w-4" />
-              </ToggleGroupItem>
               <ToggleGroupItem value="card" aria-label="카드 뷰">
                 <LayoutGrid className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="list" aria-label="리스트 뷰">
+                <LayoutList className="h-4 w-4" />
               </ToggleGroupItem>
             </ToggleGroup>
             <Button onClick={handleCreateCampaign} size="sm">

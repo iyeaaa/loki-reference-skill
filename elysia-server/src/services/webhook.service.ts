@@ -897,12 +897,235 @@ class WebhookService {
         })
       }
     } else {
-      logger.warn({
-        msg: "⚠️  [WEBHOOK] No In-Reply-To header - email_replies record NOT created",
+      // In-Reply-To 헤더가 없는 경우
+      logger.info({
+        msg: "⚠️  [WEBHOOK] No In-Reply-To header - checking fallback options",
         inboundEmailId: inboundEmail.id,
         threadId: inboundEmail.threadId,
-        reason: "Inbound email has no In-Reply-To header, cannot link to original email",
+        hasLeadId: !!leadId,
+        hasSequenceId: !!sequenceId,
       })
+
+      // Fallback: leadId와 sequenceId가 있으면 최근 발송한 이메일 찾기
+      if (leadId && sequenceId) {
+        logger.info({
+          msg: "🔍 [WEBHOOK] Attempting to find recent outbound email for this lead/sequence",
+          leadId,
+          sequenceId,
+          inboundEmailId: inboundEmail.id,
+        })
+
+        // 최근 30일 이내에 해당 lead에게 보낸 outbound 이메일 중 가장 최근 것 찾기
+        const recentOutboundResults = await db
+          .select({
+            id: emailsTable.id,
+            workspaceId: emailsTable.workspaceId,
+            messageId: emailsTable.messageId,
+            threadId: emailsTable.threadId,
+            subject: emailsTable.subject,
+            direction: emailsTable.direction,
+            sentAt: emailsTable.sentAt,
+          })
+          .from(emailsTable)
+          .where(
+            and(
+              eq(emailsTable.leadId, leadId),
+              eq(emailsTable.sequenceId, sequenceId),
+              eq(emailsTable.direction, "outbound"),
+              eq(emailsTable.workspaceId, account.workspaceId),
+              sql`${emailsTable.sentAt} >= NOW() - INTERVAL '30 days'`,
+            ),
+          )
+          .orderBy(desc(emailsTable.sentAt))
+          .limit(1)
+
+        const recentOutbound = recentOutboundResults[0]
+
+        if (recentOutbound) {
+          logger.info({
+            msg: "✅ [WEBHOOK] Found recent outbound email - treating as reply",
+            originalEmailId: recentOutbound.id,
+            originalSentAt: recentOutbound.sentAt?.toISOString(),
+            leadId,
+            sequenceId,
+            inboundEmailId: inboundEmail.id,
+            daysSinceOriginal: recentOutbound.sentAt
+              ? Math.floor(
+                  (new Date().getTime() - new Date(recentOutbound.sentAt).getTime()) /
+                    (1000 * 60 * 60 * 24),
+                )
+              : null,
+          })
+
+          // email_replies 레코드 생성 또는 업데이트
+          const existingReplyResults = await db
+            .select({ id: emailReplies.id })
+            .from(emailReplies)
+            .where(eq(emailReplies.originalEmailId, recentOutbound.id))
+            .limit(1)
+
+          const existingReply = existingReplyResults[0]
+          let emailReply: { id: string } | undefined
+
+          if (existingReply) {
+            // Update existing reply with the LATEST reply email
+            const [updated] = await db
+              .update(emailReplies)
+              .set({
+                replyEmailId: inboundEmail.id,
+                intent: null,
+                sentiment: null,
+              })
+              .where(eq(emailReplies.id, existingReply.id))
+              .returning({ id: emailReplies.id })
+
+            emailReply = updated
+            logger.info({
+              msg: "✅ [WEBHOOK] email_replies record UPDATED (fallback method)",
+              emailReplyId: emailReply?.id,
+              originalEmailId: recentOutbound.id,
+              newReplyEmailId: inboundEmail.id,
+            })
+          } else {
+            // Create new email_replies record
+            const [inserted] = await db
+              .insert(emailReplies)
+              .values({
+                workspaceId: recentOutbound.workspaceId,
+                originalEmailId: recentOutbound.id,
+                replyEmailId: inboundEmail.id,
+                isRead: false,
+              })
+              .returning({ id: emailReplies.id })
+
+            emailReply = inserted
+            logger.info({
+              msg: "✅ [WEBHOOK] email_replies record CREATED (fallback method)",
+              emailReplyId: emailReply?.id,
+              originalEmailId: recentOutbound.id,
+              replyEmailId: inboundEmail.id,
+            })
+          }
+
+          // AI classification
+          const classificationEnabled = process.env.AI_CLASSIFICATION_ENABLED !== "false"
+          if (emailReply && classificationEnabled) {
+            logger.info({
+              msg: "🚀 [WEBHOOK] Starting AI classification (async, fallback)",
+              emailReplyId: emailReply.id,
+            })
+
+            this.classifyEmailReplyAsync(
+              emailReply.id,
+              inboundEmail.subject || "",
+              inboundEmail.bodyText || inboundEmail.bodyHtml || "",
+            ).catch((error) => {
+              logger.error({
+                err: error,
+                emailReplyId: emailReply.id,
+                msg: "❌ [WEBHOOK] AI classification failed, but email was still saved",
+              })
+            })
+          }
+
+          // 원본 이메일의 repliedAt 업데이트
+          await db
+            .update(emailsTable)
+            .set({
+              repliedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(emailsTable.id, recentOutbound.id))
+
+          logger.info({
+            msg: "✅ [WEBHOOK] Original email repliedAt updated (fallback)",
+            originalEmailId: recentOutbound.id,
+          })
+
+          // 해당 리드의 모든 active 시퀀스 enrollment를 중단
+          if (inboundEmail.leadId) {
+            try {
+              const { sequenceEnrollments } = await import("../db/schema")
+
+              const activeEnrollments = await db
+                .select({
+                  id: sequenceEnrollments.id,
+                  sequenceId: sequenceEnrollments.sequenceId,
+                })
+                .from(sequenceEnrollments)
+                .where(
+                  and(
+                    eq(sequenceEnrollments.leadId, inboundEmail.leadId),
+                    eq(sequenceEnrollments.status, "active"),
+                  ),
+                )
+
+              if (activeEnrollments.length > 0) {
+                logger.info({
+                  msg: "🛑 [WEBHOOK] Stopping all active enrollments for lead (fallback reply)",
+                  leadId: inboundEmail.leadId,
+                  activeEnrollmentsCount: activeEnrollments.length,
+                })
+
+                await db
+                  .update(sequenceEnrollments)
+                  .set({
+                    status: "stopped",
+                    stoppedAt: new Date(),
+                  })
+                  .where(
+                    and(
+                      eq(sequenceEnrollments.leadId, inboundEmail.leadId),
+                      eq(sequenceEnrollments.status, "active"),
+                    ),
+                  )
+
+                // 대기 중인 step executions도 스킵 처리
+                const { sequenceStepExecutions } = await import("../db/schema")
+                for (const enrollment of activeEnrollments) {
+                  await db
+                    .update(sequenceStepExecutions)
+                    .set({
+                      status: "skipped",
+                      errorMessage: "Skipped due to reply received (fallback detection)",
+                    })
+                    .where(
+                      and(
+                        eq(sequenceStepExecutions.enrollmentId, enrollment.id),
+                        eq(sequenceStepExecutions.status, "pending"),
+                      ),
+                    )
+                }
+
+                logger.info({
+                  msg: "✅ [WEBHOOK] Active enrollments stopped and pending steps skipped (fallback)",
+                  leadId: inboundEmail.leadId,
+                })
+              }
+            } catch (error) {
+              logger.error({
+                err: error,
+                leadId: inboundEmail.leadId,
+                msg: "❌ [WEBHOOK] Failed to stop active enrollments (fallback), but email was still processed",
+              })
+            }
+          }
+        } else {
+          logger.info({
+            msg: "ℹ️  [WEBHOOK] No recent outbound email found for this lead in past 30 days",
+            leadId,
+            sequenceId,
+            inboundEmailId: inboundEmail.id,
+          })
+        }
+      } else {
+        logger.info({
+          msg: "ℹ️  [WEBHOOK] Cannot use fallback - missing leadId or sequenceId",
+          inboundEmailId: inboundEmail.id,
+          hasLeadId: !!leadId,
+          hasSequenceId: !!sequenceId,
+        })
+      }
     }
   }
 

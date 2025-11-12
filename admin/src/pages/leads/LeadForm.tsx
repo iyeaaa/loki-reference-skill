@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query"
 import { Plus, Trash2 } from "lucide-react"
 import { useId, useState } from "react"
+import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -87,12 +88,23 @@ export function LeadForm({
     leadSource: lead?.leadSource || "",
   })
 
-  const [contacts, setContacts] = useState<Partial<LeadContact>[]>(
-    lead?.contacts && lead.contacts.length > 0 ? lead.contacts : [],
+  const [contacts, setContacts] = useState<(Partial<LeadContact> & { tempId: string })[]>(
+    lead?.contacts && lead.contacts.length > 0
+      ? lead.contacts.map((c) => ({ ...c, tempId: c.id || crypto.randomUUID() }))
+      : [
+          {
+            contactType: "email" as ContactType,
+            contactValue: "",
+            isPrimary: true,
+            tempId: crypto.randomUUID(),
+          },
+        ],
   )
 
-  const [socialMedia, setSocialMedia] = useState<Partial<LeadSocialMedia>[]>(
-    lead?.socialMedia && lead.socialMedia.length > 0 ? lead.socialMedia : [],
+  const [socialMedia, setSocialMedia] = useState<(Partial<LeadSocialMedia> & { tempId: string })[]>(
+    lead?.socialMedia && lead.socialMedia.length > 0
+      ? lead.socialMedia.map((s) => ({ ...s, tempId: s.id || crypto.randomUUID() }))
+      : [],
   )
 
   const finalUrlId = useId()
@@ -105,16 +117,27 @@ export function LeadForm({
     // 유효한 연락처 필터링 및 첫 번째 연락처에 isPrimary 설정
     const validContacts = contacts
       .filter((c) => c.contactValue && c.contactValue.trim() !== "" && c.contactType !== undefined)
-      .map((c, index) => ({
-        ...c,
-        label: c.label && c.label.trim() !== "" ? c.label : undefined,
-        contactName:
-          (c as { contactName?: string }).contactName &&
-          (c as { contactName?: string }).contactName?.trim() !== ""
-            ? (c as { contactName?: string }).contactName
-            : undefined,
-        isPrimary: index === 0 ? true : c.isPrimary || false,
-      })) as LeadContact[]
+      .map((c, index) => {
+        const { tempId: _tempId, ...contactData } = c
+        return {
+          ...contactData,
+          label:
+            contactData.label && contactData.label.trim() !== "" ? contactData.label : undefined,
+          contactName:
+            (contactData as { contactName?: string }).contactName &&
+            (contactData as { contactName?: string }).contactName?.trim() !== ""
+              ? (contactData as { contactName?: string }).contactName
+              : undefined,
+          isPrimary: index === 0 ? true : contactData.isPrimary || false,
+        }
+      }) as LeadContact[]
+
+    // 이메일 필수 검증
+    const hasEmail = validContacts.some((c) => c.contactType === "email")
+    if (!hasEmail) {
+      toast.error("이메일 주소는 필수 입력 항목입니다. 최소 1개 이상의 이메일을 입력해주세요.")
+      return
+    }
 
     const submitData: LeadFormData = {
       ...formData,
@@ -122,10 +145,16 @@ export function LeadForm({
       contacts: validContacts,
       socialMedia: socialMedia
         .filter((s) => s.url && s.url.trim() !== "" && s.platform !== undefined)
-        .map((s) => ({
-          ...s,
-          username: s.username && s.username.trim() !== "" ? s.username : undefined,
-        })) as LeadSocialMedia[],
+        .map((s) => {
+          const { tempId: _tempId, ...socialData } = s
+          return {
+            ...socialData,
+            username:
+              socialData.username && socialData.username.trim() !== ""
+                ? socialData.username
+                : undefined,
+          }
+        }) as LeadSocialMedia[],
     }
 
     // Add workspaceId and customerGroupId for create mode
@@ -149,24 +178,56 @@ export function LeadForm({
         contactType: "email" as ContactType,
         contactValue: "",
         isPrimary: false,
+        tempId: crypto.randomUUID(),
       },
     ])
   }
 
   const removeContact = (index: number) => {
-    setContacts(contacts.filter((_, i) => i !== index))
+    // 최소 1개의 이메일은 남아있어야 함
+    const remainingContacts = contacts.filter((_, i) => i !== index)
+    const hasEmail = remainingContacts.some((c) => c.contactType === "email")
+
+    if (!hasEmail) {
+      toast.error("최소 1개 이상의 이메일 연락처가 필요합니다.")
+      return
+    }
+
+    setContacts(remainingContacts)
   }
 
   const updateContact = (index: number, field: keyof LeadContact, value: string | boolean) => {
     const updated = [...contacts]
     updated[index] = { ...updated[index], [field]: value }
+
+    // contactType을 변경할 때, 이메일이 최소 1개는 남아있는지 확인
+    if (field === "contactType" && value !== "email") {
+      const hasOtherEmail = updated.some(
+        (c, i) =>
+          i !== index &&
+          c.contactType === "email" &&
+          c.contactValue &&
+          c.contactValue.trim() !== "",
+      )
+
+      if (!hasOtherEmail) {
+        toast.error("최소 1개 이상의 이메일 연락처가 필요합니다.")
+        return
+      }
+    }
+
     setContacts(updated)
   }
 
   const addSocialMedia = () => {
     setSocialMedia([
       ...socialMedia,
-      { platform: "facebook" as SocialMediaPlatform, url: "", username: "" },
+      {
+        platform: "facebook" as SocialMediaPlatform,
+        url: "",
+        username: "",
+        tempId: crypto.randomUUID(),
+      },
     ])
   }
 
@@ -410,14 +471,24 @@ export function LeadForm({
       {/* Contacts Section */}
       <div className="space-y-3 pt-4 border-t">
         <div className="flex items-center justify-between">
-          <Label className="text-base font-semibold">{t("leads.form.contacts")}</Label>
+          <div>
+            <Label className="text-base font-semibold flex items-center gap-1">
+              {t("leads.form.contacts")}
+            </Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              최소 1개 이상의 이메일 주소가 필요합니다 <span className="text-red-500">*</span>
+            </p>
+          </div>
           <Button type="button" size="sm" variant="outline" onClick={addContact}>
             <Plus className="h-4 w-4 mr-1" />
             {t("leads.form.addContact")}
           </Button>
         </div>
         {contacts.map((contact, index) => (
-          <div key={index} className="flex gap-2 items-start p-3 border rounded-md bg-gray-50">
+          <div
+            key={contact.tempId}
+            className="flex gap-2 items-start p-3 border rounded-md bg-gray-50"
+          >
             <div className="flex-1 space-y-2">
               <div className="grid grid-cols-3 gap-2">
                 <div className="space-y-1">
@@ -508,7 +579,10 @@ export function LeadForm({
           </Button>
         </div>
         {socialMedia.map((social, index) => (
-          <div key={index} className="flex gap-2 items-start p-3 border rounded-md bg-gray-50">
+          <div
+            key={social.tempId}
+            className="flex gap-2 items-start p-3 border rounded-md bg-gray-50"
+          >
             <div className="flex-1 grid grid-cols-3 gap-2">
               <div className="space-y-1">
                 <Label className="text-xs">{t("leads.form.platform")}</Label>

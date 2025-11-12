@@ -688,10 +688,10 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
                                   {enrollment.leadCompanyName ||
                                     t("sequences.enrollments.companyNameUnknown")}
                                 </span>
-                                {enrollment.emailAccountAddress && (
+                                {enrollment.leadEmail && (
                                   <span className="text-xs text-muted-foreground flex items-center gap-1">
                                     <Mail className="w-3 h-3" />
-                                    {enrollment.emailAccountAddress}
+                                    {enrollment.leadEmail}
                                   </span>
                                 )}
                               </div>

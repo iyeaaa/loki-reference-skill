@@ -1007,11 +1007,23 @@ class WebhookService {
         updates.status = "bounced"
         updates.bounceType = event.bounce_classification === "hard" ? "hard" : "soft"
         updates.bounceReason = event.reason
+        // Update sequence step execution status to failed
+        await this.updateSequenceStepExecutionStatus(
+          emailId,
+          "failed",
+          `Bounced: ${event.reason || "Unknown reason"}`,
+        )
         break
       case "dropped":
       case "deferred":
         updates.status = "failed"
         updates.errorMessage = event.reason
+        // Update sequence step execution status to failed
+        await this.updateSequenceStepExecutionStatus(
+          emailId,
+          "failed",
+          event.reason || "Email dropped or deferred",
+        )
         break
       case "spam_report":
         updates.status = "spam"
@@ -1031,7 +1043,11 @@ class WebhookService {
     }
   }
 
-  private async updateSequenceStepExecutionStatus(emailId: string, status: "delivered") {
+  private async updateSequenceStepExecutionStatus(
+    emailId: string,
+    status: "delivered" | "failed",
+    errorMessage?: string,
+  ) {
     try {
       // Find sequence step execution by email ID
       const { sequenceStepExecutions } = await import("../db/schema/sequences")
@@ -1046,7 +1062,7 @@ class WebhookService {
       if (executionResults.length > 0) {
         const execution = executionResults[0]
         if (execution) {
-          await updateStepExecutionStatus(execution.id, status)
+          await updateStepExecutionStatus(execution.id, status, errorMessage)
           logger.info(
             { emailId, executionId: execution.id, status },
             "Sequence step execution status updated",

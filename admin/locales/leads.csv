@@ -161,9 +161,7 @@ form.contactValueRequired,이메일 입력 (필수),Enter email (required)
 form.contactValuePlaceholder,연락처 입력,Enter contact information
 form.contactLabel,라벨,Label
 form.contactLabelPlaceholder,예: 주연락처,Ex: Primary Contact
-form.contactName,담당자명,Contact Name
 form.contactNameOptional,(선택),(Optional)
-form.contactNamePlaceholder,예: 홍길동,Ex: John Doe
 form.socialMedia,소셜 미디어,Social Media
 form.addSocialMedia,SNS 추가,Add Social Media
 form.platform,플랫폼,Platform

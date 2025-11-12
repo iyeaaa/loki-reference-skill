@@ -24,7 +24,6 @@ filter.workspacePlaceholder,워크스페이스를 선택하세요...,Select work
 filter.workspaceSearchPlaceholder,워크스페이스 검색...,Search workspace...
 filter.noResults,검색 결과가 없습니다.,No results found
 filter.sharedLabel,공유,Shared
-filter.categoryLabel,카테고리,Category
 filter.workspaceLabel,워크스페이스,Workspace
 filter.clearFilters,필터 초기화,Clear Filters
 table.uncategorized,미분류,Uncategorized

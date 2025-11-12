@@ -30,7 +30,10 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
   // 미리보기 content는 접힌 상태일 때만 계산 (최적화)
   const getPreviewContent = () => {
     if (isExpanded) return ""
-    return email.bodyText || (email.bodyHtml ? email.bodyHtml.replace(/<[^>]*>/g, "").trim() : "")
+    const content =
+      email.bodyText || (email.bodyHtml ? email.bodyHtml.replace(/<[^>]*>/g, "").trim() : "")
+    // 최대 150자까지만 표시 (너무 길면 잘라냄)
+    return content.length > 150 ? `${content.substring(0, 150)}...` : content
   }
 
   // Engagement status indicators (for outbound emails)
@@ -222,7 +225,7 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
                   </Popover>
                 </div>
               ) : (
-                <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
+                <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 whitespace-pre-wrap line-clamp-2">
                   {getPreviewContent() || "(내용 없음)"}
                 </div>
               )}

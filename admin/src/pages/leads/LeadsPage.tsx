@@ -865,7 +865,7 @@ export default function LeadsPage() {
               onValueChange={(value) => setSelectedCustomerGroup(value === "all" ? "" : value)}
               className="flex-1"
             >
-              <TabsList className="inline-flex h-auto items-center justify-start gap-2 bg-transparent p-0 w-auto">
+              <TabsList className="inline-flex flex-wrap h-auto items-center justify-start gap-2 bg-transparent p-0 w-auto">
                 <TabsTrigger
                   value="all"
                   className="text-xs h-9 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:hover:bg-blue-700 data-[state=active]:hover:text-white"

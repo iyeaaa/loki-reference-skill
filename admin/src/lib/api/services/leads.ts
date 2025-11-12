@@ -150,7 +150,22 @@ export const leadsApi = {
     customerGroupId?: string
     createdBy?: string
   }) => {
-    return apiFetch<{ leads: Lead[] }>("/api/v1/leads/bulk", {
+    return apiFetch<{
+      leads: Lead[]
+      stats: {
+        total: number
+        created: number
+        skipped: number
+      }
+      duplicateEmails: Array<{
+        email: string
+        existingLeadId: string
+        companyName: string
+        existingCompanyName: string
+        customerGroupIds: string[]
+        type: string
+      }>
+    }>("/api/v1/leads/bulk", {
       method: "POST",
       body: JSON.stringify(data),
     })

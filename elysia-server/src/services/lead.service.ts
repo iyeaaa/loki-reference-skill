@@ -1780,11 +1780,31 @@ export async function addLeadToCustomerGroup(
   customerGroupId: string,
   addedBy?: string,
 ) {
+  // 중복 체크 - 이미 해당 그룹에 리드가 있는지 확인
+  const existing = await db
+    .select()
+    .from(customerGroupMembers)
+    .where(
+      and(
+        eq(customerGroupMembers.groupId, customerGroupId),
+        eq(customerGroupMembers.leadId, leadId),
+      ),
+    )
+    .limit(1)
+
+  // 이미 존재하면 추가하지 않음
+  if (existing.length > 0) {
+    console.log(`Lead ${leadId} already exists in group ${customerGroupId}`)
+    return { alreadyExists: true }
+  }
+
   await db.insert(customerGroupMembers).values({
     groupId: customerGroupId,
     leadId: leadId,
     addedBy: addedBy || undefined,
   })
+
+  return { alreadyExists: false }
 }
 
 // BulkAddLeadsToCustomerGroup :exec

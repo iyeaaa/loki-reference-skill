@@ -542,9 +542,28 @@ export const leadRoutes = new Elysia({ prefix: "/api/v1/leads" })
       // 고객 그룹이 선택된 경우 해당 그룹에 추가
       if (body.customerGroupId && lead.id) {
         try {
-          await leadService.addLeadToCustomerGroup(lead.id, body.customerGroupId, body.createdBy)
+          const result = await leadService.addLeadToCustomerGroup(
+            lead.id,
+            body.customerGroupId,
+            body.createdBy,
+          )
+
+          if (result?.alreadyExists) {
+            console.log(
+              `Lead ${lead.id} already exists in group ${body.customerGroupId}, skipping addition`,
+            )
+          }
         } catch (error) {
           console.error("Failed to add lead to customer group:", error)
+          // 상세한 에러 로깅
+          if (error instanceof Error) {
+            console.error("Error details:", {
+              message: error.message,
+              stack: error.stack,
+              leadId: lead.id,
+              customerGroupId: body.customerGroupId,
+            })
+          }
           // 고객 그룹 추가 실패해도 리드 생성은 성공으로 처리
         }
       }

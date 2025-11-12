@@ -89,6 +89,7 @@ export interface SequenceEnrollment {
   nextStepScheduledAt?: string | null
   // Extended fields from backend joins
   leadCompanyName?: string | null
+  leadEmail?: string | null
   emailAccountAddress?: string | null
 }
 

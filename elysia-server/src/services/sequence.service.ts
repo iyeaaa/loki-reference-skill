@@ -818,11 +818,19 @@ export async function getSequenceEnrollments(
         stoppedAt: sequenceEnrollments.stoppedAt,
         nextStepScheduledAt: sequenceEnrollments.nextStepScheduledAt,
         leadCompanyName: leads.companyName,
-        leadEmail: leads.websiteUrl,
+        leadEmail: leadContacts.contactValue,
         emailAccountAddress: userEmailAccounts.emailAddress,
       })
       .from(sequenceEnrollments)
       .leftJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
+      .leftJoin(
+        leadContacts,
+        and(
+          eq(leadContacts.leadId, leads.id),
+          eq(leadContacts.contactType, "email"),
+          eq(leadContacts.isPrimary, true),
+        ),
+      )
       .leftJoin(userEmailAccounts, eq(sequenceEnrollments.userEmailAccountId, userEmailAccounts.id))
       .where(and(...conditions))
       .orderBy(desc(sequenceEnrollments.enrolledAt))
@@ -856,11 +864,19 @@ export async function getSequenceEnrollments(
       stoppedAt: sequenceEnrollments.stoppedAt,
       nextStepScheduledAt: sequenceEnrollments.nextStepScheduledAt,
       leadCompanyName: leads.companyName,
-      leadEmail: leads.websiteUrl,
+      leadEmail: leadContacts.contactValue,
       emailAccountAddress: userEmailAccounts.emailAddress,
     })
     .from(sequenceEnrollments)
     .leftJoin(leads, eq(sequenceEnrollments.leadId, leads.id))
+    .leftJoin(
+      leadContacts,
+      and(
+        eq(leadContacts.leadId, leads.id),
+        eq(leadContacts.contactType, "email"),
+        eq(leadContacts.isPrimary, true),
+      ),
+    )
     .leftJoin(userEmailAccounts, eq(sequenceEnrollments.userEmailAccountId, userEmailAccounts.id))
     .where(and(...conditions))
     .orderBy(desc(sequenceEnrollments.enrolledAt))

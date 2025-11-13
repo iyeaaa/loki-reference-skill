@@ -427,6 +427,28 @@ export async function listSequencesWithFilters(
       customerGroupId: sequences.customerGroupId,
       customerGroupName: customerGroups.name,
       selectedLeadIds: sequences.selectedLeadIds,
+      // Email metrics
+      totalSent: sql<number>`(
+        SELECT COUNT(*)::int
+        FROM ${emailsTable}
+        WHERE ${emailsTable.sequenceId} = ${sequences.id}
+        AND ${emailsTable.direction} = 'outbound'
+        AND ${emailsTable.sentAt} IS NOT NULL
+      )`,
+      totalOpened: sql<number>`(
+        SELECT COUNT(*)::int
+        FROM ${emailsTable}
+        WHERE ${emailsTable.sequenceId} = ${sequences.id}
+        AND ${emailsTable.direction} = 'outbound'
+        AND ${emailsTable.openedAt} IS NOT NULL
+      )`,
+      totalReplied: sql<number>`(
+        SELECT COUNT(*)::int
+        FROM ${emailsTable}
+        WHERE ${emailsTable.sequenceId} = ${sequences.id}
+        AND ${emailsTable.direction} = 'outbound'
+        AND ${emailsTable.repliedAt} IS NOT NULL
+      )`,
     })
     .from(sequences)
     .innerJoin(workspaces, eq(sequences.workspaceId, workspaces.id))
@@ -437,7 +459,12 @@ export async function listSequencesWithFilters(
     .limit(limit)
     .offset(offset)
 
-  return result
+  // Calculate rates
+  return result.map((seq) => ({
+    ...seq,
+    openRate: seq.totalSent > 0 ? Math.round((seq.totalOpened / seq.totalSent) * 100) : 0,
+    replyRate: seq.totalSent > 0 ? Math.round((seq.totalReplied / seq.totalSent) * 100) : 0,
+  }))
 }
 
 // GetSequencesByWorkspace :many

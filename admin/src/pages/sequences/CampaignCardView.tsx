@@ -1,12 +1,13 @@
 import {
   BarChart3,
-  Calendar,
   CheckCircle,
   ChevronLeft,
   ChevronRight,
   Clock,
+  Edit,
   Mail,
   Pause,
+  Play,
   Users,
 } from "lucide-react"
 import { useState } from "react"
@@ -17,7 +18,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
-import { useSequences } from "@/lib/api/hooks/sequences"
+import { useSequences, useUpdateSequence } from "@/lib/api/hooks/sequences"
 import type { Sequence, SequenceStatus, SequencesParams } from "@/lib/api/types/sequence"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
@@ -26,7 +27,7 @@ interface CampaignCardViewProps {
   searchQuery: string
   selectedStatuses: string[]
   selectedSequences?: string[]
-  onToggleSequence: (sequenceId: string) => void
+  onToggleSequence?: (sequenceId: string) => void
   onEditSequence: (sequence: Sequence) => void
 }
 
@@ -41,6 +42,7 @@ export function CampaignCardView({
   const { selectedWorkspace } = useWorkspace()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
+  const updateSequence = useUpdateSequence()
   const limit = 8
 
   const workspaceFilter =
@@ -65,6 +67,20 @@ export function CampaignCardView({
   const sequences = sequencesData?.sequences || []
   const totalPages = sequencesData?.totalPages || 1
   const total = sequencesData?.total || 0
+
+  // Handle status toggle
+  const handleStatusToggle = async (sequence: Sequence, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const newStatus = sequence.status === "active" ? "paused" : "active"
+    try {
+      await updateSequence.mutateAsync({
+        sequenceId: sequence.id,
+        data: { status: newStatus },
+      })
+    } catch (error) {
+      console.error("Failed to update sequence status:", error)
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -146,8 +162,8 @@ export function CampaignCardView({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[1, 2, 3, 4, 5, 8].map((i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
           <Card key={i} className="animate-pulse">
             <CardHeader>
               <div className="h-4 bg-muted rounded w-3/4" />
@@ -189,122 +205,178 @@ export function CampaignCardView({
           const isSelected = selectedSequences.includes(sequence.id)
 
           return (
-            <Card
-              key={sequence.id}
-              className={cn(
-                "hover:shadow-md transition-shadow cursor-pointer relative",
-                isSelected && "ring-2 ring-primary",
+            <Card key={sequence.id} className="hover:shadow-md transition-shadow relative">
+              {/* Checkbox - 오른쪽 위 */}
+              {onToggleSequence && (
+                <div className="absolute top-3 right-3 z-10">
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => onToggleSequence(sequence.id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
               )}
-              onClick={() => onEditSequence(sequence)}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-4">
-                    <Checkbox
-                      checked={selectedSequences?.includes(sequence.id) || false}
-                      onCheckedChange={() => onToggleSequence(sequence.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <h3 className="font-semibold text-base line-clamp-1">{sequence.name}</h3>
+
+              <button
+                type="button"
+                className="cursor-pointer w-full text-left"
+                onClick={() => onEditSequence(sequence)}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3 className="font-semibold text-base line-clamp-1 flex-1">{sequence.name}</h3>
+                    {onToggleSequence && <div className="w-6" />}
                   </div>
-
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      "text-xs flex items-center gap-1",
-                      getStatusColor(sequence.status),
-                    )}
-                  >
-                    {getStatusIcon(sequence.status)}
-                    {t(`sequences.table.status.${sequence.status}`)}
-                  </Badge>
-                </div>
-                {sequence.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {sequence.description}
-                  </p>
-                )}
-              </CardHeader>
-
-              <CardContent className="pb-3">
-                <div className="space-y-3">
-                  {/* Basic Info */}
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-muted-foreground">워크스페이스:</span>
-                    </div>
-                    <span className="font-medium truncate">{sequence.workspaceName}</span>
-
-                    <div className="flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-muted-foreground">고객그룹:</span>
-                    </div>
-                    <span className="font-medium truncate">
-                      {sequence.customerGroupName || "-"}
-                    </span>
-
-                    <div className="flex items-center gap-1.5">
-                      <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-muted-foreground">스텝:</span>
-                    </div>
-                    <span className="font-medium">
-                      {sequence.currentMaxStep ?? 0}/{sequence.stepsCount ?? 0}
-                    </span>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        "text-xs flex items-center gap-1",
+                        getStatusColor(sequence.status),
+                      )}
+                    >
+                      {getStatusIcon(sequence.status)}
+                      {t(`sequences.table.status.${sequence.status}`)}
+                    </Badge>
                   </div>
-
-                  {/* Active Campaign Stats */}
-                  {isActive && (
-                    <div className="pt-3 border-t space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">진행률</span>
-                        <span className="font-medium">{Math.round(progress)}%</span>
-                      </div>
-                      <Progress value={progress} className="h-1.5" />
-
-                      <div className="grid grid-cols-3 gap-2 pt-2">
-                        <div className="text-center">
-                          <div className="text-xs text-muted-foreground">발송</div>
-                          <div className="text-sm font-semibold">{sequence.sentCount || 0}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-muted-foreground">오픈</div>
-                          <div className="text-sm font-semibold">
-                            {sequence.deliveredCount && sequence.openedCount
-                              ? `${Math.round((sequence.openedCount / sequence.deliveredCount) * 100)}%`
-                              : "-"}
-                          </div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-muted-foreground">회신</div>
-                          <div className="text-sm font-semibold">
-                            {sequence.deliveredCount && sequence.repliedCount
-                              ? `${Math.round((sequence.repliedCount / sequence.deliveredCount) * 100)}%`
-                              : "-"}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                  {sequence.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {sequence.description}
+                    </p>
                   )}
-                </div>
-              </CardContent>
+                </CardHeader>
 
-              <CardFooter className="pt-3 border-t">
-                <div className="flex items-center justify-between w-full text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {new Date(sequence.createdAt).toLocaleDateString("ko-KR")}
-                  </div>
-                  {isActive && (
-                    <div className="flex items-center gap-1">
-                      <BarChart3 className="h-3 w-3" />
-                      <span className="font-medium text-foreground">
-                        {sequence.completedEnrollmentsCount || 0}/{sequence.enrollmentsCount || 0}{" "}
-                        완료
+                <CardContent className="pb-3">
+                  <div className="space-y-2">
+                    {/* Basic Info - 아이콘과 함께 깔끔하게 */}
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <Users className="h-4 w-4 text-blue-500" />
+                      <span className="text-muted-foreground truncate">
+                        {sequence.customerGroupName || "그룹 미지정"}
                       </span>
                     </div>
-                  )}
+
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <Users className="h-4 w-4 text-purple-500" />
+                      <span className="font-medium">{sequence.enrollmentsCount || 0}명</span>
+                    </div>
+
+                    {/* Step Progress (if available) */}
+                    {sequence.currentMaxStep !== undefined && (
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <Mail className="h-4 w-4 text-indigo-500" />
+                        <span className="font-medium">
+                          {sequence.currentMaxStep}/{sequence.stepsCount || 0} 스텝
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Progress Section */}
+                    {isActive && (
+                      <div className="pt-2 space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <BarChart3 className="h-4 w-4 text-green-500" />
+                          <span className="font-medium">
+                            {sequence.completedEnrollmentsCount || 0}/
+                            {sequence.enrollmentsCount || 0}
+                          </span>
+                          <span className="text-muted-foreground">진행중</span>
+                        </div>
+                        <Progress value={progress} className="h-1.5" />
+                      </div>
+                    )}
+
+                    {/* Stats Section - Use new fields if available, fallback to aggregated */}
+                    <div className="pt-3 border-t space-y-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="h-4 w-4 text-blue-500" />
+                          <div className="flex flex-col">
+                            <span className="text-xs font-semibold">
+                              {sequence.sentCount ?? sequence.totalSent ?? 0}
+                            </span>
+                            <span className="text-xs text-muted-foreground">발송</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="h-4 w-4 text-orange-500" />
+                          <div className="flex flex-col">
+                            <span className="text-xs font-semibold">
+                              {sequence.deliveredCount && sequence.openedCount
+                                ? `${Math.round((sequence.openedCount / sequence.deliveredCount) * 100)}%`
+                                : sequence.openRate !== undefined
+                                  ? `${sequence.openRate}%`
+                                  : "-"}
+                            </span>
+                            <span className="text-xs text-muted-foreground">오픈율</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="h-4 w-4 text-green-500" />
+                          <div className="flex flex-col">
+                            <span className="text-xs font-semibold">
+                              {sequence.deliveredCount && sequence.repliedCount
+                                ? `${Math.round((sequence.repliedCount / sequence.deliveredCount) * 100)}%`
+                                : sequence.replyRate !== undefined
+                                  ? `${sequence.replyRate}%`
+                                  : "-"}
+                            </span>
+                            <span className="text-xs text-muted-foreground">회신율</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </button>
+
+              <CardFooter className="pt-3 border-t flex-col gap-2 items-start">
+                {/* 최종 수정일 */}
+                <div className="w-full text-left text-xs text-muted-foreground">
+                  {new Date(sequence.updatedAt).toLocaleDateString("ko-KR", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
                 </div>
+
+                {/* Action Button - 중앙 정렬 */}
+                {sequence.status === "active" ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={(e) => handleStatusToggle(sequence, e)}
+                  >
+                    <Pause className="h-3.5 w-3.5 mr-1" />
+                    일시정지
+                  </Button>
+                ) : sequence.status === "paused" ||
+                  sequence.status === "ready" ||
+                  sequence.status === "draft" ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={(e) => handleStatusToggle(sequence, e)}
+                  >
+                    <Play className="h-3.5 w-3.5 mr-1" />
+                    활성화
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onEditSequence(sequence)
+                    }}
+                  >
+                    <Edit className="h-3.5 w-3.5 mr-1" />
+                    편집
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           )

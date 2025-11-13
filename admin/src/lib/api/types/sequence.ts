@@ -53,11 +53,17 @@ export interface Sequence {
   currentMaxStep?: number
   enrollmentsCount?: number
   completedEnrollmentsCount?: number
-  // Email statistics
+  // Email statistics (detailed)
   sentCount?: number
   deliveredCount?: number
   openedCount?: number
   repliedCount?: number
+  // Email metrics (aggregated)
+  totalSent?: number
+  totalOpened?: number
+  totalReplied?: number
+  openRate?: number
+  replyRate?: number
 }
 
 export interface SequenceStep {

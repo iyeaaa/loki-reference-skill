@@ -1,0 +1,70 @@
+{
+  "name": "admin-i18n-helper",
+  "displayName": "Admin i18n Helper",
+  "description": "Inline translation display and editor for admin/locales/*.csv files",
+  "version": "2.0.0",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "adminI18nHelper.reloadTranslations",
+        "title": "Admin i18n Helper: Reload Translations"
+      },
+      {
+        "command": "adminI18nHelper.openCsvFile",
+        "title": "Admin i18n Helper: Open CSV File"
+      }
+    ],
+    "configuration": {
+      "title": "Admin i18n Helper",
+      "properties": {
+        "adminI18nHelper.adminPath": {
+          "type": "string",
+          "default": "admin",
+          "description": "Relative path to the admin directory from workspace root"
+        },
+        "adminI18nHelper.localesPath": {
+          "type": "string",
+          "default": "locales",
+          "description": "Relative path to locales directory from admin path"
+        },
+        "adminI18nHelper.displayLanguage": {
+          "type": "string",
+          "default": "ko",
+          "enum": ["ko", "en"],
+          "enumDescriptions": [
+            "한국어 (Korean)",
+            "English"
+          ],
+          "description": "Language to display in inline translations"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "package": "npm run compile && vsce package --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.74.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "csv-parse": "^5.5.0",
+    "csv-stringify": "^6.5.0"
+  }
+}

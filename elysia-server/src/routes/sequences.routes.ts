@@ -13,6 +13,7 @@ const sequenceSchema = t.Object({
   workspaceId: t.String({ format: "uuid" }),
   name: t.String({ minLength: 1, maxLength: 255 }),
   description: t.Optional(t.String()),
+  memo: t.Optional(t.String()),
   status: t.Optional(
     t.Union([
       t.Literal("draft"),
@@ -31,6 +32,7 @@ const sequenceSchema = t.Object({
 const updateSequenceSchema = t.Object({
   name: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
   description: t.Optional(t.String()),
+  memo: t.Optional(t.String()),
   status: t.Optional(
     t.Union([
       t.Literal("draft"),

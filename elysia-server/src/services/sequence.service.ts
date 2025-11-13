@@ -28,6 +28,7 @@ export async function getSequence(id: string) {
       customerGroupId: sequences.customerGroupId,
       name: sequences.name,
       description: sequences.description,
+      memo: sequences.memo,
       status: sequences.status,
       workflowData: sequences.workflowData,
       selectedLeadIds: sequences.selectedLeadIds,
@@ -55,6 +56,7 @@ export async function createSequence(data: {
   customerGroupId?: string
   name: string
   description?: string
+  memo?: string
   status?: "draft" | "ready" | "active" | "paused" | "archived"
   workflowData?: string
   selectedLeadIds?: string[] // Array of lead IDs to target
@@ -67,6 +69,7 @@ export async function createSequence(data: {
       customerGroupId: data.customerGroupId,
       name: data.name,
       description: data.description || null,
+      memo: data.memo || null,
       status: data.status || "draft",
       workflowData: data.workflowData || null,
       selectedLeadIds: data.selectedLeadIds ? JSON.stringify(data.selectedLeadIds) : null,
@@ -78,6 +81,7 @@ export async function createSequence(data: {
       customerGroupId: sequences.customerGroupId,
       name: sequences.name,
       description: sequences.description,
+      memo: sequences.memo,
       status: sequences.status,
       workflowData: sequences.workflowData,
       selectedLeadIds: sequences.selectedLeadIds,
@@ -95,6 +99,7 @@ export async function updateSequence(
   data: {
     name?: string
     description?: string
+    memo?: string
     status?: "draft" | "ready" | "active" | "paused" | "archived"
     workflowData?: string
     customerGroupId?: string
@@ -107,6 +112,7 @@ export async function updateSequence(
 
   if (data.name !== undefined) updateData.name = data.name
   if (data.description !== undefined) updateData.description = data.description
+  if (data.memo !== undefined) updateData.memo = data.memo
   if (data.status !== undefined) updateData.status = data.status
   if (data.workflowData !== undefined) updateData.workflowData = data.workflowData
   if (data.customerGroupId !== undefined) updateData.customerGroupId = data.customerGroupId
@@ -123,6 +129,7 @@ export async function updateSequence(
       customerGroupId: sequences.customerGroupId,
       name: sequences.name,
       description: sequences.description,
+      memo: sequences.memo,
       status: sequences.status,
       workflowData: sequences.workflowData,
       selectedLeadIds: sequences.selectedLeadIds,

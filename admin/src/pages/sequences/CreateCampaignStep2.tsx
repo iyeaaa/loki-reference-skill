@@ -12,7 +12,7 @@ import {
   Trash2,
   X,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { SignatureEditorModal } from "@/components/SignatureEditorModal"
 import { Badge } from "@/components/ui/badge"
@@ -146,27 +146,28 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
   const [isGeneratingAI, setIsGeneratingAI] = useState(false)
   const [showVariables, setShowVariables] = useState(false)
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false)
+  const prevDataStepsRef = useRef(data.steps)
 
   // Current editing step
   const currentStep = steps[selectedStepIndex]
 
   // Update steps when data.steps changes (e.g., when loading existing campaign)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: We intentionally use specific properties to avoid infinite loops
   useEffect(() => {
-    console.log("📥 Step2 - Received steps from parent:", data.steps)
-    if (data.steps.length > 0) {
-      const currentStepsStr = JSON.stringify(
-        steps.map((s) => ({ id: s.id, subject: s.emailSubject })),
-      )
-      const newStepsStr = JSON.stringify(
-        data.steps.map((s) => ({ id: s.id, subject: s.emailSubject })),
-      )
-      if (currentStepsStr !== newStepsStr) {
-        console.log("🔄 Step2 - Updating steps from data prop")
-        setSteps(data.steps)
-      }
+    if (data.steps.length === 0) return
+
+    const prevStepsStr = JSON.stringify(
+      prevDataStepsRef.current.map((s) => ({ id: s.id, subject: s.emailSubject })),
+    )
+    const newStepsStr = JSON.stringify(
+      data.steps.map((s) => ({ id: s.id, subject: s.emailSubject })),
+    )
+
+    if (prevStepsStr !== newStepsStr) {
+      console.log("📥 Step2 - Data steps changed, updating:", data.steps)
+      setSteps(data.steps)
+      prevDataStepsRef.current = data.steps
     }
-  }, [data.steps, steps])
+  }, [data.steps])
 
   // DB에서 서명이 로드되면 초기 서명 설정 (새 스텝 생성 시에만)
   // biome-ignore lint/correctness/useExhaustiveDependencies: Only run when signature loads, not when steps change

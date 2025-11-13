@@ -47,27 +47,42 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
   const [searchQuery, setSearchQuery] = useState("")
   const [showRepliedSection, setShowRepliedSection] = useState(true)
   const prevCustomerGroupId = useRef(customerGroupId)
+  const prevDataRef = useRef({
+    customerGroupId: data.customerGroupId,
+    selectedLeadIds: data.selectedLeadIds,
+  })
 
   // Update state when data prop changes (e.g., when loading existing campaign)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: We intentionally use specific properties to avoid infinite loops
   useEffect(() => {
-    console.log("📥 Step1 - Received data from parent:", data)
-    if (data.customerGroupId && data.customerGroupId !== customerGroupId) {
-      console.log("🔄 Step1 - Updating customerGroupId:", data.customerGroupId)
-      setCustomerGroupId(data.customerGroupId)
-      // Update prevCustomerGroupId to prevent auto-selection when loading
-      prevCustomerGroupId.current = data.customerGroupId
-    }
-    // Always update selectedLeadIds when data prop changes (including empty array)
-    if (data.selectedLeadIds !== undefined) {
-      const currentLeadIdsStr = JSON.stringify(selectedLeadIds)
-      const newLeadIdsStr = JSON.stringify(data.selectedLeadIds)
-      if (currentLeadIdsStr !== newLeadIdsStr) {
+    const prevData = prevDataRef.current
+    const hasCustomerGroupChanged = data.customerGroupId !== prevData.customerGroupId
+    const hasSelectedLeadIdsChanged =
+      JSON.stringify(data.selectedLeadIds) !== JSON.stringify(prevData.selectedLeadIds)
+
+    if (hasCustomerGroupChanged || hasSelectedLeadIdsChanged) {
+      console.log("📥 Step1 - Data prop changed:", {
+        customerGroupId: data.customerGroupId,
+        selectedLeadIds: data.selectedLeadIds,
+      })
+
+      if (hasCustomerGroupChanged && data.customerGroupId) {
+        console.log("🔄 Step1 - Updating customerGroupId:", data.customerGroupId)
+        setCustomerGroupId(data.customerGroupId)
+        prevCustomerGroupId.current = data.customerGroupId
+      }
+
+      if (hasSelectedLeadIdsChanged) {
         console.log("🔄 Step1 - Updating selectedLeadIds:", data.selectedLeadIds)
         setSelectedLeadIds(data.selectedLeadIds)
       }
+
+      // Update ref to prevent re-triggering
+      prevDataRef.current = {
+        customerGroupId: data.customerGroupId,
+        selectedLeadIds: data.selectedLeadIds,
+      }
     }
-  }, [data.customerGroupId, data.selectedLeadIds, customerGroupId, selectedLeadIds])
+  }, [data.customerGroupId, data.selectedLeadIds])
 
   const { data: customerGroups } = useCustomerGroupsByWorkspace(workspaceId, Boolean(workspaceId))
 

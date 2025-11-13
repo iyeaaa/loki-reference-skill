@@ -48,6 +48,27 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
   const [showRepliedSection, setShowRepliedSection] = useState(true)
   const prevCustomerGroupId = useRef(customerGroupId)
 
+  // Update state when data prop changes (e.g., when loading existing campaign)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: We intentionally use specific properties to avoid infinite loops
+  useEffect(() => {
+    console.log("📥 Step1 - Received data from parent:", data)
+    if (data.customerGroupId && data.customerGroupId !== customerGroupId) {
+      console.log("🔄 Step1 - Updating customerGroupId:", data.customerGroupId)
+      setCustomerGroupId(data.customerGroupId)
+      // Update prevCustomerGroupId to prevent auto-selection when loading
+      prevCustomerGroupId.current = data.customerGroupId
+    }
+    // Always update selectedLeadIds when data prop changes (including empty array)
+    if (data.selectedLeadIds !== undefined) {
+      const currentLeadIdsStr = JSON.stringify(selectedLeadIds)
+      const newLeadIdsStr = JSON.stringify(data.selectedLeadIds)
+      if (currentLeadIdsStr !== newLeadIdsStr) {
+        console.log("🔄 Step1 - Updating selectedLeadIds:", data.selectedLeadIds)
+        setSelectedLeadIds(data.selectedLeadIds)
+      }
+    }
+  }, [data.customerGroupId, data.selectedLeadIds, customerGroupId, selectedLeadIds])
+
   const { data: customerGroups } = useCustomerGroupsByWorkspace(workspaceId, Boolean(workspaceId))
 
   const { data: members = [] } = useCustomerGroupMembersWithEmails(
@@ -81,11 +102,13 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
   // Update parent when data changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: adding onChange to dependencies will cause infinite loop
   useEffect(() => {
-    onChange({
+    const dataToSave = {
       workspaceId,
       customerGroupId,
       selectedLeadIds,
-    })
+    }
+    console.log("📤 Step1 - Sending data to parent:", dataToSave)
+    onChange(dataToSave)
   }, [workspaceId, customerGroupId, selectedLeadIds])
 
   // Reset lead selections when customer group changes and select all by default

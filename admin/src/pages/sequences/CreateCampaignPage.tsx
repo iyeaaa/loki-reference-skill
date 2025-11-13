@@ -31,6 +31,7 @@ export default function CreateCampaignPage() {
     name: "새 캠페인",
     description: "",
     steps: [] as Array<{
+      id?: string // Step ID if it exists in DB
       stepOrder: number
       delayDays: number
       scheduledHour: number
@@ -62,7 +63,10 @@ export default function CreateCampaignPage() {
   useEffect(() => {
     if (!editingSequenceId || !existingSequence) return
 
-    setCampaignData({
+    console.log("📂 Loading existing sequence:", existingSequence)
+    console.log("📂 Existing steps:", existingSteps)
+
+    const loadedData = {
       workspaceId: existingSequence.workspaceId,
       customerGroupId: existingSequence.customerGroupId || "",
       selectedLeadIds: existingSequence.selectedLeadIds
@@ -72,6 +76,7 @@ export default function CreateCampaignPage() {
       description: existingSequence.description || "",
       steps:
         existingSteps?.map((step) => ({
+          id: step.id, // Include step ID for updates
           stepOrder: step.stepOrder,
           delayDays: step.delayDays,
           scheduledHour: step.scheduledHour || 9,
@@ -80,8 +85,14 @@ export default function CreateCampaignPage() {
           emailBodyText: step.emailBodyText || "",
           isDraft: false,
         })) || [],
-      memo: "",
-    })
+      memo: existingSequence.memo || "",
+    }
+
+    console.log("✅ Loaded campaign data:", loadedData)
+    console.log("👥 Customer Group ID:", loadedData.customerGroupId)
+    console.log("👥 Selected Lead IDs:", loadedData.selectedLeadIds)
+
+    setCampaignData(loadedData)
     setIsInitialized(true)
   }, [editingSequenceId, existingSequence, existingSteps])
 
@@ -136,22 +147,44 @@ export default function CreateCampaignPage() {
       if (!sequenceId || isSaving) return
 
       setIsSaving(true)
+
+      // Prepare data - always save arrays even if empty
+      const updateData: {
+        name: string
+        description?: string
+        customerGroupId?: string
+        selectedLeadIds?: string[]
+      } = {
+        name: campaignData.name,
+      }
+
+      // Only include fields that have values
+      if (campaignData.description?.trim()) {
+        updateData.description = campaignData.description.trim()
+      }
+
+      if (campaignData.customerGroupId) {
+        updateData.customerGroupId = campaignData.customerGroupId
+      }
+
+      // Always save selectedLeadIds if customerGroupId is set
+      if (campaignData.customerGroupId) {
+        updateData.selectedLeadIds = campaignData.selectedLeadIds
+      }
+
+      console.log("💾 Auto-saving campaign data:", updateData)
+
       updateSequence
         .mutateAsync({
           sequenceId,
-          data: {
-            name: campaignData.name,
-            description: campaignData.description || undefined,
-            customerGroupId: campaignData.customerGroupId || undefined,
-            selectedLeadIds:
-              campaignData.selectedLeadIds.length > 0 ? campaignData.selectedLeadIds : undefined,
-          },
+          data: updateData,
         })
         .then(() => {
           setLastSaved(new Date())
+          console.log("✅ Auto-save successful")
         })
         .catch((error) => {
-          console.error("Auto-save failed:", error)
+          console.error("❌ Auto-save failed:", error)
         })
         .finally(() => {
           setIsSaving(false)
@@ -169,15 +202,33 @@ export default function CreateCampaignPage() {
 
     setIsSaving(true)
     try {
+      // Prepare data - always save arrays even if empty
+      const updateData: {
+        name: string
+        description?: string
+        customerGroupId?: string
+        selectedLeadIds?: string[]
+      } = {
+        name: campaignData.name,
+      }
+
+      // Only include fields that have values
+      if (campaignData.description?.trim()) {
+        updateData.description = campaignData.description.trim()
+      }
+
+      if (campaignData.customerGroupId) {
+        updateData.customerGroupId = campaignData.customerGroupId
+      }
+
+      // Always save selectedLeadIds if customerGroupId is set
+      if (campaignData.customerGroupId) {
+        updateData.selectedLeadIds = campaignData.selectedLeadIds
+      }
+
       await updateSequence.mutateAsync({
         sequenceId,
-        data: {
-          name: campaignData.name,
-          description: campaignData.description || undefined,
-          customerGroupId: campaignData.customerGroupId || undefined,
-          selectedLeadIds:
-            campaignData.selectedLeadIds.length > 0 ? campaignData.selectedLeadIds : undefined,
-        },
+        data: updateData,
       })
       setLastSaved(new Date())
       toast.success("저장되었습니다")
@@ -353,6 +404,7 @@ export default function CreateCampaignPage() {
         {currentStep === 2 && (
           <div className="h-full p-6">
             <CreateCampaignStep2
+              sequenceId={sequenceId}
               data={{
                 workspaceId: campaignData.workspaceId,
                 customerGroupId: campaignData.customerGroupId,

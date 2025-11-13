@@ -39,11 +39,17 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useDefaultEmailSignature } from "@/lib/api/hooks/email-signatures"
+import {
+  useCreateSequenceStep,
+  useDeleteSequenceStep,
+  useUpdateSequenceStep,
+} from "@/lib/api/hooks/sequences"
 import { useAuth } from "@/lib/auth-provider"
 import { cn } from "@/lib/utils"
 import { generateSignatureHtml } from "@/lib/utils/email-signature"
 
 interface EmailStep {
+  id?: string // Step ID if it exists in DB
   stepOrder: number
   delayDays: number
   scheduledHour: number
@@ -56,6 +62,7 @@ interface EmailStep {
 }
 
 interface CreateCampaignStep2Props {
+  sequenceId?: string | null
   data: {
     workspaceId: string
     customerGroupId: string
@@ -85,8 +92,11 @@ const VARIABLES = [
   { label: "주소", value: "{{주소}}" },
 ]
 
-export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props) {
+export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampaignStep2Props) {
   const { user } = useAuth()
+  const createSequenceStep = useCreateSequenceStep()
+  const updateSequenceStep = useUpdateSequenceStep()
+  const deleteSequenceStep = useDeleteSequenceStep()
 
   // Get default signature from database
   const { data: defaultSignature } = useDefaultEmailSignature(
@@ -139,6 +149,24 @@ export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props
 
   // Current editing step
   const currentStep = steps[selectedStepIndex]
+
+  // Update steps when data.steps changes (e.g., when loading existing campaign)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: We intentionally use specific properties to avoid infinite loops
+  useEffect(() => {
+    console.log("📥 Step2 - Received steps from parent:", data.steps)
+    if (data.steps.length > 0) {
+      const currentStepsStr = JSON.stringify(
+        steps.map((s) => ({ id: s.id, subject: s.emailSubject })),
+      )
+      const newStepsStr = JSON.stringify(
+        data.steps.map((s) => ({ id: s.id, subject: s.emailSubject })),
+      )
+      if (currentStepsStr !== newStepsStr) {
+        console.log("🔄 Step2 - Updating steps from data prop")
+        setSteps(data.steps)
+      }
+    }
+  }, [data.steps, steps])
 
   // DB에서 서명이 로드되면 초기 서명 설정 (새 스텝 생성 시에만)
   // biome-ignore lint/correctness/useExhaustiveDependencies: Only run when signature loads, not when steps change
@@ -219,7 +247,7 @@ export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props
     setSelectedStepIndex(steps.length)
   }
 
-  const handleDeleteStep = (index: number) => {
+  const handleDeleteStep = async (index: number) => {
     // Cannot delete step 1
     if (index === 0) {
       toast.error("첫 번째 스텝은 삭제할 수 없습니다")
@@ -227,6 +255,21 @@ export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props
     }
 
     if (!confirm("이 스텝을 삭제하시겠습니까?")) return
+
+    const stepToDelete = steps[index]
+
+    // Delete from DB if it has an ID
+    if (sequenceId && stepToDelete.id) {
+      try {
+        await deleteSequenceStep.mutateAsync({
+          sequenceId,
+          stepId: stepToDelete.id,
+        })
+      } catch (error) {
+        toast.error(`스텝 삭제 오류: ${error instanceof Error ? error.message : "알 수 없는 오류"}`)
+        return
+      }
+    }
 
     const updatedSteps = steps.filter((_, i) => i !== index)
     // Re-order steps
@@ -241,7 +284,7 @@ export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props
     }
   }
 
-  const handleSaveCurrentStep = () => {
+  const handleSaveCurrentStep = async () => {
     if (!currentStep.emailSubject.trim()) {
       toast.error("이메일 제목을 입력해주세요")
       return
@@ -251,8 +294,64 @@ export function CreateCampaignStep2({ data, onChange }: CreateCampaignStep2Props
       return
     }
 
+    // Save to local state first
     updateCurrentStep({ isDraft: false })
-    toast.success("스텝이 저장되었습니다")
+
+    // Save to DB if sequenceId exists
+    if (sequenceId) {
+      try {
+        const stepData = {
+          stepOrder: currentStep.stepOrder,
+          delayDays: currentStep.delayDays,
+          scheduledHour: currentStep.scheduledHour,
+          scheduledMinute: currentStep.scheduledMinute,
+          emailSubject: currentStep.emailSubject,
+          emailBodyText: currentStep.emailBodyText,
+        }
+
+        if (currentStep.id) {
+          // Update existing step
+          const updatedStep = await updateSequenceStep.mutateAsync({
+            sequenceId,
+            stepId: currentStep.id,
+            data: stepData,
+            files: currentStep.files,
+          })
+          // Update step ID in local state if it was just created
+          if (updatedStep?.id && !currentStep.id) {
+            const updatedSteps = [...steps]
+            updatedSteps[selectedStepIndex] = {
+              ...updatedSteps[selectedStepIndex],
+              id: updatedStep.id,
+            }
+            setSteps(updatedSteps)
+          }
+        } else {
+          // Create new step
+          const createdStep = await createSequenceStep.mutateAsync({
+            data: {
+              sequenceId,
+              ...stepData,
+            },
+            files: currentStep.files,
+          })
+          // Update step ID in local state
+          if (createdStep?.id) {
+            const updatedSteps = [...steps]
+            updatedSteps[selectedStepIndex] = {
+              ...updatedSteps[selectedStepIndex],
+              id: createdStep.id,
+            }
+            setSteps(updatedSteps)
+          }
+        }
+        toast.success("스텝이 저장되었습니다")
+      } catch (error) {
+        toast.error(`스텝 저장 오류: ${error instanceof Error ? error.message : "알 수 없는 오류"}`)
+      }
+    } else {
+      toast.success("스텝이 저장되었습니다 (DB 저장은 다음 단계에서 수행됩니다)")
+    }
   }
 
   const isStepComplete = (step: EmailStep) => {

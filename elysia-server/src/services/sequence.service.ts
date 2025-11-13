@@ -62,6 +62,16 @@ export async function createSequence(data: {
   selectedLeadIds?: string[] // Array of lead IDs to target
   createdBy?: string
 }) {
+  const { default: logger } = await import("../utils/logger")
+  logger.info(
+    {
+      customerGroupId: data.customerGroupId,
+      selectedLeadIds: data.selectedLeadIds,
+      selectedLeadIdsLength: data.selectedLeadIds?.length,
+    },
+    "📝 Creating sequence with data",
+  )
+
   const [newSequence] = await db
     .insert(sequences)
     .values({
@@ -106,6 +116,18 @@ export async function updateSequence(
     selectedLeadIds?: string[] // Array of lead IDs to target
   },
 ) {
+  const { default: logger } = await import("../utils/logger")
+
+  logger.info(
+    {
+      sequenceId: id,
+      customerGroupId: data.customerGroupId,
+      selectedLeadIds: data.selectedLeadIds,
+      selectedLeadIdsLength: data.selectedLeadIds?.length,
+    },
+    "📝 Updating sequence with data",
+  )
+
   const updateData: Record<string, unknown> = {
     updatedAt: new Date(),
   }
@@ -116,8 +138,29 @@ export async function updateSequence(
   if (data.status !== undefined) updateData.status = data.status
   if (data.workflowData !== undefined) updateData.workflowData = data.workflowData
   if (data.customerGroupId !== undefined) updateData.customerGroupId = data.customerGroupId
-  if (data.selectedLeadIds !== undefined)
-    updateData.selectedLeadIds = data.selectedLeadIds ? JSON.stringify(data.selectedLeadIds) : null
+  if (data.selectedLeadIds !== undefined) {
+    // Always stringify arrays, including empty arrays []
+    const stringifiedLeadIds = Array.isArray(data.selectedLeadIds)
+      ? JSON.stringify(data.selectedLeadIds)
+      : null
+    updateData.selectedLeadIds = stringifiedLeadIds
+    logger.info(
+      {
+        sequenceId: id,
+        originalArray: data.selectedLeadIds,
+        stringified: stringifiedLeadIds,
+      },
+      "💾 Saving selectedLeadIds",
+    )
+  }
+
+  logger.info(
+    {
+      sequenceId: id,
+      updateData,
+    },
+    "💾 Final updateData being saved to DB",
+  )
 
   const [updatedSequence] = await db
     .update(sequences)
@@ -136,6 +179,21 @@ export async function updateSequence(
       createdAt: sequences.createdAt,
       updatedAt: sequences.updatedAt,
     })
+
+  if (!updatedSequence) {
+    throw new Error("Failed to update sequence")
+  }
+
+  logger.info(
+    {
+      sequenceId: id,
+      savedSequence: {
+        customerGroupId: updatedSequence.customerGroupId,
+        selectedLeadIds: updatedSequence.selectedLeadIds,
+      },
+    },
+    "✅ Sequence updated successfully",
+  )
 
   return updatedSequence
 }

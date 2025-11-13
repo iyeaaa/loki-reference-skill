@@ -6,10 +6,15 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
 import { useCustomerGroup } from "@/lib/api/hooks/customer-groups"
-import { useCreateSequenceStep, useUpdateSequence } from "@/lib/api/hooks/sequences"
+import {
+  useCreateSequenceStep,
+  useUpdateSequence,
+  useUpdateSequenceStep,
+} from "@/lib/api/hooks/sequences"
 import { useWorkspaces } from "@/lib/api/hooks/workspaces"
 
 interface EmailStep {
+  id?: string // Step ID if it exists in DB
   stepOrder: number
   delayDays: number
   scheduledHour: number
@@ -50,6 +55,7 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
 
   const updateSequence = useUpdateSequence()
   const createSequenceStep = useCreateSequenceStep()
+  const updateSequenceStep = useUpdateSequenceStep()
 
   const workspace = workspacesData?.workspaces.find((w) => w.id === data.workspaceId)
   const recipientCount =
@@ -71,40 +77,79 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
       return
     }
 
+    // Prepare update data
+    const updateData: {
+      name: string
+      description?: string
+      status: "draft"
+      customerGroupId?: string
+      selectedLeadIds?: string[]
+      memo?: string
+    } = {
+      name: data.name.trim(),
+      status: "draft",
+    }
+
+    if (data.description?.trim()) {
+      updateData.description = data.description.trim()
+    }
+
+    if (data.customerGroupId) {
+      updateData.customerGroupId = data.customerGroupId
+      // Always save selectedLeadIds when customerGroupId is set
+      updateData.selectedLeadIds = data.selectedLeadIds
+    }
+
+    if (memo.trim()) {
+      updateData.memo = memo.trim()
+    }
+
     updateSequence.mutate(
       {
         sequenceId,
-        data: {
-          name: data.name.trim(),
-          description: data.description.trim() || undefined,
-          status: "draft",
-          customerGroupId: data.customerGroupId || undefined,
-          selectedLeadIds: data.selectedLeadIds.length > 0 ? data.selectedLeadIds : undefined,
-        },
+        data: updateData,
       },
       {
         onSuccess: async () => {
-          // Create steps if any
+          // Create or update steps
           if (data.steps.length > 0) {
             try {
               for (const step of data.steps) {
-                await createSequenceStep.mutateAsync({
-                  data: {
+                if (step.id) {
+                  // Update existing step
+                  await updateSequenceStep.mutateAsync({
                     sequenceId,
-                    stepOrder: step.stepOrder,
-                    delayDays: step.delayDays,
-                    scheduledHour: step.scheduledHour,
-                    scheduledMinute: step.scheduledMinute,
-                    emailSubject: step.emailSubject,
-                    emailBodyText: step.emailBodyText,
-                  },
-                  files: step.files,
-                })
+                    stepId: step.id,
+                    data: {
+                      stepOrder: step.stepOrder,
+                      delayDays: step.delayDays,
+                      scheduledHour: step.scheduledHour,
+                      scheduledMinute: step.scheduledMinute,
+                      emailSubject: step.emailSubject,
+                      emailBodyText: step.emailBodyText,
+                    },
+                    files: step.files,
+                  })
+                } else {
+                  // Create new step
+                  await createSequenceStep.mutateAsync({
+                    data: {
+                      sequenceId,
+                      stepOrder: step.stepOrder,
+                      delayDays: step.delayDays,
+                      scheduledHour: step.scheduledHour,
+                      scheduledMinute: step.scheduledMinute,
+                      emailSubject: step.emailSubject,
+                      emailBodyText: step.emailBodyText,
+                    },
+                    files: step.files,
+                  })
+                }
               }
               toast.success("초안이 저장되었습니다")
             } catch (error) {
               toast.error(
-                `스텝 생성 오류: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
+                `스텝 저장 오류: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
               )
             }
           } else {
@@ -130,40 +175,79 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
       return
     }
 
+    // Prepare update data
+    const updateData: {
+      name: string
+      description?: string
+      status: "ready"
+      customerGroupId?: string
+      selectedLeadIds?: string[]
+      memo?: string
+    } = {
+      name: data.name.trim(),
+      status: "ready",
+    }
+
+    if (data.description?.trim()) {
+      updateData.description = data.description.trim()
+    }
+
+    if (data.customerGroupId) {
+      updateData.customerGroupId = data.customerGroupId
+      // Always save selectedLeadIds when customerGroupId is set
+      updateData.selectedLeadIds = data.selectedLeadIds
+    }
+
+    if (memo.trim()) {
+      updateData.memo = memo.trim()
+    }
+
     updateSequence.mutate(
       {
         sequenceId,
-        data: {
-          name: data.name.trim(),
-          description: data.description.trim() || undefined,
-          status: "ready",
-          customerGroupId: data.customerGroupId || undefined,
-          selectedLeadIds: data.selectedLeadIds.length > 0 ? data.selectedLeadIds : undefined,
-        },
+        data: updateData,
       },
       {
         onSuccess: async () => {
-          // Create steps if any
+          // Create or update steps
           if (data.steps.length > 0) {
             try {
               for (const step of data.steps) {
-                await createSequenceStep.mutateAsync({
-                  data: {
+                if (step.id) {
+                  // Update existing step
+                  await updateSequenceStep.mutateAsync({
                     sequenceId,
-                    stepOrder: step.stepOrder,
-                    delayDays: step.delayDays,
-                    scheduledHour: step.scheduledHour,
-                    scheduledMinute: step.scheduledMinute,
-                    emailSubject: step.emailSubject,
-                    emailBodyText: step.emailBodyText,
-                  },
-                  files: step.files,
-                })
+                    stepId: step.id,
+                    data: {
+                      stepOrder: step.stepOrder,
+                      delayDays: step.delayDays,
+                      scheduledHour: step.scheduledHour,
+                      scheduledMinute: step.scheduledMinute,
+                      emailSubject: step.emailSubject,
+                      emailBodyText: step.emailBodyText,
+                    },
+                    files: step.files,
+                  })
+                } else {
+                  // Create new step
+                  await createSequenceStep.mutateAsync({
+                    data: {
+                      sequenceId,
+                      stepOrder: step.stepOrder,
+                      delayDays: step.delayDays,
+                      scheduledHour: step.scheduledHour,
+                      scheduledMinute: step.scheduledMinute,
+                      emailSubject: step.emailSubject,
+                      emailBodyText: step.emailBodyText,
+                    },
+                    files: step.files,
+                  })
+                }
               }
               toast.success("캠페인이 준비 상태로 저장되었습니다")
             } catch (error) {
               toast.error(
-                `스텝 생성 오류: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
+                `스텝 저장 오류: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
               )
             }
           } else {

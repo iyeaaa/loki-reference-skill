@@ -468,3 +468,13 @@ export function useEnrollmentMetrics(enrollmentId: string) {
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }
+
+// Get overall sequence statistics
+export function useSequencesOverallStats(workspaceId?: string) {
+  return useQuery({
+    queryKey: [...sequenceKeys.all, "overall-stats", workspaceId] as const,
+    queryFn: () => sequencesApi.getOverallStats(workspaceId),
+    staleTime: 30 * 1000, // 30 seconds
+    gcTime: 5 * 60 * 1000, // 5 minutes
+  })
+}

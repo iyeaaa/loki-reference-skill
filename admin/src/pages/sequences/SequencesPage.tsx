@@ -12,6 +12,7 @@ import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence"
 import { BulkActionModal } from "./BulkActionModal"
 import { CampaignCardView } from "./CampaignCardView"
 import { SequenceFilters } from "./SequenceFilters"
+import { SequencesDashboard } from "./SequencesDashboard"
 import { SequencesTableWithPagination } from "./SequencesTableWithPagination"
 
 export default function SequencesPage() {
@@ -109,6 +110,9 @@ export default function SequencesPage() {
 
   return (
     <div className="space-y-6 h-full overflow-y-auto">
+      {/* Dashboard */}
+      <SequencesDashboard />
+
       {/* Filters */}
       <SequenceFilters
         selectedStatuses={selectedStatuses}

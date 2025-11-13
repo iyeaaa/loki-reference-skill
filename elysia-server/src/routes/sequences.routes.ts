@@ -908,6 +908,20 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
   // SEQUENCE METRICS ROUTES
   // ====================================
 
+  // Get overall sequence statistics (must be before /:id/metrics)
+  .get(
+    "/stats/overall",
+    async ({ query }) => {
+      const stats = await sequenceService.getOverallSequenceStats(query.workspaceId)
+      return { data: stats }
+    },
+    {
+      query: t.Object({
+        workspaceId: t.Optional(t.String({ format: "uuid" })),
+      }),
+    },
+  )
+
   // Get sequence metrics
   .get(
     "/:id/metrics",

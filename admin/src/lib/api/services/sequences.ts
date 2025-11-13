@@ -431,6 +431,31 @@ export const sequencesApi = {
     }>(`/api/v1/sequences/enrollments/${enrollmentId}/metrics`)
   },
 
+  // Get overall sequence statistics
+  getOverallStats: (workspaceId?: string) => {
+    const searchParams = new URLSearchParams()
+    if (workspaceId) {
+      searchParams.append("workspaceId", workspaceId)
+    }
+    const query = searchParams.toString()
+    return apiFetch<{
+      data: {
+        totalSequences: number
+        activeSequences: number
+        pausedSequences: number
+        completedSequences: number
+        archivedSequences: number
+        readySequences: number
+        totalSent: number
+        totalDelivered: number
+        totalOpened: number
+        totalReplied: number
+        openRate: number
+        replyRate: number
+      }
+    }>(`/api/v1/sequences/stats/overall${query ? `?${query}` : ""}`)
+  },
+
   // AI 이메일 템플릿 생성
   generateTemplate: (data: {
     workspaceId: string

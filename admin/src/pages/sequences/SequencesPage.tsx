@@ -20,7 +20,10 @@ export default function SequencesPage() {
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
-  const [viewMode, setViewMode] = useState<"list" | "card">("card")
+  const [viewMode, setViewMode] = useState<"list" | "card">(() => {
+    const savedViewMode = localStorage.getItem("sequences-view-mode")
+    return (savedViewMode as "list" | "card") || "card"
+  })
 
   const [selectedSequences, setSelectedSequences] = useState<string[]>([])
   const [showBulkActionModal, setShowBulkActionModal] = useState(false)
@@ -28,6 +31,11 @@ export default function SequencesPage() {
 
   const bulkUpdateStatus = useBulkUpdateSequenceStatus()
   const bulkDeleteSequences = useBulkDeleteSequences()
+
+  // Save view mode to localStorage
+  useEffect(() => {
+    localStorage.setItem("sequences-view-mode", viewMode)
+  }, [viewMode])
 
   // Debounce search input
   useEffect(() => {

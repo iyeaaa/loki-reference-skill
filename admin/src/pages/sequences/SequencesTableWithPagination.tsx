@@ -351,16 +351,20 @@ export function SequencesTableWithPagination({
                     {sequence.enrollmentsCount ?? 0}
                   </td>
                   <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
-                    {sequence.completedEnrollmentsCount ?? 0}/{sequence.stepsCount ?? 0}
+                    {sequence.currentMaxStep ?? 0}/{sequence.stepsCount ?? 0}
                   </td>
                   <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
-                    -
+                    {sequence.sentCount ?? 0}
                   </td>
                   <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
-                    -
+                    {sequence.deliveredCount && sequence.openedCount
+                      ? `${Math.round((sequence.openedCount / sequence.deliveredCount) * 100)}%`
+                      : "-"}
                   </td>
                   <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
-                    -
+                    {sequence.deliveredCount && sequence.repliedCount
+                      ? `${Math.round((sequence.repliedCount / sequence.deliveredCount) * 100)}%`
+                      : "-"}
                   </td>
                   <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                     {formatRelativeTime(sequence.updatedAt)}

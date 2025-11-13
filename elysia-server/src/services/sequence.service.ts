@@ -381,6 +381,11 @@ export async function listSequencesWithFilters(
         FROM ${sequenceSteps}
         WHERE ${sequenceSteps.sequenceId} = ${sequences.id}
       )`,
+      currentMaxStep: sql<number>`(
+        SELECT COALESCE(MAX(${sequenceEnrollments.currentStepOrder}), 0)::int
+        FROM ${sequenceEnrollments}
+        WHERE ${sequenceEnrollments.sequenceId} = ${sequences.id}
+      )`,
       enrollmentsCount: sql<number>`(
         SELECT COUNT(*)::int
         FROM ${sequenceEnrollments}
@@ -391,6 +396,33 @@ export async function listSequencesWithFilters(
         FROM ${sequenceEnrollments}
         WHERE ${sequenceEnrollments.sequenceId} = ${sequences.id}
         AND ${sequenceEnrollments.status} = 'completed'
+      )`,
+      sentCount: sql<number>`(
+        SELECT COUNT(*)::int
+        FROM ${emailsTable}
+        WHERE ${emailsTable.sequenceId} = ${sequences.id}
+        AND ${emailsTable.direction} = 'outbound'
+      )`,
+      deliveredCount: sql<number>`(
+        SELECT COUNT(*)::int
+        FROM ${emailsTable}
+        WHERE ${emailsTable.sequenceId} = ${sequences.id}
+        AND ${emailsTable.direction} = 'outbound'
+        AND ${emailsTable.deliveredAt} IS NOT NULL
+      )`,
+      openedCount: sql<number>`(
+        SELECT COUNT(*)::int
+        FROM ${emailsTable}
+        WHERE ${emailsTable.sequenceId} = ${sequences.id}
+        AND ${emailsTable.direction} = 'outbound'
+        AND ${emailsTable.openedAt} IS NOT NULL
+      )`,
+      repliedCount: sql<number>`(
+        SELECT COUNT(DISTINCT ${emailReplies.originalEmailId})::int
+        FROM ${emailReplies}
+        INNER JOIN ${emailsTable} ON ${emailReplies.originalEmailId} = ${emailsTable.id}
+        WHERE ${emailsTable.sequenceId} = ${sequences.id}
+        AND ${emailsTable.direction} = 'outbound'
       )`,
       customerGroupId: sequences.customerGroupId,
       customerGroupName: customerGroups.name,

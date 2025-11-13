@@ -50,8 +50,14 @@ export interface Sequence {
   createdByUsername?: string
   createdByEmail?: string
   stepsCount?: number
+  currentMaxStep?: number
   enrollmentsCount?: number
   completedEnrollmentsCount?: number
+  // Email statistics
+  sentCount?: number
+  deliveredCount?: number
+  openedCount?: number
+  repliedCount?: number
 }
 
 export interface SequenceStep {

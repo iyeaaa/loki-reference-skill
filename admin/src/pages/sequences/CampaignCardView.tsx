@@ -246,9 +246,11 @@ export function CampaignCardView({
 
                     <div className="flex items-center gap-1.5">
                       <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-muted-foreground">스텝 수:</span>
+                      <span className="text-muted-foreground">스텝:</span>
                     </div>
-                    <span className="font-medium">{sequence.stepsCount || 0}개</span>
+                    <span className="font-medium">
+                      {sequence.currentMaxStep ?? 0}/{sequence.stepsCount ?? 0}
+                    </span>
                   </div>
 
                   {/* Active Campaign Stats */}
@@ -263,17 +265,23 @@ export function CampaignCardView({
                       <div className="grid grid-cols-3 gap-2 pt-2">
                         <div className="text-center">
                           <div className="text-xs text-muted-foreground">발송</div>
-                          <div className="text-sm font-semibold">
-                            {sequence.enrollmentsCount || 0}
-                          </div>
+                          <div className="text-sm font-semibold">{sequence.sentCount || 0}</div>
                         </div>
                         <div className="text-center">
                           <div className="text-xs text-muted-foreground">오픈</div>
-                          <div className="text-sm font-semibold">-</div>
+                          <div className="text-sm font-semibold">
+                            {sequence.deliveredCount && sequence.openedCount
+                              ? `${Math.round((sequence.openedCount / sequence.deliveredCount) * 100)}%`
+                              : "-"}
+                          </div>
                         </div>
                         <div className="text-center">
                           <div className="text-xs text-muted-foreground">회신</div>
-                          <div className="text-sm font-semibold">-</div>
+                          <div className="text-sm font-semibold">
+                            {sequence.deliveredCount && sequence.repliedCount
+                              ? `${Math.round((sequence.repliedCount / sequence.deliveredCount) * 100)}%`
+                              : "-"}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -291,7 +299,8 @@ export function CampaignCardView({
                     <div className="flex items-center gap-1">
                       <BarChart3 className="h-3 w-3" />
                       <span className="font-medium text-foreground">
-                        {sequence.stepsCount || 0}/{sequence.stepsCount || 0} 스텝
+                        {sequence.completedEnrollmentsCount || 0}/{sequence.enrollmentsCount || 0}{" "}
+                        완료
                       </span>
                     </div>
                   )}

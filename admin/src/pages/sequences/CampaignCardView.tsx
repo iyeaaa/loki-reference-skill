@@ -18,7 +18,11 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
-import { useSequences, useUpdateSequence } from "@/lib/api/hooks/sequences"
+import {
+  useActivateStepBasedSequence,
+  useSequences,
+  useUpdateSequence,
+} from "@/lib/api/hooks/sequences"
 import type { Sequence, SequenceStatus, SequencesParams } from "@/lib/api/types/sequence"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
@@ -43,6 +47,7 @@ export function CampaignCardView({
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
   const updateSequence = useUpdateSequence()
+  const activateStepBasedSequence = useActivateStepBasedSequence()
   const limit = 8
 
   const workspaceFilter =
@@ -73,10 +78,16 @@ export function CampaignCardView({
     e.stopPropagation()
     const newStatus = sequence.status === "active" ? "paused" : "active"
     try {
-      await updateSequence.mutateAsync({
-        sequenceId: sequence.id,
-        data: { status: newStatus },
-      })
+      if (newStatus === "active") {
+        // Use activate-step-based API for activation
+        await activateStepBasedSequence.mutateAsync(sequence.id)
+      } else {
+        // Use regular update for pausing
+        await updateSequence.mutateAsync({
+          sequenceId: sequence.id,
+          data: { status: newStatus },
+        })
+      }
     } catch (error) {
       console.error("Failed to update sequence status:", error)
     }

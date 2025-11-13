@@ -1,6 +1,7 @@
 import { CheckCircle2, MessageSquare } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
+import { HighlightedText } from "@/components/ui/highlighted-text"
 import type { RepliedEmail } from "@/lib/api/types/email"
 import { formatAbsoluteDateTime } from "@/lib/date-utils"
 import { IntentBadge } from "./IntentBadge"
@@ -11,6 +12,7 @@ interface RepliedEmailsListItemProps {
   isActive: boolean
   onSelect: () => void
   onToggleCheckbox: (e: React.MouseEvent) => void
+  searchQuery?: string
 }
 
 export function RepliedEmailsListItem({
@@ -19,6 +21,7 @@ export function RepliedEmailsListItem({
   isActive,
   onSelect,
   onToggleCheckbox,
+  searchQuery,
 }: RepliedEmailsListItemProps) {
   // Determine the lead display name
   const leadDisplayName =
@@ -103,7 +106,7 @@ export function RepliedEmailsListItem({
         <div className="flex items-start justify-between gap-4">
           {/* Lead name - larger and prominent */}
           <h3 className="font-bold text-base text-gray-900 dark:text-gray-100 truncate flex-1">
-            {leadDisplayName}
+            <HighlightedText text={leadDisplayName} searchTerm={searchQuery} />
           </h3>
 
           {/* Latest reply date - top right with label */}
@@ -137,13 +140,13 @@ export function RepliedEmailsListItem({
         {/* Subject line */}
         {email.subject && (
           <div className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
-            Re: {email.subject}
+            Re: <HighlightedText text={email.subject} searchTerm={searchQuery} />
           </div>
         )}
 
         {/* Message preview - 2 lines max */}
         <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
-          {messagePreview}
+          <HighlightedText text={messagePreview} searchTerm={searchQuery} />
           {messagePreview.length >= 150 && "..."}
         </div>
 

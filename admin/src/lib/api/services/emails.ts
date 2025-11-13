@@ -266,6 +266,8 @@ export const emailsApi = {
     sentiment?: string
     category?: string
     priority?: string
+    dateFrom?: string
+    dateTo?: string
   }) => {
     const searchParams = new URLSearchParams()
 
@@ -285,6 +287,8 @@ export const emailsApi = {
     if (params.sentiment) searchParams.append("sentiment", params.sentiment)
     if (params.category) searchParams.append("category", params.category)
     if (params.priority) searchParams.append("priority", params.priority)
+    if (params.dateFrom) searchParams.append("dateFrom", params.dateFrom)
+    if (params.dateTo) searchParams.append("dateTo", params.dateTo)
 
     const query = searchParams.toString()
     return apiFetch<{

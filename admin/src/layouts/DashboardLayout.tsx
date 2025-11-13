@@ -218,6 +218,10 @@ const getPageName = (pathname: string, t: (key: string) => string) => {
     case "/settings":
       return t("sidebar.menu.settings")
     default:
+      // Handle webset routes
+      if (pathname.startsWith("/websets")) {
+        return t("sidebar.menu.webset")
+      }
       return "Overview"
   }
 }

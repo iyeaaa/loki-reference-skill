@@ -659,7 +659,8 @@ export default function LeadsPage() {
         `📦 배치 처리 시작: ${csvData.length}개 리드를 ${totalBatches}개 배치로 나누어 처리`,
       )
 
-      let successCount = 0
+      let totalCreated = 0
+      let totalSkipped = 0
       let errorCount = 0
 
       for (let i = 0; i < totalBatches; i++) {
@@ -675,14 +676,19 @@ export default function LeadsPage() {
         // 재시도 로직
         while (!batchSuccess && retryCount <= MAX_RETRIES) {
           try {
-            await leadsApi.createFromCSV({
+            const response = await leadsApi.createFromCSV({
               workspaceId,
               leads: batch,
               customerGroupId: targetGroupId,
             })
-            successCount += batch.length
+
+            // 실제 생성/스킵된 개수를 stats에서 가져옴
+            totalCreated += response.stats.created
+            totalSkipped += response.stats.skipped
             batchSuccess = true
-            console.log(`✅ 배치 ${i + 1} 성공: ${batch.length}개 리드 추가됨`)
+            console.log(
+              `✅ 배치 ${i + 1} 성공: ${response.stats.created}개 생성, ${response.stats.skipped}개 스킵`,
+            )
           } catch (error) {
             retryCount++
             console.error(`❌ 배치 ${i + 1} 실패 (시도 ${retryCount}/${MAX_RETRIES + 1}):`, error)
@@ -704,7 +710,9 @@ export default function LeadsPage() {
         }
       }
 
-      console.log(`📊 배치 처리 완료: 성공 ${successCount}개, 실패 ${errorCount}개`)
+      console.log(
+        `📊 배치 처리 완료: 생성 ${totalCreated}개, 중복 스킵 ${totalSkipped}개, 실패 ${errorCount}개`,
+      )
 
       // Invalidate queries to refresh data
       await queryClient.invalidateQueries({
@@ -714,11 +722,27 @@ export default function LeadsPage() {
         queryKey: customerGroupKeys.all,
       })
 
-      toast.success(
-        `${csvData.length}개의 리드가 ${
-          isNewGroup ? "새로 생성된 그룹" : "선택된 그룹"
-        }에 성공적으로 추가되었습니다.`,
-      )
+      // 결과에 따라 적절한 토스트 메시지 표시
+      if (totalCreated > 0 && totalSkipped > 0) {
+        toast.success(
+          `${totalCreated}개의 리드가 ${
+            isNewGroup ? "새로 생성된 그룹" : "선택된 그룹"
+          }에 추가되었습니다. (중복 ${totalSkipped}개 스킵)`,
+        )
+      } else if (totalCreated > 0) {
+        toast.success(
+          `${totalCreated}개의 리드가 ${
+            isNewGroup ? "새로 생성된 그룹" : "선택된 그룹"
+          }에 성공적으로 추가되었습니다.`,
+        )
+      } else if (totalSkipped > 0) {
+        toast(`모든 리드가 이미 존재하여 스킵되었습니다. (중복 ${totalSkipped}개)`, {
+          icon: "⚠️",
+          duration: 4000,
+        })
+      } else if (errorCount > 0) {
+        toast.error(`${errorCount}개의 리드 추가에 실패했습니다.`)
+      }
       setShowCSVUpload(false)
       setCsvData(null)
       setGroupName("")
@@ -865,7 +889,7 @@ export default function LeadsPage() {
               onValueChange={(value) => setSelectedCustomerGroup(value === "all" ? "" : value)}
               className="flex-1"
             >
-              <TabsList className="inline-flex h-auto items-center justify-start gap-2 bg-transparent p-0 w-auto">
+              <TabsList className="inline-flex flex-wrap h-auto items-center justify-start gap-2 bg-transparent p-0 w-auto">
                 <TabsTrigger
                   value="all"
                   className="text-xs h-9 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:hover:bg-blue-700 data-[state=active]:hover:text-white"

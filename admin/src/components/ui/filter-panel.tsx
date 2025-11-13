@@ -1,5 +1,5 @@
 import { Filter, Search, X } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useId, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { Badge } from "./badge"
@@ -20,6 +20,8 @@ export interface FilterConfig {
   category: string[]
   priority: string[]
   search: string
+  dateFrom?: string
+  dateTo?: string
 }
 
 interface FilterPanelProps {
@@ -58,7 +60,10 @@ const FilterContent = ({
   selectedSentiment,
   selectedCategory,
   selectedPriority,
+  dateFrom,
+  dateTo,
   onToggleFilter,
+  onDateChange,
   activeFilterCount,
   onClearAll,
 }: {
@@ -68,82 +73,121 @@ const FilterContent = ({
   selectedSentiment: string[]
   selectedCategory: string[]
   selectedPriority: string[]
+  dateFrom: string
+  dateTo: string
   onToggleFilter: (type: "sentiment" | "category" | "priority", value: string) => void
+  onDateChange: (type: "from" | "to", value: string) => void
   activeFilterCount: number
   onClearAll: () => void
-}) => (
-  <div className="space-y-4">
-    {/* Sentiment Filter */}
-    <div>
-      <h4 className="text-sm font-medium mb-2">Sentiment</h4>
-      <div className="space-y-1">
-        {sentimentOptions.map((option) => (
-          <label
-            key={option.value}
-            className="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded-md"
-          >
-            <input
-              type="checkbox"
-              checked={selectedSentiment.includes(option.value)}
-              onChange={() => onToggleFilter("sentiment", option.value)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm">{option.label}</span>
-          </label>
-        ))}
-      </div>
-    </div>
+}) => {
+  const dateFromId = useId()
+  const dateToId = useId()
 
-    {/* Category Filter */}
-    <div>
-      <h4 className="text-sm font-medium mb-2">Category</h4>
-      <div className="space-y-1">
-        {categoryOptions.map((option) => (
-          <label
-            key={option.value}
-            className="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded-md"
-          >
-            <input
-              type="checkbox"
-              checked={selectedCategory.includes(option.value)}
-              onChange={() => onToggleFilter("category", option.value)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm">{option.label}</span>
-          </label>
-        ))}
+  return (
+    <div className="space-y-4">
+      {/* Sentiment Filter */}
+      <div>
+        <h4 className="text-sm font-medium mb-2">Sentiment</h4>
+        <div className="space-y-1">
+          {sentimentOptions.map((option) => (
+            <label
+              key={option.value}
+              className="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded-md"
+            >
+              <input
+                type="checkbox"
+                checked={selectedSentiment.includes(option.value)}
+                onChange={() => onToggleFilter("sentiment", option.value)}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">{option.label}</span>
+            </label>
+          ))}
+        </div>
       </div>
-    </div>
 
-    {/* Priority Filter */}
-    <div>
-      <h4 className="text-sm font-medium mb-2">Priority</h4>
-      <div className="space-y-1">
-        {priorityOptions.map((option) => (
-          <label
-            key={option.value}
-            className="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded-md"
-          >
-            <input
-              type="checkbox"
-              checked={selectedPriority.includes(option.value)}
-              onChange={() => onToggleFilter("priority", option.value)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm">{option.label}</span>
-          </label>
-        ))}
+      {/* Category Filter */}
+      <div>
+        <h4 className="text-sm font-medium mb-2">Category</h4>
+        <div className="space-y-1">
+          {categoryOptions.map((option) => (
+            <label
+              key={option.value}
+              className="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded-md"
+            >
+              <input
+                type="checkbox"
+                checked={selectedCategory.includes(option.value)}
+                onChange={() => onToggleFilter("category", option.value)}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">{option.label}</span>
+            </label>
+          ))}
+        </div>
       </div>
-    </div>
 
-    {/* Clear All Button */}
-    {activeFilterCount > 0 && (
-      <Button variant="outline" size="sm" onClick={onClearAll} className="w-full">
-        Clear All Filters
-      </Button>
-    )}
-  </div>
-)
+      {/* Priority Filter */}
+      <div>
+        <h4 className="text-sm font-medium mb-2">Priority</h4>
+        <div className="space-y-1">
+          {priorityOptions.map((option) => (
+            <label
+              key={option.value}
+              className="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded-md"
+            >
+              <input
+                type="checkbox"
+                checked={selectedPriority.includes(option.value)}
+                onChange={() => onToggleFilter("priority", option.value)}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm">{option.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Date Range */}
+      <div>
+        <h4 className="text-sm font-medium mb-2">Date Range</h4>
+        <div className="space-y-2">
+          <div>
+            <label htmlFor={dateFromId} className="text-xs text-muted-foreground">
+              From
+            </label>
+            <Input
+              id={dateFromId}
+              type="date"
+              value={dateFrom}
+              onChange={(e) => onDateChange("from", e.target.value)}
+              className="h-8 text-sm"
+            />
+          </div>
+          <div>
+            <label htmlFor={dateToId} className="text-xs text-muted-foreground">
+              To
+            </label>
+            <Input
+              id={dateToId}
+              type="date"
+              value={dateTo}
+              onChange={(e) => onDateChange("to", e.target.value)}
+              className="h-8 text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Clear All Button */}
+      {activeFilterCount > 0 && (
+        <Button variant="outline" size="sm" onClick={onClearAll} className="w-full">
+          Clear All Filters
+        </Button>
+      )}
+    </div>
+  )
+}
 
 export function FilterPanel({
   onFilterChange,
@@ -152,6 +196,8 @@ export function FilterPanel({
 }: FilterPanelProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const [isMobile, setIsMobile] = useState(false)
+  const dateFromDropdownId = useId()
+  const dateToDropdownId = useId()
 
   // Initialize from URL
   const [searchInput, setSearchInput] = useState(searchParams.get("search") || "")
@@ -165,6 +211,8 @@ export function FilterPanel({
   const [selectedPriority, setSelectedPriority] = useState<string[]>(
     searchParams.get("priority")?.split(",").filter(Boolean) || [],
   )
+  const [dateFrom, setDateFrom] = useState(searchParams.get("dateFrom") || "")
+  const [dateTo, setDateTo] = useState(searchParams.get("dateTo") || "")
 
   // Detect mobile
   useEffect(() => {
@@ -188,7 +236,9 @@ export function FilterPanel({
     selectedSentiment.length +
     selectedCategory.length +
     selectedPriority.length +
-    (searchQuery ? 1 : 0)
+    (searchQuery ? 1 : 0) +
+    (dateFrom ? 1 : 0) +
+    (dateTo ? 1 : 0)
 
   // Auto-apply filters when they change
   useEffect(() => {
@@ -197,6 +247,8 @@ export function FilterPanel({
     if (selectedSentiment.length > 0) params.set("sentiment", selectedSentiment.join(","))
     if (selectedCategory.length > 0) params.set("category", selectedCategory.join(","))
     if (selectedPriority.length > 0) params.set("priority", selectedPriority.join(","))
+    if (dateFrom) params.set("dateFrom", dateFrom)
+    if (dateTo) params.set("dateTo", dateTo)
 
     setSearchParams(params, { replace: true })
 
@@ -206,6 +258,8 @@ export function FilterPanel({
         sentiment: selectedSentiment,
         category: selectedCategory,
         priority: selectedPriority,
+        dateFrom,
+        dateTo,
       })
     }
   }, [
@@ -213,6 +267,8 @@ export function FilterPanel({
     selectedSentiment,
     selectedCategory,
     selectedPriority,
+    dateFrom,
+    dateTo,
     setSearchParams,
     onFilterChange,
   ])
@@ -224,6 +280,8 @@ export function FilterPanel({
     setSelectedSentiment([])
     setSelectedCategory([])
     setSelectedPriority([])
+    setDateFrom("")
+    setDateTo("")
     setSearchParams(new URLSearchParams(), { replace: true })
 
     if (onFilterChange) {
@@ -232,6 +290,8 @@ export function FilterPanel({
         sentiment: [],
         category: [],
         priority: [],
+        dateFrom: "",
+        dateTo: "",
       })
     }
   }
@@ -387,6 +447,41 @@ export function FilterPanel({
                 ))}
               </div>
 
+              <DropdownMenuSeparator />
+
+              {/* Date Range */}
+              <div className="px-2 py-2">
+                <DropdownMenuLabel className="text-xs text-muted-foreground px-0">
+                  Date Range
+                </DropdownMenuLabel>
+                <div className="space-y-2 mt-2">
+                  <div>
+                    <label htmlFor={dateFromDropdownId} className="text-xs text-muted-foreground">
+                      From
+                    </label>
+                    <Input
+                      id={dateFromDropdownId}
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor={dateToDropdownId} className="text-xs text-muted-foreground">
+                      To
+                    </label>
+                    <Input
+                      id={dateToDropdownId}
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {activeFilterCount > 0 && (
                 <>
                   <DropdownMenuSeparator />
@@ -437,7 +532,13 @@ export function FilterPanel({
                   selectedSentiment={selectedSentiment}
                   selectedCategory={selectedCategory}
                   selectedPriority={selectedPriority}
+                  dateFrom={dateFrom}
+                  dateTo={dateTo}
                   onToggleFilter={toggleFilter}
+                  onDateChange={(type, value) => {
+                    if (type === "from") setDateFrom(value)
+                    else setDateTo(value)
+                  }}
                   activeFilterCount={activeFilterCount}
                   onClearAll={clearAllFilters}
                 />
@@ -505,6 +606,32 @@ export function FilterPanel({
               </button>
             </Badge>
           ))}
+          {dateFrom && (
+            <Badge variant="secondary" className="gap-1">
+              From: {dateFrom}
+              <button
+                type="button"
+                onClick={() => setDateFrom("")}
+                className="ml-1 hover:bg-accent rounded-full"
+                aria-label="Remove date from filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {dateTo && (
+            <Badge variant="secondary" className="gap-1">
+              To: {dateTo}
+              <button
+                type="button"
+                onClick={() => setDateTo("")}
+                className="ml-1 hover:bg-accent rounded-full"
+                aria-label="Remove date to filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
           <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-6 px-2 text-xs">
             Clear All
           </Button>

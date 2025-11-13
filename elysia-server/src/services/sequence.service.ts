@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, lte, ne, or, sql } from "drizzle-orm"
+import { and, desc, eq, ilike, inArray, lte, ne, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { customerGroups } from "../db/schema/customer-groups"
 import { userEmailAccounts } from "../db/schema/email-accounts"
@@ -2146,6 +2146,128 @@ export async function getSequenceMetrics(sequenceId: string) {
   )
 
   return metrics
+}
+
+// GetOverallSequenceStats - Get overall statistics across all active sequences
+export async function getOverallSequenceStats(workspaceId?: string) {
+  const { default: logger } = await import("../utils/logger")
+
+  logger.debug({ workspaceId }, "📊 [METRICS] Getting overall sequence statistics")
+
+  // Build where clause for workspace filter
+  const whereClause = workspaceId
+    ? and(ne(sequences.status, "draft"), eq(sequences.workspaceId, workspaceId))
+    : ne(sequences.status, "draft")
+
+  // 1. Get count of sequences by status (excluding draft)
+  const sequenceStatusCounts = await db
+    .select({
+      status: sequences.status,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(sequences)
+    .where(whereClause)
+    .groupBy(sequences.status)
+
+  // 2. Get overall email statistics from all non-draft sequences
+  const sequenceIds = await db.select({ id: sequences.id }).from(sequences).where(whereClause)
+
+  const seqIds = sequenceIds.map((s) => s.id)
+
+  // If no sequences found, return zeros
+  if (seqIds.length === 0) {
+    return {
+      totalSequences: 0,
+      activeSequences: 0,
+      pausedSequences: 0,
+      completedSequences: 0,
+      archivedSequences: 0,
+      totalSent: 0,
+      totalDelivered: 0,
+      totalOpened: 0,
+      totalReplied: 0,
+      openRate: 0,
+      replyRate: 0,
+    }
+  }
+
+  const emailStatsResult = await db
+    .select({
+      totalSent: sql<number>`COUNT(*)::int`,
+      delivered: sql<number>`COUNT(CASE WHEN ${emailsTable.deliveredAt} IS NOT NULL THEN 1 END)::int`,
+      opened: sql<number>`COUNT(CASE WHEN ${emailsTable.openedAt} IS NOT NULL THEN 1 END)::int`,
+    })
+    .from(emailsTable)
+    .where(and(inArray(emailsTable.sequenceId, seqIds), eq(emailsTable.direction, "outbound")))
+
+  const emailStats = emailStatsResult[0] || {
+    totalSent: 0,
+    delivered: 0,
+    opened: 0,
+  }
+
+  // 3. Get replied emails count
+  const repliedCountResult = await db
+    .select({
+      count: sql<number>`COUNT(DISTINCT ${emailReplies.originalEmailId})::int`,
+    })
+    .from(emailReplies)
+    .innerJoin(emailsTable, eq(emailReplies.originalEmailId, emailsTable.id))
+    .where(and(eq(emailsTable.direction, "outbound"), inArray(emailsTable.sequenceId, seqIds)))
+
+  const repliedCount = repliedCountResult[0]?.count || 0
+
+  // Process sequence status counts
+  const statusCounts: Record<string, number> = {
+    active: 0,
+    paused: 0,
+    completed: 0,
+    archived: 0,
+    ready: 0,
+  }
+
+  let totalSequences = 0
+  sequenceStatusCounts.forEach((stat) => {
+    totalSequences += stat.count
+    if (stat.status in statusCounts) {
+      statusCounts[stat.status] = stat.count
+    }
+  })
+
+  // Calculate rates
+  const deliveredCount = emailStats.delivered
+  const openRate = deliveredCount > 0 ? (emailStats.opened / deliveredCount) * 100 : 0
+  const replyRate = deliveredCount > 0 ? (repliedCount / deliveredCount) * 100 : 0
+
+  const stats = {
+    totalSequences,
+    activeSequences: statusCounts.active,
+    pausedSequences: statusCounts.paused,
+    completedSequences: statusCounts.completed,
+    archivedSequences: statusCounts.archived,
+    readySequences: statusCounts.ready,
+    totalSent: emailStats.totalSent,
+    totalDelivered: emailStats.delivered,
+    totalOpened: emailStats.opened,
+    totalReplied: repliedCount,
+    openRate: Math.round(openRate * 10) / 10,
+    replyRate: Math.round(replyRate * 10) / 10,
+  }
+
+  logger.info(
+    {
+      workspaceId,
+      stats: {
+        totalSequences: stats.totalSequences,
+        totalDelivered: stats.totalDelivered,
+        openRate: stats.openRate,
+        replyRate: stats.replyRate,
+      },
+    },
+    "📊 [METRICS] Overall sequence statistics calculated",
+  )
+
+  return stats
 }
 
 // GetEnrollmentMetrics - Get detailed metrics for a specific enrollment

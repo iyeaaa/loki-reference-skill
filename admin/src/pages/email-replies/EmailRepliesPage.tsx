@@ -33,6 +33,8 @@ export default function EmailRepliesPage() {
     sentiment: [],
     category: [],
     priority: [],
+    dateFrom: "",
+    dateTo: "",
   })
 
   // Fetch real category counts from API
@@ -223,6 +225,8 @@ export default function EmailRepliesPage() {
                     filterSentiment={filters.sentiment}
                     filterCategory={filters.category}
                     filterPriority={filters.priority}
+                    dateFrom={filters.dateFrom}
+                    dateTo={filters.dateTo}
                   />
                 ) : (
                   <div className="py-12 text-center text-muted-foreground">

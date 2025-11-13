@@ -1,6 +1,14 @@
 import { motion } from "framer-motion"
 import type { LucideIcon } from "lucide-react"
-import { BarChart3, GitBranch, Mail, MessageSquare, Settings, UserCheck } from "lucide-react"
+import {
+  BarChart3,
+  GitBranch,
+  Mail,
+  MessageSquare,
+  Search,
+  Settings,
+  UserCheck,
+} from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Link, useLocation } from "react-router-dom"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
@@ -110,11 +118,11 @@ const getMainMenuItems = (t: (key: string) => string) => [
     url: "/replied-emails",
     icon: Mail,
   },
-  // {
-  //   title: t("sidebar.menu.webset"),
-  //   url: "/websets",
-  //   icon: Search,
-  // },
+  {
+    title: t("sidebar.menu.webset"),
+    url: "/websets",
+    icon: Search,
+  },
 ]
 
 interface AppSidebarProps {

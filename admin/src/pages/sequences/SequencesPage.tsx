@@ -12,6 +12,7 @@ import { useBulkDeleteSequences, useBulkUpdateSequenceStatus } from "@/lib/api/h
 import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence"
 import { BulkActionModal } from "./BulkActionModal"
 import { CampaignCardView } from "./CampaignCardView"
+import { SequencesDashboard } from "./SequencesDashboard"
 import { SequencesTableWithPagination } from "./SequencesTableWithPagination"
 
 export default function SequencesPage() {
@@ -20,7 +21,10 @@ export default function SequencesPage() {
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
-  const [viewMode, setViewMode] = useState<"list" | "card">("card")
+  const [viewMode, setViewMode] = useState<"list" | "card">(() => {
+    const savedViewMode = localStorage.getItem("sequences-view-mode")
+    return (savedViewMode as "list" | "card") || "card"
+  })
 
   const [selectedSequences, setSelectedSequences] = useState<string[]>([])
   const [showBulkActionModal, setShowBulkActionModal] = useState(false)
@@ -28,6 +32,11 @@ export default function SequencesPage() {
 
   const bulkUpdateStatus = useBulkUpdateSequenceStatus()
   const bulkDeleteSequences = useBulkDeleteSequences()
+
+  // Save view mode to localStorage
+  useEffect(() => {
+    localStorage.setItem("sequences-view-mode", viewMode)
+  }, [viewMode])
 
   // Debounce search input
   useEffect(() => {
@@ -97,6 +106,9 @@ export default function SequencesPage() {
 
   return (
     <div className="space-y-6 h-full overflow-y-auto">
+      {/* Dashboard */}
+      <SequencesDashboard />
+
       {/* Sequences Table */}
       <Card>
         <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0">

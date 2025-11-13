@@ -951,8 +951,7 @@ class WebhookService {
             inboundEmailId: inboundEmail.id,
             daysSinceOriginal: recentOutbound.sentAt
               ? Math.floor(
-                  (new Date().getTime() - new Date(recentOutbound.sentAt).getTime()) /
-                    (1000 * 60 * 60 * 24),
+                  (Date.now() - new Date(recentOutbound.sentAt).getTime()) / (1000 * 60 * 60 * 24),
                 )
               : null,
           })

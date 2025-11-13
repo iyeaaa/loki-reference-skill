@@ -180,7 +180,7 @@ export const iterationStep = createStep({
     }
 
     // Step 3: Process companies concurrently using p-queue (max 5 concurrent)
-    const queue = new PQueue({ concurrency: 5 })
+    const queue = new PQueue({ concurrency: 2 })
     let rowsEnriched = 0
     let rowsValidated = 0
     let validationErrors = 0

@@ -40,46 +40,10 @@ services:
     networks:
       - elysia-network
 
-  # Optional: pgAdmin for database management
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: elysia-pgadmin-dev
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@localhost.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-    ports:
-      - "5050:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    depends_on:
-      - postgres
-    networks:
-      - elysia-network
-
-  # Optional: RedisInsight for Redis management
-  redis-insight:
-    image: redis/redisinsight:latest
-    container_name: elysia-redisinsight-dev
-    restart: unless-stopped
-    ports:
-      - "5540:5540"
-    volumes:
-      - redisinsight_data:/data
-    depends_on:
-      - redis
-    networks:
-      - elysia-network
-
 volumes:
   postgres_data:
     driver: local
   redis_data:
-    driver: local
-  pgadmin_data:
-    driver: local
-  redisinsight_data:
     driver: local
 
 networks:

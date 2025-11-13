@@ -370,6 +370,7 @@ export function CampaignCardView({
                     size="sm"
                     className="w-full"
                     onClick={(e) => handleStatusToggle(sequence, e)}
+                    disabled={sequence.status === "draft"}
                   >
                     <Play className="h-3.5 w-3.5 mr-1" />
                     활성화

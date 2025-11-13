@@ -4,14 +4,14 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useBulkDeleteSequences, useBulkUpdateSequenceStatus } from "@/lib/api/hooks/sequences"
 import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence"
 import { BulkActionModal } from "./BulkActionModal"
 import { CampaignCardView } from "./CampaignCardView"
-import { SequenceFilters } from "./SequenceFilters"
 import { SequencesTableWithPagination } from "./SequencesTableWithPagination"
 
 export default function SequencesPage() {
@@ -19,7 +19,7 @@ export default function SequencesPage() {
   const navigate = useNavigate()
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
+  const [selectedStatus, setSelectedStatus] = useState<string>("all")
   const [viewMode, setViewMode] = useState<"list" | "card">("card")
 
   const [selectedSequences, setSelectedSequences] = useState<string[]>([])
@@ -83,12 +83,6 @@ export default function SequencesPage() {
     }
   }
 
-  const clearFilters = () => {
-    setSelectedStatuses([])
-    setSearchInput("")
-    setSearchQuery("")
-  }
-
   const toggleSequenceSelection = useCallback((sequenceId: string) => {
     setSelectedSequences((prev) =>
       prev.includes(sequenceId) ? prev.filter((id) => id !== sequenceId) : [...prev, sequenceId],
@@ -99,20 +93,29 @@ export default function SequencesPage() {
     setSelectedSequences((prev) => (prev.length === sequenceIds.length ? [] : sequenceIds))
   }, [])
 
+  const selectedStatuses = selectedStatus === "all" ? [] : [selectedStatus]
+
   return (
     <div className="space-y-6 h-full overflow-y-auto">
-      {/* Filters */}
-      <SequenceFilters
-        selectedStatuses={selectedStatuses}
-        onStatusChange={setSelectedStatuses}
-        onClearFilters={clearFilters}
-      />
-
       {/* Sequences Table */}
       <Card>
         <CardHeader className="pb-4 flex flex-row items-center justify-between space-y-0">
           <div className="flex flex-col">
-            <CardTitle className="text-lg">{t("sequences.title.sequenceManagement")}</CardTitle>
+            {/* Status Filter Tabs */}
+            <div className="mb-4">
+              <Tabs value={selectedStatus} onValueChange={setSelectedStatus}>
+                <TabsList>
+                  <TabsTrigger value="all">{t("sequences.filter.all")}</TabsTrigger>
+                  <TabsTrigger value="draft">{t("sequences.table.status.draft")}</TabsTrigger>
+                  <TabsTrigger value="active">{t("sequences.table.status.active")}</TabsTrigger>
+                  <TabsTrigger value="paused">{t("sequences.table.status.paused")}</TabsTrigger>
+                  <TabsTrigger value="completed">
+                    {t("sequences.table.status.completed")}
+                  </TabsTrigger>
+                  <TabsTrigger value="archived">{t("sequences.table.status.archived")}</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <ToggleGroup
@@ -136,7 +139,7 @@ export default function SequencesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Search input - positioned below title */}
+          {/* Search input */}
           <div className="mb-4">
             <div className="relative w-full md:w-[400px]">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -163,7 +166,7 @@ export default function SequencesPage() {
           </div>
 
           {/* Bulk Actions */}
-          {selectedSequences.length > 0 && viewMode === "list" && (
+          {selectedSequences.length > 0 && (
             <div className="flex items-center gap-4 mb-6">
               <div className="text-sm text-muted-foreground">
                 <span className="font-medium">
@@ -172,6 +175,16 @@ export default function SequencesPage() {
                 </span>
               </div>
               <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setBulkActionType("status")
+                    setShowBulkActionModal(true)
+                  }}
+                >
+                  {t("sequences.button.changeStatus")}
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -199,6 +212,8 @@ export default function SequencesPage() {
             <CampaignCardView
               searchQuery={searchQuery}
               selectedStatuses={selectedStatuses}
+              selectedSequences={selectedSequences}
+              onToggleSequence={toggleSequenceSelection}
               onEditSequence={handleEditSequence}
             />
           )}

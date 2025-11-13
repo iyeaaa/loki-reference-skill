@@ -52,7 +52,12 @@ export default function SequencesPage() {
   }
 
   const handleEditSequence = (sequence: Sequence) => {
-    navigate(`/sequences/edit?id=${sequence.id}`)
+    // 초안 상태면 Create 페이지로, 아니면 Edit 페이지로
+    if (sequence.status === "draft") {
+      navigate(`/sequences/create?id=${sequence.id}`)
+    } else {
+      navigate(`/sequences/edit?id=${sequence.id}`)
+    }
   }
 
   const handleBulkDelete = async () => {

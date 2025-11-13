@@ -140,7 +140,7 @@ export function useUpdateSequence() {
         queryKey: sequenceKeys.detail(variables.sequenceId),
       })
       queryClient.invalidateQueries({ queryKey: sequenceKeys.lists() })
-      toast.success("시퀀스 정보가 업데이트되었습니다")
+      // toast.success("시퀀스 정보가 업데이트되었습니다")
     },
     onError: (error: Error) => {
       toast.error(error.message || "시퀀스 업데이트에 실패했습니다")

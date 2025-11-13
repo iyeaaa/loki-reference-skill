@@ -143,7 +143,8 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
     "/",
     async ({ body, set }) => {
       // 고객그룹 필수 검증 (워크플로우 실행을 위해)
-      if (!body.customerGroupId) {
+      // draft 상태가 아닐 때만 필수
+      if (!body.customerGroupId && body.status !== "draft") {
         set.status = 400
         return errorResponse(
           "워크플로우 실행을 위해 고객그룹을 선택해주세요",

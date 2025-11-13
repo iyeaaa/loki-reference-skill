@@ -3,12 +3,10 @@ import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
 import { useCustomerGroup } from "@/lib/api/hooks/customer-groups"
-import { useCreateSequence, useCreateSequenceStep } from "@/lib/api/hooks/sequences"
+import { useCreateSequenceStep, useUpdateSequence } from "@/lib/api/hooks/sequences"
 import { useWorkspaces } from "@/lib/api/hooks/workspaces"
 
 interface EmailStep {
@@ -18,10 +16,11 @@ interface EmailStep {
   scheduledMinute: number
   emailSubject: string
   emailBodyText: string
-  files?: File[] // 첨부 파일
+  files?: File[]
 }
 
 interface CreateCampaignStep3Props {
+  sequenceId: string | null
   data: {
     workspaceId: string
     customerGroupId: string
@@ -34,11 +33,14 @@ interface CreateCampaignStep3Props {
   onChange: (data: { name: string; description: string; memo: string }) => void
 }
 
-export function CreateCampaignStep3({ data, onChange }: CreateCampaignStep3Props) {
+export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampaignStep3Props) {
   const navigate = useNavigate()
-  const [name, setName] = useState(data.name)
-  const [description, setDescription] = useState(data.description)
   const [memo, setMemo] = useState(data.memo)
+
+  // Debug: Log sequenceId
+  useEffect(() => {
+    console.log("📋 CreateCampaignStep3 - sequenceId:", sequenceId)
+  }, [sequenceId])
 
   const { data: workspacesData } = useWorkspaces()
   const { data: customerGroup } = useCustomerGroup(
@@ -46,7 +48,7 @@ export function CreateCampaignStep3({ data, onChange }: CreateCampaignStep3Props
     Boolean(data.customerGroupId),
   )
 
-  const createSequence = useCreateSequence()
+  const updateSequence = useUpdateSequence()
   const createSequenceStep = useCreateSequenceStep()
 
   const workspace = workspacesData?.workspaces.find((w) => w.id === data.workspaceId)
@@ -55,37 +57,40 @@ export function CreateCampaignStep3({ data, onChange }: CreateCampaignStep3Props
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: adding onChange to dependencies will cause infinite loop
   useEffect(() => {
-    onChange({ name, description, memo })
-  }, [name, description, memo])
+    onChange({ name: data.name, description: data.description, memo })
+  }, [memo])
 
   const handleSaveDraft = async () => {
-    if (!name.trim()) {
+    if (!sequenceId) {
+      toast.error("시퀀스 ID가 없습니다")
+      return
+    }
+
+    if (!data.name.trim()) {
       toast.error("캠페인 이름을 입력해주세요")
       return
     }
 
-    createSequence.mutate(
+    updateSequence.mutate(
       {
-        workspaceId: data.workspaceId,
-        customerGroupId: data.customerGroupId,
-        name: name.trim(),
-        description: description.trim() || undefined,
-        status: "draft",
-        selectedLeadIds: data.selectedLeadIds.length > 0 ? data.selectedLeadIds : undefined,
+        sequenceId,
+        data: {
+          name: data.name.trim(),
+          description: data.description.trim() || undefined,
+          status: "draft",
+          customerGroupId: data.customerGroupId || undefined,
+          selectedLeadIds: data.selectedLeadIds.length > 0 ? data.selectedLeadIds : undefined,
+        },
       },
       {
-        onSuccess: async (sequence) => {
+        onSuccess: async () => {
           // Create steps if any
           if (data.steps.length > 0) {
             try {
               for (const step of data.steps) {
-                console.log(
-                  "📎 CreateCampaignStep3 - Creating step with files:",
-                  step.files?.length || 0,
-                )
                 await createSequenceStep.mutateAsync({
                   data: {
-                    sequenceId: sequence.id,
+                    sequenceId,
                     stepOrder: step.stepOrder,
                     delayDays: step.delayDays,
                     scheduledHour: step.scheduledHour,
@@ -115,33 +120,36 @@ export function CreateCampaignStep3({ data, onChange }: CreateCampaignStep3Props
   }
 
   const handleSaveReady = async () => {
-    if (!name.trim()) {
+    if (!sequenceId) {
+      toast.error("시퀀스 ID가 없습니다")
+      return
+    }
+
+    if (!data.name.trim()) {
       toast.error("캠페인 이름을 입력해주세요")
       return
     }
 
-    createSequence.mutate(
+    updateSequence.mutate(
       {
-        workspaceId: data.workspaceId,
-        customerGroupId: data.customerGroupId,
-        name: name.trim(),
-        description: description.trim() || undefined,
-        status: "ready",
-        selectedLeadIds: data.selectedLeadIds.length > 0 ? data.selectedLeadIds : undefined,
+        sequenceId,
+        data: {
+          name: data.name.trim(),
+          description: data.description.trim() || undefined,
+          status: "ready",
+          customerGroupId: data.customerGroupId || undefined,
+          selectedLeadIds: data.selectedLeadIds.length > 0 ? data.selectedLeadIds : undefined,
+        },
       },
       {
-        onSuccess: async (sequence) => {
+        onSuccess: async () => {
           // Create steps if any
           if (data.steps.length > 0) {
             try {
               for (const step of data.steps) {
-                console.log(
-                  "📎 CreateCampaignStep3 - Creating step (ready) with files:",
-                  step.files?.length || 0,
-                )
                 await createSequenceStep.mutateAsync({
                   data: {
-                    sequenceId: sequence.id,
+                    sequenceId,
                     stepOrder: step.stepOrder,
                     delayDays: step.delayDays,
                     scheduledHour: step.scheduledHour,
@@ -170,129 +178,174 @@ export function CreateCampaignStep3({ data, onChange }: CreateCampaignStep3Props
     )
   }
 
-  return (
-    <ScrollArea className="h-[500px]">
-      <div className="space-y-6 pr-4">
-        {/* Campaign Name & Description */}
-        <div className="space-y-4 rounded-lg border p-4">
-          <h3 className="font-semibold">캠페인 정보</h3>
-          <div className="space-y-2">
-            <Label>캠페인 이름 *</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="예: 신규 고객 온보딩 캠페인"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>설명</Label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="캠페인에 대한 설명을 입력하세요..."
-              rows={3}
-            />
-          </div>
+  // Show loading state if sequence is not ready
+  if (!sequenceId) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
+          <p className="text-muted-foreground">캠페인을 준비하고 있습니다...</p>
         </div>
+      </div>
+    )
+  }
 
-        {/* Recipients Summary */}
-        <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold">수신자 요약</h3>
-            <Check className="h-4 w-4 text-green-600 ml-auto" />
+  return (
+    <div className="h-full grid grid-cols-3 gap-6">
+      {/* Panel 1: Recipients Summary */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Users className="h-5 w-5 text-primary" />
+          발송 대상
+        </h3>
+
+        <div className="rounded-lg border p-4 bg-muted/30 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">워크스페이스</span>
+            <Check className="h-4 w-4 text-green-600" />
           </div>
+
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center py-2 border-b">
               <span className="text-muted-foreground">워크스페이스</span>
               <span className="font-medium">{workspace?.name || "-"}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center py-2 border-b">
               <span className="text-muted-foreground">고객그룹</span>
               <span className="font-medium">{customerGroup?.name || "-"}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center py-2">
               <span className="text-muted-foreground">수신자 수</span>
-              <span className="font-medium">{recipientCount}명</span>
+              <span className="font-medium text-primary text-lg">{recipientCount}명</span>
             </div>
-            {data.selectedLeadIds.length > 0 && (
-              <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/20 rounded text-xs text-blue-900 dark:text-blue-200">
-                특정 고객 {data.selectedLeadIds.length}명에게만 발송됩니다
+          </div>
+
+          {data.selectedLeadIds.length > 0 && (
+            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-md">
+              <p className="text-xs text-blue-900 dark:text-blue-200">
+                💡 특정 고객 {data.selectedLeadIds.length}명에게만 발송됩니다
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Campaign Info at bottom of first panel */}
+        <div className="rounded-lg border p-4 space-y-3">
+          <h4 className="font-semibold text-sm">캠페인 정보</h4>
+          <div className="space-y-2">
+            <div>
+              <span className="text-xs text-muted-foreground">캠페인 이름</span>
+              <p className="text-sm font-medium mt-1">{data.name || "(이름 없음)"}</p>
+            </div>
+            {data.description && (
+              <div>
+                <span className="text-xs text-muted-foreground">설명</span>
+                <p className="text-sm mt-1">{data.description}</p>
               </div>
             )}
           </div>
         </div>
+      </div>
 
-        {/* Scenario Summary */}
-        <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
-          <div className="flex items-center gap-2">
-            <Mail className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold">시나리오 요약</h3>
-            <Check className="h-4 w-4 text-green-600 ml-auto" />
+      {/* Panel 2: Email Scenario Summary */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Mail className="h-5 w-5 text-primary" />
+          이메일 시나리오
+        </h3>
+
+        <div className="rounded-lg border p-4 bg-muted/30">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-sm font-medium">총 {data.steps.length}개의 이메일 스텝</span>
+            <Check className="h-4 w-4 text-green-600" />
           </div>
-          <div className="space-y-2">
-            <div className="text-sm text-muted-foreground mb-3">
-              총 {data.steps.length}개의 이메일 스텝
-            </div>
-            {data.steps.map((step) => (
-              <div key={step.stepOrder} className="rounded-lg border bg-background p-3">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold flex-shrink-0">
-                    {step.stepOrder}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                      <Clock className="h-3 w-3" />
-                      {step.delayDays === 0 ? "즉시 발송" : `${step.delayDays}일 후`}
-                      {" · "}
-                      {String(step.scheduledHour).padStart(2, "0")}:
-                      {String(step.scheduledMinute).padStart(2, "0")}
+
+          <ScrollArea className="h-[calc(100vh-400px)]">
+            <div className="space-y-3 pr-4">
+              {data.steps.map((step) => (
+                <div key={step.stepOrder} className="rounded-lg border bg-background p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold flex-shrink-0">
+                      {step.stepOrder}
                     </div>
-                    <p className="text-sm font-medium mb-1">{step.emailSubject}</p>
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      {step.emailBodyText}
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                        <Clock className="h-3 w-3" />
+                        {step.delayDays === 0 ? "즉시 발송" : `${step.delayDays}일 후`}
+                        {" · "}
+                        {String(step.scheduledHour).padStart(2, "0")}:
+                        {String(step.scheduledMinute).padStart(2, "0")}
+                      </div>
+                      <p className="text-sm font-medium mb-2">{step.emailSubject}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-3">
+                        {step.emailBodyText}
+                      </p>
+                      {step.files && step.files.length > 0 && (
+                        <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+                          <Mail className="h-3 w-3" />
+                          첨부파일 {step.files.length}개
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Memo */}
-        <div className="space-y-4 rounded-lg border p-4">
-          <h3 className="font-semibold">메모 (선택사항)</h3>
-          <Textarea
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            placeholder="캠페인에 대한 추가 메모를 입력하세요..."
-            rows={4}
-          />
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3 pt-4 border-t">
-          <Button
-            variant="outline"
-            onClick={handleSaveDraft}
-            disabled={createSequence.isPending}
-            className="flex-1"
-          >
-            초안 저장
-          </Button>
-          <Button onClick={handleSaveReady} disabled={createSequence.isPending} className="flex-1">
-            {createSequence.isPending ? "저장 중..." : "준비 완료"}
-          </Button>
-        </div>
-
-        <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-3">
-          <p className="text-xs text-blue-900 dark:text-blue-200">
-            <strong>초안 저장:</strong> 캠페인이 초안 상태로 저장되며, 나중에 수정할 수 있습니다.
-            <br />
-            <strong>준비 완료:</strong> 캠페인이 준비 상태로 저장되며, 바로 활성화할 수 있습니다.
-          </p>
+              ))}
+            </div>
+          </ScrollArea>
         </div>
       </div>
-    </ScrollArea>
+
+      {/* Panel 3: Memo & Actions */}
+      <div className="space-y-4 flex flex-col">
+        <h3 className="text-lg font-semibold">메모</h3>
+
+        <div className="flex-1 flex flex-col gap-4">
+          <div className="flex-1">
+            <Textarea
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              placeholder="캠페인에 대한 추가 메모를 입력하세요..."
+              className="h-full min-h-[200px] resize-none"
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-4">
+              <p className="text-xs text-blue-900 dark:text-blue-200 space-y-2">
+                <span className="block">
+                  <strong>초안 저장:</strong> 캠페인이 초안 상태로 저장되며, 나중에 수정할 수
+                  있습니다.
+                </span>
+                <span className="block">
+                  <strong>준비 완료:</strong> 캠페인이 준비 상태로 저장되며, 바로 활성화할 수
+                  있습니다.
+                </span>
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={handleSaveReady}
+                disabled={updateSequence.isPending}
+                className="w-full h-11"
+                size="lg"
+              >
+                {updateSequence.isPending ? "저장 중..." : "준비 완료"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleSaveDraft}
+                disabled={updateSequence.isPending}
+                className="w-full h-11"
+                size="lg"
+              >
+                초안 저장
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

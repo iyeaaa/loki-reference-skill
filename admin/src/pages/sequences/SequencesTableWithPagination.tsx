@@ -99,6 +99,8 @@ export function SequencesTableWithPagination({
         return t("sequences.table.status.completed")
       case "no_response":
         return t("sequences.table.status.noResponse")
+      case "ready":
+        return t("sequences.table.status.ready")
       default:
         return status
     }

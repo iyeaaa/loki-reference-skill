@@ -48,6 +48,11 @@ table.column.enrollmentCount,등록 수,Enrollment Count
 table.column.createdAt,생성일,Created Date
 table.column.updatedAt,수정일,Updated Date
 table.column.actions,작업,Actions
+table.column.customerGroup,고객그룹,Customer Group
+table.column.customerCount,고객 수,Customer Count
+table.column.sentCount,발송 수,Sent Count
+table.column.openRate,오픈율,Open Rate
+table.column.replyRate,답변율,Reply Rate
 table.status.draft,초안,Draft
 table.status.ready,준비,Ready
 table.status.active,활성,Active

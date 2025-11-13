@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Edit, Pause, Play } from "lucide-react"
+import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
@@ -231,12 +231,6 @@ export function SequencesTableWithPagination({
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                  style={{ minWidth: "250px" }}
-                >
-                  {t("sequences.table.column.description")}
-                </th>
-                <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   {t("sequences.table.column.status")}
@@ -251,7 +245,13 @@ export function SequencesTableWithPagination({
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ minWidth: "120px" }}
                 >
-                  {t("sequences.table.column.creator")}
+                  {t("sequences.table.column.customerGroup")}
+                </th>
+                <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  style={{ width: "1%", whiteSpace: "nowrap" }}
+                >
+                  {t("sequences.table.column.customerCount")}
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
@@ -263,13 +263,19 @@ export function SequencesTableWithPagination({
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
-                  {t("sequences.table.column.enrollmentCount")}
+                  {t("sequences.table.column.sentCount")}
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
-                  {t("sequences.table.column.createdAt")}
+                  {t("sequences.table.column.openRate")}
+                </th>
+                <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  style={{ width: "1%", whiteSpace: "nowrap" }}
+                >
+                  {t("sequences.table.column.replyRate")}
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
@@ -312,18 +318,6 @@ export function SequencesTableWithPagination({
                   >
                     {sequence.name}
                   </td>
-                  <td
-                    className="p-2 text-sm text-gray-600 dark:text-gray-300"
-                    title={sequence.description || "-"}
-                    style={{
-                      maxWidth: "350px",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {sequence.description || "-"}
-                  </td>
                   <td className="p-2 whitespace-nowrap text-sm">
                     <Badge variant={getStatusBadgeVariant(sequence.status)} className="text-xs">
                       {getStatusText(sequence.status)}
@@ -343,7 +337,7 @@ export function SequencesTableWithPagination({
                   </td>
                   <td
                     className="p-2 text-sm text-gray-900 dark:text-gray-100"
-                    title={sequence.createdByUsername || sequence.createdByEmail || "-"}
+                    title={sequence.customerGroupName || "-"}
                     style={{
                       maxWidth: "150px",
                       overflow: "hidden",
@@ -351,16 +345,22 @@ export function SequencesTableWithPagination({
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {sequence.createdByUsername || sequence.createdByEmail || "-"}
-                  </td>
-                  <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
-                    {sequence.stepsCount ?? 0}
+                    {sequence.customerGroupName || "-"}
                   </td>
                   <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
                     {sequence.enrollmentsCount ?? 0}
                   </td>
-                  <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
-                    {formatRelativeTime(sequence.createdAt)}
+                  <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
+                    {sequence.completedEnrollmentsCount ?? 0}/{sequence.stepsCount ?? 0}
+                  </td>
+                  <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
+                    -
+                  </td>
+                  <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
+                    -
+                  </td>
+                  <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center">
+                    -
                   </td>
                   <td className="p-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                     {formatRelativeTime(sequence.updatedAt)}
@@ -394,27 +394,6 @@ export function SequencesTableWithPagination({
                         ) : (
                           <Play className="h-3 w-3" />
                         )}
-                      </Button>
-                      {/* <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/sequences/${sequence.id}/designer`)}
-                        className="text-xs h-8 px-3"
-                        title={t("sequences.table.button.editNodes")}
-                      >
-                        <Workflow className="h-3 w-3" />
-                      </Button> */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onEditSequence(sequence)
-                        }}
-                        className="text-xs h-8 px-3"
-                        title={t("sequences.table.button.editSequence")}
-                      >
-                        <Edit className="h-3 w-3" />
                       </Button>
                     </div>
                   </td>

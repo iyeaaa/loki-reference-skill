@@ -59,6 +59,7 @@ export const sequences = pgTable(
     }),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
+    memo: text("memo"), // Internal notes for campaign
     workflowData: text("workflow_data"), // JSON data for React Flow workflow
     selectedLeadIds: text("selected_lead_ids"), // JSON array of lead IDs to target (null = all leads in group)
     status: sequenceStatusEnum("status").notNull().default("draft"),

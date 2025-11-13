@@ -38,6 +38,7 @@ export interface Sequence {
   customerGroupId?: string | null
   name: string
   description?: string | null
+  memo?: string | null
   status: SequenceStatus
   workflowData?: string | null
   selectedLeadIds?: string | null // JSON string array of lead IDs
@@ -131,6 +132,7 @@ export interface CreateSequenceRequest {
 export interface UpdateSequenceRequest {
   name?: string
   description?: string
+  memo?: string
   status?: SequenceStatus
   workflowData?: string
   customerGroupId?: string

@@ -1,13 +1,17 @@
-import { ChevronDown, Mail, Sparkles } from "lucide-react"
+import { format } from "date-fns"
+import { ko } from "date-fns/locale"
+import { Calendar as CalendarIcon, ChevronDown, Mail, Sparkles } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { FileAttachment } from "@/components/FileAttachment"
 import { SignatureEditorModal } from "@/components/SignatureEditorModal"
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import {
   Select,
@@ -16,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { TimePicker } from "@/components/ui/time-picker"
 import { useDefaultEmailSignature } from "@/lib/api/hooks/email-signatures"
@@ -23,6 +28,7 @@ import { leadsApi } from "@/lib/api/services/leads"
 import { sequencesApi } from "@/lib/api/services/sequences"
 import type { SequenceStep, StepConditionType } from "@/lib/api/types/sequence"
 import { useAuth } from "@/lib/auth-provider"
+import { cn } from "@/lib/utils"
 import { generateSignatureHtml } from "@/lib/utils/email-signature"
 import { markdownToHtml } from "@/lib/utils/markdown"
 
@@ -186,6 +192,12 @@ export function SequenceStepForm({
     conditionConfig: step?.conditionConfig || "",
     previousStepId: step?.previousStepId || "",
   })
+
+  // 날짜/시간 입력 방식: "relative" (상대적) 또는 "absolute" (절대적)
+  const [scheduleMode, setScheduleMode] = useState<"relative" | "absolute">("relative")
+
+  // 절대적 날짜 선택을 위한 상태
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
 
   const [showAIGenerator, setShowAIGenerator] = useState(false)
   const [aiPrompt, setAiPrompt] = useState("")
@@ -419,61 +431,184 @@ export function SequenceStepForm({
       <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
         <h3 className="text-sm font-semibold">{t("sequences.stepForm.scheduleTitle")}</h3>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor={delayDaysId}>
-              {t("sequences.stepForm.delayDaysLabel")} <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id={delayDaysId}
-              type="number"
-              min="0"
-              value={formData.delayDays}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  delayDays: parseInt(e.target.value, 10) || 0,
-                })
-              }
-              required
-              placeholder="0"
-              className="bg-background"
-            />
-            <p className="text-xs text-muted-foreground">
-              {t("sequences.stepForm.delayDaysHelper")}
-            </p>
-          </div>
+        {/* 날짜 입력 방식 선택 탭 */}
+        <Tabs
+          value={scheduleMode}
+          onValueChange={(v) => setScheduleMode(v as "relative" | "absolute")}
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="relative">
+              {t("sequences.stepForm.relativeDateMode", "상대적 날짜")}
+            </TabsTrigger>
+            <TabsTrigger value="absolute">
+              {t("sequences.stepForm.absoluteDateMode", "절대적 날짜")}
+            </TabsTrigger>
+          </TabsList>
 
-          <div className="space-y-2">
-            <Label className="mb-3 inline-block">
-              {t("sequences.stepForm.sendTimeLabel")} <span className="text-red-500">*</span>
-            </Label>
-            <TimePicker
-              value={{
-                hour: Number.isInteger(formData.scheduledHour) ? formData.scheduledHour : 9,
-                minute: Number.isInteger(formData.scheduledMinute) ? formData.scheduledMinute : 0,
-              }}
-              onChange={(time) => {
-                console.log("TimePicker onChange:", time)
-                setFormData({
-                  ...formData,
-                  scheduledHour: time.hour,
-                  scheduledMinute: time.minute,
-                })
-              }}
-            />
-          </div>
-        </div>
+          {/* 상대적 날짜 입력 (기존 방식) */}
+          <TabsContent value="relative" className="space-y-4 mt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor={delayDaysId}>
+                  {t("sequences.stepForm.delayDaysLabel")} <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id={delayDaysId}
+                  type="number"
+                  min="0"
+                  value={formData.delayDays}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      delayDays: parseInt(e.target.value, 10) || 0,
+                    })
+                  }
+                  required
+                  placeholder="0"
+                  className="bg-background"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("sequences.stepForm.delayDaysHelper")}
+                </p>
+              </div>
 
-        {/* 발송 예정 미리보기 */}
-        <div className="rounded-md bg-primary/5 border border-primary/20 p-3">
-          <p className="text-sm font-medium text-primary">
-            {t("sequences.stepForm.schedulePreview", {
-              days: formData.delayDays,
-              time: `${formData.scheduledHour.toString().padStart(2, "0")}:${formData.scheduledMinute.toString().padStart(2, "0")}`,
-            })}
-          </p>
-        </div>
+              <div className="space-y-2">
+                <Label className="mb-3 inline-block">
+                  {t("sequences.stepForm.sendTimeLabel")} <span className="text-red-500">*</span>
+                </Label>
+                <TimePicker
+                  value={{
+                    hour: Number.isInteger(formData.scheduledHour) ? formData.scheduledHour : 9,
+                    minute: Number.isInteger(formData.scheduledMinute)
+                      ? formData.scheduledMinute
+                      : 0,
+                  }}
+                  onChange={(time) => {
+                    console.log("TimePicker onChange:", time)
+                    setFormData({
+                      ...formData,
+                      scheduledHour: time.hour,
+                      scheduledMinute: time.minute,
+                    })
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* 발송 예정 미리보기 */}
+            <div className="rounded-md bg-primary/5 border border-primary/20 p-3">
+              <p className="text-sm font-medium text-primary">
+                {t("sequences.stepForm.schedulePreview", {
+                  days: formData.delayDays,
+                  time: `${formData.scheduledHour.toString().padStart(2, "0")}:${formData.scheduledMinute.toString().padStart(2, "0")}`,
+                })}
+              </p>
+            </div>
+          </TabsContent>
+
+          {/* 절대적 날짜/시간 입력 (새로운 방식) */}
+          <TabsContent value="absolute" className="space-y-4 mt-4">
+            <div className="space-y-4">
+              {/* 날짜 선택 */}
+              <div className="space-y-2">
+                <Label>
+                  {t("sequences.stepForm.selectDateLabel", "발송 날짜 선택")}{" "}
+                  <span className="text-red-500">*</span>
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !selectedDate && "text-muted-foreground",
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate
+                        ? format(selectedDate, "PPP", { locale: ko })
+                        : t("sequences.stepForm.selectDatePlaceholder", "날짜를 선택하세요")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => {
+                        setSelectedDate(date)
+                        // 선택한 날짜를 기준으로 delayDays 계산
+                        if (date) {
+                          const now = new Date()
+                          const diffTime = date.getTime() - now.getTime()
+                          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                          setFormData({
+                            ...formData,
+                            delayDays: Math.max(0, diffDays),
+                          })
+                        }
+                      }}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    "sequences.stepForm.absoluteDateHelper",
+                    "이메일이 발송될 구체적인 날짜를 선택하세요",
+                  )}
+                </p>
+              </div>
+
+              {/* 시간 선택 */}
+              <div className="space-y-2">
+                <Label>
+                  {t("sequences.stepForm.sendTimeLabel")} <span className="text-red-500">*</span>
+                </Label>
+                <TimePicker
+                  value={{
+                    hour: Number.isInteger(formData.scheduledHour) ? formData.scheduledHour : 9,
+                    minute: Number.isInteger(formData.scheduledMinute)
+                      ? formData.scheduledMinute
+                      : 0,
+                  }}
+                  onChange={(time) => {
+                    setFormData({
+                      ...formData,
+                      scheduledHour: time.hour,
+                      scheduledMinute: time.minute,
+                    })
+                  }}
+                />
+              </div>
+
+              {/* 선택한 날짜/시간 미리보기 */}
+              {selectedDate && (
+                <div className="rounded-md bg-primary/5 border border-primary/20 p-3">
+                  <p className="text-sm font-medium text-primary">
+                    {t(
+                      "sequences.stepForm.absoluteSchedulePreview",
+                      "📅 발송 예정: {{date}} {{time}}",
+                      {
+                        date: format(selectedDate, "yyyy년 MM월 dd일 (EEE)", { locale: ko }),
+                        time: `${formData.scheduledHour.toString().padStart(2, "0")}:${formData.scheduledMinute.toString().padStart(2, "0")}`,
+                      },
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t(
+                      "sequences.stepForm.absoluteDateNote",
+                      "내부적으로 {{days}}일 후로 저장됩니다",
+                      {
+                        days: formData.delayDays,
+                      },
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* AI 생성 섹션 */}

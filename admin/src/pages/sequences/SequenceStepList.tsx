@@ -1,10 +1,11 @@
-import { Edit, Plus, Trash2 } from "lucide-react"
+import { Clock, Edit, Plus, Trash2, X } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   useCreateSequenceStep,
   useDeleteSequenceStep,
@@ -28,6 +29,14 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
   const { t } = useTranslation()
   const [editingStep, setEditingStep] = useState<SequenceStep | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+
+  // 인라인 편집 상태
+  const [inlineEditingStepId, setInlineEditingStepId] = useState<string | null>(null)
+  const [inlineEditValues, setInlineEditValues] = useState<{
+    delayDays: number
+    scheduledHour: number
+    scheduledMinute: number
+  }>({ delayDays: 0, scheduledHour: 9, scheduledMinute: 0 })
 
   // Fetch steps only if we have a sequenceId (edit mode)
   const { data: steps = [], isLoading } = useSequenceSteps(sequenceId || "", !!sequenceId)
@@ -114,6 +123,46 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
     deleteStep.mutate({ stepId })
   }
 
+  // 인라인 편집 시작
+  const handleStartInlineEdit = (step: SequenceStep) => {
+    setInlineEditingStepId(step.id)
+    setInlineEditValues({
+      delayDays: step.delayDays,
+      scheduledHour: step.scheduledHour ?? 9,
+      scheduledMinute: step.scheduledMinute ?? 0,
+    })
+  }
+
+  // 인라인 편집 취소
+  const handleCancelInlineEdit = () => {
+    setInlineEditingStepId(null)
+    setInlineEditValues({ delayDays: 0, scheduledHour: 9, scheduledMinute: 0 })
+  }
+
+  // 인라인 편집 저장
+  const handleSaveInlineEdit = (step: SequenceStep) => {
+    if (!inlineEditingStepId) return
+
+    const updateData: SequenceStepUpdateInput = {
+      stepOrder: step.stepOrder,
+      delayDays: inlineEditValues.delayDays,
+      scheduledHour: inlineEditValues.scheduledHour,
+      scheduledMinute: inlineEditValues.scheduledMinute,
+      timezone: step.timezone ?? undefined,
+      emailSubject: step.emailSubject,
+      emailBodyText: step.emailBodyText || "",
+    }
+
+    updateStep.mutate(
+      { stepId: step.id, data: updateData },
+      {
+        onSuccess: () => {
+          handleCancelInlineEdit()
+        },
+      },
+    )
+  }
+
   // Calculate next step order
   const nextStepOrder = steps.length > 0 ? Math.max(...steps.map((s) => s.stepOrder)) + 1 : 1
 
@@ -183,92 +232,204 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
             <div className="space-y-3">
               {steps
                 .sort((a, b) => a.stepOrder - b.stepOrder)
-                .map((step) => (
-                  <div
-                    key={step.id}
-                    className="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="outline" className="text-xs">
-                            {t("sequences.stepsList.stepNumber", { order: step.stepOrder })}
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {step.delayDays === 0
-                              ? t("sequences.stepsList.sendImmediately")
-                              : t("sequences.stepsList.sendAfterDays", { days: step.delayDays })}
-                          </Badge>
+                .map((step) => {
+                  const isInlineEditing = inlineEditingStepId === step.id
+                  const isFullEditing = editingStep?.id === step.id
+
+                  return (
+                    <div
+                      key={step.id}
+                      className="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    >
+                      {/* 전체 편집 모드 */}
+                      {isFullEditing ? (
+                        <div className="max-h-[80vh] overflow-y-auto">
+                          <div className="flex items-center justify-between mb-4 sticky top-0 bg-background z-10 pb-2">
+                            <h3 className="font-medium">
+                              {t("sequences.stepsList.dialog.editTitle")}
+                            </h3>
+                            <Button variant="ghost" size="sm" onClick={() => setEditingStep(null)}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <SequenceStepForm
+                            step={step}
+                            stepOrder={step.stepOrder}
+                            workspaceId={sequence?.workspaceId}
+                            customerGroupId={sequence?.customerGroupId || undefined}
+                            onSave={handleUpdateStep}
+                            onCancel={() => setEditingStep(null)}
+                          />
                         </div>
-                        <h4 className="font-medium text-sm mb-1 truncate" title={step.emailSubject}>
-                          {step.emailSubject}
-                        </h4>
-                        {step.emailBodyText && (
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {step.emailBodyText}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex gap-2 flex-shrink-0">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingStep(step)}
-                          className="h-8 px-2"
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteStep(step.id)}
-                          className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="outline" className="text-xs">
+                                {t("sequences.stepsList.stepNumber", { order: step.stepOrder })}
+                              </Badge>
+
+                              {/* 인라인 편집 모드 */}
+                              {isInlineEditing ? (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <div className="flex items-center gap-2">
+                                    <Label className="text-xs">
+                                      {t("sequences.stepsList.inlineEdit.delayDays", "대기일")}
+                                    </Label>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      value={inlineEditValues.delayDays}
+                                      onChange={(e) =>
+                                        setInlineEditValues({
+                                          ...inlineEditValues,
+                                          delayDays: parseInt(e.target.value, 10) || 0,
+                                        })
+                                      }
+                                      className="h-7 w-16 text-xs"
+                                    />
+                                    <span className="text-xs text-muted-foreground">
+                                      {t("sequences.stepsList.inlineEdit.days", "일")}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3 text-muted-foreground" />
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max="23"
+                                      value={inlineEditValues.scheduledHour}
+                                      onChange={(e) =>
+                                        setInlineEditValues({
+                                          ...inlineEditValues,
+                                          scheduledHour: parseInt(e.target.value, 10) || 0,
+                                        })
+                                      }
+                                      className="h-7 w-12 text-xs"
+                                    />
+                                    <span className="text-xs">:</span>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max="59"
+                                      value={inlineEditValues.scheduledMinute}
+                                      onChange={(e) =>
+                                        setInlineEditValues({
+                                          ...inlineEditValues,
+                                          scheduledMinute: parseInt(e.target.value, 10) || 0,
+                                        })
+                                      }
+                                      className="h-7 w-12 text-xs"
+                                    />
+                                  </div>
+
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    onClick={() => handleSaveInlineEdit(step)}
+                                    className="h-7 px-2 text-xs"
+                                  >
+                                    {t("sequences.stepsList.inlineEdit.save", "저장")}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={handleCancelInlineEdit}
+                                    className="h-7 px-2 text-xs"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleStartInlineEdit(step)
+                                  }}
+                                  title={t(
+                                    "sequences.stepsList.inlineEdit.clickToEdit",
+                                    "클릭하여 날짜/시간 수정",
+                                  )}
+                                >
+                                  {step.delayDays === 0
+                                    ? t("sequences.stepsList.sendImmediately")
+                                    : t("sequences.stepsList.sendAfterDays", {
+                                        days: step.delayDays,
+                                      })}
+                                  {" • "}
+                                  {`${step.scheduledHour?.toString().padStart(2, "0") ?? "09"}:${step.scheduledMinute?.toString().padStart(2, "0") ?? "00"}`}
+                                </Badge>
+                              )}
+                            </div>
+                            <h4
+                              className="font-medium text-sm mb-1 truncate"
+                              title={step.emailSubject}
+                            >
+                              {step.emailSubject}
+                            </h4>
+                            {step.emailBodyText && (
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {step.emailBodyText}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-2 flex-shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingStep(step)}
+                              className="h-8 px-2"
+                              disabled={isInlineEditing}
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteStep(step.id)}
+                              className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              disabled={isInlineEditing}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Create Step Dialog */}
-      <Dialog open={isCreating} onOpenChange={setIsCreating}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t("sequences.stepsList.dialog.createTitle")}</DialogTitle>
-          </DialogHeader>
-          <SequenceStepForm
-            stepOrder={nextStepOrder}
-            workspaceId={sequence?.workspaceId}
-            customerGroupId={sequence?.customerGroupId || undefined}
-            onSave={handleCreateStep}
-            onCancel={() => setIsCreating(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Step Dialog */}
-      <Dialog open={!!editingStep} onOpenChange={() => setEditingStep(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t("sequences.stepsList.dialog.editTitle")}</DialogTitle>
-          </DialogHeader>
-          {editingStep && (
+      {/* Create Step - 인라인 폼 */}
+      {isCreating && (
+        <Card className="mt-4">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">
+                {t("sequences.stepsList.dialog.createTitle")}
+              </CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => setIsCreating(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="max-h-[80vh] overflow-y-auto">
             <SequenceStepForm
-              step={editingStep}
-              stepOrder={editingStep.stepOrder}
+              stepOrder={nextStepOrder}
               workspaceId={sequence?.workspaceId}
               customerGroupId={sequence?.customerGroupId || undefined}
-              onSave={handleUpdateStep}
-              onCancel={() => setEditingStep(null)}
+              onSave={handleCreateStep}
+              onCancel={() => setIsCreating(false)}
             />
-          )}
-        </DialogContent>
-      </Dialog>
+          </CardContent>
+        </Card>
+      )}
     </>
   )
 }

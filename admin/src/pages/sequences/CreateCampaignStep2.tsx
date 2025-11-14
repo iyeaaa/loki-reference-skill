@@ -1,6 +1,8 @@
+import { format } from "date-fns"
+import { ko } from "date-fns/locale"
 import {
   AlertCircle,
-  Calendar,
+  Calendar as CalendarIcon,
   Check,
   ChevronDown,
   ChevronRight,
@@ -17,16 +19,11 @@ import toast from "react-hot-toast"
 import { SignatureEditorModal } from "@/components/SignatureEditorModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -37,6 +34,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Textarea } from "@/components/ui/textarea"
+import { TimePicker } from "@/components/ui/time-picker"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useDefaultEmailSignature } from "@/lib/api/hooks/email-signatures"
 import {
@@ -147,6 +145,9 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
   const [showVariables, setShowVariables] = useState(false)
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false)
   const prevDataStepsRef = useRef(data.steps)
+
+  // 인라인 스케줄 편집 상태
+  const [editingScheduleIndex, setEditingScheduleIndex] = useState<number | null>(null)
 
   // Current editing step
   const currentStep = steps[selectedStepIndex]
@@ -490,87 +491,177 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
                 )}
                 onClick={() => setSelectedStepIndex(index)}
               >
-                {/* Schedule info above step - Now editable */}
+                {/* Schedule info above step - Inline editable */}
                 <div className="mb-2 pb-2 border-b">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start gap-2 h-auto p-1 text-xs text-muted-foreground hover:text-foreground group"
-                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
-                      >
-                        <Calendar className="h-3 w-3" />
-                        <span>{step.delayDays === 0 ? "즉시 발송" : `${step.delayDays}일 후`}</span>
-                        <Clock className="h-3 w-3 ml-1" />
-                        <span>
-                          {String(step.scheduledHour).padStart(2, "0")}:
-                          {String(step.scheduledMinute).padStart(2, "0")}
-                        </span>
-                        <span className="text-xs text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                          수정
-                        </span>
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                        <DialogTitle>스텝 {step.stepOrder} 스케줄 설정</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label>발송 대기 일수</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            value={step.delayDays}
-                            onChange={(e) => {
-                              const updatedSteps = [...steps]
-                              updatedSteps[index].delayDays = parseInt(e.target.value, 10) || 0
-                              setSteps(updatedSteps)
-                            }}
-                            disabled={index === 0}
-                          />
-                          {index === 0 && (
-                            <p className="text-xs text-muted-foreground">
-                              첫 번째 스텝은 즉시 발송됩니다
-                            </p>
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <Label>발송 시간</Label>
-                          <div className="flex gap-2 items-center">
-                            <Input
-                              type="number"
-                              min="0"
-                              max="23"
-                              value={step.scheduledHour}
-                              onChange={(e) => {
+                  {editingScheduleIndex === index ? (
+                    // 인라인 편집 모드
+                    // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation is needed to prevent parent click
+                    <div
+                      className="space-y-2 p-2 bg-muted/50 rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {index === 0 ? (
+                        // 첫 번째 스텝: 절대적 날짜 선택
+                        <>
+                          <div className="space-y-2">
+                            <Label className="text-xs">발송 날짜</Label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full justify-start text-left font-normal h-7 text-xs",
+                                    !step.delayDays && "text-muted-foreground",
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-3 w-3" />
+                                  {step.delayDays === 0
+                                    ? "오늘"
+                                    : format(
+                                        new Date(Date.now() + step.delayDays * 24 * 60 * 60 * 1000),
+                                        "PPP",
+                                        { locale: ko },
+                                      )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={
+                                    new Date(Date.now() + step.delayDays * 24 * 60 * 60 * 1000)
+                                  }
+                                  onSelect={(date) => {
+                                    if (date) {
+                                      const now = new Date()
+                                      const diffTime = date.getTime() - now.getTime()
+                                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                                      const updatedSteps = [...steps]
+                                      updatedSteps[index].delayDays = Math.max(0, diffDays)
+                                      setSteps(updatedSteps)
+                                    }
+                                  }}
+                                  disabled={(date) =>
+                                    date < new Date(new Date().setHours(0, 0, 0, 0))
+                                  }
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">발송 시간</Label>
+                            <TimePicker
+                              value={{
+                                hour: step.scheduledHour ?? 9,
+                                minute: step.scheduledMinute ?? 0,
+                              }}
+                              onChange={(time) => {
                                 const updatedSteps = [...steps]
-                                updatedSteps[index].scheduledHour =
-                                  parseInt(e.target.value, 10) || 0
+                                updatedSteps[index].scheduledHour = time.hour
+                                updatedSteps[index].scheduledMinute = time.minute
                                 setSteps(updatedSteps)
                               }}
-                              className="w-20"
-                            />
-                            <span>:</span>
-                            <Input
-                              type="number"
-                              min="0"
-                              max="59"
-                              step="5"
-                              value={step.scheduledMinute}
-                              onChange={(e) => {
-                                const updatedSteps = [...steps]
-                                updatedSteps[index].scheduledMinute =
-                                  parseInt(e.target.value, 10) || 0
-                                setSteps(updatedSteps)
-                              }}
-                              className="w-20"
                             />
                           </div>
-                        </div>
+                        </>
+                      ) : (
+                        // 나머지 스텝: 상대적 날짜 (며칠 후)
+                        <>
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs w-16">대기일</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={step.delayDays}
+                              onChange={(e) => {
+                                const updatedSteps = [...steps]
+                                updatedSteps[index].delayDays = parseInt(e.target.value, 10) || 1
+                                setSteps(updatedSteps)
+                              }}
+                              className="h-7 w-16 text-xs"
+                            />
+                            <span className="text-xs">일 후</span>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">발송 시간</Label>
+                            <TimePicker
+                              value={{
+                                hour: step.scheduledHour ?? 9,
+                                minute: step.scheduledMinute ?? 0,
+                              }}
+                              onChange={(time) => {
+                                const updatedSteps = [...steps]
+                                updatedSteps[index].scheduledHour = time.hour
+                                updatedSteps[index].scheduledMinute = time.minute
+                                setSteps(updatedSteps)
+                              }}
+                            />
+                          </div>
+                        </>
+                      )}
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="h-6 text-xs px-2"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setEditingScheduleIndex(null)
+                            toast.success("스케줄이 저장되었습니다")
+                          }}
+                        >
+                          <Check className="h-3 w-3 mr-1" />
+                          저장
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs px-2"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setEditingScheduleIndex(null)
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
                       </div>
-                    </DialogContent>
-                  </Dialog>
+                    </div>
+                  ) : (
+                    // 보기 모드
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-2 h-auto p-1 text-xs text-muted-foreground hover:text-foreground group"
+                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                        e.stopPropagation()
+                        setEditingScheduleIndex(index)
+                      }}
+                    >
+                      <CalendarIcon className="h-3 w-3" />
+                      {index === 0 ? (
+                        // 첫 번째 스텝: 절대적 날짜 표시
+                        <span>
+                          {step.delayDays === 0
+                            ? "오늘"
+                            : format(
+                                new Date(Date.now() + step.delayDays * 24 * 60 * 60 * 1000),
+                                "MM월 dd일",
+                                { locale: ko },
+                              )}
+                        </span>
+                      ) : (
+                        // 나머지 스텝: 상대적 날짜 표시
+                        <span>{step.delayDays === 0 ? "즉시 발송" : `${step.delayDays}일 후`}</span>
+                      )}
+                      <Clock className="h-3 w-3 ml-1" />
+                      <span>
+                        {String(step.scheduledHour).padStart(2, "0")}:
+                        {String(step.scheduledMinute).padStart(2, "0")}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                        수정
+                      </span>
+                    </Button>
+                  )}
                 </div>
 
                 {/* Step content */}

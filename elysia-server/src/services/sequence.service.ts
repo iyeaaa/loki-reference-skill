@@ -2061,7 +2061,6 @@ async function checkAndUpdateSequenceCompletion(sequenceId: string) {
 
   // Check if all enrollments are completed
   const allCompleted = enrollments.every((enrollment) => enrollment.status === "completed")
-  const partiallyCompleted = enrollments.every((enrollment) => enrollment.status === "active")
 
   logger.info(
     {
@@ -2074,11 +2073,11 @@ async function checkAndUpdateSequenceCompletion(sequenceId: string) {
   )
 
   if (allCompleted) {
-    // Update sequence status to completed
+    // Update sequence status to completed (all enrollments finished)
     await db
       .update(sequences)
       .set({
-        status: "archived",
+        status: "completed",
         updatedAt: new Date(),
       })
       .where(eq(sequences.id, sequenceId))
@@ -2087,15 +2086,6 @@ async function checkAndUpdateSequenceCompletion(sequenceId: string) {
       { sequenceId },
       "🎉 [SEQUENCE-COMPLETION] Sequence marked as completed - all enrollments finished",
     )
-  } else if (partiallyCompleted) {
-    // Update sequence status to partially completed
-    await db
-      .update(sequences)
-      .set({
-        status: "completed",
-        updatedAt: new Date(),
-      })
-      .where(eq(sequences.id, sequenceId))
   }
 }
 

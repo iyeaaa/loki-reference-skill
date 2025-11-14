@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useBulkDeleteSequences, useBulkUpdateSequenceStatus } from "@/lib/api/hooks/sequences"
-import type { Sequence, SequenceStatus } from "@/lib/api/types/sequence"
-import { BulkActionModal } from "./BulkActionModal"
+import type { Sequence } from "@/lib/api/types/sequence"
 import { CampaignCardView } from "./CampaignCardView"
 import { SequencesDashboard } from "./SequencesDashboard"
 import { SequencesTableWithPagination } from "./SequencesTableWithPagination"
@@ -27,8 +26,6 @@ export default function SequencesPage() {
   })
 
   const [selectedSequences, setSelectedSequences] = useState<string[]>([])
-  const [showBulkActionModal, setShowBulkActionModal] = useState(false)
-  const [bulkActionType, setBulkActionType] = useState<"status" | "delete" | null>(null)
 
   const bulkUpdateStatus = useBulkUpdateSequenceStatus()
   const bulkDeleteSequences = useBulkDeleteSequences()
@@ -73,22 +70,36 @@ export default function SequencesPage() {
     })
   }
 
-  const handleBulkAction = async (actionType: string, value: string | string[]) => {
+  const handleBulkStart = async () => {
     if (selectedSequences.length === 0) {
       toast.error(t("sequences.toast.noSequencesSelected"))
       return
     }
 
-    if (actionType === "status") {
-      bulkUpdateStatus.mutate(
-        { sequenceIds: selectedSequences, status: value as SequenceStatus },
-        {
-          onSuccess: () => {
-            setSelectedSequences([])
-          },
+    bulkUpdateStatus.mutate(
+      { sequenceIds: selectedSequences, status: "active" },
+      {
+        onSuccess: () => {
+          setSelectedSequences([])
         },
-      )
+      },
+    )
+  }
+
+  const handleBulkPause = async () => {
+    if (selectedSequences.length === 0) {
+      toast.error(t("sequences.toast.noSequencesSelected"))
+      return
     }
+
+    bulkUpdateStatus.mutate(
+      { sequenceIds: selectedSequences, status: "paused" },
+      {
+        onSuccess: () => {
+          setSelectedSequences([])
+        },
+      },
+    )
   }
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -195,12 +206,18 @@ export default function SequencesPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setBulkActionType("status")
-                    setShowBulkActionModal(true)
-                  }}
+                  onClick={handleBulkStart}
+                  className="text-green-600 hover:text-green-700 hover:bg-green-50"
                 >
-                  {t("sequences.button.changeStatus")}
+                  {t("sequences.button.bulkStart")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkPause}
+                  className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                >
+                  {t("sequences.button.bulkPause")}
                 </Button>
                 <Button
                   variant="outline"
@@ -236,18 +253,6 @@ export default function SequencesPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Bulk Action Modal */}
-      <BulkActionModal
-        isOpen={showBulkActionModal}
-        onClose={() => {
-          setShowBulkActionModal(false)
-          setBulkActionType(null)
-        }}
-        onConfirm={handleBulkAction}
-        sequenceCount={selectedSequences.length}
-        actionType={bulkActionType}
-      />
     </div>
   )
 }

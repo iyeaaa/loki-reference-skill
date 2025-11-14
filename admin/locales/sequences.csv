@@ -4,6 +4,8 @@ button.newSequence,새 캠페인,New Campaign
 search.placeholder,캠페인명으로 검색...,Search by campaign name...
 status.selectedCount,개 선택됨,selected
 button.changeStatus,상태 변경,Change Status
+button.bulkStart,일괄 시작,Bulk Start
+button.bulkPause,일괄 일시정지,Bulk Pause
 button.deleteSelected,선택 삭제,Delete Selected
 dialog.createSequence,새 캠페인 생성,Create New Campaign
 dialog.sequenceManagement,캠페인 관리,Campaign Management

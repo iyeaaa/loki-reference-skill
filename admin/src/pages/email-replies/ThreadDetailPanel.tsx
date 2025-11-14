@@ -1,14 +1,22 @@
 import { useQueryClient } from "@tanstack/react-query"
 import { Reply, X } from "lucide-react"
 import { useEffect, useState } from "react"
+import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { FloatingReplyPopup } from "@/components/ui/floating-reply-popup"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { useThreadEmails } from "@/lib/api/hooks/emails"
+import { useSendEmail, useThreadEmails } from "@/lib/api/hooks/emails"
+import { useAuth } from "@/lib/auth-provider"
+import {
+  generateQuotedText,
+  generateReplySubject,
+  getReplyRecipient,
+  parseEmailList,
+} from "@/lib/email-utils"
 import { EmailItem } from "./EmailItem"
-import { InlineComposeBox } from "./InlineComposeBox"
 
 interface ThreadDetailPanelProps {
   threadId: string
@@ -18,14 +26,15 @@ interface ThreadDetailPanelProps {
 
 export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDetailPanelProps) {
   const { t } = useTranslation()
+  const { user } = useAuth()
   const { data, isLoading, error } = useThreadEmails(threadId, workspaceId)
   const emails = data?.data || []
   const queryClient = useQueryClient()
+  const sendEmail = useSendEmail()
 
   // 답장 상태
   const [showReply, setShowReply] = useState(false)
-  const [composeExpanded, setComposeExpanded] = useState(false)
-  const [composeFullscreen, setComposeFullscreen] = useState(false)
+  const [isSending, setIsSending] = useState(false)
 
   // 각 이메일의 펼침/접힘 상태 (기본값: 모두 펼침)
   const [expandedEmails, setExpandedEmails] = useState<Record<string, boolean>>({})
@@ -35,8 +44,6 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
   useEffect(() => {
     setExpandedEmails({})
     setShowReply(false)
-    setComposeExpanded(false)
-    setComposeFullscreen(false)
   }, [threadId])
 
   // 이메일이 펼쳐져 있는지 확인 (기본값: 마지막 이메일만 펼침)
@@ -55,6 +62,58 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
       ...prev,
       [emailId]: !currentState,
     }))
+  }
+
+  // 답장 전송 핸들러
+  const handleSendReply = async (replyText: string) => {
+    if (!user) {
+      toast.error("로그인이 필요합니다")
+      return
+    }
+
+    const lastEmail = emails[emails.length - 1]
+    if (!lastEmail) return
+
+    const effectiveWorkspaceId = lastEmail.workspaceId || workspaceId
+
+    if (!effectiveWorkspaceId || effectiveWorkspaceId === "" || effectiveWorkspaceId === "all") {
+      toast.error("워크스페이스가 선택되지 않았습니다")
+      return
+    }
+
+    const toEmail = getReplyRecipient(lastEmail)
+    const recipients = parseEmailList(toEmail)
+    if (recipients.length === 0) {
+      toast.error("유효한 받는사람 이메일 주소를 입력하세요")
+      return
+    }
+
+    const subject = generateReplySubject(lastEmail.subject)
+    const bodyWithQuote = `${replyText}\n\n${generateQuotedText(lastEmail)}`
+
+    const payload = {
+      workspaceId: effectiveWorkspaceId,
+      userId: user.id,
+      toEmail: recipients[0],
+      subject: subject.trim(),
+      bodyText: bodyWithQuote,
+      inReplyTo: lastEmail.messageId ?? undefined,
+      references: lastEmail.messageId ? [lastEmail.messageId] : undefined,
+      includeSignature: true,
+    }
+
+    setIsSending(true)
+    try {
+      await sendEmail.mutateAsync(payload)
+      // 스레드 새로고침
+      queryClient.invalidateQueries({ queryKey: ["thread-emails", threadId] })
+      queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
+      setShowReply(false)
+    } catch (error) {
+      console.error("Failed to send email:", error)
+    } finally {
+      setIsSending(false)
+    }
   }
 
   if (isLoading) {
@@ -114,47 +173,30 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
                 onToggle={() => toggleEmail(email.id)}
               />
             ))}
-
-            {/* 인라인 작성 영역 */}
-            {showReply && emails.length > 0 && (
-              <InlineComposeBox
-                originalEmail={emails[emails.length - 1]}
-                workspaceId={workspaceId || ""}
-                expanded={composeExpanded}
-                fullscreen={composeFullscreen}
-                onExpand={() => setComposeExpanded(!composeExpanded)}
-                onFullscreen={() => setComposeFullscreen(!composeFullscreen)}
-                onClose={() => {
-                  setShowReply(false)
-                  setComposeExpanded(false)
-                  setComposeFullscreen(false)
-                }}
-                onSent={() => {
-                  // 스레드 새로고침
-                  queryClient.invalidateQueries({ queryKey: ["thread-emails", threadId] })
-                  queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
-                }}
-              />
-            )}
           </div>
         </ScrollArea>
       </TooltipProvider>
 
       {/* 하단 답장 버튼 (Gmail 스타일) */}
-      {!showReply && emails.length > 0 && (
+      {emails.length > 0 && (
         <div className="px-4 py-3 border-t">
-          <Button
-            onClick={() => {
-              setShowReply(true)
-              setComposeExpanded(false)
-            }}
-            size="sm"
-            variant="default"
-          >
+          <Button onClick={() => setShowReply(true)} size="sm" variant="default">
             <Reply className="h-4 w-4 mr-2" />
             {t("email-replies.thread.replyButton")}
           </Button>
         </div>
+      )}
+
+      {/* Floating Reply Popup */}
+      {emails.length > 0 && (
+        <FloatingReplyPopup
+          isOpen={showReply}
+          onClose={() => setShowReply(false)}
+          onSend={handleSendReply}
+          to={emails[emails.length - 1]?.fromEmail || ""}
+          subject={`Re: ${emails[0]?.subject || ""}`}
+          isSending={isSending}
+        />
       )}
     </Card>
   )

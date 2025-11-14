@@ -1,17 +1,26 @@
-import { AlertCircle, Trash2 } from "lucide-react"
+import {
+  AlertCircle,
+  HelpCircle,
+  Mail,
+  MessageSquare,
+  Minus,
+  ThumbsDown,
+  ThumbsUp,
+  Trash2,
+} from "lucide-react"
 import { useCallback, useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useParams } from "react-router-dom"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { EmailSidebar } from "@/components/ui/email-sidebar"
 import { type FilterConfig, FilterPanel } from "@/components/ui/filter-panel"
 import { useBulkDeleteEmailReplies, useIntentCounts } from "@/lib/api/hooks/email-replies"
 import { useEmail } from "@/lib/api/hooks/emails"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { ConfirmDialog } from "./ConfirmDialog"
 import { RepliedEmailsList } from "./RepliedEmailsList"
-import { StatsCards } from "./StatsCards"
 import { ThreadDetailPanel } from "./ThreadDetailPanel"
 
 export default function EmailRepliesPage() {
@@ -21,6 +30,7 @@ export default function EmailRepliesPage() {
   const containerId = useId()
 
   const [selectedIntent, setSelectedIntent] = useState<string>("all")
+  const [sidebarActiveItem, setSidebarActiveItem] = useState<string>("all")
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
   const [leftWidth, setLeftWidth] = useState(50) // percentage
   const [isResizing, setIsResizing] = useState(false)
@@ -40,27 +50,76 @@ export default function EmailRepliesPage() {
   // Fetch real category counts from API
   const { data: intentCounts } = useIntentCounts(selectedWorkspace?.id || "all")
 
-  // Transform API data to category format
-  const categories = [
-    { id: "all", label: "All", count: intentCounts?.all || 0 },
-    { id: "out_of_office", label: "Auto Messages", count: intentCounts?.out_of_office || 0 },
+  // Email sidebar sections with counts
+  const emailSidebarSections = [
     {
-      id: "positive_interest",
-      label: "Positive",
-      count: intentCounts?.positive_interest || 0,
+      title: "OVERVIEW",
+      items: [
+        {
+          id: "all",
+          label: "All",
+          icon: <Mail className="h-4 w-4" />,
+          count: intentCounts?.all || 0,
+        },
+        // {
+        //   id: "unread",
+        //   label: "Unread",
+        //   icon: <Mail className="h-4 w-4" />,
+        // },
+        // {
+        //   id: "important",
+        //   label: "Important",
+        //   icon: <Star className="h-4 w-4" />,
+        // },
+      ],
     },
     {
-      id: "not_interested",
-      label: "Negative",
-      count: intentCounts?.not_interested || 0,
-    },
-    { id: "neutral", label: "Other", count: intentCounts?.neutral || 0 },
-    {
-      id: "unclassified",
-      label: "Unclassified",
-      count: intentCounts?.unclassified || 0,
+      title: "LABELS",
+      items: [
+        {
+          id: "positive_interest",
+          label: "Positive",
+          icon: <ThumbsUp className="h-4 w-4" />,
+          count: intentCounts?.positive_interest || 0,
+        },
+        {
+          id: "not_interested",
+          label: "Negative",
+          icon: <ThumbsDown className="h-4 w-4" />,
+          count: intentCounts?.not_interested || 0,
+        },
+        {
+          id: "out_of_office",
+          label: "Auto Messages",
+          icon: <MessageSquare className="h-4 w-4" />,
+          count: intentCounts?.out_of_office || 0,
+        },
+        {
+          id: "neutral",
+          label: "Other",
+          icon: <Minus className="h-4 w-4" />,
+          count: intentCounts?.neutral || 0,
+        },
+        {
+          id: "unclassified",
+          label: "Unclassified",
+          icon: <HelpCircle className="h-4 w-4" />,
+          count: intentCounts?.unclassified || 0,
+        },
+      ],
     },
   ]
+
+  // Handle sidebar item click
+  const handleSidebarItemClick = (itemId: string) => {
+    setSidebarActiveItem(itemId)
+    // Map sidebar items to intent filters
+    if (itemId === "all" || itemId === "unread" || itemId === "important") {
+      setSelectedIntent("all")
+    } else {
+      setSelectedIntent(itemId)
+    }
+  }
 
   // emailId가 있으면 해당 이메일 정보를 가져와서 threadId 설정
   const { data: emailData } = useEmail(emailId || "", !!emailId)
@@ -137,144 +196,156 @@ export default function EmailRepliesPage() {
   }, [isResizing, containerId])
 
   return (
-    <div className="flex flex-col gap-4" style={{ height: "calc(100vh - 120px)" }}>
-      {/* Workspace 선택 안내 */}
-      {!selectedWorkspace && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t("email-replies.alert.selectWorkspace.title")}</AlertTitle>
-          <AlertDescription>
-            {t("email-replies.alert.selectWorkspace.description")}
-          </AlertDescription>
-        </Alert>
-      )}
+    <div className="flex gap-0 h-full">
+      {/* Email Sidebar */}
+      <EmailSidebar
+        sections={emailSidebarSections}
+        activeItemId={sidebarActiveItem}
+        onItemClick={handleSidebarItemClick}
+      />
 
-      {/* Stats Cards at the top */}
-      {selectedWorkspace && (
-        <div className="flex-shrink-0">
-          <StatsCards
-            categories={categories}
-            selectedCategory={selectedIntent}
-            onSelectCategory={setSelectedIntent}
-          />
-        </div>
-      )}
-
-      {/* Gmail-style Split View */}
-      <div id={containerId} className="flex-1 flex relative min-h-0">
-        {/* Left: Thread List */}
-        <div
-          style={{ width: selectedThreadId ? `${leftWidth}%` : "100%" }}
-          className="flex flex-col h-full"
-        >
-          <Card className="h-full flex flex-col overflow-hidden">
-            <CardHeader className="pb-3 pt-3 flex-shrink-0">
-              <CardTitle className="text-base">
-                {t("email-replies.title")}
-                {selectedWorkspace && (
-                  <span className="ml-2 text-sm font-normal text-muted-foreground">
-                    ({selectedWorkspace.name})
-                  </span>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col overflow-hidden pt-0">
-              {/* Filter Panel */}
-              <div className="mb-3 flex-shrink-0">
-                <FilterPanel
-                  placeholder={t("email-replies.search.placeholder")}
-                  onFilterChange={setFilters}
-                />
-              </div>
-
-              {/* Bulk Actions */}
-              {selectedThreads.length > 0 && (
-                <div className="flex items-center gap-4 mb-3 flex-shrink-0">
-                  <div className="text-sm text-muted-foreground">
-                    <span className="font-medium">
-                      {t("email-replies.bulk.selected", { count: selectedThreads.length })}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleBulkDelete}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      {t("email-replies.bulk.delete")}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Thread List */}
-              <div className="flex-1 overflow-auto">
-                {selectedWorkspace ? (
-                  <RepliedEmailsList
-                    workspaceId={selectedWorkspace.id}
-                    searchQuery={filters.search}
-                    selectedStatuses={[]}
-                    selectedIntent={selectedIntent}
-                    selectedThreadId={selectedThreadId}
-                    onThreadSelect={setSelectedThreadId}
-                    selectedThreads={selectedThreads}
-                    onToggleThread={toggleThreadSelection}
-                    onToggleAll={toggleAllThreads}
-                    filterSentiment={filters.sentiment}
-                    filterCategory={filters.category}
-                    filterPriority={filters.priority}
-                    dateFrom={filters.dateFrom}
-                    dateTo={filters.dateTo}
-                  />
-                ) : (
-                  <div className="py-12 text-center text-muted-foreground">
-                    {t("email-replies.empty.selectWorkspace")}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Resizer - only show when thread is selected */}
-        {selectedThreadId && (
-          <button
-            type="button"
-            aria-label="Resize panels"
-            className={`w-px bg-gray-300 hover:bg-blue-400 cursor-col-resize flex-shrink-0 h-full border-0 p-0 ${
-              isResizing ? "bg-blue-400" : ""
-            }`}
-            onMouseDown={handleMouseDown}
-          />
+      {/* Main Content Area */}
+      <div
+        className="flex-1 flex flex-col overflow-hidden p-4 pl-2"
+        style={{ height: "calc(100vh - 120px)" }}
+      >
+        {/* Workspace 선택 안내 */}
+        {!selectedWorkspace && (
+          <Alert className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{t("email-replies.alert.selectWorkspace.title")}</AlertTitle>
+            <AlertDescription>
+              {t("email-replies.alert.selectWorkspace.description")}
+            </AlertDescription>
+          </Alert>
         )}
 
-        {/* Right: Thread Detail Panel - only show when thread is selected */}
-        {selectedThreadId && (
-          <div style={{ width: `${100 - leftWidth}%` }} className="flex flex-col h-full">
-            <ThreadDetailPanel
-              threadId={selectedThreadId}
-              workspaceId={selectedWorkspace?.id}
-              onClose={() => setSelectedThreadId(null)}
+        {/* {selectedWorkspace && (
+          <div className="flex-shrink-0">
+            <StatsCards
+              categories={categories}
+              selectedCategory={selectedIntent}
+              onSelectCategory={setSelectedIntent}
             />
           </div>
-        )}
-      </div>
+        )} */}
 
-      {/* Confirm Delete Dialog */}
-      <ConfirmDialog
-        isOpen={showConfirmDialog}
-        onClose={() => setShowConfirmDialog(false)}
-        onConfirm={confirmBulkDelete}
-        title={t("email-replies.confirm.delete.title")}
-        description={t("email-replies.confirm.delete.description", {
-          count: selectedThreads.length,
-        })}
-        confirmText={t("email-replies.confirm.delete.button")}
-        cancelText={t("email-replies.confirm.cancel.button")}
-        variant="destructive"
-      />
+        {/* Gmail-style Split View */}
+        <div id={containerId} className="flex-1 flex relative min-h-0">
+          {/* Left: Thread List */}
+          <div
+            style={{ width: selectedThreadId ? `${leftWidth}%` : "100%" }}
+            className="flex flex-col h-full"
+          >
+            <Card className="h-full flex flex-col overflow-hidden">
+              <CardHeader className="pb-3 pt-3 flex-shrink-0">
+                <CardTitle className="text-base">
+                  {t("email-replies.title")}
+                  {selectedWorkspace && (
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">
+                      ({selectedWorkspace.name})
+                    </span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col overflow-hidden pt-0">
+                {/* Filter Panel */}
+                <div className="mb-3 flex-shrink-0">
+                  <FilterPanel
+                    placeholder={t("email-replies.search.placeholder")}
+                    onFilterChange={setFilters}
+                  />
+                </div>
+
+                {/* Bulk Actions */}
+                {selectedThreads.length > 0 && (
+                  <div className="flex items-center gap-4 mb-3 flex-shrink-0">
+                    <div className="text-sm text-muted-foreground">
+                      <span className="font-medium">
+                        {t("email-replies.bulk.selected", { count: selectedThreads.length })}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleBulkDelete}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        {t("email-replies.bulk.delete")}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Thread List */}
+                <div className="flex-1 overflow-auto">
+                  {selectedWorkspace ? (
+                    <RepliedEmailsList
+                      workspaceId={selectedWorkspace.id}
+                      searchQuery={filters.search}
+                      selectedStatuses={[]}
+                      selectedIntent={selectedIntent}
+                      selectedThreadId={selectedThreadId}
+                      onThreadSelect={setSelectedThreadId}
+                      selectedThreads={selectedThreads}
+                      onToggleThread={toggleThreadSelection}
+                      onToggleAll={toggleAllThreads}
+                      filterSentiment={filters.sentiment}
+                      filterCategory={filters.category}
+                      filterPriority={filters.priority}
+                      dateFrom={filters.dateFrom}
+                      dateTo={filters.dateTo}
+                    />
+                  ) : (
+                    <div className="py-12 text-center text-muted-foreground">
+                      {t("email-replies.empty.selectWorkspace")}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Resizer - only show when thread is selected */}
+          {selectedThreadId && (
+            <button
+              type="button"
+              aria-label="Resize panels"
+              className={`w-px bg-gray-300 hover:bg-blue-400 cursor-col-resize flex-shrink-0 h-full border-0 p-0 ${
+                isResizing ? "bg-blue-400" : ""
+              }`}
+              onMouseDown={handleMouseDown}
+            />
+          )}
+
+          {/* Right: Thread Detail Panel - only show when thread is selected */}
+          {selectedThreadId && (
+            <div style={{ width: `${100 - leftWidth}%` }} className="flex flex-col h-full">
+              <ThreadDetailPanel
+                threadId={selectedThreadId}
+                workspaceId={selectedWorkspace?.id}
+                onClose={() => setSelectedThreadId(null)}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Confirm Delete Dialog */}
+        <ConfirmDialog
+          isOpen={showConfirmDialog}
+          onClose={() => setShowConfirmDialog(false)}
+          onConfirm={confirmBulkDelete}
+          title={t("email-replies.confirm.delete.title")}
+          description={t("email-replies.confirm.delete.description", {
+            count: selectedThreads.length,
+          })}
+          confirmText={t("email-replies.confirm.delete.button")}
+          cancelText={t("email-replies.confirm.cancel.button")}
+          variant="destructive"
+        />
+      </div>
     </div>
   )
 }

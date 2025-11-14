@@ -442,9 +442,63 @@ export async function getIntentCounts(workspaceId: string) {
 
   const total = totalResult[0]?.count || 0
 
+  // Get important count (count threads that have replies AND have at least one important inbound email)
+  // Must join with emailReplies to ensure we only count threads with replies
+  const importantQuery =
+    workspaceId !== "all"
+      ? sql`EXISTS (
+          SELECT 1 FROM emails e
+          WHERE e.thread_id = ${emails.threadId}
+          AND e.is_important = true
+          AND e.direction = 'inbound'
+          AND e.workspace_id = ${workspaceId}
+        )`
+      : sql`EXISTS (
+          SELECT 1 FROM emails e
+          WHERE e.thread_id = ${emails.threadId}
+          AND e.is_important = true
+          AND e.direction = 'inbound'
+        )`
+
+  const importantResult = await db
+    .select({ count: sql<number>`COUNT(DISTINCT ${emails.threadId})::int` })
+    .from(emailReplies)
+    .innerJoin(emails, eq(emailReplies.originalEmailId, emails.id))
+    .where(and(whereClause, importantQuery))
+
+  const important = importantResult[0]?.count || 0
+
+  // Get unread count (count threads that have replies AND have at least one unread inbound email)
+  // Must join with emailReplies to ensure we only count threads with replies
+  const unreadQuery =
+    workspaceId !== "all"
+      ? sql`EXISTS (
+          SELECT 1 FROM emails e
+          WHERE e.thread_id = ${emails.threadId}
+          AND e.is_read = false
+          AND e.direction = 'inbound'
+          AND e.workspace_id = ${workspaceId}
+        )`
+      : sql`EXISTS (
+          SELECT 1 FROM emails e
+          WHERE e.thread_id = ${emails.threadId}
+          AND e.is_read = false
+          AND e.direction = 'inbound'
+        )`
+
+  const unreadResult = await db
+    .select({ count: sql<number>`COUNT(DISTINCT ${emails.threadId})::int` })
+    .from(emailReplies)
+    .innerJoin(emails, eq(emailReplies.originalEmailId, emails.id))
+    .where(and(whereClause, unreadQuery))
+
+  const unread = unreadResult[0]?.count || 0
+
   // Format the response
   const intentCounts: Record<string, number> = {
     all: total,
+    important: important,
+    unread: unread,
     meeting_request: 0,
     question: 0,
     objection: 0,
@@ -545,4 +599,32 @@ export async function reclassifyEmailReply(replyId: string) {
       reasoning: classification.reasoning,
     },
   }
+}
+
+/**
+ * Toggle important status for all inbound emails in a thread
+ */
+export async function toggleImportant(threadId: string, isImportant: boolean): Promise<number> {
+  // Update all inbound emails in the thread
+  const result = await db
+    .update(emails)
+    .set({ isImportant })
+    .where(and(eq(emails.threadId, threadId), eq(emails.direction, "inbound")))
+    .returning({ id: emails.id })
+
+  return result.length
+}
+
+/**
+ * Mark all inbound emails in a thread as read
+ */
+export async function markThreadAsRead(threadId: string): Promise<number> {
+  // Update all inbound emails in the thread to mark as read
+  const result = await db
+    .update(emails)
+    .set({ isRead: true })
+    .where(and(eq(emails.threadId, threadId), eq(emails.direction, "inbound")))
+    .returning({ id: emails.id })
+
+  return result.length
 }

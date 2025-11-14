@@ -263,6 +263,8 @@ export const emailsApi = {
     sequenceId?: string
     search?: string
     intent?: string
+    isImportant?: boolean
+    isUnread?: boolean
     sentiment?: string
     category?: string
     priority?: string
@@ -284,6 +286,9 @@ export const emailsApi = {
     if (params.sequenceId) searchParams.append("sequenceId", params.sequenceId)
     if (params.search) searchParams.append("search", params.search)
     if (params.intent && params.intent !== "all") searchParams.append("intent", params.intent)
+    if (params.isImportant !== undefined)
+      searchParams.append("isImportant", params.isImportant.toString())
+    if (params.isUnread !== undefined) searchParams.append("isUnread", params.isUnread.toString())
     if (params.sentiment) searchParams.append("sentiment", params.sentiment)
     if (params.category) searchParams.append("category", params.category)
     if (params.priority) searchParams.append("priority", params.priority)

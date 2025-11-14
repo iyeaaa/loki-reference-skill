@@ -1,9 +1,12 @@
+import { useQueryClient } from "@tanstack/react-query"
 import {
   AlertCircle,
   HelpCircle,
   Mail,
+  MailOpen,
   MessageSquare,
   Minus,
+  Star,
   ThumbsDown,
   ThumbsUp,
   Trash2,
@@ -18,6 +21,7 @@ import { EmailSidebar } from "@/components/ui/email-sidebar"
 import { type FilterConfig, FilterPanel } from "@/components/ui/filter-panel"
 import { useBulkDeleteEmailReplies, useIntentCounts } from "@/lib/api/hooks/email-replies"
 import { useEmail } from "@/lib/api/hooks/emails"
+import { emailRepliesApi } from "@/lib/api/services/email-replies"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { ConfirmDialog } from "./ConfirmDialog"
 import { RepliedEmailsList } from "./RepliedEmailsList"
@@ -28,6 +32,7 @@ export default function EmailRepliesPage() {
   const { selectedWorkspace } = useWorkspace()
   const { emailId } = useParams<{ emailId?: string }>()
   const containerId = useId()
+  const queryClient = useQueryClient()
 
   const [selectedIntent, setSelectedIntent] = useState<string>("all")
   const [sidebarActiveItem, setSidebarActiveItem] = useState<string>("all")
@@ -61,16 +66,18 @@ export default function EmailRepliesPage() {
           icon: <Mail className="h-4 w-4" />,
           count: intentCounts?.all || 0,
         },
-        // {
-        //   id: "unread",
-        //   label: "Unread",
-        //   icon: <Mail className="h-4 w-4" />,
-        // },
-        // {
-        //   id: "important",
-        //   label: "Important",
-        //   icon: <Star className="h-4 w-4" />,
-        // },
+        {
+          id: "important",
+          label: "Important",
+          icon: <Star className="h-4 w-4" />,
+          count: intentCounts?.important || 0,
+        },
+        {
+          id: "unread",
+          label: "Unread",
+          icon: <MailOpen className="h-4 w-4" />,
+          count: intentCounts?.unread || 0,
+        },
       ],
     },
     {
@@ -116,6 +123,10 @@ export default function EmailRepliesPage() {
     // Map sidebar items to intent filters
     if (itemId === "all" || itemId === "unread" || itemId === "important") {
       setSelectedIntent("all")
+      // Invalidate queries when switching to important/unread filters to get fresh data
+      if (itemId === "important" || itemId === "unread") {
+        queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
+      }
     } else {
       setSelectedIntent(itemId)
     }
@@ -133,6 +144,58 @@ export default function EmailRepliesPage() {
       setSelectedThreadId(emailData.threadId)
     }
   }, [emailData])
+
+  // Mark thread as read when selected (optimistic update)
+  useEffect(() => {
+    if (selectedThreadId) {
+      // Check if the thread is currently unread
+      let wasUnread = false
+      // biome-ignore lint/suspicious/noExplicitAny: QueryClient cache data is untyped
+      queryClient.setQueriesData({ queryKey: ["replied-emails"] }, (old: any) => {
+        if (!old?.repliedEmails) return old
+
+        // biome-ignore lint/suspicious/noExplicitAny: QueryClient cache data is untyped
+        const targetEmail = old.repliedEmails.find(
+          (email: any) => email.threadId === selectedThreadId,
+        )
+        wasUnread = targetEmail && !targetEmail.isRead
+
+        return {
+          ...old,
+          // biome-ignore lint/suspicious/noExplicitAny: QueryClient cache data is untyped
+          repliedEmails: old.repliedEmails.map((email: any) =>
+            email.threadId === selectedThreadId ? { ...email, isRead: true } : email,
+          ),
+        }
+      })
+
+      // Optimistically update unread count
+      if (wasUnread) {
+        // biome-ignore lint/suspicious/noExplicitAny: QueryClient cache data is untyped
+        queryClient.setQueryData(["intent-counts", selectedWorkspace?.id || "all"], (old: any) => {
+          if (!old) return old
+          return {
+            ...old,
+            unread: Math.max(0, (old.unread || 0) - 1),
+          }
+        })
+      }
+
+      // Make API call in background
+      emailRepliesApi
+        .markThreadAsRead(selectedThreadId)
+        .then(() => {
+          // Refetch counts to ensure accuracy
+          queryClient.refetchQueries({ queryKey: ["intent-counts"] })
+        })
+        .catch((error) => {
+          console.error("Failed to mark thread as read:", error)
+          // Revert on error
+          queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
+          queryClient.invalidateQueries({ queryKey: ["intent-counts"] })
+        })
+    }
+  }, [selectedThreadId, queryClient, selectedWorkspace?.id])
 
   // Thread selection handlers
   const toggleThreadSelection = useCallback((threadId: string) => {
@@ -287,6 +350,8 @@ export default function EmailRepliesPage() {
                       searchQuery={filters.search}
                       selectedStatuses={[]}
                       selectedIntent={selectedIntent}
+                      filterImportant={sidebarActiveItem === "important" ? true : undefined}
+                      filterUnread={sidebarActiveItem === "unread" ? true : undefined}
                       selectedThreadId={selectedThreadId}
                       onThreadSelect={setSelectedThreadId}
                       selectedThreads={selectedThreads}

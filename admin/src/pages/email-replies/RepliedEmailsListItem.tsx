@@ -1,5 +1,4 @@
-import { CheckCircle2, MessageSquare } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { MessageSquare, Star } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { HighlightedText } from "@/components/ui/highlighted-text"
 import type { RepliedEmail } from "@/lib/api/types/email"
@@ -12,6 +11,7 @@ interface RepliedEmailsListItemProps {
   isActive: boolean
   onSelect: () => void
   onToggleCheckbox: (e: React.MouseEvent) => void
+  onToggleImportant?: (e: React.MouseEvent) => void
   searchQuery?: string
 }
 
@@ -21,6 +21,7 @@ export function RepliedEmailsListItem({
   isActive,
   onSelect,
   onToggleCheckbox,
+  onToggleImportant,
   searchQuery,
 }: RepliedEmailsListItemProps) {
   // Determine the lead display name
@@ -38,54 +39,14 @@ export function RepliedEmailsListItem({
           ? email.bodyHtml.replace(/<[^>]*>/g, "").slice(0, 150)
           : ""
 
-  // Sentiment badge color
-  const getSentimentBadge = () => {
-    if (!email.replySentiment) return null
-
-    const sentimentConfig = {
-      positive: {
-        label: "Positive",
-        color: "bg-green-100 text-green-700 border-green-200 dark:bg-green-900 dark:text-green-300",
-      },
-      interested: {
-        label: "Interested",
-        color: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900 dark:text-blue-300",
-      },
-      neutral: {
-        label: "Neutral",
-        color: "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300",
-      },
-      negative: {
-        label: "Negative",
-        color: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900 dark:text-red-300",
-      },
-      not_interested: {
-        label: "Not Interested",
-        color:
-          "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900 dark:text-orange-300",
-      },
-    }
-
-    const config = sentimentConfig[email.replySentiment]
-    if (!config) return null
-
-    return (
-      <Badge
-        variant="outline"
-        className={`${config.color} text-xs px-2 py-0.5 font-medium border rounded-full`}
-      >
-        {config.label}
-      </Badge>
-    )
-  }
-
   return (
     <button
       type="button"
       className={`
-        flex items-start gap-3 px-4 py-4 cursor-pointer transition-all w-full text-left
+        flex items-start gap-2 px-3 py-2.5 cursor-pointer transition-all w-full text-left
         hover:bg-gray-50 dark:hover:bg-gray-800/50
         ${isActive ? "bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500" : "bg-white dark:bg-gray-800"}
+        ${!email.isRead ? "font-semibold" : ""}
         border-b border-gray-200 dark:border-gray-700
       `}
       onClick={onSelect}
@@ -94,79 +55,66 @@ export function RepliedEmailsListItem({
       <button
         type="button"
         onClick={onToggleCheckbox}
-        className="flex-shrink-0 pt-1"
+        className="flex-shrink-0 pt-0.5"
         aria-label="Toggle selection"
       >
         <Checkbox checked={isSelected} />
       </button>
 
+      {/* Star/Important button */}
+      <button
+        type="button"
+        onClick={onToggleImportant}
+        className="flex-shrink-0 pt-0.5 hover:scale-110 transition-transform"
+        aria-label="Toggle important"
+      >
+        <Star
+          className={`h-4 w-4 ${email.isImportant ? "fill-yellow-400 text-yellow-400" : "text-gray-400"}`}
+        />
+      </button>
+
       {/* Main content */}
-      <div className="flex-1 min-w-0 space-y-2">
-        {/* Top row: Lead name + Date */}
-        <div className="flex items-start justify-between gap-4">
-          {/* Lead name - larger and prominent */}
-          <h3 className="font-bold text-base text-gray-900 dark:text-gray-100 truncate flex-1">
+      <div className="flex-1 min-w-0 space-y-1">
+        {/* Top row: Lead name + Subject + Date */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Lead name */}
+          <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
             <HighlightedText text={leadDisplayName} searchTerm={searchQuery} />
           </h3>
 
-          {/* Latest reply date - top right with label */}
-          <div className="flex-shrink-0 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
-            <span className="font-medium">Last reply:</span>{" "}
-            <span className="text-gray-900 dark:text-gray-300">
-              {formatAbsoluteDateTime(email.latestActivityAt || email.createdAt)}
-            </span>
+          {/* Subject - in the middle */}
+          {email.subject && (
+            <div className="flex-1 text-xs text-gray-600 dark:text-gray-400 truncate">
+              <HighlightedText text={email.subject} searchTerm={searchQuery} />
+            </div>
+          )}
+
+          {/* Latest reply date */}
+          <div className="flex-shrink-0 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+            {formatAbsoluteDateTime(email.latestActivityAt || email.createdAt)}
           </div>
         </div>
 
-        {/* Tags row */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Lead score / priority indicator */}
-          {email.leadScore && email.leadScore > 70 && (
-            <Badge
-              variant="outline"
-              className="bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900 dark:text-blue-300 text-xs px-2 py-0.5 font-medium border rounded-full"
-            >
-              High
-            </Badge>
-          )}
-
-          {/* Intent badge */}
-          {email.replyIntent && <IntentBadge intent={email.replyIntent} size="sm" />}
-
-          {/* Sentiment badge */}
-          {getSentimentBadge()}
-        </div>
-
-        {/* Subject line */}
-        {email.subject && (
-          <div className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
-            Re: <HighlightedText text={email.subject} searchTerm={searchQuery} />
+        {/* Second row: Message preview + Tags */}
+        <div className="flex items-center gap-2">
+          {/* Message preview - 1 line max */}
+          <div className="flex-1 text-xs text-gray-600 dark:text-gray-400 truncate">
+            <HighlightedText text={messagePreview} searchTerm={searchQuery} />
           </div>
-        )}
 
-        {/* Message preview - 2 lines max */}
-        <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
-          <HighlightedText text={messagePreview} searchTerm={searchQuery} />
-          {messagePreview.length >= 150 && "..."}
-        </div>
+          {/* Tags (compact) */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {/* Intent badge */}
+            {email.replyIntent && <IntentBadge intent={email.replyIntent} size="sm" />}
 
-        {/* Metadata row */}
-        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-          {/* Sequence name */}
-          {email.sequenceName && (
-            <span className="flex items-center gap-1">
-              <CheckCircle2 className="h-3 w-3" />
-              {email.sequenceName}
-            </span>
-          )}
-
-          {/* Message count */}
-          {email.messageCount && email.messageCount > 1 && (
-            <span className="flex items-center gap-1">
-              <MessageSquare className="h-3 w-3" />
-              {email.messageCount} messages
-            </span>
-          )}
+            {/* Message count */}
+            {email.messageCount && email.messageCount > 1 && (
+              <span className="flex items-center gap-0.5 text-xs text-gray-500">
+                <MessageSquare className="h-3 w-3" />
+                {email.messageCount}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </button>

@@ -259,3 +259,58 @@ export const emailRepliesRoutes = new Elysia({ prefix: "/api/v1/email-replies" }
       }),
     },
   )
+
+  // Toggle important status for a thread
+  .patch(
+    "/thread/:threadId/important",
+    async ({ params: { threadId }, body, set }) => {
+      try {
+        const updatedCount = await emailRepliesService.toggleImportant(threadId, body.isImportant)
+        return {
+          success: true,
+          updatedCount,
+          message: body.isImportant ? "중요 표시되었습니다." : "중요 표시가 해제되었습니다.",
+        }
+      } catch (error) {
+        set.status = 500
+        return errorResponse(
+          error instanceof Error ? error.message : "중요 표시 변경 중 오류가 발생했습니다.",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      params: t.Object({
+        threadId: t.String(),
+      }),
+      body: t.Object({
+        isImportant: t.Boolean(),
+      }),
+    },
+  )
+
+  // Mark thread as read
+  .patch(
+    "/thread/:threadId/read",
+    async ({ params: { threadId }, set }) => {
+      try {
+        const updatedCount = await emailRepliesService.markThreadAsRead(threadId)
+        return {
+          success: true,
+          updatedCount,
+          message: "읽음으로 표시되었습니다.",
+        }
+      } catch (error) {
+        set.status = 500
+        return errorResponse(
+          error instanceof Error ? error.message : "읽음 표시 중 오류가 발생했습니다.",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      params: t.Object({
+        threadId: t.String(),
+      }),
+    },
+  )

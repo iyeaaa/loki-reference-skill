@@ -1072,6 +1072,14 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         inboundConditions.push(eq(emails.workspaceId, workspaceId))
       }
 
+      // Add important and unread filters
+      if (query.isImportant === "true") {
+        inboundConditions.push(eq(emails.isImportant, true))
+      }
+      if (query.isUnread === "true") {
+        inboundConditions.push(eq(emails.isRead, false))
+      }
+
       // Build the query for finding replied threads
       // Handle filters by building the appropriate query
       type RepliedThreadId =
@@ -1082,6 +1090,8 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             matchedCreatedAt: Date
           }
       let repliedThreadIds: RepliedThreadId[]
+      // Important and Unread filters don't need emailReplies join
+      // as they are fields in the emails table itself
       const needsEmailRepliesJoin =
         (intentFilter && intentFilter !== "all") ||
         sentimentFilter ||
@@ -1190,11 +1200,27 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           .from(matchedEmailsSubquery)
           .where(eq(matchedEmailsSubquery.rowNum, 1))
       } else {
-        // Build query without join
+        // Build query without join (for Important/Unread filters)
+        // Important: Must only include threads that have replies (exist in email_replies table)
+        // Use a subquery to get threads with replies, then filter by important/unread
+        const existsQuery =
+          workspaceId !== "all"
+            ? sql`EXISTS (
+                SELECT 1 FROM email_replies er
+                INNER JOIN emails e ON er.original_email_id = e.id
+                WHERE e.thread_id = ${emails.threadId}
+                AND er.workspace_id = ${workspaceId}
+              )`
+            : sql`EXISTS (
+                SELECT 1 FROM email_replies er
+                INNER JOIN emails e ON er.original_email_id = e.id
+                WHERE e.thread_id = ${emails.threadId}
+              )`
+
         repliedThreadIds = await db
           .selectDistinct({ threadId: emails.threadId })
           .from(emails)
-          .where(and(...inboundConditions))
+          .where(and(...inboundConditions, existsQuery))
       }
 
       const threadIdsList = repliedThreadIds
@@ -1379,6 +1405,9 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           replySentiment: emailReplies.sentiment,
           // Latest activity timestamp from thread
           latestActivityAt: threadsQuery.latestCreatedAt,
+          // UI state fields (for inbound emails)
+          isImportant: emails.isImportant,
+          isRead: emails.isRead,
         })
         .from(emails)
         .innerJoin(threadsQuery, eq(emails.threadId, threadsQuery.threadId))
@@ -1465,11 +1494,45 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         })),
       })
 
-      // Get latest message body for each thread (for preview)
-      // Fetch all messages in these threads, ordered by date desc
+      // Get thread IDs for additional queries
       const threadIdsForLatest = threadEmails
         .map((e) => e.threadId)
         .filter((id): id is string => !!id)
+
+      // Get thread-level important/unread states (based on inbound emails)
+      const threadStates = await db
+        .select({
+          threadId: emails.threadId,
+          isImportant:
+            sql<boolean>`BOOL_OR(${emails.isImportant} AND ${emails.direction} = 'inbound')`.as(
+              "is_important",
+            ),
+          isUnread:
+            sql<boolean>`BOOL_OR(NOT ${emails.isRead} AND ${emails.direction} = 'inbound')`.as(
+              "is_unread",
+            ),
+        })
+        .from(emails)
+        .where(inArray(emails.threadId, threadIdsForLatest))
+        .groupBy(emails.threadId)
+
+      const threadStatesMap = new Map<string, { isImportant: boolean; isUnread: boolean }>()
+      for (const state of threadStates) {
+        if (state.threadId) {
+          threadStatesMap.set(state.threadId, {
+            isImportant: state.isImportant || false,
+            isUnread: state.isUnread || false,
+          })
+        }
+      }
+
+      logger.info({
+        msg: "✓ [REPLIED-EMAILS] Thread states fetched",
+        threadStatesCount: threadStatesMap.size,
+      })
+
+      // Get latest message body for each thread (for preview)
+      // Fetch all messages in these threads, ordered by date desc
 
       let allThreadMessages: Array<{
         threadId: string | null
@@ -1530,6 +1593,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       const threadsWithCounts = threadEmails.map((email) => {
         const countData = threadCounts.find((tc) => tc.threadId === email.threadId)
         const latestMsg = email.threadId ? latestMessagesMap.get(email.threadId) : undefined
+        const threadState = email.threadId ? threadStatesMap.get(email.threadId) : undefined
 
         // Clean MIME headers from latest message if present
         const latestBodyText = cleanBodyContent(latestMsg?.bodyText || email.bodyText)
@@ -1543,6 +1607,9 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           latestMessageBodyHtml: latestBodyHtml,
           latestMessageDirection: latestMsg?.direction || email.direction,
           latestMessageFrom: latestMsg?.fromEmail || email.fromEmail,
+          // Override with thread-level states (based on inbound emails)
+          isImportant: threadState?.isImportant || false,
+          isRead: !(threadState?.isUnread || false), // isRead is inverse of isUnread
         }
       })
 
@@ -1579,6 +1646,8 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         sequenceId: t.Optional(t.String({ format: "uuid" })),
         search: t.Optional(t.String()),
         intent: t.Optional(t.String()), // Intent filter (e.g., "meeting_request", "positive_interest", "unclassified")
+        isImportant: t.Optional(t.String()), // Important filter ("true" or "false")
+        isUnread: t.Optional(t.String()), // Unread filter ("true" or "false")
         sentiment: t.Optional(t.String()), // Sentiment filter (comma-separated: "positive,negative,neutral,question")
         category: t.Optional(t.String()), // Category filter (comma-separated: "meeting_request,question,auto,other")
         priority: t.Optional(t.String()), // Priority filter (comma-separated: "high,medium,low")

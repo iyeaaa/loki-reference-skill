@@ -221,3 +221,58 @@ export function useIntentCounts(workspaceId: string) {
     gcTime: 5 * 60 * 1000, // 5 minutes
   })
 }
+
+/**
+ * Hook to toggle important status of an email
+ * Uses optimistic update to immediately update UI without refetching
+ */
+export function useToggleImportant() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ threadId, isImportant }: { threadId: string; isImportant: boolean }) =>
+      emailRepliesApi.toggleImportant(threadId, isImportant),
+    onMutate: async ({ threadId, isImportant }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["replied-emails"] })
+
+      // Snapshot the previous value
+      const previousData = queryClient.getQueriesData({ queryKey: ["replied-emails"] })
+
+      // Optimistically update ALL cached queries with replied-emails key
+      // biome-ignore lint/suspicious/noExplicitAny: QueryClient cache data is untyped
+      queryClient.setQueriesData({ queryKey: ["replied-emails"] }, (old: any) => {
+        if (!old?.repliedEmails) return old
+
+        return {
+          ...old,
+          // biome-ignore lint/suspicious/noExplicitAny: QueryClient cache data is untyped
+          repliedEmails: old.repliedEmails.map((email: any) =>
+            email.threadId === threadId ? { ...email, isImportant } : email,
+          ),
+        }
+      })
+
+      // Return context for rollback
+      return { previousData }
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        for (const [queryKey, data] of context.previousData) {
+          queryClient.setQueryData(queryKey, data)
+        }
+      }
+      toast.error("중요 표시 변경에 실패했습니다.")
+    },
+    onSuccess: () => {
+      // After successful API call, invalidate queries but don't refetch active ones
+      // This ensures that when switching to Important filter, it will fetch fresh data
+      queryClient.invalidateQueries({
+        queryKey: ["replied-emails"],
+        refetchType: "none", // Don't refetch currently active queries
+      })
+      queryClient.invalidateQueries({ queryKey: ["intent-counts"] })
+    },
+  })
+}

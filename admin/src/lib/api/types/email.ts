@@ -270,6 +270,9 @@ export interface RepliedEmail {
   latestMessageBodyHtml?: string | null
   latestMessageDirection?: EmailDirection | null
   latestMessageFrom?: string | null
+  // UI state fields
+  isRead?: boolean
+  isImportant?: boolean
 }
 
 // Thread email for conversation history (스레드 대화 이력)

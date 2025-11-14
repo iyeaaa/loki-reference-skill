@@ -228,6 +228,8 @@ export interface RepliedEmailsParams {
   sequenceId?: string
   search?: string
   intent?: string
+  isImportant?: boolean
+  isUnread?: boolean
   sentiment?: string
   category?: string
   priority?: string

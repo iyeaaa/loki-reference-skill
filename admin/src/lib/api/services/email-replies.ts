@@ -155,4 +155,23 @@ export const emailRepliesApi = {
   getIntentCounts: async (workspaceId: string): Promise<Record<string, number>> => {
     return apiFetch(`/api/v1/email-replies/stats/by-intent?workspaceId=${workspaceId}`)
   },
+
+  /**
+   * Toggle important status for a thread
+   */
+  toggleImportant: async (threadId: string, isImportant: boolean): Promise<void> => {
+    await apiFetch(`/api/v1/email-replies/thread/${threadId}/important`, {
+      method: "PATCH",
+      body: JSON.stringify({ isImportant }),
+    })
+  },
+
+  /**
+   * Mark thread as read
+   */
+  markThreadAsRead: async (threadId: string): Promise<void> => {
+    await apiFetch(`/api/v1/email-replies/thread/${threadId}/read`, {
+      method: "PATCH",
+    })
+  },
 }

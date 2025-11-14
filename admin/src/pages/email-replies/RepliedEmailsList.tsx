@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
+import { useToggleImportant } from "@/lib/api/hooks/email-replies"
 import { type RepliedEmailsParams, useRepliedEmails } from "@/lib/api/hooks/emails"
 import { RepliedEmailsListItem } from "./RepliedEmailsListItem"
 
@@ -12,6 +13,8 @@ interface RepliedEmailsListProps {
   searchQuery: string
   selectedStatuses: string[]
   selectedIntent?: string | null
+  filterImportant?: boolean
+  filterUnread?: boolean
   selectedThreadId?: string | null
   onThreadSelect: (threadId: string) => void
   selectedThreads: string[]
@@ -29,6 +32,8 @@ export function RepliedEmailsList({
   searchQuery,
   selectedStatuses,
   selectedIntent,
+  filterImportant,
+  filterUnread,
   selectedThreadId,
   onThreadSelect,
   selectedThreads,
@@ -59,6 +64,8 @@ export function RepliedEmailsList({
             : undefined,
       search: searchQuery || undefined,
       intent: selectedIntent && selectedIntent !== "all" ? selectedIntent : undefined,
+      isImportant: filterImportant,
+      isUnread: filterUnread,
       sentiment: filterSentiment.length > 0 ? filterSentiment.join(",") : undefined,
       category: filterCategory.length > 0 ? filterCategory.join(",") : undefined,
       priority: filterPriority.length > 0 ? filterPriority.join(",") : undefined,
@@ -71,6 +78,8 @@ export function RepliedEmailsList({
       selectedStatuses,
       searchQuery,
       selectedIntent,
+      filterImportant,
+      filterUnread,
       filterSentiment,
       filterCategory,
       filterPriority,
@@ -135,6 +144,18 @@ export function RepliedEmailsList({
     repliedEmails.length > 0 &&
     repliedEmails.every((email) => email.threadId && selectedThreads.includes(email.threadId))
 
+  // Toggle important mutation
+  const toggleImportant = useToggleImportant()
+
+  const handleToggleImportant = (email: (typeof repliedEmails)[0], e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!email.threadId) return
+    toggleImportant.mutate({
+      threadId: email.threadId,
+      isImportant: !email.isImportant,
+    })
+  }
+
   return (
     <div>
       {/* List container */}
@@ -176,6 +197,7 @@ export function RepliedEmailsList({
                   e.stopPropagation()
                   if (email.threadId) onToggleThread(email.threadId)
                 }}
+                onToggleImportant={(e) => handleToggleImportant(email, e)}
                 searchQuery={searchQuery}
               />
             ))}

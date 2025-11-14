@@ -130,6 +130,10 @@ export const emails = pgTable(
     unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
     spamReportedAt: timestamp("spam_reported_at", { withTimezone: true }),
 
+    // UI state (for inbound emails)
+    isImportant: boolean("is_important").notNull().default(false),
+    isRead: boolean("is_read").notNull().default(false),
+
     // Retry logic
     retryCount: integer("retry_count").notNull().default(0),
     lastRetryAt: timestamp("last_retry_at", { withTimezone: true }),

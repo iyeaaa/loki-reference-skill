@@ -193,6 +193,9 @@ export function SequenceStepForm({
     previousStepId: step?.previousStepId || "",
   })
 
+  // 서명을 별도로 관리
+  const [emailSignature, setEmailSignature] = useState<string>("")
+
   // 날짜/시간 입력 방식: "relative" (상대적) 또는 "absolute" (절대적)
   const [scheduleMode, setScheduleMode] = useState<"relative" | "absolute">("relative")
 
@@ -211,17 +214,12 @@ export function SequenceStepForm({
   // 첨부 파일 상태
   const [files, setFiles] = useState<File[]>([])
 
-  // DB에서 서명이 로드되면 초기 서명 설정 (새 스텝 생성 시에만)
+  // DB에서 서명이 로드되면 서명 상태에 설정
   useEffect(() => {
-    if (!step && !formData.emailBodyText && defaultSignature) {
-      const signature = defaultSignature.signatureHtml
-      setFormData((prev) => ({
-        ...prev,
-        emailBodyText: `\n\n${signature}`,
-      }))
+    if (defaultSignature) {
+      setEmailSignature(defaultSignature.signatureHtml)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultSignature, step, formData.emailBodyText])
+  }, [defaultSignature])
 
   // 고객 그룹의 리드에서 country 가져오기
   useEffect(() => {
@@ -275,14 +273,20 @@ export function SequenceStepForm({
       })
     }
 
-    // Markdown을 HTML로 변환
-    const emailBodyHtml = formData.emailBodyText
-      ? markdownToHtml(formData.emailBodyText)
+    // Markdown을 HTML로 변환하고 서명 추가
+    let emailBodyWithSignature = formData.emailBodyText
+    if (emailSignature) {
+      emailBodyWithSignature = `${formData.emailBodyText}\n\n${emailSignature}`
+    }
+
+    const emailBodyHtml = emailBodyWithSignature
+      ? markdownToHtml(emailBodyWithSignature)
       : undefined
 
     onSave(
       {
         ...formData,
+        emailBodyText: emailBodyWithSignature,
         emailBodyHtml,
         conditionType: formData.stepOrder === 1 ? "always" : formData.conditionType,
       },
@@ -338,7 +342,7 @@ export function SequenceStepForm({
       setFormData({
         ...formData,
         emailSubject: result.emailSubject,
-        emailBodyText: `${htmlToMarkdown(result.emailBodyText)}\n\n${getUserSignature()}`,
+        emailBodyText: htmlToMarkdown(result.emailBodyText),
       })
 
       toast.success(
@@ -357,24 +361,7 @@ export function SequenceStepForm({
 
   // 서명 저장
   const handleSaveSignature = (signature: string) => {
-    // 기존 본문에서 서명 부분을 제거하고 새 서명 추가
-    let bodyWithoutSignature = formData.emailBodyText || ""
-
-    // 기존 서명 패턴 제거 (여러 가능한 구분자)
-    const signatureSeparators = [
-      /\n\n--\n[\s\S]*$/,
-      /\n\n---\n[\s\S]*$/,
-      /<div dir="ltr">[\s\S]*<\/div>\s*$/,
-    ]
-
-    for (const separator of signatureSeparators) {
-      bodyWithoutSignature = bodyWithoutSignature.replace(separator, "")
-    }
-
-    setFormData({
-      ...formData,
-      emailBodyText: `${bodyWithoutSignature.trim()}\n\n${signature}`,
-    })
+    setEmailSignature(signature)
   }
 
   return (
@@ -730,9 +717,40 @@ export function SequenceStepForm({
         <RichTextEditor
           value={formData.emailBodyText || ""}
           onChange={(value) => setFormData({ ...formData, emailBodyText: value })}
-          placeholder={`\n\n--\n${getUserSignature()}`}
+          placeholder={t("sequences.stepForm.emailBodyPlaceholder", "이메일 본문을 입력하세요...")}
           height="300px"
         />
+
+        {/* 서명 프리뷰 */}
+        {emailSignature && (
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium text-muted-foreground">
+                {t("sequences.stepForm.signaturePreview", "서명 미리보기")}
+              </Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsSignatureModalOpen(true)}
+                className="h-6 text-xs"
+              >
+                {t("sequences.stepForm.editSignature", "편집")}
+              </Button>
+            </div>
+            <div
+              className="text-xs prose prose-sm max-w-none dark:prose-invert"
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: User-managed signature content is safe
+              dangerouslySetInnerHTML={{ __html: emailSignature }}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t(
+                "sequences.stepForm.signatureNote",
+                "이 서명은 이메일 발송 시 본문 하단에 자동으로 추가됩니다.",
+              )}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* 파일 첨부 */}
@@ -812,7 +830,7 @@ export function SequenceStepForm({
       <SignatureEditorModal
         isOpen={isSignatureModalOpen}
         onClose={() => setIsSignatureModalOpen(false)}
-        defaultSignature={getUserSignature()}
+        defaultSignature={emailSignature || getUserSignature()}
         onSave={handleSaveSignature}
         workspaceId={workspaceId}
         userId={user?.id}

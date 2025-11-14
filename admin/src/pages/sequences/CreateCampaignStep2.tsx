@@ -55,6 +55,7 @@ interface EmailStep {
   isDraft?: boolean
   files?: File[]
   isAdvertisement?: boolean
+  emailSignature?: string // 서명을 별도로 저장
 }
 
 interface CreateCampaignStep2Props {
@@ -168,16 +169,15 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
     }
   }, [data.steps])
 
-  // DB에서 서명이 로드되면 초기 서명 설정 (새 스텝 생성 시에만)
+  // DB에서 서명이 로드되면 모든 스텝에 서명 설정
   // biome-ignore lint/correctness/useExhaustiveDependencies: Only run when signature loads, not when steps change
   useEffect(() => {
-    if (steps.length > 0 && !steps[0].emailBodyText && defaultSignature && steps[0].isDraft) {
+    if (defaultSignature) {
       const signature = defaultSignature.signatureHtml
-      const updatedSteps = [...steps]
-      updatedSteps[0] = {
-        ...updatedSteps[0],
-        emailBodyText: `\n\n${signature}`,
-      }
+      const updatedSteps = steps.map((step) => ({
+        ...step,
+        emailSignature: step.emailSignature || signature,
+      }))
       setSteps(updatedSteps)
     }
   }, [defaultSignature])
@@ -300,13 +300,19 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
     // Save to DB if sequenceId exists
     if (sequenceId) {
       try {
+        // 저장 시 서명을 본문에 결합
+        let emailBodyWithSignature = currentStep.emailBodyText
+        if (currentStep.emailSignature) {
+          emailBodyWithSignature = `${currentStep.emailBodyText}\n\n${currentStep.emailSignature}`
+        }
+
         const stepData = {
           stepOrder: currentStep.stepOrder,
           delayDays: currentStep.delayDays,
           scheduledHour: currentStep.scheduledHour,
           scheduledMinute: currentStep.scheduledMinute,
           emailSubject: currentStep.emailSubject,
-          emailBodyText: currentStep.emailBodyText,
+          emailBodyText: emailBodyWithSignature,
         }
 
         if (currentStep.id) {
@@ -371,22 +377,8 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
   }
 
   const handleSaveSignature = (signature: string) => {
-    // 기존 본문에서 서명 부분을 제거하고 새 서명 추가
-    let bodyWithoutSignature = currentStep.emailBodyText || ""
-
-    // 기존 서명 패턴 제거 (여러 가능한 구분자)
-    const signatureSeparators = [
-      /\n\n--\n[\s\S]*$/,
-      /\n\n---\n[\s\S]*$/,
-      /<div dir="ltr">[\s\S]*<\/div>\s*$/,
-    ]
-
-    for (const separator of signatureSeparators) {
-      bodyWithoutSignature = bodyWithoutSignature.replace(separator, "")
-    }
-
     updateCurrentStep({
-      emailBodyText: `${bodyWithoutSignature.trim()}\n\n${signature}`,
+      emailSignature: signature,
     })
     setIsSignatureModalOpen(false)
   }
@@ -815,9 +807,37 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
                 ref={editorRef}
                 value={currentStep?.emailBodyText || ""}
                 onChange={(value) => updateCurrentStep({ emailBodyText: value })}
-                placeholder={`이메일 내용을 입력하세요...\n\n--\n${getUserSignature()}`}
+                placeholder="이메일 내용을 입력하세요..."
                 height="300px"
               />
+
+              {/* 서명 프리뷰 */}
+              {currentStep?.emailSignature && (
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-medium text-muted-foreground">
+                      서명 미리보기
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsSignatureModalOpen(true)}
+                      className="h-6 text-xs"
+                    >
+                      편집
+                    </Button>
+                  </div>
+                  <div
+                    className="text-xs prose prose-sm max-w-none dark:prose-invert"
+                    // biome-ignore lint/security/noDangerouslySetInnerHtml: User-managed signature content is safe
+                    dangerouslySetInnerHTML={{ __html: currentStep.emailSignature }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    이 서명은 이메일 발송 시 본문 하단에 자동으로 추가됩니다.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Attachments */}
@@ -926,7 +946,7 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
       <SignatureEditorModal
         isOpen={isSignatureModalOpen}
         onClose={() => setIsSignatureModalOpen(false)}
-        defaultSignature={getUserSignature()}
+        defaultSignature={currentStep?.emailSignature || getUserSignature()}
         onSave={handleSaveSignature}
         workspaceId={data.workspaceId}
         userId={user?.id}

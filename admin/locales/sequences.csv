@@ -617,3 +617,7 @@ stepsList.inlineEdit.days,일,days
 stepsList.inlineEdit.save,저장,Save
 stepsList.inlineEdit.clickToEdit,클릭하여 날짜/시간 수정,Click to edit date/time
 filter.all,전체,All
+stepForm.editSignature,[NO TRANSLATION] sequences.stepForm.editSignature,[NO TRANSLATION] sequences.stepForm.editSignature
+stepForm.emailBodyPlaceholder,[NO TRANSLATION] sequences.stepForm.emailBodyPlaceholder,[NO TRANSLATION] sequences.stepForm.emailBodyPlaceholder
+stepForm.signatureNote,[NO TRANSLATION] sequences.stepForm.signatureNote,[NO TRANSLATION] sequences.stepForm.signatureNote
+stepForm.signaturePreview,[NO TRANSLATION] sequences.stepForm.signaturePreview,[NO TRANSLATION] sequences.stepForm.signaturePreview

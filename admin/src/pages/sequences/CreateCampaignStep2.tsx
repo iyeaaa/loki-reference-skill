@@ -24,7 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { RichTextEditor, type RichTextEditorRef } from "@/components/ui/rich-text-editor"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Sheet,
@@ -145,6 +145,7 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
   const [showVariables, setShowVariables] = useState(false)
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false)
   const prevDataStepsRef = useRef(data.steps)
+  const editorRef = useRef<RichTextEditorRef>(null)
 
   // 인라인 스케줄 편집 상태
   const [editingScheduleIndex, setEditingScheduleIndex] = useState<number | null>(null)
@@ -361,10 +362,15 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
   }
 
   const insertVariable = (variable: string) => {
-    // Insert at cursor position or at end
-    updateCurrentStep({
-      emailBodyText: currentStep.emailBodyText + variable,
-    })
+    // Insert at cursor position using editor ref
+    if (editorRef.current) {
+      editorRef.current.insertTextAtCursor(variable)
+    } else {
+      // Fallback: append to end
+      updateCurrentStep({
+        emailBodyText: currentStep.emailBodyText + variable,
+      })
+    }
     setShowVariables(false)
   }
 
@@ -832,6 +838,7 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
                 </Button>
               </div>
               <RichTextEditor
+                ref={editorRef}
                 value={currentStep?.emailBodyText || ""}
                 onChange={(value) => updateCurrentStep({ emailBodyText: value })}
                 placeholder={`이메일 내용을 입력하세요...\n\n--\n${getUserSignature()}`}

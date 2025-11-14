@@ -16,7 +16,7 @@ import { useTranslation } from "react-i18next"
 import { useParams } from "react-router-dom"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { EmailSidebar } from "@/components/ui/email-sidebar"
 import { type FilterConfig, FilterPanel } from "@/components/ui/filter-panel"
 import { useBulkDeleteEmailReplies, useIntentCounts } from "@/lib/api/hooks/email-replies"
@@ -154,8 +154,8 @@ export default function EmailRepliesPage() {
       queryClient.setQueriesData({ queryKey: ["replied-emails"] }, (old: any) => {
         if (!old?.repliedEmails) return old
 
-        // biome-ignore lint/suspicious/noExplicitAny: QueryClient cache data is untyped
         const targetEmail = old.repliedEmails.find(
+          // biome-ignore lint/suspicious/noExplicitAny: QueryClient cache data is untyped
           (email: any) => email.threadId === selectedThreadId,
         )
         wasUnread = targetEmail && !targetEmail.isRead
@@ -301,17 +301,7 @@ export default function EmailRepliesPage() {
             className="flex flex-col h-full"
           >
             <Card className="h-full flex flex-col overflow-hidden">
-              <CardHeader className="pb-3 pt-3 flex-shrink-0">
-                <CardTitle className="text-base">
-                  {t("email-replies.title")}
-                  {selectedWorkspace && (
-                    <span className="ml-2 text-sm font-normal text-muted-foreground">
-                      ({selectedWorkspace.name})
-                    </span>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1 flex flex-col overflow-hidden pt-0">
+              <CardContent className="flex-1 flex flex-col overflow-hidden pt-4">
                 {/* Filter Panel */}
                 <div className="mb-3 flex-shrink-0">
                   <FilterPanel

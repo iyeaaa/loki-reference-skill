@@ -1,5 +1,5 @@
 import { Loader2, Maximize2, Minimize2, Send, X } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -13,6 +13,7 @@ interface FloatingReplyPopupProps {
   to: string
   subject: string
   isSending?: boolean
+  initialText?: string
 }
 
 export function FloatingReplyPopup({
@@ -22,10 +23,17 @@ export function FloatingReplyPopup({
   to,
   subject,
   isSending = false,
+  initialText = "",
 }: FloatingReplyPopupProps) {
   const [replyText, setReplyText] = useState("")
   const [isMinimized, setIsMinimized] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
+
+  useEffect(() => {
+    if (isOpen && initialText) {
+      setReplyText(initialText)
+    }
+  }, [isOpen, initialText])
 
   const handleSendReply = async () => {
     if (!replyText.trim()) return
@@ -69,17 +77,19 @@ export function FloatingReplyPopup({
               : "bottom-0 right-4 w-[600px] h-[700px] flex flex-col"
         }`}
       >
-        <button
-          type="button"
-          tabIndex={isMinimized ? 0 : -1}
-          className="w-full flex items-center justify-between px-4 py-3 border-b bg-gray-50 dark:bg-gray-800 flex-shrink-0 cursor-pointer text-left"
-          onClick={() => isMinimized && setIsMinimized(false)}
-          onKeyDown={(e) => isMinimized && e.key === "Enter" && setIsMinimized(false)}
-          aria-label={isMinimized ? "Expand reply window" : "Reply header"}
-          disabled={!isMinimized}
-        >
-          <span className="text-sm font-medium truncate flex-1">답장</span>
-          <span className="flex items-center gap-1">
+        <div className="w-full flex items-center justify-between px-4 py-3 border-b bg-gray-50 dark:bg-gray-800 flex-shrink-0">
+          <button
+            type="button"
+            tabIndex={isMinimized ? 0 : -1}
+            className="text-sm font-medium truncate flex-1 text-left cursor-pointer"
+            onClick={() => isMinimized && setIsMinimized(false)}
+            onKeyDown={(e) => isMinimized && e.key === "Enter" && setIsMinimized(false)}
+            aria-label={isMinimized ? "Expand reply window" : "Reply header"}
+            disabled={!isMinimized}
+          >
+            답장
+          </button>
+          <div className="flex items-center gap-1">
             {!isMaximized && !isMinimized && (
               <Button
                 type="button"
@@ -87,7 +97,7 @@ export function FloatingReplyPopup({
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation()
-                  setIsMinimized(!isMinimized)
+                  setIsMinimized(true)
                 }}
                 className="h-8 w-8 p-0"
               >
@@ -120,8 +130,8 @@ export function FloatingReplyPopup({
             >
               <X className="h-4 w-4" />
             </Button>
-          </span>
-        </button>
+          </div>
+        </div>
 
         {!isMinimized && (
           <>

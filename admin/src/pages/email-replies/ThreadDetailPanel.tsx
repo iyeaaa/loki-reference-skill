@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query"
-import { Reply, X } from "lucide-react"
+import { Reply, Sparkles, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -35,6 +35,11 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
   // 답장 상태
   const [showReply, setShowReply] = useState(false)
   const [isSending, setIsSending] = useState(false)
+  const [initialReplyText, setInitialReplyText] = useState("")
+
+  // AI Suggestion 상태
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
 
   // 각 이메일의 펼침/접힘 상태 (기본값: 모두 펼침)
   const [expandedEmails, setExpandedEmails] = useState<Record<string, boolean>>({})
@@ -44,6 +49,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
   useEffect(() => {
     setExpandedEmails({})
     setShowReply(false)
+    setAiError(null)
   }, [threadId])
 
   // 이메일이 펼쳐져 있는지 확인 (기본값: 마지막 이메일만 펼침)
@@ -62,6 +68,49 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
       ...prev,
       [emailId]: !currentState,
     }))
+  }
+
+  // AI Suggestion 생성 핸들러
+  const handleGenerateAISuggestion = async () => {
+    setAiLoading(true)
+    setAiError(null)
+
+    try {
+      const response = await fetch("/api/ai/generate-followup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          threadId,
+          workspaceId,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to generate AI suggestion")
+      }
+
+      const result = await response.json()
+      console.log("AI Suggestion:", result)
+
+      if (result.success && result.data) {
+        const aiReply = result.data.rawResponse || ""
+
+        setInitialReplyText(aiReply)
+        setShowReply(true)
+        toast.success("AI 답장이 생성되었습니다!")
+      }
+    } catch (err) {
+      setAiError(
+        err instanceof Error
+          ? err.message
+          : "Unable to connect. Is the computer able to access the url?",
+      )
+      toast.error("AI 제안 생성에 실패했습니다")
+    } finally {
+      setAiLoading(false)
+    }
   }
 
   // 답장 전송 핸들러
@@ -177,13 +226,31 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
         </ScrollArea>
       </TooltipProvider>
 
-      {/* 하단 답장 버튼 (Gmail 스타일) */}
+      {/* AI Follow-up Suggestion & Reply Button */}
       {emails.length > 0 && (
-        <div className="px-4 py-3 border-t">
-          <Button onClick={() => setShowReply(true)} size="sm" variant="default">
-            <Reply className="h-4 w-4 mr-2" />
-            {t("email-replies.thread.replyButton")}
-          </Button>
+        <div className="px-4 py-3 border-t space-y-2">
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleGenerateAISuggestion}
+              disabled={aiLoading}
+              variant="outline"
+              size="sm"
+              className="flex-1"
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              {aiLoading ? "Generating..." : "AI Suggestion"}
+            </Button>
+            <Button
+              onClick={() => setShowReply(true)}
+              size="sm"
+              variant="default"
+              className="flex-1"
+            >
+              <Reply className="h-4 w-4 mr-2" />
+              {t("email-replies.thread.replyButton")}
+            </Button>
+          </div>
+          {aiError && <p className="text-sm text-red-600 dark:text-red-400">{aiError}</p>}
         </div>
       )}
 
@@ -191,11 +258,15 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
       {emails.length > 0 && (
         <FloatingReplyPopup
           isOpen={showReply}
-          onClose={() => setShowReply(false)}
+          onClose={() => {
+            setShowReply(false)
+            setInitialReplyText("") // Reset initial text when closing
+          }}
           onSend={handleSendReply}
           to={emails[emails.length - 1]?.fromEmail || ""}
           subject={`Re: ${emails[0]?.subject || ""}`}
           isSending={isSending}
+          initialText={initialReplyText}
         />
       )}
     </Card>

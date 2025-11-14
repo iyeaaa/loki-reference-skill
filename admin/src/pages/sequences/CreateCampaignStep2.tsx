@@ -4,8 +4,6 @@ import {
   AlertCircle,
   Calendar as CalendarIcon,
   Check,
-  ChevronDown,
-  ChevronRight,
   Clock,
   Info,
   Mail,
@@ -142,7 +140,6 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
   const [showAISheet, setShowAISheet] = useState(false)
   const [aiPrompt, setAiPrompt] = useState("")
   const [isGeneratingAI, setIsGeneratingAI] = useState(false)
-  const [showVariables, setShowVariables] = useState(false)
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false)
   const prevDataStepsRef = useRef(data.steps)
   const editorRef = useRef<RichTextEditorRef>(null)
@@ -371,7 +368,6 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
         emailBodyText: currentStep.emailBodyText + variable,
       })
     }
-    setShowVariables(false)
   }
 
   const handleSaveSignature = (signature: string) => {
@@ -781,45 +777,23 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
 
             {/* Variables */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>변수 삽입</Label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowVariables(!showVariables)}
-                  className="h-7"
-                >
-                  {showVariables ? (
-                    <>
-                      <ChevronDown className="h-3 w-3 mr-1" />
-                      접기
-                    </>
-                  ) : (
-                    <>
-                      <ChevronRight className="h-3 w-3 mr-1" />
-                      펼치기
-                    </>
-                  )}
-                </Button>
+              <Label>변수 삽입</Label>
+              <div className="flex flex-wrap gap-2 p-3 rounded-lg border bg-muted/30">
+                {VARIABLES.map((variable) => (
+                  <Button
+                    key={variable.value}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => insertVariable(variable.value)}
+                    className="h-7 text-xs"
+                  >
+                    {variable.label}
+                  </Button>
+                ))}
+                <p className="w-full text-xs text-muted-foreground mt-2">
+                  클릭하면 본문에 변수가 추가됩니다
+                </p>
               </div>
-              {showVariables && (
-                <div className="flex flex-wrap gap-2 p-3 rounded-lg border bg-muted/30">
-                  {VARIABLES.map((variable) => (
-                    <Button
-                      key={variable.value}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => insertVariable(variable.value)}
-                      className="h-7 text-xs"
-                    >
-                      {variable.label}
-                    </Button>
-                  ))}
-                  <p className="w-full text-xs text-muted-foreground mt-2">
-                    클릭하면 본문에 변수가 추가됩니다
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Email Body with RichTextEditor */}

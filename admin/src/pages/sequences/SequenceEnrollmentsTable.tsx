@@ -19,7 +19,6 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { CompanyMetricsModal } from "@/components/CompanyMetricsModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -57,14 +56,6 @@ function StepExecutionDetails({
     error,
   } = useEnrollmentStepExecutions(sequenceId, enrollmentId, true)
 
-  console.log("StepExecutionDetails Debug:", {
-    sequenceId,
-    enrollmentId,
-    executions,
-    isLoading,
-    error,
-  })
-
   if (isLoading) {
     return (
       <div className="p-4 text-sm text-muted-foreground">
@@ -88,9 +79,6 @@ function StepExecutionDetails({
     return (
       <div className="p-4 text-sm text-muted-foreground">
         {t("sequences.enrollments.stepExecutions.noSteps")}
-        <div className="text-xs mt-2">
-          (sequenceId: {sequenceId}, enrollmentId: {enrollmentId})
-        </div>
       </div>
     )
   }
@@ -360,32 +348,6 @@ function EnrollmentReplyStatus({ enrollmentId }: { enrollmentId: string }) {
   )
 }
 
-// CompanyMetricsModalWithData - 실제 API 데이터를 사용하는 모달 컴포넌트
-interface CompanyMetricsModalWithDataProps {
-  isOpen: boolean
-  onClose: () => void
-  enrollmentId: string
-}
-
-function CompanyMetricsModalWithData({
-  isOpen,
-  onClose,
-  enrollmentId,
-}: CompanyMetricsModalWithDataProps) {
-  const { data: metricsData, isLoading } = useEnrollmentMetrics(enrollmentId)
-
-  console.log("metricsData", metricsData)
-
-  return (
-    <CompanyMetricsModal
-      isOpen={isOpen}
-      onClose={onClose}
-      companyData={metricsData?.data}
-      isLoading={isLoading}
-    />
-  )
-}
-
 interface SequenceEnrollmentsTableProps {
   sequenceId: string
 }
@@ -393,8 +355,6 @@ interface SequenceEnrollmentsTableProps {
 export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTableProps) {
   const { t } = useTranslation()
   const [currentPage, setCurrentPage] = useState(1)
-  const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null)
-  const [showMetricsModal, setShowMetricsModal] = useState(false)
   const [expandedEnrollmentId, setExpandedEnrollmentId] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -521,319 +481,286 @@ export function SequenceEnrollmentsTable({ sequenceId }: SequenceEnrollmentsTabl
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>{t("sequences.enrollments.title")}</span>
-            <div className="flex gap-2">
-              {hasActiveFilters && (
-                <Badge variant="default">필터링: {enrollmentsData?.total || 0}개</Badge>
-              )}
-              {!hasActiveFilters && (
-                <Badge variant="secondary">
-                  {t("sequences.enrollments.totalEnrolled", {
-                    count: enrollmentsData?.total || 0,
-                  })}
-                </Badge>
-              )}
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* 필터 UI */}
-          <div className="mb-4 space-y-4">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="회사명 검색..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Button
-                variant={showFilters ? "default" : "outline"}
-                size="default"
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2"
-              >
-                <Filter className="w-4 h-4" />
-                필터
-              </Button>
-            </div>
-
-            {showFilters && (
-              <div className="flex flex-wrap gap-2 p-4 bg-muted/50 rounded-md">
-                <Button
-                  variant={filters.opened === true ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setFilters({
-                      ...filters,
-                      opened: filters.opened === true ? undefined : true,
-                    })
-                    setCurrentPage(1)
-                  }}
-                >
-                  오픈함
-                </Button>
-                <Button
-                  variant={filters.clicked === true ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setFilters({
-                      ...filters,
-                      clicked: filters.clicked === true ? undefined : true,
-                    })
-                    setCurrentPage(1)
-                  }}
-                >
-                  클릭함
-                </Button>
-                <Button
-                  variant={filters.replied === true ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setFilters({
-                      ...filters,
-                      replied: filters.replied === true ? undefined : true,
-                    })
-                    setCurrentPage(1)
-                  }}
-                >
-                  답장함
-                </Button>
-                <Button
-                  variant={filters.delivered === true ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setFilters({
-                      ...filters,
-                      delivered: filters.delivered === true ? undefined : true,
-                    })
-                    setCurrentPage(1)
-                  }}
-                >
-                  발송완료
-                </Button>
-                {hasActiveFilters && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSearchQuery("")
-                      setFilters({})
-                      setCurrentPage(1)
-                    }}
-                    className="flex items-center gap-1"
-                  >
-                    <X className="w-3 h-3" />
-                    필터 초기화
-                  </Button>
-                )}
-              </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span>{t("sequences.enrollments.title")}</span>
+          <div className="flex gap-2">
+            {hasActiveFilters && (
+              <Badge variant="default">필터링: {enrollmentsData?.total || 0}개</Badge>
+            )}
+            {!hasActiveFilters && (
+              <Badge variant="secondary">
+                {t("sequences.enrollments.totalEnrolled", {
+                  count: enrollmentsData?.total || 0,
+                })}
+              </Badge>
             )}
           </div>
-
-          {enrollments.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {t("sequences.enrollments.noEnrollments")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {/* 필터 UI */}
+        <div className="mb-4 space-y-4">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="회사명 검색..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
             </div>
-          ) : (
-            <>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("sequences.enrollments.column.companyName")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.status")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.progress")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.sent")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.delivered")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.opened")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.clicked")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.replied")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.enrolledAt")}</TableHead>
-                      <TableHead>{t("sequences.enrollments.column.viewDetails")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {enrollments.map((enrollment) => {
-                      const progress = getProgressPercentage(
-                        enrollment.currentStepOrder,
-                        totalSteps,
-                      )
+            <Button
+              variant={showFilters ? "default" : "outline"}
+              size="default"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2"
+            >
+              <Filter className="w-4 h-4" />
+              필터
+            </Button>
+          </div>
 
-                      // 실제 데이터 기반 간단한 상태 표시
-                      const hasEmailsSent = enrollment.currentStepOrder > 0
+          {showFilters && (
+            <div className="flex flex-wrap gap-2 p-4 bg-muted/50 rounded-md">
+              <Button
+                variant={filters.opened === true ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setFilters({
+                    ...filters,
+                    opened: filters.opened === true ? undefined : true,
+                  })
+                  setCurrentPage(1)
+                }}
+              >
+                오픈함
+              </Button>
+              <Button
+                variant={filters.clicked === true ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setFilters({
+                    ...filters,
+                    clicked: filters.clicked === true ? undefined : true,
+                  })
+                  setCurrentPage(1)
+                }}
+              >
+                클릭함
+              </Button>
+              <Button
+                variant={filters.replied === true ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setFilters({
+                    ...filters,
+                    replied: filters.replied === true ? undefined : true,
+                  })
+                  setCurrentPage(1)
+                }}
+              >
+                답장함
+              </Button>
+              <Button
+                variant={filters.delivered === true ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setFilters({
+                    ...filters,
+                    delivered: filters.delivered === true ? undefined : true,
+                  })
+                  setCurrentPage(1)
+                }}
+              >
+                발송완료
+              </Button>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery("")
+                    setFilters({})
+                    setCurrentPage(1)
+                  }}
+                  className="flex items-center gap-1"
+                >
+                  <X className="w-3 h-3" />
+                  필터 초기화
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
 
-                      const handleViewDetails = () => {
-                        setSelectedEnrollmentId(enrollment.id)
-                        setShowMetricsModal(true)
-                      }
+        {enrollments.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            {t("sequences.enrollments.noEnrollments")}
+          </div>
+        ) : (
+          <>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("sequences.enrollments.column.companyName")}</TableHead>
+                    <TableHead>{t("sequences.enrollments.column.status")}</TableHead>
+                    <TableHead>{t("sequences.enrollments.column.progress")}</TableHead>
+                    <TableHead>{t("sequences.enrollments.column.sent")}</TableHead>
+                    <TableHead>{t("sequences.enrollments.column.delivered")}</TableHead>
+                    <TableHead>{t("sequences.enrollments.column.opened")}</TableHead>
+                    <TableHead>{t("sequences.enrollments.column.clicked")}</TableHead>
+                    <TableHead>{t("sequences.enrollments.column.replied")}</TableHead>
+                    <TableHead>{t("sequences.enrollments.column.enrolledAt")}</TableHead>
+                    <TableHead>{t("sequences.enrollments.column.viewDetails")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {enrollments.map((enrollment) => {
+                    const progress = getProgressPercentage(enrollment.currentStepOrder, totalSteps)
 
-                      const isExpanded = expandedEnrollmentId === enrollment.id
-                      const toggleExpand = () => {
-                        setExpandedEnrollmentId(isExpanded ? null : enrollment.id)
-                      }
+                    // 실제 데이터 기반 간단한 상태 표시
+                    const hasEmailsSent = enrollment.currentStepOrder > 0
 
-                      return (
-                        <>
-                          <TableRow key={enrollment.id} className="hover:bg-muted/50">
-                            <TableCell className="font-medium">
-                              <div className="flex flex-col gap-1">
-                                <span>
-                                  {enrollment.leadCompanyName ||
-                                    t("sequences.enrollments.companyNameUnknown")}
-                                </span>
-                                {enrollment.leadEmail && (
-                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <Mail className="w-3 h-3" />
-                                    {enrollment.leadEmail}
-                                  </span>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>{getStatusBadge(enrollment.status)}</TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-2 min-w-[120px]">
-                                <div className="flex items-center justify-between text-sm">
-                                  <span className="text-muted-foreground">
-                                    {t("sequences.enrollments.progress.step", {
-                                      current: enrollment.currentStepOrder,
-                                      total: totalSteps,
-                                    })}
-                                  </span>
-                                  <span className="font-medium">{progress}%</span>
-                                </div>
-                                <Progress value={progress} className="h-2" />
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {hasEmailsSent ? (
-                                <div className="flex items-center gap-1 text-sm text-blue-600">
+                    const isExpanded = expandedEnrollmentId === enrollment.id
+                    const toggleExpand = () => {
+                      setExpandedEnrollmentId(isExpanded ? null : enrollment.id)
+                    }
+
+                    return (
+                      <>
+                        <TableRow key={enrollment.id} className="hover:bg-muted/50">
+                          <TableCell className="font-medium">
+                            <div className="flex flex-col gap-1">
+                              <span>
+                                {enrollment.leadCompanyName ||
+                                  t("sequences.enrollments.companyNameUnknown")}
+                              </span>
+                              {enrollment.leadEmail && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
                                   <Mail className="w-3 h-3" />
-                                  <span className="font-medium">
-                                    {t("sequences.enrollments.sent.count", {
-                                      count: enrollment.currentStepOrder,
-                                    })}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-sm text-muted-foreground">
-                                  {t("sequences.enrollments.sent.waiting")}
+                                  {enrollment.leadEmail}
                                 </span>
                               )}
-                            </TableCell>
-                            <TableCell>
-                              <EnrollmentDeliveryStatus enrollmentId={enrollment.id} />
-                            </TableCell>
-                            <TableCell>
-                              <EnrollmentOpenStatus enrollmentId={enrollment.id} />
-                            </TableCell>
-                            <TableCell>
-                              <EnrollmentClickStatus enrollmentId={enrollment.id} />
-                            </TableCell>
-                            <TableCell>
-                              <EnrollmentReplyStatus enrollmentId={enrollment.id} />
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1 text-sm">
-                                <Calendar className="w-3 h-3 text-muted-foreground" />
-                                {formatDate(enrollment.enrolledAt)}
+                            </div>
+                          </TableCell>
+                          <TableCell>{getStatusBadge(enrollment.status)}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-2 min-w-[120px]">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">
+                                  {t("sequences.enrollments.progress.step", {
+                                    current: enrollment.currentStepOrder,
+                                    total: totalSteps,
+                                  })}
+                                </span>
+                                <span className="font-medium">{progress}%</span>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={toggleExpand}
-                                  className="flex items-center gap-1"
-                                >
-                                  {isExpanded ? (
-                                    <ChevronUp className="w-3 h-3" />
-                                  ) : (
-                                    <ChevronDown className="w-3 h-3" />
-                                  )}
-                                  {t("sequences.enrollments.stepSchedule")}
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={handleViewDetails}
-                                  className="flex items-center gap-1"
-                                >
-                                  <Eye className="w-3 h-3" />
-                                  {t("sequences.enrollments.viewDetailsButton")}
-                                </Button>
+                              <Progress value={progress} className="h-2" />
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {hasEmailsSent ? (
+                              <div className="flex items-center gap-1 text-sm text-blue-600">
+                                <Mail className="w-3 h-3" />
+                                <span className="font-medium">
+                                  {t("sequences.enrollments.sent.count", {
+                                    count: enrollment.currentStepOrder,
+                                  })}
+                                </span>
                               </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">
+                                {t("sequences.enrollments.sent.waiting")}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <EnrollmentDeliveryStatus enrollmentId={enrollment.id} />
+                          </TableCell>
+                          <TableCell>
+                            <EnrollmentOpenStatus enrollmentId={enrollment.id} />
+                          </TableCell>
+                          <TableCell>
+                            <EnrollmentClickStatus enrollmentId={enrollment.id} />
+                          </TableCell>
+                          <TableCell>
+                            <EnrollmentReplyStatus enrollmentId={enrollment.id} />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1 text-sm">
+                              <Calendar className="w-3 h-3 text-muted-foreground" />
+                              {formatDate(enrollment.enrolledAt)}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={toggleExpand}
+                              className="flex items-center gap-1"
+                            >
+                              {isExpanded ? (
+                                <ChevronUp className="w-3 h-3" />
+                              ) : (
+                                <ChevronDown className="w-3 h-3" />
+                              )}
+                              {t("sequences.enrollments.stepSchedule")}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                        {isExpanded && (
+                          <TableRow>
+                            <TableCell colSpan={10} className="p-0">
+                              <StepExecutionDetails
+                                sequenceId={sequenceId}
+                                enrollmentId={enrollment.id}
+                              />
                             </TableCell>
                           </TableRow>
-                          {isExpanded && (
-                            <TableRow>
-                              <TableCell colSpan={9} className="p-0">
-                                <StepExecutionDetails
-                                  sequenceId={sequenceId}
-                                  enrollmentId={enrollment.id}
-                                />
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                        )}
+                      </>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-muted-foreground">
-                    {t("sequences.enrollments.pagination.page", {
-                      current: currentPage,
-                      total: totalPages,
-                    })}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      {t("sequences.enrollments.pagination.previous")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      {t("sequences.enrollments.pagination.next")}
-                    </Button>
-                  </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <div className="text-sm text-muted-foreground">
+                  {t("sequences.enrollments.pagination.page", {
+                    current: currentPage,
+                    total: totalPages,
+                  })}
                 </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 회사별 상세 지표 모달 */}
-      {selectedEnrollmentId && (
-        <CompanyMetricsModalWithData
-          isOpen={showMetricsModal}
-          onClose={() => {
-            setShowMetricsModal(false)
-            setSelectedEnrollmentId(null)
-          }}
-          enrollmentId={selectedEnrollmentId}
-        />
-      )}
-    </>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    {t("sequences.enrollments.pagination.previous")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    {t("sequences.enrollments.pagination.next")}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
   )
 }

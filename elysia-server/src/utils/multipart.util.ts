@@ -6,9 +6,10 @@ export function parseMultipartFormData(
   contentType: string | null,
   body: ArrayBuffer,
 ): Promise<{ formData: SendGridInboundPayload; files: FileData[] }> {
-  return new Promise((resolve, _reject) => {
+  return new Promise((resolve, reject) => {
     const formData: SendGridInboundPayload = {} as SendGridInboundPayload
     const files: FileData[] = []
+    const filePromises: Promise<void>[] = []
 
     const bb = busboy({
       headers: {
@@ -30,29 +31,44 @@ export function parseMultipartFormData(
         info: { filename: string; mimeType: string },
       ) => {
         const chunks: Buffer[] = []
+        const filePromise = new Promise<void>((resolveFile) => {
+          stream.on("data", (chunk: Buffer) => {
+            chunks.push(chunk)
+          })
 
-        stream.on("data", (chunk: Buffer) => {
-          chunks.push(chunk)
-        })
+          stream.on("end", () => {
+            const buffer = Buffer.concat(chunks)
+            files.push({
+              fieldname: name,
+              originalname: info.filename,
+              mimetype: info.mimeType,
+              buffer,
+              size: buffer.length,
+            })
+            resolveFile()
+          })
 
-        stream.on("end", () => {
-          files.push({
-            fieldname: name,
-            originalname: info.filename,
-            mimetype: info.mimeType,
-            buffer: Buffer.concat(chunks),
-            size: Buffer.concat(chunks).length,
+          stream.on("error", (err: Error) => {
+            reject(new Error(`File stream error for ${info.filename}: ${err.message}`))
           })
         })
+
+        filePromises.push(filePromise)
       },
     )
 
-    bb.on("finish", () => {
-      resolve({ formData, files })
+    bb.on("finish", async () => {
+      // Wait for all file streams to complete before resolving
+      try {
+        await Promise.all(filePromises)
+        resolve({ formData, files })
+      } catch (error) {
+        reject(error)
+      }
     })
 
     bb.on("error", (err: Error) => {
-      _reject(err)
+      reject(err)
     })
 
     const nodeStream = Readable.from(Buffer.from(body))

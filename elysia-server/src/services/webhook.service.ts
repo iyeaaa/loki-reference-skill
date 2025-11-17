@@ -629,19 +629,31 @@ class WebhookService {
         })
 
         // Update email with attachment metadata
-        await db
+        const updateResult = await db
           .update(emailsTable)
           .set({ attachments: attachmentMetadata })
           .where(eq(emailsTable.id, inboundEmail.id))
+          .returning({ id: emailsTable.id, attachments: emailsTable.attachments })
 
-        logger.info(
-          {
-            emailId: inboundEmail.id,
-            attachmentCount: attachmentMetadata.length,
-            attachmentFilenames: attachmentMetadata.map((att) => att.filename),
-          },
-          "Attachments saved as base64 in DB",
-        )
+        if (updateResult.length === 0) {
+          logger.error(
+            {
+              emailId: inboundEmail.id,
+              attachmentCount: attachmentMetadata.length,
+            },
+            "Failed to update email with attachments - no rows affected",
+          )
+        } else {
+          logger.info(
+            {
+              emailId: inboundEmail.id,
+              attachmentCount: attachmentMetadata.length,
+              attachmentFilenames: attachmentMetadata.map((att) => att.filename),
+              updatedAttachments: updateResult[0]?.attachments,
+            },
+            "Attachments saved as base64 in DB",
+          )
+        }
       } catch (error) {
         logger.error(
           {

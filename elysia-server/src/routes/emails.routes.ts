@@ -1201,26 +1201,11 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           .where(eq(matchedEmailsSubquery.rowNum, 1))
       } else {
         // Build query without join (for Important/Unread filters)
-        // Important: Must only include threads that have replies (exist in email_replies table)
-        // Use a subquery to get threads with replies, then filter by important/unread
-        const existsQuery =
-          workspaceId !== "all"
-            ? sql`EXISTS (
-                SELECT 1 FROM email_replies er
-                INNER JOIN emails e ON er.original_email_id = e.id
-                WHERE e.thread_id = ${emails.threadId}
-                AND er.workspace_id = ${workspaceId}
-              )`
-            : sql`EXISTS (
-                SELECT 1 FROM email_replies er
-                INNER JOIN emails e ON er.original_email_id = e.id
-                WHERE e.thread_id = ${emails.threadId}
-              )`
-
+        // Show ALL inbound emails, not just those with replies
         repliedThreadIds = await db
           .selectDistinct({ threadId: emails.threadId })
           .from(emails)
-          .where(and(...inboundConditions, existsQuery))
+          .where(and(...inboundConditions))
       }
 
       const threadIdsList = repliedThreadIds
@@ -1334,7 +1319,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         hasIntentFilter: !!intentFilter && intentFilter !== "all",
       })
 
-      // Step 3: Get threads with their representative email
+      // Step 3: Get threads with their representative email (스레드 기반 그룹화)
       // When filtering by intent/sentiment, show the matched email from Step 1
       // Otherwise, show the first email of the thread
       const threadsQuery = db
@@ -1352,7 +1337,6 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         .as("threads")
 
       // Get full email details for first email in each thread + reply intent/sentiment
-      // Note: There's only ONE email_replies record per thread (gets updated with latest reply)
       const threadEmails = await db
         .select({
           id: emails.id,
@@ -1400,7 +1384,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           enrollmentCompletedAt: sequenceEnrollments.completedAt,
           enrollmentStoppedAt: sequenceEnrollments.stoppedAt,
           enrollmentNextStepScheduledAt: sequenceEnrollments.nextStepScheduledAt,
-          // Reply classification (from email_replies) - always shows latest reply's classification
+          // Reply classification (from email_replies)
           replyIntent: emailReplies.intent,
           replySentiment: emailReplies.sentiment,
           // Latest activity timestamp from thread
@@ -1420,7 +1404,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             eq(sequenceEnrollments.leadId, emails.leadId),
           ),
         )
-        // Join email_replies - there's only ONE record per thread
+        // Join email_replies
         .leftJoin(
           emailReplies,
           needsEmailRepliesJoin
@@ -1447,6 +1431,33 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
             : // Otherwise, show the first email of each thread
               eq(emails.createdAt, threadsQuery.firstCreatedAt),
         )
+
+      logger.info({
+        msg: "✓ [REPLIED-EMAILS] Thread emails fetched",
+        threadEmailsCount: threadEmails.length,
+        threadIds: threadEmails.map((e) => e.threadId),
+        sentimentFilter: sentimentFilter || "none",
+        intentFilter: intentFilter || "none",
+        emailDetails: threadEmails.map((e) => ({
+          threadId: e.threadId,
+          direction: e.direction,
+          subject: e.subject,
+          replyIntent: e.replyIntent,
+          replySentiment: e.replySentiment,
+        })),
+        sequenceInfo: threadEmails.map((e) => ({
+          threadId: e.threadId,
+          sequenceId: e.sequenceId,
+          sequenceName: e.sequenceName,
+        })),
+        leadInfo: threadEmails.map((e) => ({
+          threadId: e.threadId,
+          leadId: e.leadId,
+          leadName: e.leadName,
+          companyName: e.companyName,
+          contactName: e.contactName,
+        })),
+      })
 
       logger.info({
         msg: "✓ [REPLIED-EMAILS] Thread emails fetched",
@@ -1532,8 +1543,6 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       })
 
       // Get latest message body for each thread (for preview)
-      // Fetch all messages in these threads, ordered by date desc
-
       let allThreadMessages: Array<{
         threadId: string | null
         bodyText: string | null
@@ -1589,7 +1598,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         return cleaned
       }
 
-      // Combine data
+      // Combine data (스레드 기반)
       const threadsWithCounts = threadEmails.map((email) => {
         const countData = threadCounts.find((tc) => tc.threadId === email.threadId)
         const latestMsg = email.threadId ? latestMessagesMap.get(email.threadId) : undefined
@@ -1613,7 +1622,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         }
       })
 
-      // Count total threads (only threads with inbound replies)
+      // Count total threads (스레드 개수)
       const totalThreadsResult = await db
         .select({ count: sql<number>`COUNT(DISTINCT ${emails.threadId})` })
         .from(emails)

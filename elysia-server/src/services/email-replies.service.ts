@@ -45,35 +45,20 @@ interface EmailReplyWithDetails extends EmailReply {
 }
 
 /**
- * List email replies with pagination and filters
+ * List all inbound emails grouped by thread with pagination and filters
+ * Shows the latest inbound email in each thread
  */
 export async function listEmailReplies(
   limit: number,
   offset: number,
   filters: EmailReplyFilters,
 ): Promise<EmailReplyWithDetails[]> {
-  const conditions = buildFilterConditions(filters)
+  const conditions = buildInboundFilterConditions(filters)
 
+  // Get latest inbound email per thread with pagination
   const results = await db
     .select({
-      reply: emailReplies,
-      originalEmail: {
-        id: originalEmail.id,
-        subject: originalEmail.subject,
-        fromEmail: originalEmail.fromEmail,
-        toEmail: originalEmail.toEmail,
-        sentAt: originalEmail.sentAt,
-      },
-      replyEmail: {
-        id: replyEmail.id,
-        subject: replyEmail.subject,
-        fromEmail: replyEmail.fromEmail,
-        toEmail: replyEmail.toEmail,
-        bodyText: replyEmail.bodyText,
-        bodyHtml: replyEmail.bodyHtml,
-        sentAt: replyEmail.sentAt,
-        leadName: replyEmail.leadName,
-      },
+      inboundEmail: emails,
       emailAccount: {
         id: userEmailAccounts.id,
         emailAddress: userEmailAccounts.emailAddress,
@@ -84,46 +69,79 @@ export async function listEmailReplies(
       leadContact: {
         contactName: leadContacts.contactName,
       },
+      // Get email_reply metadata if it exists
+      replyMetadata: {
+        id: emailReplies.id,
+        intent: emailReplies.intent,
+        sentiment: emailReplies.sentiment,
+        aiSummary: emailReplies.aiSummary,
+        isRead: emailReplies.isRead,
+        assignedTo: emailReplies.assignedTo,
+        originalEmailId: emailReplies.originalEmailId,
+      },
     })
-    .from(emailReplies)
-    .leftJoin(originalEmail, eq(emailReplies.originalEmailId, originalEmail.id))
-    .leftJoin(replyEmail, eq(emailReplies.replyEmailId, replyEmail.id))
-    .leftJoin(userEmailAccounts, eq(replyEmail.userEmailAccountId, userEmailAccounts.id))
-    .leftJoin(leads, eq(replyEmail.leadId, leads.id))
+    .from(emails)
+    .leftJoin(userEmailAccounts, eq(emails.userEmailAccountId, userEmailAccounts.id))
+    .leftJoin(leads, eq(emails.leadId, leads.id))
     .leftJoin(
       leadContacts,
       and(eq(leadContacts.leadId, leads.id), eq(leadContacts.isPrimary, true)),
     )
+    .leftJoin(emailReplies, eq(emails.id, emailReplies.replyEmailId))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(emailReplies.createdAt))
+    .orderBy(desc(emails.createdAt))
     .limit(limit)
     .offset(offset)
 
+  // Transform to match EmailReplyWithDetails interface
   return results.map((r) => ({
-    ...r.reply,
-    originalEmail: r.originalEmail,
-    replyEmail: r.replyEmail
+    // Use email_reply id if exists, otherwise use email id
+    id: r.replyMetadata?.id || r.inboundEmail.id,
+    workspaceId: r.inboundEmail.workspaceId,
+    originalEmailId: r.replyMetadata?.originalEmailId || "",
+    replyEmailId: r.inboundEmail.id,
+    intent: r.replyMetadata?.intent || null,
+    sentiment: r.replyMetadata?.sentiment || null,
+    aiSummary: r.replyMetadata?.aiSummary || null,
+    isRead: r.replyMetadata?.isRead ?? r.inboundEmail.isRead,
+    assignedTo: r.replyMetadata?.assignedTo || null,
+    createdAt: r.inboundEmail.createdAt,
+    originalEmail: r.replyMetadata?.originalEmailId
       ? {
-          ...r.replyEmail,
-          companyName: r.lead?.companyName || null,
-          contactName: r.leadContact?.contactName || null,
+          id: r.replyMetadata.originalEmailId,
+          subject: null,
+          fromEmail: "",
+          toEmail: "",
+          sentAt: null,
         }
       : null,
+    replyEmail: {
+      id: r.inboundEmail.id,
+      subject: r.inboundEmail.subject,
+      fromEmail: r.inboundEmail.fromEmail,
+      toEmail: r.inboundEmail.toEmail,
+      bodyText: r.inboundEmail.bodyText,
+      bodyHtml: r.inboundEmail.bodyHtml,
+      sentAt: r.inboundEmail.sentAt,
+      leadName: r.inboundEmail.leadName,
+      companyName: r.lead?.companyName || null,
+      contactName: r.leadContact?.contactName || null,
+    },
     emailAccount: r.emailAccount,
   }))
 }
 
 /**
- * Count total email replies matching filters
+ * Count total inbound emails matching filters
  */
 export async function countEmailReplies(filters: EmailReplyFilters): Promise<number> {
-  const conditions = buildFilterConditions(filters)
+  const conditions = buildInboundFilterConditions(filters)
 
   const result = await db
     .select({ count: count() })
-    .from(emailReplies)
-    .leftJoin(replyEmail, eq(emailReplies.replyEmailId, replyEmail.id))
-    .leftJoin(userEmailAccounts, eq(replyEmail.userEmailAccountId, userEmailAccounts.id))
+    .from(emails)
+    .leftJoin(userEmailAccounts, eq(emails.userEmailAccountId, userEmailAccounts.id))
+    .leftJoin(emailReplies, eq(emails.id, emailReplies.replyEmailId))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
 
   return result[0]?.count || 0
@@ -377,17 +395,17 @@ export async function bulkDeleteEmailReplies(ids: string[]): Promise<number> {
 }
 
 /**
- * Build filter conditions for queries
+ * Build filter conditions for inbound emails queries
  */
-function buildFilterConditions(filters: EmailReplyFilters) {
-  const conditions = []
+function buildInboundFilterConditions(filters: EmailReplyFilters) {
+  const conditions = [eq(emails.direction, "inbound")]
 
   if (filters.workspaceId) {
-    conditions.push(eq(emailReplies.workspaceId, filters.workspaceId))
+    conditions.push(eq(emails.workspaceId, filters.workspaceId))
   }
 
   if (filters.isRead !== undefined) {
-    conditions.push(eq(emailReplies.isRead, filters.isRead))
+    conditions.push(eq(emails.isRead, filters.isRead))
   }
 
   if (filters.sentiment) {
@@ -406,10 +424,10 @@ function buildFilterConditions(filters: EmailReplyFilters) {
   if (filters.search) {
     conditions.push(
       or(
-        ilike(replyEmail.subject, `%${filters.search}%`),
-        ilike(replyEmail.fromEmail, `%${filters.search}%`),
-        ilike(replyEmail.bodyText, `%${filters.search}%`),
-      ),
+        ilike(emails.subject, `%${filters.search}%`),
+        ilike(emails.fromEmail, `%${filters.search}%`),
+        ilike(emails.bodyText, `%${filters.search}%`),
+      )!,
     )
   }
 
@@ -417,82 +435,50 @@ function buildFilterConditions(filters: EmailReplyFilters) {
 }
 
 /**
- * Get count of replies by intent category
- * Counts DISTINCT threads (conversations), not individual email replies
+ * Get count of inbound threads by intent category
+ * Counts DISTINCT threads (conversations), not individual emails
  */
 export async function getIntentCounts(workspaceId: string) {
-  const whereClause = workspaceId === "all" ? undefined : eq(emailReplies.workspaceId, workspaceId)
+  const whereClause =
+    workspaceId === "all"
+      ? eq(emails.direction, "inbound")
+      : and(eq(emails.workspaceId, workspaceId), eq(emails.direction, "inbound"))
 
-  const counts = await db
-    .select({
-      intent: emailReplies.intent,
-      count: sql<number>`COUNT(DISTINCT ${emails.threadId})::int`,
-    })
-    .from(emailReplies)
-    .innerJoin(emails, eq(emailReplies.originalEmailId, emails.id))
-    .where(whereClause)
-    .groupBy(emailReplies.intent)
-
-  // Get total count of distinct threads
+  // Get total count of distinct threads with inbound emails
   const totalResult = await db
     .select({ count: sql<number>`COUNT(DISTINCT ${emails.threadId})::int` })
-    .from(emailReplies)
-    .innerJoin(emails, eq(emailReplies.originalEmailId, emails.id))
+    .from(emails)
     .where(whereClause)
 
   const total = totalResult[0]?.count || 0
 
-  // Get important count (count threads that have replies AND have at least one important inbound email)
-  // Must join with emailReplies to ensure we only count threads with replies
-  const importantQuery =
-    workspaceId !== "all"
-      ? sql`EXISTS (
-          SELECT 1 FROM emails e
-          WHERE e.thread_id = ${emails.threadId}
-          AND e.is_important = true
-          AND e.direction = 'inbound'
-          AND e.workspace_id = ${workspaceId}
-        )`
-      : sql`EXISTS (
-          SELECT 1 FROM emails e
-          WHERE e.thread_id = ${emails.threadId}
-          AND e.is_important = true
-          AND e.direction = 'inbound'
-        )`
-
+  // Get important count (threads with at least one important inbound email)
   const importantResult = await db
     .select({ count: sql<number>`COUNT(DISTINCT ${emails.threadId})::int` })
-    .from(emailReplies)
-    .innerJoin(emails, eq(emailReplies.originalEmailId, emails.id))
-    .where(and(whereClause, importantQuery))
+    .from(emails)
+    .where(and(whereClause, eq(emails.isImportant, true)))
 
   const important = importantResult[0]?.count || 0
 
-  // Get unread count (count threads that have replies AND have at least one unread inbound email)
-  // Must join with emailReplies to ensure we only count threads with replies
-  const unreadQuery =
-    workspaceId !== "all"
-      ? sql`EXISTS (
-          SELECT 1 FROM emails e
-          WHERE e.thread_id = ${emails.threadId}
-          AND e.is_read = false
-          AND e.direction = 'inbound'
-          AND e.workspace_id = ${workspaceId}
-        )`
-      : sql`EXISTS (
-          SELECT 1 FROM emails e
-          WHERE e.thread_id = ${emails.threadId}
-          AND e.is_read = false
-          AND e.direction = 'inbound'
-        )`
-
+  // Get unread count (threads with at least one unread inbound email)
   const unreadResult = await db
     .select({ count: sql<number>`COUNT(DISTINCT ${emails.threadId})::int` })
-    .from(emailReplies)
-    .innerJoin(emails, eq(emailReplies.originalEmailId, emails.id))
-    .where(and(whereClause, unreadQuery))
+    .from(emails)
+    .where(and(whereClause, eq(emails.isRead, false)))
 
   const unread = unreadResult[0]?.count || 0
+
+  // Get intent counts from email_replies (for threads that have replies)
+  // Count distinct threads by intent
+  const intentCountsResult = await db
+    .select({
+      intent: emailReplies.intent,
+      count: sql<number>`COUNT(DISTINCT ${emails.threadId})::int`,
+    })
+    .from(emails)
+    .innerJoin(emailReplies, eq(emails.id, emailReplies.replyEmailId))
+    .where(whereClause)
+    .groupBy(emailReplies.intent)
 
   // Format the response
   const intentCounts: Record<string, number> = {
@@ -509,7 +495,7 @@ export async function getIntentCounts(workspaceId: string) {
     unclassified: 0,
   }
 
-  for (const row of counts) {
+  for (const row of intentCountsResult) {
     if (row.intent) {
       intentCounts[row.intent] = Number(row.count)
     } else {

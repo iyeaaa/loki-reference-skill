@@ -1,7 +1,10 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
+import { userEmailAccounts } from "../db/schema/email-accounts"
+import { sequenceEnrollments } from "../db/schema/sequences"
 import { users } from "../db/schema/users"
 import { workspaceMembers, workspaces } from "../db/schema/workspaces"
+import logger from "../utils/logger"
 
 // ====================================
 // WORKSPACE CRUD OPERATIONS
@@ -160,7 +163,37 @@ export async function updateWorkspace(
 
 // DeleteWorkspace :exec
 export async function deleteWorkspace(id: string) {
+  logger.info({ workspaceId: id }, "Starting workspace deletion")
+
+  // 1. First, get all user_email_accounts for this workspace
+  const emailAccounts = await db
+    .select({ id: userEmailAccounts.id })
+    .from(userEmailAccounts)
+    .where(eq(userEmailAccounts.workspaceId, id))
+
+  logger.info(
+    { workspaceId: id, emailAccountCount: emailAccounts.length },
+    "Found email accounts for workspace",
+  )
+
+  // 2. Delete sequence_enrollments that reference these email accounts
+  if (emailAccounts.length > 0) {
+    const emailAccountIds = emailAccounts.map((acc) => acc.id)
+    const enrollmentCondition = or(
+      ...emailAccountIds.map((accId) => eq(sequenceEnrollments.userEmailAccountId, accId)),
+    )
+    if (enrollmentCondition) {
+      await db.delete(sequenceEnrollments).where(enrollmentCondition)
+      logger.info(
+        { workspaceId: id, emailAccountIds },
+        "Deleted sequence enrollments for email accounts",
+      )
+    }
+  }
+
+  // 3. Now delete the workspace (cascade will handle user_email_accounts and other related tables)
   await db.delete(workspaces).where(eq(workspaces.id, id))
+  logger.info({ workspaceId: id }, "Workspace deleted successfully")
 }
 
 // ====================================

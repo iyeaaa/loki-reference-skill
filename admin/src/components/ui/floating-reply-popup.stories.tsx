@@ -55,8 +55,8 @@ function InteractiveWrapper() {
   const [isOpen, setIsOpen] = useState(false)
   const [isSending, setIsSending] = useState(false)
 
-  const handleSend = async (text: string) => {
-    console.log("Sending reply:", text)
+  const handleSend = async (text: string, subject: string) => {
+    console.log("Sending reply:", text, "with subject:", subject)
     setIsSending(true)
     // Simulate sending delay
     await new Promise((resolve) => setTimeout(resolve, 1500))

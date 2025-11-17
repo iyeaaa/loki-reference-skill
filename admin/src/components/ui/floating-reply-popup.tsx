@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 interface FloatingReplyPopupProps {
   isOpen: boolean
   onClose: () => void
-  onSend: (replyText: string) => void | Promise<void>
+  onSend: (replyText: string, subject: string) => void | Promise<void>
   to: string
   subject: string
   isSending?: boolean
@@ -26,21 +26,26 @@ export function FloatingReplyPopup({
   initialText = "",
 }: FloatingReplyPopupProps) {
   const [replyText, setReplyText] = useState("")
+  const [editableSubject, setEditableSubject] = useState(subject)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
 
   useEffect(() => {
-    if (isOpen && initialText) {
-      setReplyText(initialText)
+    if (isOpen) {
+      if (initialText) {
+        setReplyText(initialText)
+      }
+      setEditableSubject(subject)
     }
-  }, [isOpen, initialText])
+  }, [isOpen, initialText, subject])
 
   const handleSendReply = async () => {
     if (!replyText.trim()) return
 
     try {
-      await onSend(replyText)
+      await onSend(replyText, editableSubject)
       setReplyText("")
+      setEditableSubject(subject)
       onClose()
     } catch (error) {
       console.error("Failed to send reply:", error)
@@ -49,6 +54,7 @@ export function FloatingReplyPopup({
 
   const handleClose = () => {
     setReplyText("")
+    setEditableSubject(subject)
     setIsMinimized(false)
     setIsMaximized(false)
     onClose()
@@ -153,9 +159,9 @@ export function FloatingReplyPopup({
                 </span>
                 <Input
                   type="text"
-                  value={subject}
-                  disabled
-                  className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-2 h-9 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  value={editableSubject}
+                  onChange={(e) => setEditableSubject(e.target.value)}
+                  className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-2 h-9 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                 />
               </div>
             </div>

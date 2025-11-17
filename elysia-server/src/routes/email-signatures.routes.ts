@@ -63,7 +63,7 @@ export const emailSignatureRoutes = new Elysia({
     },
     {
       query: t.Object({
-        workspaceId: t.String({ format: "uuid" }),
+        workspaceId: t.Union([t.String({ format: "uuid" }), t.Literal("all")]),
         userId: t.String({ format: "uuid" }),
         includeInactive: t.Optional(t.Boolean()),
       }),

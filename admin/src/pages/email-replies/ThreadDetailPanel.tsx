@@ -10,12 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { useSendEmail, useThreadEmails } from "@/lib/api/hooks/emails"
 import { useAuth } from "@/lib/auth-provider"
-import {
-  generateQuotedText,
-  generateReplySubject,
-  getReplyRecipient,
-  parseEmailList,
-} from "@/lib/email-utils"
+import { generateQuotedText, getReplyRecipient, parseEmailList } from "@/lib/email-utils"
 import { EmailItem } from "./EmailItem"
 
 interface ThreadDetailPanelProps {
@@ -114,7 +109,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
   }
 
   // 답장 전송 핸들러
-  const handleSendReply = async (replyText: string) => {
+  const handleSendReply = async (replyText: string, subject: string) => {
     if (!user) {
       toast.error("로그인이 필요합니다")
       return
@@ -137,7 +132,6 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
       return
     }
 
-    const subject = generateReplySubject(lastEmail.subject)
     const bodyWithQuote = `${replyText}\n\n${generateQuotedText(lastEmail)}`
 
     const payload = {

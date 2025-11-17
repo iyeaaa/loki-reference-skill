@@ -18,7 +18,7 @@ export interface EmailMessage {
 
 interface EmailThreadViewerProps {
   messages: EmailMessage[]
-  onSendReply?: (replyText: string) => void | Promise<void>
+  onSendReply?: (replyText: string, subject: string) => void | Promise<void>
   loading?: boolean
   className?: string
 }
@@ -36,12 +36,12 @@ export function EmailThreadViewer({
   const [showReply, setShowReply] = useState(false)
   const [isSending, setIsSending] = useState(false)
 
-  const handleSendReply = async (replyText: string) => {
+  const handleSendReply = async (replyText: string, subject: string) => {
     if (!replyText.trim() || !onSendReply) return
 
     setIsSending(true)
     try {
-      await onSendReply(replyText)
+      await onSendReply(replyText, subject)
       setShowReply(false)
     } catch (error) {
       console.error("Failed to send reply:", error)

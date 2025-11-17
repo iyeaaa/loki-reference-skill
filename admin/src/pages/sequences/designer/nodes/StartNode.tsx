@@ -1,6 +1,7 @@
 import { Handle, Position } from "@xyflow/react"
 import { Plus } from "lucide-react"
 import { type FC, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -16,6 +17,7 @@ interface StartNodeProps {
 }
 
 export const StartNode: FC<StartNodeProps> = ({ data }) => {
+  const { t } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
 
   const handleAddNode = (type: string) => {
@@ -30,9 +32,13 @@ export const StartNode: FC<StartNodeProps> = ({ data }) => {
           <div className="bg-white rounded-full p-2">
             <div className="w-3 h-3 bg-green-600 rounded-full" />
           </div>
-          <span className="text-white font-semibold text-lg">시작</span>
+          <span className="text-white font-semibold text-lg">
+            {t("sequences.designer.startNode.start")}
+          </span>
         </div>
-        <p className="text-green-50 text-sm mt-2">워크플로우 시작점</p>
+        <p className="text-green-50 text-sm mt-2">
+          {t("sequences.designer.startNode.description")}
+        </p>
       </div>
 
       <div className="border-t border-green-700 p-3 bg-green-600/30">
@@ -40,12 +46,12 @@ export const StartNode: FC<StartNodeProps> = ({ data }) => {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="w-full text-white hover:bg-green-700/50">
               <Plus className="h-4 w-4 mr-2" />
-              노드 추가
+              {t("sequences.designer.startNode.addNode")}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem onClick={() => handleAddNode("emailDraft")}>
-              이메일 초안 추가
+              {t("sequences.designer.startNode.addEmailDraft")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

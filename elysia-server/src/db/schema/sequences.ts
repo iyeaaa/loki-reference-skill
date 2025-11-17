@@ -16,11 +16,13 @@ import { userEmailAccounts } from "./email-accounts"
 import { emailTemplates } from "./email-templates"
 import { leads } from "./leads"
 import { users } from "./users"
+import { generationModeEnum } from "./workflow-emails"
 import { workspaces } from "./workspaces"
 
 // Enums
 export const sequenceStatusEnum = pgEnum("sequence_status_enum", [
   "draft",
+  "generating",
   "ready",
   "active",
   "paused",
@@ -93,6 +95,7 @@ export const sequenceSteps = pgTable(
     emailBodyHtml: text("email_body_html"),
     emailTemplateId: uuid("email_template_id"), // Reference to email_templates (we'll add this relation later)
     attachments: jsonb("attachments"), // Array of { filename, type, size, content (base64) }
+    generationSource: generationModeEnum("generation_source").notNull().default("manual"), // Whether step was AI-generated or manually created
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -155,6 +158,7 @@ export const sequenceStepExecutions = pgTable(
     executedAt: timestamp("executed_at", { withTimezone: true }),
     errorMessage: text("error_message"),
     emailId: uuid("email_id"), // Reference to emails table (we'll add this relation later)
+    generationSource: generationModeEnum("generation_source").notNull().default("manual"), // Whether step was AI-generated or manually created (denormalized from step)
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({

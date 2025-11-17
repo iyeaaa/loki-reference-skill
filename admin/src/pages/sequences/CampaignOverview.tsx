@@ -1,4 +1,5 @@
 import { Calendar, CheckCircle, Clock, Mail, Target, Users } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -10,6 +11,7 @@ interface CampaignOverviewProps {
 }
 
 export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
+  const { t } = useTranslation()
   const { data: sequence } = useSequence(sequenceId)
   const { data: metricsData } = useSequenceMetrics(sequenceId)
   const { data: steps = [] } = useSequenceSteps(sequenceId)
@@ -17,7 +19,7 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
   if (!sequence) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">로딩 중...</div>
+        <div className="text-muted-foreground">{t("sequences.campaignOverview.loading")}</div>
       </div>
     )
   }
@@ -28,6 +30,8 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
     switch (status) {
       case "draft":
         return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+      // case "generating":
+      //   return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
       case "ready":
         return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
       case "active":
@@ -61,12 +65,7 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
               )}
             </div>
             <Badge variant="secondary" className={cn("text-sm", getStatusColor(sequence.status))}>
-              {sequence.status === "draft" && "초안"}
-              {sequence.status === "ready" && "준비"}
-              {sequence.status === "active" && "활성"}
-              {sequence.status === "paused" && "일시정지"}
-              {sequence.status === "completed" && "완료"}
-              {sequence.status === "archived" && "보관됨"}
+              {t(`sequences.table.status.${sequence.status}`)}
             </Badge>
           </div>
         </CardHeader>
@@ -75,7 +74,9 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
             <div className="flex items-center gap-3">
               <Calendar className="h-5 w-5 text-muted-foreground" />
               <div>
-                <div className="text-xs text-muted-foreground">생성일</div>
+                <div className="text-xs text-muted-foreground">
+                  {t("sequences.campaignOverview.created")}
+                </div>
                 <div className="text-sm font-medium">
                   {new Date(sequence.createdAt).toLocaleDateString("ko-KR")}
                 </div>
@@ -84,14 +85,18 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
             <div className="flex items-center gap-3">
               <Users className="h-5 w-5 text-muted-foreground" />
               <div>
-                <div className="text-xs text-muted-foreground">워크스페이스</div>
+                <div className="text-xs text-muted-foreground">
+                  {t("sequences.campaignOverview.workspace")}
+                </div>
                 <div className="text-sm font-medium">{sequence.workspaceName || "-"}</div>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Mail className="h-5 w-5 text-muted-foreground" />
               <div>
-                <div className="text-xs text-muted-foreground">생성자</div>
+                <div className="text-xs text-muted-foreground">
+                  {t("sequences.campaignOverview.creator")}
+                </div>
                 <div className="text-sm font-medium">{sequence.createdByUsername || "-"}</div>
               </div>
             </div>
@@ -104,18 +109,25 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Target className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">타겟 정보</CardTitle>
+            <CardTitle className="text-lg">{t("sequences.campaignOverview.target")}</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">고객그룹</span>
+              <span className="text-sm text-muted-foreground">
+                {t("sequences.campaignOverview.customerGroup")}
+              </span>
               <span className="text-sm font-medium">{sequence.customerGroupName || "-"}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">수신자 수</span>
-              <span className="text-sm font-medium">{metrics?.totalEnrollments || 0}명</span>
+              <span className="text-sm text-muted-foreground">
+                {t("sequences.campaignOverview.recipientCount")}
+              </span>
+              <span className="text-sm font-medium">
+                {metrics?.totalEnrollments || 0}
+                {t("sequences.campaignOverview.peopleCount")}
+              </span>
             </div>
           </div>
         </CardContent>
@@ -126,14 +138,19 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Mail className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">시나리오 정보</CardTitle>
+            <CardTitle className="text-lg">{t("sequences.campaignOverview.scenario")}</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">총 스텝 수</span>
-              <span className="text-sm font-medium">{steps.length}개</span>
+              <span className="text-sm text-muted-foreground">
+                {t("sequences.campaignOverview.totalSteps")}
+              </span>
+              <span className="text-sm font-medium">
+                {steps.length}
+                {t("sequences.campaignOverview.stepCount")}
+              </span>
             </div>
 
             {steps.length > 0 && (
@@ -146,7 +163,9 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                         <Clock className="h-3 w-3" />
-                        {step.delayDays === 0 ? "즉시" : `${step.delayDays}일 후`}
+                        {step.delayDays === 0
+                          ? t("sequences.campaignOverview.immediately")
+                          : t("sequences.campaignOverview.daysLater", { days: step.delayDays })}
                         {" · "}
                         {String(step.scheduledHour).padStart(2, "0")}:
                         {String(step.scheduledMinute).padStart(2, "0")}
@@ -167,14 +186,18 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
           <CardHeader>
             <div className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">성과 지표</CardTitle>
+              <CardTitle className="text-lg">
+                {t("sequences.campaignOverview.performance")}
+              </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">전체 진행률</span>
+                  <span className="text-muted-foreground">
+                    {t("sequences.campaignOverview.overallProgress")}
+                  </span>
                   <span className="font-medium">{Math.round(progress)}%</span>
                 </div>
                 <Progress value={progress} className="h-2" />
@@ -183,7 +206,9 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
               <div className="grid grid-cols-3 gap-4 pt-4 border-t">
                 <div className="text-center">
                   <div className="text-2xl font-bold">{metrics.totalSent || 0}</div>
-                  <div className="text-xs text-muted-foreground">총 발송</div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("sequences.campaignOverview.totalSent")}
+                  </div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold">
@@ -192,7 +217,9 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
                       : 0}
                     %
                   </div>
-                  <div className="text-xs text-muted-foreground">오픈율</div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("sequences.campaignOverview.openRate")}
+                  </div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold">
@@ -201,7 +228,9 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
                       : 0}
                     %
                   </div>
-                  <div className="text-xs text-muted-foreground">회신율</div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("sequences.campaignOverview.replyRate")}
+                  </div>
                 </div>
               </div>
             </div>

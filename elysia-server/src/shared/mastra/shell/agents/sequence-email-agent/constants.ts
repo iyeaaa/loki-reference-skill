@@ -1,0 +1,1 @@
+export const model = "gpt-5-mini-2025-08-07"

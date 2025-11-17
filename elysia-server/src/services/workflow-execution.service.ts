@@ -23,7 +23,7 @@ interface WorkflowNode {
     subject?: string
     bodyText?: string
     delayDays?: number
-    generationMode?: "ai" | "manual"
+    generationMode?: "ai" | "manual" | "template"
     aiPrompt?: string
     comment?: string
     [key: string]: unknown

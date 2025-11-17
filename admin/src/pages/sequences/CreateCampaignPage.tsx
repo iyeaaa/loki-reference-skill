@@ -1,6 +1,7 @@
 import { ArrowLeft, Check, Save } from "lucide-react"
 import { useEffect, useId, useRef, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +16,7 @@ import { CreateCampaignStep2 } from "./CreateCampaignStep2"
 import { CreateCampaignStep3 } from "./CreateCampaignStep3"
 
 export default function CreateCampaignPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const editingSequenceId = searchParams.get("id")
@@ -28,8 +30,10 @@ export default function CreateCampaignPage() {
     workspaceId: "",
     customerGroupId: "",
     selectedLeadIds: [] as string[],
-    name: "새 캠페인",
+    name: t("sequences.createPage.newCampaign"),
     description: "",
+    creationMode: "manual" as "ai" | "manual",
+    selectedEmailAccountId: "",
     steps: [] as Array<{
       id?: string // Step ID if it exists in DB
       stepOrder: number
@@ -54,17 +58,29 @@ export default function CreateCampaignPage() {
   const { data: existingSteps } = useSequenceSteps(editingSequenceId || "", !!editingSequenceId)
 
   const steps = [
-    { number: 1, title: "고객 선택", description: "수신자 선택" },
-    { number: 2, title: "시나리오 생성", description: "이메일 작성" },
-    { number: 3, title: "검토 및 저장", description: "최종 확인" },
+    {
+      number: 1,
+      title: t("sequences.createPage.step1Title"),
+      description: t("sequences.createPage.step1Desc"),
+    },
+    {
+      number: 2,
+      title: t("sequences.createPage.step2Title"),
+      description: t("sequences.createPage.step2Desc"),
+    },
+    {
+      number: 3,
+      title: t("sequences.createPage.step3Title"),
+      description: t("sequences.createPage.step3Desc"),
+    },
   ]
 
   // Load existing draft if editing
   useEffect(() => {
     if (!editingSequenceId || !existingSequence) return
 
-    console.log("📂 Loading existing sequence:", existingSequence)
-    console.log("📂 Existing steps:", existingSteps)
+    // console.log("📂 Loading existing sequence:", existingSequence)
+    // console.log("📂 Existing steps:", existingSteps)
 
     const loadedData = {
       workspaceId: existingSequence.workspaceId,
@@ -74,6 +90,8 @@ export default function CreateCampaignPage() {
         : [],
       name: existingSequence.name,
       description: existingSequence.description || "",
+      creationMode: "manual" as "ai" | "manual",
+      selectedEmailAccountId: "",
       steps:
         existingSteps?.map((step) => ({
           id: step.id, // Include step ID for updates
@@ -81,16 +99,16 @@ export default function CreateCampaignPage() {
           delayDays: step.delayDays,
           scheduledHour: step.scheduledHour || 9,
           scheduledMinute: step.scheduledMinute || 0,
-          emailSubject: step.emailSubject,
+          emailSubject: step.emailSubject || "",
           emailBodyText: step.emailBodyText || "",
           isDraft: false,
         })) || [],
       memo: existingSequence.memo || "",
     }
 
-    console.log("✅ Loaded campaign data:", loadedData)
-    console.log("👥 Customer Group ID:", loadedData.customerGroupId)
-    console.log("👥 Selected Lead IDs:", loadedData.selectedLeadIds)
+    // console.log("✅ Loaded campaign data:", loadedData)
+    // console.log("👥 Customer Group ID:", loadedData.customerGroupId)
+    // console.log("👥 Selected Lead IDs:", loadedData.selectedLeadIds)
 
     setCampaignData(loadedData)
     setIsInitialized(true)
@@ -106,7 +124,7 @@ export default function CreateCampaignPage() {
       selectedWorkspace && selectedWorkspace.id !== "all" ? selectedWorkspace.id : ""
 
     if (!workspaceId) {
-      toast.error("워크스페이스를 선택해주세요")
+      toast.error(t("sequences.createPage.selectWorkspace"))
       navigate("/sequences")
       return
     }
@@ -118,22 +136,22 @@ export default function CreateCampaignPage() {
     sequencesApi
       .create({
         workspaceId,
-        name: "새 캠페인",
+        name: t("sequences.createPage.newCampaign"),
         description: "",
         status: "draft",
       })
       .then((sequence) => {
-        console.log("✅ 초안 캠페인 생성 완료:", sequence.id)
+        // console.log("✅ 초안 캠페인 생성 완료:", sequence.id)
         setSequenceId(sequence.id)
         setCampaignData((prev) => ({
           ...prev,
           workspaceId,
         }))
         setIsInitialized(true)
-        toast.success("초안 캠페인이 생성되었습니다")
+        toast.success(t("sequences.createPage.draftCreated"))
       })
       .catch((error) => {
-        toast.error(`캠페인 생성 실패: ${error.message || error}`)
+        toast.error(t("sequences.createPage.creationFailed", { error: error.message || error }))
         isCreatingRef.current = false
         navigate("/sequences")
       })
@@ -172,7 +190,7 @@ export default function CreateCampaignPage() {
         updateData.selectedLeadIds = campaignData.selectedLeadIds
       }
 
-      console.log("💾 Auto-saving campaign data:", updateData)
+      // console.log("💾 Auto-saving campaign data:", updateData)
 
       updateSequence
         .mutateAsync({
@@ -181,7 +199,7 @@ export default function CreateCampaignPage() {
         })
         .then(() => {
           setLastSaved(new Date())
-          console.log("✅ Auto-save successful")
+          // console.log("✅ Auto-save successful")
         })
         .catch((error) => {
           console.error("❌ Auto-save failed:", error)
@@ -196,7 +214,7 @@ export default function CreateCampaignPage() {
 
   const handleManualSave = async () => {
     if (!sequenceId) {
-      toast.error("캠페인이 생성되지 않았습니다")
+      toast.error(t("sequences.createPage.notCreated"))
       return
     }
 
@@ -231,9 +249,9 @@ export default function CreateCampaignPage() {
         data: updateData,
       })
       setLastSaved(new Date())
-      toast.success("저장되었습니다")
+      toast.success(t("sequences.createPage.saved"))
     } catch {
-      toast.error("저장 실패")
+      toast.error(t("sequences.createPage.saveFailed"))
     } finally {
       setIsSaving(false)
     }
@@ -247,25 +265,28 @@ export default function CreateCampaignPage() {
     if (currentStep === 1) {
       // Validate Step 1
       if (!campaignData.customerGroupId) {
-        toast.error("고객그룹을 선택해주세요")
+        toast.error(t("sequences.createPage.selectCustomerGroup"))
         return
       }
     }
 
     if (currentStep === 2) {
       // Validate Step 2
-      if (campaignData.steps.length === 0) {
-        toast.error("최소 1개 이상의 이메일 스텝을 추가해주세요")
-        return
-      }
-      const hasDraftSteps = campaignData.steps.some((step) => step.isDraft)
-      if (hasDraftSteps) {
-        toast.error("작성 중인 스텝이 있습니다. 모든 스텝을 저장해주세요")
-        return
+      // Skip step count validation for AI mode (AI generates steps automatically)
+      if (campaignData.creationMode === "manual") {
+        if (campaignData.steps.length === 0) {
+          toast.error(t("sequences.createPage.addAtLeastOneStep"))
+          return
+        }
+        const hasDraftSteps = campaignData.steps.some((step) => step.isDraft)
+        if (hasDraftSteps) {
+          toast.error(t("sequences.createPage.saveDraftSteps"))
+          return
+        }
       }
       // Check if sequence is created
       if (!sequenceId) {
-        toast.error("캠페인이 생성되지 않았습니다. 잠시 후 다시 시도해주세요")
+        toast.error(t("sequences.createPage.notCreatedTryAgain"))
         return
       }
     }
@@ -289,7 +310,7 @@ export default function CreateCampaignPage() {
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={handleBack}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              돌아가기
+              {t("sequences.createPage.back")}
             </Button>
           </div>
           <div className="flex items-center gap-3">
@@ -298,8 +319,8 @@ export default function CreateCampaignPage() {
                 <Save className="h-3 w-3" />
                 <span>
                   {isSaving
-                    ? "저장 중..."
-                    : `${lastSaved.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} 저장됨`}
+                    ? t("sequences.createPage.savingStatus")
+                    : `${lastSaved.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} ${t("sequences.createPage.savedAt")}`}
                 </span>
               </div>
             )}
@@ -311,7 +332,7 @@ export default function CreateCampaignPage() {
               className="h-8"
             >
               <Save className="h-4 w-4 mr-2" />
-              {isSaving ? "저장 중..." : "저장"}
+              {isSaving ? t("sequences.createPage.savingStatus") : t("sequences.createPage.save")}
             </Button>
           </div>
         </div>
@@ -319,24 +340,26 @@ export default function CreateCampaignPage() {
         {/* Campaign Name & Description */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor={campaignNameId}>캠페인 이름 *</Label>
+            <Label htmlFor={campaignNameId}>{t("sequences.createPage.campaignNameLabel")}</Label>
             <Input
               id={campaignNameId}
               value={campaignData.name}
               onChange={(e) => setCampaignData((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="예: 신규 고객 온보딩 캠페인"
+              placeholder={t("sequences.createPage.campaignNamePlaceholder")}
               className="h-9"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={campaignDescriptionId}>캠페인 설명</Label>
+            <Label htmlFor={campaignDescriptionId}>
+              {t("sequences.createPage.campaignDescLabel")}
+            </Label>
             <Textarea
               id={campaignDescriptionId}
               value={campaignData.description}
               onChange={(e) =>
                 setCampaignData((prev) => ({ ...prev, description: e.target.value }))
               }
-              placeholder="캠페인에 대한 간단한 설명..."
+              placeholder={t("sequences.createPage.campaignDescPlaceholder")}
               className="h-9 resize-none"
               rows={1}
             />
@@ -408,6 +431,8 @@ export default function CreateCampaignPage() {
               data={{
                 workspaceId: campaignData.workspaceId,
                 customerGroupId: campaignData.customerGroupId,
+                creationMode: campaignData.creationMode,
+                selectedEmailAccountId: campaignData.selectedEmailAccountId,
                 steps: campaignData.steps,
               }}
               onChange={(data) => setCampaignData((prev) => ({ ...prev, ...data }))}
@@ -430,10 +455,12 @@ export default function CreateCampaignPage() {
         <div className="border-t bg-background px-6 py-4">
           <div className="flex justify-between">
             <Button variant="outline" onClick={handlePrevStep} disabled={currentStep === 1}>
-              이전
+              {t("sequences.createPage.previous")}
             </Button>
             <Button onClick={handleNextStep} disabled={!sequenceId}>
-              {!sequenceId ? "초기화 중..." : "다음"}
+              {!sequenceId
+                ? t("sequences.createPage.initializing")
+                : t("sequences.createPage.next")}
             </Button>
           </div>
         </div>

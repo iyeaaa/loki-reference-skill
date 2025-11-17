@@ -1,6 +1,7 @@
 import { Check, Clock, Mail, Users } from "lucide-react"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -39,6 +40,7 @@ interface CreateCampaignStep3Props {
 }
 
 export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampaignStep3Props) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [memo, setMemo] = useState(data.memo)
 
@@ -68,12 +70,12 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
 
   const handleSaveDraft = async () => {
     if (!sequenceId) {
-      toast.error("시퀀스 ID가 없습니다")
+      toast.error(t("sequences.step3.noSequenceId"))
       return
     }
 
     if (!data.name.trim()) {
-      toast.error("캠페인 이름을 입력해주세요")
+      toast.error(t("sequences.step3.enterCampaignName"))
       return
     }
 
@@ -146,19 +148,24 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
                   })
                 }
               }
-              toast.success("초안이 저장되었습니다")
+              toast.success(t("sequences.step3.draftSaved"))
             } catch (error) {
               toast.error(
-                `스텝 저장 오류: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
+                t("sequences.step3.stepSaveError", {
+                  error:
+                    error instanceof Error
+                      ? error.message
+                      : t("sequences.step3.saveError", { error: "Unknown" }),
+                }),
               )
             }
           } else {
-            toast.success("초안이 저장되었습니다")
+            toast.success(t("sequences.step3.draftSaved"))
           }
           navigate("/sequences")
         },
         onError: (error) => {
-          toast.error(`오류: ${error.message}`)
+          toast.error(t("sequences.step3.saveError", { error: error.message }))
         },
       },
     )
@@ -166,12 +173,12 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
 
   const handleSaveReady = async () => {
     if (!sequenceId) {
-      toast.error("시퀀스 ID가 없습니다")
+      toast.error(t("sequences.step3.noSequenceId"))
       return
     }
 
     if (!data.name.trim()) {
-      toast.error("캠페인 이름을 입력해주세요")
+      toast.error(t("sequences.step3.enterCampaignName"))
       return
     }
 
@@ -244,19 +251,24 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
                   })
                 }
               }
-              toast.success("캠페인이 준비 상태로 저장되었습니다")
+              toast.success(t("sequences.step3.readySaved"))
             } catch (error) {
               toast.error(
-                `스텝 저장 오류: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
+                t("sequences.step3.stepSaveError", {
+                  error:
+                    error instanceof Error
+                      ? error.message
+                      : t("sequences.step3.saveError", { error: "Unknown" }),
+                }),
               )
             }
           } else {
-            toast.success("캠페인이 준비 상태로 저장되었습니다")
+            toast.success(t("sequences.step3.readySaved"))
           }
           navigate("/sequences")
         },
         onError: (error) => {
-          toast.error(`오류: ${error.message}`)
+          toast.error(t("sequences.step3.saveError", { error: error.message }))
         },
       },
     )
@@ -268,7 +280,7 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
       <div className="h-full flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-          <p className="text-muted-foreground">캠페인을 준비하고 있습니다...</p>
+          <p className="text-muted-foreground">{t("sequences.step3.preparingCampaign")}</p>
         </div>
       </div>
     )
@@ -280,34 +292,37 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
       <div className="space-y-4">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Users className="h-5 w-5 text-primary" />
-          발송 대상
+          {t("sequences.step3.sendTarget")}
         </h3>
 
         <div className="rounded-lg border p-4 bg-muted/30 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">워크스페이스</span>
+            <span className="text-sm font-medium">{t("sequences.step3.workspace")}</span>
             <Check className="h-4 w-4 text-green-600" />
           </div>
 
           <div className="space-y-2 text-sm">
             <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-muted-foreground">워크스페이스</span>
+              <span className="text-muted-foreground">{t("sequences.step3.workspace")}</span>
               <span className="font-medium">{workspace?.name || "-"}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-muted-foreground">고객그룹</span>
+              <span className="text-muted-foreground">{t("sequences.step3.customerGroup")}</span>
               <span className="font-medium">{customerGroup?.name || "-"}</span>
             </div>
             <div className="flex justify-between items-center py-2">
-              <span className="text-muted-foreground">수신자 수</span>
-              <span className="font-medium text-primary text-lg">{recipientCount}명</span>
+              <span className="text-muted-foreground">{t("sequences.step3.recipientCount")}</span>
+              <span className="font-medium text-primary text-lg">
+                {recipientCount}
+                {t("sequences.step3.people")}
+              </span>
             </div>
           </div>
 
           {data.selectedLeadIds.length > 0 && (
             <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-md">
               <p className="text-xs text-blue-900 dark:text-blue-200">
-                💡 특정 고객 {data.selectedLeadIds.length}명에게만 발송됩니다
+                {t("sequences.step3.specificRecipients", { count: data.selectedLeadIds.length })}
               </p>
             </div>
           )}
@@ -315,15 +330,19 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
 
         {/* Campaign Info at bottom of first panel */}
         <div className="rounded-lg border p-4 space-y-3">
-          <h4 className="font-semibold text-sm">캠페인 정보</h4>
+          <h4 className="font-semibold text-sm">{t("sequences.step3.campaignInfo")}</h4>
           <div className="space-y-2">
             <div>
-              <span className="text-xs text-muted-foreground">캠페인 이름</span>
-              <p className="text-sm font-medium mt-1">{data.name || "(이름 없음)"}</p>
+              <span className="text-xs text-muted-foreground">
+                {t("sequences.step3.campaignName")}
+              </span>
+              <p className="text-sm font-medium mt-1">{data.name || t("sequences.step3.noName")}</p>
             </div>
             {data.description && (
               <div>
-                <span className="text-xs text-muted-foreground">설명</span>
+                <span className="text-xs text-muted-foreground">
+                  {t("sequences.step3.description")}
+                </span>
                 <p className="text-sm mt-1">{data.description}</p>
               </div>
             )}
@@ -335,12 +354,14 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
       <div className="space-y-4">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Mail className="h-5 w-5 text-primary" />
-          이메일 시나리오
+          {t("sequences.step3.emailScenario")}
         </h3>
 
         <div className="rounded-lg border p-4 bg-muted/30">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-medium">총 {data.steps.length}개의 이메일 스텝</span>
+            <span className="text-sm font-medium">
+              {t("sequences.step3.totalSteps", { count: data.steps.length })}
+            </span>
             <Check className="h-4 w-4 text-green-600" />
           </div>
 
@@ -355,7 +376,9 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                         <Clock className="h-3 w-3" />
-                        {step.delayDays === 0 ? "즉시 발송" : `${step.delayDays}일 후`}
+                        {step.delayDays === 0
+                          ? t("sequences.step3.sendImmediately")
+                          : t("sequences.step3.daysLater", { days: step.delayDays })}
                         {" · "}
                         {String(step.scheduledHour).padStart(2, "0")}:
                         {String(step.scheduledMinute).padStart(2, "0")}
@@ -367,7 +390,7 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
                       {step.files && step.files.length > 0 && (
                         <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
                           <Mail className="h-3 w-3" />
-                          첨부파일 {step.files.length}개
+                          {t("sequences.step3.attachments", { count: step.files.length })}
                         </div>
                       )}
                     </div>
@@ -381,14 +404,14 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
 
       {/* Panel 3: Memo & Actions */}
       <div className="space-y-4 flex flex-col">
-        <h3 className="text-lg font-semibold">메모</h3>
+        <h3 className="text-lg font-semibold">{t("sequences.step3.memo")}</h3>
 
         <div className="flex-1 flex flex-col gap-4">
           <div className="flex-1">
             <Textarea
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
-              placeholder="캠페인에 대한 추가 메모를 입력하세요..."
+              placeholder={t("sequences.step3.memoPlaceholder")}
               className="h-full min-h-[200px] resize-none"
             />
           </div>
@@ -398,12 +421,12 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
             <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-4">
               <p className="text-xs text-blue-900 dark:text-blue-200 space-y-2">
                 <span className="block">
-                  <strong>초안 저장:</strong> 캠페인이 초안 상태로 저장되며, 나중에 수정할 수
-                  있습니다.
+                  <strong>{t("sequences.step3.draftNote")}</strong>{" "}
+                  {t("sequences.step3.draftNoteDescription")}
                 </span>
                 <span className="block">
-                  <strong>준비 완료:</strong> 캠페인이 준비 상태로 저장되며, 바로 활성화할 수
-                  있습니다.
+                  <strong>{t("sequences.step3.readyNote")}</strong>{" "}
+                  {t("sequences.step3.readyNoteDescription")}
                 </span>
               </p>
             </div>
@@ -415,7 +438,9 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
                 className="w-full h-11"
                 size="lg"
               >
-                {updateSequence.isPending ? "저장 중..." : "준비 완료"}
+                {updateSequence.isPending
+                  ? t("sequences.step3.saving")
+                  : t("sequences.step3.ready")}
               </Button>
               <Button
                 variant="outline"
@@ -424,7 +449,7 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
                 className="w-full h-11"
                 size="lg"
               >
-                초안 저장
+                {t("sequences.step3.saveDraft")}
               </Button>
             </div>
           </div>

@@ -188,3 +188,31 @@ export function useGenerationProgress(sequenceId: string, nodeId: string, enable
     staleTime: 1000,
   })
 }
+
+// Get all workflow emails for a sequence across all steps
+export function useWorkflowEmails(sequenceId: string, enabled = true) {
+  return useQuery({
+    queryKey: [...workflowEmailKeys.all, "sequence", sequenceId] as const,
+    queryFn: async () => {
+      // First, fetch the sequence steps to get all step IDs (which are used as nodeIds)
+      const response = await fetch(`/api/v1/sequences/${sequenceId}/steps`)
+      if (!response.ok) {
+        throw new Error("Failed to fetch sequence steps")
+      }
+      const steps = await response.json()
+
+      // Fetch emails for each step/node in parallel
+      const emailPromises = steps.data.map((step: { id: string }) =>
+        workflowEmailsApi.getByNode(sequenceId, step.id).catch(() => []),
+      )
+
+      const emailArrays = await Promise.all(emailPromises)
+
+      // Flatten all email arrays into a single array
+      return emailArrays.flat()
+    },
+    enabled: enabled && !!sequenceId,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+  })
+}

@@ -18,6 +18,7 @@ export function SequenceFilters({
   const { t } = useTranslation()
   const statuses = [
     { value: "draft", label: t("sequences.table.status.draft") },
+    { value: "generating", label: t("sequences.table.status.generating") },
     { value: "active", label: t("sequences.table.status.active") },
     { value: "paused", label: t("sequences.table.status.paused") },
     { value: "archived", label: t("sequences.table.status.archived") },

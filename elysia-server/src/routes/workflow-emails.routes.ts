@@ -32,7 +32,7 @@ const updateEmailSchema = t.Object({
 })
 
 const generateAllEmailsSchema = t.Object({
-  mode: t.Union([t.Literal("ai"), t.Literal("manual")]),
+  mode: t.Union([t.Literal("template"), t.Literal("ai"), t.Literal("manual")]),
   aiPrompt: t.Optional(t.String()),
   aiModel: t.Optional(t.String()),
   templateSubject: t.Optional(t.String()),
@@ -46,7 +46,11 @@ export const workflowEmailRoutes = new Elysia({ prefix: "/api/v1/sequences" })
   .get("/:id/nodes/:nodeId/generated-emails", async ({ params }) => {
     const { id: sequenceId, nodeId } = params
 
+    // console.log("nodeId:       ", nodeId)
+    // console.log("sequenceId:   ", sequenceId)
+
     const emails = await workflowEmailService.getGeneratedEmailsByNode(sequenceId, nodeId)
+    // console.log(emails)
     return emails
   })
 

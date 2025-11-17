@@ -47,12 +47,14 @@ export const EmailDraftNode: FC<EmailDraftNodeProps> = ({ data }) => {
   const [isOpen, setIsOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
 
-  const getInitialMode = (): "ai" | "manual" => {
+  const getInitialMode = (): "ai" | "manual" | "template" => {
     if (data.generationMode === "ai") return "ai"
     return "manual"
   }
 
-  const [generationMode, setGenerationMode] = useState<"ai" | "manual">(getInitialMode())
+  const [generationMode, setGenerationMode] = useState<"ai" | "manual" | "template">(
+    getInitialMode(),
+  )
   const [subject, setSubject] = useState(data.subject || "")
   const [bodyText, setBodyText] = useState(data.bodyText || "")
   const [bodyHtml, setBodyHtml] = useState(data.bodyHtml || "")

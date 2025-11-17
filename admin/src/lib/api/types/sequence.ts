@@ -3,6 +3,7 @@
 export type SequenceStatus =
   | "draft"
   | "ready"
+  | "generating"
   | "active"
   | "paused"
   | "archived"
@@ -24,6 +25,8 @@ export type StepExecutionStatus =
   | "delivered"
   | "failed"
   | "skipped"
+
+export type GenerationSource = "ai" | "manual" | "template"
 
 export type StepConditionType =
   | "always"
@@ -79,6 +82,7 @@ export interface SequenceStep {
   emailBodyText?: string | null
   emailBodyHtml?: string | null
   emailTemplateId?: string | null
+  generationSource: GenerationSource
   conditionType?: StepConditionType | null
   conditionConfig?: string | null
   previousStepId?: string | null
@@ -116,6 +120,7 @@ export interface SequenceStepExecution {
   executedAt?: string | null
   errorMessage?: string | null
   emailId?: string | null
+  generationSource: GenerationSource
   createdAt: string
 }
 
@@ -149,6 +154,7 @@ export interface CreateSequenceStepRequest {
   emailBodyText?: string
   emailBodyHtml?: string
   emailTemplateId?: string
+  generationSource?: GenerationSource
   conditionType?: StepConditionType
   conditionConfig?: string
   previousStepId?: string

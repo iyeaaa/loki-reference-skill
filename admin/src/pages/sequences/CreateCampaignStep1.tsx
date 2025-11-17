@@ -1,5 +1,6 @@
 import { AlertCircle, Check, CheckCircle, ChevronDown, ChevronUp } from "lucide-react"
-import { useEffect, useId, useRef, useState } from "react"
+import { useEffect, useId, useMemo, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -32,6 +33,7 @@ interface CreateCampaignStep1Props {
 }
 
 export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props) {
+  const { t } = useTranslation()
   const { selectedWorkspace } = useWorkspace()
   const selectAllId = useId()
   const selectAllRepliedId = useId()
@@ -91,9 +93,9 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
     Boolean(customerGroupId),
   )
 
-  // Separate replied and non-replied leads
-  const repliedLeads = members.filter((m) => m.hasReplied)
-  const nonRepliedLeads = members.filter((m) => !m.hasReplied)
+  // Separate replied and non-replied leads with memoization to prevent infinite loops
+  const repliedLeads = useMemo(() => members.filter((m) => m.hasReplied), [members])
+  const nonRepliedLeads = useMemo(() => members.filter((m) => !m.hasReplied), [members])
 
   const filteredRepliedLeads = repliedLeads.filter(
     (member) =>
@@ -188,12 +190,15 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
             <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
             <div>
               <p className="text-sm font-medium text-blue-900 dark:text-blue-200">
-                {effectiveRecipientCount}명의 고객에게 이메일이 발송됩니다
+                {t("sequences.step1.recipientNotice", { count: effectiveRecipientCount })}
               </p>
               <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
                 {selectedCount > 0
-                  ? `${selectedCount}명이 선택되었습니다${selectedRepliedCount > 0 ? ` (답장한 리드 ${selectedRepliedCount}명 포함)` : ""}`
-                  : "고객을 선택하지 않으면 고객 그룹의 모든 리드에게 발송됩니다"}
+                  ? t("sequences.step1.selectedCount", { count: selectedCount }) +
+                    (selectedRepliedCount > 0
+                      ? t("sequences.step1.repliedLeadsIncluded", { count: selectedRepliedCount })
+                      : "")
+                  : t("sequences.step1.defaultAllLeads")}
               </p>
             </div>
           </div>
@@ -204,12 +209,14 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
         {/* Left Panel - Customer Group Selection */}
         <div className="space-y-4 border-r pr-6">
           <div>
-            <h3 className="text-lg font-semibold mb-4">고객그룹 선택</h3>
+            <h3 className="text-lg font-semibold mb-4">
+              {t("sequences.step1.selectCustomerGroup")}
+            </h3>
           </div>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>고객그룹 *</Label>
+              <Label>{t("sequences.step1.customerGroupRequired")}</Label>
               <Select
                 value={customerGroupId}
                 onValueChange={setCustomerGroupId}
@@ -217,18 +224,25 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
               >
                 <SelectTrigger>
                   <SelectValue
-                    placeholder={workspaceId ? "고객그룹 선택" : "워크스페이스를 선택하세요"}
+                    placeholder={
+                      workspaceId
+                        ? t("sequences.step1.customerGroupPlaceholder")
+                        : t("sequences.step1.selectWorkspaceFirst")
+                    }
                   />
                 </SelectTrigger>
                 <SelectContent>
                   {customerGroups && customerGroups.length === 0 ? (
                     <SelectItem disabled value="none">
-                      고객그룹이 없습니다
+                      {t("sequences.step1.noCustomerGroups")}
                     </SelectItem>
                   ) : (
                     customerGroups?.map((group) => (
                       <SelectItem key={group.id} value={group.id}>
-                        {group.name} ({group.leadCount || 0}명)
+                        {t("sequences.step1.leadCountFormat", {
+                          name: group.name,
+                          count: group.leadCount || 0,
+                        })}
                       </SelectItem>
                     ))
                   )}
@@ -240,7 +254,9 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
               <div className="rounded-lg border bg-muted/50 p-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">선택된 고객그룹</span>
+                    <span className="text-sm font-medium">
+                      {t("sequences.step1.selectedGroup")}
+                    </span>
                     <Check className="h-4 w-4 text-green-600" />
                   </div>
                   <div className="text-sm text-muted-foreground">
@@ -248,7 +264,9 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
                     {selectedGroup.description && (
                       <div className="mt-1">{selectedGroup.description}</div>
                     )}
-                    <div className="mt-2 text-xs">총 {selectedGroup.leadCount || 0}명의 리드</div>
+                    <div className="mt-2 text-xs">
+                      {t("sequences.step1.totalLeads", { count: selectedGroup.leadCount || 0 })}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -259,29 +277,31 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
         {/* Right Panel - Lead Selection */}
         <div className="flex flex-col gap-4 overflow-hidden">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">수신자 선택</h3>
+            <h3 className="text-lg font-semibold">{t("sequences.step1.selectRecipients")}</h3>
             {members.length > 0 && (
               <div className="text-sm text-muted-foreground">
                 {selectedLeadIds.length > 0
-                  ? `${selectedLeadIds.length}명 선택됨`
-                  : "전체 선택 (기본)"}
+                  ? t("sequences.step1.selectedFormat", { count: selectedLeadIds.length })
+                  : t("sequences.step1.selectAllDefault")}
               </div>
             )}
           </div>
 
           {!customerGroupId ? (
             <div className="flex flex-1 items-center justify-center rounded-lg border-2 border-dashed">
-              <p className="text-sm text-muted-foreground">좌측에서 고객그룹을 선택하세요</p>
+              <p className="text-sm text-muted-foreground">
+                {t("sequences.step1.selectGroupFromLeft")}
+              </p>
             </div>
           ) : members.length === 0 ? (
             <div className="flex flex-1 items-center justify-center rounded-lg border-2 border-dashed">
-              <p className="text-sm text-muted-foreground">고객그룹에 리드가 없습니다</p>
+              <p className="text-sm text-muted-foreground">{t("sequences.step1.noLeadsInGroup")}</p>
             </div>
           ) : (
             <div className="flex-1 flex flex-col gap-3 overflow-hidden">
               <div className="flex items-center gap-2">
                 <Input
-                  placeholder="리드 검색..."
+                  placeholder={t("sequences.step1.searchLeads")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="flex-1"
@@ -291,8 +311,7 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
               {selectedRepliedCount > 0 && (
                 <div className="rounded-md bg-amber-50 dark:bg-amber-950/20 p-3 border border-amber-200 dark:border-amber-800">
                   <p className="text-xs text-amber-900 dark:text-amber-200">
-                    ⚠️ 선택한 리드 중 {selectedRepliedCount}명은 이미 답장했습니다. 재등록 시
-                    주의하세요.
+                    {t("sequences.step1.repliedLeadsWarning", { count: selectedRepliedCount })}
                   </p>
                 </div>
               )}
@@ -309,7 +328,10 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
                       <div className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-amber-700 dark:text-amber-400" />
                         <span className="text-sm font-medium text-amber-900 dark:text-amber-200">
-                          답장한 리드 ({selectedRepliedCount}/{repliedCount})
+                          {t("sequences.step1.repliedLeadsCount", {
+                            selected: selectedRepliedCount,
+                            total: repliedCount,
+                          })}
                         </span>
                       </div>
                       {showRepliedSection ? (
@@ -336,11 +358,11 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
                                 htmlFor={selectAllRepliedId}
                                 className="text-xs cursor-pointer"
                               >
-                                전체 선택
+                                {t("sequences.step1.selectAll")}
                               </Label>
                             </div>
                             <span className="text-xs text-muted-foreground">
-                              재등록 시 주의 필요
+                              {t("sequences.step1.reEnrollWarning")}
                             </span>
                           </div>
                         </div>
@@ -392,17 +414,17 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
                           onCheckedChange={handleToggleAllNonReplied}
                         />
                         <Label htmlFor={selectAllId} className="text-sm cursor-pointer">
-                          일반 리드 전체 선택 (
-                          {
-                            selectedLeadIds.filter((id) => nonRepliedLeads.find((m) => m.id === id))
-                              .length
-                          }
-                          /{filteredNonRepliedLeads.length})
+                          {t("sequences.step1.normalLeadsSelectAll", {
+                            selected: selectedLeadIds.filter((id) =>
+                              nonRepliedLeads.find((m) => m.id === id),
+                            ).length,
+                            total: filteredNonRepliedLeads.length,
+                          })}
                         </Label>
                       </div>
                       {selectedLeadIds.length > 0 && (
                         <Button variant="ghost" size="sm" onClick={() => setSelectedLeadIds([])}>
-                          선택 해제
+                          {t("sequences.step1.deselectAll")}
                         </Button>
                       )}
                     </div>

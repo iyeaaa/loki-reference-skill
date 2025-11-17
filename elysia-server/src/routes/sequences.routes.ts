@@ -3,6 +3,7 @@ import { Elysia, t } from "elysia"
 import { db } from "../db"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { getAITemplateGenerationService } from "../services/ai-template-generation.service"
+import { generateAICampaign } from "../services/campaign-generation.service"
 import * as sequenceService from "../services/sequence.service"
 import * as workspaceService from "../services/workspace.service"
 import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
@@ -58,6 +59,9 @@ const sequenceStepSchema = t.Object({
   emailBodyText: t.Optional(t.String()),
   emailBodyHtml: t.Optional(t.String()),
   emailTemplateId: t.Optional(t.String({ format: "uuid" })),
+  generationSource: t.Optional(
+    t.Union([t.Literal("template"), t.Literal("ai"), t.Literal("manual")]),
+  ),
   files: t.Optional(t.Files()), // 첨부 파일
 })
 
@@ -362,6 +366,100 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
         customerGroupId: t.Optional(t.String({ format: "uuid" })),
         selectedLeadIds: t.Optional(t.Array(t.String({ format: "uuid" }))),
         createdBy: t.Optional(t.String({ format: "uuid" })),
+      }),
+    },
+  )
+
+  // Generate AI sequence (6 steps + personalized email drafts)
+  .post(
+    "/:id/generate",
+    async ({ params: { id }, body, set }) => {
+      console.log("🤖 [SEQUENCES] POST /:id/generate - Sequence ID:", id)
+      console.log("Email Account ID:", body.userEmailAccountId)
+
+      logger.info(
+        {
+          sequenceId: id,
+        },
+        "🤖 [SEQUENCE] AI generation request received",
+      )
+
+      // Get sequence details
+      const sequence = await sequenceService.getSequence(id)
+      if (!sequence) {
+        console.log("❌ [SEQUENCES] Sequence not found:", id)
+        set.status = 404
+        return errorResponse("시퀀스를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      }
+
+      console.log("Sequence details:", { name: sequence.name, workspaceId: sequence.workspaceId })
+
+      if (!sequence.customerGroupId) {
+        console.log("❌ [SEQUENCES] No customer group:", id)
+        set.status = 400
+        return errorResponse("고객그룹이 설정되지 않았습니다.", ResponseCode.BAD_REQUEST)
+      }
+
+      console.log("Calling generateAICampaign...")
+      // Generate AI sequence (reusing campaign generation logic)
+      const result = await generateAICampaign({
+        sequenceId: id,
+        workspaceId: sequence.workspaceId,
+        customerGroupId: sequence.customerGroupId,
+        userEmailAccountId: body.userEmailAccountId,
+      })
+
+      if (!result.success) {
+        console.log("❌ [SEQUENCES] AI sequence generation failed:", result.error)
+        logger.error(
+          {
+            sequenceId: id,
+            error: result.error,
+          },
+          "❌ [SEQUENCE] AI generation failed",
+        )
+        set.status = 500
+        return errorResponse(result.error || "AI 시퀀스 생성 실패", ResponseCode.INTERNAL_ERROR)
+      }
+
+      console.log("✅ [SEQUENCES] AI sequence generated successfully")
+      console.log("Results:", {
+        totalLeads: result.totalLeads,
+        totalDrafts: result.totalDrafts,
+        stepsCreated: result.stepsCreated,
+        enrollmentsCreated: result.enrollmentsCreated,
+        executionsCreated: result.executionsCreated,
+        aiGenerated: result.aiGenerated,
+      })
+
+      logger.info(
+        {
+          sequenceId: id,
+          totalLeads: result.totalLeads,
+          totalDrafts: result.totalDrafts,
+        },
+        "🎉 [SEQUENCE] AI generation completed",
+      )
+
+      return successResponse(
+        {
+          totalLeads: result.totalLeads,
+          totalDrafts: result.totalDrafts,
+          stepsCreated: result.stepsCreated,
+          enrollmentsCreated: result.enrollmentsCreated,
+          executionsCreated: result.executionsCreated,
+          aiGenerated: result.aiGenerated,
+        },
+        "AI 시퀀스 생성 완료",
+        ResponseCode.SUCCESS,
+      )
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      body: t.Object({
+        userEmailAccountId: t.Optional(t.String({ format: "uuid" })), // Optional - not needed for draft generation
       }),
     },
   )
@@ -697,6 +795,7 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
         emailBodyText: body.emailBodyText,
         emailBodyHtml: body.emailBodyHtml,
         emailTemplateId: body.emailTemplateId,
+        generationSource: body.generationSource,
         attachments: attachmentsData,
       }
 
@@ -766,6 +865,7 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
         emailBodyText: body.emailBodyText,
         emailBodyHtml: body.emailBodyHtml,
         emailTemplateId: body.emailTemplateId,
+        generationSource: body.generationSource,
         attachments: attachmentsData,
       }
 
@@ -819,6 +919,8 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
         delivered:
           query.delivered === "true" ? true : query.delivered === "false" ? false : undefined,
       }
+
+      // const enrollments = await sequenceService.getSequenceEnrollmentsNoContacts(id, limit, offset, filters)
 
       const enrollments = await sequenceService.getSequenceEnrollments(id, limit, offset, filters)
       const total = await sequenceService.countEnrollments(id, filters)

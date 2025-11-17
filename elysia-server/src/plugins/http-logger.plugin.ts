@@ -33,6 +33,7 @@ export const httpLogger = new Elysia({ name: "http-logger" })
     return {}
   })
   .mapResponse(({ request, set }) => {
+    // .onAfterHandle(({ request, set }) => {
     const { method, url } = request
     const path = new URL(url).pathname
 

@@ -1,11 +1,12 @@
 import { and, desc, eq } from "drizzle-orm"
+// import { config } from "../config"
 import { db } from "../db/index"
 import { customerGroupMembers } from "../db/schema/customer-groups"
 import { leadContacts } from "../db/schema/lead-details"
 import { leads } from "../db/schema/leads"
 import { sequences } from "../db/schema/sequences"
 import { workflowGeneratedEmails } from "../db/schema/workflow-emails"
-import { getAIEmailService } from "../lib/ai-email-service"
+import { mastra } from "../shared/mastra"
 
 // ====================================
 // WORKFLOW GENERATED EMAILS CRUD
@@ -143,14 +144,35 @@ export async function upsertGeneratedEmail(data: {
         throw new Error("리드 정보를 찾을 수 없습니다")
       }
 
-      // Generate email content using AI
-      const aiService = getAIEmailService()
-      const result = await aiService.generateSequenceEmail({
-        companyName: lead.companyName || "",
-        industry: lead.businessType || undefined,
-        website: lead.websiteUrl || undefined,
-        prompt: data.aiPrompt,
+      // Generate email content using Mastra workflow
+      const sequenceEmailWorkflow = mastra.getWorkflow("sequenceEmailGenerationWorkflow")
+      const emailRun = await sequenceEmailWorkflow.createRunAsync()
+      const emailResult = await emailRun.start({
+        inputData: {
+          context: {
+            companyName: lead.companyName || "",
+            industry: lead.businessType || undefined,
+            website: lead.websiteUrl || undefined,
+            additionalContext: data.aiPrompt,
+          },
+        },
       })
+
+      if (emailResult.status === "failed") {
+        throw new Error(`Workflow failed: ${emailResult.error.message}`)
+      }
+
+      const emailStepResult = emailResult.steps["generate-sequence-email"]
+      if (!emailStepResult || emailStepResult.status !== "success") {
+        throw new Error("Email generation step failed")
+      }
+
+      const result = emailStepResult.output as {
+        success: boolean
+        subject?: string
+        bodyText?: string
+        error?: string
+      }
 
       if (!result.success) {
         throw new Error(result.error || "AI 이메일 생성 실패")

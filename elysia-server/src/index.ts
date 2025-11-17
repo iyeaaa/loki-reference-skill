@@ -34,7 +34,7 @@ import { workflowEmailRoutes } from "./routes/workflow-emails.routes"
 import { workflowExecutionRoutes } from "./routes/workflow-execution.routes"
 import { adminWorkspaceRoutes, workspaceRoutes } from "./routes/workspaces.routes"
 import logger from "./utils/logger"
-import { startEmailSequenceWorker } from "./workers/email-sequence-worker"
+import { startEmailSequenceWorker } from "./workers/email-sequence-worker-v2"
 import { startScheduledEmailWorker } from "./workers/scheduled-email-worker"
 import { startWorkflowExecutionWorker } from "./workers/workflow-execution-worker"
 

@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, Check, Edit2, FileText, Mail, Users, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -17,6 +18,7 @@ import { SequenceForm } from "./SequenceForm"
 import { SequenceStepsList } from "./SequenceStepList"
 
 export default function SequenceEditPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
@@ -32,17 +34,17 @@ export default function SequenceEditPage() {
 
   useEffect(() => {
     if (!sequenceId) {
-      toast.error("시퀀스 ID가 없습니다")
+      toast.error(t("sequences.editPage.sequenceIdMissing"))
       navigate("/sequences")
     }
-  }, [sequenceId, navigate])
+  }, [sequenceId, navigate, t])
 
   useEffect(() => {
     if (error) {
-      toast.error("시퀀스를 불러오는데 실패했습니다")
+      toast.error(t("sequences.editPage.loadFailed"))
       navigate("/sequences")
     }
-  }, [error, navigate])
+  }, [error, navigate, t])
 
   useEffect(() => {
     if (sequence) {
@@ -51,7 +53,10 @@ export default function SequenceEditPage() {
       setMemo(sequence.memo || "")
 
       // Set default tab based on sequence status
-      const isDraftOrReady = sequence.status === "draft" || sequence.status === "ready"
+      const isDraftOrReady =
+        sequence.status === "draft" ||
+        sequence.status === "generating" ||
+        sequence.status === "ready"
       const isActiveOrBeyond = ["active", "paused", "completed", "archived"].includes(
         sequence.status,
       )
@@ -78,7 +83,7 @@ export default function SequenceEditPage() {
       },
       {
         onSuccess: () => {
-          toast.success("시퀀스가 업데이트되었습니다")
+          toast.success(t("sequences.editPage.updated"))
         },
       },
     )
@@ -90,7 +95,7 @@ export default function SequenceEditPage() {
 
   const handleSaveTitleDescription = async () => {
     if (!sequenceId || !editedName.trim()) {
-      toast.error("캠페인 이름을 입력해주세요")
+      toast.error(t("sequences.editPage.enterName"))
       return
     }
 
@@ -142,7 +147,7 @@ export default function SequenceEditPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-muted-foreground">로딩 중...</div>
+        <div className="text-muted-foreground">{t("sequences.editPage.loading")}</div>
       </div>
     )
   }
@@ -151,20 +156,21 @@ export default function SequenceEditPage() {
     return null
   }
 
-  const isDraftOrReady = sequence.status === "draft" || sequence.status === "ready"
+  const isDraftOrReady =
+    sequence.status === "draft" || sequence.status === "generating" || sequence.status === "ready"
   const isActiveOrBeyond = ["active", "paused", "completed", "archived"].includes(sequence.status)
 
   // Menu items based on status
   const menuItems = isDraftOrReady
     ? [
-        { id: "customer-selection", label: "고객 그룹", icon: Users },
-        { id: "scenario", label: "시나리오", icon: Mail },
-        { id: "memo", label: "메모", icon: FileText },
+        { id: "customer-selection", label: t("sequences.editPage.customerGroupMenu"), icon: Users },
+        { id: "scenario", label: t("sequences.editPage.scenarioMenu"), icon: Mail },
+        { id: "memo", label: t("sequences.editPage.memoMenu"), icon: FileText },
       ]
     : [
-        { id: "overview", label: "개요", icon: FileText },
-        { id: "enrollment", label: "발송현황", icon: Mail },
-        { id: "memo", label: "메모", icon: FileText },
+        { id: "overview", label: t("sequences.editPage.overviewMenu"), icon: FileText },
+        { id: "enrollment", label: t("sequences.editPage.enrollmentMenu"), icon: Mail },
+        { id: "memo", label: t("sequences.editPage.memoMenu"), icon: FileText },
       ]
 
   return (
@@ -174,7 +180,7 @@ export default function SequenceEditPage() {
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={handleBack} className="gap-2">
             <ArrowLeft className="h-4 w-4" />
-            돌아가기
+            {t("sequences.editPage.back")}
           </Button>
           <div className="flex-1">
             {isEditingTitle ? (
@@ -183,7 +189,7 @@ export default function SequenceEditPage() {
                   <Input
                     value={editedName}
                     onChange={(e) => setEditedName(e.target.value)}
-                    placeholder="캠페인 이름"
+                    placeholder={t("sequences.editPage.campaignName")}
                     className="text-2xl font-bold h-auto py-1"
                   />
                   <Button size="sm" variant="ghost" onClick={handleSaveTitleDescription}>
@@ -196,7 +202,7 @@ export default function SequenceEditPage() {
                 <Input
                   value={editedDescription}
                   onChange={(e) => setEditedDescription(e.target.value)}
-                  placeholder="캠페인 설명 (선택사항)"
+                  placeholder={t("sequences.editPage.campaignDescPlaceholder")}
                   className="text-sm"
                 />
               </div>
@@ -205,7 +211,7 @@ export default function SequenceEditPage() {
                 <div className="flex-1">
                   <h1 className="text-2xl font-bold">{sequence.name}</h1>
                   <p className="text-sm text-muted-foreground">
-                    {sequence.description || "캠페인 상세"}
+                    {sequence.description || t("sequences.editPage.campaignDetail")}
                   </p>
                 </div>
                 <Button
@@ -215,7 +221,7 @@ export default function SequenceEditPage() {
                   className="gap-2"
                 >
                   <Edit2 className="h-4 w-4" />
-                  수정
+                  {t("sequences.editPage.edit")}
                 </Button>
               </div>
             )}
@@ -260,7 +266,9 @@ export default function SequenceEditPage() {
               <>
                 {selectedMenu === "customer-selection" && (
                   <Card className="p-6">
-                    <h2 className="text-xl font-semibold mb-4">고객 그룹</h2>
+                    <h2 className="text-xl font-semibold mb-4">
+                      {t("sequences.editPage.customerGroupMenu")}
+                    </h2>
                     <SequenceForm
                       sequence={sequence}
                       isEdit={true}
@@ -273,26 +281,32 @@ export default function SequenceEditPage() {
 
                 {selectedMenu === "scenario" && (
                   <div>
-                    <h2 className="text-xl font-semibold mb-4">시나리오</h2>
+                    <h2 className="text-xl font-semibold mb-4">
+                      {t("sequences.editPage.scenarioMenu")}
+                    </h2>
                     <SequenceStepsList sequenceId={sequence.id} isEdit={true} />
                   </div>
                 )}
 
                 {selectedMenu === "memo" && (
                   <Card className="p-6">
-                    <h2 className="text-xl font-semibold mb-4">메모</h2>
+                    <h2 className="text-xl font-semibold mb-4">
+                      {t("sequences.editPage.memoMenu")}
+                    </h2>
                     <p className="text-sm text-muted-foreground mb-4">
-                      캠페인에 대한 내부 메모를 작성할 수 있습니다. 이 메모는 팀원들과 공유됩니다.
+                      {t("sequences.editPage.memoNote")}
                     </p>
                     <Textarea
                       value={memo}
                       onChange={(e) => setMemo(e.target.value)}
-                      placeholder="캠페인에 대한 메모를 입력하세요..."
+                      placeholder={t("sequences.editPage.memoPlaceholder")}
                       rows={10}
                     />
                     <div className="flex justify-end gap-2 mt-4">
                       <Button onClick={handleSaveMemo} disabled={updateSequence.isPending}>
-                        {updateSequence.isPending ? "저장 중..." : "저장"}
+                        {updateSequence.isPending
+                          ? t("sequences.editPage.saving")
+                          : t("sequences.editPage.save")}
                       </Button>
                     </div>
                   </Card>
@@ -307,7 +321,7 @@ export default function SequenceEditPage() {
                   <div>
                     <div className="mb-4 p-4 bg-muted/50 rounded-lg border">
                       <p className="text-sm text-muted-foreground">
-                        ℹ️ 활성화된 캠페인은 읽기 전용입니다. 메모만 수정할 수 있습니다.
+                        {t("sequences.editPage.readOnlyNotice")}
                       </p>
                     </div>
                     <CampaignOverview sequenceId={sequence.id} />
@@ -316,26 +330,32 @@ export default function SequenceEditPage() {
 
                 {selectedMenu === "enrollment" && (
                   <div>
-                    <h2 className="text-xl font-semibold mb-4">발송현황</h2>
+                    <h2 className="text-xl font-semibold mb-4">
+                      {t("sequences.editPage.enrollmentMenu")}
+                    </h2>
                     <SequenceEnrollmentsTable sequenceId={sequence.id} />
                   </div>
                 )}
 
                 {selectedMenu === "memo" && (
                   <Card className="p-6">
-                    <h2 className="text-xl font-semibold mb-4">메모</h2>
+                    <h2 className="text-xl font-semibold mb-4">
+                      {t("sequences.editPage.memoMenu")}
+                    </h2>
                     <p className="text-sm text-muted-foreground mb-4">
-                      캠페인에 대한 내부 메모를 작성할 수 있습니다. 이 메모는 팀원들과 공유됩니다.
+                      {t("sequences.editPage.memoNote")}
                     </p>
                     <Textarea
                       value={memo}
                       onChange={(e) => setMemo(e.target.value)}
-                      placeholder="캠페인에 대한 메모를 입력하세요..."
+                      placeholder={t("sequences.editPage.memoPlaceholder")}
                       rows={10}
                     />
                     <div className="flex justify-end gap-2 mt-4">
                       <Button onClick={handleSaveMemo} disabled={updateSequence.isPending}>
-                        {updateSequence.isPending ? "저장 중..." : "저장"}
+                        {updateSequence.isPending
+                          ? t("sequences.editPage.saving")
+                          : t("sequences.editPage.save")}
                       </Button>
                     </div>
                   </Card>

@@ -11,6 +11,7 @@ export interface UserEmailAccount {
   displayName?: string | null
   apiKey: string
   sendgridVerifiedSenderId?: string | null
+  userEmail?: string | null
   // Status and verification
   isVerified: boolean
   isDefault: boolean

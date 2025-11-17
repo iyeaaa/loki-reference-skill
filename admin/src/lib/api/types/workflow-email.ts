@@ -29,7 +29,7 @@ export interface WorkflowGeneratedEmail {
 }
 
 export interface GenerateAllEmailsRequest {
-  mode: "ai" | "manual"
+  mode: "ai" | "manual" | "template"
   aiPrompt?: string
   aiModel?: string
   templateSubject?: string

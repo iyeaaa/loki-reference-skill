@@ -15,7 +15,7 @@ const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"))
 const RepliedEmailsPage = lazy(() => import("../pages/email-replies/EmailRepliesPage"))
 const LeadsPage = lazy(() => import("../pages/leads"))
 const SequencesPage = lazy(() => import("../pages/sequences"))
-const CreateCampaignPage = lazy(() => import("../pages/sequences/CreateCampaignPage"))
+const CreateSequencePage = lazy(() => import("../pages/sequences/CreateCampaignPage"))
 const SequenceEditPage = lazy(() => import("../pages/sequences/SequenceEditPage"))
 const SettingsPage = lazy(() => import("../pages/settings"))
 
@@ -72,10 +72,6 @@ export const router = createBrowserRouter([
             path: "dashboard",
             element: <DashboardPage />,
           },
-          // {
-          //   path: "campaigns",
-          //   element: <CampaignsPage />,
-          // },
           {
             path: "leads",
             element: <LeadsPage />,
@@ -90,7 +86,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "sequences/create",
-            element: <CreateCampaignPage />,
+            element: <CreateSequencePage />,
           },
           {
             path: "sequences/edit",

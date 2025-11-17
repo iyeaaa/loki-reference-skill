@@ -8,6 +8,7 @@ delete,삭제,Delete
 edit,편집,Edit
 search,검색,Search
 loading,로딩 중...,Loading...
+viewDetails,상세보기,View Details
 layout.page.customerMonitoring,고객 모니터링,Customer Monitoring
 layout.page.leadManagement,전체 고객 관리,Lead Management
 layout.page.customerGroupManagement,고객 그룹 관리,Customer Group Management
@@ -40,3 +41,6 @@ tag.tooltip.low,낮은 우선순위,Low priority
 tag.tooltip.meetingRequest,회의 요청 메시지,Meeting request message
 tag.tooltip.question,질문 메시지,Question message
 tag.tooltip.auto,자동 생성된 메시지,Auto-generated message
+create,생성,Create
+saving,저장 중...,Saving...
+update,수정,Update

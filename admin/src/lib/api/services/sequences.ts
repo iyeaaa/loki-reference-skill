@@ -474,4 +474,29 @@ export const sequencesApi = {
       body: JSON.stringify(data),
     })
   },
+
+  generateAI: async (
+    sequenceId: string,
+    userEmailAccountId?: string,
+  ): Promise<{
+    success: boolean
+    message: string
+    data: {
+      totalLeads: number
+      totalDrafts: number
+      stepsCreated: number
+      enrollmentsCreated: number
+    }
+  }> => {
+    // Build request body conditionally - only include userEmailAccountId if provided
+    const requestBody: { userEmailAccountId?: string } = {}
+    if (userEmailAccountId) {
+      requestBody.userEmailAccountId = userEmailAccountId
+    }
+
+    return apiFetch(`/api/v1/sequences/${sequenceId}/generate`, {
+      method: "POST",
+      body: JSON.stringify(requestBody),
+    })
+  },
 }

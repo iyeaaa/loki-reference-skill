@@ -1,5 +1,6 @@
 import { Edit, Trash2 } from "lucide-react"
 import { type FC, useEffect, useId, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -14,6 +15,7 @@ interface CommentNodeProps {
 }
 
 export const CommentNode: FC<CommentNodeProps> = ({ data }) => {
+  const { t } = useTranslation()
   const [isEditing, setIsEditing] = useState(false)
   const [comment, setComment] = useState(data.comment || "")
   const commentId = useId()
@@ -41,7 +43,7 @@ export const CommentNode: FC<CommentNodeProps> = ({ data }) => {
             id={commentId}
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder="메모를 입력하세요..."
+            placeholder={t("sequences.designer.commentNode.placeholder")}
             rows={4}
             className="text-sm bg-white border-yellow-300 focus:border-yellow-500 resize-none"
             autoFocus
@@ -53,10 +55,10 @@ export const CommentNode: FC<CommentNodeProps> = ({ data }) => {
               onClick={handleCancel}
               className="flex-1 h-7 text-xs"
             >
-              취소
+              {t("sequences.designer.commentNode.cancel")}
             </Button>
             <Button size="sm" onClick={handleSave} className="flex-1 h-7 text-xs">
-              저장
+              {t("sequences.designer.commentNode.save")}
             </Button>
           </div>
         </div>
@@ -76,7 +78,7 @@ export const CommentNode: FC<CommentNodeProps> = ({ data }) => {
               className="flex-1 text-xs text-gray-400 italic bg-white p-2 rounded border border-dashed border-yellow-300 hover:bg-yellow-50 text-left min-h-[60px]"
               onClick={() => setIsEditing(true)}
             >
-              메모 작성...
+              {t("sequences.designer.commentNode.writeMemo")}
             </button>
           )}
 
@@ -87,7 +89,7 @@ export const CommentNode: FC<CommentNodeProps> = ({ data }) => {
               size="sm"
               onClick={() => setIsEditing(true)}
               className="h-6 w-6 p-0 hover:bg-yellow-200"
-              title="편집"
+              title={t("sequences.designer.commentNode.edit")}
             >
               <Edit className="h-3 w-3 text-yellow-700" />
             </Button>
@@ -96,7 +98,7 @@ export const CommentNode: FC<CommentNodeProps> = ({ data }) => {
               size="sm"
               onClick={() => data.onDelete?.()}
               className="h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
-              title="삭제"
+              title={t("sequences.designer.commentNode.delete")}
             >
               <Trash2 className="h-3 w-3" />
             </Button>

@@ -360,6 +360,11 @@ export async function listCustomerGroupsWithFilters(
       workspaceName: workspaces.name,
       createdByUsername: users.username,
       createdByEmail: users.email,
+      leadCount: sql<number>`(
+        SELECT COUNT(*)::int
+        FROM customer_group_members
+        WHERE group_id = ${customerGroups.id}
+      )`,
     })
     .from(customerGroups)
     .leftJoin(workspaces, eq(customerGroups.workspaceId, workspaces.id))

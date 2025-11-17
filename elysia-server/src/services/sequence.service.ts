@@ -116,17 +116,17 @@ export async function updateSequence(
     selectedLeadIds?: string[] // Array of lead IDs to target
   },
 ) {
-  const { default: logger } = await import("../utils/logger")
+  // const { default: logger } = await import("../utils/logger")
 
-  logger.info(
-    {
-      sequenceId: id,
-      customerGroupId: data.customerGroupId,
-      selectedLeadIds: data.selectedLeadIds,
-      selectedLeadIdsLength: data.selectedLeadIds?.length,
-    },
-    "📝 Updating sequence with data",
-  )
+  // logger.info(
+  //   {
+  //     sequenceId: id,
+  //     customerGroupId: data.customerGroupId,
+  //     selectedLeadIds: data.selectedLeadIds,
+  //     selectedLeadIdsLength: data.selectedLeadIds?.length,
+  //   },
+  //   "📝 Updating sequence with data",
+  // )
 
   const updateData: Record<string, unknown> = {
     updatedAt: new Date(),
@@ -144,23 +144,23 @@ export async function updateSequence(
       ? JSON.stringify(data.selectedLeadIds)
       : null
     updateData.selectedLeadIds = stringifiedLeadIds
-    logger.info(
-      {
-        sequenceId: id,
-        originalArray: data.selectedLeadIds,
-        stringified: stringifiedLeadIds,
-      },
-      "💾 Saving selectedLeadIds",
-    )
+    // logger.info(
+    //   {
+    //     sequenceId: id,
+    //     originalArray: data.selectedLeadIds,
+    //     stringified: stringifiedLeadIds,
+    //   },
+    //   "💾 Saving selectedLeadIds",
+    // )
   }
 
-  logger.info(
-    {
-      sequenceId: id,
-      updateData,
-    },
-    "💾 Final updateData being saved to DB",
-  )
+  // logger.info(
+  //   {
+  //     sequenceId: id,
+  //     updateData,
+  //   },
+  //   "💾 Final updateData being saved to DB",
+  // )
 
   const [updatedSequence] = await db
     .update(sequences)
@@ -184,16 +184,16 @@ export async function updateSequence(
     throw new Error("Failed to update sequence")
   }
 
-  logger.info(
-    {
-      sequenceId: id,
-      savedSequence: {
-        customerGroupId: updatedSequence.customerGroupId,
-        selectedLeadIds: updatedSequence.selectedLeadIds,
-      },
-    },
-    "✅ Sequence updated successfully",
-  )
+  // logger.info(
+  //   {
+  //     sequenceId: id,
+  //     savedSequence: {
+  //       customerGroupId: updatedSequence.customerGroupId,
+  //       selectedLeadIds: updatedSequence.selectedLeadIds,
+  //     },
+  //   },
+  //   "✅ Sequence updated successfully",
+  // )
 
   return updatedSequence
 }
@@ -312,6 +312,7 @@ export async function copySequence(
       emailBodyText: step.emailBodyText,
       emailBodyHtml: step.emailBodyHtml,
       emailTemplateId: step.emailTemplateId,
+      generationSource: step.generationSource,
     }))
 
     const { default: logger } = await import("../utils/logger")
@@ -572,6 +573,7 @@ export async function getSequenceSteps(sequenceId: string) {
       emailBodyText: sequenceSteps.emailBodyText,
       emailBodyHtml: sequenceSteps.emailBodyHtml,
       emailTemplateId: sequenceSteps.emailTemplateId,
+      generationSource: sequenceSteps.generationSource,
       createdAt: sequenceSteps.createdAt,
       updatedAt: sequenceSteps.updatedAt,
     })
@@ -594,6 +596,7 @@ export async function createSequenceStep(data: {
   emailBodyText?: string
   emailBodyHtml?: string
   emailTemplateId?: string
+  generationSource?: "ai" | "manual" | "template"
   attachments?: Array<{
     filename: string
     type: string
@@ -618,6 +621,7 @@ export async function createSequenceStep(data: {
       emailBodyText: data.emailBodyText || null,
       emailBodyHtml: emailBodyHtml,
       emailTemplateId: data.emailTemplateId || null,
+      generationSource: data.generationSource ?? "manual",
       attachments: data.attachments || null,
     })
     .returning({
@@ -629,6 +633,7 @@ export async function createSequenceStep(data: {
       scheduledMinute: sequenceSteps.scheduledMinute,
       timezone: sequenceSteps.timezone,
       emailSubject: sequenceSteps.emailSubject,
+      generationSource: sequenceSteps.generationSource,
       attachments: sequenceSteps.attachments,
       createdAt: sequenceSteps.createdAt,
       updatedAt: sequenceSteps.updatedAt,
@@ -650,6 +655,7 @@ export async function updateSequenceStep(
     emailBodyText?: string
     emailBodyHtml?: string
     emailTemplateId?: string
+    generationSource?: "ai" | "manual" | "template"
     attachments?: Array<{
       filename: string
       type: string
@@ -748,6 +754,7 @@ export async function updateSequenceStep(
       scheduledMinute: sequenceSteps.scheduledMinute,
       timezone: sequenceSteps.timezone,
       emailSubject: sequenceSteps.emailSubject,
+      generationSource: sequenceSteps.generationSource,
       attachments: sequenceSteps.attachments,
       updatedAt: sequenceSteps.updatedAt,
     })
@@ -905,6 +912,7 @@ export async function getSequenceEnrollments(
       )
 
     const leadIds = await leadIdsQuery
+    // console.log("LEAD IDs:", leadIds)
     const validLeadIds = leadIds.map((row) => row.leadId).filter((id): id is string => id !== null)
 
     // 조건에 맞는 enrollment가 없으면 빈 배열 반환
@@ -1002,6 +1010,103 @@ export async function getSequenceEnrollments(
       ),
     )
     .leftJoin(userEmailAccounts, eq(sequenceEnrollments.userEmailAccountId, userEmailAccounts.id))
+    .where(and(...conditions))
+    .orderBy(desc(sequenceEnrollments.enrolledAt))
+    .limit(limit)
+    .offset(offset)
+
+  // console.log("RESULT:", result)
+
+  return result
+}
+
+export async function getSequenceEnrollmentsNoContacts(
+  sequenceId: string,
+  limit: number,
+  offset: number,
+  filters?: {
+    companyName?: string
+    opened?: boolean
+    clicked?: boolean
+    replied?: boolean
+    delivered?: boolean
+  },
+) {
+  // Simple query - only fetch enrollment data without any joins
+  const conditions = [eq(sequenceEnrollments.sequenceId, sequenceId)]
+
+  // If email filters are provided, filter by leadIds that match email criteria
+  if (
+    filters?.opened !== undefined ||
+    filters?.clicked !== undefined ||
+    filters?.replied !== undefined ||
+    filters?.delivered !== undefined
+  ) {
+    // Get leadIds that match email filters
+    const leadIdsQuery = db
+      .selectDistinct({ leadId: emailsTable.leadId })
+      .from(emailsTable)
+      .where(
+        and(
+          eq(emailsTable.sequenceId, sequenceId),
+          eq(emailsTable.direction, "outbound"),
+          filters?.opened !== undefined
+            ? filters.opened
+              ? sql`${emailsTable.openedAt} IS NOT NULL`
+              : sql`${emailsTable.openedAt} IS NULL`
+            : undefined,
+          filters?.clicked !== undefined
+            ? filters.clicked
+              ? sql`${emailsTable.clickedAt} IS NOT NULL`
+              : sql`${emailsTable.clickedAt} IS NULL`
+            : undefined,
+          filters?.replied !== undefined
+            ? filters.replied
+              ? sql`${emailsTable.repliedAt} IS NOT NULL`
+              : sql`${emailsTable.repliedAt} IS NULL`
+            : undefined,
+          filters?.delivered !== undefined
+            ? filters.delivered
+              ? sql`${emailsTable.deliveredAt} IS NOT NULL`
+              : sql`${emailsTable.deliveredAt} IS NULL`
+            : undefined,
+        ),
+      )
+
+    const leadIds = await leadIdsQuery
+    const validLeadIds = leadIds.map((row) => row.leadId).filter((id): id is string => id !== null)
+
+    if (validLeadIds.length === 0) {
+      return []
+    }
+
+    conditions.push(
+      sql`${sequenceEnrollments.leadId} IN (${sql.join(
+        validLeadIds.map((id) => sql`${id}`),
+        sql`, `,
+      )})`,
+    )
+  }
+
+  // Note: companyName filter is ignored since we don't join to leads table
+
+  const result = await db
+    .select({
+      id: sequenceEnrollments.id,
+      sequenceId: sequenceEnrollments.sequenceId,
+      leadId: sequenceEnrollments.leadId,
+      userEmailAccountId: sequenceEnrollments.userEmailAccountId,
+      currentStepOrder: sequenceEnrollments.currentStepOrder,
+      status: sequenceEnrollments.status,
+      enrolledBy: sequenceEnrollments.enrolledBy,
+      enrolledAt: sequenceEnrollments.enrolledAt,
+      firstEmailSentAt: sequenceEnrollments.firstEmailSentAt,
+      lastEmailSentAt: sequenceEnrollments.lastEmailSentAt,
+      completedAt: sequenceEnrollments.completedAt,
+      stoppedAt: sequenceEnrollments.stoppedAt,
+      nextStepScheduledAt: sequenceEnrollments.nextStepScheduledAt,
+    })
+    .from(sequenceEnrollments)
     .where(and(...conditions))
     .orderBy(desc(sequenceEnrollments.enrolledAt))
     .limit(limit)
@@ -1708,6 +1813,7 @@ export async function bulkEnrollWithScheduling(data: {
         stepOrder: step.stepOrder,
         status: "pending" as const,
         scheduledAt,
+        generationSource: step.generationSource,
       })
 
       // Use this step's scheduled time as the base for the next step
@@ -1808,6 +1914,7 @@ export async function getEnrollmentStepExecutions(enrollmentId: string) {
       executedAt: sequenceStepExecutions.executedAt,
       emailId: sequenceStepExecutions.emailId,
       errorMessage: sequenceStepExecutions.errorMessage,
+      generationSource: sequenceStepExecutions.generationSource,
       emailSubject: sequenceSteps.emailSubject,
     })
     .from(sequenceStepExecutions)
@@ -1838,6 +1945,7 @@ export async function getPendingStepExecutions(limit: number = 100) {
       stepId: sequenceStepExecutions.stepId,
       stepOrder: sequenceStepExecutions.stepOrder,
       scheduledAt: sequenceStepExecutions.scheduledAt,
+      generationSource: sequenceStepExecutions.generationSource,
       emailSubject: sequenceSteps.emailSubject,
       emailBodyText: sequenceSteps.emailBodyText,
       emailBodyHtml: sequenceSteps.emailBodyHtml,
@@ -2188,31 +2296,29 @@ export async function getSequenceMetrics(sequenceId: string) {
   const bounceRate =
     emailCounts.totalSent > 0 ? (emailCounts.bounced / emailCounts.totalSent) * 100 : 0
 
-  // 디버깅: 이메일 카운트 로깅
-  logger.info(
-    {
-      sequenceId,
-      emailCounts: {
-        totalSent: emailCounts.totalSent,
-        delivered: emailCounts.delivered,
-        opened: emailCounts.opened,
-        clicked: emailCounts.clicked,
-        replied: repliedCount,
-        bounced: emailCounts.bounced,
-        dropped: emailCounts.dropped,
-      },
-      calculatedRates: {
-        openRate,
-        clickRate,
-        replyRate,
-        bounceRate,
-      },
-      calculationDetails: {
-        deliveredCount,
-      },
-    },
-    "🔍 [DEBUG] Email counts and calculated rates",
-  )
+  // // 디버깅: 이메일 카운트 로깅
+  // logger.info(
+  //   {
+  //     sequenceId,
+  //     emailCounts: {
+  //       totalSent: emailCounts.totalSent,
+  //       delivered: emailCounts.delivered,
+  //       opened: emailCounts.opened,
+  //       clicked: emailCounts.clicked,
+  //       bounced: emailCounts.bounced,
+  //     },
+  //     calculatedRates: {
+  //       openRate,
+  //       clickRate,
+  //       bounceRate,
+  //     },
+  //     calculationDetails: {
+  //       deliveredCount,
+  //       usingDeliveredEvent: emailCounts.delivered > 0,
+  //     },
+  //   },
+  //   "🔍 [DEBUG] Email counts and calculated rates",
+  // )
 
   const metrics = {
     // 발송 통계
@@ -2243,21 +2349,19 @@ export async function getSequenceMetrics(sequenceId: string) {
     lastSentAt: lastSentResult[0]?.lastSentAt?.toISOString(),
   }
 
-  logger.info(
-    {
-      sequenceId,
-      metrics: {
-        totalSent: metrics.totalSent,
-        delivered: metrics.delivered,
-        openRate: metrics.openRate,
-        clickRate: metrics.clickRate,
-        replyRate: metrics.replyRate,
-        replied: metrics.replied,
-        totalEnrollments: metrics.totalEnrollments,
-      },
-    },
-    "📊 [METRICS] Sequence metrics calculated",
-  )
+  // logger.info(
+  //   {
+  //     sequenceId,
+  //     metrics: {
+  //       totalSent: metrics.totalSent,
+  //       delivered: metrics.delivered,
+  //       openRate: metrics.openRate,
+  //       clickRate: metrics.clickRate,
+  //       totalEnrollments: metrics.totalEnrollments,
+  //     },
+  //   },
+  //   "📊 [METRICS] Sequence metrics calculated",
+  // )
 
   return metrics
 }

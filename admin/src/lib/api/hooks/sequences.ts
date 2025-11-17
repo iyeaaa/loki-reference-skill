@@ -478,3 +478,24 @@ export function useSequencesOverallStats(workspaceId?: string) {
     gcTime: 5 * 60 * 1000, // 5 minutes
   })
 }
+
+// Generate AI sequence (6 steps + personalized drafts)
+export function useGenerateAISequence() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      sequenceId,
+      userEmailAccountId,
+    }: {
+      sequenceId: string
+      userEmailAccountId?: string
+    }) => sequencesApi.generateAI(sequenceId, userEmailAccountId),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.detail(variables.sequenceId) })
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.metrics(variables.sequenceId) })
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.steps(variables.sequenceId) })
+      queryClient.invalidateQueries({ queryKey: sequenceKeys.enrollments(variables.sequenceId) })
+    },
+  })
+}

@@ -314,6 +314,7 @@ export function SequenceLaunchModal({
       emailBodyText: "",
       emailBodyHtml: "",
       emailTemplateId: null,
+      generationSource: "manual",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }

@@ -4,5 +4,6 @@
  */
 
 import { mastra } from "../shared/mastra"
+import { getMastra } from "../shared/mastra/shell/mastra"
 
-export { mastra }
+export { getMastra, mastra }

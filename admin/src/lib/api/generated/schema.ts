@@ -8426,7 +8426,7 @@ export interface operations {
         "application/json": {
           name?: string
           description?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
+          status?: "draft" | "generating" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           customerGroupId?: string
@@ -8435,7 +8435,7 @@ export interface operations {
         "multipart/form-data": {
           name?: string
           description?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
+          status?: "draft" | "generating" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           customerGroupId?: string
@@ -8444,7 +8444,7 @@ export interface operations {
         "text/plain": {
           name?: string
           description?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
+          status?: "draft" | "generating" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           customerGroupId?: string
@@ -8514,7 +8514,7 @@ export interface operations {
           workspaceId: string
           name: string
           description?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
+          status?: "draft" | "generating" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           createdBy?: string
@@ -8527,7 +8527,7 @@ export interface operations {
           workspaceId: string
           name: string
           description?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
+          status?: "draft" | "generating" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           createdBy?: string
@@ -8540,7 +8540,7 @@ export interface operations {
           workspaceId: string
           name: string
           description?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
+          status?: "draft" | "generating" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           createdBy?: string
@@ -9307,7 +9307,7 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": {
-          mode: "ai" | "manual"
+          mode: "ai" | "manual" | "template"
           aiPrompt?: string
           aiModel?: string
           templateSubject?: string
@@ -9316,7 +9316,7 @@ export interface operations {
           incremental?: boolean
         }
         "multipart/form-data": {
-          mode: "ai" | "manual"
+          mode: "ai" | "manual" | "template"
           aiPrompt?: string
           aiModel?: string
           templateSubject?: string
@@ -9325,7 +9325,7 @@ export interface operations {
           incremental?: boolean
         }
         "text/plain": {
-          mode: "ai" | "manual"
+          mode: "ai" | "manual" | "template"
           aiPrompt?: string
           aiModel?: string
           templateSubject?: string

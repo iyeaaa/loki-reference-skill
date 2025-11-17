@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -32,6 +33,7 @@ export function BulkActionModal({
   sequenceCount,
   actionType,
 }: BulkActionModalProps) {
+  const { t } = useTranslation()
   const [selectedValue, setSelectedValue] = useState<string>("")
 
   const handleConfirm = () => {
@@ -45,20 +47,20 @@ export function BulkActionModal({
   const getTitle = () => {
     switch (actionType) {
       case "status":
-        return "시퀀스 상태 일괄 변경"
+        return t("sequences.bulkAction.changeStatus")
       case "delete":
-        return "시퀀스 일괄 삭제"
+        return t("sequences.bulkAction.deleteSequences")
       default:
-        return "일괄 작업"
+        return t("sequences.bulkAction.bulkOperation")
     }
   }
 
   const getDescription = () => {
     switch (actionType) {
       case "status":
-        return `선택된 ${sequenceCount}개의 시퀀스 상태를 변경합니다.`
+        return t("sequences.bulkAction.changeStatusDesc", { count: sequenceCount })
       case "delete":
-        return `선택된 ${sequenceCount}개의 시퀀스를 삭제합니다. 이 작업은 취소할 수 없습니다.`
+        return t("sequences.bulkAction.deleteSequencesDesc", { count: sequenceCount })
       default:
         return ""
     }
@@ -75,17 +77,21 @@ export function BulkActionModal({
         <div className="py-4 space-y-4">
           {actionType === "status" && (
             <div className="space-y-2">
-              <Label>변경할 상태</Label>
+              <Label>{t("sequences.bulkAction.statusToChange")}</Label>
               <Select value={selectedValue} onValueChange={setSelectedValue}>
                 <SelectTrigger>
-                  <SelectValue placeholder="상태 선택" />
+                  <SelectValue placeholder={t("sequences.bulkAction.selectStatus")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="draft">초안</SelectItem>
-                  <SelectItem value="active">활성</SelectItem>
-                  <SelectItem value="paused">일시정지</SelectItem>
-                  <SelectItem value="archived">보관됨</SelectItem>
-                  <SelectItem value="no_response">답변 없음</SelectItem>
+                  <SelectItem value="draft">{t("sequences.bulkAction.status.draft")}</SelectItem>
+                  <SelectItem value="active">{t("sequences.bulkAction.status.active")}</SelectItem>
+                  <SelectItem value="paused">{t("sequences.bulkAction.status.paused")}</SelectItem>
+                  <SelectItem value="archived">
+                    {t("sequences.bulkAction.status.archived")}
+                  </SelectItem>
+                  <SelectItem value="no_response">
+                    {t("sequences.bulkAction.status.noResponse")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -94,14 +100,16 @@ export function BulkActionModal({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            취소
+            {t("sequences.bulkAction.cancel")}
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={actionType === "status" && !selectedValue}
             variant={actionType === "delete" ? "destructive" : "default"}
           >
-            {actionType === "delete" ? "삭제" : "변경"}
+            {actionType === "delete"
+              ? t("sequences.bulkAction.delete")
+              : t("sequences.bulkAction.change")}
           </Button>
         </DialogFooter>
       </DialogContent>

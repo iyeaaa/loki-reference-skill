@@ -1,5 +1,23 @@
 /**
- * Email Sequence Worker
+ * Email Sequence Worker (ORIGINAL IMPLEMENTATION)
+ *
+ * ⚠️ DEPRECATED: This file contains the original implementation that generates
+ * email content on-the-fly during sending.
+ *
+ * 🆕 NEW IMPLEMENTATION: See email-sequence-worker-with-drafts.ts
+ * The new version uses pre-generated email drafts for better performance.
+ *
+ * This file is kept for reference and fallback purposes.
+ * To switch back to this implementation, uncomment the code below and
+ * update the worker registration in your main server file.
+ */
+
+/* ============================================================================
+   COMMENTED OUT - Original implementation below
+   ============================================================================
+
+/**
+ * Email Sequence Worker (ORIGINAL)
  *
  * This worker runs periodically to process pending sequence step executions.
  * It fetches pending steps, sends emails via SendGrid, and updates execution status.
@@ -150,46 +168,98 @@ async function sendSequenceEmail(execution: {
       "✅ [STEP-WORKER] Found lead info",
     )
 
-    // Prepare lead context for variable replacement
-    const leadContext = {
-      companyName: lead.companyName || "",
-      contactName: leadContact.contactName || "", // From leadContacts table
-      contactEmail: leadContact.email || "", // From leadContacts table
-      industry: industryString || "",
-      businessType: lead.businessType || "", // Add businessType field
-      website: lead.websiteUrl || "",
-      description: lead.description || "",
-      address: lead.address || "",
-      country: lead.country || "",
-      city: lead.city || "",
-      state: lead.state || "",
-      foundedYear: lead.foundedYear?.toString() || "",
-      employeeCount: lead.employeeCount || "",
-      leadSource: lead.leadSource || "",
-      leadStatus: lead.leadStatus || "",
-      leadScore: lead.leadScore?.toString() || "",
+    // ====================================
+    // CHECK FOR PRE-GENERATED DRAFT
+    // ====================================
+    // For AI-generated campaigns, check if a draft already exists in workflow_generated_emails
+    // nodeId = stepId (we use stepId as nodeId for step-based sequences)
+    const { workflowGeneratedEmails } = await import("../db/schema/workflow-emails")
+    const [preDraft] = await db
+      .select({
+        id: workflowGeneratedEmails.id,
+        subject: workflowGeneratedEmails.subject,
+        bodyText: workflowGeneratedEmails.bodyText,
+        bodyHtml: workflowGeneratedEmails.bodyHtml,
+        status: workflowGeneratedEmails.status,
+        generationMode: workflowGeneratedEmails.generationMode,
+      })
+      .from(workflowGeneratedEmails)
+      .where(
+        and(
+          eq(workflowGeneratedEmails.sequenceId, execution.sequenceId),
+          eq(workflowGeneratedEmails.nodeId, execution.stepId), // nodeId = stepId for step-based sequences
+          eq(workflowGeneratedEmails.leadId, execution.leadId),
+        ),
+      )
+      .limit(1)
+
+    let personalizedSubject: string
+    let personalizedBodyText: string | null
+    let personalizedBodyHtml: string | null
+
+    if (preDraft && (preDraft.status === "generated" || preDraft.status === "edited")) {
+      // Use pre-generated draft from AI or user edits
+      personalizedSubject = preDraft.subject
+      personalizedBodyText = preDraft.bodyText
+      personalizedBodyHtml = preDraft.bodyHtml
+
+      logger.info(
+        {
+          executionId: execution.executionId,
+          draftId: preDraft.id,
+          generationMode: preDraft.generationMode,
+          status: preDraft.status,
+        },
+        "📝 [STEP-WORKER] Using pre-generated draft from workflow_generated_emails",
+      )
+    } else {
+      // No pre-generated draft found, generate on-the-fly (backwards compatible with old sequences)
+      logger.debug(
+        { executionId: execution.executionId },
+        "🔄 [STEP-WORKER] No pre-generated draft found, generating on-the-fly from template",
+      )
+
+      // Prepare lead context for variable replacement
+      const leadContext = {
+        companyName: lead.companyName || "",
+        contactName: leadContact.contactName || "", // From leadContacts table
+        contactEmail: leadContact.email || "", // From leadContacts table
+        industry: industryString || "",
+        businessType: lead.businessType || "", // Add businessType field
+        website: lead.websiteUrl || "",
+        description: lead.description || "",
+        address: lead.address || "",
+        country: lead.country || "",
+        city: lead.city || "",
+        state: lead.state || "",
+        foundedYear: lead.foundedYear?.toString() || "",
+        employeeCount: lead.employeeCount || "",
+        leadSource: lead.leadSource || "",
+        leadStatus: lead.leadStatus || "",
+        leadScore: lead.leadScore?.toString() || "",
+      }
+
+      // Replace template variables with actual values
+      personalizedSubject = workflowEmailService.replaceTemplateVariables(
+        execution.emailSubject,
+        leadContext,
+      )
+      personalizedBodyText = execution.emailBodyText
+        ? workflowEmailService.replaceTemplateVariables(execution.emailBodyText, leadContext)
+        : null
+      personalizedBodyHtml = execution.emailBodyHtml
+        ? workflowEmailService.replaceTemplateVariables(execution.emailBodyHtml, leadContext)
+        : null
+
+      logger.debug(
+        {
+          executionId: execution.executionId,
+          originalSubject: execution.emailSubject,
+          personalizedSubject,
+        },
+        "🔄 [STEP-WORKER] Personalized email content from template",
+      )
     }
-
-    // Replace template variables with actual values
-    const personalizedSubject = workflowEmailService.replaceTemplateVariables(
-      execution.emailSubject,
-      leadContext,
-    )
-    const personalizedBodyText = execution.emailBodyText
-      ? workflowEmailService.replaceTemplateVariables(execution.emailBodyText, leadContext)
-      : null
-    const personalizedBodyHtml = execution.emailBodyHtml
-      ? workflowEmailService.replaceTemplateVariables(execution.emailBodyHtml, leadContext)
-      : null
-
-    logger.debug(
-      {
-        executionId: execution.executionId,
-        originalSubject: execution.emailSubject,
-        personalizedSubject,
-      },
-      "🔄 [STEP-WORKER] Personalized email content",
-    )
 
     // Get email account details
     const [emailAccount] = await db
@@ -476,7 +546,7 @@ async function sendSequenceEmail(execution: {
   }
 }
 
-async function processSequenceEmails() {
+async function _processSequenceEmails() {
   try {
     logger.debug("🔍 [STEP-WORKER] Checking for pending step executions")
 
@@ -611,10 +681,10 @@ export function startEmailSequenceWorker() {
   logger.debug("✅ Email sequence worker started")
 
   // Run immediately
-  processSequenceEmails()
+  _processSequenceEmails()
 
   // Then run every minute
-  const intervalId = setInterval(processSequenceEmails, 60 * 1000) // 60 seconds
+  const intervalId = setInterval(_processSequenceEmails, 60 * 1000) // 60 seconds
 
   // Return function to stop worker
   return () => {
@@ -623,5 +693,11 @@ export function startEmailSequenceWorker() {
   }
 }
 
-// Export for manual testing
-export { processSequenceEmails }
+export const processSequenceEmails = _processSequenceEmails
+
+// ============================================================================
+// END OF COMMENTED OUT CODE - Original implementation above
+// ============================================================================ */
+
+// Current implementation already supports pre-generated drafts
+// The worker checks for drafts in workflow_generated_emails before generating on-the-fly

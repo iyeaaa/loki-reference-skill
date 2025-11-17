@@ -56,6 +56,7 @@ table.column.sentCount,발송 수,Sent Count
 table.column.openRate,오픈율,Open Rate
 table.column.replyRate,답변율,Reply Rate
 table.status.draft,초안,Draft
+table.status.generating,생성 중,Generating
 table.status.ready,준비,Ready
 table.status.active,활성,Active
 table.status.paused,일시정지,Paused
@@ -617,7 +618,348 @@ stepsList.inlineEdit.days,일,days
 stepsList.inlineEdit.save,저장,Save
 stepsList.inlineEdit.clickToEdit,클릭하여 날짜/시간 수정,Click to edit date/time
 filter.all,전체,All
-stepForm.editSignature,[NO TRANSLATION] sequences.stepForm.editSignature,[NO TRANSLATION] sequences.stepForm.editSignature
-stepForm.emailBodyPlaceholder,[NO TRANSLATION] sequences.stepForm.emailBodyPlaceholder,[NO TRANSLATION] sequences.stepForm.emailBodyPlaceholder
-stepForm.signatureNote,[NO TRANSLATION] sequences.stepForm.signatureNote,[NO TRANSLATION] sequences.stepForm.signatureNote
-stepForm.signaturePreview,[NO TRANSLATION] sequences.stepForm.signaturePreview,[NO TRANSLATION] sequences.stepForm.signaturePreview
+stepForm.editSignature,서명 편집,Edit Signature
+stepForm.emailBodyPlaceholder,이메일 내용을 입력하세요...,Enter email content...
+stepForm.signatureNote,이 서명은 이메일 발송 시 본문 하단에 자동으로 추가됩니다.,This signature will be automatically added to the bottom of the email body when sent.
+stepForm.signaturePreview,서명 미리보기,Signature Preview
+campaignOverview.loading,로딩 중...,Loading...
+campaignOverview.target,타겟 정보,Target Information
+campaignOverview.scenario,시나리오 정보,Scenario Information
+campaignOverview.totalSteps,총 스텝 수,Total Steps
+campaignOverview.performance,성과 지표,Performance Metrics
+campaignOverview.overallProgress,전체 진행률,Overall Progress
+campaignOverview.totalSent,총 발송,Total Sent
+campaignOverview.immediately,즉시,Immediately
+campaignOverview.daysLater,일 후,days later
+campaignOverview.openRate,오픈율,Open Rate
+campaignOverview.replyRate,회신율,Reply Rate
+campaignOverview.created,생성일,Created Date
+campaignOverview.workspace,워크스페이스,Workspace
+campaignOverview.creator,생성자,Creator
+campaignOverview.customerGroup,고객그룹,Customer Group
+campaignOverview.recipientCount,수신자 수,Recipient Count
+campaignOverview.peopleCount,명,people
+campaignOverview.stepCount,개,steps
+step2.creationMode,캠페인 생성 방식,Campaign Creation Mode
+step2.aiMode.title,AI 자동 생성 (6 steps),AI Auto Generation (6 steps)
+step2.aiMode.recommended,추천,Recommended
+step2.aiMode.description,AI가 자동으로 6단계 이메일 시나리오와 개인화된 이메일 초안을 생성합니다,AI automatically generates 6-step email scenario and personalized email drafts
+step2.manualMode.title,수동 작성,Manual Creation
+step2.manualMode.description,직접 이메일 스텝을 작성하고 관리합니다 (최대 4개),Manually create and manage email steps (max 4)
+step2.maxStepsError,최대 {{max}}개의 스텝까지 추가할 수 있습니다,You can add up to {{max}} steps
+step2.cannotDeleteFirstStep,첫 번째 스텝은 삭제할 수 없습니다,Cannot delete the first step
+step2.confirmDeleteStep,이 스텝을 삭제하시겠습니까?,Are you sure you want to delete this step?
+step2.stepDeleteError,스텝 삭제 오류: {{error}},Step deletion error: {{error}}
+step2.enterSubject,이메일 제목을 입력해주세요,Please enter email subject
+step2.enterBody,이메일 본문을 입력해주세요,Please enter email body
+step2.stepSaved,스텝이 저장되었습니다,Step saved successfully
+step2.stepSavedLocal,스텝이 저장되었습니다 (DB 저장은 다음 단계에서 수행됩니다),Step saved (DB save will be done in the next step)
+step2.stepSaveError,스텝 저장 오류: {{error}},Step save error: {{error}}
+step2.enterAIPrompt,AI 프롬프트를 입력해주세요,Please enter AI prompt
+step2.aiEmailGenerated,AI 이메일이 생성되었습니다,AI email generated successfully
+step2.aiEmailGenerationFailed,AI 이메일 생성 실패,AI email generation failed
+step2.selectEmailAccount,이메일 계정을 선택해주세요,Please select an email account
+step2.aiGenerationComplete,AI 생성 완료!\n리드 {{leads}}명\n초안 {{drafts}}건\n스텝 {{steps}}개 생성됨,AI generation complete!\n{{leads}} leads\n{{drafts}} drafts\n{{steps}} steps created
+step2.aiGenerationFailed,AI 생성 실패\n{{error}},AI generation failed\n{{error}}
+step2.unknownError,알 수 없는 오류,Unknown error
+aiMode.selectEmailAccount,이메일 계정 선택 *,Select Email Account *
+aiMode.selectEmailAccountPlaceholder,이메일 계정을 선택하세요,Select an email account
+aiMode.noEmailAccounts,이메일 계정이 없습니다,No email accounts available
+aiMode.generating,AI 생성 중... (2-5분 소요),Generating with AI... (2-5 minutes)
+aiMode.generateButton,AI로 캠페인 생성하기,Generate Campaign with AI
+aiMode.generatingMessage,AI가 캠페인을 생성하고 있습니다,AI is generating the campaign
+aiMode.generatingDetails,6개의 이메일 스텝과 모든 리드에 대한 개인화된 초안을 생성 중입니다.,Generating 6 email steps and personalized drafts for all leads.
+step1.recipientNotice,{{count}}명의 고객에게 이메일이 발송됩니다,Email will be sent to {{count}} customers
+step1.selectedCount,{{count}}명이 선택되었습니다,{{count}} selected
+step1.repliedLeadsIncluded,(답장한 리드 {{count}}명 포함),({{count}} replied leads included)
+step1.defaultAllLeads,고객을 선택하지 않으면 고객 그룹의 모든 리드에게 발송됩니다,If no customers are selected emails will be sent to all leads in the customer group
+step1.selectCustomerGroup,고객그룹 선택,Select Customer Group
+step1.customerGroupRequired,고객그룹 *,Customer Group *
+step1.customerGroupPlaceholder,고객그룹 선택,Select customer group
+step1.selectWorkspaceFirst,워크스페이스를 선택하세요,Please select workspace first
+step1.noCustomerGroups,고객그룹이 없습니다,No customer groups available
+step1.leadCountFormat,{{name}} ({{count}}명),{{name}} ({{count}} people)
+step1.selectedGroup,선택된 고객그룹,Selected Customer Group
+step1.totalLeads,총 {{count}}명의 리드,Total {{count}} leads
+step1.selectRecipients,수신자 선택,Select Recipients
+step1.selectedFormat,{{count}}명 선택됨,{{count}} selected
+step1.selectAllDefault,전체 선택 (기본),Select All (Default)
+step1.selectGroupFromLeft,좌측에서 고객그룹을 선택하세요,Please select customer group from left
+step1.noLeadsInGroup,고객그룹에 리드가 없습니다,No leads in customer group
+step1.searchLeads,리드 검색...,Search leads...
+step1.repliedLeadsWarning,⚠️ 선택한 리드 중 {{count}}명은 이미 답장했습니다. 재등록 시 주의하세요.,⚠️ {{count}} selected leads have already replied. Be careful when re-enrolling.
+step1.repliedLeadsCount,답장한 리드 ({{selected}}/{{total}}),Replied Leads ({{selected}}/{{total}})
+step1.selectAll,전체 선택,Select All
+step1.reEnrollWarning,재등록 시 주의 필요,Caution required for re-enrollment
+step1.normalLeadsSelectAll,일반 리드 전체 선택 ({{selected}}/{{total}}),Select All Normal Leads ({{selected}}/{{total}})
+step1.deselectAll,선택 해제,Deselect All
+step3.noSequenceId,시퀀스 ID가 없습니다,No sequence ID
+step3.enterCampaignName,캠페인 이름을 입력해주세요,Please enter campaign name
+step3.draftSaved,초안이 저장되었습니다,Draft saved successfully
+step3.stepSaveError,스텝 저장 오류: {{error}},Step save error: {{error}}
+step3.saveError,오류: {{error}},Error: {{error}}
+step3.readySaved,캠페인이 준비 상태로 저장되었습니다,Campaign saved as ready
+step3.preparingCampaign,캠페인을 준비하고 있습니다...,Preparing campaign...
+step3.sendTarget,발송 대상,Send Target
+step3.workspace,워크스페이스,Workspace
+step3.customerGroup,고객그룹,Customer Group
+step3.recipientCount,수신자 수,Recipient Count
+step3.people,명,people
+step3.specificRecipients,💡 특정 고객 {{count}}명에게만 발송됩니다,💡 Will be sent only to {{count}} specific customers
+step3.campaignInfo,캠페인 정보,Campaign Information
+step3.campaignName,캠페인 이름,Campaign Name
+step3.noName,(이름 없음),(No name)
+step3.description,설명,Description
+step3.emailScenario,이메일 시나리오,Email Scenario
+step3.totalSteps,총 {{count}}개의 이메일 스텝,Total {{count}} email steps
+step3.sendImmediately,즉시 발송,Send Immediately
+step3.daysLater,{{days}}일 후,{{days}} days later
+step3.attachments,첨부파일 {{count}}개,{{count}} attachments
+step3.memo,메모,Memo
+step3.memoPlaceholder,캠페인에 대한 추가 메모를 입력하세요...,Enter additional memo for campaign...
+step3.draftNote,초안 저장:,Save as Draft:
+step3.draftNoteDescription,캠페인이 초안 상태로 저장되며\n 나중에 수정할 수 있습니다.,Campaign will be saved as draft and can be modified later.
+step3.readyNote,준비 완료:,Ready:
+step3.readyNoteDescription,캠페인이 준비 상태로 저장되며\n 바로 활성화할 수 있습니다.,Campaign will be saved as ready and can be activated immediately.
+step3.saving,저장 중...,Saving...
+step3.ready,준비 완료,Ready
+step3.saveDraft,초안 저장,Save as Draft
+cardView.noCampaigns,캠페인이 없습니다,No campaigns
+cardView.createFirst,"""새 캠페인"" 버튼을 눌러 첫 캠페인을 만들어보세요","Click ""New Campaign"" button to create your first campaign"
+cardView.groupNotAssigned,그룹 미지정,Group not assigned
+cardView.people,명,people
+cardView.steps,스텝,steps
+cardView.inProgress,진행중,In Progress
+cardView.sent,발송,Sent
+cardView.openRate,오픈율,Open Rate
+cardView.replyRate,회신율,Reply Rate
+cardView.pause,일시정지,Pause
+cardView.activate,활성화,Activate
+cardView.edit,편집,Edit
+createPage.newCampaign,새 캠페인,New Campaign
+createPage.selectWorkspace,워크스페이스를 선택해주세요,Please select workspace
+createPage.draftCreated,초안 캠페인이 생성되었습니다,Draft campaign created
+createPage.creationFailed,캠페인 생성 실패: {{error}},Campaign creation failed: {{error}}
+createPage.notCreated,캠페인이 생성되지 않았습니다,Campaign not created
+createPage.saved,저장되었습니다,Saved
+createPage.saveFailed,저장 실패,Save failed
+createPage.selectCustomerGroup,고객그룹을 선택해주세요,Please select customer group
+createPage.addAtLeastOneStep,최소 1개 이상의 이메일 스텝을 추가해주세요,Please add at least 1 email step
+createPage.saveDraftSteps,작성 중인 스텝이 있습니다. 모든 스텝을 저장해주세요,There are draft steps. Please save all steps
+createPage.notCreatedTryAgain,캠페인이 생성되지 않았습니다. 잠시 후 다시 시도해주세요,Campaign not created. Please try again later
+createPage.back,돌아가기,Back
+createPage.savingStatus,저장 중...,Saving...
+createPage.savedAt,저장됨,Saved
+createPage.save,저장,Save
+createPage.campaignNameLabel,캠페인 이름 *,Campaign Name *
+createPage.campaignNamePlaceholder,예: 신규 고객 온보딩 캠페인,Ex: New Customer Onboarding Campaign
+createPage.campaignDescLabel,캠페인 설명,Campaign Description
+createPage.campaignDescPlaceholder,캠페인에 대한 간단한 설명...,Brief description of campaign...
+createPage.step1Title,고객 선택,Customer Selection
+createPage.step1Desc,수신자 선택,Select Recipients
+createPage.step2Title,시나리오 생성,Create Scenario
+createPage.step2Desc,이메일 작성,Create Emails
+createPage.step3Title,검토 및 저장,Review and Save
+createPage.step3Desc,최종 확인,Final Review
+createPage.previous,이전,Previous
+createPage.initializing,초기화 중...,Initializing...
+createPage.next,다음,Next
+manualMode.emailSteps,이메일 스텝,Email Steps
+manualMode.howItWorks,동작 방식:,How it works:
+manualMode.howItWorksDesc,각 이메일을 순차적으로 발송합니다. 답장이 오면 캠페인이 즉시 중지되고\n 답장이 없으면 설정한 일수 후 다음 이메일을 발송합니다.,Sends emails sequentially. Campaign stops immediately upon reply. If no reply sends next email after set days.
+manualMode.add,추가,Add
+manualMode.addNewStep,새 이메일 스텝 추가 (최대 {{max}}개),Add new email step (max {{max}})
+manualMode.draftStepsWarning,작성 중인 스텝이 있습니다. 모든 스텝을 저장한 후 다음 단계로 진행하세요,There are draft steps. Please save all steps before proceeding
+manualMode.sendDate,발송 날짜,Send Date
+manualMode.today,오늘,Today
+manualMode.sendTime,발송 시간,Send Time
+manualMode.waitDays,대기일,Wait Days
+manualMode.daysLater,일 후,days later
+manualMode.scheduleSaved,스케줄이 저장되었습니다,Schedule saved
+manualMode.save,저장,Save
+manualMode.edit,수정,Edit
+manualMode.step,스텝 {{order}},Step {{order}}
+manualMode.completed,완료,Completed
+manualMode.drafting,작성중,Drafting
+manualMode.noSubject,제목 없음,No subject
+manualMode.deleteStep,스텝 삭제,Delete step
+manualMode.editStep,스텝 {{order}} 편집,Edit Step {{order}}
+manualMode.enterContent,이메일 내용을 작성하세요,Enter email content
+manualMode.aiGenerate,AI 생성,AI Generate
+manualMode.save,저장,Save
+manualMode.emailSubjectRequired,이메일 제목 *,Email Subject *
+manualMode.advertisementLabel,(광고) 표시,(Advertisement) Label
+manualMode.subjectPlaceholder,예: 안녕하세요\n {{회사명}} 담당자님,Ex: Hello {{company_name}}
+manualMode.insertVariables,변수 삽입,Insert Variables
+manualMode.clickToInsert,클릭하면 본문에 변수가 추가됩니다,Click to insert variable into body
+manualMode.emailBodyRequired,이메일 본문 *,Email Body *
+manualMode.editSignature,서명 편집,Edit Signature
+manualMode.bodyPlaceholder,이메일 내용을 입력하세요...,Enter email content...
+manualMode.signaturePreview,서명 미리보기,Signature Preview
+manualMode.edit,편집,Edit
+manualMode.signatureNote,이 서명은 이메일 발송 시 본문 하단에 자동으로 추가됩니다.,This signature will be automatically added to the bottom of the email body when sent.
+manualMode.attachments,첨부 파일,Attachments
+manualMode.clickToSelectFile,클릭하여 파일 선택,Click to select file
+manualMode.aiEmailGeneration,AI 이메일 생성,AI Email Generation
+manualMode.aiDescription,AI가 자동으로 이메일을 작성해드립니다. 원하는 내용을 설명해주세요.,AI will automatically create the email. Describe what you want.
+manualMode.aiPrompt,AI 프롬프트,AI Prompt
+manualMode.aiPromptPlaceholder,예: 신규 고객을 위한 제품 소개 이메일을 작성해주세요. 친근하고 전문적인 톤으로...,Ex: Create a product introduction email for new customers. Use a friendly and professional tone...
+manualMode.promptTips,프롬프트 작성 팁,Prompt Writing Tips
+manualMode.tip1,이메일의 목적을 명확히 작성하세요,Clearly state the purpose of the email
+manualMode.tip2,원하는 톤과 스타일을 지정하세요 (예: 친근한\n 공식적인),Specify desired tone and style (ex: friendly formal)
+manualMode.tip3,포함하고 싶은 핵심 내용을 나열하세요,List key points to include
+manualMode.tip4,이메일 길이를 지정할 수 있습니다 (예: 짧게\n 상세하게),You can specify email length (ex: brief detailed)
+manualMode.generating,생성 중...,Generating...
+manualMode.generate,생성하기,Generate
+manualMode.cancel,취소,Cancel
+constants.companyName,회사명,Company Name
+constants.contactName,담당자명,Contact Name
+constants.email,이메일,Email
+constants.website,웹사이트,Website
+constants.phone,전화번호,Phone
+constants.address,주소,Address
+editPage.sequenceIdMissing,시퀀스 ID가 없습니다,Sequence ID is missing
+editPage.loadFailed,시퀀스를 불러오는데 실패했습니다,Failed to load sequence
+editPage.updated,시퀀스가 업데이트되었습니다,Sequence updated
+editPage.back,돌아가기,Back
+editPage.enterName,캠페인 이름을 입력해주세요,Please enter campaign name
+editPage.loading,로딩 중...,Loading...
+editPage.customerGroupMenu,고객 그룹,Customer Group
+editPage.scenarioMenu,시나리오,Scenario
+editPage.memoMenu,메모,Memo
+editPage.campaignInfo,캠페인 정보,Campaign Information
+editPage.campaignName,캠페인 이름,Campaign name
+editPage.campaignDescPlaceholder,캠페인 설명 (선택사항),Campaign description (optional)
+editPage.campaignDetail,캠페인 상세,Campaign Details
+editPage.edit,수정,Edit
+editPage.overviewMenu,개요,Overview
+editPage.enrollmentMenu,발송현황,Sending Status
+editPage.memoNote,캠페인에 대한 내부 메모를 작성할 수 있습니다. 이 메모는 팀원들과 공유됩니다.,You can write internal notes about the campaign. These notes are shared with team members.
+editPage.memoPlaceholder,캠페인에 대한 메모를 입력하세요...,Enter memo for campaign...
+editPage.saving,저장 중...,Saving...
+editPage.save,저장,Save
+editPage.readOnlyNotice,ℹ️ 활성화된 캠페인은 읽기 전용입니다. 메모만 수정할 수 있습니다.,ℹ️ Active campaigns are read-only. Only memos can be modified.
+bulk.statusChangeTitle,시퀀스 상태 일괄 변경,Bulk Change Sequence Status
+bulk.deleteTitle,시퀀스 일괄 삭제,Bulk Delete Sequences
+bulk.bulkAction,일괄 작업,Bulk Action
+bulk.changeStatus,선택된 {{count}}개의 시퀀스 상태를 변경합니다.,Change status of {{count}} selected sequences.
+bulk.deleteConfirm,선택된 {{count}}개의 시퀀스를 삭제합니다. 이 작업은 취소할 수 없습니다.,Delete {{count}} selected sequences. This action cannot be undone.
+bulk.selectStatus,변경할 상태,Status to change
+bulk.selectStatusPlaceholder,상태 선택,Select status
+bulk.cancel,취소,Cancel
+bulk.delete,삭제,Delete
+bulk.change,변경,Change
+enrollment.noReason,이유 없음,No reason
+enrollment.filteringCount,필터링: {{count}}개,Filtering: {{count}}
+enrollment.searchCompany,회사명 검색...,Search company name...
+enrollment.filter,필터,Filter
+enrollment.opened,오픈함,Opened
+enrollment.clicked,클릭함,Clicked
+enrollment.replied,답장함,Replied
+enrollment.delivered,발송완료,Delivered
+enrollment.clearFilters,필터 초기화,Clear Filters
+viewMode.cardView,카드 뷰,Card View
+viewMode.listView,리스트 뷰,List View
+comment.enterMemo,메모를 입력하세요...,Enter memo...
+comment.cancel,취소,Cancel
+comment.save,저장,Save
+comment.writeMemo,메모 작성...,Write memo...
+comment.edit,편집,Edit
+comment.delete,삭제,Delete
+startNode.start,시작,Start
+startNode.workflowStart,워크플로우 시작점,Workflow Start Point
+startNode.addNode,노드 추가,Add Node
+startNode.addEmailDraft,이메일 초안 추가,Add Email Draft
+timer.timer,타이머,Timer
+timer.waitTime,대기 시간,Wait Time
+timer.days,일,days
+timer.noReplyExecuteNext,답장이 없으면 다음 노드 실행,Execute next node if no reply
+timer.realtimeStats,📊 실시간 통계,📊 Real-time Statistics
+timer.sent,발송,Sent
+timer.replied,답장,Replied
+timer.waiting,대기,Waiting
+timer.edit,편집,Edit
+timer.addNode,노드 추가,Add Node
+timer.addEmailDraft,이메일 초안 추가,Add Email Draft
+timer.timerSettings,타이머 설정,Timer Settings
+timer.waitTimeDays,대기 시간 (일),Wait Time (days)
+timer.enterDays,일 단위로 입력,Enter in days
+timer.noReplyDescription,이 시간 동안 답장이 없으면 다음 노드가 실행됩니다,Next node will execute if no reply during this time
+timer.cancel,취소,Cancel
+timer.save,저장,Save
+bulkAction.bulkOperation,[NO TRANSLATION] sequences.bulkAction.bulkOperation,[NO TRANSLATION] sequences.bulkAction.bulkOperation
+bulkAction.cancel,[NO TRANSLATION] sequences.bulkAction.cancel,[NO TRANSLATION] sequences.bulkAction.cancel
+bulkAction.change,[NO TRANSLATION] sequences.bulkAction.change,[NO TRANSLATION] sequences.bulkAction.change
+bulkAction.changeStatus,[NO TRANSLATION] sequences.bulkAction.changeStatus,[NO TRANSLATION] sequences.bulkAction.changeStatus
+bulkAction.delete,[NO TRANSLATION] sequences.bulkAction.delete,[NO TRANSLATION] sequences.bulkAction.delete
+bulkAction.deleteSequences,[NO TRANSLATION] sequences.bulkAction.deleteSequences,[NO TRANSLATION] sequences.bulkAction.deleteSequences
+bulkAction.selectStatus,[NO TRANSLATION] sequences.bulkAction.selectStatus,[NO TRANSLATION] sequences.bulkAction.selectStatus
+bulkAction.status.active,[NO TRANSLATION] sequences.bulkAction.status.active,[NO TRANSLATION] sequences.bulkAction.status.active
+bulkAction.status.archived,[NO TRANSLATION] sequences.bulkAction.status.archived,[NO TRANSLATION] sequences.bulkAction.status.archived
+bulkAction.status.draft,[NO TRANSLATION] sequences.bulkAction.status.draft,[NO TRANSLATION] sequences.bulkAction.status.draft
+bulkAction.status.noResponse,[NO TRANSLATION] sequences.bulkAction.status.noResponse,[NO TRANSLATION] sequences.bulkAction.status.noResponse
+bulkAction.status.paused,[NO TRANSLATION] sequences.bulkAction.status.paused,[NO TRANSLATION] sequences.bulkAction.status.paused
+bulkAction.statusToChange,[NO TRANSLATION] sequences.bulkAction.statusToChange,[NO TRANSLATION] sequences.bulkAction.statusToChange
+designer.commentNode.cancel,[NO TRANSLATION] sequences.designer.commentNode.cancel,[NO TRANSLATION] sequences.designer.commentNode.cancel
+designer.commentNode.delete,[NO TRANSLATION] sequences.designer.commentNode.delete,[NO TRANSLATION] sequences.designer.commentNode.delete
+designer.commentNode.edit,[NO TRANSLATION] sequences.designer.commentNode.edit,[NO TRANSLATION] sequences.designer.commentNode.edit
+designer.commentNode.placeholder,[NO TRANSLATION] sequences.designer.commentNode.placeholder,[NO TRANSLATION] sequences.designer.commentNode.placeholder
+designer.commentNode.save,[NO TRANSLATION] sequences.designer.commentNode.save,[NO TRANSLATION] sequences.designer.commentNode.save
+designer.commentNode.writeMemo,[NO TRANSLATION] sequences.designer.commentNode.writeMemo,[NO TRANSLATION] sequences.designer.commentNode.writeMemo
+designer.startNode.addEmailDraft,[NO TRANSLATION] sequences.designer.startNode.addEmailDraft,[NO TRANSLATION] sequences.designer.startNode.addEmailDraft
+designer.startNode.addNode,[NO TRANSLATION] sequences.designer.startNode.addNode,[NO TRANSLATION] sequences.designer.startNode.addNode
+designer.startNode.description,[NO TRANSLATION] sequences.designer.startNode.description,[NO TRANSLATION] sequences.designer.startNode.description
+designer.startNode.start,[NO TRANSLATION] sequences.designer.startNode.start,[NO TRANSLATION] sequences.designer.startNode.start
+designer.timerNode.addEmailDraft,[NO TRANSLATION] sequences.designer.timerNode.addEmailDraft,[NO TRANSLATION] sequences.designer.timerNode.addEmailDraft
+designer.timerNode.addNode,[NO TRANSLATION] sequences.designer.timerNode.addNode,[NO TRANSLATION] sequences.designer.timerNode.addNode
+designer.timerNode.cancel,[NO TRANSLATION] sequences.designer.timerNode.cancel,[NO TRANSLATION] sequences.designer.timerNode.cancel
+designer.timerNode.days,[NO TRANSLATION] sequences.designer.timerNode.days,[NO TRANSLATION] sequences.designer.timerNode.days
+designer.timerNode.description,[NO TRANSLATION] sequences.designer.timerNode.description,[NO TRANSLATION] sequences.designer.timerNode.description
+designer.timerNode.edit,[NO TRANSLATION] sequences.designer.timerNode.edit,[NO TRANSLATION] sequences.designer.timerNode.edit
+designer.timerNode.enterInDays,[NO TRANSLATION] sequences.designer.timerNode.enterInDays,[NO TRANSLATION] sequences.designer.timerNode.enterInDays
+designer.timerNode.noReplyDescription,[NO TRANSLATION] sequences.designer.timerNode.noReplyDescription,[NO TRANSLATION] sequences.designer.timerNode.noReplyDescription
+designer.timerNode.realtimeStats,[NO TRANSLATION] sequences.designer.timerNode.realtimeStats,[NO TRANSLATION] sequences.designer.timerNode.realtimeStats
+designer.timerNode.replied,[NO TRANSLATION] sequences.designer.timerNode.replied,[NO TRANSLATION] sequences.designer.timerNode.replied
+designer.timerNode.save,[NO TRANSLATION] sequences.designer.timerNode.save,[NO TRANSLATION] sequences.designer.timerNode.save
+designer.timerNode.sent,[NO TRANSLATION] sequences.designer.timerNode.sent,[NO TRANSLATION] sequences.designer.timerNode.sent
+designer.timerNode.timer,[NO TRANSLATION] sequences.designer.timerNode.timer,[NO TRANSLATION] sequences.designer.timerNode.timer
+designer.timerNode.timerSettings,[NO TRANSLATION] sequences.designer.timerNode.timerSettings,[NO TRANSLATION] sequences.designer.timerNode.timerSettings
+designer.timerNode.waitTime,[NO TRANSLATION] sequences.designer.timerNode.waitTime,[NO TRANSLATION] sequences.designer.timerNode.waitTime
+designer.timerNode.waitTimeDays,[NO TRANSLATION] sequences.designer.timerNode.waitTimeDays,[NO TRANSLATION] sequences.designer.timerNode.waitTimeDays
+designer.timerNode.waiting,[NO TRANSLATION] sequences.designer.timerNode.waiting,[NO TRANSLATION] sequences.designer.timerNode.waiting
+table.column.timeline,[NO TRANSLATION] sequences.table.column.timeline,[NO TRANSLATION] sequences.table.column.timeline
+table.pagination.goTo,[NO TRANSLATION] sequences.table.pagination.goTo,[NO TRANSLATION] sequences.table.pagination.goTo
+table.timeline.future,[NO TRANSLATION] sequences.table.timeline.future,[NO TRANSLATION] sequences.table.timeline.future
+table.timeline.past,[NO TRANSLATION] sequences.table.timeline.past,[NO TRANSLATION] sequences.table.timeline.past
+table.timeline.present,[NO TRANSLATION] sequences.table.timeline.present,[NO TRANSLATION] sequences.table.timeline.present
+aiMode.addEmailAccount,이메일 계정 추가,Add Email Account
+aiMode.noEmailAccountsMessage,AI 캠페인 생성을 사용하려면 먼저 이메일 계정을 추가해야 합니다.,You need to add an email account first to use AI campaign generation.
+aiMode.noEmailAccountsWarning,이메일 계정이 없습니다,No email accounts available
+aiMode.loadingGeneratedContent,생성된 콘텐츠를 불러오는 중...,Loading generated content...
+aiMode.noLeadsFound,리드를 찾을 수 없습니다,No leads found
+aiMode.backToGeneration,생성 화면으로 돌아가기,Back to generation
+aiMode.leadList.title,리드 목록,Lead List
+aiMode.leadList.subtitle,총 {{count}}개의 리드,Total {{count}} leads
+aiMode.leadList.unknownCompany,알 수 없는 회사,Unknown Company
+aiMode.leadList.emailsGenerated,{{count}}/{{total}} 이메일 생성됨,{{count}}/{{total}} emails generated
+aiMode.status.completed,완료,Completed
+aiMode.status.generating,생성 중,Generating
+aiMode.status.failed,실패,Failed
+aiMode.status.partial,부분 완료,Partial
+aiMode.status.pending,대기 중,Pending
+aiMode.stepTypes.coldIntro,콜드 이메일,Cold Introduction
+aiMode.stepTypes.valueFollowUp,가치 제안 팔로업,Value Follow-Up
+aiMode.stepTypes.problemSolution,문제-해결 제안,Problem-Solution Nudge
+aiMode.stepTypes.softBump,소프트 리마인더,Soft Bump
+aiMode.stepTypes.meetingRequest,미팅 요청,Meeting Request
+aiMode.stepTypes.breakup,마지막 연락,Breakup / Last Touch
+aiMode.stepTypes.followUp,팔로업,Follow-Up
+aiMode.emailPreview.unknownCompany,알 수 없는 회사,Unknown Company
+aiMode.emailPreview.stepTitle,스텝 {{number}} 이메일,Step {{number}} Email
+aiMode.emailPreview.delayDays,{{days}}일 후,After {{days}} days
+aiMode.emailPreview.subject,제목,Subject
+aiMode.emailPreview.noSubject,제목 없음,No Subject
+aiMode.emailPreview.body,본문,Body
+aiMode.emailPreview.noContent,내용 없음,No Content
+aiMode.emailPreview.notGenerated,아직 생성되지 않음,Not Generated Yet
+step2.sequenceIdRequired,[NO TRANSLATION] sequences.step2.sequenceIdRequired,[NO TRANSLATION] sequences.step2.sequenceIdRequired

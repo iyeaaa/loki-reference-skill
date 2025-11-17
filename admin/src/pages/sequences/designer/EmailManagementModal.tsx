@@ -29,7 +29,7 @@ interface EmailManagementModalProps {
   onOpenChange: (open: boolean) => void
   sequenceId: string
   nodeId: string
-  generationMode: "ai" | "manual"
+  generationMode: "ai" | "manual" | "template"
   aiPrompt?: string
   templateSubject?: string
   templateBody?: string
@@ -380,7 +380,7 @@ interface EmailEditDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onClose: () => void
-  generationMode: "ai" | "manual"
+  generationMode: "ai" | "manual" | "template"
 }
 
 function EmailEditDialog({

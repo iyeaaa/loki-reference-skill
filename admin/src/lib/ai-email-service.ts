@@ -13,6 +13,41 @@ interface AIEmailResponse {
   error?: string
 }
 
+// New interfaces for personalized email generation
+interface PersonalizedEmailContext extends EmailContext {
+  additionalContext?: string // Extra parameter for personalized generation
+}
+
+interface JudgmentResult {
+  pass: boolean
+  qualityScore: number // 0-10
+  accuracyScore: number // 0-10
+  feedback: string
+  issues?: string[]
+}
+
+interface EmailMetadata {
+  sentiment: "positive" | "neutral" | "negative"
+  intent: string[]
+  topics: string[]
+  actionItems: string[]
+}
+
+interface ParsedEmailData {
+  subject: string
+  body: string
+  greeting: string
+  signature: string
+  metadata: EmailMetadata
+}
+
+interface PersonalizedEmailResponse {
+  success: boolean
+  parsedEmail?: ParsedEmailData
+  error?: string
+  attempts?: number
+}
+
 class AIEmailService {
   private openai: OpenAI
 
@@ -60,7 +95,7 @@ class AIEmailService {
       인사말 포함, 핵심 답변, 필요시 미팅 링크만 포함하세요.`
 
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-5",
+        model: "gpt-4",
         messages: [
           {
             role: "system",
@@ -118,6 +153,247 @@ class AIEmailService {
   }
 
   /**
+   * Generate personalized email with quality judgment and parsing
+   * @param context - Email context with optional additional context
+   * @param customPrompt - Custom system prompt for email generation
+   * @param maxRetries - Maximum number of generation attempts (default: 3)
+   */
+  async generatePersonalizedEmail(
+    context: PersonalizedEmailContext,
+    customPrompt: string,
+    maxRetries: number = 3,
+  ): Promise<PersonalizedEmailResponse> {
+    let attempts = 0
+    let lastError: string = ""
+
+    while (attempts < maxRetries) {
+      attempts++
+
+      try {
+        console.log(`🔄 이메일 생성 시도 ${attempts}/${maxRetries}`)
+
+        // Step 1: Generate draft
+        const draft = await this.generatePersonalizedEmailDraft(context, customPrompt)
+        console.log("✅ 초안 생성 완료")
+
+        // Step 2: Judge quality
+        const judgment = await this.judgeEmailQuality(draft, context)
+        console.log(
+          `📊 품질 평가: ${judgment.qualityScore}/10, 정확성: ${judgment.accuracyScore}/10`,
+        )
+
+        if (!judgment.pass) {
+          lastError = `품질 평가 불합격: ${judgment.feedback}`
+          console.log(`❌ ${lastError}`)
+
+          if (attempts < maxRetries) {
+            console.log("🔄 재생성 시도...")
+            continue
+          } else {
+            // Max retries reached, return fallback
+            console.log("⚠️ 최대 재시도 횟수 도달, 폴백 사용")
+            return {
+              success: false,
+              error: `${lastError} (${attempts}회 시도 후 실패)`,
+              attempts,
+            }
+          }
+        }
+
+        // Step 3: Parse email content
+        console.log("📝 이메일 파싱 중...")
+        const parsedEmail = await this.parseEmailContent(draft)
+        console.log("✅ 파싱 완료")
+
+        return {
+          success: true,
+          parsedEmail,
+          attempts,
+        }
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류 발생"
+        lastError = errorMessage
+        console.error(`❌ 시도 ${attempts} 실패:`, errorMessage)
+
+        // Handle specific errors that shouldn't retry
+        if (
+          error &&
+          typeof error === "object" &&
+          "code" in error &&
+          error.code === "insufficient_quota"
+        ) {
+          return {
+            success: false,
+            error: "OpenAI API 사용량 한도 초과",
+            attempts,
+          }
+        }
+
+        if (error && typeof error === "object" && "status" in error && error.status === 401) {
+          return {
+            success: false,
+            error: "OpenAI API 키 인증 실패",
+            attempts,
+          }
+        }
+
+        // If last attempt, return error
+        if (attempts >= maxRetries) {
+          return {
+            success: false,
+            error: `${errorMessage} (${attempts}회 시도 후 실패)`,
+            attempts,
+          }
+        }
+
+        // Otherwise, retry
+        console.log("🔄 재시도 중...")
+      }
+    }
+
+    // Shouldn't reach here, but just in case
+    return {
+      success: false,
+      error: lastError || "알 수 없는 오류로 실패",
+      attempts,
+    }
+  }
+
+  /**
+   * Generate personalized email draft (private helper)
+   */
+  private async generatePersonalizedEmailDraft(
+    context: PersonalizedEmailContext,
+    customPrompt: string,
+  ): Promise<string> {
+    const userPrompt = `고객 이메일:
+발신자: ${context.fromEmail}
+제목: ${context.subject}
+내용: ${context.content}
+${context.additionalContext ? `추가 컨텍스트: ${context.additionalContext}` : ""}
+
+위 정보를 바탕으로 이메일 답변을 작성하세요.`
+
+    const completion = await this.openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: customPrompt,
+        },
+        {
+          role: "user",
+          content: userPrompt,
+        },
+      ],
+    })
+
+    const draft = completion.choices[0]?.message?.content
+    if (!draft) {
+      throw new Error("이메일 초안 생성 실패")
+    }
+
+    return draft
+  }
+
+  /**
+   * Judge email quality (private helper)
+   */
+  private async judgeEmailQuality(
+    emailContent: string,
+    originalContext: PersonalizedEmailContext,
+  ): Promise<JudgmentResult> {
+    const judgePrompt = `당신은 이메일 품질 평가 전문가입니다. 다음 기준으로 이메일을 평가하세요:
+
+1. 품질/톤 (0-10점): 전문성, 적절한 어조, 문법
+2. 정확성 (0-10점): 고객 질문에 올바르게 답변했는지
+3. 합격/불합격: 7점 미만이면 불합격
+
+평가 결과를 다음 JSON 형식으로 반환하세요:
+{
+  "pass": true/false,
+  "qualityScore": 0-10,
+  "accuracyScore": 0-10,
+  "feedback": "간단한 피드백",
+  "issues": ["문제점1", "문제점2"] (선택사항)
+}
+
+원본 고객 이메일:
+제목: ${originalContext.subject}
+내용: ${originalContext.content}
+
+평가할 답변 이메일:
+${emailContent}`
+
+    const completion = await this.openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: "당신은 이메일 품질 평가 전문가입니다. JSON 형식으로만 응답하세요.",
+        },
+        {
+          role: "user",
+          content: judgePrompt,
+        },
+      ],
+      response_format: { type: "json_object" },
+    })
+
+    const result = completion.choices[0]?.message?.content
+    if (!result) {
+      throw new Error("이메일 평가 실패")
+    }
+
+    return JSON.parse(result) as JudgmentResult
+  }
+
+  /**
+   * Parse email content into structured format (private helper)
+   */
+  private async parseEmailContent(emailContent: string): Promise<ParsedEmailData> {
+    const parsePrompt = `다음 이메일을 분석하여 구조화된 데이터로 추출하세요:
+
+${emailContent}
+
+다음 JSON 형식으로 반환하세요:
+{
+  "subject": "이메일 제목 (없으면 '답변')",
+  "body": "본문 내용",
+  "greeting": "인사말 부분",
+  "signature": "서명 부분",
+  "metadata": {
+    "sentiment": "positive/neutral/negative",
+    "intent": ["의도1", "의도2"],
+    "topics": ["주제1", "주제2"],
+    "actionItems": ["액션 아이템1", "액션 아이템2"]
+  }
+}`
+
+    const completion = await this.openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: "당신은 이메일 파싱 전문가입니다. JSON 형식으로만 응답하세요.",
+        },
+        {
+          role: "user",
+          content: parsePrompt,
+        },
+      ],
+      response_format: { type: "json_object" },
+    })
+
+    const result = completion.choices[0]?.message?.content
+    if (!result) {
+      throw new Error("이메일 파싱 실패")
+    }
+
+    return JSON.parse(result) as ParsedEmailData
+  }
+
+  /**
    * 기본 응답 템플릿 (AI 실패 시 사용)
    */
   generateFallbackReply(context: EmailContext): string {
@@ -152,5 +428,13 @@ export function getAIEmailService(): AIEmailService {
   return aiEmailServiceInstance
 }
 
-export type { EmailContext, AIEmailResponse }
+export type {
+  EmailContext,
+  AIEmailResponse,
+  PersonalizedEmailContext,
+  JudgmentResult,
+  EmailMetadata,
+  ParsedEmailData,
+  PersonalizedEmailResponse,
+}
 export { AIEmailService }

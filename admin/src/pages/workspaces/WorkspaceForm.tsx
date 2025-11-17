@@ -37,11 +37,13 @@ export function WorkspaceForm({
   onAddMemberClick,
 }: WorkspaceFormProps) {
   const nameId = useId()
+  const companyNameId = useId()
   const descriptionId = useId()
   const isActiveId = useId()
 
   const [formData, setFormData] = useState({
     name: workspace?.name || "",
+    companyName: workspace?.companyName || "",
     description: workspace?.description || "",
     ownerId: workspace?.ownerId || "",
     isActive: workspace?.isActive ?? true,
@@ -74,6 +76,16 @@ export function WorkspaceForm({
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
               placeholder="워크스페이스 이름을 입력하세요"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={companyNameId}>고객사명</Label>
+            <Input
+              id={companyNameId}
+              value={formData.companyName}
+              onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+              placeholder="고객사 이름을 입력하세요"
             />
           </div>
 

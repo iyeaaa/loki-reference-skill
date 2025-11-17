@@ -102,8 +102,13 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
       updateData.selectedLeadIds = data.selectedLeadIds
     }
 
+    // Check if memo is provided and not empty
     if (memo.trim()) {
       updateData.memo = memo.trim()
+    } else if (memo.length > 0) {
+      // User tried to save empty memo (only whitespace)
+      toast.error(t("sequences.step3.memoEmpty"))
+      return
     }
 
     updateSequence.mutate(
@@ -205,8 +210,13 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
       updateData.selectedLeadIds = data.selectedLeadIds
     }
 
+    // Check if memo is provided and not empty
     if (memo.trim()) {
       updateData.memo = memo.trim()
+    } else if (memo.length > 0) {
+      // User tried to save empty memo (only whitespace)
+      toast.error(t("sequences.step3.memoEmpty"))
+      return
     }
 
     updateSequence.mutate(

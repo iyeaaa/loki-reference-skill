@@ -128,6 +128,12 @@ export default function SequenceEditPage() {
   const handleSaveMemo = async () => {
     if (!sequenceId) return
 
+    // Check if memo is empty
+    if (!memo.trim()) {
+      toast.error(t("sequences.editPage.memoEmpty"))
+      return
+    }
+
     updateSequence.mutate(
       {
         sequenceId,
@@ -139,6 +145,7 @@ export default function SequenceEditPage() {
         onSuccess: () => {
           // Query invalidation is handled by the hook
           queryClient.invalidateQueries({ queryKey: sequenceKeys.detail(sequenceId) })
+          toast.success(t("sequences.editPage.memoSaved"))
         },
       },
     )

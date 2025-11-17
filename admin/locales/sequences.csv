@@ -963,3 +963,6 @@ aiMode.emailPreview.body,본문,Body
 aiMode.emailPreview.noContent,내용 없음,No Content
 aiMode.emailPreview.notGenerated,아직 생성되지 않음,Not Generated Yet
 step2.sequenceIdRequired,[NO TRANSLATION] sequences.step2.sequenceIdRequired,[NO TRANSLATION] sequences.step2.sequenceIdRequired
+editPage.memoEmpty,[NO TRANSLATION] sequences.editPage.memoEmpty,[NO TRANSLATION] sequences.editPage.memoEmpty
+editPage.memoSaved,[NO TRANSLATION] sequences.editPage.memoSaved,[NO TRANSLATION] sequences.editPage.memoSaved
+step3.memoEmpty,[NO TRANSLATION] sequences.step3.memoEmpty,[NO TRANSLATION] sequences.step3.memoEmpty

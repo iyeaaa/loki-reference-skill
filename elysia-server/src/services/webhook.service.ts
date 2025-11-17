@@ -72,7 +72,7 @@ class WebhookService {
 
     // Store email in database
     try {
-      await this.storeInboundEmailInDB(body, headers, parsedAttachments)
+      await this.storeInboundEmailInDB(body, headers, parsedAttachments, files)
     } catch (error) {
       logger.error({ err: error }, "Failed to store inbound email in DB")
     }
@@ -337,6 +337,7 @@ class WebhookService {
       references: string[]
     },
     _attachments: unknown[],
+    files: FileData[],
   ) {
     logger.info("Storing inbound email in DB")
 
@@ -582,6 +583,90 @@ class WebhookService {
       return
     }
 
+    // 5-1. 첨부파일 저장 (SendGrid Inbound Parse sends attachments as multipart files)
+    // According to SendGrid docs: attachments are sent as multipart/form-data file fields
+    // Reference: https://support.sendgrid.com/hc/en-us/articles/21253170997659-Understanding-Inbound-Parse-Attachments
+    let attachmentMetadata: Array<{
+      filename: string
+      type: string
+      size: number
+      content: string // Base64 encoded content for DB storage
+    }> | null = null
+
+    // Log attachment information for debugging
+    logger.info(
+      {
+        emailId: inboundEmail.id,
+        filesCount: files?.length || 0,
+        attachmentsField: body.attachments,
+        attachmentInfoField: body["attachment-info"],
+        fileNames: files?.map((f) => f.originalname) || [],
+      },
+      "Processing attachments from multipart data",
+    )
+
+    if (files && files.length > 0) {
+      try {
+        // Convert files to base64 and store in DB (same format as outbound emails)
+        attachmentMetadata = files.map((file) => {
+          const base64Content = file.buffer.toString("base64")
+          logger.info(
+            {
+              emailId: inboundEmail.id,
+              filename: file.originalname,
+              size: file.size,
+              mimetype: file.mimetype,
+            },
+            "Saving attachment as base64",
+          )
+
+          return {
+            filename: file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_"), // Sanitize filename
+            type: file.mimetype || "application/octet-stream",
+            size: file.size,
+            content: base64Content, // Store as base64 in DB
+          }
+        })
+
+        // Update email with attachment metadata
+        await db
+          .update(emailsTable)
+          .set({ attachments: attachmentMetadata })
+          .where(eq(emailsTable.id, inboundEmail.id))
+
+        logger.info(
+          {
+            emailId: inboundEmail.id,
+            attachmentCount: attachmentMetadata.length,
+            attachmentFilenames: attachmentMetadata.map((att) => att.filename),
+          },
+          "Attachments saved as base64 in DB",
+        )
+      } catch (error) {
+        logger.error(
+          {
+            err: error,
+            emailId: inboundEmail.id,
+            filesCount: files.length,
+            errorMessage: error instanceof Error ? error.message : String(error),
+          },
+          "Failed to save attachments, but email was saved",
+        )
+        // 첨부파일 저장 실패해도 이메일은 저장됨
+      }
+    } else if (body.attachments && body.attachments !== "0" && body.attachments !== "[]") {
+      // Log warning if attachments field indicates attachments but no files received
+      logger.warn(
+        {
+          emailId: inboundEmail.id,
+          attachmentsField: body.attachments,
+          attachmentInfoField: body["attachment-info"],
+          filesCount: 0,
+        },
+        "Attachments field indicates attachments exist but no files found in multipart data",
+      )
+    }
+
     logger.info(
       {
         emailId: inboundEmail.id,
@@ -589,6 +674,7 @@ class WebhookService {
         sequenceId: inboundEmail.sequenceId,
         leadName: inboundEmail.leadName,
         sequenceName: inboundEmail.sequenceName,
+        attachmentCount: attachmentMetadata?.length || 0,
       },
       "Inbound email saved successfully with inherited info",
     )

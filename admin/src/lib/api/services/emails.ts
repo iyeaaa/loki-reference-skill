@@ -229,6 +229,31 @@ export const emailsApi = {
     })
   },
 
+  updateIntent: (
+    emailId: string,
+    data: {
+      intent?:
+        | "meeting_request"
+        | "question"
+        | "objection"
+        | "out_of_office"
+        | "not_interested"
+        | "positive_interest"
+        | "neutral"
+        | null
+      sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
+    },
+  ) => {
+    return apiFetch<{
+      id: string
+      intent: string | null
+      sentiment: string | null
+    }>(`/api/v1/emails/${emailId}/intent`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    })
+  },
+
   delete: (emailId: string) => {
     return apiFetch(`/api/v1/emails/${emailId}`, {
       method: "DELETE",

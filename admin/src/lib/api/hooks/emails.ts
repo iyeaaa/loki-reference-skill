@@ -173,6 +173,42 @@ export function useUpdateEmailStatus() {
   })
 }
 
+export function useUpdateEmailIntent() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      emailId,
+      data,
+    }: {
+      emailId: string
+      data: {
+        intent?:
+          | "meeting_request"
+          | "question"
+          | "objection"
+          | "out_of_office"
+          | "not_interested"
+          | "positive_interest"
+          | "neutral"
+          | null
+        sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
+      }
+    }) => emailsApi.updateIntent(emailId, data),
+    onSuccess: () => {
+      // Invalidate related queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: ["email-replies"] })
+      queryClient.invalidateQueries({ queryKey: ["replied-emails"] })
+      queryClient.invalidateQueries({ queryKey: ["thread-emails"] })
+      queryClient.invalidateQueries({ queryKey: ["intent-counts"] })
+      toast.success("태그가 업데이트되었습니다.")
+    },
+    onError: (error: Error) => {
+      toast.error(`태그 업데이트 실패: ${error.message}`)
+    },
+  })
+}
+
 export function useDeleteEmail() {
   const queryClient = useQueryClient()
 

@@ -240,11 +240,12 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
           </div>
         </button>
 
-        {/* Intent Badge for inbound emails */}
-        {email.direction === "inbound" && email.emailReplyId && (
+        {/* Intent Badge for inbound emails only */}
+        {email.direction === "inbound" && (
           <div className="ml-13 mt-2 flex items-center gap-2">
             <IntentSelector
-              emailReplyId={email.emailReplyId}
+              emailId={email.id}
+              emailReplyId={email.emailReplyId || undefined}
               currentIntent={email.replyIntent}
               size="sm"
             />

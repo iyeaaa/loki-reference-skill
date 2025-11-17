@@ -20,11 +20,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useUpdateEmailReply } from "@/lib/api/hooks/email-replies"
+import { useUpdateEmailIntent } from "@/lib/api/hooks/emails"
 import type { EmailIntent } from "@/lib/api/types/email"
 import { IntentBadge } from "./IntentBadge"
 
 interface IntentSelectorProps {
-  emailReplyId: string
+  emailReplyId?: string // Optional: for backward compatibility
+  emailId?: string // New: email ID to set intent directly
   currentIntent: EmailIntent | null | undefined
   size?: "sm" | "md" | "lg"
 }
@@ -43,14 +45,28 @@ const intentOptions: Array<{
   { value: "out_of_office", label: "Out of Office", icon: Coffee },
 ]
 
-export function IntentSelector({ emailReplyId, currentIntent, size = "md" }: IntentSelectorProps) {
+export function IntentSelector({
+  emailReplyId,
+  emailId,
+  currentIntent,
+  size = "md",
+}: IntentSelectorProps) {
   const updateEmailReply = useUpdateEmailReply()
+  const updateEmailIntent = useUpdateEmailIntent()
 
   const handleSelectIntent = (intent: EmailIntent | null) => {
-    updateEmailReply.mutate({
-      id: emailReplyId,
-      data: { intent },
-    })
+    // Use emailId if available (new approach), otherwise use emailReplyId (backward compatibility)
+    if (emailId) {
+      updateEmailIntent.mutate({
+        emailId,
+        data: { intent },
+      })
+    } else if (emailReplyId) {
+      updateEmailReply.mutate({
+        id: emailReplyId,
+        data: { intent },
+      })
+    }
   }
 
   return (

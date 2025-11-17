@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { db } from "../db"
 import { emailReplies, emails, userEmailAccounts } from "../db/schema"
@@ -422,13 +422,14 @@ function buildInboundFilterConditions(filters: EmailReplyFilters) {
   }
 
   if (filters.search) {
-    conditions.push(
-      or(
-        ilike(emails.subject, `%${filters.search}%`),
-        ilike(emails.fromEmail, `%${filters.search}%`),
-        ilike(emails.bodyText, `%${filters.search}%`),
-      )!,
+    const searchCondition = or(
+      ilike(emails.subject, `%${filters.search}%`),
+      ilike(emails.fromEmail, `%${filters.search}%`),
+      ilike(emails.bodyText, `%${filters.search}%`),
     )
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
   }
 
   return conditions
@@ -526,6 +527,101 @@ export async function updateEmailReply(
     .returning()
 
   return updated
+}
+
+/**
+ * Update or create email reply intent by email ID
+ * This allows setting intent for any email, even if email_replies record doesn't exist
+ */
+export async function updateEmailIntentByEmailId(
+  emailId: string,
+  data: {
+    intent?: string | null
+    sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
+  },
+) {
+  // Get the email to check its direction and workspace
+  const [email] = await db
+    .select({
+      id: emails.id,
+      workspaceId: emails.workspaceId,
+      direction: emails.direction,
+      inReplyTo: emails.inReplyTo,
+      threadId: emails.threadId,
+    })
+    .from(emails)
+    .where(eq(emails.id, emailId))
+    .limit(1)
+
+  if (!email) {
+    return null
+  }
+
+  // Find or create email_replies record
+  // For inbound emails, find originalEmailId from inReplyTo
+  // For outbound emails, use the email itself as originalEmailId (self-referencing)
+  let originalEmailId = email.id
+
+  if (email.direction === "inbound" && email.inReplyTo) {
+    // Try to find the original email being replied to
+    const [originalEmail] = await db
+      .select({ id: emails.id })
+      .from(emails)
+      .where(eq(emails.messageId, email.inReplyTo))
+      .limit(1)
+
+    if (originalEmail) {
+      originalEmailId = originalEmail.id
+    } else if (email.threadId) {
+      // If original email not found by messageId, try to find first email in thread
+      const [firstEmail] = await db
+        .select({ id: emails.id })
+        .from(emails)
+        .where(eq(emails.threadId, email.threadId))
+        .orderBy(asc(emails.createdAt))
+        .limit(1)
+
+      if (firstEmail) {
+        originalEmailId = firstEmail.id
+      }
+    }
+  }
+
+  // Check if email_replies record already exists
+  const existingReply = await db
+    .select({ id: emailReplies.id })
+    .from(emailReplies)
+    .where(eq(emailReplies.replyEmailId, emailId))
+    .limit(1)
+
+  if (existingReply.length > 0 && existingReply[0]) {
+    // Update existing record
+    const [updated] = await db
+      .update(emailReplies)
+      .set({
+        ...(data.intent !== undefined && { intent: data.intent }),
+        ...(data.sentiment !== undefined && { sentiment: data.sentiment }),
+      })
+      .where(eq(emailReplies.id, existingReply[0].id))
+      .returning()
+
+    return updated
+  }
+
+  // Create new email_replies record
+  const [created] = await db
+    .insert(emailReplies)
+    .values({
+      workspaceId: email.workspaceId,
+      originalEmailId,
+      replyEmailId: emailId,
+      ...(data.intent !== undefined && { intent: data.intent }),
+      ...(data.sentiment !== undefined && { sentiment: data.sentiment }),
+      isRead: false,
+    })
+    .returning()
+
+  return created
 }
 
 /**

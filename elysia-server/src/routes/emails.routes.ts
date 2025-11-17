@@ -13,6 +13,7 @@ import {
 import { workspaces } from "../db/schema/workspaces"
 import type { SendGridAttachment } from "../models/email.model"
 import { emailService } from "../services/email.service"
+import * as emailRepliesService from "../services/email-replies.service"
 import * as leadService from "../services/lead.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
 import { fixUtf8Encoding, parseEmailBody } from "../utils/email.util"
@@ -1733,6 +1734,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           subject: emails.subject,
           bodyText: emails.bodyText,
           bodyHtml: emails.bodyHtml,
+          attachments: emails.attachments,
           status: emails.status,
           sentAt: emails.sentAt,
           repliedAt: emails.repliedAt,
@@ -1844,6 +1846,7 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
           subject: emails.subject,
           bodyText: emails.bodyText,
           bodyHtml: emails.bodyHtml,
+          attachments: emails.attachments,
           status: emails.status,
           scheduledAt: emails.scheduledAt,
           sentAt: emails.sentAt,
@@ -1915,6 +1918,56 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
     },
     {
       body: emailSchema,
+    },
+  )
+
+  // Update email intent by email ID
+  .patch(
+    "/:id/intent",
+    async ({ params: { id }, body, set }) => {
+      try {
+        const result = await emailRepliesService.updateEmailIntentByEmailId(id, body)
+        if (!result) {
+          set.status = 404
+          return errorResponse("이메일을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+        }
+        return result
+      } catch (error) {
+        set.status = 500
+        return errorResponse(
+          error instanceof Error ? error.message : "Intent 업데이트 중 오류가 발생했습니다.",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      body: t.Object({
+        intent: t.Optional(
+          t.Union([
+            t.Literal("meeting_request"),
+            t.Literal("question"),
+            t.Literal("objection"),
+            t.Literal("out_of_office"),
+            t.Literal("not_interested"),
+            t.Literal("positive_interest"),
+            t.Literal("neutral"),
+            t.Null(),
+          ]),
+        ),
+        sentiment: t.Optional(
+          t.Union([
+            t.Literal("positive"),
+            t.Literal("neutral"),
+            t.Literal("negative"),
+            t.Literal("interested"),
+            t.Literal("not_interested"),
+            t.Null(),
+          ]),
+        ),
+      }),
     },
   )
 

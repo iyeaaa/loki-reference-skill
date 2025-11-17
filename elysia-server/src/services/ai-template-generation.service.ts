@@ -99,7 +99,7 @@ class AITemplateGenerationService {
       workspaceDescription,
       country,
       userPrompt,
-      model = "gpt-4o-mini",
+      model = "gpt-4.1-mini",
       temperature = 0.7,
     } = options
 
@@ -141,7 +141,7 @@ ${workspaceDescription ? `- 설명: ${workspaceDescription}` : ""}
 
 [중요 지침]
 1. ${targetLanguageInstruction}
-2. 이메일에는 반드시 다음 한글 placeholder들을 적절히 활용하세요 (모든 placeholder를 사용할 필요는 없음):
+2. 이메일에는 다음 한글 placeholder들을 적절히 활용할 수 있습니다 (모든 placeholder를 사용할 필요는 없음, 아래 placeholder들은 수신 리드의 회사 정보를 의미함, 예: {{웹사이트}}는 발신 회사의 웹사이트가 아니라 메일을 받는 쪽의 웹사이트를 의미함):
    - {{회사명}}, {{웹사이트}}, {{업종}}, {{설명}}
    - {{국가}}, {{도시}}, {{주/도}}, {{주소}}
    - {{담당자명}}, {{이메일}}
@@ -175,7 +175,7 @@ ${examplesText}
 LANGUAGE: [감지된 언어 코드 (예: en, ko, ja, zh, es 등)]
 SUBJECT: [이메일 제목]
 BODY:
-[이메일 본문 - HTML 형식으로 작성, placeholder 포함]`
+[이메일 본문 - MARKDOWN 형식으로 작성, placeholder 포함]`
 
       const userMessage = `
 사용자 요구사항: ${userPrompt}

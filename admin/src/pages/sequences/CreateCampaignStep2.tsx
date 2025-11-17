@@ -40,9 +40,12 @@ import {
   useDeleteSequenceStep,
   useUpdateSequenceStep,
 } from "@/lib/api/hooks/sequences"
+import { leadsApi } from "@/lib/api/services/leads"
+import { sequencesApi } from "@/lib/api/services/sequences"
 import { useAuth } from "@/lib/auth-provider"
 import { cn } from "@/lib/utils"
 import { generateSignatureHtml } from "@/lib/utils/email-signature"
+import { analyzeLeadsForGroupName } from "@/lib/utils/lead-analyzer"
 
 interface EmailStep {
   id?: string // Step ID if it exists in DB
@@ -140,6 +143,10 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
   const [selectedStepIndex, setSelectedStepIndex] = useState<number>(0)
   const [showAISheet, setShowAISheet] = useState(false)
   const [aiPrompt, setAiPrompt] = useState("")
+  const [aiCountry, setAiCountry] = useState("Korea") // Detected/selected country for AI
+  const [aiGroupInfo, setAiGroupInfo] = useState("") // Auto-detected group info
+  const [aiGoal, setAiGoal] = useState("") // Follow-up goal
+  const [aiStrategy, setAiStrategy] = useState("") // Tone and manner strategy
   const [isGeneratingAI, setIsGeneratingAI] = useState(false)
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false)
   const prevDataStepsRef = useRef(data.steps)
@@ -383,32 +390,130 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
     setIsSignatureModalOpen(false)
   }
 
+  const handleOpenAISheet = async () => {
+    setShowAISheet(true)
+
+    // Detect country and group info from customer group leads when opening the sheet
+    try {
+      const leadsResult = await leadsApi.list({
+        customerGroupId: data.customerGroupId,
+        page: 1,
+        limit: 100, // Fetch up to 100 leads for analysis
+      })
+
+      if (leadsResult.leads.length > 0) {
+        const analysis = analyzeLeadsForGroupName(leadsResult.leads)
+        console.log("analysis", analysis)
+
+        // Set country
+        if (analysis.country && analysis.country !== "Unknown") {
+          setAiCountry(analysis.country)
+        }
+
+        // Generate group info summary
+        const groupInfoParts = []
+        if (analysis.country && analysis.country !== "Unknown") {
+          groupInfoParts.push(`국가: ${analysis.country}`)
+        }
+        if (analysis.scale && analysis.scale !== "Unknown") {
+          groupInfoParts.push(`기업 규모: ${analysis.scale}`)
+        }
+        if (analysis.businessType && analysis.businessType !== "Unknown") {
+          groupInfoParts.push(`비즈니스 타입: ${analysis.businessType}`)
+        }
+        if (analysis.businessSector && analysis.businessSector !== "Unknown") {
+          groupInfoParts.push(`업종: ${analysis.businessSector}`)
+        }
+
+        const groupInfo = groupInfoParts.join(", ")
+        setAiGroupInfo(groupInfo || "타겟 고객 정보를 입력하세요")
+
+        // Set default goal based on step
+        const stepNumber = currentStep?.stepOrder || 1
+        if (stepNumber === 1) {
+          setAiGoal("첫 접촉 및 관심 유도")
+        } else if (stepNumber === 2) {
+          setAiGoal("후속 팔로업 및 가치 제안")
+        } else if (stepNumber === 3) {
+          setAiGoal("미팅 제안 또는 행동 유도")
+        } else {
+          setAiGoal("최종 팔로업 및 클로징")
+        }
+
+        // Set default strategy
+        setAiStrategy("전문적이고 친근한 톤, 간결하고 명확한 메시지")
+      }
+    } catch (error) {
+      console.warn("Failed to detect country from leads:", error)
+      // Set minimal defaults even on error
+      setAiGroupInfo("타겟 고객 정보를 입력하세요")
+      setAiGoal("팔로업 목표를 입력하세요")
+      setAiStrategy("톤앤매너를 입력하세요")
+    }
+  }
+
   const handleGenerateAI = async () => {
-    if (!aiPrompt.trim()) {
-      toast.error("AI 프롬프트를 입력해주세요")
+    // Build structured prompt from all fields
+    const promptParts = []
+
+    // Group info (required)
+    if (aiGroupInfo.trim()) {
+      promptParts.push(`[타겟 고객]: ${aiGroupInfo.trim()}`)
+    }
+
+    // Goal (required)
+    if (aiGoal.trim()) {
+      promptParts.push(`[목표]: ${aiGoal.trim()}`)
+    }
+
+    // Strategy (required)
+    if (aiStrategy.trim()) {
+      promptParts.push(`[전략]: ${aiStrategy.trim()}`)
+    }
+
+    // Additional instructions (optional)
+    if (aiPrompt.trim()) {
+      promptParts.push(`[추가 지시사항]: ${aiPrompt.trim()}`)
+    }
+
+    const finalPrompt = promptParts.join("\n\n")
+
+    // Validate: at least group info, goal, or strategy must be provided
+    if (!aiGroupInfo.trim() && !aiGoal.trim() && !aiStrategy.trim()) {
+      toast.error("최소한 그룹 정보, 목표, 또는 전략 중 하나를 입력해주세요")
+      return
+    }
+
+    // Validate prompt length (minimum 10 characters required by backend)
+    if (finalPrompt.length < 10) {
+      toast.error("입력 내용이 너무 짧습니다. 더 자세히 입력해주세요")
       return
     }
 
     setIsGeneratingAI(true)
     try {
-      // TODO: Call actual AI API - For now using mock data
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-
-      // Mock AI generated content
-      const aiSubject = `AI 생성: ${aiPrompt.substring(0, 30)}`
-      const aiBody = `안녕하세요 {{담당자명}}님,\n\n${aiPrompt}에 대한 내용입니다.\n\n{{회사명}}에 관심을 가져주셔서 감사합니다.\n\n감사합니다.`
+      // Call actual AI API with selected country
+      const result = await sequencesApi.generateTemplate({
+        workspaceId: data.workspaceId,
+        country: aiCountry,
+        prompt: finalPrompt,
+        temperature: 0.7,
+      })
 
       // Update current step with AI generated content
       updateCurrentStep({
-        emailSubject: aiSubject,
-        emailBodyText: aiBody,
+        emailSubject: result.emailSubject,
+        emailBodyText: result.emailBodyText,
       })
 
       toast.success("AI 이메일이 생성되었습니다")
       setShowAISheet(false)
-      setAiPrompt("")
-    } catch {
-      toast.error("AI 이메일 생성 실패")
+      // Don't clear the fields so user can regenerate with modifications
+    } catch (error) {
+      console.error("AI generation error:", error)
+      toast.error(
+        `AI 이메일 생성 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
+      )
     } finally {
       setIsGeneratingAI(false)
     }
@@ -724,12 +829,7 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
             <p className="text-sm text-muted-foreground">이메일 내용을 작성하세요</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAISheet(true)}
-              className="h-9"
-            >
+            <Button variant="outline" size="sm" onClick={handleOpenAISheet} className="h-9">
               <Sparkles className="h-4 w-4 mr-2" />
               AI 생성
             </Button>
@@ -903,23 +1003,88 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
           </SheetHeader>
 
           <div className="mt-6 space-y-4">
+            {/* Auto-detected Group Info */}
+            <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-4 space-y-2">
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <Info className="h-4 w-4 text-blue-600" />
+                타겟 고객 그룹 정보 (자동 감지)
+              </h4>
+              <Input
+                value={aiGroupInfo}
+                onChange={(e) => setAiGroupInfo(e.target.value)}
+                placeholder="타겟 고객 정보를 입력하세요"
+                className="bg-white dark:bg-background"
+              />
+              <p className="text-xs text-muted-foreground">
+                고객 리드 데이터를 기반으로 자동 감지됩니다. 필요시 수정 가능합니다.
+              </p>
+            </div>
+
+            {/* Target Country */}
             <div className="space-y-2">
-              <Label>AI 프롬프트</Label>
-              <Textarea
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="예: 신규 고객을 위한 제품 소개 이메일을 작성해주세요. 친근하고 전문적인 톤으로..."
-                rows={6}
+              <Label>타겟 국가</Label>
+              <Input
+                value={aiCountry}
+                onChange={(e) => setAiCountry(e.target.value)}
+                placeholder="예: Korea, Japan, China"
               />
             </div>
 
+            {/* Follow-up Goal */}
+            <div className="space-y-2">
+              <Label>팔로업 목표</Label>
+              <Input
+                value={aiGoal}
+                onChange={(e) => setAiGoal(e.target.value)}
+                placeholder="예: 미팅 성사, 데모 요청, 자료 다운로드 유도"
+              />
+              <p className="text-xs text-muted-foreground">
+                이 이메일을 통해 달성하고자 하는 목표를 입력하세요
+              </p>
+            </div>
+
+            {/* Template Strategy (Tone & Manner) */}
+            <div className="space-y-2">
+              <Label>템플릿 전략 (톤앤매너)</Label>
+              <Input
+                value={aiStrategy}
+                onChange={(e) => setAiStrategy(e.target.value)}
+                placeholder="예: 전문적이고 친근한 톤, 간결하고 명확한 메시지"
+              />
+              <p className="text-xs text-muted-foreground">
+                이메일의 톤, 스타일, 길이 등을 지정하세요
+              </p>
+            </div>
+
+            {/* AI Prompt (Optional Additional Instructions) */}
+            <div className="space-y-2">
+              <Label>추가 지시사항 (선택)</Label>
+              <Textarea
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="예: 최근 출시한 신제품에 대한 소개를 포함하고, 기존 고객 성공 사례를 언급해주세요..."
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground">
+                추가로 포함하고 싶은 내용이나 특별한 지시사항을 입력하세요
+              </p>
+            </div>
+
             <div className="rounded-lg bg-muted p-4 space-y-2">
-              <h4 className="font-medium text-sm">프롬프트 작성 팁</h4>
+              <h4 className="font-medium text-sm">💡 작성 가이드</h4>
               <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                <li>이메일의 목적을 명확히 작성하세요</li>
-                <li>원하는 톤과 스타일을 지정하세요 (예: 친근한, 공식적인)</li>
-                <li>포함하고 싶은 핵심 내용을 나열하세요</li>
-                <li>이메일 길이를 지정할 수 있습니다 (예: 짧게, 상세하게)</li>
+                <li>
+                  <strong>그룹 정보</strong>: 타겟 고객의 특성 (자동 감지, 수정 가능)
+                </li>
+                <li>
+                  <strong>목표</strong>: 이메일을 통해 달성하고자 하는 구체적인 행동
+                </li>
+                <li>
+                  <strong>전략</strong>: 톤, 메시지 스타일, 길이 등의 방향성
+                </li>
+                <li>
+                  <strong>추가 지시사항</strong>: 포함할 특정 내용이나 예시
+                </li>
               </ul>
             </div>
 

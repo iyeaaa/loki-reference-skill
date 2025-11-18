@@ -421,20 +421,19 @@ class WebhookService {
       return
     }
 
-    // 3. 답장인 경우: 원본 이메일에서 leadId, sequenceId, threadId, workspaceId를 가져옴
+    // 3. 답장인 경우: 원본 이메일에서 leadId, sequenceId, threadId를 가져옴
+    // workspaceId는 항상 이메일 계정의 workspace 사용 (원본 이메일의 workspace 상속 제거)
     let leadId: string | null = null
     let sequenceId: string | null = null
     let leadName: string | null = null
     let sequenceName: string | null = null
     let threadId = headers.messageId // First email: messageId becomes threadId
-    let workspaceId = account.workspaceId // Default to account workspace, will be overridden if reply
 
     if (headers.inReplyTo) {
-      // 답장인 경우: 원본 이메일 찾기 (모든 필요한 정보 한번에 조회)
+      // 답장인 경우: 원본 이메일 찾기 (threadId, leadId, sequenceId만 상속)
       const originalEmailResults = await db
         .select({
           id: emailsTable.id,
-          workspaceId: emailsTable.workspaceId,
           threadId: emailsTable.threadId,
           leadId: emailsTable.leadId,
           sequenceId: emailsTable.sequenceId,
@@ -447,13 +446,6 @@ class WebhookService {
 
       if (originalEmailResults.length > 0 && originalEmailResults[0]) {
         const originalEmail = originalEmailResults[0]
-
-        // workspaceId 상속 (reply-to-reply를 위해 중요!)
-        workspaceId = originalEmail.workspaceId
-        logger.info(
-          { workspaceId, inReplyTo: headers.inReplyTo },
-          "Workspace ID inherited from original email",
-        )
 
         // threadId 상속
         if (originalEmail.threadId) {

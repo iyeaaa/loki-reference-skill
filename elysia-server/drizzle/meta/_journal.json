@@ -162,6 +162,13 @@
       "when": 1763265884485,
       "tag": "0022_military_photon",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1763437137618,
+      "tag": "0023_boring_tyger_tiger",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
-  "id": "02439799-6ca7-4ad1-a95b-a7eea95338a4",
-  "prevId": "fd4a0415-45d3-473f-8f1f-c70faa0ef471",
+  "id": "2bdaa7d5-f6d2-4f70-bc0d-7b199feff134",
+  "prevId": "02439799-6ca7-4ad1-a95b-a7eea95338a4",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1783,7 +1783,7 @@
           "tableTo": "workspaces",
           "columnsFrom": ["workspace_id"],
           "columnsTo": ["id"],
-          "onDelete": "cascade",
+          "onDelete": "restrict",
           "onUpdate": "no action"
         },
         "emails_user_email_account_id_user_email_accounts_id_fk": {

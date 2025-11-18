@@ -1,6 +1,7 @@
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
+import { emails } from "../db/schema/emails"
 import { sequenceEnrollments } from "../db/schema/sequences"
 import { users } from "../db/schema/users"
 import { workspaceMembers, workspaces } from "../db/schema/workspaces"
@@ -165,7 +166,25 @@ export async function updateWorkspace(
 export async function deleteWorkspace(id: string) {
   logger.info({ workspaceId: id }, "Starting workspace deletion")
 
-  // 1. First, get all user_email_accounts for this workspace
+  // 1. 이메일 개수 확인 (RESTRICT 방지 - 워크스페이스에 이메일이 있으면 삭제 불가)
+  const emailCountResult = await db
+    .select({ count: count() })
+    .from(emails)
+    .where(eq(emails.workspaceId, id))
+
+  const totalEmails = emailCountResult[0]?.count || 0
+
+  if (totalEmails > 0) {
+    logger.warn(
+      { workspaceId: id, emailCount: totalEmails },
+      "Cannot delete workspace: emails exist",
+    )
+    throw new Error(
+      `워크스페이스에 ${totalEmails}개의 이메일이 있습니다. 워크스페이스를 삭제하려면 먼저 이메일을 이동하거나 삭제해야 합니다.`,
+    )
+  }
+
+  // 2. First, get all user_email_accounts for this workspace
   const emailAccounts = await db
     .select({ id: userEmailAccounts.id })
     .from(userEmailAccounts)
@@ -176,7 +195,7 @@ export async function deleteWorkspace(id: string) {
     "Found email accounts for workspace",
   )
 
-  // 2. Delete sequence_enrollments that reference these email accounts
+  // 3. Delete sequence_enrollments that reference these email accounts
   if (emailAccounts.length > 0) {
     const emailAccountIds = emailAccounts.map((acc) => acc.id)
     const enrollmentCondition = or(
@@ -191,7 +210,7 @@ export async function deleteWorkspace(id: string) {
     }
   }
 
-  // 3. Now delete the workspace (cascade will handle user_email_accounts and other related tables)
+  // 4. Now delete the workspace (RESTRICT constraint ensures emails are checked before deletion)
   await db.delete(workspaces).where(eq(workspaces.id, id))
   logger.info({ workspaceId: id }, "Workspace deleted successfully")
 }

@@ -66,7 +66,7 @@ export const emails = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     workspaceId: uuid("workspace_id")
       .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
+      .references(() => workspaces.id, { onDelete: "restrict" }),
     userEmailAccountId: uuid("user_email_account_id")
       .notNull()
       .references(() => userEmailAccounts.id, { onDelete: "restrict" }),

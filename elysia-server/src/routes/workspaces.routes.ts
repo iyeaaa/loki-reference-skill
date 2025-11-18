@@ -137,9 +137,17 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
   // Delete workspace
   .delete(
     "/:id",
-    async ({ params: { id } }) => {
-      await workspaceService.deleteWorkspace(id)
-      return { success: true, message: "워크스페이스가 삭제되었습니다." }
+    async ({ params: { id }, set }) => {
+      try {
+        await workspaceService.deleteWorkspace(id)
+        return { success: true, message: "워크스페이스가 삭제되었습니다." }
+      } catch (error) {
+        set.status = 400
+        return errorResponse(
+          error instanceof Error ? error.message : "워크스페이스 삭제에 실패했습니다.",
+          ResponseCode.BAD_REQUEST,
+        )
+      }
     },
     {
       params: t.Object({

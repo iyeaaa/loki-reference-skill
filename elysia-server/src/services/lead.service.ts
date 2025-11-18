@@ -215,6 +215,135 @@ export async function createLead(data: {
   return newLead
 }
 
+// CopyLead :one - 리드를 다른 워크스페이스로 복사 (모든 관련 데이터 포함)
+export async function copyLead(leadId: string, targetWorkspaceId: string, createdBy?: string) {
+  // 원본 리드 정보 가져오기
+  const originalLead = await getLead(leadId)
+  if (!originalLead) {
+    throw new Error("Lead not found")
+  }
+
+  // 이미 같은 워크스페이스에 있으면 복사하지 않음
+  if (originalLead.workspaceId === targetWorkspaceId) {
+    return originalLead
+  }
+
+  // 연락처 가져오기
+  const contacts = await db.select().from(leadContacts).where(eq(leadContacts.leadId, leadId))
+
+  // 소셜 미디어 가져오기
+  const socialMedia = await db
+    .select()
+    .from(leadSocialMedia)
+    .where(eq(leadSocialMedia.leadId, leadId))
+
+  // 제품 가져오기
+  const products = await db.select().from(leadProducts).where(eq(leadProducts.leadId, leadId))
+
+  // 비즈니스 섹터 가져오기
+  const businessSectors = await db
+    .select()
+    .from(leadBusinessSectors)
+    .where(eq(leadBusinessSectors.leadId, leadId))
+
+  // 제품 카테고리 가져오기
+  const productCategories = await db
+    .select()
+    .from(leadProductCategories)
+    .where(eq(leadProductCategories.leadId, leadId))
+
+  // 산업 유형 가져오기
+  const industryTypes = await db
+    .select()
+    .from(leadIndustryTypes)
+    .where(eq(leadIndustryTypes.leadId, leadId))
+
+  // 새 리드 생성
+  const newLead = await createLead({
+    workspaceId: targetWorkspaceId,
+    companyName: originalLead.companyName ?? undefined,
+    foundCompanyName: originalLead.foundCompanyName ?? undefined,
+    contactName: originalLead.contactName ?? undefined,
+    websiteUrl: originalLead.websiteUrl ?? undefined,
+    finalUrl: originalLead.finalUrl ?? undefined,
+    httpStatus: originalLead.httpStatus ?? undefined,
+    nameUrlMatch: originalLead.nameUrlMatch ?? undefined,
+    businessType: originalLead.businessType ?? undefined,
+    isBusinessTypeMatched: originalLead.isBusinessTypeMatched ?? undefined,
+    description: originalLead.description ?? undefined,
+    address: originalLead.address ?? undefined,
+    country: originalLead.country ?? undefined,
+    city: originalLead.city ?? undefined,
+    state: originalLead.state ?? undefined,
+    foundedYear: originalLead.foundedYear ?? undefined,
+    employeeCount: originalLead.employeeCount ?? undefined,
+    leadSource: originalLead.leadSource ?? undefined,
+    leadStatus: originalLead.leadStatus ?? undefined,
+    leadScore: originalLead.leadScore ?? undefined,
+    notes: originalLead.notes ?? undefined,
+    crawlTimeSeconds: originalLead.crawlTimeSeconds ?? undefined,
+    gptTimeSeconds: originalLead.gptTimeSeconds ?? undefined,
+    collectedAt: originalLead.collectedAt ?? undefined,
+    errorMessage: originalLead.errorMessage ?? undefined,
+    createdBy: createdBy ?? originalLead.createdBy ?? undefined,
+    contacts: contacts.map((c) => ({
+      contactType: c.contactType,
+      contactValue: c.contactValue,
+      contactName: c.contactName,
+      label: c.label,
+      isPrimary: c.isPrimary,
+    })),
+    socialMedia: socialMedia.map((s) => ({
+      platform: s.platform,
+      url: s.url,
+      username: s.username,
+    })),
+  })
+
+  // 제품 추가
+  if (products.length > 0) {
+    await db.insert(leadProducts).values(
+      products.map((p) => ({
+        leadId: newLead.id,
+        productName: p.productName,
+        description: p.description,
+      })),
+    )
+  }
+
+  // 비즈니스 섹터 추가
+  if (businessSectors.length > 0) {
+    await db.insert(leadBusinessSectors).values(
+      businessSectors.map((s) => ({
+        leadId: newLead.id,
+        sectorName: s.sectorName,
+      })),
+    )
+  }
+
+  // 제품 카테고리 추가
+  if (productCategories.length > 0) {
+    await db.insert(leadProductCategories).values(
+      productCategories.map((c) => ({
+        leadId: newLead.id,
+        categoryName: c.categoryName,
+      })),
+    )
+  }
+
+  // 산업 유형 추가
+  if (industryTypes.length > 0) {
+    await db.insert(leadIndustryTypes).values(
+      industryTypes.map((t) => ({
+        leadId: newLead.id,
+        industryName: t.industryName,
+      })),
+    )
+  }
+
+  return newLead
+}
+
 // UpdateLead :one
 export async function updateLead(
   id: string,
@@ -528,7 +657,8 @@ export async function listLeadsWithFilters(
     }
   }
 
-  if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
+  // workspaceIds 필터: customerGroupId가 있을 때는 제외 (그룹에 속한 모든 워크스페이스의 리드를 포함하기 위해)
+  if (filters?.workspaceIds && filters.workspaceIds.length > 0 && !filters?.customerGroupId) {
     const workspaceCondition = or(...filters.workspaceIds.map((id) => eq(leads.workspaceId, id)))
     if (workspaceCondition) {
       conditions.push(workspaceCondition)
@@ -940,7 +1070,8 @@ export async function countLeadsWithFilters(filters?: {
     }
   }
 
-  if (filters?.workspaceIds && filters.workspaceIds.length > 0) {
+  // workspaceIds 필터: customerGroupId가 있을 때는 제외 (그룹에 속한 모든 워크스페이스의 리드를 포함하기 위해)
+  if (filters?.workspaceIds && filters.workspaceIds.length > 0 && !filters?.customerGroupId) {
     const workspaceCondition = or(...filters.workspaceIds.map((id) => eq(leads.workspaceId, id)))
     if (workspaceCondition) {
       conditions.push(workspaceCondition)
@@ -997,11 +1128,17 @@ export async function countLeadsWithFilters(filters?: {
   // Build count query with dynamic chaining
   let countQuery = db.select({ count: sql<number>`count(*)::int` }).from(leads).$dynamic()
 
-  // Conditionally add customerGroup join
+  // Conditionally add customerGroup filter (use subquery to match listLeadsWithFilters)
   if (filters?.customerGroupId) {
-    countQuery = countQuery
-      .innerJoin(customerGroupMembers, eq(leads.id, customerGroupMembers.leadId))
-      .where(and(eq(customerGroupMembers.groupId, filters.customerGroupId), whereClause))
+    const groupMemberSubquery = db
+      .select({ leadId: customerGroupMembers.leadId })
+      .from(customerGroupMembers)
+      .where(eq(customerGroupMembers.groupId, filters.customerGroupId))
+
+    const inGroupCondition = inArray(leads.id, groupMemberSubquery)
+    countQuery = countQuery.where(
+      whereClause ? and(inGroupCondition, whereClause) : inGroupCondition,
+    )
   } else if (whereClause) {
     countQuery = countQuery.where(whereClause)
   }

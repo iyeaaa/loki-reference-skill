@@ -46,6 +46,7 @@ interface LeadsTableWithPaginationProps {
   isSelectAllMode?: boolean
   allLeadsSelected?: boolean
   onToggleSelectAll?: () => void
+  selectedGroupWorkspaceId?: string
 }
 
 export function LeadsTableWithPagination({
@@ -62,6 +63,7 @@ export function LeadsTableWithPagination({
   isSelectAllMode = false,
   allLeadsSelected = false,
   onToggleSelectAll,
+  selectedGroupWorkspaceId,
 }: LeadsTableWithPaginationProps) {
   const { t } = useTranslation()
 
@@ -199,7 +201,30 @@ export function LeadsTableWithPagination({
     return () => clearInterval(interval)
   }, [currentWorkspace])
 
-  const workspaceFilter = currentWorkspace === "all" ? undefined : [currentWorkspace]
+  // 워크스페이스 필터: 고객 그룹이 선택된 경우 그룹의 워크스페이스도 포함
+  const workspaceFilter = useMemo(() => {
+    if (currentWorkspace === "all") {
+      // "all" 선택 시 고객 그룹이 선택되어 있고 그룹이 다른 워크스페이스에 있으면 그 워크스페이스 포함
+      if (selectedCustomerGroup && selectedGroupWorkspaceId) {
+        return undefined // "all"이면 모든 워크스페이스 포함
+      }
+      return undefined
+    }
+
+    // 특정 워크스페이스 선택 시
+    const workspaceIds = [currentWorkspace]
+
+    // 고객 그룹이 선택되어 있고 그룹이 다른 워크스페이스에 있으면 추가
+    if (
+      selectedCustomerGroup &&
+      selectedGroupWorkspaceId &&
+      selectedGroupWorkspaceId !== currentWorkspace
+    ) {
+      workspaceIds.push(selectedGroupWorkspaceId)
+    }
+
+    return workspaceIds
+  }, [currentWorkspace, selectedCustomerGroup, selectedGroupWorkspaceId])
 
   // Merge prop column filters with active column filters from table
   const mergedFilters = useMemo(
@@ -212,6 +237,7 @@ export function LeadsTableWithPagination({
     () => ({
       page: currentPage,
       limit: limit,
+      // workspaceFilter가 undefined이면 workspaceIds를 전달하지 않음 (모든 워크스페이스 조회)
       workspaceIds: workspaceFilter,
       customerGroupId: selectedCustomerGroup || undefined,
       // Add sorting from TanStack Table

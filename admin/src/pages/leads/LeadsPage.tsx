@@ -51,6 +51,7 @@ import {
   useBulkAddGroupMembers,
   useBulkRemoveGroupMembers,
   useCreateCustomerGroup,
+  useCustomerGroup,
   useCustomerGroupsByWorkspace,
   useDeleteCustomerGroup,
   useUpdateCustomerGroup,
@@ -190,6 +191,16 @@ export default function LeadsPage() {
     selectedWorkspaceId !== "all" ? selectedWorkspaceId : "",
     selectedWorkspaceId !== "all",
   )
+
+  // 선택된 고객 그룹 정보 가져오기 (다른 워크스페이스의 그룹일 수 있음)
+  const selectedGroup = customerGroups?.find((g) => g.id === selectedCustomerGroup)
+  const { data: selectedGroupDetail } = useCustomerGroup(
+    selectedCustomerGroup,
+    !!selectedCustomerGroup && !selectedGroup,
+  )
+
+  // 선택된 그룹의 워크스페이스 ID (현재 워크스페이스에 없는 그룹일 수 있음)
+  const selectedGroupWorkspaceId = selectedGroup?.workspaceId || selectedGroupDetail?.workspaceId
 
   // 사용자 데이터 가져오기 (필요시 사용)
   useAllUsers()
@@ -1125,6 +1136,7 @@ export default function LeadsPage() {
             isSelectAllMode={isSelectAllMode}
             allLeadsSelected={allLeadsSelected}
             onToggleSelectAll={handleSelectAllLeads}
+            selectedGroupWorkspaceId={selectedGroupWorkspaceId}
           />
         </CardContent>
       </Card>
@@ -1183,6 +1195,8 @@ export default function LeadsPage() {
         leadCount={selectedLeads.length}
         actionType={bulkActionType}
         customerGroups={customerGroups}
+        workspaces={workspaces}
+        currentWorkspaceId={selectedWorkspaceId}
       />
 
       {/* CSV Upload Dialog */}

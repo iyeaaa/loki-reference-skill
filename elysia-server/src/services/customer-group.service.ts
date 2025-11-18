@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { customerGroupMembers, customerGroups } from "../db/schema/customer-groups"
 import { emails } from "../db/schema/emails"
@@ -6,6 +6,7 @@ import { leadContacts } from "../db/schema/lead-details"
 import { leads } from "../db/schema/leads"
 import { users } from "../db/schema/users"
 import { workspaces } from "../db/schema/workspaces"
+import { copyLead } from "./lead.service"
 
 // ====================================
 // CUSTOMER GROUP CRUD OPERATIONS
@@ -603,6 +604,12 @@ export async function bulkAddMembers(data: {
   leadIds: string[]
   addedBy?: string
 }) {
+  // 고객 그룹 정보 가져오기 (workspaceId 확인용)
+  const group = await getCustomerGroup(data.groupId)
+  if (!group) {
+    throw new Error("Customer group not found")
+  }
+
   // 이미 존재하는 멤버 조회 (중복 방지)
   const existing = await db
     .select({ leadId: customerGroupMembers.leadId })
@@ -617,7 +624,26 @@ export async function bulkAddMembers(data: {
     return 0
   }
 
-  const values = newLeadIds.map((leadId) => ({
+  // 각 리드의 workspaceId 확인 및 복사 처리
+  const leadsToAdd = await db
+    .select({ id: leads.id, workspaceId: leads.workspaceId })
+    .from(leads)
+    .where(inArray(leads.id, newLeadIds))
+
+  const finalLeadIds: string[] = []
+
+  for (const lead of leadsToAdd) {
+    // 워크스페이스가 다르면 리드 복사
+    if (lead.workspaceId !== group.workspaceId) {
+      const copiedLead = await copyLead(lead.id, group.workspaceId, data.addedBy)
+      finalLeadIds.push(copiedLead.id)
+    } else {
+      // 같은 워크스페이스면 기존 리드 사용
+      finalLeadIds.push(lead.id)
+    }
+  }
+
+  const values = finalLeadIds.map((leadId) => ({
     groupId: data.groupId,
     leadId,
     addedBy: data.addedBy || null,

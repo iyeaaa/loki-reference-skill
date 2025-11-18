@@ -6,7 +6,7 @@ export const structuredExtractionAgent = new Agent({
   name: "Structured Extraction",
   instructions:
     "You are a structured extraction agent. Your task is to extract structured data from the given text with upmost accuracy",
-  model: openai("gpt-5-mini-2025-08-07"),
+  model: openai("gpt-5.1-2025-11-13"),
   memory,
   defaultStreamOptions: {
     maxSteps: 50,

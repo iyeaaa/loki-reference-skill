@@ -22,15 +22,66 @@ system.bulkEmailCSV.title,CSV 대량 메일 발송,CSV Bulk Email Sending
 system.bulkEmailCSV.desc,CSV 파일로 여러 수신자에게 이메일을 한 번에 발송합니다,Send emails to multiple recipients at once via CSV file
 workspace.title,워크스페이스 정보,Workspace Information
 workspace.description,현재 워크스페이스의 회사 정보를 관리합니다,Manage company information for the current workspace
+workspace.descriptionFor,{{name}}의 회사 정보를 관리합니다,Manage company information for {{name}}
 workspace.companyName,회사명,Company Name
 workspace.companyWebsite,회사 웹사이트,Company Website
 workspace.companyPhone,회사 전화번호,Company Phone
 workspace.industry,업종,Industry
 workspace.companySize,회사 규모,Company Size
+workspace.companySizePlaceholder,"예: 1-10, 11-50, 51-200","e.g., 1-10, 11-50, 51-200"
 workspace.companyAddress,회사 주소,Company Address
 workspace.companyDescription,회사 설명,Company Description
 workspace.saving,저장 중...,Saving...
 workspace.saveChanges,변경사항 저장,Save Changes
+workspace.cancel,취소,Cancel
+workspace.save,저장,Save
+workspace.website,웹사이트,Website
+workspace.phoneNumber,전화번호,Phone Number
+workspace.address,주소,Address
+workspace.companyNamePlaceholder,회사명을 입력하세요,Enter company name
+workspace.companyWebsitePlaceholder,https://example.com,https://example.com
+workspace.companyPhonePlaceholder,"+1 (555) 123-4567","+1 (555) 123-4567"
+workspace.industryPlaceholder,"예: IT, 제조, 금융","e.g., IT, Manufacturing, Finance"
+workspace.companyAddressPlaceholder,회사 주소를 입력하세요,Enter company address
+workspace.companyDescriptionPlaceholder,회사에 대한 간단한 설명을 입력하세요,Enter a brief description of the company
+workspace.updateSuccess,회사 정보가 성공적으로 업데이트되었습니다.,Company information updated successfully.
+workspace.updateError,회사 정보 업데이트에 실패했습니다.,Failed to update company information.
+workspace.targetAudiences,타겟 고객층,Target Audiences
+workspace.targetAudiencesPlaceholder,"타겟 고객층을 쉼표로 구분하여 입력하세요 (예: 중소기업, 스타트업, 대기업)","Enter target audiences separated by commas (e.g., SMBs, Startups, Enterprises)"
+workspace.expansionGoals,확장 목표,Expansion Goals
+workspace.expansionGoalsPlaceholder,"확장 목표를 쉼표로 구분하여 입력하세요 (예: 해외 진출, 신규 시장 개척, 제품 라인 확대)","Enter expansion goals separated by commas (e.g., International expansion, New markets, Product line extension)"
+workspace.competitiveAdvantages,경쟁 우위,Competitive Advantages
+workspace.competitiveAdvantagesPlaceholder,"경쟁 우위를 쉼표로 구분하여 입력하세요 (예: 특허 기술, 빠른 고객 지원, 저렴한 가격)","Enter competitive advantages separated by commas (e.g., Patented technology, Fast support, Competitive pricing)"
+workspaces.management,워크스페이스 관리,Workspace Management
+workspaces.create,워크스페이스 생성,Create Workspace
+workspaces.edit,워크스페이스 수정,Edit Workspace
+workspaces.searchPlaceholder,"이름, 설명으로 검색...","Search by name, description..."
+workspaces.selected,{{count}}개 선택됨,{{count}} selected
+workspaces.changeStatus,상태 변경,Change Status
+workspaces.deleteSelected,선택 항목 삭제,Delete Selected
+workspaces.noWorkspaceSelected,선택된 워크스페이스가 없습니다.,No workspace selected.
+workspaces.deleteConfirm,정말로 {{count}}개의 워크스페이스를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.,Are you sure you want to delete {{count}} workspace(s)? This action cannot be undone.
+workspaces.form.workspaceName,워크스페이스 이름,Workspace Name
+workspaces.form.clientName,고객사 이름,Client Name
+workspaces.form.description,설명,Description
+workspaces.form.owner,소유자,Owner
+workspaces.form.active,활성,Active
+workspaces.form.create,생성,Create
+workspaces.form.save,저장,Save
+workspaces.form.cancel,취소,Cancel
+workspaces.form.workspaceNamePlaceholder,워크스페이스 이름을 입력하세요,Enter workspace name
+workspaces.form.clientNamePlaceholder,고객사 이름을 입력하세요,Enter client name
+workspaces.form.descriptionPlaceholder,워크스페이스에 대한 설명을 입력하세요,Enter a description of the workspace
+workspaces.form.selectOwner,소유자 선택,Select owner
+workspaces.form.searchUsers,사용자 검색...,Search users...
+workspaces.form.noUsersFound,사용자를 찾을 수 없습니다.,No users found.
+workspaces.form.selectCompanySize,회사 규모 선택,Select company size
+workspaces.form.size_1_10,1-10명,1-10 employees
+workspaces.form.size_11_50,11-50명,11-50 employees
+workspaces.form.size_51_200,51-200명,51-200 employees
+workspaces.form.size_201_500,201-500명,201-500 employees
+workspaces.form.size_501_1000,501-1000명,501-1000 employees
+workspaces.form.size_1001_plus,1001명 이상,1001+ employees
 signature.title,이메일 서명 관리,Email Signature Management
 signature.add,[NO TRANSLATION] settings.signature.add,[NO TRANSLATION] settings.signature.add
 signature.addDescription,[NO TRANSLATION] settings.signature.addDescription,[NO TRANSLATION] settings.signature.addDescription

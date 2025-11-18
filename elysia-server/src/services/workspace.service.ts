@@ -3,7 +3,11 @@ import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { sequenceEnrollments } from "../db/schema/sequences"
 import { users } from "../db/schema/users"
+import { workspaceProducts } from "../db/schema/workspace-products"
 import { workspaceMembers, workspaces } from "../db/schema/workspaces"
+import { mastra } from "../shared/mastra"
+import type { OnboardingEnrichmentOutput } from "../shared/mastra/shell/workflows/onboarding-enrichment/onboarding-enrichment"
+// import { model } from "../shared/mastra/shell/agents/onboarding-research-agent/constants"
 import logger from "../utils/logger"
 
 // ====================================
@@ -25,6 +29,11 @@ export async function getWorkspace(id: string) {
       companySize: workspaces.companySize,
       companyAddress: workspaces.companyAddress,
       companyDescription: workspaces.companyDescription,
+      websiteAnalysis: workspaces.websiteAnalysis,
+      targetAudiences: workspaces.targetAudiences,
+      expansionGoals: workspaces.expansionGoals,
+      competitiveAdvantages: workspaces.competitiveAdvantages,
+      rawResearchOutput: workspaces.rawResearchOutput,
       isActive: workspaces.isActive,
       createdAt: workspaces.createdAt,
       updatedAt: workspaces.updatedAt,
@@ -33,6 +42,37 @@ export async function getWorkspace(id: string) {
     })
     .from(workspaces)
     .innerJoin(users, eq(workspaces.ownerId, users.id))
+    .where(eq(workspaces.id, id))
+    .limit(1)
+
+  return result[0]
+}
+
+// GetWorkspace :one
+export async function getWorkspaceOnlyById(id: string) {
+  const result = await db
+    .select({
+      id: workspaces.id,
+      name: workspaces.name,
+      description: workspaces.description,
+      ownerId: workspaces.ownerId,
+      companyName: workspaces.companyName,
+      companyWebsite: workspaces.companyWebsite,
+      companyPhone: workspaces.companyPhone,
+      industry: workspaces.industry,
+      companySize: workspaces.companySize,
+      companyAddress: workspaces.companyAddress,
+      companyDescription: workspaces.companyDescription,
+      websiteAnalysis: workspaces.websiteAnalysis,
+      targetAudiences: workspaces.targetAudiences,
+      expansionGoals: workspaces.expansionGoals,
+      competitiveAdvantages: workspaces.competitiveAdvantages,
+      rawResearchOutput: workspaces.rawResearchOutput,
+      isActive: workspaces.isActive,
+      createdAt: workspaces.createdAt,
+      updatedAt: workspaces.updatedAt,
+    })
+    .from(workspaces)
     .where(eq(workspaces.id, id))
     .limit(1)
 
@@ -52,6 +92,11 @@ export async function createWorkspace(data: {
   companySize?: string
   companyAddress?: string
   companyDescription?: string
+  websiteAnalysis?: unknown
+  targetAudiences?: string[]
+  expansionGoals?: string[]
+  competitiveAdvantages?: string[]
+  rawResearchOutput?: unknown
 }) {
   const [newWorkspace] = await db
     .insert(workspaces)
@@ -67,6 +112,11 @@ export async function createWorkspace(data: {
       companySize: data.companySize || null,
       companyAddress: data.companyAddress || null,
       companyDescription: data.companyDescription || null,
+      websiteAnalysis: data.websiteAnalysis || null,
+      targetAudiences: data.targetAudiences || null,
+      expansionGoals: data.expansionGoals || null,
+      competitiveAdvantages: data.competitiveAdvantages || null,
+      rawResearchOutput: data.rawResearchOutput || null,
     })
     .returning({
       id: workspaces.id,
@@ -80,12 +130,154 @@ export async function createWorkspace(data: {
       companySize: workspaces.companySize,
       companyAddress: workspaces.companyAddress,
       companyDescription: workspaces.companyDescription,
+      websiteAnalysis: workspaces.websiteAnalysis,
+      targetAudiences: workspaces.targetAudiences,
+      expansionGoals: workspaces.expansionGoals,
+      competitiveAdvantages: workspaces.competitiveAdvantages,
+      rawResearchOutput: workspaces.rawResearchOutput,
       isActive: workspaces.isActive,
       createdAt: workspaces.createdAt,
       updatedAt: workspaces.updatedAt,
     })
 
   return newWorkspace
+}
+
+export async function onboardingEnrichment({
+  workspaceId,
+  websiteUrl,
+}: {
+  workspaceId: string
+  websiteUrl: string
+}) {
+  const workflow = mastra.getWorkflow("onboardingEnrichmentWorkflow")
+
+  if (!workflow) {
+    logger.error("❌ [ONBOARDING-ENRICHMENT] Onboarding Enrichment workflow not found in Mastra")
+    throw new Error(" Onboarding Enrichment workflow not found")
+  }
+
+  logger.info("✅ [ONBOARDING-ENRICHMENT] Workflow found, creating run instance")
+
+  // Create a run instance
+  const run = await workflow.createRunAsync()
+  logger.info("✅ [ONBOARDING-ENRICHMENT] Workflow run instance created")
+
+  // Execute the workflow
+  logger.info("🚀 [ONBOARDING-ENRICHMENT] Starting workflow execution")
+  const workflowResult = await run.start({
+    inputData: {
+      companyUrl: websiteUrl,
+    },
+  })
+
+  logger.info(
+    {
+      status: workflowResult.status,
+      stepCount: Object.keys(workflowResult.steps).length,
+    },
+    "📊 [ONBOARDING-ENRICHMENT] Workflow execution completed",
+  )
+
+  // Handle workflow failure
+  if (workflowResult.status === "failed") {
+    logger.error(
+      {
+        error: workflowResult.error.message,
+        errorDetails: workflowResult.error,
+      },
+      "❌ [ONBOARDING-ENRICHMENT] Workflow execution failed",
+    )
+    throw new Error(`Workflow failed: ${workflowResult.error.message}`)
+  }
+
+  // Get the step result
+  logger.info("📊 [ONBOARDING-ENRICHMENT] Extracting step result from workflow output")
+  const stepResult = workflowResult.steps["merge-data-step"]
+
+  if (!stepResult) {
+    logger.error(
+      { availableSteps: Object.keys(workflowResult.steps) },
+      "❌ [ONBOARDING-ENRICHMENT] Step 'merge-data-step' not found in workflow result",
+    )
+    throw new Error("Campaign steps generation step not found in workflow result")
+  }
+
+  logger.info(
+    {
+      stepId: "merge-data-step",
+      status: stepResult.status,
+    },
+    "📊 [ONBOARDING-ENRICHMENT] Step result extracted",
+  )
+
+  if (stepResult.status !== "success") {
+    logger.error({ status: stepResult.status }, "❌ [ONBOARDING-ENRICHMENT] Step execution failed")
+    throw new Error("Campaign steps generation step failed")
+  }
+
+  const result = stepResult.output as OnboardingEnrichmentOutput
+
+  if (!result.rawOutput) {
+    throw new Error("Failed to enrich onboarding")
+  }
+
+  logger.info(
+    {
+      targetMarkets: result.business.business.targetMarkets.length,
+      rawOutput: `${result.rawOutput?.substring(0, 50)}...`,
+    },
+    "🎉 [ONBOARDING-ENRICHMENT] Enriched Onboarding via workflow",
+  )
+
+  // 5. Store enrichment data in database
+  const workspace = await getWorkspaceOnlyById(workspaceId)
+  if (!workspace) {
+    throw new Error("Workspace not found")
+  }
+
+  // Update workspace with enrichment data
+  await updateWorkspace(workspaceId, {
+    name: workspace.name,
+    isActive: workspace.isActive,
+    websiteAnalysis: result.companyAndProducts,
+    targetAudiences: result.business.business.targetMarkets,
+    expansionGoals: result.business.business.expansionGoals,
+    competitiveAdvantages: result.business.business.competitiveAdvantages,
+    rawResearchOutput: result.rawOutput,
+  })
+
+  // Delete existing products first before creating new ones
+  const deletedProducts = await deleteWorkspaceProducts(workspaceId)
+  logger.info(
+    {
+      workspaceId,
+      productsDeleted: deletedProducts.length,
+    },
+    "🗑️ [ONBOARDING-ENRICHMENT] Deleted existing workspace products",
+  )
+
+  // Create workspace products from enrichment data
+  for (const product of result.companyAndProducts.products) {
+    await createWorkspaceProduct({
+      workspaceId: workspaceId,
+      name: product.name,
+      description: product.description,
+      category: product.category,
+      features: product.features,
+      priceRange: product.priceRange,
+      targetAudience: product.targetAudience,
+      imageUrl: product.image,
+    })
+  }
+
+  logger.info(
+    {
+      workspaceId,
+      productsCreated: result.companyAndProducts.products.length,
+    },
+    "✅ [ONBOARDING-ENRICHMENT] Workspace updated with enrichment data",
+  )
 }
 
 // UpdateWorkspace :one
@@ -103,6 +295,11 @@ export async function updateWorkspace(
     companySize?: string
     companyAddress?: string
     companyDescription?: string
+    websiteAnalysis?: unknown
+    targetAudiences?: string[]
+    expansionGoals?: string[]
+    competitiveAdvantages?: string[]
+    rawResearchOutput?: unknown
   },
 ) {
   const updateData: {
@@ -117,6 +314,11 @@ export async function updateWorkspace(
     companySize?: string
     companyAddress?: string
     companyDescription?: string
+    websiteAnalysis?: unknown
+    targetAudiences?: string[]
+    expansionGoals?: string[]
+    competitiveAdvantages?: string[]
+    rawResearchOutput?: unknown
     updatedAt: Date
   } = {
     name: data.name,
@@ -129,7 +331,30 @@ export async function updateWorkspace(
     companySize: data.companySize,
     companyAddress: data.companyAddress,
     companyDescription: data.companyDescription,
+    websiteAnalysis: data.websiteAnalysis,
+    targetAudiences: data.targetAudiences,
+    expansionGoals: data.expansionGoals,
+    competitiveAdvantages: data.competitiveAdvantages,
+    rawResearchOutput: data.rawResearchOutput,
     updatedAt: new Date(),
+  }
+  console.log(updateData)
+  if (updateData.companyWebsite) {
+    const oldWorkspaceData = await getWorkspaceOnlyById(id)
+    if (oldWorkspaceData) {
+      if (oldWorkspaceData.companyWebsite !== updateData.companyWebsite) {
+        // Ensure URL has protocol before passing to enrichment
+        const websiteUrl = updateData.companyWebsite.startsWith("http")
+          ? updateData.companyWebsite
+          : `https://${updateData.companyWebsite}`
+
+        // jina scraper background job
+        onboardingEnrichment({
+          workspaceId: id,
+          websiteUrl: websiteUrl,
+        })
+      }
+    }
   }
 
   // Only update ownerId if provided
@@ -153,6 +378,11 @@ export async function updateWorkspace(
       companySize: workspaces.companySize,
       companyAddress: workspaces.companyAddress,
       companyDescription: workspaces.companyDescription,
+      websiteAnalysis: workspaces.websiteAnalysis,
+      targetAudiences: workspaces.targetAudiences,
+      expansionGoals: workspaces.expansionGoals,
+      competitiveAdvantages: workspaces.competitiveAdvantages,
+      rawResearchOutput: workspaces.rawResearchOutput,
       isActive: workspaces.isActive,
       createdAt: workspaces.createdAt,
       updatedAt: workspaces.updatedAt,
@@ -215,6 +445,11 @@ export async function listWorkspaces(limit: number, offset: number) {
       companySize: workspaces.companySize,
       companyAddress: workspaces.companyAddress,
       companyDescription: workspaces.companyDescription,
+      websiteAnalysis: workspaces.websiteAnalysis,
+      targetAudiences: workspaces.targetAudiences,
+      expansionGoals: workspaces.expansionGoals,
+      competitiveAdvantages: workspaces.competitiveAdvantages,
+      rawResearchOutput: workspaces.rawResearchOutput,
       isActive: workspaces.isActive,
       createdAt: workspaces.createdAt,
       updatedAt: workspaces.updatedAt,
@@ -278,6 +513,11 @@ export async function listWorkspacesWithFilters(
       companySize: workspaces.companySize,
       companyAddress: workspaces.companyAddress,
       companyDescription: workspaces.companyDescription,
+      websiteAnalysis: workspaces.websiteAnalysis,
+      targetAudiences: workspaces.targetAudiences,
+      expansionGoals: workspaces.expansionGoals,
+      competitiveAdvantages: workspaces.competitiveAdvantages,
+      rawResearchOutput: workspaces.rawResearchOutput,
       isActive: workspaces.isActive,
       createdAt: workspaces.createdAt,
       updatedAt: workspaces.updatedAt,
@@ -309,6 +549,11 @@ export async function getWorkspacesByOwner(ownerId: string) {
       companySize: workspaces.companySize,
       companyAddress: workspaces.companyAddress,
       companyDescription: workspaces.companyDescription,
+      websiteAnalysis: workspaces.websiteAnalysis,
+      targetAudiences: workspaces.targetAudiences,
+      expansionGoals: workspaces.expansionGoals,
+      competitiveAdvantages: workspaces.competitiveAdvantages,
+      rawResearchOutput: workspaces.rawResearchOutput,
       isActive: workspaces.isActive,
       createdAt: workspaces.createdAt,
       updatedAt: workspaces.updatedAt,
@@ -534,6 +779,11 @@ export async function getUserWorkspaces(userId: string) {
       companySize: workspaces.companySize,
       companyAddress: workspaces.companyAddress,
       companyDescription: workspaces.companyDescription,
+      websiteAnalysis: workspaces.websiteAnalysis,
+      targetAudiences: workspaces.targetAudiences,
+      expansionGoals: workspaces.expansionGoals,
+      competitiveAdvantages: workspaces.competitiveAdvantages,
+      rawResearchOutput: workspaces.rawResearchOutput,
       isActive: workspaces.isActive,
       role: workspaceMembers.role,
       status: workspaceMembers.status,
@@ -564,6 +814,11 @@ export async function getAllUserRelatedWorkspaces(userId: string) {
       companySize: workspaces.companySize,
       companyAddress: workspaces.companyAddress,
       companyDescription: workspaces.companyDescription,
+      websiteAnalysis: workspaces.websiteAnalysis,
+      targetAudiences: workspaces.targetAudiences,
+      expansionGoals: workspaces.expansionGoals,
+      competitiveAdvantages: workspaces.competitiveAdvantages,
+      rawResearchOutput: workspaces.rawResearchOutput,
       createdAt: workspaces.createdAt,
       updatedAt: workspaces.updatedAt,
     })
@@ -586,6 +841,11 @@ export async function getAllUserRelatedWorkspaces(userId: string) {
       companySize: workspaces.companySize,
       companyAddress: workspaces.companyAddress,
       companyDescription: workspaces.companyDescription,
+      websiteAnalysis: workspaces.websiteAnalysis,
+      targetAudiences: workspaces.targetAudiences,
+      expansionGoals: workspaces.expansionGoals,
+      competitiveAdvantages: workspaces.competitiveAdvantages,
+      rawResearchOutput: workspaces.rawResearchOutput,
       createdAt: workspaces.createdAt,
       updatedAt: workspaces.updatedAt,
     })
@@ -610,4 +870,119 @@ export async function getAllUserRelatedWorkspaces(userId: string) {
   }
 
   return Array.from(workspaceMap.values())
+}
+
+// ====================================
+// WORKSPACE PRODUCTS OPERATIONS
+// ====================================
+
+// Get workspace with products
+export async function getWorkspaceWithProducts(id: string) {
+  const workspace = await getWorkspace(id)
+  if (!workspace) {
+    return null
+  }
+
+  const products = await db
+    .select()
+    .from(workspaceProducts)
+    .where(eq(workspaceProducts.workspaceId, id))
+    .orderBy(desc(workspaceProducts.createdAt))
+
+  return {
+    ...workspace,
+    products,
+  }
+}
+
+// List workspace products
+export async function listWorkspaceProducts(workspaceId: string) {
+  const products = await db
+    .select()
+    .from(workspaceProducts)
+    .where(eq(workspaceProducts.workspaceId, workspaceId))
+    .orderBy(desc(workspaceProducts.createdAt))
+
+  return products
+}
+
+// Get single workspace product
+export async function getWorkspaceProduct(id: string) {
+  const result = await db
+    .select()
+    .from(workspaceProducts)
+    .where(eq(workspaceProducts.id, id))
+    .limit(1)
+
+  return result[0]
+}
+
+// Create workspace product
+export async function createWorkspaceProduct(data: {
+  workspaceId: string
+  name?: string
+  description?: string
+  category?: string
+  features?: string[]
+  priceRange?: string
+  targetAudience?: string
+  imageUrl?: string
+}) {
+  const result = await db
+    .insert(workspaceProducts)
+    .values({
+      workspaceId: data.workspaceId,
+      name: data.name,
+      description: data.description,
+      category: data.category,
+      features: data.features || null,
+      priceRange: data.priceRange,
+      targetAudience: data.targetAudience,
+      imageUrl: data.imageUrl,
+    })
+    .returning()
+
+  return result[0]
+}
+
+// Update workspace product
+export async function updateWorkspaceProduct(
+  id: string,
+  data: {
+    name?: string
+    description?: string
+    category?: string
+    features?: string[]
+    priceRange?: string
+    targetAudience?: string
+    imageUrl?: string
+  },
+) {
+  const result = await db
+    .update(workspaceProducts)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(workspaceProducts.id, id))
+    .returning()
+
+  return result[0]
+}
+
+// Delete workspace product
+export async function deleteWorkspaceProduct(id: string) {
+  const result = await db.delete(workspaceProducts).where(eq(workspaceProducts.id, id)).returning()
+
+  return result[0]
+}
+
+// Delete all products for a workspace (useful for cleanup, though cascade should handle this)
+export async function deleteWorkspaceProducts(workspaceId: string) {
+  const result = await db
+    .delete(workspaceProducts)
+    .where(eq(workspaceProducts.workspaceId, workspaceId))
+    .returning()
+
+  return result
 }

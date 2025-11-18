@@ -1,0 +1,30 @@
+#compose.db.yml
+# This database is used locally to make migration testing easier before merging to the main branch
+# you can just comment out the DB ENV Variables and paste those ones instead
+# Database Configuration (Docker internal network)
+# DATABASE_URL="postgres://postgres:postgres@localhost:5432/postgres"
+# DB_HOST=localhost
+# DB_PORT=5432
+# DB_USER=postgres
+# DB_PASSWORD=postgres
+# DB_NAME=postgres
+# Then Start Docker
+# Then run `docker-compose -f compose.db.yml up` in the root directory
+# Then run `bun run db:migrate`
+# Then run `bun db:seed`
+# Then do db modifications and run `bun run db:generate` then `bun run db:migrate`
+
+services:
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres:/var/lib/postgresql
+    ports:
+      - 5432:5432
+volumes:
+  postgres:

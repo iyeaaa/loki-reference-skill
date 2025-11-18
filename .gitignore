@@ -66,3 +66,5 @@ sh
 elysia-server/index
 
 tmp
+
+.claude

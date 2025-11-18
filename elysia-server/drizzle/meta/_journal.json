@@ -162,6 +162,13 @@
       "when": 1763265884485,
       "tag": "0022_military_photon",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1763424964871,
+      "tag": "0023_superb_lily_hollister",
+      "breakpoints": true
     }
   ]
 }

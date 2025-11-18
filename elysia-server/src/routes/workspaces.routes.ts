@@ -350,3 +350,127 @@ export const adminWorkspaceRoutes = new Elysia({
       }),
     },
   )
+
+  // ====================================
+  // WORKSPACE PRODUCTS ROUTES
+  // ====================================
+
+  // Get all products for a workspace
+  .get(
+    "/:id/products",
+    async ({ params }) => {
+      const products = await workspaceService.listWorkspaceProducts(params.id)
+      return products
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
+  // Get single workspace product
+  .get(
+    "/:id/products/:productId",
+    async ({ params }) => {
+      const product = await workspaceService.getWorkspaceProduct(params.productId)
+      if (!product) {
+        return errorResponse("제품을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      }
+      return product
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+        productId: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
+  // Create workspace product
+  .post(
+    "/:id/products",
+    async ({ params, body }) => {
+      const product = await workspaceService.createWorkspaceProduct({
+        workspaceId: params.id,
+        ...body,
+      })
+      return product
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      body: t.Object({
+        name: t.Optional(t.String()),
+        description: t.Optional(t.String()),
+        category: t.Optional(t.String()),
+        features: t.Optional(t.Array(t.String())),
+        priceRange: t.Optional(t.String()),
+        targetAudience: t.Optional(t.String()),
+        imageUrl: t.Optional(t.String()),
+      }),
+    },
+  )
+
+  // Update workspace product
+  .put(
+    "/:id/products/:productId",
+    async ({ params, body }) => {
+      const product = await workspaceService.updateWorkspaceProduct(params.productId, body)
+      if (!product) {
+        return errorResponse("제품을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      }
+      return product
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+        productId: t.String({ format: "uuid" }),
+      }),
+      body: t.Object({
+        name: t.Optional(t.String()),
+        description: t.Optional(t.String()),
+        category: t.Optional(t.String()),
+        features: t.Optional(t.Array(t.String())),
+        priceRange: t.Optional(t.String()),
+        targetAudience: t.Optional(t.String()),
+        imageUrl: t.Optional(t.String()),
+      }),
+    },
+  )
+
+  // Delete workspace product
+  .delete(
+    "/:id/products/:productId",
+    async ({ params }) => {
+      const product = await workspaceService.deleteWorkspaceProduct(params.productId)
+      if (!product) {
+        return errorResponse("제품을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      }
+      return { message: "제품이 삭제되었습니다.", product }
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+        productId: t.String({ format: "uuid" }),
+      }),
+    },
+  )
+
+  // Get workspace with products (optional include)
+  .get(
+    "/:id/with-products",
+    async ({ params }) => {
+      const workspace = await workspaceService.getWorkspaceWithProducts(params.id)
+      if (!workspace) {
+        return errorResponse("워크스페이스를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      }
+      return workspace
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+    },
+  )

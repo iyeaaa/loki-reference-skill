@@ -1,6 +1,7 @@
 import { Plus, Search, Trash2, UserCheck, X } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -17,11 +18,13 @@ import type { User } from "@/lib/api/types/user"
 import type { Workspace } from "@/lib/api/types/workspace"
 import { AddMemberDialog } from "./AddMemberDialog"
 import { BulkActionModal } from "./BulkActionModal"
+import { WorkspaceCompanyInfo } from "./WorkspaceCompanyInfo"
 import { WorkspaceFilters } from "./WorkspaceFilters"
 import { WorkspaceForm } from "./WorkspaceForm"
 import { WorkspacesTableWithPagination } from "./WorkspacesTableWithPagination"
 
 export default function WorkspacesPage() {
+  const { t } = useTranslation()
   const [users, setUsers] = useState<User[]>([])
 
   const [searchInput, setSearchInput] = useState("")
@@ -93,11 +96,7 @@ export default function WorkspacesPage() {
   const handleBulkDelete = async () => {
     if (selectedWorkspaces.length === 0) return
 
-    if (
-      !confirm(
-        `선택한 ${selectedWorkspaces.length}개의 워크스페이스를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.`,
-      )
-    )
+    if (!confirm(t("settings.workspaces.deleteConfirm", { count: selectedWorkspaces.length })))
       return
 
     for (const workspaceId of selectedWorkspaces) {
@@ -108,7 +107,7 @@ export default function WorkspacesPage() {
 
   const handleBulkAction = async (actionType: string, value: string | string[]) => {
     if (selectedWorkspaces.length === 0) {
-      toast.error("선택된 워크스페이스가 없습니다.")
+      toast.error(t("settings.workspaces.noWorkspaceSelected"))
       return
     }
 
@@ -127,7 +126,7 @@ export default function WorkspacesPage() {
 
   const openBulkActionModal = (type: "status") => {
     if (selectedWorkspaces.length === 0) {
-      toast.error("선택된 워크스페이스가 없습니다.")
+      toast.error(t("settings.workspaces.noWorkspaceSelected"))
       return
     }
     setBulkActionType(type)
@@ -169,14 +168,17 @@ export default function WorkspacesPage() {
         onClearFilters={clearFilters}
       />
 
+      {/* Workspace Company Info - only shown when a specific workspace is selected */}
+      <WorkspaceCompanyInfo />
+
       {/* Workspaces Table */}
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">워크스페이스 관리</CardTitle>
+            <CardTitle className="text-lg">{t("settings.workspaces.management")}</CardTitle>
             <Button onClick={() => setShowCreateDialog(true)}>
               <Plus className="h-4 w-4 mr-1" />
-              워크스페이스 생성
+              {t("settings.workspaces.create")}
             </Button>
           </div>
         </CardHeader>
@@ -186,7 +188,7 @@ export default function WorkspacesPage() {
             <div className="relative w-full md:w-[400px]">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="워크스페이스명, 설명으로 검색..."
+                placeholder={t("settings.workspaces.searchPlaceholder")}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
@@ -211,12 +213,14 @@ export default function WorkspacesPage() {
           {selectedWorkspaces.length > 0 && (
             <div className="flex items-center gap-4 mb-6">
               <div className="text-sm text-muted-foreground">
-                <span className="font-medium">{selectedWorkspaces.length}개 선택됨</span>
+                <span className="font-medium">
+                  {t("settings.workspaces.selected", { count: selectedWorkspaces.length })}
+                </span>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => openBulkActionModal("status")}>
                   <UserCheck className="h-4 w-4 mr-1" />
-                  상태 변경
+                  {t("settings.workspaces.changeStatus")}
                 </Button>
                 <Button
                   variant="outline"
@@ -225,7 +229,7 @@ export default function WorkspacesPage() {
                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                 >
                   <Trash2 className="h-4 w-4 mr-1" />
-                  선택 삭제
+                  {t("settings.workspaces.deleteSelected")}
                 </Button>
               </div>
             </div>
@@ -248,7 +252,9 @@ export default function WorkspacesPage() {
       <Dialog open={_showCreateDialog} onOpenChange={(open) => setShowCreateDialog(open)}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="text-xl font-semibold">워크스페이스 생성</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">
+              {t("settings.workspaces.create")}
+            </DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto flex-1 -mx-6 px-6">
             <WorkspaceForm
@@ -265,7 +271,9 @@ export default function WorkspacesPage() {
       <Dialog open={!!editingWorkspace} onOpenChange={(open) => !open && setEditingWorkspace(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="text-xl font-semibold">워크스페이스 정보 수정</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">
+              {t("settings.workspaces.edit")}
+            </DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto flex-1 -mx-6 px-6">
             {editingWorkspace && (

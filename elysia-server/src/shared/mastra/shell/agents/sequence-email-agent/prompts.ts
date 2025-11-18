@@ -213,16 +213,18 @@ ${productsContext}
 Social Media Presence:
 ${socialMediaContext}
 
-${context.additionalContext || ""}
-
 Requirements:
 - Create a personalized Korean B2B email
 - Use the recipient company details, products, and social media presence to create highly personalized content
 - Tone: Professional, personalized, value-focused
-- Use Korean placeholders: {{회사명}}, {{담당자명}}, {{업종}}, {{웹사이트}}
 
 Response Format:
 SUBJECT: [Email subject line]
 BODY:
-[Email body content]`
+[Email body content]
+
+
+Sender of the email information:
+${context.additionalContext}
+`
 }

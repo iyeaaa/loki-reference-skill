@@ -40,5 +40,7 @@ export const generateCampaignPrompt = (context: CampaignStepGenerationContext) =
   and here is the campaign info:
   ${context.campaignName ? `campaign name: ${context.campaignName}` : ""}
   ${context.campaignDescription ? `campaign description: ${context.campaignDescription}` : ""}
+  ${context.campaignMemo ? `campaign memo: ${context.campaignMemo}` : ""}
+  ${context.rawResearchOutput ? `raw research output of my company: ${context.rawResearchOutput}` : ""}
   `
 }

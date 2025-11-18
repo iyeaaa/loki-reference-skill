@@ -142,20 +142,27 @@ export async function generateAICampaign(data: {
       },
       "🚀 [CAMPAIGN-GEN] Starting AI campaign generation",
     )
-    db.update(sequences)
+    const sequence = await db
+      .update(sequences)
       .set({ status: "generating" })
       .where(eq(sequences.id, data.sequenceId))
-      .returning()
+      .returning({
+        id: sequences.id,
+        name: sequences.name,
+        description: sequences.description,
+        memo: sequences.memo,
+      })
 
     // 1. Get workspace information
     const [workspace] = await db
       .select({
         name: workspaces.name,
         companyName: workspaces.companyName,
+        companyDescription: workspaces.companyDescription,
         companyWebsite: workspaces.companyWebsite,
         industry: workspaces.industry,
-        companyDescription: workspaces.companyDescription,
         companySize: workspaces.companySize,
+        rawResearchOutput: workspaces.rawResearchOutput,
       })
       .from(workspaces)
       .where(eq(workspaces.id, data.workspaceId))
@@ -510,34 +517,6 @@ export async function generateAICampaign(data: {
     let totalDrafts = 0
 
     const currentTime = new Date()
-    // const enrollmentsByLeadId = new Map<string, string>() // leadId -> enrollmentId
-
-    // COMMENTED OUT: Enrollment creation - not needed for AI draft generation
-    // logger.info(
-    //   { totalLeads: leadsInfo.length },
-    //   "📝 [CAMPAIGN-GEN] Creating enrollments for all leads",
-    // )
-
-    // for (const leadInfo of leadsInfo) {
-    //   const [enrollment] = await db
-    //     .insert(sequenceEnrollments)
-    //     .values({
-    //       sequenceId: data.sequenceId,
-    //       leadId: leadInfo.id,
-    //       userEmailAccountId: data.userEmailAccountId,
-    //       status: "active",
-    //       currentStepOrder: 1,
-    //       enrolledAt: currentTime,
-    //     })
-    //     .returning({
-    //       id: sequenceEnrollments.id,
-    //     })
-
-    //   if (enrollment) {
-    //     enrollmentsByLeadId.set(leadInfo.id, enrollment.id)
-    //     totalEnrollments++
-    //   }
-    // }
 
     logger.info(
       { totalLeads: leadsInfo.length },
@@ -567,43 +546,6 @@ export async function generateAICampaign(data: {
 
       // Process all leads for this step
       for (const leadInfo of leadsInfo) {
-        // COMMENTED OUT: Enrollment and execution creation - not needed for AI draft generation
-        // const enrollmentId = enrollmentsByLeadId.get(leadInfo.id)
-        // if (!enrollmentId) {
-        //   logger.warn(
-        //     { leadId: leadInfo.id, stepOrder: step.stepOrder },
-        //     "⚠️ [CAMPAIGN-GEN] No enrollment found for lead, skipping",
-        //   )
-        //   continue
-        // }
-
-        // // Calculate scheduled time
-        // const scheduledAt = calculateScheduledTime(
-        //   new Date(),
-        //   stepTemplate.delayDays,
-        //   stepTemplate.scheduledHour,
-        //   stepTemplate.scheduledMinute,
-        //   stepTemplate.timezone,
-        // )
-
-        // // Create step execution
-        // const [execution] = await db
-        //   .insert(sequenceStepExecutions)
-        //   .values({
-        //     enrollmentId,
-        //     stepId: step.id,
-        //     stepOrder: step.stepOrder,
-        //     status: "pending",
-        //     scheduledAt,
-        //   })
-        //   .returning({
-        //     id: sequenceStepExecutions.id,
-        //   })
-
-        // if (!execution) continue
-
-        // totalExecutions++
-
         // Generate AI email draft with personalized generation (judge + parse)
         try {
           logger.info(
@@ -619,19 +561,21 @@ export async function generateAICampaign(data: {
           // Build additional context with workspace and step metadata
           const additionalContext = `Workspace Information:
 - Company: ${workspace.companyName || workspace.name}
-- Industry: ${workspace.industry || "N/A"}
 - Website: ${workspace.companyWebsite || "N/A"}
-- Description: ${workspace.companyDescription || "N/A"}
 
-Email Requirements:
+- Sequence Information: ${JSON.stringify(sequence)}
+- Sequence Step Information:
 - Step ${step.stepOrder} of ${createdSteps.length}: ${stepTemplate.emailType}
 - Purpose: ${getStepPurpose(step.stepOrder)}
-- Length: Under 125 words for first two emails, concise for all
-- Tone: Professional, personalized, value-focused
-- Must include: Clear value proposition and specific CTA
-- Personalization: Use the recipient company details, products, and social media presence to create highly personalized content
 
-Current Time: ${currentTime.toISOString()}`
+- Additional Company Information:
+${
+  workspace.rawResearchOutput
+    ? `- Research Output: ${workspace.rawResearchOutput}`
+    : `- Industry: ${workspace.industry || "N/A"}
+- Description: ${workspace.companyDescription || "N/A"}
+- Size: ${workspace.companySize || "N/A"}`
+}}`
 
           // Use Mastra sequence email generation workflow
           const emailWorkflow = mastra.getWorkflow("sequenceEmailGenerationWorkflow")
@@ -878,6 +822,7 @@ export async function generateAICampaignSteps(data: {
         industry: workspaces.industry,
         companyDescription: workspaces.companyDescription,
         companySize: workspaces.companySize,
+        rawResearchOutput: workspaces.rawResearchOutput,
       })
       .from(workspaces)
       .where(eq(workspaces.id, data.workspaceId))
@@ -971,11 +916,13 @@ export async function generateAICampaignSteps(data: {
         industry: workspace.industry || undefined,
         companyDescription: workspace.companyDescription || undefined,
         companySize: workspace.companySize || undefined,
+        rawResearchOutput: workspace.rawResearchOutput || undefined,
         totalLeads: groupLeads.length,
         averageIndustry,
         leadsDescription,
         campaignName: campaign.name,
         campaignDescription: campaign.description,
+        campaignMemo: campaign.memo || undefined,
         groupName: customerGroup.name,
         groupDescription: customerGroup.description,
       },

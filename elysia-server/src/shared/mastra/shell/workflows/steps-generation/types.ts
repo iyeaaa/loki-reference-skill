@@ -15,11 +15,13 @@ export const CampaignStepGenerationContextSchema = z.object({
   industry: z.string().optional().describe("Industry/sector"),
   companyDescription: z.string().optional().describe("Company description"),
   companySize: z.string().optional().describe("Company size"),
+  rawResearchOutput: z.string().optional().describe("Company research output"),
   totalLeads: z.number().describe("Total number of leads in the campaign"),
   averageIndustry: z.string().optional().describe("Primary industry of leads"),
   leadsDescription: z.string().describe("Description of the lead group"),
   campaignName: z.string().optional().describe("Name of the campaign"),
   campaignDescription: z.string().optional().describe("Description of the campaign"),
+  campaignMemo: z.string().optional().describe("Memo for the campaign"),
   groupName: z.string().optional().describe("Name of the lead group"),
   groupDescription: z.string().optional().describe("Description of the lead group"),
 })

@@ -236,9 +236,7 @@ export async function onboardingEnrichment({
   if (!workspace) {
     throw new Error("Workspace not found")
   }
-
-  // Update workspace with enrichment data
-  await updateWorkspace(workspaceId, {
+  let updateWorkspacePromise = updateWorkspace(workspaceId, {
     name: workspace.name,
     isActive: workspace.isActive,
     websiteAnalysis: result.companyAndProducts,
@@ -248,8 +246,27 @@ export async function onboardingEnrichment({
     rawResearchOutput: result.rawOutput,
   })
 
+  // populate company description if empty or doesn't exist
+  if (!workspace.companyDescription || workspace.companyDescription === "") {
+    updateWorkspacePromise = updateWorkspace(workspaceId, {
+      name: workspace.name,
+      isActive: workspace.isActive,
+      websiteAnalysis: result.companyAndProducts,
+      targetAudiences: result.business.business.targetMarkets,
+      expansionGoals: result.business.business.expansionGoals,
+      competitiveAdvantages: result.business.business.competitiveAdvantages,
+      rawResearchOutput: result.rawOutput,
+      companyDescription: result.companyAndProducts.company.description,
+    })
+  }
+
   // Delete existing products first before creating new ones
-  const deletedProducts = await deleteWorkspaceProducts(workspaceId)
+  const [deletedProducts] = await Promise.all([
+    deleteWorkspaceProducts(workspaceId),
+    // Update workspace with enrichment data in parallel with deletion
+    updateWorkspacePromise,
+  ])
+
   logger.info(
     {
       workspaceId,
@@ -258,19 +275,21 @@ export async function onboardingEnrichment({
     "🗑️ [ONBOARDING-ENRICHMENT] Deleted existing workspace products",
   )
 
-  // Create workspace products from enrichment data
-  for (const product of result.companyAndProducts.products) {
-    await createWorkspaceProduct({
-      workspaceId: workspaceId,
-      name: product.name,
-      description: product.description,
-      category: product.category,
-      features: product.features,
-      priceRange: product.priceRange,
-      targetAudience: product.targetAudience,
-      imageUrl: product.image,
-    })
-  }
+  // Create workspace products from enrichment data (after deletion completes)
+  await Promise.all(
+    result.companyAndProducts.products.map((product) =>
+      createWorkspaceProduct({
+        workspaceId: workspaceId,
+        name: product.name,
+        description: product.description,
+        category: product.category,
+        features: product.features,
+        priceRange: product.priceRange,
+        targetAudience: product.targetAudience,
+        imageUrl: product.image,
+      }),
+    ),
+  )
 
   logger.info(
     {

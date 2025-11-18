@@ -50,6 +50,10 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
   // const [selectedEmailAccountId, setSelectedEmailAccountId] = useState(data.selectedEmailAccountId)
   const [isGenerating, setIsGenerating] = useState(false)
 
+  // AI mode signature state
+  const [aiIncludeSignature, setAiIncludeSignature] = useState(false)
+  const [aiSignature, setAiSignature] = useState<string>("")
+
   // // Get email accounts for AI mode
   // const { data: emailAccountsData } = useEmailAccounts({ page: 1, limit: 100 })
   // const emailAccounts = emailAccountsData?.emailAccounts || []
@@ -144,6 +148,11 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
         emailSignature: step.emailSignature || signature,
       }))
       setSteps(updatedSteps)
+
+      // AI mode signature도 초기화
+      if (!aiSignature) {
+        setAiSignature(signature)
+      }
     }
   }, [defaultSignature])
 
@@ -470,6 +479,12 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
           //   }))}
           isGenerating={isGenerating}
           onGenerateAI={handleGenerateAIMode}
+          includeSignature={aiIncludeSignature}
+          onIncludeSignatureChange={setAiIncludeSignature}
+          signature={aiSignature}
+          onSignatureChange={setAiSignature}
+          getUserSignature={getUserSignature}
+          userId={user?.id}
         />
       )}
 

@@ -1,11 +1,10 @@
-import { Loader2, Sparkles } from "lucide-react"
-import {
-  useEffect,
-  // useId,
-  useState,
-} from "react"
+import { Loader2, Mail, Sparkles } from "lucide-react"
+import { useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
+import { SignatureEditorModal } from "@/components/SignatureEditorModal"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 import { useSequenceSteps } from "@/lib/api/hooks/sequences"
 // import { Label } from "@/components/ui/label"
 // import {
@@ -30,20 +29,35 @@ interface AIModeContentProps {
   // }>
   isGenerating: boolean
   onGenerateAI: () => void
+  // Signature options
+  includeSignature?: boolean
+  onIncludeSignatureChange?: (include: boolean) => void
+  signature?: string
+  onSignatureChange?: (signature: string) => void
+  getUserSignature?: () => string
+  userId?: string
 }
 
 export function AIModeContent({
   sequenceId,
-  workspaceId: _workspaceId,
+  workspaceId,
   // selectedEmailAccountId,
   // onEmailAccountChange,
   // emailAccounts,
   isGenerating,
   onGenerateAI,
+  includeSignature = false,
+  onIncludeSignatureChange,
+  signature,
+  onSignatureChange,
+  getUserSignature,
+  userId,
 }: AIModeContentProps) {
   const { t } = useTranslation()
   // const emailAccountSelectId = useId()
   const [showGeneratedContent, setShowGeneratedContent] = useState(false)
+  const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false)
+  const signatureCheckboxId = useId()
 
   // Check if we have generated steps
   const { data: steps } = useSequenceSteps(sequenceId || "", !!sequenceId)
@@ -67,54 +81,54 @@ export function AIModeContent({
 
   return (
     <div className="space-y-6">
-      {/* Email account is now optional - warning commented out */}
-      {/* {emailAccounts.length === 0 && (
-        <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-4 border border-amber-200 dark:border-amber-800">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-                {t("sequences.aiMode.noEmailAccountsWarning")}
-              </p>
-              <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                {t("sequences.aiMode.noEmailAccountsMessage")}
-              </p>
-              <Link to="/settings?tab=workspace" className="mt-3 inline-block">
-                <Button size="sm" variant="outline" className="border-amber-300">
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t("sequences.aiMode.addEmailAccount")}
-                </Button>
-              </Link>
-            </div>
-          </div>
+      {/* Signature Option */}
+      <div className="space-y-4 rounded-lg border p-4 bg-card">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id={signatureCheckboxId}
+            checked={includeSignature}
+            onCheckedChange={(checked) => onIncludeSignatureChange?.(checked as boolean)}
+            disabled={isGenerating}
+          />
+          <Label htmlFor={signatureCheckboxId} className="text-sm font-medium cursor-pointer">
+            이메일에 서명 추가
+          </Label>
         </div>
-      )}
 
-      <div className="space-y-2">
-        <Label htmlFor={emailAccountSelectId}>{t("sequences.aiMode.selectEmailAccount")}</Label>
-        <Select
-          value={selectedEmailAccountId}
-          onValueChange={onEmailAccountChange}
-          disabled={isGenerating || emailAccounts.length === 0}
-        >
-          <SelectTrigger id={emailAccountSelectId}>
-            <SelectValue placeholder={t("sequences.aiMode.selectEmailAccountPlaceholder")} />
-          </SelectTrigger>
-          <SelectContent>
-            {emailAccounts.length === 0 ? (
-              <SelectItem disabled value="none">
-                {t("sequences.aiMode.noEmailAccounts")}
-              </SelectItem>
-            ) : (
-              emailAccounts.map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.displayName || account.emailAddress || account.userEmail || "No Info"}
-                </SelectItem>
-              ))
+        {includeSignature && (
+          <div className="space-y-3 pl-6 border-l-2 border-primary/20">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm text-muted-foreground">서명 설정</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsSignatureModalOpen(true)}
+                disabled={isGenerating}
+                className="h-8"
+              >
+                <Mail className="h-3 w-3 mr-1" />
+                서명 편집
+              </Button>
+            </div>
+
+            {/* Signature Preview */}
+            {signature && (
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground">서명 미리보기</Label>
+                <div
+                  className="text-xs prose prose-sm max-w-none dark:prose-invert"
+                  // biome-ignore lint/security/noDangerouslySetInnerHtml: User-managed signature content is safe
+                  dangerouslySetInnerHTML={{ __html: signature }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  이 서명은 생성된 모든 이메일 본문 하단에 자동으로 추가됩니다.
+                </p>
+              </div>
             )}
-          </SelectContent>
-        </Select>
-      </div> */}
+          </div>
+        )}
+      </div>
 
       <div className="bg-gradient-to-br from-primary/5 to-primary/10 p-6 rounded-xl border-2 border-primary/20">
         <Button
@@ -151,6 +165,21 @@ export function AIModeContent({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Signature Editor Modal */}
+      {getUserSignature && (
+        <SignatureEditorModal
+          isOpen={isSignatureModalOpen}
+          onClose={() => setIsSignatureModalOpen(false)}
+          defaultSignature={signature || getUserSignature()}
+          onSave={(newSignature) => {
+            onSignatureChange?.(newSignature)
+            setIsSignatureModalOpen(false)
+          }}
+          workspaceId={workspaceId}
+          userId={userId}
+        />
       )}
     </div>
   )

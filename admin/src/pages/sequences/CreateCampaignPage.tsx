@@ -52,6 +52,7 @@ export default function CreateCampaignPage() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const isCreatingRef = useRef(false)
+  const sequenceIdRef = useRef<string | null>(editingSequenceId)
 
   // Load existing sequence if editing
   const { data: existingSequence } = useSequence(editingSequenceId || "", !!editingSequenceId)
@@ -114,11 +115,20 @@ export default function CreateCampaignPage() {
     setIsInitialized(true)
   }, [editingSequenceId, existingSequence, existingSteps])
 
-  // Initialize: Create draft sequence in DB on mount (only if not editing)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: navigate is stable function
+  // Update ref when sequenceId changes
   useEffect(() => {
-    if (editingSequenceId) return // Skip if editing existing
-    if (isInitialized || sequenceId || isCreatingRef.current) return
+    sequenceIdRef.current = sequenceId
+  }, [sequenceId])
+
+  // Initialize: Create draft sequence in DB on mount (only if not editing)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: navigate, t are stable functions
+  useEffect(() => {
+    // Skip if editing existing or already initialized
+    if (editingSequenceId) return
+    if (isInitialized) return
+    // ref를 사용하여 최신 sequenceId 확인 (클로저 문제 방지)
+    if (sequenceIdRef.current) return // sequenceId가 이미 있으면 절대 새로 생성하지 않음
+    if (isCreatingRef.current) return
 
     const workspaceId =
       selectedWorkspace && selectedWorkspace.id !== "all" ? selectedWorkspace.id : ""
@@ -143,6 +153,7 @@ export default function CreateCampaignPage() {
       .then((sequence) => {
         // console.log("✅ 초안 캠페인 생성 완료:", sequence.id)
         setSequenceId(sequence.id)
+        sequenceIdRef.current = sequence.id
         setCampaignData((prev) => ({
           ...prev,
           workspaceId,
@@ -155,7 +166,9 @@ export default function CreateCampaignPage() {
         isCreatingRef.current = false
         navigate("/sequences")
       })
-  }, [editingSequenceId, isInitialized, sequenceId, selectedWorkspace])
+    // sequenceId를 의존성에서 제거: sequenceId가 변경되어도 초기화 로직은 재실행되지 않아야 함
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingSequenceId, isInitialized, selectedWorkspace])
 
   // Auto-save to DB with debounce
   useEffect(() => {
@@ -163,6 +176,12 @@ export default function CreateCampaignPage() {
 
     const timer = setTimeout(() => {
       if (!sequenceId || isSaving) return
+
+      // Skip auto-save if campaign name is empty or default
+      const trimmedName = campaignData.name.trim()
+      if (!trimmedName || trimmedName === t("sequences.createPage.newCampaign")) {
+        return
+      }
 
       setIsSaving(true)
 
@@ -173,7 +192,7 @@ export default function CreateCampaignPage() {
         customerGroupId?: string
         selectedLeadIds?: string[]
       } = {
-        name: campaignData.name,
+        name: trimmedName,
       }
 
       // Only include fields that have values
@@ -210,11 +229,18 @@ export default function CreateCampaignPage() {
     }, 2000) // 2초 디바운스
 
     return () => clearTimeout(timer)
-  }, [campaignData, sequenceId, isSaving, updateSequence])
+  }, [campaignData, sequenceId, isSaving, updateSequence, t])
 
   const handleManualSave = async () => {
     if (!sequenceId) {
       toast.error(t("sequences.createPage.notCreated"))
+      return
+    }
+
+    // Validate: Campaign name should not be empty or default
+    const trimmedName = campaignData.name.trim()
+    if (!trimmedName || trimmedName === t("sequences.createPage.newCampaign")) {
+      toast.error(t("sequences.step3.enterCampaignName"))
       return
     }
 
@@ -227,7 +253,7 @@ export default function CreateCampaignPage() {
         customerGroupId?: string
         selectedLeadIds?: string[]
       } = {
-        name: campaignData.name,
+        name: trimmedName,
       }
 
       // Only include fields that have values

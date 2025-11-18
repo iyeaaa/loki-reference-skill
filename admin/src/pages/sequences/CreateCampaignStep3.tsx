@@ -74,7 +74,8 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
       return
     }
 
-    if (!data.name.trim()) {
+    const trimmedName = data.name.trim()
+    if (!trimmedName || trimmedName === t("sequences.createPage.newCampaign")) {
       toast.error(t("sequences.step3.enterCampaignName"))
       return
     }
@@ -88,7 +89,7 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
       selectedLeadIds?: string[]
       memo?: string
     } = {
-      name: data.name.trim(),
+      name: trimmedName,
       status: "draft",
     }
 
@@ -182,7 +183,8 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
       return
     }
 
-    if (!data.name.trim()) {
+    const trimmedName = data.name.trim()
+    if (!trimmedName || trimmedName === t("sequences.createPage.newCampaign")) {
       toast.error(t("sequences.step3.enterCampaignName"))
       return
     }
@@ -196,7 +198,7 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
       selectedLeadIds?: string[]
       memo?: string
     } = {
-      name: data.name.trim(),
+      name: trimmedName,
       status: "ready",
     }
 

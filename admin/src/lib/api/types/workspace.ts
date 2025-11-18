@@ -10,6 +10,11 @@ export interface Workspace {
   companySize?: string | undefined
   companyAddress?: string | undefined
   companyDescription?: string | undefined
+  websiteAnalysis?: unknown | undefined
+  targetAudiences?: string[] | undefined
+  expansionGoals?: string[] | undefined
+  competitiveAdvantages?: string[] | undefined
+  rawResearchOutput?: unknown | undefined
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -56,6 +61,11 @@ export interface CreateWorkspaceData {
   companySize?: string | undefined
   companyAddress?: string | undefined
   companyDescription?: string | undefined
+  websiteAnalysis?: unknown | undefined
+  targetAudiences?: string[] | undefined
+  expansionGoals?: string[] | undefined
+  competitiveAdvantages?: string[] | undefined
+  rawResearchOutput?: unknown | undefined
   isActive?: boolean
 }
 
@@ -70,5 +80,48 @@ export interface UpdateWorkspaceData {
   companySize?: string | undefined
   companyAddress?: string | undefined
   companyDescription?: string | undefined
+  websiteAnalysis?: unknown | undefined
+  targetAudiences?: string[] | undefined
+  expansionGoals?: string[] | undefined
+  competitiveAdvantages?: string[] | undefined
+  rawResearchOutput?: unknown | undefined
   isActive: boolean
+}
+
+export interface WorkspaceProduct {
+  id: string
+  workspaceId: string
+  name?: string | null
+  description?: string | null
+  category?: string | null
+  features?: string[] | null
+  priceRange?: string | null
+  targetAudience?: string | null
+  imageUrl?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateWorkspaceProductData {
+  name?: string
+  description?: string
+  category?: string
+  features?: string[]
+  priceRange?: string
+  targetAudience?: string
+  imageUrl?: string
+}
+
+export interface UpdateWorkspaceProductData {
+  name?: string
+  description?: string
+  category?: string
+  features?: string[]
+  priceRange?: string
+  targetAudience?: string
+  imageUrl?: string
+}
+
+export interface WorkspaceWithProducts extends Workspace {
+  products: WorkspaceProduct[]
 }

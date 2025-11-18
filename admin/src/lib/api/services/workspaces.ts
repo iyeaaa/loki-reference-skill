@@ -1,11 +1,15 @@
 import { apiFetch } from "../client"
 import type {
   CreateWorkspaceData,
+  CreateWorkspaceProductData,
   UpdateWorkspaceData,
+  UpdateWorkspaceProductData,
   Workspace,
   WorkspaceMember,
+  WorkspaceProduct,
   WorkspacesParams,
   WorkspacesResponse,
+  WorkspaceWithProducts,
 } from "../types/workspace"
 
 export const workspacesApi = {
@@ -153,6 +157,55 @@ export const workspacesApi = {
     return apiFetch<Workspace>(`/api/v1/admin/workspaces/${workspaceId}/transfer`, {
       method: "PUT",
       body: JSON.stringify({ newOwnerId }),
+    })
+  },
+
+  // ====================================
+  // WORKSPACE PRODUCTS OPERATIONS
+  // ====================================
+
+  // Get workspace with products
+  getWithProducts: async (id: string): Promise<WorkspaceWithProducts> => {
+    return apiFetch<WorkspaceWithProducts>(`/api/v1/workspaces/${id}/with-products`)
+  },
+
+  // List workspace products
+  listProducts: async (workspaceId: string): Promise<WorkspaceProduct[]> => {
+    return apiFetch<WorkspaceProduct[]>(`/api/v1/workspaces/${workspaceId}/products`)
+  },
+
+  // Get single workspace product
+  getProduct: async (workspaceId: string, productId: string): Promise<WorkspaceProduct> => {
+    return apiFetch<WorkspaceProduct>(`/api/v1/workspaces/${workspaceId}/products/${productId}`)
+  },
+
+  // Create workspace product
+  createProduct: async (
+    workspaceId: string,
+    data: CreateWorkspaceProductData,
+  ): Promise<WorkspaceProduct> => {
+    return apiFetch<WorkspaceProduct>(`/api/v1/workspaces/${workspaceId}/products`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  },
+
+  // Update workspace product
+  updateProduct: async (
+    workspaceId: string,
+    productId: string,
+    data: UpdateWorkspaceProductData,
+  ): Promise<WorkspaceProduct> => {
+    return apiFetch<WorkspaceProduct>(`/api/v1/workspaces/${workspaceId}/products/${productId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    })
+  },
+
+  // Delete workspace product
+  deleteProduct: async (workspaceId: string, productId: string): Promise<void> => {
+    await apiFetch(`/api/v1/workspaces/${workspaceId}/products/${productId}`, {
+      method: "DELETE",
     })
   },
 }

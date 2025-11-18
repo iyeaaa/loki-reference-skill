@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm"
 import {
   boolean,
   index,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -44,6 +45,13 @@ export const workspaces = pgTable(
     companySize: varchar("company_size", { length: 50 }),
     companyAddress: text("company_address"),
     companyDescription: text("company_description"),
+
+    // New research and analysis fields
+    websiteAnalysis: jsonb("website_analysis"),
+    targetAudiences: jsonb("target_audiences"), // Store as JSON array
+    expansionGoals: jsonb("expansion_goals"), // Store as JSON array
+    competitiveAdvantages: jsonb("competitive_advantages"), // Store as JSON array
+    rawResearchOutput: jsonb("raw_research_output"),
 
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

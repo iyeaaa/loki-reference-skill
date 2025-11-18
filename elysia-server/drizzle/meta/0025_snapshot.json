@@ -1,6 +1,6 @@
 {
-  "id": "87165e72-cc93-43ec-938e-90b867d41022",
-  "prevId": "02439799-6ca7-4ad1-a95b-a7eea95338a4",
+  "id": "2a76146f-efd0-4161-b2a7-b29bb70cf76d",
+  "prevId": "87165e72-cc93-43ec-938e-90b867d41022",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1859,7 +1859,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "restrict",
           "onUpdate": "no action"
         },
         "emails_user_email_account_id_user_email_accounts_id_fk": {

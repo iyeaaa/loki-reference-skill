@@ -1,7 +1,13 @@
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import toast from "react-hot-toast"
 import { workspacesApi } from "../services/workspaces"
-import type { CreateWorkspaceData, UpdateWorkspaceData, WorkspacesParams } from "../types/workspace"
+import type {
+  CreateWorkspaceData,
+  CreateWorkspaceProductData,
+  UpdateWorkspaceData,
+  UpdateWorkspaceProductData,
+  WorkspacesParams,
+} from "../types/workspace"
 
 // 1. Query Keys
 export const workspaceKeys = {
@@ -9,9 +15,13 @@ export const workspaceKeys = {
   lists: () => [...workspaceKeys.all, "list"] as const,
   list: (params?: WorkspacesParams) => [...workspaceKeys.lists(), params] as const,
   detail: (id: string) => [...workspaceKeys.all, "detail", id] as const,
+  withProducts: (id: string) => [...workspaceKeys.all, "with-products", id] as const,
   byOwner: (ownerId: string) => [...workspaceKeys.all, "owner", ownerId] as const,
   byUser: (userId: string) => [...workspaceKeys.all, "user", userId] as const,
   members: (workspaceId: string) => [...workspaceKeys.all, "members", workspaceId] as const,
+  products: (workspaceId: string) => [...workspaceKeys.all, "products", workspaceId] as const,
+  product: (workspaceId: string, productId: string) =>
+    [...workspaceKeys.all, "products", workspaceId, productId] as const,
 }
 
 // 2. Queries
@@ -280,6 +290,120 @@ export function useRemoveWorkspaceMember() {
     },
     onError: (error: Error) => {
       toast.error(error.message || "멤버 제거에 실패했습니다")
+    },
+  })
+}
+
+// ====================================
+// WORKSPACE PRODUCTS HOOKS
+// ====================================
+
+// Query hooks
+export function useWorkspaceWithProducts(workspaceId: string, enabled = true) {
+  return useQuery({
+    queryKey: workspaceKeys.withProducts(workspaceId),
+    queryFn: () => workspacesApi.getWithProducts(workspaceId),
+    enabled,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
+}
+
+export function useWorkspaceProducts(workspaceId: string, enabled = true) {
+  return useQuery({
+    queryKey: workspaceKeys.products(workspaceId),
+    queryFn: () => workspacesApi.listProducts(workspaceId),
+    enabled,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+  })
+}
+
+export function useWorkspaceProduct(workspaceId: string, productId: string, enabled = true) {
+  return useQuery({
+    queryKey: workspaceKeys.product(workspaceId, productId),
+    queryFn: () => workspacesApi.getProduct(workspaceId, productId),
+    enabled,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
+}
+
+// Mutation hooks
+export function useCreateWorkspaceProduct() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      workspaceId,
+      data,
+    }: {
+      workspaceId: string
+      data: CreateWorkspaceProductData
+    }) => workspacesApi.createProduct(workspaceId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.products(variables.workspaceId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.withProducts(variables.workspaceId),
+      })
+      toast.success("제품이 추가되었습니다")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "제품 추가에 실패했습니다")
+    },
+  })
+}
+
+export function useUpdateWorkspaceProduct() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      workspaceId,
+      productId,
+      data,
+    }: {
+      workspaceId: string
+      productId: string
+      data: UpdateWorkspaceProductData
+    }) => workspacesApi.updateProduct(workspaceId, productId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.product(variables.workspaceId, variables.productId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.products(variables.workspaceId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.withProducts(variables.workspaceId),
+      })
+      toast.success("제품 정보가 업데이트되었습니다")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "제품 업데이트에 실패했습니다")
+    },
+  })
+}
+
+export function useDeleteWorkspaceProduct() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ workspaceId, productId }: { workspaceId: string; productId: string }) =>
+      workspacesApi.deleteProduct(workspaceId, productId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.products(variables.workspaceId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.withProducts(variables.workspaceId),
+      })
+      toast.success("제품이 삭제되었습니다")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "제품 삭제에 실패했습니다")
     },
   })
 }

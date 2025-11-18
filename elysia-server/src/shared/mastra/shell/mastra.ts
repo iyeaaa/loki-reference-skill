@@ -4,6 +4,7 @@ import { config } from "../../../config"
 import { createEmailDraftAgent } from "./agents/email-draft-agent"
 import { createEmailReplyAgent } from "./agents/email-reply-agent"
 import { createGeneralAssistantAgent } from "./agents/general-assistant"
+import { onboardingResearchAgent } from "./agents/onboarding-research-agent/index"
 import { createSequenceEmailAgent } from "./agents/sequence-email-agent"
 import { createCampaignStepsAgent } from "./agents/steps-agent"
 import { structuredExtractionAgent } from "./agents/structured-extraction-agent"
@@ -11,6 +12,7 @@ import { createResearchAgent } from "./agents/web-research-agent"
 import { emailGenerationWorkflow } from "./workflows/email-generation/generate-email.workflow"
 import { emailReplyGenerationWorkflow } from "./workflows/email-reply-generation/generate-reply.workflow"
 import { enrichDataWorkflow } from "./workflows/enrich-data.workflow"
+import { onboardingEnrichmentWorkflow } from "./workflows/onboarding-enrichment/onboarding-enrichment"
 import { runWebsetWorkflow } from "./workflows/run-webset.workflow"
 import { searchCompanyWorkflow } from "./workflows/search-company.workflow"
 import { sequenceEmailGenerationWorkflow } from "./workflows/sequence-email-generation/generate-sequence-email.workflow"
@@ -44,6 +46,7 @@ function createMastra(): Mastra {
       emailReplyAgent: createEmailReplyAgent(mastraConfigCompat),
       sequenceEmailAgent: createSequenceEmailAgent(),
       structuredExtractionAgent,
+      onboardingResearchAgent,
     },
     workflows: {
       searchCompanyWorkflow,
@@ -56,6 +59,7 @@ function createMastra(): Mastra {
       emailGenerationWorkflow,
       emailReplyGenerationWorkflow,
       sequenceEmailGenerationWorkflow,
+      onboardingEnrichmentWorkflow,
     },
     storage: new LibSQLStore({
       url: ":memory:",

@@ -53,6 +53,12 @@ export default function CreateCampaignPage() {
   const [isSaving, setIsSaving] = useState(false)
   const isCreatingRef = useRef(false)
   const sequenceIdRef = useRef<string | null>(editingSequenceId)
+  const lastSavedDataRef = useRef<{
+    name: string
+    description: string
+    customerGroupId: string
+    selectedLeadIds: string // JSON stringified array for comparison
+  } | null>(null)
 
   // Load existing sequence if editing
   const { data: existingSequence } = useSequence(editingSequenceId || "", !!editingSequenceId)
@@ -113,6 +119,18 @@ export default function CreateCampaignPage() {
 
     setCampaignData(loadedData)
     setIsInitialized(true)
+    // Initialize last saved data ref when loading existing campaign
+    lastSavedDataRef.current = {
+      name: existingSequence.name,
+      description: existingSequence.description || "",
+      customerGroupId: existingSequence.customerGroupId || "",
+      selectedLeadIds: JSON.stringify(
+        (existingSequence.selectedLeadIds
+          ? JSON.parse(existingSequence.selectedLeadIds)
+          : []
+        ).sort(),
+      ),
+    }
   }, [editingSequenceId, existingSequence, existingSteps])
 
   // Update ref when sequenceId changes
@@ -154,11 +172,20 @@ export default function CreateCampaignPage() {
         // console.log("✅ 초안 캠페인 생성 완료:", sequence.id)
         setSequenceId(sequence.id)
         sequenceIdRef.current = sequence.id
+        const defaultName = t("sequences.createPage.newCampaign")
         setCampaignData((prev) => ({
           ...prev,
           workspaceId,
+          name: defaultName,
         }))
         setIsInitialized(true)
+        // Initialize last saved data ref for new campaign
+        lastSavedDataRef.current = {
+          name: defaultName,
+          description: "",
+          customerGroupId: "",
+          selectedLeadIds: JSON.stringify([]),
+        }
         toast.success(t("sequences.createPage.draftCreated"))
       })
       .catch((error) => {
@@ -170,7 +197,7 @@ export default function CreateCampaignPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingSequenceId, isInitialized, selectedWorkspace])
 
-  // Auto-save to DB with debounce
+  // Auto-save to DB with debounce (only when changes detected)
   useEffect(() => {
     if (!sequenceId) return
 
@@ -181,6 +208,29 @@ export default function CreateCampaignPage() {
       const trimmedName = campaignData.name.trim()
       if (!trimmedName || trimmedName === t("sequences.createPage.newCampaign")) {
         return
+      }
+
+      // Prepare current data for comparison
+      const currentData = {
+        name: trimmedName,
+        description: campaignData.description?.trim() || "",
+        customerGroupId: campaignData.customerGroupId || "",
+        selectedLeadIds: JSON.stringify([...campaignData.selectedLeadIds].sort()),
+      }
+
+      // Compare with last saved data
+      const lastSaved = lastSavedDataRef.current
+      if (lastSaved) {
+        const hasChanges =
+          lastSaved.name !== currentData.name ||
+          lastSaved.description !== currentData.description ||
+          lastSaved.customerGroupId !== currentData.customerGroupId ||
+          lastSaved.selectedLeadIds !== currentData.selectedLeadIds
+
+        // No changes detected, skip save
+        if (!hasChanges) {
+          return
+        }
       }
 
       setIsSaving(true)
@@ -217,6 +267,13 @@ export default function CreateCampaignPage() {
           data: updateData,
         })
         .then(() => {
+          // Update last saved data ref
+          lastSavedDataRef.current = {
+            name: trimmedName,
+            description: campaignData.description?.trim() || "",
+            customerGroupId: campaignData.customerGroupId || "",
+            selectedLeadIds: JSON.stringify([...campaignData.selectedLeadIds].sort()),
+          }
           setLastSaved(new Date())
           // console.log("✅ Auto-save successful")
         })
@@ -226,7 +283,7 @@ export default function CreateCampaignPage() {
         .finally(() => {
           setIsSaving(false)
         })
-    }, 2000) // 2초 디바운스
+    }, 3000) // 3초 디바운스 (변경 후 3초 대기)
 
     return () => clearTimeout(timer)
   }, [campaignData, sequenceId, isSaving, updateSequence, t])
@@ -274,6 +331,13 @@ export default function CreateCampaignPage() {
         sequenceId,
         data: updateData,
       })
+      // Update last saved data ref after manual save
+      lastSavedDataRef.current = {
+        name: trimmedName,
+        description: campaignData.description?.trim() || "",
+        customerGroupId: campaignData.customerGroupId || "",
+        selectedLeadIds: JSON.stringify([...campaignData.selectedLeadIds].sort()),
+      }
       setLastSaved(new Date())
       toast.success(t("sequences.createPage.saved"))
     } catch {

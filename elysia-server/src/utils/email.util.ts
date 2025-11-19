@@ -465,7 +465,11 @@ export function parseEmailAttachments(emailContent: string): Array<{
     }
 
     const headers = headerBodySplit[0]
-    const body = headerBodySplit.slice(1).join("\r\n\r\n").trim()
+    let body = headerBodySplit.slice(1).join("\r\n\r\n").trim()
+
+    // Remove trailing boundary markers and whitespace
+    // Body may contain the next boundary marker (--boundary) or final marker (--boundary--)
+    body = body.replace(/\r?\n--[^\r\n]*--?\s*$/, "").trim()
 
     // Check if this part is an attachment
     const dispositionMatch = headers.match(/Content-Disposition:\s*([^\r\n]+)/i)
@@ -515,8 +519,9 @@ export function parseEmailAttachments(emailContent: string): Array<{
 
     try {
       if (encoding === "base64") {
-        // Remove whitespace and decode base64
-        const cleaned = body.replace(/\s/g, "")
+        // Remove all whitespace (spaces, tabs, newlines) before decoding base64
+        // Base64 should only contain A-Z, a-z, 0-9, +, /, and = padding
+        const cleaned = body.replace(/[\s\r\n\t]/g, "")
         decodedBuffer = Buffer.from(cleaned, "base64")
       } else if (encoding === "quoted-printable") {
         // Decode quoted-printable

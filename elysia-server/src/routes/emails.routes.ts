@@ -1868,7 +1868,25 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
       }
 
       // Decode base64 content
-      const buffer = Buffer.from(attachment.content, "base64")
+      let buffer: Buffer
+      try {
+        // Remove any whitespace before decoding
+        const cleanedContent = attachment.content.replace(/\s/g, "")
+        buffer = Buffer.from(cleanedContent, "base64")
+      } catch (error) {
+        logger.error(
+          {
+            err: error,
+            emailId: id,
+            attachmentIndex: index,
+            filename: attachment.filename,
+            contentLength: attachment.content.length,
+          },
+          "Failed to decode base64 attachment content",
+        )
+        set.status = 500
+        return errorResponse("첨부파일 디코딩 실패", ResponseCode.INTERNAL_ERROR)
+      }
 
       // Set response headers for file download
       set.headers["Content-Type"] = attachment.type || "application/octet-stream"
@@ -1876,7 +1894,8 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
         `attachment; filename="${encodeURIComponent(attachment.filename)}"`
       set.headers["Content-Length"] = buffer.length.toString()
 
-      return buffer
+      // Return as Response object for proper binary data handling
+      return new Response(buffer)
     },
     {
       params: t.Object({

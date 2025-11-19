@@ -1,0 +1,1 @@
+ALTER TABLE "email_events" ADD COLUMN "possibly_bot" boolean DEFAULT false NOT NULL;

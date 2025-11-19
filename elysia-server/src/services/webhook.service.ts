@@ -1250,7 +1250,7 @@ class WebhookService {
     const shortMessageId = event.sg_message_id.split(".")[0] as string
 
     const emailResults = await db
-      .select({ id: emailsTable.id, status: emailsTable.status })
+      .select({ id: emailsTable.id, status: emailsTable.status, sentAt: emailsTable.sentAt })
       .from(emailsTable)
       .where(eq(emailsTable.sendgridMessageId, shortMessageId))
       .limit(1)
@@ -1269,7 +1269,12 @@ class WebhookService {
     const email = emailResults[0]
     if (!email) return
 
-    // 2. email_events 테이블에 이벤트 저장
+    // 2-a. 봇/보안 스캐너에 의한 open/click 이벤트는 카운트에서 제외
+    const possiblyBot =
+      (event.event === "open" && this.isAutomatedOpen(event, email.sentAt)) ||
+      (event.event === "click" && this.isSecurityScannerClick(event))
+
+    // 2. email_events 테이블에 이벤트 저장 (사람/봇 모두 기록)
     await db.insert(emailEvents).values({
       emailId: email.id,
       eventType: event.event,
@@ -1283,15 +1288,27 @@ class WebhookService {
       smtpResponse: event.response,
       rawEventData: event as unknown as Record<string, unknown>,
       processed: false,
+      possiblyBot: possiblyBot,
     })
 
-    logger.info({ emailId: email.id, eventType: event.event }, "Event saved to database")
+    logger.info({ emailId: email.id, event }, "Event saved to database")
 
-    // 3. 이메일 상태 업데이트
-    await this.updateEmailStatus(email.id, event)
+    // 3. 이메일 상태 업데이트 (사람이 실제로 오픈/클릭한 것으로 추정되는 이벤트만 반영)
+    if (!possiblyBot) {
+      await this.updateEmailStatus(email, event)
+    } else {
+      logger.info({ event }, "Skipping email status update for possibly bot event")
+    }
   }
 
-  private async updateEmailStatus(emailId: string, event: SendGridEvent) {
+  private async updateEmailStatus(
+    email: {
+      id: string
+      status: (typeof emailsTable.$inferSelect)["status"] | null
+      sentAt: Date | null
+    },
+    event: SendGridEvent,
+  ) {
     const updates: Record<string, unknown> = {
       updatedAt: new Date(),
     }
@@ -1301,7 +1318,7 @@ class WebhookService {
         updates.status = "delivered"
         updates.deliveredAt = new Date(event.timestamp * 1000)
         // Update sequence step execution status to delivered
-        await this.updateSequenceStepExecutionStatus(emailId, "delivered")
+        await this.updateSequenceStepExecutionStatus(email.id, "delivered")
         break
       case "open":
         updates.status = "opened"
@@ -1321,7 +1338,7 @@ class WebhookService {
         updates.bounceReason = event.reason
         // Update sequence step execution status to failed
         await this.updateSequenceStepExecutionStatus(
-          emailId,
+          email.id,
           "failed",
           `Bounced: ${event.reason || "Unknown reason"}`,
         )
@@ -1332,7 +1349,7 @@ class WebhookService {
         updates.errorMessage = event.reason
         // Update sequence step execution status to failed
         await this.updateSequenceStepExecutionStatus(
-          emailId,
+          email.id,
           "failed",
           event.reason || "Email dropped or deferred",
         )
@@ -1349,10 +1366,95 @@ class WebhookService {
 
     if (Object.keys(updates).length > 1) {
       // More than just updatedAt
-      await db.update(emailsTable).set(updates).where(eq(emailsTable.id, emailId))
+      await db.update(emailsTable).set(updates).where(eq(emailsTable.id, email.id))
 
-      logger.info({ emailId, status: updates.status, event: event.event }, "Email status updated")
+      logger.info(
+        { emailId: email.id, status: updates.status, event: event.event },
+        "Email status updated",
+      )
     }
+  }
+
+  /**
+   * 보안 스캐너/이미지 프록시/자동 프리페치에 의한 오픈인지 판별
+   * - User-Agent 패턴
+   * - IP 대역
+   * - 발송 후 10초 이내 오픈
+   */
+  private isAutomatedOpen(event: SendGridEvent, sentAt: Date | null): boolean {
+    const userAgent = event.useragent || ""
+    const ip = event.ip || ""
+
+    const automatedUserAgentPatterns = [
+      /Chrome\/109\.0\.0\.0/, // 기업 보안 게이트웨이
+      /Chrome\/113\.0\.0\.0/, // 기업 보안 게이트웨이 (구버전)
+      /GoogleImageProxy/, // Gmail 이미지 프록시
+      /YahooMailProxy/, // Yahoo 메일 프록시
+      /ms-office; MSOffice/i, // Outlook 프리뷰
+    ]
+
+    if (userAgent && automatedUserAgentPatterns.some((pattern) => pattern.test(userAgent))) {
+      return true
+    }
+
+    const automatedIpPatterns = [
+      /^74\.125\.209\./, // Gmail 이미지 프록시
+      /^4\.182\./, // Microsoft ATP / Safe Links
+      /^57\.155\./, // Microsoft ATP
+    ]
+
+    if (ip && automatedIpPatterns.some((pattern) => pattern.test(ip))) {
+      return true
+    }
+
+    // 이메일 발송 직후 10초 이내 오픈은 자동 오픈일 가능성이 높음
+    if (sentAt) {
+      const openTime = new Date(event.timestamp * 1000)
+      const timeDiffSeconds = (openTime.getTime() - sentAt.getTime()) / 1000
+
+      if (timeDiffSeconds >= 0 && timeDiffSeconds < 10) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  /**
+   * 보안 스캐너/자동화 봇에 의한 클릭인지 판별
+   * - User-Agent 패턴 (Chrome 130, python-requests, aiohttp 등)
+   * - Microsoft ATP / Defender IP 대역
+   *
+   * open-rate-analysis.md / click-analysis.md 에서 분석한 패턴을 기반으로 함
+   */
+  private isSecurityScannerClick(event: SendGridEvent): boolean {
+    const userAgent = event.useragent || ""
+    const ip = event.ip || ""
+
+    const scannerUserAgentPatterns = [
+      /Chrome\/130\.0\.0\.0/, // Microsoft ATP / Safe Links
+      /Chrome\/113\.0\.0\.0/, // Microsoft ATP (구버전)
+      /python-requests/i, // Python 기반 보안/봇
+      /aiohttp/i, // Python 비동기 HTTP 클라이언트
+      /SCMGUARD/i, // 기타 보안 스캐너
+    ]
+
+    if (userAgent && scannerUserAgentPatterns.some((pattern) => pattern.test(userAgent))) {
+      return true
+    }
+
+    const microsoftATPIpPatterns = [
+      /^57\.155\./, // Azure ATP
+      /^4\.182\./, // Azure Safe Links
+      /^72\.145\./, // Defender for Office 365
+      /^74\.240\./, // 기타 Microsoft 보안 서비스
+    ]
+
+    if (ip && microsoftATPIpPatterns.some((pattern) => pattern.test(ip))) {
+      return true
+    }
+
+    return false
   }
 
   private async updateSequenceStepExecutionStatus(

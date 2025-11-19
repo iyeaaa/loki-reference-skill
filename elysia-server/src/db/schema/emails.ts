@@ -209,6 +209,7 @@ export const emailEvents = pgTable(
     smtpResponse: text("smtp_response"),
     rawEventData: jsonb("raw_event_data"), // Store full webhook payload
     processed: boolean("processed").notNull().default(false),
+    possiblyBot: boolean("possibly_bot").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({

@@ -4,9 +4,10 @@ import {
   AlertCircle,
   Calendar as CalendarIcon,
   Check,
+  ChevronDown,
+  ChevronUp,
   Clock,
   Info,
-  Mail,
   Plus,
   Sparkles,
   Trash2,
@@ -15,7 +16,6 @@ import {
 import { useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
-import { SignatureEditorModal } from "@/components/SignatureEditorModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -26,6 +26,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { RichTextEditor, type RichTextEditorRef } from "@/components/ui/rich-text-editor"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -35,6 +42,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { TimePicker } from "@/components/ui/time-picker"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useEmailSignatures } from "@/lib/api/hooks/email-signatures"
 import { leadsApi } from "@/lib/api/services/leads"
 import { sequencesApi } from "@/lib/api/services/sequences"
 import { cn } from "@/lib/utils"
@@ -103,10 +111,10 @@ export function ManualModeContent({
   onAIPromptChange,
   isGeneratingAI,
   setIsGeneratingAI,
-  isSignatureModalOpen,
-  onSignatureModalOpenChange,
-  onSaveSignature,
-  onCloseSignature,
+  isSignatureModalOpen: _isSignatureModalOpen,
+  onSignatureModalOpenChange: _onSignatureModalOpenChange,
+  onSaveSignature: _onSaveSignature,
+  onCloseSignature: _onCloseSignature,
   editingScheduleIndex,
   onEditingScheduleIndexChange,
   editorRef,
@@ -116,7 +124,7 @@ export function ManualModeContent({
   handleAdvertisementToggle,
   workspaceId,
   customerGroupId,
-  userId,
+  userId: _userId,
   hasDraftSteps,
   setSteps,
 }: ManualModeContentProps) {
@@ -126,6 +134,56 @@ export function ManualModeContent({
   const [aiGroupInfo, setAiGroupInfo] = useState("") // Auto-detected group info
   const [aiGoal, setAiGoal] = useState("") // Follow-up goal
   const [aiStrategy, setAiStrategy] = useState("") // Tone and manner strategy
+  const [showSignaturePreview, setShowSignaturePreview] = useState(false)
+
+  // Get all signatures (workspaceId를 "all"로 설정하여 모든 워크스페이스의 서명 조회)
+  const { data: signatures } = useEmailSignatures(
+    {
+      workspaceId: "all",
+      includeInactive: false,
+    },
+    true,
+  )
+
+  // Get current signature ID from step
+  const getCurrentSignatureValue = () => {
+    if (!currentStep?.emailSignature) {
+      return "none"
+    }
+
+    // Check if it matches any signature in the list
+    const matchedSignature = signatures?.find(
+      (sig) => sig.signatureHtml === currentStep.emailSignature,
+    )
+
+    if (matchedSignature) {
+      return matchedSignature.id
+    }
+
+    // Check if it matches the default signature
+    const defaultSignature = getUserSignature()
+    if (currentStep.emailSignature === defaultSignature) {
+      return "default"
+    }
+
+    // Custom signature (not in list)
+    return "custom"
+  }
+
+  // Handle signature selection
+  const handleSignatureChange = (signatureId: string) => {
+    if (signatureId === "none") {
+      onUpdateStep({ emailSignature: "" })
+    } else if (signatureId === "default") {
+      const defaultSignature = getUserSignature()
+      onUpdateStep({ emailSignature: defaultSignature })
+    } else {
+      const selectedSignature = signatures?.find((sig) => sig.id === signatureId)
+      if (selectedSignature) {
+        onUpdateStep({ emailSignature: selectedSignature.signatureHtml })
+      }
+    }
+  }
 
   const handleGenerateAI = async () => {
     // Build structured prompt from all fields
@@ -341,6 +399,11 @@ export function ManualModeContent({
                     <div
                       className="space-y-2 p-2 bg-muted/50 rounded"
                       onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.stopPropagation()
+                        }
+                      }}
                     >
                       {index === 0 ? (
                         // First step: Absolute date selection
@@ -643,19 +706,7 @@ export function ManualModeContent({
 
             {/* Email Body with RichTextEditor */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>이메일 본문 *</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onSignatureModalOpenChange(true)}
-                  className="h-7"
-                >
-                  <Mail className="h-3 w-3 mr-1" />
-                  서명 편집
-                </Button>
-              </div>
+              <Label>이메일 본문 *</Label>
               <RichTextEditor
                 ref={editorRef}
                 value={currentStep?.emailBodyText || ""}
@@ -664,33 +715,104 @@ export function ManualModeContent({
                 height="300px"
               />
 
-              {/* 서명 프리뷰 */}
-              {currentStep?.emailSignature && (
-                <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-                  <div className="flex items-center justify-between">
+              {/* 서명 선택 및 미리보기 */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">서명 선택</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowSignaturePreview(!showSignaturePreview)}
+                    className="h-7 text-xs"
+                  >
+                    {showSignaturePreview ? (
+                      <>
+                        <ChevronUp className="h-3 w-3 mr-1" />
+                        미리보기 숨기기
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-3 w-3 mr-1" />
+                        미리보기 보기
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <Select value={getCurrentSignatureValue()} onValueChange={handleSignatureChange}>
+                  <SelectTrigger className="relative h-auto min-h-9 py-1.5">
+                    {(() => {
+                      const value = getCurrentSignatureValue()
+                      const selected = signatures?.find((sig) => sig.id === value)
+
+                      if (value === "none") {
+                        return <SelectValue placeholder="서명 없음" />
+                      }
+                      if (value === "default") {
+                        return <SelectValue placeholder="기본 서명" />
+                      }
+                      if (value === "custom") {
+                        return <SelectValue placeholder="사용자 정의 서명" />
+                      }
+                      if (selected) {
+                        return <SelectValue className="sr-only" placeholder={selected.name} />
+                      }
+                      return <SelectValue placeholder="서명을 선택하세요" />
+                    })()}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">서명 없음</SelectItem>
+                    <SelectItem value="default">기본 서명</SelectItem>
+                    {signatures?.map((signature) => {
+                      const displayText = `${signature.name}${signature.workspaceName ? ` (${signature.workspaceName}${signature.userName ? ` • ${signature.userName}` : ""})` : ""}`
+                      return (
+                        <SelectItem key={signature.id} value={signature.id} textValue={displayText}>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{signature.name}</span>
+                              {signature.isDefault && (
+                                <Badge variant="secondary" className="text-xs">
+                                  기본
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              {signature.workspaceName && (
+                                <span className="flex items-center gap-1">
+                                  <span>{signature.workspaceName}</span>
+                                </span>
+                              )}
+                              {signature.userName && (
+                                <>
+                                  {signature.workspaceName && <span>•</span>}
+                                  <span>{signature.userName}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+
+                {/* 서명 미리보기 (토글형) */}
+                {showSignaturePreview && currentStep?.emailSignature && (
+                  <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
                     <Label className="text-xs font-medium text-muted-foreground">
                       서명 미리보기
                     </Label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onSignatureModalOpenChange(true)}
-                      className="h-6 text-xs"
-                    >
-                      편집
-                    </Button>
+                    <div
+                      className="text-xs prose prose-sm max-w-none dark:prose-invert"
+                      // biome-ignore lint/security/noDangerouslySetInnerHtml: User-managed signature content is safe
+                      dangerouslySetInnerHTML={{ __html: currentStep.emailSignature }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      이 서명은 이메일 발송 시 본문 하단에 자동으로 추가됩니다.
+                    </p>
                   </div>
-                  <div
-                    className="text-xs prose prose-sm max-w-none dark:prose-invert"
-                    // biome-ignore lint/security/noDangerouslySetInnerHtml: User-managed signature content is safe
-                    dangerouslySetInnerHTML={{ __html: currentStep.emailSignature }}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    이 서명은 이메일 발송 시 본문 하단에 자동으로 추가됩니다.
-                  </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* Attachments */}
@@ -859,16 +981,6 @@ export function ManualModeContent({
           </div>
         </SheetContent>
       </Sheet>
-
-      {/* Signature Editor Modal */}
-      <SignatureEditorModal
-        isOpen={isSignatureModalOpen}
-        onClose={onCloseSignature}
-        defaultSignature={currentStep?.emailSignature || getUserSignature()}
-        onSave={onSaveSignature}
-        workspaceId={workspaceId}
-        userId={userId}
-      />
     </div>
   )
 }

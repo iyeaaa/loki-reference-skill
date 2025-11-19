@@ -110,7 +110,6 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
   const [aiPrompt, setAiPrompt] = useState("")
 
   const [isGeneratingAI, setIsGeneratingAI] = useState(false)
-  const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false)
   const prevDataStepsRef = useRef(data.steps)
   const editorRef = useRef<RichTextEditorRef>(null)
 
@@ -360,13 +359,6 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
     }
   }
 
-  const handleSaveSignature = (signature: string) => {
-    updateCurrentStep({
-      emailSignature: signature,
-    })
-    setIsSignatureModalOpen(false)
-  }
-
   const hasDraftSteps = steps.some((step) => step.isDraft)
 
   // // Sync local state with parent when creationMode or selectedEmailAccountId changes
@@ -505,10 +497,10 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
           onAIPromptChange={setAiPrompt}
           isGeneratingAI={isGeneratingAI}
           setIsGeneratingAI={setIsGeneratingAI}
-          isSignatureModalOpen={isSignatureModalOpen}
-          onSignatureModalOpenChange={setIsSignatureModalOpen}
-          onSaveSignature={handleSaveSignature}
-          onCloseSignature={() => setIsSignatureModalOpen(false)}
+          isSignatureModalOpen={false}
+          onSignatureModalOpenChange={() => {}}
+          onSaveSignature={() => {}}
+          onCloseSignature={() => {}}
           editingScheduleIndex={editingScheduleIndex}
           onEditingScheduleIndexChange={setEditingScheduleIndex}
           editorRef={editorRef}

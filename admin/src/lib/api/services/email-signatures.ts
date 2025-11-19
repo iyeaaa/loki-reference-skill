@@ -14,7 +14,9 @@ export const emailSignaturesApi = {
   list: async (params: EmailSignaturesParams): Promise<EmailSignature[]> => {
     const searchParams = new URLSearchParams()
     searchParams.append("workspaceId", params.workspaceId)
-    searchParams.append("userId", params.userId)
+    if (params.userId) {
+      searchParams.append("userId", params.userId)
+    }
     if (params.includeInactive !== undefined) {
       searchParams.append("includeInactive", params.includeInactive.toString())
     }
@@ -28,11 +30,13 @@ export const emailSignaturesApi = {
   // Get signature by ID
   get: async (
     id: string,
-    params: { workspaceId: string; userId: string },
+    params: { workspaceId: string; userId?: string },
   ): Promise<EmailSignature> => {
     const searchParams = new URLSearchParams()
     searchParams.append("workspaceId", params.workspaceId)
-    searchParams.append("userId", params.userId)
+    if (params.userId) {
+      searchParams.append("userId", params.userId)
+    }
 
     const response = await apiFetch<{ code: number; data: EmailSignature }>(
       `${BASE_PATH}/${id}?${searchParams.toString()}`,
@@ -66,11 +70,13 @@ export const emailSignaturesApi = {
   // Create a new signature
   create: async (
     body: CreateEmailSignatureRequest,
-    params: { workspaceId: string; userId: string },
+    params: { workspaceId: string; userId?: string },
   ): Promise<EmailSignature> => {
     const searchParams = new URLSearchParams()
     searchParams.append("workspaceId", params.workspaceId)
-    searchParams.append("userId", params.userId)
+    if (params.userId) {
+      searchParams.append("userId", params.userId)
+    }
 
     const response = await apiFetch<{ code: number; data: EmailSignature }>(
       `${BASE_PATH}?${searchParams.toString()}`,
@@ -86,11 +92,13 @@ export const emailSignaturesApi = {
   update: async (
     id: string,
     body: UpdateEmailSignatureRequest,
-    params: { workspaceId: string; userId: string },
+    params: { workspaceId: string; userId?: string },
   ): Promise<EmailSignature> => {
     const searchParams = new URLSearchParams()
     searchParams.append("workspaceId", params.workspaceId)
-    searchParams.append("userId", params.userId)
+    if (params.userId) {
+      searchParams.append("userId", params.userId)
+    }
 
     const response = await apiFetch<{ code: number; data: EmailSignature }>(
       `${BASE_PATH}/${id}?${searchParams.toString()}`,
@@ -105,11 +113,13 @@ export const emailSignaturesApi = {
   // Delete a signature
   delete: async (
     id: string,
-    params: { workspaceId: string; userId: string; hardDelete?: boolean },
+    params: { workspaceId: string; userId?: string; hardDelete?: boolean },
   ): Promise<void> => {
     const searchParams = new URLSearchParams()
     searchParams.append("workspaceId", params.workspaceId)
-    searchParams.append("userId", params.userId)
+    if (params.userId) {
+      searchParams.append("userId", params.userId)
+    }
     if (params.hardDelete !== undefined) {
       searchParams.append("hardDelete", params.hardDelete.toString())
     }

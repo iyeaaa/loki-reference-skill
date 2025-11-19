@@ -24,7 +24,7 @@ export function useEmailSignatures(params: EmailSignaturesParams, enabled = true
   return useQuery({
     queryKey: emailSignatureKeys.list(params),
     queryFn: () => emailSignaturesApi.list(params),
-    enabled: enabled && !!params.workspaceId && !!params.userId,
+    enabled: enabled && !!params.workspaceId,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
   })
@@ -32,13 +32,13 @@ export function useEmailSignatures(params: EmailSignaturesParams, enabled = true
 
 export function useEmailSignature(
   id: string,
-  params: { workspaceId: string; userId: string },
+  params: { workspaceId: string; userId?: string },
   enabled = true,
 ) {
   return useQuery({
-    queryKey: emailSignatureKeys.detail(id, params.workspaceId, params.userId),
+    queryKey: emailSignatureKeys.detail(id, params.workspaceId, params.userId || ""),
     queryFn: () => emailSignaturesApi.get(id, params),
-    enabled: enabled && !!id && !!params.workspaceId && !!params.userId,
+    enabled: enabled && !!id && !!params.workspaceId,
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,
   })
@@ -64,7 +64,7 @@ export function useCreateEmailSignature() {
       params,
     }: {
       body: CreateEmailSignatureRequest
-      params: { workspaceId: string; userId: string }
+      params: { workspaceId: string; userId?: string }
     }) => emailSignaturesApi.create(body, params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: emailSignatureKeys.lists() })
@@ -87,7 +87,7 @@ export function useUpdateEmailSignature() {
     }: {
       id: string
       body: UpdateEmailSignatureRequest
-      params: { workspaceId: string; userId: string }
+      params: { workspaceId: string; userId?: string }
     }) => emailSignaturesApi.update(id, body, params),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: emailSignatureKeys.lists() })
@@ -95,7 +95,7 @@ export function useUpdateEmailSignature() {
         queryKey: emailSignatureKeys.detail(
           variables.id,
           variables.params.workspaceId,
-          variables.params.userId,
+          variables.params.userId || "",
         ),
       })
       toast.success("서명이 업데이트되었습니다")
@@ -115,7 +115,7 @@ export function useDeleteEmailSignature() {
       params,
     }: {
       id: string
-      params: { workspaceId: string; userId: string; hardDelete?: boolean }
+      params: { workspaceId: string; userId?: string; hardDelete?: boolean }
     }) => emailSignaturesApi.delete(id, params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: emailSignatureKeys.lists() })

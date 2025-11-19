@@ -44,10 +44,9 @@ export function EmailSignatureManagement() {
   const { data: signatures, isLoading } = useEmailSignatures(
     {
       workspaceId: workspaceId || "",
-      userId: user?.id || "",
       includeInactive: false,
     },
-    !!workspaceId && !!user?.id,
+    !!workspaceId,
   )
   const createMutation = useCreateEmailSignature()
   const updateMutation = useUpdateEmailSignature()
@@ -97,7 +96,7 @@ export function EmailSignatureManagement() {
       await updateMutation.mutateAsync({
         id: editingSignature.id,
         body: formData,
-        params,
+        params: { workspaceId },
       })
     } else {
       await createMutation.mutateAsync({
@@ -110,14 +109,13 @@ export function EmailSignatureManagement() {
   }
 
   const handleDelete = async (signatureId: string) => {
-    if (!workspaceId || !user?.id) return
+    if (!workspaceId) return
     if (!confirm("정말 이 서명을 삭제하시겠습니까?")) return
 
     await deleteMutation.mutateAsync({
       id: signatureId,
       params: {
         workspaceId,
-        userId: user.id,
         hardDelete: false,
       },
     })

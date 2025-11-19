@@ -10,6 +10,9 @@ export interface EmailSignature {
   isActive: boolean
   createdAt: string
   updatedAt: string
+  workspaceName?: string
+  userName?: string
+  userEmail?: string
 }
 
 export interface CreateEmailSignatureRequest {
@@ -29,8 +32,8 @@ export interface UpdateEmailSignatureRequest {
 }
 
 export interface EmailSignaturesParams {
-  workspaceId: string
-  userId: string
+  workspaceId: string | "all"
+  userId?: string
   includeInactive?: boolean
 }
 

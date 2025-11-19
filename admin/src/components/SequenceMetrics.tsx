@@ -1,4 +1,13 @@
-import { CheckCircle2, Mail, MailOpen, MousePointer, Reply } from "lucide-react"
+import {
+  CheckCircle2,
+  Clock,
+  Mail,
+  MailOpen,
+  MousePointer,
+  Reply,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,6 +45,17 @@ interface SequenceMetricsProps {
     lastSentAt?: string
     avgTimeToOpen?: number // 분 단위
     avgTimeToReply?: number // 분 단위
+    minTimeToReply?: number // 분 단위
+    maxTimeToReply?: number // 분 단위
+
+    // 회신 상세 정보
+    replySummaries?: Array<{
+      originalEmailId: string
+      replyTime: number
+      aiSummary: string | null
+      sentiment: string | null
+      intent: string | null
+    }>
   }
   isLoading?: boolean
 }
@@ -227,6 +247,134 @@ export function SequenceMetrics({
           </CardContent>
         </Card>
       </div>
+
+      {/* 회신 시간 통계 */}
+      {metrics.replied > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Clock className="h-4 w-4 text-blue-600" />
+              회신 시간 통계
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {metrics.avgTimeToReply !== undefined ||
+            metrics.minTimeToReply !== undefined ||
+            metrics.maxTimeToReply !== undefined ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {metrics.avgTimeToReply !== undefined && (
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-blue-600">
+                      {formatReplyTime(metrics.avgTimeToReply)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">평균 회신 시간</p>
+                  </div>
+                )}
+                {metrics.minTimeToReply !== undefined && (
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-green-600 flex items-center justify-center gap-1">
+                      <TrendingDown className="h-4 w-4" />
+                      {formatReplyTime(metrics.minTimeToReply)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">최단 회신 시간</p>
+                  </div>
+                )}
+                {metrics.maxTimeToReply !== undefined && (
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-orange-600 flex items-center justify-center gap-1">
+                      <TrendingUp className="h-4 w-4" />
+                      {formatReplyTime(metrics.maxTimeToReply)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">최장 회신 시간</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-sm text-muted-foreground">
+                회신 시간 데이터를 계산 중입니다...
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 회신 내용 요약 */}
+      {metrics.replied > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">회신 내용 요약</CardTitle>
+            <Badge variant="outline">{metrics.replySummaries?.length || 0}개</Badge>
+          </CardHeader>
+          <CardContent>
+            {metrics.replySummaries && metrics.replySummaries.length > 0 ? (
+              <div className="space-y-3">
+                {metrics.replySummaries.map((summary, index) => (
+                  <div key={summary.originalEmailId} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          #{index + 1}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          회신 시간: {formatReplyTime(summary.replyTime)}
+                        </span>
+                      </div>
+                      {summary.sentiment && (
+                        <Badge
+                          variant={
+                            summary.sentiment === "positive"
+                              ? "default"
+                              : summary.sentiment === "negative"
+                                ? "destructive"
+                                : "secondary"
+                          }
+                          className="text-xs"
+                        >
+                          {summary.sentiment === "positive"
+                            ? "긍정"
+                            : summary.sentiment === "negative"
+                              ? "부정"
+                              : "중립"}
+                        </Badge>
+                      )}
+                    </div>
+                    {summary.intent && (
+                      <div>
+                        <Badge variant="outline" className="text-xs">
+                          의도: {summary.intent}
+                        </Badge>
+                      </div>
+                    )}
+                    {summary.aiSummary && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {summary.aiSummary}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-sm text-muted-foreground">
+                회신 내용 요약 데이터가 없습니다.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
+}
+
+function formatReplyTime(minutes: number): string {
+  if (minutes < 60) {
+    return `${Math.round(minutes)}분`
+  } else if (minutes < 1440) {
+    const hours = Math.floor(minutes / 60)
+    const mins = Math.round(minutes % 60)
+    return mins > 0 ? `${hours}시간 ${mins}분` : `${hours}시간`
+  } else {
+    const days = Math.floor(minutes / 1440)
+    const hours = Math.floor((minutes % 1440) / 60)
+    return hours > 0 ? `${days}일 ${hours}시간` : `${days}일`
+  }
 }

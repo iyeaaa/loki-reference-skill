@@ -1,4 +1,14 @@
-import { Calendar, CheckCircle, Clock, Mail, Target, Users } from "lucide-react"
+import {
+  Calendar,
+  CheckCircle,
+  Clock,
+  Mail,
+  Reply,
+  Target,
+  TrendingDown,
+  TrendingUp,
+  Users,
+} from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -233,10 +243,158 @@ export function CampaignOverview({ sequenceId }: CampaignOverviewProps) {
                   </div>
                 </div>
               </div>
+
+              {/* 회신 시간 통계 */}
+              {metrics.replied > 0 &&
+                (metrics.avgTimeToReply !== undefined ||
+                  metrics.minTimeToReply !== undefined ||
+                  metrics.maxTimeToReply !== undefined) && (
+                  <div className="pt-6 border-t mt-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="p-1.5 rounded-md bg-blue-50 dark:bg-blue-950">
+                        <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <span className="text-sm font-semibold text-foreground">회신 시간 통계</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      {metrics.avgTimeToReply !== undefined && (
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/50 dark:to-blue-900/30 rounded-lg p-4 border border-blue-200/50 dark:border-blue-800/50">
+                          <div className="text-center">
+                            <div className="text-xl font-bold text-blue-700 dark:text-blue-300 mb-1">
+                              {formatReplyTime(metrics.avgTimeToReply)}
+                            </div>
+                            <div className="text-xs font-medium text-blue-600/80 dark:text-blue-400/80">
+                              평균 회신 시간
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {metrics.minTimeToReply !== undefined && (
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/50 dark:to-blue-900/30 rounded-lg p-4 border border-blue-200/50 dark:border-blue-800/50">
+                          <div className="text-center">
+                            <div className="text-xl font-bold text-blue-700 dark:text-blue-300 mb-1 flex items-center justify-center gap-1">
+                              <TrendingDown className="h-4 w-4" />
+                              {formatReplyTime(metrics.minTimeToReply)}
+                            </div>
+                            <div className="text-xs font-medium text-blue-600/80 dark:text-blue-400/80">
+                              최단 회신 시간
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {metrics.maxTimeToReply !== undefined && (
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/50 dark:to-blue-900/30 rounded-lg p-4 border border-blue-200/50 dark:border-blue-800/50">
+                          <div className="text-center">
+                            <div className="text-xl font-bold text-blue-700 dark:text-blue-300 mb-1 flex items-center justify-center gap-1">
+                              <TrendingUp className="h-4 w-4" />
+                              {formatReplyTime(metrics.maxTimeToReply)}
+                            </div>
+                            <div className="text-xs font-medium text-blue-600/80 dark:text-blue-400/80">
+                              최장 회신 시간
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              {/* 회신 내용 요약 */}
+              {metrics.replied > 0 &&
+                metrics.replySummaries &&
+                metrics.replySummaries.length > 0 && (
+                  <div className="pt-6 border-t mt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-md bg-blue-50 dark:bg-blue-950">
+                          <Reply className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <span className="text-sm font-semibold text-foreground">
+                          회신 내용 요약
+                        </span>
+                      </div>
+                      <Badge variant="secondary" className="text-xs font-medium">
+                        {metrics.replySummaries.length}개
+                      </Badge>
+                    </div>
+                    <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                      {metrics.replySummaries.map((summary, index) => (
+                        <div
+                          key={summary.originalEmailId}
+                          className="group relative bg-gradient-to-r from-muted/30 to-muted/10 dark:from-muted/20 dark:to-muted/5 rounded-lg p-3 border border-border/50 hover:border-primary/30 dark:hover:border-primary/20 transition-all duration-200 hover:shadow-sm"
+                        >
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <Badge
+                                variant="outline"
+                                className="text-xs font-semibold shrink-0 bg-background"
+                              >
+                                #{index + 1}
+                              </Badge>
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                <span className="font-medium">
+                                  {formatReplyTime(summary.replyTime)}
+                                </span>
+                              </div>
+                            </div>
+                            {summary.sentiment && (
+                              <Badge
+                                variant={
+                                  summary.sentiment === "positive"
+                                    ? "default"
+                                    : summary.sentiment === "negative"
+                                      ? "destructive"
+                                      : "secondary"
+                                }
+                                className="text-xs font-medium shrink-0"
+                              >
+                                {summary.sentiment === "positive"
+                                  ? "긍정"
+                                  : summary.sentiment === "negative"
+                                    ? "부정"
+                                    : "중립"}
+                              </Badge>
+                            )}
+                          </div>
+                          {summary.intent && (
+                            <div className="mb-2">
+                              <Badge
+                                variant="outline"
+                                className="text-xs font-medium bg-background/50"
+                              >
+                                의도: {summary.intent}
+                              </Badge>
+                            </div>
+                          )}
+                          {summary.aiSummary && (
+                            <p className="text-xs leading-relaxed text-muted-foreground line-clamp-2 group-hover:text-foreground/80 transition-colors">
+                              {summary.aiSummary}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
             </div>
           </CardContent>
         </Card>
       )}
     </div>
   )
+}
+
+function formatReplyTime(minutes: number): string {
+  if (minutes < 60) {
+    return `${Math.round(minutes)}분`
+  } else if (minutes < 1440) {
+    const hours = Math.floor(minutes / 60)
+    const mins = Math.round(minutes % 60)
+    return mins > 0 ? `${hours}시간 ${mins}분` : `${hours}시간`
+  } else {
+    const days = Math.floor(minutes / 1440)
+    const hours = Math.floor((minutes % 1440) / 60)
+    return hours > 0 ? `${days}일 ${hours}시간` : `${days}일`
+  }
 }

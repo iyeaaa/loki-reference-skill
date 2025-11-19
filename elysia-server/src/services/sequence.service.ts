@@ -1,4 +1,5 @@
 import { and, desc, eq, ilike, inArray, lte, ne, or, sql } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 import { db } from "../db/index"
 import { customerGroups } from "../db/schema/customer-groups"
 import { userEmailAccounts } from "../db/schema/email-accounts"
@@ -2249,16 +2250,61 @@ export async function getSequenceMetrics(sequenceId: string) {
     .orderBy(desc(emailsTable.sentAt))
     .limit(1)
 
-  // 5. Get replied emails count from email_replies table
-  const repliedCountResult = await db
+  // 5. Get replied emails count and reply time statistics from email_replies table
+  // Join with reply email to get actual reply sent_at time
+  const replyEmail = alias(emailsTable, "reply_email")
+  const repliedDataResult = await db
     .select({
-      count: sql<number>`COUNT(DISTINCT ${emailReplies.originalEmailId})::int`,
+      originalEmailId: emailReplies.originalEmailId,
+      originalSentAt: emailsTable.sentAt,
+      replyEmailId: emailReplies.replyEmailId,
+      replySentAt: replyEmail.sentAt,
+      aiSummary: emailReplies.aiSummary,
+      sentiment: emailReplies.sentiment,
+      intent: emailReplies.intent,
     })
     .from(emailReplies)
     .innerJoin(emailsTable, eq(emailReplies.originalEmailId, emailsTable.id))
+    .leftJoin(replyEmail, eq(emailReplies.replyEmailId, replyEmail.id))
     .where(and(eq(emailsTable.direction, "outbound"), eq(emailsTable.sequenceId, sequenceId)))
 
-  const repliedCount = repliedCountResult[0]?.count || 0
+  const repliedCount = repliedDataResult.length
+
+  // Calculate reply time statistics (in minutes)
+  const replyTimes: number[] = []
+  const replySummaries: Array<{
+    originalEmailId: string
+    replyTime: number
+    aiSummary: string | null
+    sentiment: string | null
+    intent: string | null
+  }> = []
+
+  for (const reply of repliedDataResult) {
+    // Use reply email's sent_at if available, otherwise fall back to original email's replied_at
+    const replyTime = reply.replySentAt || null
+    if (reply.originalSentAt && replyTime) {
+      const replyTimeMinutes =
+        (new Date(replyTime).getTime() - new Date(reply.originalSentAt).getTime()) / (1000 * 60)
+      if (replyTimeMinutes > 0) {
+        replyTimes.push(replyTimeMinutes)
+        replySummaries.push({
+          originalEmailId: reply.originalEmailId,
+          replyTime: replyTimeMinutes,
+          aiSummary: reply.aiSummary,
+          sentiment: reply.sentiment,
+          intent: reply.intent,
+        })
+      }
+    }
+  }
+
+  const avgTimeToReply =
+    replyTimes.length > 0
+      ? replyTimes.reduce((sum, time) => sum + time, 0) / replyTimes.length
+      : undefined
+  const minTimeToReply = replyTimes.length > 0 ? Math.min(...replyTimes) : undefined
+  const maxTimeToReply = replyTimes.length > 0 ? Math.max(...replyTimes) : undefined
 
   // Process enrollment statistics
   const enrollmentCounts = {
@@ -2347,6 +2393,12 @@ export async function getSequenceMetrics(sequenceId: string) {
 
     // 시간별 통계
     lastSentAt: lastSentResult[0]?.lastSentAt?.toISOString(),
+    avgTimeToReply: avgTimeToReply ? Math.round(avgTimeToReply * 10) / 10 : undefined,
+    minTimeToReply: minTimeToReply ? Math.round(minTimeToReply * 10) / 10 : undefined,
+    maxTimeToReply: maxTimeToReply ? Math.round(maxTimeToReply * 10) / 10 : undefined,
+
+    // 회신 상세 정보
+    replySummaries: replySummaries.slice(0, 10), // 최대 10개만 반환
   }
 
   // logger.info(

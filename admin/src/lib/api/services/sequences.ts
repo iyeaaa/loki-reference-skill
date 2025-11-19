@@ -368,6 +368,18 @@ export const sequencesApi = {
 
         // 시간별 통계
         lastSentAt?: string
+        avgTimeToReply?: number // 분 단위
+        minTimeToReply?: number // 분 단위
+        maxTimeToReply?: number // 분 단위
+
+        // 회신 상세 정보
+        replySummaries?: Array<{
+          originalEmailId: string
+          replyTime: number
+          aiSummary: string | null
+          sentiment: string | null
+          intent: string | null
+        }>
       }
     }>(`/api/v1/sequences/${sequenceId}/metrics`)
   },

@@ -1,7 +1,7 @@
 import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
-import { emails } from "../db/schema/emails"
+import { emailReplies, emails } from "../db/schema/emails"
 import { sequenceEnrollments } from "../db/schema/sequences"
 import { users } from "../db/schema/users"
 import { workspaceProducts } from "../db/schema/workspace-products"
@@ -420,8 +420,13 @@ export async function deleteWorkspace(id: string) {
     .select({ count: count() })
     .from(emails)
     .where(eq(emails.workspaceId, id))
+  // + 이메일 답장 개수도 확인
+  const emailReplyCountResult = await db
+    .select({ count: count() })
+    .from(emailReplies)
+    .where(eq(emailReplies.workspaceId, id))
 
-  const totalEmails = emailCountResult[0]?.count || 0
+  const totalEmails = (emailCountResult[0]?.count || 0) + (emailReplyCountResult[0]?.count || 0)
 
   if (totalEmails > 0) {
     logger.warn(
@@ -429,7 +434,7 @@ export async function deleteWorkspace(id: string) {
       "Cannot delete workspace: emails exist",
     )
     throw new Error(
-      `워크스페이스에 ${totalEmails}개의 이메일이 있습니다. 워크스페이스를 삭제하려면 먼저 이메일을 이동하거나 삭제해야 합니다.`,
+      `워크스페이스에 ${totalEmails}개의 이메일 또는 답장이 있습니다. 워크스페이스를 삭제하려면 먼저 이메일을 이동하거나 삭제해야 합니다.`,
     )
   }
 

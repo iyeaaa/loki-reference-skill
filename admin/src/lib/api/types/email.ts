@@ -284,6 +284,7 @@ export interface ThreadEmail {
   subject?: string | null
   bodyText?: string | null
   bodyHtml?: string | null
+  attachments?: EmailAttachment[] | null
   status: EmailStatus
   sentAt?: string | null
   repliedAt?: string | null

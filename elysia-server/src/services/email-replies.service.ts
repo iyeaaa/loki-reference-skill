@@ -33,6 +33,7 @@ interface EmailReplyWithDetails extends EmailReply {
     toEmail: string
     bodyText: string | null
     bodyHtml: string | null
+    attachments: Array<{ filename: string; type: string; size: number; content?: string }> | null
     sentAt: Date | null
     leadName: string | null
     companyName: string | null
@@ -122,6 +123,12 @@ export async function listEmailReplies(
       toEmail: r.inboundEmail.toEmail,
       bodyText: r.inboundEmail.bodyText,
       bodyHtml: r.inboundEmail.bodyHtml,
+      attachments: r.inboundEmail.attachments as Array<{
+        filename: string
+        type: string
+        size: number
+        content?: string
+      }> | null,
       sentAt: r.inboundEmail.sentAt,
       leadName: r.inboundEmail.leadName,
       companyName: r.lead?.companyName || null,
@@ -168,6 +175,7 @@ export async function getEmailReplyById(id: string): Promise<EmailReplyWithDetai
         toEmail: replyEmail.toEmail,
         bodyText: replyEmail.bodyText,
         bodyHtml: replyEmail.bodyHtml,
+        attachments: replyEmail.attachments,
         sentAt: replyEmail.sentAt,
         leadName: replyEmail.leadName,
       },
@@ -203,6 +211,12 @@ export async function getEmailReplyById(id: string): Promise<EmailReplyWithDetai
     replyEmail: r.replyEmail
       ? {
           ...r.replyEmail,
+          attachments: r.replyEmail.attachments as Array<{
+            filename: string
+            type: string
+            size: number
+            content?: string
+          }> | null,
           companyName: r.lead?.companyName || null,
           contactName: r.leadContact?.contactName || null,
         }

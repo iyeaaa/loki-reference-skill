@@ -1,5 +1,15 @@
-import { Check, CheckCheck, ChevronDown, Eye, MousePointerClick } from "lucide-react"
+import {
+  Check,
+  CheckCheck,
+  ChevronDown,
+  Download,
+  Eye,
+  File,
+  FileSpreadsheet,
+  MousePointerClick,
+} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { ThreadEmail } from "@/lib/api/types/email"
@@ -34,6 +44,51 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
       email.bodyText || (email.bodyHtml ? email.bodyHtml.replace(/<[^>]*>/g, "").trim() : "")
     // 최대 150자까지만 표시 (너무 길면 잘라냄)
     return content.length > 150 ? `${content.substring(0, 150)}...` : content
+  }
+
+  // 첨부파일 다운로드 핸들러
+  const handleDownloadAttachment = async (attachmentIndex: number) => {
+    const attachment = email.attachments?.[attachmentIndex]
+    if (!attachment) return
+
+    try {
+      const response = await fetch(`/api/v1/emails/${email.id}/attachments/${attachmentIndex}`)
+      if (!response.ok) {
+        throw new Error("첨부파일 다운로드 실패")
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = attachment.filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error("Failed to download attachment:", error)
+    }
+  }
+
+  // 파일 크기 포맷팅
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  // 파일 타입별 아이콘 반환
+  const getFileIcon = (filename: string) => {
+    const lowerFilename = filename.toLowerCase()
+    if (
+      lowerFilename.endsWith(".xlsx") ||
+      lowerFilename.endsWith(".xls") ||
+      lowerFilename.endsWith(".csv")
+    ) {
+      return <FileSpreadsheet className="h-4 w-4 text-green-600" />
+    }
+    return <File className="h-4 w-4 text-muted-foreground" />
   }
 
   // Engagement status indicators (for outbound emails)
@@ -254,12 +309,50 @@ export function EmailItem({ email, isExpanded, onToggle }: EmailItemProps) {
 
         {/* Email body - only show when expanded, 선택 가능 */}
         {isExpanded && (
-          <div className="ml-13 text-sm text-gray-700 dark:text-gray-300 mt-3 select-text cursor-text">
-            <EmailBody
-              bodyText={email.bodyText ?? undefined}
-              bodyHtml={email.bodyHtml ?? undefined}
-            />
-          </div>
+          <>
+            <div className="ml-13 text-sm text-gray-700 dark:text-gray-300 mt-3 select-text cursor-text">
+              <EmailBody
+                bodyText={email.bodyText ?? undefined}
+                bodyHtml={email.bodyHtml ?? undefined}
+              />
+            </div>
+
+            {/* 첨부파일 섹션 */}
+            {email.attachments && email.attachments.length > 0 && (
+              <div className="ml-13 mt-4 space-y-2">
+                <div className="text-xs font-medium text-muted-foreground mb-2">첨부파일</div>
+                <div className="flex flex-wrap gap-2">
+                  {email.attachments.map((attachment, index) => (
+                    <div
+                      key={index}
+                      className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-sm hover:bg-muted/80 transition-colors"
+                    >
+                      {getFileIcon(attachment.filename)}
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-medium text-foreground truncate max-w-[200px]">
+                          {attachment.filename}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatFileSize(attachment.size)}
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 ml-1"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDownloadAttachment(index)
+                        }}
+                      >
+                        <Download className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

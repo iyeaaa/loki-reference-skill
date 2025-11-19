@@ -1826,6 +1826,66 @@ export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
     },
   )
 
+  // Download email attachment
+  .get(
+    "/:id/attachments/:attachmentIndex",
+    async ({ params: { id, attachmentIndex }, set }) => {
+      const emailResult = await db
+        .select({
+          attachments: emails.attachments,
+        })
+        .from(emails)
+        .where(eq(emails.id, id))
+        .limit(1)
+
+      if (!emailResult[0]) {
+        set.status = 404
+        return errorResponse("이메일을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      }
+
+      const attachments = emailResult[0].attachments as Array<{
+        filename: string
+        type: string
+        size: number
+        content: string
+      }> | null
+
+      if (!attachments || attachments.length === 0) {
+        set.status = 404
+        return errorResponse("첨부파일을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      }
+
+      const index = Number.parseInt(attachmentIndex, 10)
+      if (Number.isNaN(index) || index < 0 || index >= attachments.length) {
+        set.status = 400
+        return errorResponse("잘못된 첨부파일 인덱스입니다.", ResponseCode.VALIDATION_ERROR)
+      }
+
+      const attachment = attachments[index]
+      if (!attachment || !attachment.content) {
+        set.status = 404
+        return errorResponse("첨부파일 내용을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      }
+
+      // Decode base64 content
+      const buffer = Buffer.from(attachment.content, "base64")
+
+      // Set response headers for file download
+      set.headers["Content-Type"] = attachment.type || "application/octet-stream"
+      set.headers["Content-Disposition"] =
+        `attachment; filename="${encodeURIComponent(attachment.filename)}"`
+      set.headers["Content-Length"] = buffer.length.toString()
+
+      return buffer
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+        attachmentIndex: t.String(),
+      }),
+    },
+  )
+
   // Get email by ID
   .get(
     "/:id",

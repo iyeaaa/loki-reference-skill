@@ -109,7 +109,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
   }
 
   // 답장 전송 핸들러
-  const handleSendReply = async (replyText: string, subject: string) => {
+  const handleSendReply = async (replyText: string, subject: string, files?: File[]) => {
     if (!user) {
       toast.error("로그인이 필요합니다")
       return
@@ -143,6 +143,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
       inReplyTo: lastEmail.messageId ?? undefined,
       references: lastEmail.messageId ? [lastEmail.messageId] : undefined,
       includeSignature: true,
+      files: files && files.length > 0 ? files : undefined,
     }
 
     setIsSending(true)

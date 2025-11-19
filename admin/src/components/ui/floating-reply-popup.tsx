@@ -1,6 +1,7 @@
 import { Loader2, Maximize2, Minimize2, Send, X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
+import { FileAttachment } from "@/components/FileAttachment"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 interface FloatingReplyPopupProps {
   isOpen: boolean
   onClose: () => void
-  onSend: (replyText: string, subject: string) => void | Promise<void>
+  onSend: (replyText: string, subject: string, files?: File[]) => void | Promise<void>
   to: string
   subject: string
   isSending?: boolean
@@ -29,6 +30,7 @@ export function FloatingReplyPopup({
   const [editableSubject, setEditableSubject] = useState(subject)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
+  const [files, setFiles] = useState<File[]>([])
 
   useEffect(() => {
     if (isOpen) {
@@ -36,6 +38,9 @@ export function FloatingReplyPopup({
         setReplyText(initialText)
       }
       setEditableSubject(subject)
+    } else {
+      // Reset files when closing
+      setFiles([])
     }
   }, [isOpen, initialText, subject])
 
@@ -43,9 +48,10 @@ export function FloatingReplyPopup({
     if (!replyText.trim()) return
 
     try {
-      await onSend(replyText, editableSubject)
+      await onSend(replyText, editableSubject, files.length > 0 ? files : undefined)
       setReplyText("")
       setEditableSubject(subject)
+      setFiles([])
       onClose()
     } catch (error) {
       console.error("Failed to send reply:", error)
@@ -55,6 +61,7 @@ export function FloatingReplyPopup({
   const handleClose = () => {
     setReplyText("")
     setEditableSubject(subject)
+    setFiles([])
     setIsMinimized(false)
     setIsMaximized(false)
     onClose()
@@ -163,6 +170,18 @@ export function FloatingReplyPopup({
                   onChange={(e) => setEditableSubject(e.target.value)}
                   className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-2 h-9 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                 />
+              </div>
+              <div className="flex items-start gap-2 mt-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0 pt-1">
+                  첨부
+                </span>
+                <div className="flex-1">
+                  <FileAttachment
+                    files={files}
+                    onFilesChange={setFiles}
+                    maxSize={20 * 1024 * 1024}
+                  />
+                </div>
               </div>
             </div>
 

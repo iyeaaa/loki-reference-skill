@@ -414,6 +414,150 @@ export function htmlToText(html: string): string {
 }
 
 /**
+ * Parse attachments from raw MIME email content
+ * Extracts files with Content-Disposition: attachment or inline
+ *
+ * @param emailContent - Full RFC 822 email content
+ * @returns Array of attachments with filename, type, size, and base64 content
+ */
+export function parseEmailAttachments(emailContent: string): Array<{
+  filename: string
+  type: string
+  size: number
+  content: string // Base64 encoded
+}> {
+  const attachments: Array<{
+    filename: string
+    type: string
+    size: number
+    content: string
+  }> = []
+
+  if (!emailContent) {
+    return attachments
+  }
+
+  // Find boundary for multipart messages
+  const boundaryMatch = emailContent.match(/boundary="?([^"\s;]+)"?/i)
+  if (!boundaryMatch || !boundaryMatch[1]) {
+    return attachments // Not a multipart message, no attachments
+  }
+
+  const boundary = boundaryMatch[1]
+  // Escape special regex characters in boundary
+  const escapedBoundary = boundary.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const boundaryRegex = new RegExp(`--${escapedBoundary}`, "g")
+
+  // Split by boundary
+  const parts = emailContent.split(boundaryRegex)
+
+  for (const part of parts) {
+    // Skip empty parts and final boundary marker
+    const trimmedPart = part.trim()
+    if (!trimmedPart || trimmedPart === "--") {
+      continue
+    }
+
+    // Extract headers and body
+    const headerBodySplit = trimmedPart.split(/\r?\n\r?\n/)
+    if (headerBodySplit.length < 2 || !headerBodySplit[0]) {
+      continue
+    }
+
+    const headers = headerBodySplit[0]
+    const body = headerBodySplit.slice(1).join("\r\n\r\n").trim()
+
+    // Check if this part is an attachment
+    const dispositionMatch = headers.match(/Content-Disposition:\s*([^\r\n]+)/i)
+    if (!dispositionMatch || !dispositionMatch[1]) {
+      continue
+    }
+
+    const disposition = dispositionMatch[1].toLowerCase()
+    const isAttachment = disposition.includes("attachment") || disposition.includes("inline")
+
+    if (!isAttachment) {
+      continue
+    }
+
+    // Extract filename
+    const filenameMatch = headers.match(/filename="?([^"\r\n]+)"?/i)
+    let filename: string
+
+    if (filenameMatch && filenameMatch[1]) {
+      filename = filenameMatch[1].trim()
+    } else {
+      // Try filename* format (RFC 2231)
+      const filenameStarMatch = headers.match(/filename\*=\w+'[^']*'([^;\r\n]+)/i)
+      if (filenameStarMatch && filenameStarMatch[1]) {
+        filename = decodeURIComponent(filenameStarMatch[1].trim())
+      } else {
+        // Try name parameter in Content-Type
+        const nameMatch = headers.match(/name="?([^"\r\n]+)"?/i)
+        if (nameMatch && nameMatch[1]) {
+          filename = nameMatch[1].trim()
+        } else {
+          continue // Skip if no filename
+        }
+      }
+    }
+
+    // Extract content type
+    const contentTypeMatch = headers.match(/Content-Type:\s*([^\r\n;]+)/i)
+    const contentType = contentTypeMatch?.[1]?.trim() || "application/octet-stream"
+
+    // Extract encoding
+    const encodingMatch = headers.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i)
+    const encoding = encodingMatch?.[1]?.trim().toLowerCase() || "7bit"
+
+    // Decode body based on encoding
+    let decodedBuffer: Buffer
+
+    try {
+      if (encoding === "base64") {
+        // Remove whitespace and decode base64
+        const cleaned = body.replace(/\s/g, "")
+        decodedBuffer = Buffer.from(cleaned, "base64")
+      } else if (encoding === "quoted-printable") {
+        // Decode quoted-printable
+        const withoutSoftBreaks = body.replace(/=\r?\n/g, "")
+        const bytes: number[] = []
+        let i = 0
+        while (i < withoutSoftBreaks.length) {
+          if (withoutSoftBreaks[i] === "=" && i + 2 < withoutSoftBreaks.length) {
+            const hex = withoutSoftBreaks.substring(i + 1, i + 3)
+            bytes.push(Number.parseInt(hex, 16))
+            i += 3
+          } else {
+            bytes.push(withoutSoftBreaks.charCodeAt(i))
+            i++
+          }
+        }
+        decodedBuffer = Buffer.from(bytes)
+      } else {
+        // 7bit, 8bit - treat as text and convert to buffer
+        decodedBuffer = Buffer.from(body, "utf-8")
+      }
+
+      // Store as base64 for consistency with multipart file handling
+      const base64Content = decodedBuffer.toString("base64")
+
+      attachments.push({
+        filename: filename.replace(/[^a-zA-Z0-9._-]/g, "_"), // Sanitize filename
+        type: contentType,
+        size: decodedBuffer.length,
+        content: base64Content,
+      })
+    } catch (error) {
+      console.error(`Failed to parse attachment ${filename}:`, error)
+      // Skip this attachment if parsing fails
+    }
+  }
+
+  return attachments
+}
+
+/**
  * Parse RFC 822 email headers from raw email content
  * Extracts Message-ID, In-Reply-To, and References headers
  *

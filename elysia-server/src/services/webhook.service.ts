@@ -11,7 +11,12 @@ import type {
   SendGridInboundPayload,
 } from "../models/email.model"
 import { emails } from "../types/email-storage"
-import { extractEmailAddress, parseEmailBody, parseEmailHeaders } from "../utils/email.util"
+import {
+  extractEmailAddress,
+  parseEmailAttachments,
+  parseEmailBody,
+  parseEmailHeaders,
+} from "../utils/email.util"
 import logger from "../utils/logger"
 import { getAIClassificationService } from "./ai-classification.service"
 import { emailService } from "./email.service"
@@ -575,9 +580,10 @@ class WebhookService {
       return
     }
 
-    // 5-1. 첨부파일 저장 (SendGrid Inbound Parse sends attachments as multipart files)
-    // According to SendGrid docs: attachments are sent as multipart/form-data file fields
-    // Reference: https://support.sendgrid.com/hc/en-us/articles/21253170997659-Understanding-Inbound-Parse-Attachments
+    // 5-1. 첨부파일 저장
+    // SendGrid Inbound Parse는 두 가지 모드를 지원:
+    // 1. Parsed 모드: 첨부파일이 multipart/form-data의 파일 필드로 전송됨 (files 배열)
+    // 2. Raw 모드: 전체 MIME이 body.email에 포함되고 첨부파일도 MIME 내부에 포함됨
     let attachmentMetadata: Array<{
       filename: string
       type: string
@@ -590,13 +596,17 @@ class WebhookService {
       {
         emailId: inboundEmail.id,
         filesCount: files?.length || 0,
+        hasRawEmail: !!body.email,
         attachmentsField: body.attachments,
         attachmentInfoField: body["attachment-info"],
         fileNames: files?.map((f) => f.originalname) || [],
+        fileFieldNames: files?.map((f) => f.fieldname) || [],
+        fileSizes: files?.map((f) => f.size) || [],
       },
       "Processing attachments from multipart data",
     )
 
+    // Method 1: 첨부파일이 multipart 파일 필드로 전송된 경우 (Parsed 모드)
     if (files && files.length > 0) {
       try {
         // Convert files to base64 and store in DB (same format as outbound emails)
@@ -658,17 +668,97 @@ class WebhookService {
         )
         // 첨부파일 저장 실패해도 이메일은 저장됨
       }
-    } else if (body.attachments && body.attachments !== "0" && body.attachments !== "[]") {
-      // Log warning if attachments field indicates attachments but no files received
-      logger.warn(
-        {
-          emailId: inboundEmail.id,
-          attachmentsField: body.attachments,
-          attachmentInfoField: body["attachment-info"],
-          filesCount: 0,
-        },
-        "Attachments field indicates attachments exist but no files found in multipart data",
-      )
+    } else if (body.email) {
+      // Method 2: Raw MIME 모드 - body.email에서 첨부파일 파싱
+      try {
+        const parsedAttachments = parseEmailAttachments(body.email)
+
+        if (parsedAttachments.length > 0) {
+          logger.info(
+            {
+              emailId: inboundEmail.id,
+              attachmentCount: parsedAttachments.length,
+              attachmentFilenames: parsedAttachments.map(
+                (att: { filename: string }) => att.filename,
+              ),
+            },
+            "Parsed attachments from raw MIME email",
+          )
+
+          attachmentMetadata = parsedAttachments
+
+          // Update email with attachment metadata
+          const updateResult = await db
+            .update(emailsTable)
+            .set({ attachments: attachmentMetadata })
+            .where(eq(emailsTable.id, inboundEmail.id))
+            .returning({ id: emailsTable.id, attachments: emailsTable.attachments })
+
+          if (updateResult.length === 0) {
+            logger.error(
+              {
+                emailId: inboundEmail.id,
+                attachmentCount: attachmentMetadata?.length || 0,
+              },
+              "Failed to update email with attachments from raw MIME - no rows affected",
+            )
+          } else {
+            logger.info(
+              {
+                emailId: inboundEmail.id,
+                attachmentCount: attachmentMetadata?.length || 0,
+                attachmentFilenames:
+                  attachmentMetadata?.map((att: { filename: string }) => att.filename) || [],
+              },
+              "Attachments from raw MIME saved as base64 in DB",
+            )
+          }
+        } else {
+          logger.info(
+            {
+              emailId: inboundEmail.id,
+              hasRawEmail: true,
+            },
+            "No attachments found in raw MIME email",
+          )
+        }
+      } catch (error) {
+        logger.error(
+          {
+            err: error,
+            emailId: inboundEmail.id,
+            errorMessage: error instanceof Error ? error.message : String(error),
+          },
+          "Failed to parse attachments from raw MIME, but email was saved",
+        )
+      }
+    } else {
+      // Log if no attachments were found
+      const hasAttachmentsField =
+        body.attachments && body.attachments !== "0" && body.attachments !== "[]"
+      if (hasAttachmentsField) {
+        // Log warning if attachments field indicates attachments but no files received
+        logger.warn(
+          {
+            emailId: inboundEmail.id,
+            attachmentsField: body.attachments,
+            attachmentInfoField: body["attachment-info"],
+            filesCount: 0,
+            hasRawEmail: !!body.email,
+          },
+          "⚠️ Attachments field indicates attachments exist but no files found",
+        )
+      } else {
+        logger.info(
+          {
+            emailId: inboundEmail.id,
+            filesCount: 0,
+            attachmentsField: body.attachments,
+            hasRawEmail: !!body.email,
+          },
+          "No attachments in this email",
+        )
+      }
     }
 
     logger.info(

@@ -138,11 +138,11 @@ export function ManualModeContent({
   const [showSignaturePreview, setShowSignaturePreview] = useState(false)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
 
-  // Get all signatures (workspaceId를 "all"로 설정하여 모든 워크스페이스의 서명 조회)
+  // Get all signatures (userId를 전달하여 기본 서명 표시 포함)
   const { data: signatures } = useEmailSignatures(
     {
-      workspaceId: "all",
       includeInactive: false,
+      userId: _userId,
     },
     true,
   )
@@ -161,8 +161,17 @@ export function ManualModeContent({
 
   // Get current signature ID from step
   const getCurrentSignatureValue = () => {
+    // 기본 서명 가져오기
+    const defaultSignature = getUserSignature()
+
+    // 서명이 없으면 기본 서명 선택 (기본 서명이 있는 경우)
     if (!currentStep?.emailSignature) {
-      return "none"
+      // 기본 서명이 서명 목록에 있으면 그 ID 반환, 없으면 "default" 반환
+      const defaultSigInList = signatures?.find((sig) => sig.isDefault)
+      if (defaultSigInList) {
+        return defaultSigInList.id
+      }
+      return defaultSignature ? "default" : "none"
     }
 
     // Check if it matches any signature in the list
@@ -175,8 +184,12 @@ export function ManualModeContent({
     }
 
     // Check if it matches the default signature
-    const defaultSignature = getUserSignature()
     if (currentStep.emailSignature === defaultSignature) {
+      // 기본 서명이 서명 목록에 있으면 그 ID 반환, 없으면 "default" 반환
+      const defaultSigInList = signatures?.find((sig) => sig.isDefault)
+      if (defaultSigInList) {
+        return defaultSigInList.id
+      }
       return "default"
     }
 

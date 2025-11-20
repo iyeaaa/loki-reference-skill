@@ -83,13 +83,7 @@ export function SequenceLaunchModal({
   const promptId = useId()
 
   // Get default signature from database
-  const { data: defaultSignature } = useDefaultEmailSignature(
-    {
-      workspaceId: workspaceId || "",
-      userId: user?.id || "",
-    },
-    !!workspaceId && !!user?.id,
-  )
+  const { data: defaultSignature } = useDefaultEmailSignature(!!user?.id)
 
   // 고객 그룹의 모든 멤버 조회
   const { data: membersData } = useCustomerGroupMembers(

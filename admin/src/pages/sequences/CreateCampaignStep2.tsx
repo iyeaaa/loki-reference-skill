@@ -63,13 +63,7 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
   const modeManualId = useId()
 
   // Get default signature from database
-  const { data: defaultSignature } = useDefaultEmailSignature(
-    {
-      workspaceId: data.workspaceId || "",
-      userId: user?.id || "",
-    },
-    !!data.workspaceId && !!user?.id,
-  )
+  const { data: defaultSignature } = useDefaultEmailSignature(!!user?.id)
   // console.log("defaultSignature", defaultSignature)
 
   // Get user signature

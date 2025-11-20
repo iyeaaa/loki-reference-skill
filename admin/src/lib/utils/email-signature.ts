@@ -79,12 +79,17 @@ Web. www.grinda.ai
 This email contains confidential information that is protected by law or under the confidentiality agreements. Any information contained herein shall be kept secure and any unauthorized disclosure, distribution, copying or use of any or all of the information contained herein to any third party is strictly prohibited. If this email is sent incorrectly, please notify the sender or us and delete this email and attachments immediately. In addition, the law of this mail does not guarantee safety and virus-free, and we are not responsible for any changes made to this mail by others.`.trim()
 }
 
-// HTML을 Markdown으로 변환하는 함수
+// HTML을 텍스트로 변환하는 함수 (줄바꿈 유지)
 export function htmlToMarkdown(html: string): string {
   if (!html) return ""
 
   return (
     html
+      // <br> 태그를 줄바꿈으로 변환
+      .replace(/<br\s*\/?>/gi, "\n")
+      // <div> 태그를 줄바꿈으로 변환
+      .replace(/<\/div>/gi, "\n")
+      .replace(/<div[^>]*>/gi, "")
       // HTML 태그 제거
       .replace(/<[^>]*>/g, "")
       // HTML 엔티티 디코딩
@@ -95,8 +100,9 @@ export function htmlToMarkdown(html: string): string {
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
       .replace(/&apos;/g, "'")
-      // 연속된 공백 정리
-      .replace(/\s+/g, " ")
+      // 연속된 줄바꿈 정리 (최대 2개)
+      .replace(/\n{3,}/g, "\n\n")
+      // 앞뒤 공백 제거
       .trim()
   )
 }

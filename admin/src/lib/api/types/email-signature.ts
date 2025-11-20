@@ -1,12 +1,12 @@
 // Email Signature Types
 export interface EmailSignature {
   id: string
-  userId: string
-  workspaceId: string
+  userId: string | null
+  workspaceId: string | null
   name: string
   signatureHtml: string
   signatureText: string
-  isDefault: boolean
+  isDefault?: boolean // API에서 반환되는 기본 서명 여부 플래그
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -19,7 +19,6 @@ export interface CreateEmailSignatureRequest {
   name: string
   signatureHtml: string
   signatureText: string
-  isDefault?: boolean
   isActive?: boolean
 }
 
@@ -27,17 +26,5 @@ export interface UpdateEmailSignatureRequest {
   name?: string
   signatureHtml?: string
   signatureText?: string
-  isDefault?: boolean
   isActive?: boolean
-}
-
-export interface EmailSignaturesParams {
-  workspaceId: string | "all"
-  userId?: string
-  includeInactive?: boolean
-}
-
-export interface GetDefaultSignatureParams {
-  workspaceId: string
-  userId: string
 }

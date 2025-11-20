@@ -35,6 +35,15 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
   const url = `${API_BASE_URL}${endpoint}`
   const token = getToken()
 
+  // Debug: Log token presence for PATCH requests to email-signatures
+  if (options.method === "PATCH" && endpoint.includes("email-signatures")) {
+    console.debug("[apiFetch] PATCH request to email-signatures:", {
+      endpoint,
+      hasToken: !!token,
+      tokenLength: token?.length,
+    })
+  }
+
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

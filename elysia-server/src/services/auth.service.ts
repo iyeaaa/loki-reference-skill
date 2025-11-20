@@ -32,7 +32,14 @@ export async function verifyToken(token: string): Promise<TokenPayload> {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload
     return decoded
-  } catch (_error) {
-    throw new Error("유효하지 않은 토큰입니다.")
+  } catch (error) {
+    // Log the actual error for debugging
+    if (error instanceof jwt.TokenExpiredError) {
+      throw new Error("토큰이 만료되었습니다.")
+    } else if (error instanceof jwt.JsonWebTokenError) {
+      throw new Error(`유효하지 않은 토큰입니다: ${error.message}`)
+    } else {
+      throw new Error(`토큰 검증 실패: ${error instanceof Error ? error.message : String(error)}`)
+    }
   }
 }

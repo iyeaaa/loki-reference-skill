@@ -96,13 +96,7 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
   const deleteSequenceStep = useDeleteSequenceStep()
 
   // Get default signature from database
-  const { data: defaultSignature } = useDefaultEmailSignature(
-    {
-      workspaceId: data.workspaceId || "",
-      userId: user?.id || "",
-    },
-    !!data.workspaceId && !!user?.id,
-  )
+  const { data: defaultSignature } = useDefaultEmailSignature(!!user?.id)
 
   // Get user signature
   const getUserSignature = () => {

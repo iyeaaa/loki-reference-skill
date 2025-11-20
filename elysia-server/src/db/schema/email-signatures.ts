@@ -8,12 +8,8 @@ export const emailSignatures = pgTable(
   "email_signatures",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    workspaceId: uuid("workspace_id")
-      .notNull()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }), // nullable: 생성자 추적용 (선택적)
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "set null" }), // nullable: 전역 서명 가능
 
     // Signature details
     name: varchar("name", { length: 100 }).notNull(),
@@ -21,7 +17,6 @@ export const emailSignatures = pgTable(
     signatureText: text("signature_text").notNull(),
 
     // Status
-    isDefault: boolean("is_default").notNull().default(false),
     isActive: boolean("is_active").notNull().default(true),
 
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -30,7 +25,6 @@ export const emailSignatures = pgTable(
   (table) => ({
     userIdx: index("email_signatures_user_id_idx").on(table.userId),
     workspaceIdx: index("email_signatures_workspace_id_idx").on(table.workspaceId),
-    isDefaultIdx: index("email_signatures_is_default_idx").on(table.isDefault),
     isActiveIdx: index("email_signatures_is_active_idx").on(table.isActive),
   }),
 )

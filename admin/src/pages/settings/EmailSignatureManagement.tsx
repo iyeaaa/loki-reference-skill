@@ -1,5 +1,6 @@
 import { Check, Edit2, Mail, Plus, Trash2, X } from "lucide-react"
 import { useId, useState } from "react"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,6 +16,7 @@ import { Label } from "@/components/ui/label"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import {
   useCreateEmailSignature,
+  useDefaultEmailSignature,
   useDeleteEmailSignature,
   useEmailSignatures,
   useSetDefaultEmailSignature,
@@ -22,6 +24,7 @@ import {
 } from "@/lib/api/hooks/email-signatures"
 import type { CreateEmailSignatureRequest, EmailSignature } from "@/lib/api/types/email-signature"
 import { useAuth } from "@/lib/auth-provider"
+import { generateSignatureHtml, htmlToMarkdown } from "@/lib/utils/email-signature"
 
 export function EmailSignatureManagement() {
   const { user } = useAuth()
@@ -29,29 +32,67 @@ export function EmailSignatureManagement() {
   const [editingSignature, setEditingSignature] = useState<EmailSignature | null>(null)
 
   // Get workspaceId from localStorage
+  // 백엔드에서 JWT 토큰으로 "all"을 처리하므로 프론트엔드에서는 그대로 전달
   const workspaceId = localStorage.getItem("selectedWorkspace") || ""
 
+  // 기본 서명 템플릿 생성 (HTML 형식)
+  const getDefaultSignature = () => {
+    if (user) {
+      const name = user.name || user.username || "사용자"
+      const title = user.department_name || "직원"
+      const html = generateSignatureHtml({ name, title })
+      // HTML을 텍스트로 변환 (줄바꿈과 공백 처리)
+      const text = htmlToMarkdown(html)
+        .replace(/&nbsp;/g, " ") // HTML 엔티티 변환
+        .replace(/\s+/g, " ") // 연속된 공백을 하나로
+        .replace(/\n\s*\n/g, "\n\n") // 여러 줄바꿈을 두 개로 정리
+        .trim()
+      return { html, text }
+    }
+    const html = generateSignatureHtml()
+    const text = htmlToMarkdown(html)
+      .replace(/&nbsp;/g, " ")
+      .replace(/\s+/g, " ")
+      .replace(/\n\s*\n/g, "\n\n")
+      .trim()
+    return { html, text }
+  }
+
   const nameInputId = useId()
-  const isDefaultCheckboxId = useId()
   const [formData, setFormData] = useState<CreateEmailSignatureRequest>({
     name: "",
     signatureHtml: "",
     signatureText: "",
-    isDefault: false,
   })
 
   // API Hooks
+  // 모든 서명 조회 (workspaceId 무관)
   const { data: signatures, isLoading } = useEmailSignatures(
     {
-      workspaceId: workspaceId || "",
       includeInactive: false,
+      userId: user?.id,
     },
-    !!workspaceId,
+    true,
   )
+  const { data: defaultSignature } = useDefaultEmailSignature()
   const createMutation = useCreateEmailSignature()
   const updateMutation = useUpdateEmailSignature()
   const deleteMutation = useDeleteEmailSignature()
   const setDefaultMutation = useSetDefaultEmailSignature()
+
+  // 기본 서명 여부 확인
+  const isDefaultSignature = (signatureId: string) => {
+    // API 응답의 isDefault 플래그 확인
+    const signature = signatures?.find((sig) => sig.id === signatureId)
+    if (signature?.isDefault) {
+      return true
+    }
+    // defaultSignature 쿼리 결과 확인
+    if (defaultSignature?.id === signatureId) {
+      return true
+    }
+    return false
+  }
 
   const handleOpenDialog = (signature?: EmailSignature) => {
     if (signature) {
@@ -60,15 +101,15 @@ export function EmailSignatureManagement() {
         name: signature.name,
         signatureHtml: signature.signatureHtml,
         signatureText: signature.signatureText,
-        isDefault: signature.isDefault,
       })
     } else {
+      // 새 서명 추가 시 기본 템플릿 사용 (HTML 형식)
+      const defaultSignature = getDefaultSignature()
       setEditingSignature(null)
       setFormData({
         name: "",
-        signatureHtml: "",
-        signatureText: "",
-        isDefault: false,
+        signatureHtml: defaultSignature.html,
+        signatureText: defaultSignature.text,
       })
     }
     setIsDialogOpen(true)
@@ -81,27 +122,22 @@ export function EmailSignatureManagement() {
       name: "",
       signatureHtml: "",
       signatureText: "",
-      isDefault: false,
     })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!workspaceId || !user?.id) return
-
-    const params = { workspaceId, userId: user.id }
-
     if (editingSignature) {
       await updateMutation.mutateAsync({
         id: editingSignature.id,
         body: formData,
-        params: { workspaceId },
       })
     } else {
+      // workspaceId, userId는 선택적 (생성자 추적용)
       await createMutation.mutateAsync({
         body: formData,
-        params,
+        params: workspaceId && workspaceId !== "all" ? { workspaceId } : undefined,
       })
     }
 
@@ -109,27 +145,21 @@ export function EmailSignatureManagement() {
   }
 
   const handleDelete = async (signatureId: string) => {
-    if (!workspaceId) return
     if (!confirm("정말 이 서명을 삭제하시겠습니까?")) return
 
     await deleteMutation.mutateAsync({
       id: signatureId,
-      params: {
-        workspaceId,
-        hardDelete: false,
-      },
     })
   }
 
   const handleSetDefault = async (signatureId: string) => {
-    if (!workspaceId || !user?.id) return
-
+    if (!user?.id) {
+      toast.error("사용자 정보를 찾을 수 없습니다")
+      return
+    }
     await setDefaultMutation.mutateAsync({
       id: signatureId,
-      params: {
-        workspaceId,
-        userId: user.id,
-      },
+      userId: user.id,
     })
   }
 
@@ -185,7 +215,7 @@ export function EmailSignatureManagement() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold">{signature.name}</h3>
-                        {signature.isDefault && (
+                        {isDefaultSignature(signature.id) && (
                           <Badge variant="default">
                             <Check className="h-3 w-3 mr-1" />
                             기본
@@ -198,7 +228,7 @@ export function EmailSignatureManagement() {
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      {!signature.isDefault && (
+                      {!isDefaultSignature(signature.id) && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -216,6 +246,7 @@ export function EmailSignatureManagement() {
                         size="sm"
                         onClick={() => handleDelete(signature.id)}
                         disabled={deleteMutation.isPending}
+                        title="서명 삭제"
                       >
                         <Trash2 className="h-4 w-4 text-red-600" />
                       </Button>
@@ -265,29 +296,20 @@ export function EmailSignatureManagement() {
                   setFormData({
                     ...formData,
                     signatureText: value,
-                    // HTML도 같이 업데이트 (간단한 변환)
-                    signatureHtml: value.replace(/\n/g, "<br>"),
+                    // 텍스트 변경 시 HTML도 업데이트 (줄바꿈을 <br>로 변환)
+                    // 단, 새로 추가한 경우가 아니면 기존 HTML 구조 유지
+                    signatureHtml: editingSignature
+                      ? value.replace(/\n/g, "<br>")
+                      : formData.signatureHtml || value.replace(/\n/g, "<br>"),
                   })
                 }}
                 placeholder="서명 내용을 입력하세요&#10;&#10;예:&#10;홍길동&#10;주식회사 그린다에이아이 | 대리&#10;Tel. 010-1234-5678&#10;Email. hong@grinda.ai"
                 height="300px"
               />
               <p className="text-xs text-muted-foreground">
-                이 내용은 HTML 형식으로 자동 변환되어 저장됩니다
+                이 내용은 HTML 형식으로 자동 변환되어 저장됩니다. 새 서명 추가 시 기본 HTML
+                템플릿(이미지 포함)이 적용됩니다.
               </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id={isDefaultCheckboxId}
-                checked={formData.isDefault}
-                onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
-                className="h-4 w-4 rounded border-gray-300"
-              />
-              <Label htmlFor={isDefaultCheckboxId} className="cursor-pointer">
-                이 서명을 기본 서명으로 설정
-              </Label>
             </div>
 
             <div className="flex justify-end gap-2 pt-4 border-t">

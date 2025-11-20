@@ -88,6 +88,13 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
 
   const { data: customerGroups } = useCustomerGroupsByWorkspace(workspaceId, Boolean(workspaceId))
 
+  console.log("🔍 Step1 - Current state:", {
+    workspaceId,
+    customerGroupId,
+    customerGroupsCount: customerGroups?.length || 0,
+    customerGroupIds: customerGroups?.map((g) => g.id) || [],
+  })
+
   const { data: members = [] } = useCustomerGroupMembersWithEmails(
     customerGroupId || "",
     Boolean(customerGroupId),

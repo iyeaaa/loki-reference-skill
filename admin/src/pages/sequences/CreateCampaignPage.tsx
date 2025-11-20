@@ -61,7 +61,10 @@ export default function CreateCampaignPage() {
   } | null>(null)
 
   // Load existing sequence if editing
-  const { data: existingSequence } = useSequence(editingSequenceId || "", !!editingSequenceId)
+  const { data: existingSequence, isLoading: isLoadingSequence } = useSequence(
+    editingSequenceId || "",
+    !!editingSequenceId,
+  )
   const { data: existingSteps } = useSequenceSteps(editingSequenceId || "", !!editingSequenceId)
 
   const steps = [
@@ -86,8 +89,9 @@ export default function CreateCampaignPage() {
   useEffect(() => {
     if (!editingSequenceId || !existingSequence) return
 
-    // console.log("📂 Loading existing sequence:", existingSequence)
-    // console.log("📂 Existing steps:", existingSteps)
+    console.log("📂 Loading existing sequence:", existingSequence)
+    console.log("📂 Customer Group ID from sequence:", existingSequence.customerGroupId)
+    console.log("📂 Existing steps:", existingSteps)
 
     const loadedData = {
       workspaceId: existingSequence.workspaceId,
@@ -390,6 +394,18 @@ export default function CreateCampaignPage() {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
     }
+  }
+
+  // Show loading state while fetching existing sequence
+  if (editingSequenceId && isLoadingSequence) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center space-y-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">{t("sequences.createPage.loading")}</p>
+        </div>
+      </div>
+    )
   }
 
   return (

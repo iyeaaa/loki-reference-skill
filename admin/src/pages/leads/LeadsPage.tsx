@@ -14,6 +14,7 @@ import {
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
+import { useNavigate } from "react-router-dom"
 import { AdvancedSearchInput } from "@/components/search/AdvancedSearchInput"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -68,6 +69,7 @@ import {
 import { useAllUsers } from "@/lib/api/hooks/users"
 import { customerGroupsApi } from "@/lib/api/services/customer-groups"
 import { leadsApi } from "@/lib/api/services/leads"
+import { sequencesApi } from "@/lib/api/services/sequences"
 import { workspacesApi } from "@/lib/api/services/workspaces"
 import type { CreateCustomerGroupRequest, CustomerGroup } from "@/lib/api/types/customer-group"
 import type { Lead, LeadStatus } from "@/lib/api/types/lead"
@@ -94,6 +96,7 @@ import { SequenceLaunchModal } from "./SequenceLaunchModal"
 
 export default function LeadsPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>(() => {
     return localStorage.getItem("selectedWorkspace") || "all"
@@ -888,19 +891,192 @@ export default function LeadsPage() {
     }
   }
 
+  // Handle Create New Campaign button click
+  const handleCreateCampaign = async () => {
+    try {
+      const workspaceId = selectedWorkspaceId !== "all" ? selectedWorkspaceId : workspaces[0]?.id
+
+      if (!workspaceId) {
+        toast.error(t("leads.error.noWorkspaceSelected"))
+        return
+      }
+
+      let targetGroupId: string
+      let targetGroupName: string
+
+      // Case 1: In "Group A", Select All Leads mode
+      if (selectedCustomerGroup && allLeadsSelected) {
+        targetGroupId = selectedCustomerGroup
+        const group = customerGroups?.find((g) => g.id === selectedCustomerGroup)
+        targetGroupName = group?.name || "Group"
+      }
+      // Case 2: In "Group A", Some leads selected
+      else if (selectedCustomerGroup && selectedLeads.length > 0) {
+        const group = customerGroups?.find((g) => g.id === selectedCustomerGroup)
+        const baseGroupName = group?.name || "Group"
+
+        // Find next available number for group name
+        let counter = 1
+        let newGroupName = `${baseGroupName} (${counter})`
+        while (customerGroups?.some((g) => g.name === newGroupName)) {
+          counter++
+          newGroupName = `${baseGroupName} (${counter})`
+        }
+
+        // Create new group with selected leads
+        const newGroup = await createCustomerGroup.mutateAsync({
+          workspaceId,
+          name: newGroupName,
+          description: `${baseGroupName}에서 선택된 ${selectedLeads.length}개의 리드`,
+          isDynamic: false,
+        })
+
+        // Add selected leads to the new group
+        await bulkAddGroupMembers.mutateAsync({
+          groupId: newGroup.id,
+          leadIds: selectedLeads,
+        })
+
+        targetGroupId = newGroup.id
+        targetGroupName = newGroupName
+        toast.success(`새 그룹 "${newGroupName}"이 생성되었습니다.`)
+      }
+      // Case 3: In "All", Select All Leads mode
+      else if (!selectedCustomerGroup && allLeadsSelected) {
+        // Get all leads
+        const allLeadsResponse = await leadsApi.list({
+          page: 1,
+          limit: 10000,
+          workspaceIds: [workspaceId],
+          filters: columnFilters.length > 0 ? JSON.stringify(columnFilters) : undefined,
+        })
+
+        const allLeadIds = allLeadsResponse.leads.map((lead) => lead.id)
+
+        // Create "All Leads" group
+        const newGroup = await createCustomerGroup.mutateAsync({
+          workspaceId,
+          name: "All Leads",
+          description: `전체 ${allLeadIds.length}개의 리드`,
+          isDynamic: false,
+        })
+
+        // Add all leads to the group
+        await bulkAddGroupMembers.mutateAsync({
+          groupId: newGroup.id,
+          leadIds: allLeadIds,
+        })
+
+        targetGroupId = newGroup.id
+        targetGroupName = "All Leads"
+        toast.success('새 그룹 "All Leads"가 생성되었습니다.')
+      }
+      // Case 4: In "All", Some leads selected
+      else if (!selectedCustomerGroup && selectedLeads.length > 0) {
+        let counter = 1
+        let newGroupName = `All Leads (${counter})`
+        while (customerGroups?.some((g) => g.name === newGroupName)) {
+          counter++
+          newGroupName = `All Leads (${counter})`
+        }
+
+        // Create new group with selected leads
+        const newGroup = await createCustomerGroup.mutateAsync({
+          workspaceId,
+          name: newGroupName,
+          description: `선택된 ${selectedLeads.length}개의 리드`,
+          isDynamic: false,
+        })
+
+        // Add selected leads to the new group
+        await bulkAddGroupMembers.mutateAsync({
+          groupId: newGroup.id,
+          leadIds: selectedLeads,
+        })
+
+        targetGroupId = newGroup.id
+        targetGroupName = newGroupName
+        toast.success(`새 그룹 "${newGroupName}"이 생성되었습니다.`)
+      } else {
+        toast.error("리드를 선택하거나 전체 선택 모드를 활성화해주세요.")
+        return
+      }
+
+      // Refresh customer groups
+      await queryClient.invalidateQueries({
+        queryKey: customerGroupKeys.all,
+      })
+
+      // Create new campaign (sequence) as draft
+      // Create more descriptive campaign name based on context
+      let campaignName: string
+      let campaignDescription: string
+
+      if (selectedCustomerGroup && allLeadsSelected) {
+        // Case 1: All leads in a specific group
+        campaignName = `${targetGroupName} - 캠페인`
+        campaignDescription = `${targetGroupName} 전체 리드를 위한 캠페인`
+      } else if (selectedCustomerGroup && selectedLeads.length > 0) {
+        // Case 2: Some leads from a specific group
+        const group = customerGroups?.find((g) => g.id === selectedCustomerGroup)
+        const baseGroupName = group?.name || "Group"
+        campaignName = `${baseGroupName} (선택 ${selectedLeads.length}명) - 캠페인`
+        campaignDescription = `${baseGroupName}에서 선택된 ${selectedLeads.length}명의 리드를 위한 캠페인`
+      } else if (!selectedCustomerGroup && allLeadsSelected) {
+        // Case 3: All leads
+        const totalCount = totalLeadsCount || 0
+        campaignName = `전체 리드 (${totalCount}명) - 캠페인`
+        campaignDescription = `전체 ${totalCount}명의 리드를 위한 캠페인`
+      } else {
+        // Case 4: Some leads from all
+        campaignName = `선택된 리드 (${selectedLeads.length}명) - 캠페인`
+        campaignDescription = `선택된 ${selectedLeads.length}명의 리드를 위한 캠페인`
+      }
+
+      console.log("🎯 Creating sequence with:", {
+        workspaceId,
+        name: campaignName,
+        customerGroupId: targetGroupId,
+        targetGroupName,
+        selectedLeadsCount: selectedLeads.length,
+        allLeadsSelected,
+      })
+
+      const newSequence = await sequencesApi.create({
+        workspaceId,
+        name: campaignName,
+        description: campaignDescription,
+        status: "draft",
+        customerGroupId: targetGroupId,
+      })
+
+      console.log("✅ Sequence created:", newSequence)
+      console.log("✅ Sequence customerGroupId:", newSequence.customerGroupId)
+
+      // Small delay to ensure cache is updated
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Navigate to campaign page with the new sequence ID
+      navigate(`/sequences/create?id=${newSequence.id}`)
+    } catch (error) {
+      console.error("Failed to create campaign:", error)
+      toast.error("캠페인 생성 중 오류가 발생했습니다.")
+    }
+  }
+
   return (
     <div className="space-y-6 h-full overflow-y-auto">
       {/* Leads Table */}
       <Card>
         <CardHeader className="pb-4">
           {/* 고객 그룹 선택 - 탭 형태 */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 mb-4">
             <Tabs
               value={selectedCustomerGroup || "all"}
               onValueChange={(value) => setSelectedCustomerGroup(value === "all" ? "" : value)}
-              className="flex-1"
+              className="flex-1 min-w-0"
             >
-              <TabsList className="inline-flex flex-wrap h-auto items-center justify-start gap-2 bg-transparent p-0 w-auto">
+              <TabsList className="inline-flex flex-wrap h-auto items-center justify-start gap-2 bg-transparent p-0 w-full lg:w-auto">
                 <TabsTrigger
                   value="all"
                   className="text-xs h-9 px-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:hover:bg-blue-700 data-[state=active]:hover:text-white"
@@ -965,43 +1141,22 @@ export default function LeadsPage() {
                 />
               </TabsList>
             </Tabs>
-            {selectedWorkspaceId !== "all" && (
-              <div className="flex gap-2 ml-4">
-                {/* 시퀀스 이메일 발송 버튼 - 특정 그룹 선택 시에만 표시 */}
-                {selectedCustomerGroup && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const group = customerGroups?.find((g) => g.id === selectedCustomerGroup)
-                      if (group) {
-                        setSequenceLaunchGroup(group)
-                        setShowSequenceLaunchModal(true)
-                      }
-                    }}
-                  >
-                    <Send className="h-4 w-4 mr-1" />
-                    시퀀스 이메일 발송
-                  </Button>
-                )}
-              </div>
-            )}
           </div>
           {selectedWorkspaceId !== "all" && customerGroups && customerGroups.length === 0 && (
             <div className="text-sm text-muted-foreground text-center py-4 bg-gray-50 rounded-md mb-4">
               {t("leads.group.noGroups")}
             </div>
           )}
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             {/* 고급 검색 */}
-            <div className="flex-auto">
+            <div className="flex-1 min-w-0">
               <AdvancedSearchInput
                 tokens={searchTokens}
                 onChange={setSearchTokens}
                 placeholder={t("leads.search.placeholder")}
               />
             </div>
-            <div className="gap-2">
+            <div className="flex-shrink-0">
               <Button
                 onClick={() => {
                   setShowAddLeadSheet(true)
@@ -1010,7 +1165,7 @@ export default function LeadsPage() {
                   setPreviewLeadData(null)
                   setCsvData(null)
                 }}
-                className="transition-all duration-200 hover:scale-105 active:scale-95"
+                className="w-full sm:w-auto transition-all duration-200 hover:scale-105 active:scale-95"
               >
                 <Plus className="h-4 w-4 mr-1" />
                 {/* 리드 추가 */}
@@ -1021,11 +1176,14 @@ export default function LeadsPage() {
         </CardHeader>
         <CardContent>
           {/* 전체 선택 및 Bulk Actions */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
+          <div className="space-y-3 mb-6">
+            {/* 한 줄에 모든 컨트롤 표시 */}
+            <div className="flex flex-wrap items-center gap-2">
               {/* 페이지 크기 설정 */}
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">{t("leads.button.pageSize")}</span>
+                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                  {t("leads.button.pageSize")}
+                </span>
                 <Select
                   value={String(pageSize)}
                   onValueChange={(value) => handlePageSizeChange(Number(value))}
@@ -1056,68 +1214,99 @@ export default function LeadsPage() {
                   : t("leads.button.selectAllMode")}
               </Button>
 
-              {/* 전체 선택 상태 표시 */}
-              {isSelectAllMode && (
-                <span className="text-sm text-muted-foreground">
-                  {allLeadsSelected
-                    ? t("leads.status.allLeadsSelected")
-                    : t("leads.status.clickToSelectAll")}
+              {/* 캠페인 생성 버튼 - 하이라이트 */}
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleCreateCampaign}
+                disabled={selectedLeads.length === 0 && !allLeadsSelected}
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all"
+              >
+                <Send className="h-4 w-4 mr-1" />
+                <span className="hidden lg:inline">{t("leads.button.createCampaign")}</span>
+                <span className="lg:hidden">Campaign</span>
+              </Button>
+
+              {/* 액션 버튼들 */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadSelectedLeadsCSV}
+                disabled={
+                  downloadSelectedLeadsCSV.isPending ||
+                  (selectedLeads.length === 0 && !allLeadsSelected)
+                }
+              >
+                <Download className="h-4 w-4 mr-1" />
+                <span className="hidden lg:inline">
+                  {downloadSelectedLeadsCSV.isPending
+                    ? t("leads.button.downloading")
+                    : allLeadsSelected
+                      ? t("leads.button.downloadAll")
+                      : t("leads.button.downloadSelected")}
                 </span>
-              )}
+                <span className="lg:hidden">
+                  {downloadSelectedLeadsCSV.isPending ? "..." : "Download"}
+                </span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openBulkActionModal("status")}
+                disabled={selectedLeads.length === 0 && !allLeadsSelected}
+              >
+                <span className="hidden lg:inline">{t("leads.button.changeStatus")}</span>
+                <span className="lg:hidden">Status</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openBulkActionModal("businessType")}
+                disabled={selectedLeads.length === 0 && !allLeadsSelected}
+              >
+                <span className="hidden lg:inline">{t("leads.button.changeBusinessType")}</span>
+                <span className="lg:hidden">Type</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openBulkActionModal("copyToGroup")}
+                disabled={selectedLeads.length === 0 && !allLeadsSelected}
+              >
+                <Users className="h-4 w-4 mr-1" />
+                <span className="hidden lg:inline">{t("leads.button.copyToGroup")}</span>
+                <span className="lg:hidden">Copy</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBulkDelete}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:text-gray-400 disabled:hover:text-gray-400 disabled:hover:bg-transparent"
+                disabled={selectedLeads.length === 0 && !allLeadsSelected}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                <span className="hidden lg:inline">{t("leads.button.delete")}</span>
+                <span className="lg:hidden">Delete</span>
+              </Button>
             </div>
 
-            {/* 선택된 리드 액션 버튼들 */}
-            {(selectedLeads.length > 0 || allLeadsSelected) && (
-              <div className="flex items-center gap-4">
-                <div className="text-sm text-muted-foreground">
+            {/* 선택 상태 표시 (별도 줄) */}
+            {(isSelectAllMode || selectedLeads.length > 0 || allLeadsSelected) && (
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                {isSelectAllMode && (
+                  <span>
+                    {allLeadsSelected
+                      ? t("leads.status.allLeadsSelected")
+                      : t("leads.status.clickToSelectAll")}
+                  </span>
+                )}
+                {(selectedLeads.length > 0 || allLeadsSelected) && !isSelectAllMode && (
                   <span className="font-medium">
                     {allLeadsSelected
                       ? t("leads.status.allSelected")
                       : `${selectedLeads.length}${t("leads.status.selectedCount")}`}
                   </span>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDownloadSelectedLeadsCSV}
-                    disabled={downloadSelectedLeadsCSV.isPending}
-                  >
-                    <Download className="h-4 w-4 mr-1" />
-                    {downloadSelectedLeadsCSV.isPending
-                      ? t("leads.button.downloading")
-                      : allLeadsSelected
-                        ? t("leads.button.downloadAll")
-                        : t("leads.button.downloadSelected")}
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => openBulkActionModal("status")}>
-                    {t("leads.button.changeStatus")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openBulkActionModal("businessType")}
-                  >
-                    {t("leads.button.changeBusinessType")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openBulkActionModal("copyToGroup")}
-                  >
-                    <Users className="h-4 w-4 mr-1" />
-                    {t("leads.button.copyToGroup")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleBulkDelete}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    {t("leads.button.delete")}
-                  </Button>
-                </div>
+                )}
               </div>
             )}
           </div>

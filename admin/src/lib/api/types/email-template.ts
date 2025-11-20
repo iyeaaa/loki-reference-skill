@@ -19,12 +19,12 @@ export interface EmailTemplate {
 export interface CreateEmailTemplateRequest {
   workspaceId: string
   name: string
-  description?: string
+  description?: string | null
   subject: string
-  bodyText?: string
-  bodyHtml?: string
-  variables?: Record<string, unknown>
-  category?: string
+  bodyText?: string | null
+  bodyHtml?: string | null
+  variables?: Record<string, unknown> | null
+  category?: string | null
   isShared?: boolean
   createdBy?: string
 }

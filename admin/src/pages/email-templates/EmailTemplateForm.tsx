@@ -1,5 +1,5 @@
 import { Label } from "@radix-ui/react-label"
-import { useId, useState } from "react"
+import { useEffect, useId, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
@@ -36,13 +36,33 @@ export function EmailTemplateForm({
     bodyHtml: template?.bodyHtml || "",
     bodyText: template?.bodyText || "",
     category: template?.category || "",
-    isShared: true,
+    isShared: template?.isShared ?? true,
     workspaceId: template?.workspaceId || "",
   })
 
+  // Update formData when template changes (for edit mode)
+  useEffect(() => {
+    if (template) {
+      setFormData({
+        name: template.name || "",
+        description: template.description || "",
+        subject: template.subject || "",
+        bodyHtml: template.bodyHtml || "",
+        bodyText: template.bodyText || "",
+        category: template.category || "",
+        isShared: template.isShared ?? true,
+        workspaceId: template.workspaceId || "",
+      })
+    }
+  }, [template])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSave(formData)
+    // Include bodyText even if empty (empty string is valid)
+    onSave({
+      ...formData,
+      bodyText: formData.bodyText,
+    })
   }
 
   return (
@@ -80,7 +100,9 @@ export function EmailTemplateForm({
         <Label htmlFor={bodyTextId}>텍스트 본문</Label>
         <RichTextEditor
           value={formData.bodyText || ""}
-          onChange={(value) => setFormData({ ...formData, bodyText: value })}
+          onChange={(value) => {
+            setFormData((prev) => ({ ...prev, bodyText: value || "" }))
+          }}
           placeholder="텍스트 형식의 이메일 본문을 입력하세요"
           height="200px"
         />

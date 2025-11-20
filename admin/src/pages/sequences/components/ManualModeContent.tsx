@@ -13,7 +13,7 @@ import {
   Trash2,
   X,
 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
@@ -43,6 +43,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { TimePicker } from "@/components/ui/time-picker"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useEmailSignatures } from "@/lib/api/hooks/email-signatures"
+import { useEmailTemplates } from "@/lib/api/hooks/email-templates"
 import { leadsApi } from "@/lib/api/services/leads"
 import { sequencesApi } from "@/lib/api/services/sequences"
 import { cn } from "@/lib/utils"
@@ -135,6 +136,7 @@ export function ManualModeContent({
   const [aiGoal, setAiGoal] = useState("") // Follow-up goal
   const [aiStrategy, setAiStrategy] = useState("") // Tone and manner strategy
   const [showSignaturePreview, setShowSignaturePreview] = useState(false)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
 
   // Get all signatures (workspaceId를 "all"로 설정하여 모든 워크스페이스의 서명 조회)
   const { data: signatures } = useEmailSignatures(
@@ -144,6 +146,18 @@ export function ManualModeContent({
     },
     true,
   )
+
+  // Get email templates for the current workspace
+  const { data: templatesData } = useEmailTemplates({
+    limit: 100,
+    workspaceIds: workspaceId ? [workspaceId] : undefined,
+  })
+
+  // Reset selected template when step changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset template selection when step changes
+  useEffect(() => {
+    setSelectedTemplateId("")
+  }, [selectedStepIndex])
 
   // Get current signature ID from step
   const getCurrentSignatureValue = () => {
@@ -182,6 +196,19 @@ export function ManualModeContent({
       if (selectedSignature) {
         onUpdateStep({ emailSignature: selectedSignature.signatureHtml })
       }
+    }
+  }
+
+  // Handle template selection
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplateId(templateId)
+    const template = templatesData?.emailTemplates.find((t) => t.id === templateId)
+    if (template) {
+      onUpdateStep({
+        emailSubject: template.subject,
+        emailBodyText: template.bodyText || "",
+      })
+      toast.success("템플릿이 적용되었습니다")
     }
   }
 
@@ -658,6 +685,39 @@ export function ManualModeContent({
 
         <ScrollArea className="flex-1">
           <div className="space-y-4 pr-4">
+            {/* Template Selection */}
+            <div className="space-y-2">
+              <Label>템플릿에서 불러오기</Label>
+              <Select value={selectedTemplateId} onValueChange={handleTemplateSelect}>
+                <SelectTrigger>
+                  <SelectValue placeholder="템플릿 선택 (선택사항)" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {templatesData?.emailTemplates && templatesData.emailTemplates.length > 0 ? (
+                    templatesData.emailTemplates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        <div className="flex flex-col gap-1">
+                          <span className="font-medium">{template.name}</span>
+                          {template.description && (
+                            <span className="text-xs text-muted-foreground">
+                              {template.description}
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-templates" disabled>
+                      등록된 템플릿이 없습니다
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                💡 기존 템플릿을 선택하면 제목과 본문이 자동으로 입력됩니다
+              </p>
+            </div>
+
             {/* Email Subject */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">

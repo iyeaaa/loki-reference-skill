@@ -1,4 +1,4 @@
-import { Search, Share2, Tag, Trash2, X } from "lucide-react"
+import { Plus, Search, Share2, Tag, Trash2, X } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -6,16 +6,19 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { useCurrentUser } from "@/lib/api/hooks/auth"
 // Import API and types
 import {
   useBulkDeleteEmailTemplates,
   useBulkUpdateEmailTemplateCategory,
   useBulkUpdateEmailTemplateShared,
+  useCreateEmailTemplate,
   useUpdateEmailTemplate,
 } from "@/lib/api/hooks/email-templates"
 import { workspacesApi } from "@/lib/api/services/workspaces"
 import type { EmailTemplate } from "@/lib/api/types/email-template"
 import type { Workspace } from "@/lib/api/types/workspace"
+import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { BulkActionModal } from "./BulkActionModal"
 import { EmailTemplateFilters } from "./EmailTemplateFilters"
 import { EmailTemplateForm } from "./EmailTemplateForm"
@@ -23,6 +26,8 @@ import { EmailTemplatesTableWithPagination } from "./EmailTemplatesTableWithPagi
 
 export default function EmailTemplatesPage() {
   const { t } = useTranslation()
+  const { selectedWorkspace } = useWorkspace()
+  const { data: currentUser } = useCurrentUser()
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
 
   const [searchInput, setSearchInput] = useState("")
@@ -35,10 +40,12 @@ export default function EmailTemplatesPage() {
   })
 
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null)
+  const [creatingTemplate, setCreatingTemplate] = useState(false)
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([])
   const [showBulkActionModal, setShowBulkActionModal] = useState(false)
   const [bulkActionType, setBulkActionType] = useState<"category" | "shared" | null>(null)
 
+  const createTemplate = useCreateEmailTemplate()
   const updateTemplate = useUpdateEmailTemplate()
   // const _deleteTemplate = useDeleteEmailTemplate()
   const bulkUpdateCategory = useBulkUpdateEmailTemplateCategory()
@@ -92,6 +99,42 @@ export default function EmailTemplatesPage() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
+  const handleCreateTemplate = async (templateData: unknown) => {
+    if (!selectedWorkspace?.id) {
+      toast.error("워크스페이스를 선택해주세요")
+      return
+    }
+
+    const data = templateData as {
+      name: string
+      description?: string
+      subject: string
+      bodyText?: string
+      bodyHtml?: string
+      category?: string
+      isShared?: boolean
+    }
+
+    createTemplate.mutate(
+      {
+        workspaceId: selectedWorkspace.id,
+        name: data.name,
+        description: data.description || null,
+        subject: data.subject,
+        bodyText: data.bodyText || null,
+        bodyHtml: data.bodyHtml || null,
+        category: data.category || null,
+        isShared: data.isShared ?? false,
+        createdBy: currentUser?.id,
+      },
+      {
+        onSuccess: () => {
+          setCreatingTemplate(false)
+        },
+      },
+    )
+  }
+
   const handleUpdateTemplate = async (templateData: unknown) => {
     if (!editingTemplate) return
     const data = templateData as Partial<EmailTemplate>
@@ -100,12 +143,14 @@ export default function EmailTemplatesPage() {
         templateId: editingTemplate.id,
         data: {
           name: data.name || editingTemplate.name,
-          description: data.description,
+          description:
+            data.description !== undefined ? data.description || null : editingTemplate.description,
           subject: data.subject || editingTemplate.subject,
-          bodyText: data.bodyText,
-          bodyHtml: data.bodyHtml,
-          variables: data.variables,
-          category: data.category,
+          bodyText: data.bodyText !== undefined ? data.bodyText : editingTemplate.bodyText,
+          bodyHtml: data.bodyHtml !== undefined ? data.bodyHtml : editingTemplate.bodyHtml,
+          variables:
+            data.variables !== undefined ? data.variables || null : editingTemplate.variables,
+          category: data.category !== undefined ? data.category || null : editingTemplate.category,
           isShared: data.isShared ?? editingTemplate.isShared,
         },
       },
@@ -208,7 +253,15 @@ export default function EmailTemplatesPage() {
       {/* Email Templates Table */}
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg">{t("emailTemplates.title.templateManagement")}</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">
+              {t("emailTemplates.title.templateManagement")}
+            </CardTitle>
+            <Button onClick={() => setCreatingTemplate(true)} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              템플릿 추가
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {/* Search input - positioned below title */}
@@ -281,6 +334,22 @@ export default function EmailTemplatesPage() {
           />
         </CardContent>
       </Card>
+
+      {/* Create Template Dialog */}
+      <Dialog open={creatingTemplate} onOpenChange={setCreatingTemplate}>
+        <DialogContent className="max-w-3xl max-h-[90vh]">
+          <DialogHeader className="pb-4 border-b">
+            <DialogTitle className="text-xl font-semibold">템플릿 추가</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-1">
+            <EmailTemplateForm
+              workspaces={workspaces}
+              onSave={handleCreateTemplate}
+              onCancel={() => setCreatingTemplate(false)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Template Dialog */}
       <Dialog open={!!editingTemplate} onOpenChange={() => setEditingTemplate(null)}>

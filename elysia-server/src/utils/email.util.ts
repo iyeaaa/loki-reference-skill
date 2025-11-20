@@ -488,17 +488,17 @@ export function parseEmailAttachments(emailContent: string): Array<{
     const filenameMatch = headers.match(/filename="?([^"\r\n]+)"?/i)
     let filename: string
 
-    if (filenameMatch && filenameMatch[1]) {
+    if (filenameMatch?.[1]) {
       filename = filenameMatch[1].trim()
     } else {
       // Try filename* format (RFC 2231)
       const filenameStarMatch = headers.match(/filename\*=\w+'[^']*'([^;\r\n]+)/i)
-      if (filenameStarMatch && filenameStarMatch[1]) {
+      if (filenameStarMatch?.[1]) {
         filename = decodeURIComponent(filenameStarMatch[1].trim())
       } else {
         // Try name parameter in Content-Type
         const nameMatch = headers.match(/name="?([^"\r\n]+)"?/i)
-        if (nameMatch && nameMatch[1]) {
+        if (nameMatch?.[1]) {
           filename = nameMatch[1].trim()
         } else {
           continue // Skip if no filename

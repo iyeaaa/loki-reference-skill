@@ -17,12 +17,12 @@ const emailTemplateSchema = t.Object({
 
 const updateEmailTemplateSchema = t.Object({
   name: t.String({ minLength: 1, maxLength: 255 }),
-  description: t.Optional(t.String()),
+  description: t.Optional(t.Union([t.String(), t.Null()])),
   subject: t.String({ minLength: 1, maxLength: 500 }),
-  bodyText: t.Optional(t.String()),
-  bodyHtml: t.Optional(t.String()),
+  bodyText: t.Optional(t.Union([t.String(), t.Null()])),
+  bodyHtml: t.Optional(t.Union([t.String(), t.Null()])),
   variables: t.Optional(t.Any()),
-  category: t.Optional(t.String({ maxLength: 100 })),
+  category: t.Optional(t.Union([t.String({ maxLength: 100 }), t.Null()])),
   isShared: t.Boolean(),
 })
 
@@ -139,12 +139,29 @@ export const emailTemplateRoutes = new Elysia({ prefix: "/api/v1/email-templates
   .put(
     "/:id",
     async ({ params: { id }, body, set }) => {
-      const template = await emailTemplateService.updateEmailTemplate(id, body)
-      if (!template) {
-        set.status = 404
-        return errorResponse("이메일 템플릿을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      try {
+        // Convert undefined to null for optional fields
+        const updateData = {
+          ...body,
+          description: body.description ?? null,
+          bodyText: body.bodyText ?? null,
+          bodyHtml: body.bodyHtml ?? null,
+          category: body.category ?? null,
+        }
+        const template = await emailTemplateService.updateEmailTemplate(id, updateData)
+        if (!template) {
+          set.status = 404
+          return errorResponse("이메일 템플릿을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+        }
+        return template
+      } catch (error) {
+        console.error("Error updating email template:", error)
+        set.status = 500
+        return errorResponse(
+          error instanceof Error ? error.message : "템플릿 업데이트에 실패했습니다.",
+          ResponseCode.INTERNAL_ERROR,
+        )
       }
-      return template
     },
     {
       params: t.Object({

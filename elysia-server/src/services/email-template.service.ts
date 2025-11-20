@@ -89,12 +89,12 @@ export async function updateEmailTemplate(
   id: string,
   data: {
     name: string
-    description?: string
+    description?: string | null
     subject: string
-    bodyText?: string
-    bodyHtml?: string
-    variables?: Record<string, unknown>
-    category?: string
+    bodyText?: string | null
+    bodyHtml?: string | null
+    variables?: Record<string, unknown> | null
+    category?: string | null
     isShared: boolean
   },
 ) {
@@ -102,12 +102,12 @@ export async function updateEmailTemplate(
     .update(emailTemplates)
     .set({
       name: data.name,
-      description: data.description,
+      description: data.description ?? null,
       subject: data.subject,
-      bodyText: data.bodyText,
-      bodyHtml: data.bodyHtml,
-      variables: data.variables,
-      category: data.category,
+      bodyText: data.bodyText ?? null,
+      bodyHtml: data.bodyHtml ?? null,
+      variables: data.variables ?? null,
+      category: data.category ?? null,
       isShared: data.isShared,
       updatedAt: new Date(),
     })
@@ -148,6 +148,9 @@ export async function listEmailTemplates(limit: number, offset: number) {
       name: emailTemplates.name,
       description: emailTemplates.description,
       subject: emailTemplates.subject,
+      bodyText: emailTemplates.bodyText,
+      bodyHtml: emailTemplates.bodyHtml,
+      variables: emailTemplates.variables,
       category: emailTemplates.category,
       isShared: emailTemplates.isShared,
       createdBy: emailTemplates.createdBy,
@@ -226,6 +229,9 @@ export async function listEmailTemplatesWithFilters(
       name: emailTemplates.name,
       description: emailTemplates.description,
       subject: emailTemplates.subject,
+      bodyText: emailTemplates.bodyText,
+      bodyHtml: emailTemplates.bodyHtml,
+      variables: emailTemplates.variables,
       category: emailTemplates.category,
       isShared: emailTemplates.isShared,
       createdBy: emailTemplates.createdBy,

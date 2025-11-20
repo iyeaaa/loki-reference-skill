@@ -170,13 +170,11 @@ enrollments.statusUpdated,등록 상태가 업데이트되었습니다,Enrollmen
 steps.addNewStep,새 단계 추가,Add New Step
 steps.addStepButton,단계 추가,Add Step
 toast.fallbackUsed,AI 생성 실패 기본 6단계 템플릿 사용,AI generation failed using default 6-step template
-toast.aiGenerationCompleteDesc,{{totalLeads}}개 리드 {{totalDrafts}}개 초안 {{stepsCreated}}개 단계 생성됨,{{totalLeads}} leads {{totalDrafts}} drafts {{stepsCreated}} steps created
 review.afterDays,+{{days}}일,+{{days}} days
 review.campaignSteps,캠페인 단계,Campaign Steps
 review.stepsGenerated,{{count}}개 단계 생성됨,{{count}} steps created
 review.dayZero,Day 0,Day 0
 review.noSchedule,예약 없음,Not scheduled
-button.generateWithAI,AI로 캠페인 생성,Generate Campaign with AI
 toast.stepUpdated,단계가 업데이트되었습니다,Step updated successfully
 toast.stepUpdateFailed,단계 업데이트 실패,Failed to update step
 success.title,캠페인이 성공적으로 생성되었습니다!,Campaign Generated Successfully!

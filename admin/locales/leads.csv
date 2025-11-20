@@ -285,3 +285,4 @@ addLead.totalLeads,총 {count}개의 리드를 추가할 예정입니다,Total {
 addLead.addToExistingGroup,기존 그룹에 추가됩니다,Add to existing group
 addLead.addToNewGroup,새 그룹 {{name}}에 추가됩니다,Add to new group {{name}}
 file.noName,이름 없음,No name
+button.createCampaign,캠페인 생성,Create Campaign

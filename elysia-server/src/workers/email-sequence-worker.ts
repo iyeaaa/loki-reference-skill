@@ -251,6 +251,8 @@ async function sendSequenceEmail(execution: {
         ? workflowEmailService.replaceTemplateVariables(execution.emailBodyHtml, leadContext)
         : null
 
+      // 서명은 이미 본문에 포함되어 있으므로 별도 처리 불필요
+
       logger.debug(
         {
           executionId: execution.executionId,
@@ -405,7 +407,8 @@ async function sendSequenceEmail(execution: {
       )
     }
 
-    // Send email using EmailService (includes automatic signature)
+    // Send email using EmailService
+    // 서명은 이미 emailBodyHtml에 포함되어 있으므로 includeSignature는 false
     const sendResult = await emailService.sendEmail({
       fromEmail: emailAccount.emailAddress,
       fromName: emailAccount.displayName || emailAccount.emailAddress,
@@ -416,7 +419,7 @@ async function sendSequenceEmail(execution: {
       inReplyTo,
       references,
       attachments: sendGridAttachments,
-      includeSignature: false, // 시퀀스 이메일은 프론트엔드에서 이미 서명이 포함됨
+      includeSignature: false, // 이미 본문에 서명 추가됨
       userId: execution.userId || undefined,
       workspaceId: execution.workspaceId,
       apiKey: apiKey,

@@ -13,5 +13,7 @@ export interface EmailStep {
   isDraft?: boolean
   files?: File[]
   isAdvertisement?: boolean
-  emailSignature?: string // 서명을 별도로 저장
+  emailSignature?: string // 서명 HTML (미리보기용)
+  emailSignatureId?: string // 서명 ID (이메일 전송 시 사용)
+  includeSignature?: boolean // 서명 포함 여부 (기본값: true)
 }

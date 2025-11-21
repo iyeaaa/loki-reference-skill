@@ -201,14 +201,23 @@ export function ManualModeContent({
   // Handle signature selection
   const handleSignatureChange = (signatureId: string) => {
     if (signatureId === "none") {
-      onUpdateStep({ emailSignature: "" })
+      // 서명 제거
+      onUpdateStep({ emailSignature: "", emailSignatureId: "" })
     } else if (signatureId === "default") {
-      const defaultSignature = getUserSignature()
-      onUpdateStep({ emailSignature: defaultSignature })
+      const signatureHtml = getUserSignature()
+      // 기본 서명 ID 찾기
+      const defaultSigInList = signatures?.find((sig) => sig.isDefault)
+      onUpdateStep({
+        emailSignature: signatureHtml,
+        emailSignatureId: defaultSigInList?.id || "default",
+      })
     } else {
       const selectedSignature = signatures?.find((sig) => sig.id === signatureId)
       if (selectedSignature) {
-        onUpdateStep({ emailSignature: selectedSignature.signatureHtml })
+        onUpdateStep({
+          emailSignature: selectedSignature.signatureHtml,
+          emailSignatureId: signatureId,
+        })
       }
     }
   }
@@ -836,6 +845,22 @@ export function ManualModeContent({
                     )}
                   </Button>
                 </div>
+                {/* 서명 포함 여부 체크박스 */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`include-signature-${currentStep?.stepOrder || 0}`}
+                    checked={currentStep?.includeSignature !== false} // 기본값: true
+                    onCheckedChange={(checked) =>
+                      onUpdateStep({ includeSignature: checked as boolean })
+                    }
+                  />
+                  <Label
+                    htmlFor={`include-signature-${currentStep?.stepOrder || 0}`}
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    이메일에 서명 추가
+                  </Label>
+                </div>
                 <Select value={getCurrentSignatureValue()} onValueChange={handleSignatureChange}>
                   <SelectTrigger className="relative h-auto min-h-9 py-1.5">
                     {(() => {
@@ -894,21 +919,35 @@ export function ManualModeContent({
                 </Select>
 
                 {/* 서명 미리보기 (토글형) */}
-                {showSignaturePreview && currentStep?.emailSignature && (
-                  <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">
-                      서명 미리보기
-                    </Label>
-                    <div
-                      className="text-xs prose prose-sm max-w-none dark:prose-invert"
-                      // biome-ignore lint/security/noDangerouslySetInnerHtml: User-managed signature content is safe
-                      dangerouslySetInnerHTML={{ __html: currentStep.emailSignature }}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      이 서명은 이메일 발송 시 본문 하단에 자동으로 추가됩니다.
-                    </p>
-                  </div>
-                )}
+                {showSignaturePreview &&
+                  (() => {
+                    // 표시할 서명 HTML 가져오기
+                    const signatureToShow =
+                      currentStep?.emailSignature ||
+                      (() => {
+                        const currentValue = getCurrentSignatureValue()
+                        if (currentValue === "none") return null
+                        if (currentValue === "default") return getUserSignature()
+                        const selectedSig = signatures?.find((sig) => sig.id === currentValue)
+                        return selectedSig?.signatureHtml || getUserSignature()
+                      })()
+
+                    return signatureToShow ? (
+                      <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                        <Label className="text-xs font-medium text-muted-foreground">
+                          서명 미리보기
+                        </Label>
+                        <div
+                          className="text-xs prose prose-sm max-w-none dark:prose-invert"
+                          // biome-ignore lint/security/noDangerouslySetInnerHtml: User-managed signature content is safe
+                          dangerouslySetInnerHTML={{ __html: signatureToShow }}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          이 서명은 이메일 발송 시 본문 하단에 자동으로 추가됩니다.
+                        </p>
+                      </div>
+                    ) : null
+                  })()}
               </div>
             </div>
 

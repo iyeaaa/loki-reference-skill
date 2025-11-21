@@ -244,6 +244,7 @@ This email contains confidential information that is protected by law or under t
     includeSignature?: boolean // 서명 포함 여부 (기본값: true)
     userId?: string // 서명 생성을 위한 사용자 ID
     workspaceId?: string // 서명 생성을 위한 워크스페이스 ID
+    signatureHtml?: string // 직접 지정한 서명 HTML (이 값이 있으면 이걸 우선 사용)
   }): Promise<{
     success: boolean
     messageId?: string
@@ -299,7 +300,15 @@ This email contains confidential information that is protected by law or under t
           let signatureHtml = ""
           let signatureText = ""
 
-          if (data.userId && data.workspaceId) {
+          // 직접 지정한 서명이 있으면 우선 사용
+          if (data.signatureHtml) {
+            signatureHtml = data.signatureHtml
+            signatureText = htmlToText(data.signatureHtml)
+            logger.info(
+              { userId: data.userId, workspaceId: data.workspaceId },
+              "Using provided signature HTML",
+            )
+          } else if (data.userId && data.workspaceId) {
             // Use user data to generate signature
             const userSignature = await this.generateUserSignature(data.userId, data.workspaceId)
             signatureHtml = userSignature.signatureHtml

@@ -139,6 +139,7 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
       const updatedSteps = steps.map((step) => ({
         ...step,
         emailSignature: step.emailSignature || signature,
+        includeSignature: step.includeSignature !== undefined ? step.includeSignature : true, // 기본값: true
       }))
       setSteps(updatedSteps)
 
@@ -272,10 +273,11 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
     // Save to DB if sequenceId exists
     if (sequenceId) {
       try {
-        // 저장 시 서명을 본문에 결합
-        let emailBodyWithSignature = currentStep.emailBodyText
-        if (currentStep.emailSignature) {
-          emailBodyWithSignature = `${currentStep.emailBodyText}\n\n${currentStep.emailSignature}`
+        // 서명이 선택되어 있고 포함 여부가 true이면 본문에 서명 추가
+        let emailBodyText = currentStep.emailBodyText
+        if (currentStep.emailSignature && currentStep.includeSignature !== false) {
+          // 서명 HTML을 본문 끝에 추가
+          emailBodyText = `${currentStep.emailBodyText}\n\n${currentStep.emailSignature}`
         }
 
         const stepData = {
@@ -284,7 +286,7 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
           scheduledHour: currentStep.scheduledHour,
           scheduledMinute: currentStep.scheduledMinute,
           emailSubject: currentStep.emailSubject,
-          emailBodyText: emailBodyWithSignature,
+          emailBodyText, // 서명이 본문에 포함됨
           generationSource: creationMode === "ai" ? ("ai" as const) : ("manual" as const),
         }
 

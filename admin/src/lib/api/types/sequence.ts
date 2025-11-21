@@ -82,6 +82,8 @@ export interface SequenceStep {
   emailBodyText?: string | null
   emailBodyHtml?: string | null
   emailTemplateId?: string | null
+  emailSignature?: string | null
+  includeSignature?: boolean | null
   generationSource: GenerationSource
   conditionType?: StepConditionType | null
   conditionConfig?: string | null

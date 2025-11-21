@@ -22,6 +22,7 @@ interface EmailStep {
   scheduledMinute: number
   emailSubject: string
   emailBodyText: string
+  emailBodyHtml?: string // 서명이 포함된 HTML 본문
   files?: File[]
 }
 
@@ -135,6 +136,7 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
                       scheduledMinute: step.scheduledMinute,
                       emailSubject: step.emailSubject,
                       emailBodyText: step.emailBodyText,
+                      emailBodyHtml: step.emailBodyHtml, // 서명이 포함된 HTML 포함
                     },
                     files: step.files,
                   })
@@ -149,6 +151,7 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
                       scheduledMinute: step.scheduledMinute,
                       emailSubject: step.emailSubject,
                       emailBodyText: step.emailBodyText,
+                      emailBodyHtml: step.emailBodyHtml, // 서명이 포함된 HTML 포함
                     },
                     files: step.files,
                   })
@@ -244,6 +247,7 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
                       scheduledMinute: step.scheduledMinute,
                       emailSubject: step.emailSubject,
                       emailBodyText: step.emailBodyText,
+                      emailBodyHtml: step.emailBodyHtml, // 서명이 포함된 HTML 포함
                     },
                     files: step.files,
                   })
@@ -258,6 +262,7 @@ export function CreateCampaignStep3({ sequenceId, data, onChange }: CreateCampai
                       scheduledMinute: step.scheduledMinute,
                       emailSubject: step.emailSubject,
                       emailBodyText: step.emailBodyText,
+                      emailBodyHtml: step.emailBodyHtml, // 서명이 포함된 HTML 포함
                     },
                     files: step.files,
                   })

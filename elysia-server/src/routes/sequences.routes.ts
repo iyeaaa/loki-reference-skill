@@ -739,6 +739,10 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
           sequenceId: id,
           hasFiles: !!body.files,
           filesCount: body.files ? (Array.isArray(body.files) ? body.files.length : 1) : 0,
+          hasEmailBodyHtml: !!body.emailBodyHtml,
+          emailBodyHtmlLength: body.emailBodyHtml?.length || 0,
+          emailBodyHtmlPreview: body.emailBodyHtml?.substring(0, 200),
+          emailBodyTextLength: body.emailBodyText?.length || 0,
         },
         "📎 [API] Creating sequence step",
       )
@@ -813,7 +817,21 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
   // Update sequence step
   .put(
     "/:id/steps/:stepId",
-    async ({ params: { stepId }, body, set }) => {
+    async ({ params: { id, stepId }, body, set }) => {
+      logger.info(
+        {
+          sequenceId: id,
+          stepId,
+          hasFiles: !!body.files,
+          filesCount: body.files ? (Array.isArray(body.files) ? body.files.length : 1) : 0,
+          hasEmailBodyHtml: !!body.emailBodyHtml,
+          emailBodyHtmlLength: body.emailBodyHtml?.length || 0,
+          emailBodyHtmlPreview: body.emailBodyHtml?.substring(0, 200),
+          emailBodyTextLength: body.emailBodyText?.length || 0,
+        },
+        "📎 [API] Updating sequence step",
+      )
+
       // Process attachments if files are provided
       let attachmentsData = null
       if (body.files && body.files.length > 0) {
@@ -868,6 +886,21 @@ export const sequenceRoutes = new Elysia({ prefix: "/api/v1/sequences" })
         generationSource: body.generationSource,
         attachments: attachmentsData,
       }
+
+      logger.info(
+        {
+          stepId,
+          updateData: {
+            ...updateData,
+            emailBodyHtmlLength: updateData.emailBodyHtml?.length || 0,
+            emailBodyHtmlPreview: updateData.emailBodyHtml?.substring(0, 200),
+            emailBodyHtmlEndsWith: updateData.emailBodyHtml?.substring(
+              Math.max(0, (updateData.emailBodyHtml?.length || 0) - 100),
+            ),
+          },
+        },
+        "📎 [API] updateData before calling updateSequenceStep",
+      )
 
       const step = await sequenceService.updateSequenceStep(stepId, updateData)
       if (!step) {

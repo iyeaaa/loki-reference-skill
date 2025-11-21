@@ -161,6 +161,15 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
   }, [steps])
 
   const updateCurrentStep = (updates: Partial<EmailStep>) => {
+    console.log("[DEBUG] updateCurrentStep called with:", {
+      updates,
+      currentStepBefore: steps[selectedStepIndex],
+      selectedStepIndex,
+      hasEmailSignature: !!updates.emailSignature,
+      emailSignatureId: updates.emailSignatureId,
+      emailBodyHtml: updates.emailBodyHtml,
+    })
+
     const updatedSteps = [...steps]
 
     // 제목이 변경되는 경우 "(광고) " 상태를 자동으로 감지
@@ -173,6 +182,15 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
       ...updatedSteps[selectedStepIndex],
       ...updates,
     }
+
+    console.log("[DEBUG] updateCurrentStep after update:", {
+      updatedStep: updatedSteps[selectedStepIndex],
+      emailSignature: updatedSteps[selectedStepIndex].emailSignature,
+      emailSignatureId: updatedSteps[selectedStepIndex].emailSignatureId,
+      includeSignature: updatedSteps[selectedStepIndex].includeSignature,
+      emailBodyHtml: updatedSteps[selectedStepIndex].emailBodyHtml,
+    })
+
     setSteps(updatedSteps)
   }
 
@@ -267,18 +285,60 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
       return
     }
 
-    // Save to local state first
-    updateCurrentStep({ isDraft: false })
-
     // Save to DB if sequenceId exists
     if (sequenceId) {
       try {
-        // 서명이 선택되어 있고 포함 여부가 true이면 본문에 서명 추가
-        let emailBodyText = currentStep.emailBodyText
-        if (currentStep.emailSignature && currentStep.includeSignature !== false) {
-          // 서명 HTML을 본문 끝에 추가
-          emailBodyText = `${currentStep.emailBodyText}\n\n${currentStep.emailSignature}`
+        // 서명이 없으면 기본 서명 가져오기 (DB 저장 전에 서명 설정)
+        let emailSignature = currentStep.emailSignature
+        let emailSignatureId = currentStep.emailSignatureId
+        let includeSignature = currentStep.includeSignature !== false // 기본값: true
+
+        // 서명이 없고 기본 서명이 있으면 자동으로 설정
+        if (!emailSignature) {
+          const defaultSignatureHtml = getUserSignature()
+          if (defaultSignatureHtml) {
+            emailSignature = defaultSignatureHtml
+            // 기본 서명 ID 설정
+            emailSignatureId = defaultSignature?.id || "default"
+            includeSignature = true
+
+            console.log("[DEBUG] Auto-setting default signature before save:", {
+              emailSignature: emailSignature.substring(0, 100),
+              emailSignatureId,
+              includeSignature,
+              defaultSignatureId: defaultSignature?.id,
+            })
+
+            // 로컬 상태 업데이트 (서명 설정)
+            updateCurrentStep({
+              emailSignature,
+              emailSignatureId,
+              includeSignature,
+            })
+          }
         }
+
+        // 서명이 없으면 빈 문자열로 설정 (서명 없이 저장)
+        if (!emailSignature) {
+          emailSignature = ""
+        }
+
+        // 항상 최신 emailBodyText를 HTML로 변환하고 서명 추가
+        // emailBodyHtml은 항상 재생성하여 최신 상태 유지
+        const { markdownToHtml } = await import("@/lib/utils/markdown")
+        const bodyHtmlFromMarkdown = markdownToHtml(currentStep.emailBodyText)
+
+        const emailBodyText = currentStep.emailBodyText
+        // 서명이 있고 포함 여부가 true이면 추가
+        const emailBodyHtml =
+          emailSignature && includeSignature
+            ? `${bodyHtmlFromMarkdown}\n\n${emailSignature}`
+            : bodyHtmlFromMarkdown
+
+        console.log("[DEBUG] After processing:", {
+          emailBodyText: emailBodyText,
+          emailBodyHtml: emailBodyHtml,
+        })
 
         const stepData = {
           stepOrder: currentStep.stepOrder,
@@ -286,18 +346,47 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
           scheduledHour: currentStep.scheduledHour,
           scheduledMinute: currentStep.scheduledMinute,
           emailSubject: currentStep.emailSubject,
-          emailBodyText, // 서명이 본문에 포함됨
+          emailBodyText,
+          emailBodyHtml, // 서명이 포함된 HTML
           generationSource: creationMode === "ai" ? ("ai" as const) : ("manual" as const),
         }
 
+        console.log("[DEBUG] stepData:", {
+          ...stepData,
+          emailBodyHtmlLength: stepData.emailBodyHtml?.length || 0,
+          emailBodyHtmlPreview: stepData.emailBodyHtml?.substring(0, 200),
+        })
+
         if (currentStep.id) {
           // Update existing step
+          console.log("bbbbbbbbbbbbbb")
+          console.log("[DEBUG] updateSequenceStep object:", {
+            mutateAsync: typeof updateSequenceStep.mutateAsync,
+            hasMutateAsync: !!updateSequenceStep.mutateAsync,
+            stepData: {
+              ...stepData,
+              emailBodyHtmlLength: stepData.emailBodyHtml?.length || 0,
+            },
+          })
+
           const updatedStep = await updateSequenceStep.mutateAsync({
             sequenceId,
             stepId: currentStep.id,
             data: stepData,
             files: currentStep.files,
           })
+
+          console.log("[DEBUG] updateSequenceStep.mutateAsync completed:", updatedStep)
+
+          // DB 저장 성공 후 isDraft: false로 설정 및 서명 정보 업데이트
+          updateCurrentStep({
+            isDraft: false,
+            emailSignature,
+            emailSignatureId,
+            includeSignature,
+            emailBodyHtml,
+          })
+
           // Update step ID in local state if it was just created
           if (updatedStep?.id && !currentStep.id) {
             const updatedSteps = [...steps]
@@ -308,7 +397,7 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
             setSteps(updatedSteps)
           }
         } else {
-          // Create new step
+          console.log("aaaaaaaaaaaaa")
           const createdStep = await createSequenceStep.mutateAsync({
             data: {
               sequenceId,
@@ -316,6 +405,16 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
             },
             files: currentStep.files,
           })
+
+          // DB 저장 성공 후 isDraft: false로 설정 및 서명 정보 업데이트
+          updateCurrentStep({
+            isDraft: false,
+            emailSignature,
+            emailSignatureId,
+            includeSignature,
+            emailBodyHtml,
+          })
+
           // Update step ID in local state
           if (createdStep?.id) {
             const updatedSteps = [...steps]

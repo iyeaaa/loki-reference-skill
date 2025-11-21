@@ -10,6 +10,7 @@ export interface EmailStep {
   scheduledMinute: number
   emailSubject: string
   emailBodyText: string
+  emailBodyHtml?: string // 서명이 포함된 HTML 본문
   isDraft?: boolean
   files?: File[]
   isAdvertisement?: boolean

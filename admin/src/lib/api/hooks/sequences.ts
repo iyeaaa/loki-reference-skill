@@ -179,13 +179,29 @@ export function useCreateSequenceStep(sequenceId?: string) {
       const data = "data" in variables ? variables.data : variables
       const files = "data" in variables ? variables.files : undefined
 
-      console.log("📎 Hook - Extracted data:", data)
+      console.log("📎 Hook - Extracted data:", {
+        ...data,
+        emailBodyHtmlLength: data.emailBodyHtml?.length || 0,
+        emailBodyHtmlPreview: data.emailBodyHtml,
+        hasEmailBodyHtml: !!data.emailBodyHtml,
+      })
       console.log("📎 Hook - Extracted files:", files)
       console.log("📎 Hook - Files count:", files?.length || 0)
 
       const id = data.sequenceId || sequenceId
       if (!id) throw new Error("sequenceId is required")
-      return sequencesApi.createStep(id, data, files)
+
+      console.log("📎 Hook - About to call sequencesApi.createStep with:", {
+        id,
+        emailBodyHtmlLength: data.emailBodyHtml?.length || 0,
+        hasEmailBodyHtml: !!data.emailBodyHtml,
+      })
+
+      const result = sequencesApi.createStep(id, data, files)
+
+      console.log("📎 Hook - sequencesApi.createStep returned:", result)
+
+      return result
     },
     onSuccess: (_, variables) => {
       const data = "data" in variables ? variables.data : variables
@@ -213,9 +229,34 @@ export function useUpdateSequenceStep(sequenceId?: string) {
       data: CreateSequenceStepRequest
       files?: File[]
     }) => {
+      console.log("📎 Hook - updateStep mutationFn CALLED!")
+      console.log("📎 Hook - updateStep mutationFn called with variables:", {
+        ...variables,
+        data: {
+          ...variables.data,
+          emailBodyHtmlLength: variables.data.emailBodyHtml?.length || 0,
+          emailBodyHtmlPreview: variables.data.emailBodyHtml?.substring(0, 200),
+          hasEmailBodyHtml: !!variables.data.emailBodyHtml,
+        },
+      })
+
       const id = variables.sequenceId || sequenceId
       if (!id) throw new Error("sequenceId is required")
-      return sequencesApi.updateStep(id, variables.stepId, variables.data, variables.files)
+
+      console.log("📎 Hook - About to call sequencesApi.updateStep with:", {
+        id,
+        stepId: variables.stepId,
+        emailBodyHtmlLength: variables.data.emailBodyHtml?.length || 0,
+        hasEmailBodyHtml: !!variables.data.emailBodyHtml,
+      })
+
+      console.log("📎 Hook - CALLING sequencesApi.updateStep NOW!")
+      const result = sequencesApi.updateStep(id, variables.stepId, variables.data, variables.files)
+      console.log("📎 Hook - sequencesApi.updateStep CALLED, result:", result)
+
+      console.log("📎 Hook - sequencesApi.updateStep returned:", result)
+
+      return result
     },
     onSuccess: (_, variables) => {
       const id = variables.sequenceId || sequenceId

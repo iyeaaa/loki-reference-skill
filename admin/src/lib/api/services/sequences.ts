@@ -96,6 +96,12 @@ export const sequencesApi = {
   createStep: (sequenceId: string, data: CreateSequenceStepRequest, files?: File[]) => {
     console.log("📎 API - createStep called with files:", files)
     console.log("📎 API - Files count:", files?.length || 0)
+    console.log("📎 API - Data:", {
+      ...data,
+      emailBodyHtmlLength: data.emailBodyHtml?.length || 0,
+      emailBodyHtmlPreview: data.emailBodyHtml?.substring(0, 200),
+      hasEmailBodyHtml: !!data.emailBodyHtml,
+    })
 
     // If files are provided, use FormData
     if (files && files.length > 0) {
@@ -114,7 +120,15 @@ export const sequencesApi = {
       if (data.timezone) formData.append("timezone", data.timezone)
       formData.append("emailSubject", data.emailSubject)
       if (data.emailBodyText) formData.append("emailBodyText", data.emailBodyText)
-      if (data.emailBodyHtml) formData.append("emailBodyHtml", data.emailBodyHtml)
+      if (data.emailBodyHtml) {
+        formData.append("emailBodyHtml", data.emailBodyHtml)
+        console.log("📎 API - emailBodyHtml appended to FormData:", {
+          length: data.emailBodyHtml.length,
+          preview: data.emailBodyHtml.substring(0, 200),
+        })
+      } else {
+        console.warn("📎 API - emailBodyHtml is missing!")
+      }
       if (data.emailTemplateId) formData.append("emailTemplateId", data.emailTemplateId)
 
       // Append files
@@ -130,6 +144,11 @@ export const sequencesApi = {
     }
 
     // No files, use JSON
+    console.log("📎 API - Using JSON, emailBodyHtml:", {
+      hasEmailBodyHtml: !!data.emailBodyHtml,
+      emailBodyHtmlLength: data.emailBodyHtml?.length || 0,
+      emailBodyHtmlPreview: data.emailBodyHtml?.substring(0, 200),
+    })
     return apiFetch<SequenceStep>(`/api/v1/sequences/${sequenceId}/steps`, {
       method: "POST",
       body: JSON.stringify(data),
@@ -142,6 +161,17 @@ export const sequencesApi = {
     data: CreateSequenceStepRequest,
     files?: File[],
   ) => {
+    console.log("📎 API - updateStep FUNCTION CALLED!")
+    console.log("📎 API - updateStep called:", {
+      sequenceId,
+      stepId,
+      ...data,
+      emailBodyHtmlLength: data.emailBodyHtml?.length || 0,
+      emailBodyHtmlPreview: data.emailBodyHtml?.substring(0, 200),
+      hasEmailBodyHtml: !!data.emailBodyHtml,
+      filesCount: files?.length || 0,
+    })
+
     // If files are provided, use FormData
     if (files && files.length > 0) {
       const formData = new FormData()
@@ -158,7 +188,15 @@ export const sequencesApi = {
       if (data.timezone) formData.append("timezone", data.timezone)
       formData.append("emailSubject", data.emailSubject)
       if (data.emailBodyText) formData.append("emailBodyText", data.emailBodyText)
-      if (data.emailBodyHtml) formData.append("emailBodyHtml", data.emailBodyHtml)
+      if (data.emailBodyHtml) {
+        formData.append("emailBodyHtml", data.emailBodyHtml)
+        console.log("📎 API - emailBodyHtml appended to FormData:", {
+          length: data.emailBodyHtml.length,
+          preview: data.emailBodyHtml.substring(0, 200),
+        })
+      } else {
+        console.warn("📎 API - emailBodyHtml is missing!")
+      }
       if (data.emailTemplateId) formData.append("emailTemplateId", data.emailTemplateId)
 
       // Append files
@@ -174,6 +212,11 @@ export const sequencesApi = {
     }
 
     // No files, use JSON
+    console.log("📎 API - Using JSON for updateStep, emailBodyHtml:", {
+      hasEmailBodyHtml: !!data.emailBodyHtml,
+      emailBodyHtmlLength: data.emailBodyHtml?.length || 0,
+      emailBodyHtmlPreview: data.emailBodyHtml?.substring(0, 200),
+    })
     return apiFetch<SequenceStep>(`/api/v1/sequences/${sequenceId}/steps/${stepId}`, {
       method: "PUT",
       body: JSON.stringify(data),

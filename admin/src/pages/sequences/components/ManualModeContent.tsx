@@ -160,6 +160,37 @@ export function ManualModeContent({
     setSelectedTemplateId("")
   }, [selectedStepIndex])
 
+  // currentStep이 변경될 때 서명이 없으면 기본 서명 자동 설정
+  useEffect(() => {
+    if (!currentStep) return
+
+    const defaultSignature = getUserSignature()
+    const defaultSigInList = signatures?.find((sig) => sig.isDefault)
+
+    // 서명이 없고 기본 서명이 있으면 자동으로 설정
+    if (!currentStep.emailSignature && defaultSignature) {
+      console.log("[DEBUG] Auto-setting default signature for currentStep:", {
+        stepOrder: currentStep.stepOrder,
+        hasDefaultSignature: !!defaultSignature,
+        defaultSigId: defaultSigInList?.id || "default",
+      })
+
+      // markdownToHtml을 사용하여 emailBodyHtml 생성
+      import("@/lib/utils/markdown").then(({ markdownToHtml }) => {
+        const currentBodyText = currentStep.emailBodyText || ""
+        const bodyHtmlFromMarkdown = markdownToHtml(currentBodyText)
+        const emailBodyHtml = `${bodyHtmlFromMarkdown}\n\n${defaultSignature}`
+
+        onUpdateStep({
+          emailSignature: defaultSignature,
+          emailSignatureId: defaultSigInList?.id || "default",
+          includeSignature: true,
+          emailBodyHtml,
+        })
+      })
+    }
+  }, [currentStep, signatures, getUserSignature, onUpdateStep])
+
   // Get current signature ID from step
   const getCurrentSignatureValue = () => {
     // 기본 서명 가져오기
@@ -199,27 +230,79 @@ export function ManualModeContent({
   }
 
   // Handle signature selection
-  const handleSignatureChange = (signatureId: string) => {
+  const handleSignatureChange = async (signatureId: string) => {
+    console.log("[DEBUG] handleSignatureChange called:", {
+      signatureId,
+      currentStep: currentStep,
+      hasCurrentStep: !!currentStep,
+      currentStepEmailSignature: currentStep?.emailSignature,
+      currentStepEmailSignatureId: currentStep?.emailSignatureId,
+    })
+
+    // markdownToHtml을 사용하여 emailBodyHtml 생성
+    const { markdownToHtml } = await import("@/lib/utils/markdown")
+    const currentBodyText = currentStep?.emailBodyText || ""
+    const bodyHtmlFromMarkdown = markdownToHtml(currentBodyText)
+
     if (signatureId === "none") {
       // 서명 제거
-      onUpdateStep({ emailSignature: "", emailSignatureId: "" })
+      const updateData = {
+        emailSignature: "",
+        emailSignatureId: "",
+        includeSignature: false,
+        emailBodyHtml: bodyHtmlFromMarkdown, // 서명 없는 HTML
+      }
+      console.log("[DEBUG] Removing signature, calling onUpdateStep with:", updateData)
+      onUpdateStep(updateData)
     } else if (signatureId === "default") {
       const signatureHtml = getUserSignature()
       // 기본 서명 ID 찾기
       const defaultSigInList = signatures?.find((sig) => sig.isDefault)
-      onUpdateStep({
+      // emailBodyHtml에 서명 추가
+      const emailBodyHtml = `${bodyHtmlFromMarkdown}\n\n${signatureHtml}`
+      const updateData = {
         emailSignature: signatureHtml,
         emailSignatureId: defaultSigInList?.id || "default",
+        includeSignature: true,
+        emailBodyHtml, // 서명이 포함된 HTML
+      }
+      console.log("[DEBUG] Setting default signature, calling onUpdateStep with:", {
+        ...updateData,
+        signatureHtmlPreview: signatureHtml.substring(0, 100),
+        emailBodyHtmlLength: emailBodyHtml.length,
       })
+      onUpdateStep(updateData)
     } else {
       const selectedSignature = signatures?.find((sig) => sig.id === signatureId)
       if (selectedSignature) {
-        onUpdateStep({
+        // emailBodyHtml에 서명 추가
+        const emailBodyHtml = `${bodyHtmlFromMarkdown}\n\n${selectedSignature.signatureHtml}`
+        const updateData = {
           emailSignature: selectedSignature.signatureHtml,
           emailSignatureId: signatureId,
+          includeSignature: true,
+          emailBodyHtml, // 서명이 포함된 HTML
+        }
+        console.log("[DEBUG] Setting selected signature, calling onUpdateStep with:", {
+          ...updateData,
+          signatureHtmlPreview: selectedSignature.signatureHtml.substring(0, 100),
+          emailBodyHtmlLength: emailBodyHtml.length,
         })
+        onUpdateStep(updateData)
+      } else {
+        console.warn("[DEBUG] Signature not found:", signatureId)
       }
     }
+
+    // 업데이트 후 확인
+    setTimeout(() => {
+      console.log("[DEBUG] After handleSignatureChange, currentStep:", {
+        emailSignature: currentStep?.emailSignature,
+        emailSignatureId: currentStep?.emailSignatureId,
+        includeSignature: currentStep?.includeSignature,
+        emailBodyHtml: currentStep?.emailBodyHtml,
+      })
+    }, 100)
   }
 
   // Handle template selection

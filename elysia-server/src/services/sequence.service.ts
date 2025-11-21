@@ -117,18 +117,6 @@ export async function updateSequence(
     selectedLeadIds?: string[] // Array of lead IDs to target
   },
 ) {
-  // const { default: logger } = await import("../utils/logger")
-
-  // logger.info(
-  //   {
-  //     sequenceId: id,
-  //     customerGroupId: data.customerGroupId,
-  //     selectedLeadIds: data.selectedLeadIds,
-  //     selectedLeadIdsLength: data.selectedLeadIds?.length,
-  //   },
-  //   "📝 Updating sequence with data",
-  // )
-
   const updateData: Record<string, unknown> = {
     updatedAt: new Date(),
   }
@@ -145,23 +133,7 @@ export async function updateSequence(
       ? JSON.stringify(data.selectedLeadIds)
       : null
     updateData.selectedLeadIds = stringifiedLeadIds
-    // logger.info(
-    //   {
-    //     sequenceId: id,
-    //     originalArray: data.selectedLeadIds,
-    //     stringified: stringifiedLeadIds,
-    //   },
-    //   "💾 Saving selectedLeadIds",
-    // )
   }
-
-  // logger.info(
-  //   {
-  //     sequenceId: id,
-  //     updateData,
-  //   },
-  //   "💾 Final updateData being saved to DB",
-  // )
 
   const [updatedSequence] = await db
     .update(sequences)
@@ -606,8 +578,16 @@ export async function createSequenceStep(data: {
 }) {
   // Markdown을 HTML로 변환
   const { markdownToHtml } = await import("../utils/markdown")
+  // emailBodyHtml이 이미 제공되면 그대로 사용 (서명 포함)
+  // 없으면 emailBodyText를 markdownToHtml로 변환
+  // 주의: data.emailBodyHtml이 undefined나 null일 때만 markdownToHtml 사용
+  // 빈 문자열("")도 유효한 값이므로 체크해야 함
   const emailBodyHtml =
-    data.emailBodyHtml || (data.emailBodyText ? markdownToHtml(data.emailBodyText) : null)
+    data.emailBodyHtml !== undefined && data.emailBodyHtml !== null
+      ? data.emailBodyHtml
+      : data.emailBodyText
+        ? markdownToHtml(data.emailBodyText)
+        : null
 
   const [newStep] = await db
     .insert(sequenceSteps)
@@ -730,15 +710,61 @@ export async function updateSequenceStep(
 
   // 5. Markdown을 HTML로 변환
   const { markdownToHtml } = await import("../utils/markdown")
+
+  // 디버깅: 입력 데이터 확인
+  logger.info(
+    {
+      stepId: id,
+      hasDataEmailBodyHtml: !!data.emailBodyHtml,
+      dataEmailBodyHtmlLength: data.emailBodyHtml?.length || 0,
+      dataEmailBodyHtmlPreview: data.emailBodyHtml?.substring(0, 200),
+      dataEmailBodyHtmlEndsWith: data.emailBodyHtml?.substring(
+        Math.max(0, (data.emailBodyHtml?.length || 0) - 100),
+      ),
+      hasDataEmailBodyText: !!data.emailBodyText,
+      dataEmailBodyTextLength: data.emailBodyText?.length || 0,
+      dataEmailBodyTextPreview: data.emailBodyText?.substring(0, 100),
+      fullDataKeys: Object.keys(data),
+      dataEmailBodyHtmlType: typeof data.emailBodyHtml,
+      dataEmailBodyHtmlIsEmptyString: data.emailBodyHtml === "",
+    },
+    "📝 [SERVICE] updateSequenceStep - Input data",
+  )
+
+  // emailBodyHtml이 이미 제공되면 그대로 사용 (서명 포함)
+  // 없으면 emailBodyText를 markdownToHtml로 변환
+  // 주의: data.emailBodyHtml이 undefined나 null일 때만 markdownToHtml 사용
+  // 빈 문자열("")도 유효한 값이므로 체크해야 함
   const emailBodyHtml =
-    data.emailBodyHtml || (data.emailBodyText ? markdownToHtml(data.emailBodyText) : null)
+    data.emailBodyHtml !== undefined && data.emailBodyHtml !== null
+      ? data.emailBodyHtml
+      : data.emailBodyText
+        ? markdownToHtml(data.emailBodyText)
+        : null
+
+  // 디버깅: 최종 emailBodyHtml 확인
+  logger.info(
+    {
+      stepId: id,
+      finalEmailBodyHtmlLength: emailBodyHtml?.length || 0,
+      finalEmailBodyHtmlPreview: emailBodyHtml?.substring(0, 200),
+      finalEmailBodyHtmlEndsWith: emailBodyHtml?.substring(
+        Math.max(0, (emailBodyHtml?.length || 0) - 100),
+      ),
+      isFromData: !!data.emailBodyHtml,
+      isFromMarkdown: !data.emailBodyHtml && !!data.emailBodyText,
+    },
+    "📝 [SERVICE] updateSequenceStep - Final emailBodyHtml",
+  )
 
   // 6. 스텝 정보 업데이트
+  // emailBodyHtml을 명시적으로 설정하여 서명이 포함된 HTML이 저장되도록 함
+  const { emailBodyHtml: _, ...dataWithoutEmailBodyHtml } = data
   const [updatedStep] = await db
     .update(sequenceSteps)
     .set({
-      ...data,
-      emailBodyHtml: emailBodyHtml,
+      ...dataWithoutEmailBodyHtml,
+      emailBodyHtml: emailBodyHtml, // 서명이 포함된 HTML 저장
       scheduledHour: data.scheduledHour ?? 9,
       scheduledMinute: data.scheduledMinute ?? 0,
       timezone: data.timezone ?? "Asia/Seoul",
@@ -755,6 +781,8 @@ export async function updateSequenceStep(
       scheduledMinute: sequenceSteps.scheduledMinute,
       timezone: sequenceSteps.timezone,
       emailSubject: sequenceSteps.emailSubject,
+      emailBodyText: sequenceSteps.emailBodyText,
+      emailBodyHtml: sequenceSteps.emailBodyHtml,
       generationSource: sequenceSteps.generationSource,
       attachments: sequenceSteps.attachments,
       updatedAt: sequenceSteps.updatedAt,

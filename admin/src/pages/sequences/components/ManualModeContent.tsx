@@ -137,6 +137,7 @@ export function ManualModeContent({
   const [aiStrategy, setAiStrategy] = useState("") // Tone and manner strategy
   const [showSignaturePreview, setShowSignaturePreview] = useState(false)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
+  const [selectedAITemplateId, setSelectedAITemplateId] = useState<string>("none") // Template for AI generation
 
   // Get all signatures (userId를 전달하여 기본 서명 표시 포함)
   const { data: signatures } = useEmailSignatures(
@@ -244,6 +245,23 @@ export function ManualModeContent({
       promptParts.push(`[전략]: ${aiStrategy.trim()}`)
     }
 
+    // Template reference (if selected)
+    if (selectedAITemplateId && selectedAITemplateId !== "none") {
+      const selectedTemplate = templatesData?.emailTemplates.find(
+        (t) => t.id === selectedAITemplateId,
+      )
+      if (selectedTemplate) {
+        // Extract text from HTML if needed
+        const bodyText = selectedTemplate.bodyText || ""
+        const bodyHtml = selectedTemplate.bodyHtml || ""
+        const templateBody = bodyText || (bodyHtml ? bodyHtml.replace(/<[^>]*>/g, "").trim() : "")
+
+        promptParts.push(
+          `[참고 템플릿 - 반드시 이 템플릿의 구조와 스타일을 따라주세요]:\n템플릿명: ${selectedTemplate.name}\n${selectedTemplate.description ? `설명: ${selectedTemplate.description}\n` : ""}제목 예시: ${selectedTemplate.subject}\n본문 예시:\n${templateBody}\n\n**중요 지시사항:**\n1. 위 템플릿의 구조(인사말, 본문 흐름, 마무리 등)를 그대로 따라주세요\n2. 템플릿의 톤과 스타일(공식적/비공식적, 길이, 문체 등)을 유지해주세요\n3. 템플릿에서 사용된 변수 형식({{회사명}}, {{담당자명}} 등)을 동일하게 사용해주세요\n4. 템플릿의 전체적인 흐름과 문단 구성을 참고하여 작성해주세요`,
+        )
+      }
+    }
+
     // Additional instructions (optional)
     if (aiPrompt.trim()) {
       promptParts.push(`[추가 지시사항]: ${aiPrompt.trim()}`)
@@ -251,9 +269,14 @@ export function ManualModeContent({
 
     const finalPrompt = promptParts.join("\n\n")
 
-    // Validate: at least group info, goal, or strategy must be provided
-    if (!aiGroupInfo.trim() && !aiGoal.trim() && !aiStrategy.trim()) {
-      toast.error("최소한 그룹 정보, 목표, 또는 전략 중 하나를 입력해주세요")
+    // Validate: at least group info, goal, strategy, or template must be provided
+    if (
+      !aiGroupInfo.trim() &&
+      !aiGoal.trim() &&
+      !aiStrategy.trim() &&
+      (!selectedAITemplateId || selectedAITemplateId === "none")
+    ) {
+      toast.error("최소한 그룹 정보, 목표, 전략, 또는 템플릿 중 하나를 입력/선택해주세요")
       return
     }
 
@@ -294,6 +317,7 @@ export function ManualModeContent({
 
   const handleOpenAISheet = async () => {
     onShowAISheetChange(true)
+    setSelectedAITemplateId("none") // Reset template selection when opening AI sheet
 
     // Detect country and group info from customer group leads when opening the sheet
     try {
@@ -939,7 +963,7 @@ export function ManualModeContent({
 
       {/* AI Generation Sheet */}
       <Sheet open={showAISheet} onOpenChange={onShowAISheetChange}>
-        <SheetContent side="right" className="w-[600px] sm:max-w-[600px]">
+        <SheetContent side="right" className="w-[600px] sm:max-w-[600px] flex flex-col">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
@@ -950,107 +974,217 @@ export function ManualModeContent({
             </SheetDescription>
           </SheetHeader>
 
-          <div className="mt-6 space-y-4">
-            {/* Auto-detected Group Info */}
-            <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-4 space-y-2">
-              <h4 className="font-medium text-sm flex items-center gap-2">
-                <Info className="h-4 w-4 text-blue-600" />
-                타겟 고객 그룹 정보 (자동 감지)
-              </h4>
-              <Input
-                value={aiGroupInfo}
-                onChange={(e) => setAiGroupInfo(e.target.value)}
-                placeholder="타겟 고객 정보를 입력하세요"
-                className="bg-white dark:bg-background"
-              />
-              <p className="text-xs text-muted-foreground">
-                고객 리드 데이터를 기반으로 자동 감지됩니다. 필요시 수정 가능합니다.
-              </p>
-            </div>
+          <ScrollArea className="flex-1 mt-6 pr-4">
+            <div className="space-y-4">
+              {/* Template Selection for AI */}
+              <div className="space-y-2">
+                <Label>템플릿 참고 (선택)</Label>
+                <Select value={selectedAITemplateId} onValueChange={setSelectedAITemplateId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="템플릿 선택 (선택사항)" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="none">템플릿 없이 생성</SelectItem>
+                    {templatesData?.emailTemplates && templatesData.emailTemplates.length > 0 ? (
+                      templatesData.emailTemplates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium">{template.name}</span>
+                            {template.description && (
+                              <span className="text-xs text-muted-foreground">
+                                {template.description}
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-templates" disabled>
+                        등록된 템플릿이 없습니다
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  💡 템플릿을 선택하면 AI가 해당 템플릿의 스타일과 구조를 참고하여 이메일을
+                  생성합니다
+                </p>
 
-            {/* Target Country */}
-            <div className="space-y-2">
-              <Label>타겟 국가</Label>
-              <Input
-                value={aiCountry}
-                onChange={(e) => setAiCountry(e.target.value)}
-                placeholder="예: Korea, Japan, China"
-              />
-            </div>
+                {/* Template Preview */}
+                {selectedAITemplateId && selectedAITemplateId !== "none" && (
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-3 mt-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm flex items-center gap-2">
+                        <Info className="h-4 w-4 text-primary" />
+                        선택한 템플릿 미리보기
+                      </h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => setSelectedAITemplateId("none")}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    {(() => {
+                      const selectedTemplate = templatesData?.emailTemplates.find(
+                        (t) => t.id === selectedAITemplateId,
+                      )
+                      if (!selectedTemplate) return null
 
-            {/* Follow-up Goal */}
-            <div className="space-y-2">
-              <Label>팔로업 목표</Label>
-              <Input
-                value={aiGoal}
-                onChange={(e) => setAiGoal(e.target.value)}
-                placeholder="예: 미팅 성사, 데모 요청, 자료 다운로드 유도"
-              />
-              <p className="text-xs text-muted-foreground">
-                이 이메일을 통해 달성하고자 하는 목표를 입력하세요
-              </p>
-            </div>
-
-            {/* Template Strategy (Tone & Manner) */}
-            <div className="space-y-2">
-              <Label>템플릿 전략 (톤앤매너)</Label>
-              <Input
-                value={aiStrategy}
-                onChange={(e) => setAiStrategy(e.target.value)}
-                placeholder="예: 전문적이고 친근한 톤, 간결하고 명확한 메시지"
-              />
-              <p className="text-xs text-muted-foreground">
-                이메일의 톤, 스타일, 길이 등을 지정하세요
-              </p>
-            </div>
-
-            {/* AI Prompt (Optional Additional Instructions) */}
-            <div className="space-y-2">
-              <Label>추가 지시사항 (선택)</Label>
-              <Textarea
-                value={aiPrompt}
-                onChange={(e) => onAIPromptChange(e.target.value)}
-                placeholder="예: 최근 출시한 신제품에 대한 소개를 포함하고, 기존 고객 성공 사례를 언급해주세요..."
-                rows={4}
-              />
-              <p className="text-xs text-muted-foreground">
-                추가로 포함하고 싶은 내용이나 특별한 지시사항을 입력하세요
-              </p>
-            </div>
-
-            <div className="rounded-lg bg-muted p-4 space-y-2">
-              <h4 className="font-medium text-sm">💡 작성 가이드</h4>
-              <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                <li>
-                  <strong>그룹 정보</strong>: 타겟 고객의 특성 (자동 감지, 수정 가능)
-                </li>
-                <li>
-                  <strong>목표</strong>: 이메일을 통해 달성하고자 하는 구체적인 행동
-                </li>
-                <li>
-                  <strong>전략</strong>: 톤, 메시지 스타일, 길이 등의 방향성
-                </li>
-                <li>
-                  <strong>추가 지시사항</strong>: 포함할 특정 내용이나 예시
-                </li>
-              </ul>
-            </div>
-
-            <div className="flex gap-2">
-              <Button onClick={handleGenerateAI} disabled={isGeneratingAI} className="flex-1">
-                {isGeneratingAI ? (
-                  "생성 중..."
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    생성하기
-                  </>
+                      return (
+                        <div className="space-y-2 text-sm">
+                          <div>
+                            <span className="font-medium text-muted-foreground">템플릿명:</span>{" "}
+                            <span className="font-semibold">{selectedTemplate.name}</span>
+                          </div>
+                          {selectedTemplate.description && (
+                            <div>
+                              <span className="font-medium text-muted-foreground">설명:</span>{" "}
+                              <span>{selectedTemplate.description}</span>
+                            </div>
+                          )}
+                          <div className="border-t pt-2 space-y-2">
+                            <div>
+                              <span className="font-medium text-muted-foreground">제목:</span>
+                              <div className="mt-1 p-2 bg-background rounded border text-xs">
+                                {selectedTemplate.subject}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="font-medium text-muted-foreground">본문:</span>
+                              <div className="mt-1 p-2 bg-background rounded border text-xs max-h-[200px] overflow-y-auto">
+                                {selectedTemplate.bodyHtml ? (
+                                  <div
+                                    className="prose prose-sm max-w-none dark:prose-invert"
+                                    // biome-ignore lint/security/noDangerouslySetInnerHtml: Template preview is safe
+                                    dangerouslySetInnerHTML={{ __html: selectedTemplate.bodyHtml }}
+                                  />
+                                ) : (
+                                  <pre className="whitespace-pre-wrap font-sans">
+                                    {selectedTemplate.bodyText || "(본문 없음)"}
+                                  </pre>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground pt-2 border-t">
+                            💡 AI가 위 템플릿의 구조, 톤, 스타일을 참고하여 새로운 이메일을
+                            생성합니다
+                          </p>
+                        </div>
+                      )
+                    })()}
+                  </div>
                 )}
-              </Button>
-              <Button variant="outline" onClick={() => onShowAISheetChange(false)}>
-                취소
-              </Button>
+              </div>
+
+              {/* Auto-detected Group Info */}
+              <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-4 space-y-2">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <Info className="h-4 w-4 text-blue-600" />
+                  타겟 고객 그룹 정보 (자동 감지)
+                </h4>
+                <Input
+                  value={aiGroupInfo}
+                  onChange={(e) => setAiGroupInfo(e.target.value)}
+                  placeholder="타겟 고객 정보를 입력하세요"
+                  className="bg-white dark:bg-background"
+                />
+                <p className="text-xs text-muted-foreground">
+                  고객 리드 데이터를 기반으로 자동 감지됩니다. 필요시 수정 가능합니다.
+                </p>
+              </div>
+
+              {/* Target Country */}
+              <div className="space-y-2">
+                <Label>타겟 국가</Label>
+                <Input
+                  value={aiCountry}
+                  onChange={(e) => setAiCountry(e.target.value)}
+                  placeholder="예: Korea, Japan, China"
+                />
+              </div>
+
+              {/* Follow-up Goal */}
+              <div className="space-y-2">
+                <Label>팔로업 목표</Label>
+                <Input
+                  value={aiGoal}
+                  onChange={(e) => setAiGoal(e.target.value)}
+                  placeholder="예: 미팅 성사, 데모 요청, 자료 다운로드 유도"
+                />
+                <p className="text-xs text-muted-foreground">
+                  이 이메일을 통해 달성하고자 하는 목표를 입력하세요
+                </p>
+              </div>
+
+              {/* Template Strategy (Tone & Manner) */}
+              <div className="space-y-2">
+                <Label>템플릿 전략 (톤앤매너)</Label>
+                <Input
+                  value={aiStrategy}
+                  onChange={(e) => setAiStrategy(e.target.value)}
+                  placeholder="예: 전문적이고 친근한 톤, 간결하고 명확한 메시지"
+                />
+                <p className="text-xs text-muted-foreground">
+                  이메일의 톤, 스타일, 길이 등을 지정하세요
+                </p>
+              </div>
+
+              {/* AI Prompt (Optional Additional Instructions) */}
+              <div className="space-y-2">
+                <Label>추가 지시사항 (선택)</Label>
+                <Textarea
+                  value={aiPrompt}
+                  onChange={(e) => onAIPromptChange(e.target.value)}
+                  placeholder="예: 최근 출시한 신제품에 대한 소개를 포함하고, 기존 고객 성공 사례를 언급해주세요..."
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">
+                  추가로 포함하고 싶은 내용이나 특별한 지시사항을 입력하세요
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-muted p-4 space-y-2">
+                <h4 className="font-medium text-sm">💡 작성 가이드</h4>
+                <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>
+                    <strong>템플릿 참고</strong>: 기존 템플릿의 스타일과 구조를 참고하여 생성
+                    (선택사항)
+                  </li>
+                  <li>
+                    <strong>그룹 정보</strong>: 타겟 고객의 특성 (자동 감지, 수정 가능)
+                  </li>
+                  <li>
+                    <strong>목표</strong>: 이메일을 통해 달성하고자 하는 구체적인 행동
+                  </li>
+                  <li>
+                    <strong>전략</strong>: 톤, 메시지 스타일, 길이 등의 방향성
+                  </li>
+                  <li>
+                    <strong>추가 지시사항</strong>: 포함할 특정 내용이나 예시
+                  </li>
+                </ul>
+              </div>
             </div>
+          </ScrollArea>
+
+          <div className="flex gap-2 pt-4 border-t mt-auto">
+            <Button onClick={handleGenerateAI} disabled={isGeneratingAI} className="flex-1">
+              {isGeneratingAI ? (
+                "생성 중..."
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  생성하기
+                </>
+              )}
+            </Button>
+            <Button variant="outline" onClick={() => onShowAISheetChange(false)}>
+              취소
+            </Button>
           </div>
         </SheetContent>
       </Sheet>

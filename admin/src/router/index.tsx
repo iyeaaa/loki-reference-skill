@@ -38,6 +38,7 @@ const WebDataExtraction = lazy(() => import("../pages/settings/WebDataExtraction
 const WebsetPage = lazy(() => import("../pages/webset"))
 const WebsetCriteriaPage = lazy(() => import("../pages/webset/criteria"))
 const WebsetDetailPage = lazy(() => import("../pages/websets/[id]"))
+const GeminiSearchPage = lazy(() => import("../pages/gemini-search/GeminiSearchPage"))
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>
@@ -167,6 +168,10 @@ export const router = createBrowserRouter([
           {
             path: "websets/:id",
             element: <WebsetDetailPage />,
+          },
+          {
+            path: "gemini-search",
+            element: <GeminiSearchPage />,
           },
         ],
       },

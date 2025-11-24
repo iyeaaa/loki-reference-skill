@@ -19,6 +19,7 @@ import { emailRepliesRoutes } from "./routes/email-replies.routes"
 import { emailSignatureRoutes } from "./routes/email-signatures.routes"
 import { adminEmailTemplateRoutes, emailTemplateRoutes } from "./routes/email-templates.routes"
 import { adminEmailRoutes, emailRoutes } from "./routes/emails.routes"
+import { geminiFileSearchRoutes } from "./routes/gemini-file-search.routes"
 // Import routes
 import { healthRoutes } from "./routes/health.routes"
 import { leadImportRoutes } from "./routes/lead-import.routes"
@@ -165,6 +166,7 @@ const app = new Elysia()
   .use(openaiApiKeysRoutes)
   .use(webExtractionRoutes)
   .use(websetRoutes)
+  .use(geminiFileSearchRoutes)
 
   .listen(config.port)
 

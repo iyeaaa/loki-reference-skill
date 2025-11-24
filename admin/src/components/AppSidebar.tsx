@@ -7,6 +7,7 @@ import {
   MessageSquare,
   Search,
   Settings,
+  Sparkles,
   UserCheck,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
@@ -122,6 +123,11 @@ const getMainMenuItems = (t: (key: string) => string) => [
     title: t("sidebar.menu.webset"),
     url: "/websets",
     icon: Search,
+  },
+  {
+    title: t("sidebar.menu.geminiSearch"),
+    url: "/gemini-search",
+    icon: Sparkles,
   },
 ]
 

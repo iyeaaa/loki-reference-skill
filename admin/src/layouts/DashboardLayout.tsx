@@ -217,6 +217,8 @@ const getPageName = (pathname: string, t: (key: string) => string) => {
       return t("sidebar.menu.aiSalesAutomation")
     case "/settings":
       return t("sidebar.menu.settings")
+    case "/gemini-search":
+      return t("sidebar.menu.geminiSearch")
     default:
       // Handle webset routes
       if (pathname.startsWith("/websets")) {

@@ -107,6 +107,11 @@ export const config = {
     apiKey: process.env.OPENAI_API_KEY || "",
   },
 
+  // Gemini (for File Search)
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || "",
+  },
+
   // External APIs
   apis: {
     jina: {

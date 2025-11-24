@@ -261,9 +261,9 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
         </div>
       )}
 
-      <div className="flex-1 grid grid-cols-2 gap-6 overflow-hidden">
+      <div className="flex-1 grid grid-cols-2 gap-6 overflow-hidden min-h-0">
         {/* Left Panel - Customer Group Selection */}
-        <div className="space-y-4 border-r pr-6">
+        <div className="space-y-4 border-r pr-6 overflow-y-auto">
           <div>
             <h3 className="text-lg font-semibold mb-4">
               {t("sequences.step1.selectCustomerGroup")}
@@ -356,7 +356,7 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
           ) : (
             <div className="flex-1 flex flex-col gap-3 overflow-hidden">
               {/* Filter Panel - Always Visible */}
-              <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-3 flex-shrink-0">
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium text-sm">{t("sequences.step1.filterOptions")}</span>
                   {hasActiveFilters && (
@@ -441,14 +441,14 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
               </div>
 
               {selectedRepliedCount > 0 && (
-                <div className="rounded-md bg-amber-50 dark:bg-amber-950/20 p-3 border border-amber-200 dark:border-amber-800">
+                <div className="rounded-md bg-amber-50 dark:bg-amber-950/20 p-3 border border-amber-200 dark:border-amber-800 flex-shrink-0">
                   <p className="text-xs text-amber-900 dark:text-amber-200">
                     {t("sequences.step1.repliedLeadsWarning", { count: selectedRepliedCount })}
                   </p>
                 </div>
               )}
 
-              <div className="flex-1 flex flex-col gap-2 overflow-hidden">
+              <div className="flex-1 flex flex-col gap-2 overflow-hidden min-h-0">
                 {/* Replied Leads Section */}
                 {repliedCount > 0 && (
                   <div className="rounded-lg border border-amber-200 dark:border-amber-800 overflow-hidden flex-shrink-0">
@@ -498,7 +498,7 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
                             </span>
                           </div>
                         </div>
-                        <ScrollArea className="h-[120px]">
+                        <ScrollArea className="h-[150px]">
                           <div className="p-3 space-y-2">
                             {filteredRepliedLeads.map((member) => (
                               <div
@@ -533,8 +533,8 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
                 )}
 
                 {/* Non-Replied Leads Section */}
-                <div className="flex-1 flex flex-col gap-2 overflow-hidden">
-                  <div className="rounded-md bg-muted/30 p-3">
+                <div className="flex-1 flex flex-col gap-2 overflow-hidden min-h-0">
+                  <div className="rounded-md bg-muted/30 p-3 flex-shrink-0">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Checkbox
@@ -562,7 +562,7 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
                     </div>
                   </div>
 
-                  <ScrollArea className="flex-1 rounded-md border">
+                  <ScrollArea className="h-[400px] rounded-md border">
                     <div className="p-3 space-y-2">
                       {filteredNonRepliedLeads.map((member) => (
                         <div

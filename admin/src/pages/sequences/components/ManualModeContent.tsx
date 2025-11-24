@@ -472,8 +472,8 @@ export function ManualModeContent({
 
   return (
     <div className="flex-1 flex gap-6 overflow-hidden">
-      {/* Left Panel - Steps List (30%) */}
-      <div className="w-[30%] flex flex-col gap-4 border-r pr-6">
+      {/* Left Panel - Steps List */}
+      <div className="w-[420px] flex-shrink-0 flex flex-col gap-4 border-r pr-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold">{t("sequences.manualMode.emailSteps")}</h3>
@@ -756,7 +756,9 @@ export function ManualModeContent({
                       )}
                     </div>
                     {step.emailSubject ? (
-                      <p className="text-sm font-medium truncate">{step.emailSubject}</p>
+                      <p className="text-sm font-medium line-clamp-2 break-words">
+                        {step.emailSubject}
+                      </p>
                     ) : (
                       <p className="text-sm text-muted-foreground italic">
                         {t("sequences.manualMode.noSubject")}
@@ -793,7 +795,7 @@ export function ManualModeContent({
         </ScrollArea>
       </div>
 
-      {/* Right Panel - Email Editor (70%) */}
+      {/* Right Panel - Email Editor (65%) */}
       <div className="flex-1 flex flex-col gap-4 overflow-hidden">
         <div className="flex items-center justify-between">
           <div>

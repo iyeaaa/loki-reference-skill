@@ -1478,8 +1478,6 @@ class WebhookService {
     const automatedUserAgentPatterns = [
       /Chrome\/109\.0\.0\.0/, // 기업 보안 게이트웨이
       /Chrome\/113\.0\.0\.0/, // 기업 보안 게이트웨이 (구버전)
-      /GoogleImageProxy/, // Gmail 이미지 프록시
-      /YahooMailProxy/, // Yahoo 메일 프록시
       /ms-office; MSOffice/i, // Outlook 프리뷰
     ]
 
@@ -1488,7 +1486,6 @@ class WebhookService {
     }
 
     const automatedIpPatterns = [
-      /^74\.125\.209\./, // Gmail 이미지 프록시
       /^4\.182\./, // Microsoft ATP / Safe Links
       /^57\.155\./, // Microsoft ATP
     ]

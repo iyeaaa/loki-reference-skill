@@ -287,10 +287,10 @@ export async function createWebsetCriteria(query: string) {
   const criteriaExtractionSchema = z.object({
     validationCriteria: z
       .array(z.string())
-      .min(2)
+      .min(1)
       .max(5)
       .describe(
-        "2-5 yes/no questions that capture ONLY the requirements explicitly stated in the query",
+        "1-5 yes/no questions that capture ONLY the requirements explicitly stated in the query",
       ),
   })
 
@@ -299,18 +299,23 @@ export async function createWebsetCriteria(query: string) {
     schema: criteriaExtractionSchema,
     schemaName: "CriteriaExtraction",
     schemaDescription: "Extract validation criteria from the search query",
-    prompt: `Analyze this search query and extract 2-5 validation criteria: "${query}"
+    prompt: `Analyze this search query and extract 1-5 validation criteria: "${query}"
 
 CRITICAL RULES:
 - Only use information EXPLICITLY mentioned in the original query
 - Do NOT add assumptions, implications, or related concepts not stated in the query
 - Do NOT infer additional requirements beyond what is directly stated
 - Each criterion must directly map to something mentioned in the query
-- Generate only as many criteria as there are distinct requirements in the query (minimum 2, maximum 5)
+- Generate only as many criteria as there are distinct requirements in the query (minimum 1, maximum 5)
+- For simple single-term queries, one criterion is sufficient
 
-Generate 2-5 clear yes/no questions that validate the EXACT requirements stated in the query.
+Generate 1-5 clear yes/no questions that validate the EXACT requirements stated in the query.
 
 For example:
+- Query: "GRINDA" (simple single-term query)
+  Valid criteria:
+  1. Does the company name contain "GRINDA" or is it related to GRINDA?
+
 - Query: "AI companies in healthcare"
   Valid criteria:
   1. Does the company work with AI or artificial intelligence?

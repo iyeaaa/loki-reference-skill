@@ -684,6 +684,12 @@ export async function getGroupMembersWithEmails(groupId: string) {
       companyName: leads.companyName,
       websiteUrl: leads.websiteUrl,
       leadStatus: leads.leadStatus,
+      country: leads.country,
+      city: leads.city,
+      state: leads.state,
+      businessType: leads.businessType,
+      leadSource: leads.leadSource,
+      employeeCount: leads.employeeCount,
       primaryEmail: sql<string>`COALESCE(
         (SELECT contact_value FROM ${leadContacts}
          WHERE ${leadContacts.leadId} = ${leads.id}

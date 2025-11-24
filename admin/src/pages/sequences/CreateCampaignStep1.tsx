@@ -1,9 +1,8 @@
-import { AlertCircle, Check, CheckCircle, ChevronDown, ChevronUp } from "lucide-react"
+import { AlertCircle, Check, CheckCircle, ChevronDown, ChevronUp, X } from "lucide-react"
 import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -46,8 +45,12 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>(
     data.selectedLeadIds.length > 0 ? data.selectedLeadIds : [],
   )
-  const [searchQuery, setSearchQuery] = useState("")
   const [showRepliedSection, setShowRepliedSection] = useState(true)
+
+  // Filter states
+  const [selectedCountry, setSelectedCountry] = useState<string>("all")
+  const [selectedCity, setSelectedCity] = useState<string>("all")
+  const [selectedBusinessType, setSelectedBusinessType] = useState<string>("all")
   const prevCustomerGroupId = useRef(customerGroupId)
   const prevDataRef = useRef({
     customerGroupId: data.customerGroupId,
@@ -100,23 +103,50 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
     Boolean(customerGroupId),
   )
 
+  // Extract unique filter values
+  const uniqueCountries = useMemo(() => {
+    const countries = members.map((m) => m.country).filter((c): c is string => Boolean(c))
+    return Array.from(new Set(countries)).sort()
+  }, [members])
+
+  const uniqueCities = useMemo(() => {
+    const cities = members.map((m) => m.city).filter((c): c is string => Boolean(c))
+    return Array.from(new Set(cities)).sort()
+  }, [members])
+
+  const uniqueBusinessTypes = useMemo(() => {
+    const types = members.map((m) => m.businessType).filter((t): t is string => Boolean(t))
+    return Array.from(new Set(types)).sort()
+  }, [members])
+
+  // Apply filters to members
+  const filteredMembers = useMemo(() => {
+    return members.filter((member) => {
+      // Country filter
+      if (selectedCountry !== "all" && member.country !== selectedCountry) {
+        return false
+      }
+      // City filter
+      if (selectedCity !== "all" && member.city !== selectedCity) {
+        return false
+      }
+      // Business type filter
+      if (selectedBusinessType !== "all" && member.businessType !== selectedBusinessType) {
+        return false
+      }
+      return true
+    })
+  }, [members, selectedCountry, selectedCity, selectedBusinessType])
+
   // Separate replied and non-replied leads with memoization to prevent infinite loops
-  const repliedLeads = useMemo(() => members.filter((m) => m.hasReplied), [members])
-  const nonRepliedLeads = useMemo(() => members.filter((m) => !m.hasReplied), [members])
-
-  const filteredRepliedLeads = repliedLeads.filter(
-    (member) =>
-      !searchQuery ||
-      member.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.email?.toLowerCase().includes(searchQuery.toLowerCase()),
+  const repliedLeads = useMemo(() => filteredMembers.filter((m) => m.hasReplied), [filteredMembers])
+  const nonRepliedLeads = useMemo(
+    () => filteredMembers.filter((m) => !m.hasReplied),
+    [filteredMembers],
   )
 
-  const filteredNonRepliedLeads = nonRepliedLeads.filter(
-    (member) =>
-      !searchQuery ||
-      member.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.email?.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  const filteredRepliedLeads = repliedLeads
+  const filteredNonRepliedLeads = nonRepliedLeads
 
   const repliedCount = repliedLeads.length
   const selectedRepliedCount = selectedLeadIds.filter((id) =>
@@ -144,6 +174,25 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
       prevCustomerGroupId.current = customerGroupId
     }
   }, [customerGroupId, nonRepliedLeads])
+
+  // Reset filters function
+  const handleResetFilters = () => {
+    setSelectedCountry("all")
+    setSelectedCity("all")
+    setSelectedBusinessType("all")
+  }
+
+  // Apply filters automatically to selections
+  useEffect(() => {
+    if (selectedCountry !== "all" || selectedCity !== "all" || selectedBusinessType !== "all") {
+      // When filters are applied, auto-select filtered non-replied leads
+      const filteredNonRepliedIds = nonRepliedLeads.map((m) => m.id)
+      setSelectedLeadIds(filteredNonRepliedIds)
+    }
+  }, [selectedCountry, selectedCity, selectedBusinessType, nonRepliedLeads])
+
+  const hasActiveFilters =
+    selectedCountry !== "all" || selectedCity !== "all" || selectedBusinessType !== "all"
 
   const handleToggleAllNonReplied = () => {
     const nonRepliedIds = filteredNonRepliedLeads.map((m) => m.id)
@@ -306,13 +355,89 @@ export function CreateCampaignStep1({ data, onChange }: CreateCampaignStep1Props
             </div>
           ) : (
             <div className="flex-1 flex flex-col gap-3 overflow-hidden">
-              <div className="flex items-center gap-2">
-                <Input
-                  placeholder={t("sequences.step1.searchLeads")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1"
-                />
+              {/* Filter Panel - Always Visible */}
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-sm">{t("sequences.step1.filterOptions")}</span>
+                  {hasActiveFilters && (
+                    <Button variant="ghost" size="sm" onClick={handleResetFilters}>
+                      <X className="h-3 w-3 mr-1" />
+                      {t("sequences.step1.resetFilters")}
+                    </Button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  {/* Country Filter */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      {t("sequences.step1.country")}
+                    </Label>
+                    <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t("sequences.step1.allCountries")}</SelectItem>
+                        {uniqueCountries.map((country) => (
+                          <SelectItem key={country} value={country}>
+                            {country} ({members.filter((m) => m.country === country).length})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* City Filter */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      {t("sequences.step1.city")}
+                    </Label>
+                    <Select value={selectedCity} onValueChange={setSelectedCity}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t("sequences.step1.allCities")}</SelectItem>
+                        {uniqueCities.map((city) => (
+                          <SelectItem key={city} value={city}>
+                            {city} ({members.filter((m) => m.city === city).length})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Business Type Filter */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      {t("sequences.step1.businessType")}
+                    </Label>
+                    <Select value={selectedBusinessType} onValueChange={setSelectedBusinessType}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t("sequences.step1.allBusinessTypes")}</SelectItem>
+                        {uniqueBusinessTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type} ({members.filter((m) => m.businessType === type).length})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Filter Summary */}
+                {hasActiveFilters && (
+                  <div className="pt-2 border-t text-xs text-muted-foreground">
+                    {t("sequences.step1.filterResults", {
+                      count: filteredMembers.length,
+                      total: members.length,
+                    })}
+                  </div>
+                )}
               </div>
 
               {selectedRepliedCount > 0 && (

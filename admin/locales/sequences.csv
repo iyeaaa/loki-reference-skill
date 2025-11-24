@@ -965,3 +965,13 @@ editPage.memoSaved,[NO TRANSLATION] sequences.editPage.memoSaved,[NO TRANSLATION
 step3.memoEmpty,[NO TRANSLATION] sequences.step3.memoEmpty,[NO TRANSLATION] sequences.step3.memoEmpty
 createPage.enterCampaignName,[NO TRANSLATION] sequences.createPage.enterCampaignName,[NO TRANSLATION] sequences.createPage.enterCampaignName
 createPage.loading,[NO TRANSLATION] sequences.createPage.loading,[NO TRANSLATION] sequences.createPage.loading
+step1.filters,필터,Filters
+step1.filterOptions,필터 옵션,Filter Options
+step1.resetFilters,초기화,Reset
+step1.country,국가,Country
+step1.city,도시,City
+step1.businessType,비즈니스 타입,Business Type
+step1.allCountries,전체 국가,All Countries
+step1.allCities,전체 도시,All Cities
+step1.allBusinessTypes,전체 타입,All Types
+step1.filterResults,필터 결과: {{count}}명 / 전체 {{total}}명,Filter Results: {{count}} / {{total}} total

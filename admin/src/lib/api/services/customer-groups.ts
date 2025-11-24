@@ -142,6 +142,13 @@ export const customerGroupsApi = {
         name: string
         email: string
         hasReplied: boolean
+        country?: string | null
+        city?: string | null
+        state?: string | null
+        businessType?: string | null
+        leadSource?: string | null
+        employeeCount?: string | null
+        leadStatus?: string | null
       }>
     >(`/api/v1/customer-groups/${groupId}/members-with-emails`)
   },

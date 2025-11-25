@@ -90,18 +90,16 @@ function deduplicateData(data: Array<Record<string, unknown>>): {
     const emailKey = Object.keys(row).find((k) => k.toLowerCase().includes("email"))
     const email = emailKey ? String(row[emailKey]).toLowerCase().trim() : ""
 
-    // 이메일이 없거나 중복이면 스킵
-    if (!email || email === "" || email === "undefined" || email === "null") {
-      duplicatesRemoved++
-      continue
+    // 이메일이 있는 경우에만 중복 체크
+    if (email && email !== "" && email !== "undefined" && email !== "null") {
+      if (seen.has(email)) {
+        duplicatesRemoved++
+        continue
+      }
+      seen.add(email)
     }
 
-    if (seen.has(email)) {
-      duplicatesRemoved++
-      continue
-    }
-
-    seen.add(email)
+    // 이메일이 없어도 데이터는 보존
     cleaned.push(row)
   }
 
@@ -262,6 +260,27 @@ export async function uploadCSVToGemini(request: UploadCSVRequest): Promise<Uplo
       throw new Error("No valid data remaining after cleaning. Please check your CSV file.")
     }
 
+    // 📊 데이터 샘플 로그 (첫 3개 행)
+    logger.info(
+      {
+        sampleData: cleanedData.slice(0, 3).map((row) => {
+          const sample: Record<string, unknown> = {}
+          for (const [key, value] of Object.entries(row)) {
+            // 긴 값은 잘라서 표시
+            if (typeof value === "string" && value.length > 50) {
+              sample[key] = `${value.substring(0, 50)}...`
+            } else {
+              sample[key] = value
+            }
+          }
+          return sample
+        }),
+        totalColumns: columns.length,
+        columnNames: columns,
+      },
+      "📊 Upload data sample (first 3 rows)",
+    )
+
     // 3단계: 정제된 데이터를 CSV로 다시 변환
     const cleanedWorkbook = XLSX.utils.book_new()
     const cleanedWorksheet = XLSX.utils.json_to_sheet(cleanedData)
@@ -296,12 +315,25 @@ export async function uploadCSVToGemini(request: UploadCSVRequest): Promise<Uplo
           store.displayName?.includes(`Lead DB - ${request.workspaceId}`),
       )
 
+      // 🔍 Store 매칭 로그
+      logger.debug(
+        {
+          allStores: allStores.stores.map((s) => ({
+            name: s.name,
+            displayName: s.displayName,
+          })),
+          searchingFor: request.workspaceId,
+          found: !!workspaceStore,
+        },
+        "🔍 Searching for workspace store",
+      )
+
       if (workspaceStore) {
         // 기존 Store 재사용
         finalStoreName = workspaceStore.name
         logger.info(
           { storeName: finalStoreName, displayName: workspaceStore.displayName },
-          "Found existing File Search Store, will reuse",
+          "✅ Found existing File Search Store, will reuse",
         )
       } else {
         // 새로운 Store 생성
@@ -440,6 +472,20 @@ export async function uploadCSVToGemini(request: UploadCSVRequest): Promise<Uplo
       "File uploaded and indexed successfully",
     )
 
+    // ✅ 업로드 성공 요약 로그
+    logger.info(
+      {
+        storeName: finalStoreName,
+        fileName: file.name,
+        originalRows: originalRowCount,
+        cleanedRows: totalRows,
+        duplicatesRemoved,
+        retentionRate: `${((totalRows / originalRowCount) * 100).toFixed(1)}%`,
+        csvSize: `${(cleanedCsvBuffer.length / 1024).toFixed(1)} KB`,
+      },
+      "✅ Upload completed - Data summary",
+    )
+
     // 메타데이터 강화 (검색 시 활용)
     const deduplicationRate = ((duplicatesRemoved / originalRowCount) * 100).toFixed(1)
     const retentionRate = ((totalRows / originalRowCount) * 100).toFixed(1)
@@ -494,7 +540,19 @@ export async function searchLeads(request: LeadSearchRequest): Promise<LeadSearc
 
   try {
     const startTime = Date.now()
-    const { query, filters, limit = 20, storeNames } = request
+    const { query, filters, limit = 50, storeNames } = request
+
+    // 🔍 검색 시작 로그
+    logger.info(
+      {
+        workspaceId: request.workspaceId,
+        query,
+        filters,
+        limit,
+        storeNames: storeNames || "auto-detect",
+      },
+      "🔍 Starting Gemini file search",
+    )
 
     // Store 이름 결정
     // Note: fileSearch tool은 full store name을 요구함 (fileSearchStores/ prefix 포함)
@@ -546,7 +604,16 @@ export async function searchLeads(request: LeadSearchRequest): Promise<LeadSearc
       }
     }
 
-    logger.info({ storeNames: finalStoreNames, query }, "Searching leads in File Search Stores")
+    // ✅ 최종 Store 확정 로그
+    logger.info(
+      {
+        finalStoreNames,
+        storeCount: finalStoreNames.length,
+        query,
+        workspaceId: request.workspaceId,
+      },
+      "✅ Store selected for search",
+    )
 
     // Store 메타데이터 조회 (컨텍스트 강화)
     let storeMetadata = ""
@@ -557,6 +624,14 @@ export async function searchLeads(request: LeadSearchRequest): Promise<LeadSearc
         if (storeData?.displayName) {
           storeMetadata = `\n데이터베이스: ${storeData.displayName}`
         }
+
+        // 📊 Store 메타데이터 로그
+        logger.debug(
+          {
+            storeData,
+          },
+          "📊 Store metadata fetched",
+        )
       }
     } catch (error) {
       logger.warn({ error }, "Failed to fetch store metadata")
@@ -667,11 +742,32 @@ CRITICAL: Return AS MANY relevant companies as possible up to ${limit}. Include 
       "Using File Search with official SDK",
     )
 
+    // 🔍 검색 프롬프트 전체 로그 (디버깅용)
+    logger.debug(
+      {
+        fullPrompt: searchPrompt,
+        queryLength: query.length,
+        filtersApplied: Object.keys(filters || {}).length,
+      },
+      "🔍 Full search prompt",
+    )
+
+    // 🚀 Gemini API 호출 시작
+    logger.info(
+      {
+        model: "gemini-2.5-pro",
+        storeNames: finalStoreNames,
+        temperature: 2,
+        queryLength: query.length,
+      },
+      "🚀 Calling Gemini API with File Search",
+    )
+
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro", // Pro 모델로 업그레이드 (더 정확하지만 비용 높음)
+      model: "gemini-2.5-pro",
       contents: searchPrompt,
       config: {
-        temperature: 2, // 낮은 값으로 일관성 증가 (0=결정적, 2=창의적)
+        temperature: 2,
         tools: [
           {
             fileSearch: {
@@ -694,6 +790,7 @@ CRITICAL: Return AS MANY relevant companies as possible up to ${limit}. Include 
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || []
     const candidate = response.candidates?.[0]
 
+    // 🔍 Gemini 응답 상세 로그
     logger.info(
       {
         query,
@@ -718,6 +815,49 @@ CRITICAL: Return AS MANY relevant companies as possible up to ${limit}. Include 
         responsePreview: text.substring(0, 500),
       },
       "Gemini search completed with File Search",
+    )
+
+    // 🚨 groundingChunks가 없으면 경고 및 빈 결과 반환
+    if (groundingChunks.length === 0) {
+      logger.warn(
+        {
+          query,
+          storeNames: finalStoreNames,
+          responseText: text,
+        },
+        "🚨 No grounding chunks found! Gemini couldn't find relevant data in the store",
+      )
+
+      // groundingChunks가 없으면 실제 데이터를 찾지 못한 것
+      // Gemini가 생성한 예시 데이터를 반환하지 않음
+      return {
+        success: true,
+        query,
+        results: [],
+        totalResults: 0,
+        explanation:
+          "데이터베이스에서 관련 데이터를 찾지 못했습니다. Store에 데이터가 올바르게 업로드되었는지 확인해주세요.",
+        processingTime: (Date.now() - startTime) / 1000,
+        citations: [],
+      }
+    }
+
+    // 📊 groundingChunks 전체 로그 (디버깅용)
+    if (groundingChunks.length > 0) {
+      logger.debug(
+        {
+          groundingChunks: JSON.stringify(groundingChunks, null, 2),
+        },
+        "📊 Full grounding chunks data",
+      )
+    }
+
+    // 📝 Gemini 전체 응답 로그 (디버깅용)
+    logger.debug(
+      {
+        fullResponse: text,
+      },
+      "📝 Full Gemini response text",
     )
 
     // JSON 파싱
@@ -748,8 +888,24 @@ CRITICAL: Return AS MANY relevant companies as possible up to ${limit}. Include 
         "JSON parsed successfully",
       )
     } catch (parseError) {
-      logger.error({ error: parseError, text }, "Failed to parse Gemini response")
-      throw new Error("Failed to parse search results")
+      logger.error(
+        {
+          error: parseError instanceof Error ? parseError.message : String(parseError),
+          stack: parseError instanceof Error ? parseError.stack : undefined,
+          responseText: text,
+          responseLength: text.length,
+          textPreview: text.substring(0, 1000),
+          jsonMatchAttempt: text.match(/```json\n([\s\S]*?)\n```/)
+            ? "Found json code block"
+            : text.match(/\{[\s\S]*\}/)
+              ? "Found JSON object"
+              : "No JSON pattern found",
+        },
+        "🚨 Failed to parse Gemini response",
+      )
+      throw new Error(
+        `Failed to parse search results: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+      )
     }
 
     const processingTime = (Date.now() - startTime) / 1000

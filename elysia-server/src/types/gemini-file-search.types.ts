@@ -63,7 +63,7 @@ export interface LeadSearchRequest {
     dbVersion?: string
     [key: string]: string | undefined
   }
-  limit?: number // 결과 개수 제한 (기본: 50)
+  limit?: number // 결과 개수 제한 (기본: 50, 최대: 100)
   storeNames?: string[] // 검색할 스토어 지정 (없으면 모든 스토어)
 }
 

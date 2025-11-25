@@ -309,8 +309,8 @@ export async function uploadCSVToGemini(request: UploadCSVRequest): Promise<Uplo
           { workspaceId: request.workspaceId },
           "No existing store found, creating new one",
         )
-      const newStore = await createFileSearchStore(`Lead DB - ${request.workspaceId}`)
-      finalStoreName = newStore.name
+        const newStore = await createFileSearchStore(`Lead DB - ${request.workspaceId}`)
+        finalStoreName = newStore.name
         logger.info(
           { storeName: finalStoreName, displayName: newStore.displayName },
           "Created new File Search Store",

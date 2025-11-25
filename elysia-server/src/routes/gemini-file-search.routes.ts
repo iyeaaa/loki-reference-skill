@@ -13,12 +13,7 @@ import logger from "../utils/logger"
 // Request validation schemas
 const uploadCSVSchema = t.Object({
   file: t.File({
-    type: [
-      "text/csv",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ],
-    maxSize: 100 * 1024 * 1024, // 100MB
+    maxSize: 100 * 1024 * 1024, // 100MB - Remove type restriction for now to debug
   }),
   workspaceId: t.String({ format: "uuid" }),
   storeName: t.Optional(t.String()),
@@ -119,6 +114,51 @@ export const geminiFileSearchRoutes = new Elysia({
     "/upload",
     async ({ body, set }) => {
       try {
+        // Validate file object
+        if (!body.file || typeof body.file !== "object" || !body.file.name) {
+          set.status = 400
+          return {
+            success: false as const,
+            code: ResponseCode.VALIDATION_ERROR,
+            message:
+              "Invalid file upload. Please ensure you're sending a proper file via FormData.",
+            timestamp: new Date().toISOString(),
+          }
+        }
+
+        // Validate file type - be more flexible with CSV files
+        const allowedTypes = [
+          "text/csv",
+          "text/plain", // Some browsers send CSV as text/plain
+          "application/csv", // Alternative CSV MIME type
+          "application/vnd.ms-excel",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ]
+
+        // Also check file extension for CSV files
+        const fileName = body.file.name.toLowerCase()
+        const isCSVFile = fileName.endsWith(".csv")
+        const isExcelFile = fileName.endsWith(".xls") || fileName.endsWith(".xlsx")
+
+        if (!allowedTypes.includes(body.file.type) && !isCSVFile && !isExcelFile) {
+          logger.warn(
+            {
+              fileName: body.file.name,
+              fileType: body.file.type,
+              fileSize: body.file.size,
+            },
+            "File type validation failed",
+          )
+
+          set.status = 400
+          return {
+            success: false as const,
+            code: ResponseCode.VALIDATION_ERROR,
+            message: `Invalid file type: ${body.file.type} for file: ${body.file.name}. Allowed types: CSV, XLS, XLSX`,
+            timestamp: new Date().toISOString(),
+          }
+        }
+
         const request: UploadCSVRequest = {
           workspaceId: body.workspaceId,
           file: body.file,
@@ -131,6 +171,7 @@ export const geminiFileSearchRoutes = new Elysia({
             workspaceId: body.workspaceId,
             fileName: body.file.name,
             fileSize: body.file.size,
+            fileType: body.file.type,
           },
           "Uploading CSV to Gemini File Search",
         )
@@ -166,6 +207,7 @@ export const geminiFileSearchRoutes = new Elysia({
           data: uploadResponseSchema,
           timestamp: t.String(),
         }),
+        400: errorResponseSchema,
         500: errorResponseSchema,
       },
     },

@@ -637,98 +637,70 @@ export async function searchLeads(request: LeadSearchRequest): Promise<LeadSearc
       logger.warn({ error }, "Failed to fetch store metadata")
     }
 
-    // 검색 쿼리 구성 (메타데이터 활용)
-    let searchPrompt = `You are a lead search assistant. Search the uploaded lead database for companies matching this query:
+    // 🚀 최적화된 검색 프롬프트 (CRITICAL 지시사항을 최상단에 배치)
+    let searchPrompt = `
+═══════════════════════════════════════════════════════════════
+🎯 CRITICAL INSTRUCTION (READ THIS FIRST!)
+═══════════════════════════════════════════════════════════════
+1. You MUST return AT LEAST ${Math.min(limit, 30)} and UP TO ${limit} matching leads
+2. EXHAUSTIVELY SEARCH through ALL data in the file search store
+3. DO NOT stop at the first few matches - keep searching until you find ${limit} results
+4. Include BOTH exact matches AND related/similar matches
+5. If you find fewer than ${Math.min(limit, 10)} results, EXPAND your search criteria
+═══════════════════════════════════════════════════════════════
 
-Query: "${query}"${storeMetadata}
+SEARCH QUERY: "${query}"
+${storeMetadata}
 `
 
     if (filters && Object.keys(filters).length > 0) {
-      searchPrompt += "\nFilters:\n"
+      searchPrompt += "\nAPPLIED FILTERS:\n"
       for (const [key, value] of Object.entries(filters)) {
         if (value) {
-          searchPrompt += `- ${key}: ${value}\n`
+          searchPrompt += `• ${key}: ${value}\n`
         }
       }
     }
 
     searchPrompt += `
 
-DATABASE QUALITY:
-The uploaded data has been preprocessed for quality:
-- Duplicates have been removed based on email addresses
-- Empty and invalid fields have been cleaned
-- All data is validated and normalized
+SEARCH STRATEGY (use ALL of these):
+1. PRIMARY: Match "Company Industry" field (exact or related)
+2. SECONDARY: Match "Job title" field (e.g., "IT Manager" for IT query)
+3. TERTIARY: Match "Company Name" (e.g., "Tech Solutions" for IT query)
+4. QUATERNARY: Match any field containing relevant keywords
 
-IMPORTANT GUIDELINES:
-1. **Return UP TO ${limit} matching companies** - this is your PRIMARY goal
-2. **Include companies that match OR are related to the query**
-3. **Prioritize Company Industry matches, but include related results too**
-4. **Balance quality with quantity** - aim for ${limit} results
-5. **Use the structured format to accurately extract field values**
-
-The database contains these fields:
-Full name, Industry, Job title, Company Name, Company Industry, Company Size, Emails, Company Website, Location, etc.
-
-EXTRACTION REQUIREMENTS:
-Extract these exact values from the database source for EACH match:
-- Company Name (from database)
-- Company Industry (from database) - MUST match query topic
-- Company Size (from database)
-- Emails (from database)
-- Full name (contact person from database)
-- Job title (from database)
-- Company Website (from database)
-- Location (from database)
-
-ANALYSIS FIELDS:
-Generate these based on your analysis:
-- matchReason: Explain WHY the Company Industry field matches the query
-- confidenceScore: 0.7-1.0 for strong matches ONLY
-
-MATCHING RULES:
-- If query asks for "IT companies", prioritize Company Industry: technology/IT/software
-- If query asks for "energy companies", prioritize Company Industry: energy/power
-- If query asks for "marketing", prioritize Company Industry: marketing/advertising
-- Primary match: Company Industry field
-- Secondary match: Related industries or adjacent sectors (lower confidence score)
-- Tertiary match: Job titles or skills in relevant domain (even lower confidence)
-- Include diverse matches to reach the ${limit} result count
+FIELD EXTRACTION (copy EXACTLY from database):
+• Company Name, Company Industry, Company Size
+• Emails, Full name, Job title
+• Company Website, Location
 
 CONFIDENCE SCORING:
-- 0.9-1.0: Perfect match (Company Industry exactly matches query)
-- 0.8-0.9: Strong match (Company Industry closely related to query)
-- 0.7-0.8: Good match (Company Industry somewhat related)
-- 0.6-0.7: Fair match (Company Industry loosely related)
-- 0.5-0.6: Weak match (some relevance exists)
-- Below 0.5: DO NOT INCLUDE (too weak)
+• 0.9-1.0: Exact industry match
+• 0.7-0.9: Related industry or job title match
+• 0.5-0.7: Keyword match in any field
+• Include ALL matches with confidence ≥ 0.5
 
-RESULT QUANTITY PRIORITY:
-- Your PRIMARY goal is to return UP TO ${limit} relevant matches
-- Cast a wider net - include good, fair, and even some weak matches
-- Better to return ${limit} results with varying confidence than just 2-3 perfect matches
-- Users prefer quantity + quality over just perfect matches
-
-Return format:
+OUTPUT FORMAT (JSON only):
 {
   "results": [
     {
-      "Company Name": "exact name from database",
-      "Company Industry": "exact industry from database",
-      "Company Size": "exact size from database",
-      "Emails": "exact email from database",
-      "Full name": "exact contact name from database",
-      "Job title": "exact job title from database",
-      "Company Website": "exact website from database",
-      "Location": "exact location from database",
-      "matchReason": "Company Industry is [X], which matches/relates to the query for [Y]",
+      "Company Name": "exact value",
+      "Company Industry": "exact value",
+      "Company Size": "exact value",
+      "Emails": "exact value",
+      "Full name": "exact value",
+      "Job title": "exact value",
+      "Company Website": "exact value",
+      "Location": "exact value",
+      "matchReason": "why this matches the query",
       "confidenceScore": 0.85
     }
   ],
-  "explanation": "Found X companies where Company Industry field matches or relates to the query criteria"
+  "explanation": "summary of search results"
 }
 
-CRITICAL: Return AS MANY relevant companies as possible up to ${limit}. Include matches with confidence 0.5+. Prioritize quantity while maintaining reasonable quality.`
+⚠️ REMINDER: Return ${limit} results. If you have fewer, your search was not exhaustive enough.`
 
     // Gemini 모델 호출 (공식 SDK + File Search Tool)
     logger.info(
@@ -755,7 +727,7 @@ CRITICAL: Return AS MANY relevant companies as possible up to ${limit}. Include 
     // 🚀 Gemini API 호출 시작
     logger.info(
       {
-        model: "gemini-2.5-pro",
+        model: "gemini-3.5-pro",
         storeNames: finalStoreNames,
         temperature: 2,
         queryLength: query.length,

@@ -23,6 +23,9 @@ let apiKey: string
 
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
+// 분할 업로드 설정
+const MAX_ROWS_PER_CHUNK = 20000 // 한 파일당 최대 행 수 (안정적인 인덱싱을 위해)
+
 /**
  * Gemini API 초기화
  */
@@ -336,16 +339,17 @@ export async function uploadCSVToGemini(request: UploadCSVRequest): Promise<Uplo
           "✅ Found existing File Search Store, will reuse",
         )
       } else {
-        // 새로운 Store 생성
+        // 새로운 Store 생성 (레코드 수 포함)
         logger.info(
-          { workspaceId: request.workspaceId },
-          "No existing store found, creating new one",
+          { workspaceId: request.workspaceId, totalRows },
+          "No existing store found, creating new one with record count",
         )
-        const newStore = await createFileSearchStore(`Lead DB - ${request.workspaceId}`)
+        const displayNameWithCount = `Lead DB - ${request.workspaceId} - ${totalRows} leads`
+        const newStore = await createFileSearchStore(displayNameWithCount)
         finalStoreName = newStore.name
         logger.info(
-          { storeName: finalStoreName, displayName: newStore.displayName },
-          "Created new File Search Store",
+          { storeName: finalStoreName, displayName: newStore.displayName, totalRows },
+          "Created new File Search Store with record count",
         )
       }
     } else {
@@ -363,113 +367,166 @@ export async function uploadCSVToGemini(request: UploadCSVRequest): Promise<Uplo
     // 1. 공식 SDK로 File Search Store에 직접 업로드
     if (!ai) initializeGemini()
 
-    logger.info(
-      { storeName: finalStoreName, fileName: file.name },
-      "Uploading cleaned CSV to File Search Store",
-    )
-
-    // 정제된 CSV 파일 업로드
-    let uploadOp = await ai.fileSearchStores.uploadToFileSearchStore({
-      fileSearchStoreName: finalStoreName,
-      file: new File([cleanedCsvBuffer], file.name, { type: "text/csv" }),
-    })
-
-    // 핵심 수정: response 필드가 있으면 업로드 완료! ✨
-    const startTime = Date.now() // 여기로 이동하여 스코프 문제 해결
-    const MAX_WAIT_TIME = 10 * 60 * 1000 // 10분
-    const POLL_INTERVAL = 3000 // 3초
-    let pollCount = 0
-
-    // Google GenAI SDK의 Operation은 동적으로 response 필드를 추가함
-    type OperationWithResponse = typeof uploadOp & {
-      response?: { documentName?: string; parent?: string }
+    // 📦 대용량 데이터 분할 처리
+    const chunks: Array<Record<string, unknown>>[] = []
+    if (cleanedData.length > MAX_ROWS_PER_CHUNK) {
+      // 데이터 분할
+      for (let i = 0; i < cleanedData.length; i += MAX_ROWS_PER_CHUNK) {
+        chunks.push(cleanedData.slice(i, i + MAX_ROWS_PER_CHUNK))
+      }
+      logger.info(
+        {
+          totalRows: cleanedData.length,
+          chunkCount: chunks.length,
+          rowsPerChunk: MAX_ROWS_PER_CHUNK,
+        },
+        "📦 Large dataset detected, splitting into chunks for stable upload",
+      )
+    } else {
+      // 분할 필요 없음
+      chunks.push(cleanedData)
     }
 
-    const opWithResponse = uploadOp as OperationWithResponse
-    // biome-ignore lint/complexity/useOptionalChain: response 필드는 동적으로 추가되므로 명시적 체크 필요
-    if (opWithResponse.response && opWithResponse.response.documentName) {
+    const uploadedDocuments: string[] = []
+    const uploadStartTime = Date.now()
+
+    // 각 청크를 순차적으로 업로드
+    for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+      const chunk = chunks[chunkIndex]
+      if (!chunk) continue
+
+      // 청크를 CSV로 변환
+      const chunkWorkbook = XLSX.utils.book_new()
+      const chunkWorksheet = XLSX.utils.json_to_sheet(chunk)
+      XLSX.utils.book_append_sheet(chunkWorkbook, chunkWorksheet, "Sheet1")
+      const chunkCsvBuffer = XLSX.write(chunkWorkbook, { type: "buffer", bookType: "csv" })
+
+      // 파일명에 청크 번호 추가
+      const chunkFileName =
+        chunks.length > 1
+          ? file.name.replace(/\.csv$/, `-part${chunkIndex + 1}of${chunks.length}.csv`)
+          : file.name
+
       logger.info(
         {
           storeName: finalStoreName,
-          fileName: file.name,
-          documentName: opWithResponse.response.documentName,
-          parent: opWithResponse.response.parent,
+          fileName: chunkFileName,
+          chunkIndex: chunkIndex + 1,
+          totalChunks: chunks.length,
+          rowsInChunk: chunk.length,
         },
-        "File uploaded successfully (response field present)",
-      )
-    } else {
-      // response가 없으면 polling 필요
-      logger.warn(
-        {
-          uploadOp: JSON.stringify(uploadOp, null, 2),
-        },
-        "No response field in upload operation, starting polling",
+        `📤 Uploading chunk ${chunkIndex + 1}/${chunks.length}`,
       )
 
-      while (!uploadOp.done && !(uploadOp as OperationWithResponse).response) {
-        pollCount++
-        const elapsed = Date.now() - startTime
+      // 정제된 CSV 파일 업로드
+      let uploadOp = await ai.fileSearchStores.uploadToFileSearchStore({
+        fileSearchStoreName: finalStoreName,
+        file: new File([chunkCsvBuffer], chunkFileName, { type: "text/csv" }),
+      })
 
-        if (elapsed > MAX_WAIT_TIME) {
-          throw new Error(`Upload timeout after ${MAX_WAIT_TIME / 1000}s (${pollCount} polls)`)
-        }
+      // 핵심 수정: response 필드가 있으면 업로드 완료! ✨
+      const startTime = Date.now()
+      const MAX_WAIT_TIME = 10 * 60 * 1000 // 10분
+      const POLL_INTERVAL = 3000 // 3초
+      let pollCount = 0
 
+      // Google GenAI SDK의 Operation은 동적으로 response 필드를 추가함
+      type OperationWithResponse = typeof uploadOp & {
+        response?: { documentName?: string; parent?: string }
+      }
+
+      const opWithResponse = uploadOp as OperationWithResponse
+      // biome-ignore lint/complexity/useOptionalChain: response 필드는 동적으로 추가되므로 명시적 체크 필요
+      if (opWithResponse.response && opWithResponse.response.documentName) {
+        uploadedDocuments.push(opWithResponse.response.documentName)
         logger.info(
           {
-            pollCount,
-            elapsed: `${(elapsed / 1000).toFixed(1)}s`,
-            operationName: uploadOp.name,
-            done: uploadOp.done,
-            hasResponse: !!(uploadOp as OperationWithResponse).response,
+            storeName: finalStoreName,
+            fileName: chunkFileName,
+            documentName: opWithResponse.response.documentName,
+            chunkIndex: chunkIndex + 1,
+            totalChunks: chunks.length,
           },
-          "Polling upload status",
+          `✅ Chunk ${chunkIndex + 1}/${chunks.length} uploaded successfully`,
+        )
+      } else {
+        // response가 없으면 polling 필요
+        logger.warn(
+          {
+            uploadOp: JSON.stringify(uploadOp, null, 2),
+          },
+          "No response field in upload operation, starting polling",
         )
 
-        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL))
+        while (!uploadOp.done && !(uploadOp as OperationWithResponse).response) {
+          pollCount++
+          const elapsed = Date.now() - startTime
 
-        try {
-          uploadOp = await ai.operations.get({ operation: uploadOp })
-
-          // 에러 상태 체크
-          if (uploadOp.error) {
-            throw new Error(`Upload failed: ${JSON.stringify(uploadOp.error)}`)
+          if (elapsed > MAX_WAIT_TIME) {
+            throw new Error(`Upload timeout after ${MAX_WAIT_TIME / 1000}s (${pollCount} polls)`)
           }
 
-          // response 필드가 생겼으면 완료!
-          const updatedOp = uploadOp as OperationWithResponse
-          if (updatedOp.response) {
-            logger.info(
-              {
-                pollCount,
-                documentName: updatedOp.response.documentName,
-              },
-              "Upload completed (response field appeared)",
-            )
-            break
-          }
-        } catch (error) {
-          logger.error(
+          logger.info(
             {
-              error: error instanceof Error ? error.message : String(error),
               pollCount,
               elapsed: `${(elapsed / 1000).toFixed(1)}s`,
+              operationName: uploadOp.name,
+              done: uploadOp.done,
+              hasResponse: !!(uploadOp as OperationWithResponse).response,
             },
-            "Error polling upload status",
+            "Polling upload status",
           )
-          throw error
+
+          await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL))
+
+          try {
+            uploadOp = await ai.operations.get({ operation: uploadOp })
+
+            // 에러 상태 체크
+            if (uploadOp.error) {
+              throw new Error(`Upload failed: ${JSON.stringify(uploadOp.error)}`)
+            }
+
+            // response 필드가 생겼으면 완료!
+            const updatedOp = uploadOp as OperationWithResponse
+            if (updatedOp.response) {
+              uploadedDocuments.push(updatedOp.response.documentName || "unknown")
+              logger.info(
+                {
+                  pollCount,
+                  documentName: updatedOp.response.documentName,
+                  chunkIndex: chunkIndex + 1,
+                  totalChunks: chunks.length,
+                },
+                `✅ Chunk ${chunkIndex + 1}/${chunks.length} upload completed (after polling)`,
+              )
+              break
+            }
+          } catch (error) {
+            logger.error(
+              {
+                error: error instanceof Error ? error.message : String(error),
+                pollCount,
+                elapsed: `${(elapsed / 1000).toFixed(1)}s`,
+              },
+              "Error polling upload status",
+            )
+            throw error
+          }
         }
       }
-    }
+    } // End of for loop for chunks
 
     logger.info(
       {
         storeName: finalStoreName,
-        fileName: file.name,
+        originalFileName: file.name,
         totalRows,
-        pollCount,
-        totalTime: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
+        chunksUploaded: chunks.length,
+        documentsCreated: uploadedDocuments.length,
+        totalTime: `${((Date.now() - uploadStartTime) / 1000).toFixed(1)}s`,
       },
-      "File uploaded and indexed successfully",
+      "📦 All chunks uploaded and indexed successfully",
     )
 
     // ✅ 업로드 성공 요약 로그
@@ -506,8 +563,13 @@ export async function uploadCSVToGemini(request: UploadCSVRequest): Promise<Uplo
       cleanedSize: cleanedCsvBuffer.length.toString(),
       sizeReduction: `${sizeReduction}%`,
       indexingStrategy: "csv_deduplication_and_cleaning",
+      chunksUploaded: chunks.length.toString(),
+      documentsCreated: uploadedDocuments.length.toString(),
       ...metadata,
     }
+
+    const chunkInfo =
+      chunks.length > 1 ? ` (split into ${chunks.length} chunks for stable indexing)` : ""
 
     return {
       success: true,
@@ -515,7 +577,7 @@ export async function uploadCSVToGemini(request: UploadCSVRequest): Promise<Uplo
       fileName: file.name,
       fileId: finalStoreName, // Store name as file ID
       totalRows,
-      message: `CSV uploaded and indexed with ${duplicatesRemoved} duplicates removed (${totalRows}/${originalRowCount} rows retained)`,
+      message: `CSV uploaded and indexed with ${duplicatesRemoved} duplicates removed (${totalRows}/${originalRowCount} rows retained)${chunkInfo}`,
       metadata: enhancedMetadata,
     }
   } catch (error) {
@@ -615,20 +677,32 @@ export async function searchLeads(request: LeadSearchRequest): Promise<LeadSearc
       "✅ Store selected for search",
     )
 
-    // Store 메타데이터 조회 (컨텍스트 강화)
+    // Store 메타데이터 조회 (컨텍스트 강화 + 레코드 수 파싱)
     let storeMetadata = ""
+    let totalLeadsInStore = 0
     try {
       const storeDetails = await fetch(`${GEMINI_API_BASE}/${finalStoreNames[0]}?key=${apiKey}`)
       if (storeDetails.ok) {
         const storeData = (await storeDetails.json()) as { displayName?: string }
         if (storeData?.displayName) {
-          storeMetadata = `\n데이터베이스: ${storeData.displayName}`
+          storeMetadata = `\nDatabase: ${storeData.displayName}`
+
+          // displayName에서 레코드 수 파싱 (예: "Lead DB - workspace_xxx - 5847 leads")
+          const leadsMatch = storeData.displayName.match(/(\d+)\s*leads?/i)
+          if (leadsMatch?.[1]) {
+            totalLeadsInStore = parseInt(leadsMatch[1], 10)
+            logger.info(
+              { totalLeadsInStore, displayName: storeData.displayName },
+              "📊 Parsed lead count from store displayName",
+            )
+          }
         }
 
         // 📊 Store 메타데이터 로그
         logger.debug(
           {
             storeData,
+            totalLeadsInStore,
           },
           "📊 Store metadata fetched",
         )
@@ -637,7 +711,14 @@ export async function searchLeads(request: LeadSearchRequest): Promise<LeadSearc
       logger.warn({ error }, "Failed to fetch store metadata")
     }
 
-    // 🚀 최적화된 검색 프롬프트 (CRITICAL 지시사항을 최상단에 배치)
+    // 🚀 최적화된 검색 프롬프트 (CRITICAL 지시사항을 최상단에 배치 + 메타데이터 활용)
+    const datasetInfo =
+      totalLeadsInStore > 0
+        ? `\n📊 DATABASE SIZE: ${totalLeadsInStore.toLocaleString()} total leads available
+   → You are searching through a LARGE dataset. Return the TOP ${limit} most relevant matches.
+   → Target: Find ${Math.min(limit, Math.ceil(totalLeadsInStore * 0.01))}+ matches (≈${((limit / totalLeadsInStore) * 100).toFixed(2)}% of database)`
+        : ""
+
     let searchPrompt = `
 ═══════════════════════════════════════════════════════════════
 🎯 CRITICAL INSTRUCTION (READ THIS FIRST!)
@@ -648,7 +729,7 @@ export async function searchLeads(request: LeadSearchRequest): Promise<LeadSearc
 4. Include BOTH exact matches AND related/similar matches
 5. If you find fewer than ${Math.min(limit, 10)} results, EXPAND your search criteria
 ═══════════════════════════════════════════════════════════════
-
+${datasetInfo}
 SEARCH QUERY: "${query}"
 ${storeMetadata}
 `
@@ -675,11 +756,16 @@ FIELD EXTRACTION (copy EXACTLY from database):
 • Emails, Full name, Job title
 • Company Website, Location
 
-CONFIDENCE SCORING:
-• 0.9-1.0: Exact industry match
-• 0.7-0.9: Related industry or job title match
-• 0.5-0.7: Keyword match in any field
-• Include ALL matches with confidence ≥ 0.5
+CONFIDENCE SCORING (BE STRICT - quality over quantity):
+• 0.9-1.0: Exact industry match (BEST - prioritize these)
+• 0.8-0.9: Closely related industry match
+• 0.7-0.8: Related industry or exact job title match  
+• 0.6-0.7: Loosely related or keyword match
+• 0.5-0.6: Weak match (include only if need more results)
+• Below 0.5: DO NOT INCLUDE
+
+⚠️ QUALITY RULE: Prioritize HIGH confidence (0.7+) matches first.
+   Only include lower confidence matches to reach the quantity target.
 
 OUTPUT FORMAT (JSON only):
 {

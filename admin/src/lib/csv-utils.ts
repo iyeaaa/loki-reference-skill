@@ -376,132 +376,66 @@ export function validateCSVData(data: LeadCSVData[]): {
   }
 }
 
-export function generateCSVTemplate(): string {
-  const csvContent = `# 리드 데이터 CSV 템플릿
-# 필수 필드: companyName (회사명), primaryEmail (주요 이메일), websiteUrl (웹사이트 URL)
-# 선택 필드: 나머지 모든 컬럼
-# 
-# 컬럼 설명:
-# - companyName: 회사명 (필수)
-# - foundCompanyName: 발견된 회사명
-# - contactName: 담당자명
-# - businessType: 업종 (예: IT, 제조업, 서비스업)
-# - websiteUrl: 웹사이트 URL (필수)
-# - description: 회사 설명
-# - employeeCount: 직원 수 (예: 1-10명, 11-50명, 51-200명, 200명 이상)
-# - foundedYear: 설립년도
-# - country: 국가
-# - city: 도시
-# - state: 주/도
-# - address: 주소
-# - leadSource: 리드 소스 (예: 웹사이트, 추천, 광고, 전시회)
-# - leadStatus: 리드 상태 (new, contacted, qualified, unqualified, converted, lost, unsubscribed)
-# - leadScore: 리드 점수 (0-100)
-# - notes: 메모
-# - primaryEmail: 주요 이메일 (필수)
-# - primaryPhone: 주요 전화번호
-# - secondaryEmail: 보조 이메일
-# - secondaryPhone: 보조 전화번호
+/**
+ * 심플 템플릿 생성 - 필수 필드만 포함
+ * 고객이 쉽게 데이터를 입력할 수 있도록 최소한의 필드만 제공
+ */
+export function generateSimpleCSVTemplate(): string {
+  const csvContent = `회사명,담당자명,이메일,전화번호,웹사이트
+"Venus Beauty Supply","김영희","contact@venusbeauty.com","+1-555-0123","https://venusbeauty.com"
+"Beauty World Inc","Sarah Johnson","info@beautyworld.com","+1-555-0234","https://beautyworld.com"
+"Global Beauty Co","Michael Chen","hello@globalbeauty.co","+1-555-0345","https://globalbeauty.co"`
 
-companyName,foundCompanyName,contactName,businessType,websiteUrl,description,employeeCount,foundedYear,country,city,state,address,leadSource,leadStatus,leadScore,notes,primaryEmail,primaryPhone,secondaryEmail,secondaryPhone
-"Venus Beauty Supply","Venus Beauty Supply Ltd.","김영희","K뷰티 유통","https://venusbeautysupply.com","미국 K뷰티 유통업체","50-100명",2015,"미국","뉴욕","뉴욕주","123 Beauty St, New York","웹사이트","new",73,"K뷰티 제품 유통 가능성 높음","contact@venusbeautysupply.com","+1-555-0123","support@venusbeautysupply.com","+1-555-0124"
-"Beauty World Inc","Beauty World Inc.","Sarah Johnson","화장품 유통","https://beautyworld.com","화장품 전문 유통업체","100-500명",2010,"미국","로스앤젤레스","캘리포니아","456 Cosmetics Ave, LA","추천","contacted",85,"프리미엄 브랜드 선호","info@beautyworld.com","+1-555-0234","sales@beautyworld.com","+1-555-0235"
-"Global Beauty Co","Global Beauty Company","Michael Chen","뷰티 유통","https://globalbeauty.co","글로벌 뷰티 유통업체","500명 이상",2005,"미국","시카고","일리노이","789 Global Blvd, Chicago","전시회","qualified",92,"대규모 유통망 보유","hello@globalbeauty.co","+1-555-0345","partnerships@globalbeauty.co","+1-555-0346"`
-
-  // Add BOM for proper UTF-8 encoding in Excel
   return `\uFEFF${csvContent}`
 }
 
-export function generateXLSXTemplate(): Blob {
-  const headers = [
-    "companyName",
-    "foundCompanyName",
-    "contactName",
-    "businessType",
-    "websiteUrl",
-    "description",
-    "employeeCount",
-    "foundedYear",
-    "country",
-    "city",
-    "state",
-    "address",
-    "leadSource",
-    "leadStatus",
-    "leadScore",
-    "notes",
-    "primaryEmail",
-    "primaryPhone",
-    "secondaryEmail",
-    "secondaryPhone",
-  ]
+/**
+ * 상세 템플릿 생성 - 모든 필드 포함
+ * 더 많은 데이터를 입력하고 싶은 고객을 위한 상세 템플릿
+ */
+export function generateDetailedCSVTemplate(): string {
+  const csvContent = `회사명,담당자명,이메일,전화번호,웹사이트,업종,국가,도시,주소,직원수,설립년도,메모
+"Venus Beauty Supply","김영희","contact@venusbeauty.com","+1-555-0123","https://venusbeauty.com","K뷰티 유통","미국","뉴욕","123 Beauty St, New York","50-100명",2015,"K뷰티 제품 유통 가능성 높음"
+"Beauty World Inc","Sarah Johnson","info@beautyworld.com","+1-555-0234","https://beautyworld.com","화장품 유통","미국","로스앤젤레스","456 Cosmetics Ave, LA","100-500명",2010,"프리미엄 브랜드 선호"
+"Global Beauty Co","Michael Chen","hello@globalbeauty.co","+1-555-0345","https://globalbeauty.co","뷰티 유통","미국","시카고","789 Global Blvd, Chicago","500명 이상",2005,"대규모 유통망 보유"`
+
+  return `\uFEFF${csvContent}`
+}
+
+/**
+ * 기존 호환성을 위한 기본 템플릿 (상세 템플릿 사용)
+ */
+export function generateCSVTemplate(): string {
+  return generateSimpleCSVTemplate()
+}
+
+/**
+ * 심플 XLSX 템플릿 생성
+ */
+export function generateSimpleXLSXTemplate(): Blob {
+  const headers = ["회사명", "담당자명", "이메일", "전화번호", "웹사이트"]
 
   const sampleData = [
     [
       "Venus Beauty Supply",
-      "Venus Beauty Supply Ltd.",
       "김영희",
-      "K뷰티 유통",
-      "https://venusbeautysupply.com",
-      "미국 K뷰티 유통업체",
-      "50-100명",
-      2015,
-      "미국",
-      "뉴욕",
-      "뉴욕주",
-      "123 Beauty St, New York",
-      "웹사이트",
-      "new",
-      73,
-      "K뷰티 제품 유통 가능성 높음",
-      "contact@venusbeautysupply.com",
+      "contact@venusbeauty.com",
       "+1-555-0123",
-      "support@venusbeautysupply.com",
-      "+1-555-0124",
+      "https://venusbeauty.com",
     ],
     [
       "Beauty World Inc",
-      "Beauty World Inc.",
       "Sarah Johnson",
-      "화장품 유통",
-      "https://beautyworld.com",
-      "화장품 전문 유통업체",
-      "100-500명",
-      2010,
-      "미국",
-      "로스앤젤레스",
-      "캘리포니아",
-      "456 Cosmetics Ave, LA",
-      "추천",
-      "contacted",
-      85,
-      "프리미엄 브랜드 선호",
       "info@beautyworld.com",
       "+1-555-0234",
-      "sales@beautyworld.com",
-      "+1-555-0235",
+      "https://beautyworld.com",
     ],
     [
       "Global Beauty Co",
-      "Global Beauty Company",
       "Michael Chen",
-      "뷰티 유통",
-      "https://globalbeauty.co",
-      "글로벌 뷰티 유통업체",
-      "500명 이상",
-      2005,
-      "미국",
-      "시카고",
-      "일리노이",
-      "789 Global Blvd, Chicago",
-      "전시회",
-      "qualified",
-      92,
-      "대규모 유통망 보유",
       "hello@globalbeauty.co",
       "+1-555-0345",
-      "partnerships@globalbeauty.co",
-      "+1-555-0346",
+      "https://globalbeauty.co",
     ],
   ]
 
@@ -509,26 +443,122 @@ export function generateXLSXTemplate(): Blob {
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, worksheet, "리드 데이터")
 
-  // 워크시트에 스타일 적용 (헤더 행 강조)
-  const range = XLSX.utils.decode_range(worksheet["!ref"] || "A1")
-  for (let col = range.s.c; col <= range.e.c; col++) {
-    const headerCell = XLSX.utils.encode_cell({ r: 0, c: col })
-    if (worksheet[headerCell]) {
-      worksheet[headerCell].s = {
-        font: { bold: true, color: { rgb: "FFFFFF" } },
-        fill: { fgColor: { rgb: "366092" } },
-      }
-    }
-  }
+  // 컬럼 너비 자동 조정
+  worksheet["!cols"] = [
+    { wch: 25 }, // 회사명
+    { wch: 15 }, // 담당자명
+    { wch: 30 }, // 이메일
+    { wch: 15 }, // 전화번호
+    { wch: 35 }, // 웹사이트
+  ]
 
-  // UTF-8 인코딩을 위한 옵션 추가
   const excelBuffer = XLSX.write(workbook, {
     bookType: "xlsx",
     type: "array",
-    cellStyles: true,
     compression: true,
   })
   return new Blob([excelBuffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   })
+}
+
+/**
+ * 상세 XLSX 템플릿 생성
+ */
+export function generateDetailedXLSXTemplate(): Blob {
+  const headers = [
+    "회사명",
+    "담당자명",
+    "이메일",
+    "전화번호",
+    "웹사이트",
+    "업종",
+    "국가",
+    "도시",
+    "주소",
+    "직원수",
+    "설립년도",
+    "메모",
+  ]
+
+  const sampleData = [
+    [
+      "Venus Beauty Supply",
+      "김영희",
+      "contact@venusbeauty.com",
+      "+1-555-0123",
+      "https://venusbeauty.com",
+      "K뷰티 유통",
+      "미국",
+      "뉴욕",
+      "123 Beauty St, New York",
+      "50-100명",
+      2015,
+      "K뷰티 제품 유통 가능성 높음",
+    ],
+    [
+      "Beauty World Inc",
+      "Sarah Johnson",
+      "info@beautyworld.com",
+      "+1-555-0234",
+      "https://beautyworld.com",
+      "화장품 유통",
+      "미국",
+      "로스앤젤레스",
+      "456 Cosmetics Ave, LA",
+      "100-500명",
+      2010,
+      "프리미엄 브랜드 선호",
+    ],
+    [
+      "Global Beauty Co",
+      "Michael Chen",
+      "hello@globalbeauty.co",
+      "+1-555-0345",
+      "https://globalbeauty.co",
+      "뷰티 유통",
+      "미국",
+      "시카고",
+      "789 Global Blvd, Chicago",
+      "500명 이상",
+      2005,
+      "대규모 유통망 보유",
+    ],
+  ]
+
+  const worksheet = XLSX.utils.aoa_to_sheet([headers, ...sampleData])
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, "리드 데이터")
+
+  // 컬럼 너비 자동 조정
+  worksheet["!cols"] = [
+    { wch: 25 }, // 회사명
+    { wch: 15 }, // 담당자명
+    { wch: 30 }, // 이메일
+    { wch: 15 }, // 전화번호
+    { wch: 35 }, // 웹사이트
+    { wch: 15 }, // 업종
+    { wch: 10 }, // 국가
+    { wch: 12 }, // 도시
+    { wch: 30 }, // 주소
+    { wch: 12 }, // 직원수
+    { wch: 10 }, // 설립년도
+    { wch: 30 }, // 메모
+  ]
+
+  const excelBuffer = XLSX.write(workbook, {
+    bookType: "xlsx",
+    type: "array",
+    compression: true,
+  })
+  return new Blob([excelBuffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  })
+}
+
+/**
+ * 기존 호환성을 위한 기본 템플릿 (심플 템플릿 사용)
+ */
+export function generateXLSXTemplate(): Blob {
+  return generateSimpleXLSXTemplate()
 }

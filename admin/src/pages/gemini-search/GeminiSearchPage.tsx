@@ -375,8 +375,8 @@ export default function GeminiSearchPage() {
         const result = searchResults[idx]
 
         // 연락처 이름 구성 (이름 + 직책)
-        const fullName = result["Full name"] || result.name || result["이름"] || ""
-        const jobTitle = result["Job title"] || result.title || result["직책"] || ""
+        const fullName = result["Full name"] || result.name || result.이름 || ""
+        const jobTitle = result["Job title"] || result.title || result.직책 || ""
         const contactName = jobTitle ? `${fullName} (${jobTitle})` : fullName
 
         const lead: Record<string, unknown> = {
@@ -384,8 +384,8 @@ export default function GeminiSearchPage() {
           companyName:
             result["Company Name"] ||
             result.companyName ||
-            result["company_name"] ||
-            result["회사명"] ||
+            result.company_name ||
+            result.회사명 ||
             "",
           leadSource: "Gemini Search",
           leadStatus: "new",
@@ -396,22 +396,22 @@ export default function GeminiSearchPage() {
         if (foundCompanyName) lead.foundCompanyName = foundCompanyName
 
         const businessType =
-          result["Company Industry"] || result.vertical || result.industry || result["산업"]
+          result["Company Industry"] || result.vertical || result.industry || result.산업
         if (businessType) lead.businessType = businessType
 
         const websiteUrl =
-          result["Company Website"] || result.website || result["웹사이트"] || result.url
+          result["Company Website"] || result.website || result.웹사이트 || result.url
         if (websiteUrl && websiteUrl !== "null") lead.websiteUrl = websiteUrl
 
-        const description = result.description || result["설명"]
+        const description = result.description || result.설명
         if (description && description !== "null") lead.description = description
 
-        const country = result.Location || result.country || result["국가"]
+        const country = result.Location || result.country || result.국가
         if (country) lead.country = country
 
         if (contactName) lead.contactName = contactName
 
-        const primaryEmail = result.Emails || result.email || result["이메일"]
+        const primaryEmail = result.Emails || result.email || result.이메일
         if (primaryEmail) lead.primaryEmail = primaryEmail
 
         return lead

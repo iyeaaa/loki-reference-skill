@@ -15,6 +15,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
+import { ColumnMappingModal } from "@/components/leads/ColumnMappingModal"
 import { AdvancedSearchInput } from "@/components/search/AdvancedSearchInput"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -76,6 +77,10 @@ import type { Lead, LeadStatus } from "@/lib/api/types/lead"
 import type { Workspace } from "@/lib/api/types/workspace"
 import {
   generateCSVTemplate,
+  generateDetailedCSVTemplate,
+  generateDetailedXLSXTemplate,
+  generateSimpleCSVTemplate,
+  generateSimpleXLSXTemplate,
   generateXLSXTemplate,
   type LeadCSVData,
   parseCSV,
@@ -86,6 +91,11 @@ import { analyzeCSVLeadsForGroupName } from "@/lib/utils/csv-lead-analyzer"
 import { generateGroupName } from "@/lib/utils/group-name-generator"
 import type { SearchToken } from "@/lib/utils/search-tokens"
 import { tokensToFilters } from "@/lib/utils/search-tokens"
+import {
+  parseCSVWithMappings,
+  type SmartParseResult,
+  smartAnalyzeCSV,
+} from "@/lib/utils/smart-csv-parser"
 import { BulkActionModal } from "./BulkActionModal"
 import { CreateGroupModal } from "./CreateGroupModal"
 import { GroupEditModal } from "./GroupEditModal"
@@ -129,6 +139,11 @@ export default function LeadsPage() {
   const [csvErrors, setCsvErrors] = useState<string[]>([])
   const [isUploadingLeads, setIsUploadingLeads] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // 스마트 CSV 파싱 관련 상태
+  const [useSmartParsing, setUseSmartParsing] = useState(true)
+  const [smartParseResult, setSmartParseResult] = useState<SmartParseResult | null>(null)
+  const [showColumnMappingModal, setShowColumnMappingModal] = useState(false)
+  const [csvText, setCsvText] = useState<string | null>(null)
 
   // CSV 업로드용 그룹 선택 상태
   const [groupName, setGroupName] = useState("")
@@ -559,34 +574,69 @@ export default function LeadsPage() {
     setCsvErrors([])
 
     try {
-      let parsedData: LeadCSVData[]
+      // 스마트 파싱 모드
+      if (useSmartParsing) {
+        let text: string
 
-      if (isCSV) {
-        const text = await file.text()
-        parsedData = parseCSV(text)
+        if (isCSV) {
+          text = await file.text()
+        } else {
+          // XLSX → CSV 변환
+          const XLSX = await import("xlsx")
+          const arrayBuffer = await file.arrayBuffer()
+          const workbook = XLSX.read(arrayBuffer, { type: "buffer" })
+          const firstSheetName = workbook.SheetNames[0]
+          const worksheet = workbook.Sheets[firstSheetName]
+          text = XLSX.utils.sheet_to_csv(worksheet)
+        }
+
+        setCsvText(text)
+        setCsvFileName(file.name)
+        setCsvFileSize(file.size)
+
+        // 스마트 분석
+        const result = smartAnalyzeCSV(text)
+        setSmartParseResult(result)
+
+        if (result.errors.length > 0) {
+          toast.error(result.errors[0])
+          return
+        }
+
+        // 컬럼 매핑 모달 표시
+        setShowColumnMappingModal(true)
+        toast.success(`${result.totalRows}개 행이 분석되었습니다. 컬럼 매핑을 확인해주세요.`)
       } else {
-        parsedData = await parseXLSX(file)
+        // 기존 파싱 모드
+        let parsedData: LeadCSVData[]
+
+        if (isCSV) {
+          const text = await file.text()
+          parsedData = parseCSV(text)
+        } else {
+          parsedData = await parseXLSX(file)
+        }
+
+        const validation = validateCSVData(parsedData)
+
+        if (!validation.valid) {
+          setCsvErrors(validation.errors)
+          toast.error("파일에 오류가 있습니다.")
+          return
+        }
+
+        // 경고가 있는 경우 표시
+        if (validation.warnings.length > 0) {
+          validation.warnings.forEach((warning) => {
+            console.warn(warning)
+          })
+        }
+
+        setCsvData(parsedData)
+        setCsvFileName(file.name)
+        setCsvFileSize(file.size)
+        toast.success(`${parsedData.length}개의 리드 데이터를 성공적으로 파싱했습니다.`)
       }
-
-      const validation = validateCSVData(parsedData)
-
-      if (!validation.valid) {
-        setCsvErrors(validation.errors)
-        toast.error("파일에 오류가 있습니다.")
-        return
-      }
-
-      // 경고가 있는 경우 표시
-      if (validation.warnings.length > 0) {
-        validation.warnings.forEach((warning) => {
-          console.warn(warning)
-        })
-      }
-
-      setCsvData(parsedData)
-      setCsvFileName(file.name)
-      setCsvFileSize(file.size)
-      toast.success(`${parsedData.length}개의 리드 데이터를 성공적으로 파싱했습니다.`)
     } catch (error) {
       console.error("파일 파싱 오류:", error)
       const errorMessage =
@@ -596,6 +646,47 @@ export default function LeadsPage() {
       setIsProcessingCSV(false)
     }
   }
+
+  // 스마트 파싱 컬럼 매핑 확인 핸들러
+  const handleColumnMappingConfirm = useCallback(
+    (mappings: Record<string, keyof LeadCSVData | null>, hasHeaders: boolean) => {
+      if (!csvText) return
+
+      const { leads, errors } = parseCSVWithMappings(csvText, mappings, hasHeaders)
+
+      if (leads.length === 0) {
+        toast.error("유효한 리드 데이터가 없습니다.")
+        return
+      }
+
+      // 파싱 에러가 있으면 경고 표시
+      if (errors.length > 0) {
+        console.warn("일부 행 파싱 오류:", errors)
+      }
+
+      setCsvData(leads)
+      setCsvErrors([])
+      setShowColumnMappingModal(false)
+      toast.success(`${leads.length}개의 리드가 매핑되었습니다.`)
+    },
+    [csvText],
+  )
+
+  // 헤더 토글 시 재분석 핸들러
+  const handleToggleHeaders = useCallback(
+    (hasHeaders: boolean) => {
+      if (!csvText) return
+
+      // 스마트 분석 재실행 (헤더 존재 여부 강제 지정)
+      const result = smartAnalyzeCSV(csvText, hasHeaders)
+      setSmartParseResult(result)
+
+      if (result.errors.length > 0) {
+        toast.error(result.errors[0])
+      }
+    },
+    [csvText],
+  )
 
   const handleDownloadTemplate = (format: "csv" | "xlsx") => {
     if (format === "csv") {
@@ -1519,46 +1610,87 @@ export default function LeadsPage() {
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">{t("leads.file.upload")} (CSV/XLSX)</h3>
                 <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDownloadTemplate("csv")}
+                  <Select
+                    defaultValue="simple-xlsx"
+                    onValueChange={(value) => {
+                      const [type, format] = value.split("-") as [
+                        "simple" | "detailed",
+                        "csv" | "xlsx",
+                      ]
+                      if (format === "csv") {
+                        const template =
+                          type === "simple"
+                            ? generateSimpleCSVTemplate()
+                            : generateDetailedCSVTemplate()
+                        const blob = new Blob([template], { type: "text/csv;charset=utf-8;" })
+                        const link = document.createElement("a")
+                        link.href = URL.createObjectURL(blob)
+                        link.download = `leads_template_${type}.csv`
+                        link.click()
+                      } else {
+                        const blob =
+                          type === "simple"
+                            ? generateSimpleXLSXTemplate()
+                            : generateDetailedXLSXTemplate()
+                        const link = document.createElement("a")
+                        link.href = URL.createObjectURL(blob)
+                        link.download = `leads_template_${type}.xlsx`
+                        link.click()
+                      }
+                    }}
                   >
-                    <Download className="h-4 w-4 mr-2" />
-                    {t("leads.button.csvTemplate")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDownloadTemplate("xlsx")}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    {t("leads.button.xlsxTemplate")}
-                  </Button>
+                    <SelectTrigger className="w-[180px]">
+                      <Download className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="템플릿 다운로드" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="simple-xlsx">📊 심플 템플릿 (Excel)</SelectItem>
+                      <SelectItem value="simple-csv">📄 심플 템플릿 (CSV)</SelectItem>
+                      <SelectItem value="detailed-xlsx">📊 상세 템플릿 (Excel)</SelectItem>
+                      <SelectItem value="detailed-csv">📄 상세 템플릿 (CSV)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
-              {/* 필수 필드 안내 */}
-              <Card className="bg-blue-50 border-blue-200">
+              {/* 스마트 파싱 안내 */}
+              <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
                 <CardContent className="pt-4">
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                      !
+                    <div className="flex-shrink-0 w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-sm">
+                      ✨
                     </div>
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-blue-900">
-                        {t("leads.file.requiredFields")}
-                      </h4>
-                      <div className="text-sm text-blue-800">
-                        <p className="mb-2">
-                          <strong>{t("leads.file.requiredFieldsDescription")}</strong>
-                        </p>
-                        <p className="mb-2">
-                          <strong>{t("leads.file.optionalFields")}</strong>
-                        </p>
-                        <p className="text-xs text-blue-600">💡 {t("leads.file.templateTip")}</p>
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-amber-900">스마트 컬럼 매핑</h4>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-amber-700">
+                            {useSmartParsing ? "활성화됨" : "비활성화됨"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setUseSmartParsing(!useSmartParsing)}
+                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                              useSmartParsing ? "bg-amber-500" : "bg-gray-300"
+                            }`}
+                          >
+                            <span
+                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                useSmartParsing ? "translate-x-4" : "translate-x-0"
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="text-sm text-amber-800">
+                        {useSmartParsing ? (
+                          <p>
+                            템플릿 없이도 파일을 업로드하면 자동으로 컬럼을 분석하고 매핑합니다.
+                            회사명, 이메일, 웹사이트 등을 자동 인식합니다.
+                          </p>
+                        ) : (
+                          <p>기존 방식: 정해진 템플릿 형식의 파일만 업로드할 수 있습니다.</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1692,6 +1824,19 @@ export default function LeadsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Column Mapping Modal for Smart CSV Parsing */}
+      <ColumnMappingModal
+        isOpen={showColumnMappingModal}
+        onClose={() => {
+          setShowColumnMappingModal(false)
+          setSmartParseResult(null)
+          setCsvText(null)
+        }}
+        onConfirm={handleColumnMappingConfirm}
+        parseResult={smartParseResult}
+        onToggleHeaders={handleToggleHeaders}
+      />
 
       {/* Group Edit Modal */}
       <GroupEditModal

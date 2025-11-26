@@ -308,48 +308,38 @@ export async function uploadCSVToGemini(request: UploadCSVRequest): Promise<Uplo
     let finalStoreName = storeName
 
     if (!finalStoreName) {
-      // 기존 Store 목록 조회하여 워크스페이스에 맞는 Store 찾기
-      logger.info({ workspaceId: request.workspaceId }, "Looking for existing File Search Store")
+      // 공용 Store 사용 - 워크스페이스 구분 없이 첫 번째 Store 사용
+      logger.info("Looking for shared File Search Store")
       const allStores = await listFileSearchStores()
 
-      const workspaceStore = allStores.stores.find(
-        (store) =>
-          store.displayName?.includes(request.workspaceId) ||
-          store.displayName?.includes(`Lead DB - ${request.workspaceId}`),
-      )
-
-      // 🔍 Store 매칭 로그
       logger.debug(
         {
-          allStores: allStores.stores.map((s) => ({
-            name: s.name,
-            displayName: s.displayName,
-          })),
-          searchingFor: request.workspaceId,
-          found: !!workspaceStore,
+          totalStores: allStores.total,
+          storeNames: allStores.stores.map((s) => s.displayName),
         },
-        "🔍 Searching for workspace store",
+        "🔍 Available stores",
       )
 
-      if (workspaceStore) {
-        // 기존 Store 재사용
-        finalStoreName = workspaceStore.name
-        logger.info(
-          { storeName: finalStoreName, displayName: workspaceStore.displayName },
-          "✅ Found existing File Search Store, will reuse",
-        )
-      } else {
-        // 새로운 Store 생성 (레코드 수 포함)
-        logger.info(
-          { workspaceId: request.workspaceId, totalRows },
-          "No existing store found, creating new one with record count",
-        )
-        const displayNameWithCount = `Lead DB - ${request.workspaceId} - ${totalRows} leads`
-        const newStore = await createFileSearchStore(displayNameWithCount)
+      if (allStores.stores.length > 0) {
+        // 기존 공용 Store 재사용
+        const firstStore = allStores.stores[0]
+        if (firstStore) {
+          finalStoreName = firstStore.name
+          logger.info(
+            { storeName: finalStoreName, displayName: firstStore.displayName },
+            "✅ Using existing shared Store",
+          )
+        }
+      }
+
+      if (!finalStoreName) {
+        // 공용 Store 없으면 새로 생성
+        logger.info({ totalRows }, "No existing store found, creating new shared store")
+        const newStore = await createFileSearchStore("Global Lead Database")
         finalStoreName = newStore.name
         logger.info(
           { storeName: finalStoreName, displayName: newStore.displayName, totalRows },
-          "Created new File Search Store with record count",
+          "Created new shared File Search Store",
         )
       }
     } else {
@@ -623,46 +613,32 @@ export async function searchLeads(request: LeadSearchRequest): Promise<LeadSearc
     if (storeNames && storeNames.length > 0) {
       finalStoreNames = storeNames
     } else {
-      // 기본 store 이름으로 검색 (실제 존재하는 store를 찾아야 함)
-      // 먼저 모든 store를 조회해서 workspaceId와 매칭되는 것을 찾음
+      // 공용 Store 사용 - 워크스페이스 구분 없이 첫 번째 Store 사용
       const allStores = await listFileSearchStores()
 
       logger.info(
         {
           totalStores: allStores.total,
           storeNames: allStores.stores.map((s) => s.name),
-          searchingFor: request.workspaceId,
         },
-        "Looking for workspace store",
+        "Looking for shared store",
       )
 
-      const workspaceStore = allStores.stores.find(
-        (store) =>
-          store.name.includes(`lead-db-${request.workspaceId}`) ||
-          store.displayName?.includes(request.workspaceId),
-      )
-
-      if (workspaceStore) {
-        finalStoreNames = [workspaceStore.name]
-        logger.info({ foundStore: workspaceStore.name }, "Found workspace store")
-      } else {
-        // workspaceId가 없으면 가장 최근 Store 사용
-        if (allStores.stores.length > 0) {
-          const firstStore = allStores.stores[0]
-          if (!firstStore) {
-            throw new Error(`No File Search Store found. Please upload a file first.`)
-          }
-          finalStoreNames = [firstStore.name]
-          logger.warn(
-            {
-              workspaceId: request.workspaceId,
-              usingStore: finalStoreNames[0],
-            },
-            "No exact match found, using most recent store",
-          )
-        } else {
+      if (allStores.stores.length > 0) {
+        const firstStore = allStores.stores[0]
+        if (!firstStore) {
           throw new Error(`No File Search Store found. Please upload a file first.`)
         }
+        finalStoreNames = [firstStore.name]
+        logger.info(
+          {
+            usingStore: finalStoreNames[0],
+            displayName: firstStore.displayName,
+          },
+          "Using shared store for all workspaces",
+        )
+      } else {
+        throw new Error(`No File Search Store found. Please upload a file first.`)
       }
     }
 
@@ -677,48 +653,22 @@ export async function searchLeads(request: LeadSearchRequest): Promise<LeadSearc
       "✅ Store selected for search",
     )
 
-    // Store 메타데이터 조회 (컨텍스트 강화 + 레코드 수 파싱)
+    // Store 메타데이터 조회
     let storeMetadata = ""
-    let totalLeadsInStore = 0
     try {
       const storeDetails = await fetch(`${GEMINI_API_BASE}/${finalStoreNames[0]}?key=${apiKey}`)
       if (storeDetails.ok) {
         const storeData = (await storeDetails.json()) as { displayName?: string }
         if (storeData?.displayName) {
           storeMetadata = `\nDatabase: ${storeData.displayName}`
-
-          // displayName에서 레코드 수 파싱 (예: "Lead DB - workspace_xxx - 5847 leads")
-          const leadsMatch = storeData.displayName.match(/(\d+)\s*leads?/i)
-          if (leadsMatch?.[1]) {
-            totalLeadsInStore = parseInt(leadsMatch[1], 10)
-            logger.info(
-              { totalLeadsInStore, displayName: storeData.displayName },
-              "📊 Parsed lead count from store displayName",
-            )
-          }
         }
-
-        // 📊 Store 메타데이터 로그
-        logger.debug(
-          {
-            storeData,
-            totalLeadsInStore,
-          },
-          "📊 Store metadata fetched",
-        )
+        logger.debug({ storeData }, "📊 Store metadata fetched")
       }
     } catch (error) {
       logger.warn({ error }, "Failed to fetch store metadata")
     }
 
-    // 🚀 최적화된 검색 프롬프트 (CRITICAL 지시사항을 최상단에 배치 + 메타데이터 활용)
-    const datasetInfo =
-      totalLeadsInStore > 0
-        ? `\n📊 DATABASE SIZE: ${totalLeadsInStore.toLocaleString()} total leads available
-   → You are searching through a LARGE dataset. Return the TOP ${limit} most relevant matches.
-   → Target: Find ${Math.min(limit, Math.ceil(totalLeadsInStore * 0.01))}+ matches (≈${((limit / totalLeadsInStore) * 100).toFixed(2)}% of database)`
-        : ""
-
+    // 🚀 최적화된 검색 프롬프트 (CRITICAL 지시사항을 최상단에 배치)
     let searchPrompt = `
 ═══════════════════════════════════════════════════════════════
 🎯 CRITICAL INSTRUCTION (READ THIS FIRST!)
@@ -729,7 +679,6 @@ export async function searchLeads(request: LeadSearchRequest): Promise<LeadSearc
 4. Include BOTH exact matches AND related/similar matches
 5. If you find fewer than ${Math.min(limit, 10)} results, EXPAND your search criteria
 ═══════════════════════════════════════════════════════════════
-${datasetInfo}
 SEARCH QUERY: "${query}"
 ${storeMetadata}
 `

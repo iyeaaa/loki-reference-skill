@@ -397,6 +397,27 @@ export async function uploadCSVToGemini(request: UploadCSVRequest): Promise<Uplo
           ? file.name.replace(/\.csv$/, `-part${chunkIndex + 1}of${chunks.length}.csv`)
           : file.name
 
+      // customMetadata 생성 (리드 수, 청크 정보, 국가 등)
+      const customMetadata: Array<{ key: string; stringValue: string }> = [
+        { key: "leadCount", stringValue: String(chunk.length) },
+        { key: "chunkIndex", stringValue: String(chunkIndex + 1) },
+        { key: "totalChunks", stringValue: String(chunks.length) },
+      ]
+
+      // 요청에서 전달된 메타데이터 추가
+      if (metadata?.country) {
+        customMetadata.push({ key: "country", stringValue: metadata.country })
+      }
+      if (metadata?.region) {
+        customMetadata.push({ key: "region", stringValue: metadata.region })
+      }
+      if (metadata?.vertical) {
+        customMetadata.push({ key: "industry", stringValue: metadata.vertical })
+      }
+      if (metadata?.source) {
+        customMetadata.push({ key: "source", stringValue: metadata.source })
+      }
+
       logger.info(
         {
           storeName: finalStoreName,
@@ -404,14 +425,19 @@ export async function uploadCSVToGemini(request: UploadCSVRequest): Promise<Uplo
           chunkIndex: chunkIndex + 1,
           totalChunks: chunks.length,
           rowsInChunk: chunk.length,
+          customMetadata,
         },
-        `📤 Uploading chunk ${chunkIndex + 1}/${chunks.length}`,
+        `📤 Uploading chunk ${chunkIndex + 1}/${chunks.length} with customMetadata`,
       )
 
-      // 정제된 CSV 파일 업로드
+      // SDK로 업로드 (customMetadata 포함)
       let uploadOp = await ai.fileSearchStores.uploadToFileSearchStore({
         fileSearchStoreName: finalStoreName,
         file: new File([chunkCsvBuffer], chunkFileName, { type: "text/csv" }),
+        config: {
+          displayName: chunkFileName,
+          customMetadata,
+        },
       })
 
       // 핵심 수정: response 필드가 있으면 업로드 완료! ✨

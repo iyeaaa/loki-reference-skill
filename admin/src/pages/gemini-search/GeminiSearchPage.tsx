@@ -8,7 +8,6 @@ import {
   Plus,
   Search,
   Sparkles,
-  Trash2,
   Upload,
 } from "lucide-react"
 import type React from "react"
@@ -494,62 +493,6 @@ export default function GeminiSearchPage() {
     } catch (error) {
       console.error("Download error:", error)
       toast.error("다운로드에 실패했습니다")
-    }
-  }
-
-  // 파일 삭제
-  const handleDeleteFile = async (fileId: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/admin/gemini-search/files/${fileId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      })
-
-      const result = await response.json()
-
-      if (result.success) {
-        toast.success("파일이 삭제되었습니다")
-        fetchStores()
-      } else {
-        throw new Error(result.message || "삭제 실패")
-      }
-    } catch (error) {
-      console.error("Delete error:", error)
-      toast.error(error instanceof Error ? error.message : "삭제에 실패했습니다")
-    }
-  }
-
-  // 모든 Store 삭제
-  const handleDeleteAllStores = async () => {
-    if (
-      !confirm(
-        "⚠️ 모든 Store를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 모든 업로드된 데이터가 삭제됩니다.",
-      )
-    ) {
-      return
-    }
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/admin/gemini-search/stores/all`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      })
-
-      const result = await response.json()
-
-      if (result.success) {
-        toast.success(result.message || "모든 Store가 삭제되었습니다")
-        fetchStores()
-      } else {
-        throw new Error(result.message || "삭제 실패")
-      }
-    } catch (error) {
-      console.error("Delete all stores error:", error)
-      toast.error(error instanceof Error ? error.message : "삭제에 실패했습니다")
     }
   }
 
@@ -1139,18 +1082,8 @@ export default function GeminiSearchPage() {
           <TabsContent value="files">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>업로드된 파일</CardTitle>
-                    <CardDescription>Gemini에 업로드된 리드 데이터 파일 목록</CardDescription>
-                  </div>
-                  {uploadedStores.length > 0 && (
-                    <Button variant="destructive" size="sm" onClick={handleDeleteAllStores}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      모든 Store 삭제
-                    </Button>
-                  )}
-                </div>
+                <CardTitle>업로드된 파일</CardTitle>
+                <CardDescription>Gemini에 업로드된 리드 데이터 파일 목록</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoadingStores ? (
@@ -1166,7 +1099,6 @@ export default function GeminiSearchPage() {
                           <TableHead>파일명</TableHead>
                           <TableHead>업로드 일시</TableHead>
                           <TableHead>수정 일시</TableHead>
-                          <TableHead className="text-right">작업</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1178,15 +1110,6 @@ export default function GeminiSearchPage() {
                             </TableCell>
                             <TableCell className="text-sm">
                               {new Date(store.updateTime).toLocaleString("ko-KR")}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteFile(store.name)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}

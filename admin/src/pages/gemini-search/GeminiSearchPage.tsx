@@ -3,14 +3,12 @@ import {
   AlertCircle,
   Database,
   Download,
-  FileUp,
   Loader2,
   Plus,
   Search,
   Sparkles,
   Upload,
 } from "lucide-react"
-import type React from "react"
 import { useCallback, useEffect, useId, useState } from "react"
 import toast from "react-hot-toast"
 import * as XLSX from "xlsx"
@@ -66,11 +64,6 @@ interface UploadedStore {
 }
 
 export default function GeminiSearchPage() {
-  const fileId = useId()
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [isUploading, setIsUploading] = useState(false)
-  const [isDragOver, setIsDragOver] = useState(false)
-
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<LeadResult[]>([])
@@ -106,10 +99,6 @@ export default function GeminiSearchPage() {
   const filterCountryId = useId()
   const filterRegionId = useId()
   const filterVerticalId = useId()
-  const metaCountryId = useId()
-  const metaRegionId = useId()
-  const metaVerticalId = useId()
-  const metaSourceId = useId()
   const driveUrlId = useId()
   const driveMetaCountryId = useId()
   const driveMetaRegionId = useId()
@@ -187,90 +176,6 @@ export default function GeminiSearchPage() {
   useEffect(() => {
     fetchStores()
   }, [fetchStores])
-
-  // 파일 선택 핸들러
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setSelectedFile(file)
-    }
-  }
-
-  // 드래그 앤 드롭 핸들러
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(true)
-  }
-
-  const handleDragLeave = () => {
-    setIsDragOver(false)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(false)
-    const file = e.dataTransfer.files[0]
-    if (file) {
-      setSelectedFile(file)
-    }
-  }
-
-  // CSV 업로드
-  const handleUpload = async () => {
-    if (!selectedFile) {
-      toast.error("파일을 선택해주세요")
-      return
-    }
-
-    if (!workspaceId || workspaceId === "all") {
-      toast.error("워크스페이스를 선택해주세요")
-      return
-    }
-
-    try {
-      setIsUploading(true)
-
-      const formData = new FormData()
-      formData.append("file", selectedFile)
-      formData.append("workspaceId", workspaceId)
-
-      // 메타데이터 추가 (값이 있는 것만)
-      const metadataObj: Record<string, string> = {}
-      if (metadata.country) metadataObj.country = metadata.country
-      if (metadata.region) metadataObj.region = metadata.region
-      if (metadata.vertical) metadataObj.vertical = metadata.vertical
-      if (metadata.source) metadataObj.source = metadata.source
-      if (metadata.dbVersion) metadataObj.dbVersion = metadata.dbVersion
-
-      if (Object.keys(metadataObj).length > 0) {
-        formData.append("metadata", JSON.stringify(metadataObj))
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/v1/admin/gemini-search/upload`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-        body: formData,
-      })
-
-      const result = await response.json()
-
-      if (result.success) {
-        toast.success(`업로드 성공! ${result.data.totalRows}개 리드가 등록되었습니다`)
-        setSelectedFile(null)
-        setMetadata({ country: "", region: "", vertical: "", source: "", dbVersion: "" })
-        fetchStores()
-      } else {
-        throw new Error(result.message || "업로드 실패")
-      }
-    } catch (error) {
-      console.error("Upload error:", error)
-      toast.error(error instanceof Error ? error.message : "업로드에 실패했습니다")
-    } finally {
-      setIsUploading(false)
-    }
-  }
 
   // 리드 검색
   const handleSearch = async () => {
@@ -580,10 +485,6 @@ export default function GeminiSearchPage() {
               <Search className="h-4 w-4 mr-2" />
               검색
             </TabsTrigger>
-            <TabsTrigger value="upload">
-              <Upload className="h-4 w-4 mr-2" />
-              로컬 업로드
-            </TabsTrigger>
             <TabsTrigger value="drive">
               <Database className="h-4 w-4 mr-2" />
               Drive 가져오기
@@ -830,131 +731,6 @@ export default function GeminiSearchPage() {
                     검색 결과가 여기에 표시됩니다
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* 로컬 CSV 업로드 탭 */}
-          <TabsContent value="upload">
-            <Card>
-              <CardHeader>
-                <CardTitle>CSV 파일 업로드</CardTitle>
-                <CardDescription>
-                  리드 데이터를 Gemini File Search에 업로드하세요 (최대 100MB)
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* 파일 선택 영역 */}
-                <label
-                  htmlFor={fileId}
-                  className={`block border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
-                    isDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25"
-                  }`}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                >
-                  <FileUp className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      파일을 드래그하거나 클릭하여 선택하세요
-                    </p>
-                    <input
-                      type="file"
-                      id={fileId}
-                      accept=".csv,.xlsx,.xls"
-                      onChange={handleFileSelect}
-                      className="hidden"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        document.getElementById(fileId)?.click()
-                      }}
-                    >
-                      파일 선택
-                    </Button>
-                  </div>
-                  {selectedFile && (
-                    <div className="mt-4 p-3 bg-muted rounded-md">
-                      <p className="text-sm font-medium">{selectedFile.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                  )}
-                </label>
-
-                {/* 메타데이터 입력 */}
-                <div className="space-y-2">
-                  <Label>메타데이터 (선택사항)</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="meta-country" className="text-xs">
-                        국가
-                      </Label>
-                      <Input
-                        id={metaCountryId}
-                        placeholder="예: Germany"
-                        value={metadata.country}
-                        onChange={(e) => setMetadata({ ...metadata, country: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={metaRegionId} className="text-xs">
-                        지역
-                      </Label>
-                      <Input
-                        id={metaRegionId}
-                        placeholder="예: Europe"
-                        value={metadata.region}
-                        onChange={(e) => setMetadata({ ...metadata, region: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={metaVerticalId} className="text-xs">
-                        업종
-                      </Label>
-                      <Input
-                        id={metaVerticalId}
-                        placeholder="예: bedding"
-                        value={metadata.vertical}
-                        onChange={(e) => setMetadata({ ...metadata, vertical: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={metaSourceId} className="text-xs">
-                        출처
-                      </Label>
-                      <Input
-                        id={metaSourceId}
-                        placeholder="예: Beauty-DB-2025"
-                        value={metadata.source}
-                        onChange={(e) => setMetadata({ ...metadata, source: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleUpload}
-                  disabled={!selectedFile || isUploading}
-                  className="w-full"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      업로드 중...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Gemini에 업로드
-                    </>
-                  )}
-                </Button>
               </CardContent>
             </Card>
           </TabsContent>

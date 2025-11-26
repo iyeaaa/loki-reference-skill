@@ -726,6 +726,12 @@ SEARCH STRATEGY (use ALL of these):
 3. TERTIARY: Match "Company Name" (e.g., "Tech Solutions" for IT query)
 4. QUATERNARY: Match any field containing relevant keywords
 
+🌍 GEOGRAPHIC DIVERSITY (IMPORTANT!):
+- Search across ALL countries/regions in the database
+- DO NOT focus only on one country (e.g., United States)
+- Include leads from diverse locations: USA, Indonesia, Europe, Asia, etc.
+- If no country filter is specified, return a MIX of results from different countries
+
 FIELD EXTRACTION (copy EXACTLY from database):
 • Company Name, Company Industry, Company Size
 • Emails, Full name, Job title
@@ -788,9 +794,9 @@ OUTPUT FORMAT (JSON only):
     // 🚀 Gemini API 호출 시작
     logger.info(
       {
-        model: "gemini-3.5-pro",
+        model: "gemini-2.5-pro",
         storeNames: finalStoreNames,
-        temperature: 2,
+        temperature: 0.2,
         queryLength: query.length,
       },
       "🚀 Calling Gemini API with File Search",
@@ -800,7 +806,7 @@ OUTPUT FORMAT (JSON only):
       model: "gemini-2.5-pro",
       contents: searchPrompt,
       config: {
-        temperature: 2,
+        temperature: 0.2,
         tools: [
           {
             fileSearch: {

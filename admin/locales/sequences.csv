@@ -975,3 +975,9 @@ step1.allCountries,전체 국가,All Countries
 step1.allCities,전체 도시,All Cities
 step1.allBusinessTypes,전체 타입,All Types
 step1.filterResults,필터 결과: {{count}}명 / 전체 {{total}}명,Filter Results: {{count}} / {{total}} total
+stepsList.viewDetail,상세 보기,View Detail
+stepsList.dialog.attachments,첨부파일,Attachments
+stepsList.dialog.body,본문,Body
+stepsList.dialog.close,닫기,Close
+stepsList.dialog.noContent,내용이 없습니다.,No content available.
+stepsList.dialog.subject,제목,Subject

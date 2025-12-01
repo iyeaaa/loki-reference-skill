@@ -70,6 +70,13 @@ export interface Sequence {
   replyRate?: number
 }
 
+export interface SequenceStepAttachment {
+  filename: string
+  type: string
+  size?: number
+  content?: string
+}
+
 export interface SequenceStep {
   id: string
   sequenceId: string
@@ -88,6 +95,7 @@ export interface SequenceStep {
   conditionType?: StepConditionType | null
   conditionConfig?: string | null
   previousStepId?: string | null
+  attachments?: SequenceStepAttachment[] | null
   createdAt: string
   updatedAt: string
 }

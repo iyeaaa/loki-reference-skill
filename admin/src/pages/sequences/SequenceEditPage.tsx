@@ -176,7 +176,8 @@ export default function SequenceEditPage() {
       ]
     : [
         { id: "overview", label: t("sequences.editPage.overviewMenu"), icon: FileText },
-        { id: "enrollment", label: t("sequences.editPage.enrollmentMenu"), icon: Mail },
+        { id: "scenario", label: t("sequences.editPage.scenarioMenu"), icon: Mail },
+        { id: "enrollment", label: t("sequences.editPage.enrollmentMenu"), icon: Users },
         { id: "memo", label: t("sequences.editPage.memoMenu"), icon: FileText },
       ]
 
@@ -332,6 +333,20 @@ export default function SequenceEditPage() {
                       </p>
                     </div>
                     <CampaignOverview sequenceId={sequence.id} />
+                  </div>
+                )}
+
+                {selectedMenu === "scenario" && (
+                  <div>
+                    <h2 className="text-xl font-semibold mb-4">
+                      {t("sequences.editPage.scenarioMenu")}
+                    </h2>
+                    <div className="mb-4 p-4 bg-muted/50 rounded-lg border">
+                      <p className="text-sm text-muted-foreground">
+                        {t("sequences.editPage.readOnlyNotice")}
+                      </p>
+                    </div>
+                    <SequenceStepsList sequenceId={sequence.id} isEdit={true} readOnly={true} />
                   </div>
                 )}
 

@@ -4,8 +4,10 @@ import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   useCreateSequenceStep,
   useDeleteSequenceStep,
@@ -23,12 +25,18 @@ import { SequenceStepForm } from "./SequenceStepForm"
 interface SequenceStepsListProps {
   sequenceId?: string
   isEdit?: boolean
+  readOnly?: boolean
 }
 
-export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsListProps) {
+export function SequenceStepsList({
+  sequenceId,
+  isEdit = false,
+  readOnly = false,
+}: SequenceStepsListProps) {
   const { t } = useTranslation()
   const [editingStep, setEditingStep] = useState<SequenceStep | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [viewingStep, setViewingStep] = useState<SequenceStep | null>(null)
 
   // 인라인 편집 상태
   const [inlineEditingStepId, setInlineEditingStepId] = useState<string | null>(null)
@@ -189,7 +197,7 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-base">{t("sequences.stepsList.title")}</CardTitle>
-          {sequenceId && (
+          {sequenceId && !readOnly && (
             <Button
               onClick={() => setIsCreating(true)}
               size="sm"
@@ -221,7 +229,7 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
               <p className="text-sm text-muted-foreground mb-4">
                 {t("sequences.stepsList.noSteps")}
               </p>
-              {sequenceId && (
+              {sequenceId && !readOnly && (
                 <Button onClick={() => setIsCreating(true)} size="sm" disabled={!hasCustomerGroup}>
                   <Plus className="h-4 w-4 mr-1" />
                   {t("sequences.stepsList.addFirstStep")}
@@ -237,9 +245,25 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
                   const isFullEditing = editingStep?.id === step.id
 
                   return (
+                    // biome-ignore lint/a11y/useSemanticElements: Complex card with nested interactive elements
                     <div
                       key={step.id}
-                      className="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      role="button"
+                      tabIndex={0}
+                      className="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                      onClick={() => {
+                        if (!isFullEditing && !isInlineEditing) {
+                          setViewingStep(step)
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          if (!isFullEditing && !isInlineEditing) {
+                            setViewingStep(step)
+                          }
+                        }
+                      }}
                     >
                       {/* 전체 편집 모드 */}
                       {isFullEditing ? (
@@ -271,7 +295,11 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
 
                               {/* 인라인 편집 모드 */}
                               {isInlineEditing ? (
-                                <div className="flex items-center gap-2 flex-wrap">
+                                // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation for event bubbling
+                                <div
+                                  className="flex items-center gap-2 flex-wrap"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
                                   <div className="flex items-center gap-2">
                                     <Label className="text-xs">
                                       {t("sequences.stepsList.inlineEdit.delayDays", "대기일")}
@@ -344,15 +372,20 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
                               ) : (
                                 <Badge
                                   variant="secondary"
-                                  className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors"
+                                  className={`text-xs ${!readOnly ? "cursor-pointer hover:bg-secondary/80" : ""} transition-colors`}
                                   onClick={(e) => {
+                                    if (readOnly) return
                                     e.stopPropagation()
                                     handleStartInlineEdit(step)
                                   }}
-                                  title={t(
-                                    "sequences.stepsList.inlineEdit.clickToEdit",
-                                    "클릭하여 날짜/시간 수정",
-                                  )}
+                                  title={
+                                    readOnly
+                                      ? undefined
+                                      : t(
+                                          "sequences.stepsList.inlineEdit.clickToEdit",
+                                          "클릭하여 날짜/시간 수정",
+                                        )
+                                  }
                                 >
                                   {step.delayDays === 0
                                     ? t("sequences.stepsList.sendImmediately")
@@ -376,26 +409,32 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
                               </p>
                             )}
                           </div>
-                          <div className="flex gap-2 flex-shrink-0">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setEditingStep(step)}
-                              className="h-8 px-2"
-                              disabled={isInlineEditing}
+                          {!readOnly && (
+                            // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation for event bubbling
+                            <div
+                              className="flex gap-2 flex-shrink-0"
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteStep(step.id)}
-                              className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                              disabled={isInlineEditing}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setEditingStep(step)}
+                                className="h-8 px-2"
+                                disabled={isInlineEditing}
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteStep(step.id)}
+                                className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                disabled={isInlineEditing}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -430,6 +469,89 @@ export function SequenceStepsList({ sequenceId, isEdit = false }: SequenceStepsL
           </CardContent>
         </Card>
       )}
+
+      {/* 이메일 상세 보기 Dialog */}
+      <Dialog open={!!viewingStep} onOpenChange={(open) => !open && setViewingStep(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                {t("sequences.stepsList.stepNumber", { order: viewingStep?.stepOrder })}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                {viewingStep?.delayDays === 0
+                  ? t("sequences.stepsList.sendImmediately")
+                  : t("sequences.stepsList.sendAfterDays", {
+                      days: viewingStep?.delayDays,
+                    })}
+                {" • "}
+                {`${viewingStep?.scheduledHour?.toString().padStart(2, "0") ?? "09"}:${viewingStep?.scheduledMinute?.toString().padStart(2, "0") ?? "00"}`}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="space-y-4 pr-4">
+              {/* 제목 */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  {t("sequences.stepsList.dialog.subject", "제목")}
+                </Label>
+                <div className="p-3 bg-muted/50 rounded-md border">
+                  <p className="font-medium">{viewingStep?.emailSubject}</p>
+                </div>
+              </div>
+
+              {/* 본문 */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  {t("sequences.stepsList.dialog.body", "본문")}
+                </Label>
+                <div className="p-4 bg-muted/50 rounded-md border min-h-[200px]">
+                  {viewingStep?.emailBodyHtml ? (
+                    <div
+                      className="prose prose-sm dark:prose-invert max-w-none"
+                      // biome-ignore lint/security/noDangerouslySetInnerHtml: Email content from trusted source
+                      dangerouslySetInnerHTML={{ __html: viewingStep.emailBodyHtml }}
+                    />
+                  ) : viewingStep?.emailBodyText ? (
+                    <p className="whitespace-pre-wrap text-sm">{viewingStep.emailBodyText}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
+                      {t("sequences.stepsList.dialog.noContent", "내용이 없습니다.")}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* 첨부파일 */}
+              {viewingStep?.attachments && viewingStep.attachments.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    {t("sequences.stepsList.dialog.attachments", "첨부파일")}
+                  </Label>
+                  <div className="p-3 bg-muted/50 rounded-md border">
+                    <ul className="space-y-1">
+                      {viewingStep.attachments.map((attachment, index) => (
+                        <li key={index} className="text-sm flex items-center gap-2">
+                          <span className="truncate">{attachment.filename}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({Math.round((attachment.size || 0) / 1024)} KB)
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          <div className="flex justify-end pt-4 border-t">
+            <Button variant="outline" onClick={() => setViewingStep(null)}>
+              {t("sequences.stepsList.dialog.close", "닫기")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

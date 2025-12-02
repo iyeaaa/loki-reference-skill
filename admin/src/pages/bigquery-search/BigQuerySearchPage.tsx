@@ -83,8 +83,9 @@ interface EnrichmentResult {
 }
 
 // 데이터 사전 (BigQuery 테이블 메타데이터)
+// 와일드카드 테이블로 lead_csv_data + lead_csv_data_02 모두 검색
 const DATA_DICTIONARY = {
-  tableName: "gen-lang-client-0140658679.test_lead_01.lead_csv_data",
+  tableName: "gen-lang-client-0140658679.test_lead_01.lead_csv_data*",
   columns: [
     "first_name",
     "middle_name",
@@ -106,28 +107,28 @@ const DATA_DICTIONARY = {
   ],
   industries: [
     "Business Services",
-    "Real Estate & Construction",
-    "Retail",
     "Manufacturing",
-    "Media & Entertainment",
-    "Software & Internet",
-    "Healthcare",
+    "Retail",
     "Financial Services",
-    "Non-Profit",
+    "Healthcare",
+    "Real Estate & Construction",
     "Computers & Electronics",
-    "Travel, Recreation, and Leisure",
+    "Software & Internet",
     "Education",
-    "Telecommunications",
-    "Other",
+    "Media & Entertainment",
     "Consumer Services",
+    "Travel, Recreation, and Leisure",
+    "Telecommunications",
+    "Non-Profit",
     "Transportation & Storage",
-    "Wholesale & Distribution",
+    "Other",
     "Energy & Utilities",
+    "Wholesale & Distribution",
     "Government",
     "Agriculture & Mining",
-    "Food & Beverage",
     "Retail & Wholesale",
     "Services (Miscellaneous)",
+    "Food & Beverage",
     "Travel & Accommodation",
     "Recreation & Leisure",
     "Conglomerates",
@@ -145,12 +146,19 @@ const DATA_DICTIONARY = {
   ],
   revenueRanges: [
     "$0 - $1M",
+    "$0 - 1M",
     "$1 - $10M",
+    "$1 - 10M",
     "$10 - $50M",
+    "$10 - 50M",
     "$50 - $100M",
+    "$50 - 100M",
     "$100 - $250M",
+    "$100 - 250M",
     "$250 - $500M",
+    "$250 - 500M",
     "$500M - $1B",
+    "$500M - 1B",
     "> $1B",
   ],
 }
@@ -238,6 +246,14 @@ const saveCollapsedToStorage = (collapsed: Set<string>) => {
   }
 }
 
+// 예시 질문 목록
+const EXAMPLE_QUERIES = [
+  "헬스케어 산업의 미국 회사 100개 보여줘",
+  "직원 수 1000명 이상인 소프트웨어 회사 찾아줘",
+  "캐나다에 있는 금융 서비스 회사",
+  "매출 10억 달러 이상인 제조업체",
+]
+
 export default function BigQuerySearchPage() {
   const welcomeMessage: Message = {
     id: "welcome",
@@ -246,13 +262,7 @@ export default function BigQuerySearchPage() {
 
 자연어로 질문하시면 SQL 쿼리로 변환해서 결과를 보여드릴게요.
 
-**예시 질문:**
-- "헬스케어 산업의 미국 회사 100개 보여줘"
-- "직원 수 1000명 이상인 소프트웨어 회사 찾아줘"
-- "캐나다에 있는 금융 서비스 회사"
-- "매출 10억 달러 이상인 제조업체"
-
-무엇을 찾아드릴까요?`,
+**예시 질문:** (클릭하면 입력창에 복사됩니다)`,
     timestamp: new Date(),
   }
 
@@ -757,7 +767,24 @@ export default function BigQuerySearchPage() {
                         <span>검색 중...</span>
                       </div>
                     ) : (
-                      <div className="whitespace-pre-wrap text-sm">{message.content}</div>
+                      <>
+                        <div className="whitespace-pre-wrap text-sm">{message.content}</div>
+                        {/* Welcome 메시지일 때 예시 질문 버튼 표시 */}
+                        {message.id === "welcome" && (
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {EXAMPLE_QUERIES.map((query) => (
+                              <button
+                                key={query}
+                                type="button"
+                                onClick={() => setInputValue(query)}
+                                className="px-3 py-1.5 text-xs bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors border border-primary/20 hover:border-primary/40"
+                              >
+                                {query}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
 
@@ -879,6 +906,7 @@ export default function BigQuerySearchPage() {
                                 <div
                                   className="flex items-center gap-2"
                                   onClick={(e) => e.stopPropagation()}
+                                  onKeyDown={(e) => e.stopPropagation()}
                                 >
                                   <span className="text-xs text-muted-foreground">표시 개수:</span>
                                   <Select

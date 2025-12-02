@@ -1,0 +1,224 @@
+import logger from "../utils/logger"
+
+// Enrichment 결과 타입
+export interface EnrichmentResult {
+  domain: string
+  emails: Array<{
+    value: string
+    type: string
+    confidence?: number
+  }>
+  companyInfo: {
+    name?: string
+    description?: string
+    industry?: string
+    size?: string
+    founded?: string
+    location?: string
+  }
+  socialLinks: {
+    linkedin?: string
+    twitter?: string
+    facebook?: string
+  }
+  rawContent?: string
+}
+
+// Hunter.io API로 이메일 찾기 (공식 이메일만)
+export const findEmailsWithHunter = async (
+  domain: string,
+  apiKey: string,
+): Promise<{
+  emails: Array<{ value: string; type: string; confidence: number }>
+  organization?: string
+  description?: string
+}> => {
+  try {
+    // type=generic: 공식 이메일만 가져옴 (contact@, info@, sales@, support@ 등)
+    const url = `https://api.hunter.io/v2/domain-search?domain=${encodeURIComponent(domain)}&type=generic&api_key=${apiKey}`
+
+    const response = await fetch(url)
+
+    if (!response.ok) {
+      const error = await response.json()
+      logger.warn({ domain, error }, "Hunter.io API error")
+      return { emails: [] }
+    }
+
+    const data = (await response.json()) as {
+      data?: {
+        emails?: Array<{ value: string; type: string; confidence: number }>
+        organization?: string
+        description?: string
+      }
+    }
+
+    // generic 타입만 필터링 (이중 보장)
+    const genericEmails =
+      data.data?.emails
+        ?.filter((e) => e.type === "generic")
+        .map((e) => ({
+          value: e.value,
+          type: e.type,
+          confidence: e.confidence || 0,
+        })) || []
+
+    // 신뢰도 순으로 정렬
+    const sortedEmails = genericEmails.sort((a, b) => b.confidence - a.confidence)
+
+    return {
+      emails: sortedEmails.slice(0, 5), // 상위 5개만
+      organization: data.data?.organization,
+      description: data.data?.description,
+    }
+  } catch (error) {
+    logger.error({ error, domain }, "Failed to fetch emails from Hunter.io")
+    return { emails: [] }
+  }
+}
+
+// Jina Reader로 웹사이트 콘텐츠 추출
+export const extractWebsiteContent = async (
+  url: string,
+): Promise<{
+  content: string
+  title?: string
+  description?: string
+}> => {
+  try {
+    // URL 정규화
+    const normalizedUrl = url.startsWith("http") ? url : `https://${url}`
+
+    const response = await fetch(`https://r.jina.ai/${normalizedUrl}`, {
+      headers: {
+        Accept: "text/plain",
+      },
+    })
+
+    if (!response.ok) {
+      logger.warn({ url, status: response.status }, "Jina Reader API error")
+      return { content: "" }
+    }
+
+    const content = await response.text()
+
+    // 콘텐츠에서 제목과 설명 추출 시도
+    const titleMatch = content.match(/^#\s*(.+)$/m)
+    const title = titleMatch ? titleMatch[1] : undefined
+
+    // 첫 몇 문장을 설명으로 사용
+    const paragraphs = content.split("\n\n").filter((p) => p.trim().length > 50)
+    const description = paragraphs.slice(0, 2).join(" ").slice(0, 500)
+
+    return {
+      content: content.slice(0, 5000), // 최대 5000자
+      title,
+      description,
+    }
+  } catch (error) {
+    logger.error({ error, url }, "Failed to extract content with Jina Reader")
+    return { content: "" }
+  }
+}
+
+// 회사 정보 요약 생성 (Gemini 사용)
+export const summarizeCompanyInfo = async (
+  content: string,
+  companyName: string,
+  geminiApiKey: string,
+): Promise<{
+  description: string
+  industry?: string
+  products?: string
+}> => {
+  try {
+    const { GoogleGenAI } = await import("@google/genai")
+    const ai = new GoogleGenAI({ apiKey: geminiApiKey })
+
+    const prompt = `Based on the following website content, provide a brief summary about the company "${companyName}".
+
+Content:
+${content.slice(0, 3000)}
+
+Respond in JSON format:
+{
+  "description": "2-3 sentence description of what the company does (in Korean)",
+  "industry": "main industry/sector",
+  "products": "main products or services (in Korean)"
+}
+
+JSON response:`
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+    })
+
+    const text = response.text?.trim() || "{}"
+    const cleaned = text.replace(/```json\n?/gi, "").replace(/```\n?/gi, "")
+
+    return JSON.parse(cleaned)
+  } catch (error) {
+    logger.error({ error, companyName }, "Failed to summarize company info")
+    return { description: "" }
+  }
+}
+
+// 메인 enrichment 함수
+export const enrichLead = async (
+  webAddress: string,
+  companyName: string,
+  options: {
+    hunterApiKey?: string
+    geminiApiKey?: string
+    skipHunter?: boolean
+    skipJina?: boolean
+  } = {},
+): Promise<EnrichmentResult> => {
+  const domain = webAddress.replace(/^https?:\/\//, "").replace(/\/.*$/, "")
+
+  logger.info({ domain, companyName }, "Starting lead enrichment")
+
+  const result: EnrichmentResult = {
+    domain,
+    emails: [],
+    companyInfo: {},
+    socialLinks: {},
+  }
+
+  // Hunter.io로 이메일 찾기
+  if (!options.skipHunter && options.hunterApiKey) {
+    const hunterResult = await findEmailsWithHunter(domain, options.hunterApiKey)
+    result.emails = hunterResult.emails
+    if (hunterResult.organization) {
+      result.companyInfo.name = hunterResult.organization
+    }
+    if (hunterResult.description) {
+      result.companyInfo.description = hunterResult.description
+    }
+  }
+
+  // Jina Reader로 웹사이트 콘텐츠 추출
+  if (!options.skipJina) {
+    const jinaResult = await extractWebsiteContent(webAddress)
+    result.rawContent = jinaResult.content
+
+    // Gemini로 요약 생성
+    if (jinaResult.content && options.geminiApiKey) {
+      const summary = await summarizeCompanyInfo(
+        jinaResult.content,
+        companyName || domain,
+        options.geminiApiKey,
+      )
+      result.companyInfo.description = summary.description || result.companyInfo.description
+      result.companyInfo.industry = summary.industry
+    }
+  }
+
+  logger.info(
+    { domain, emailCount: result.emails.length, hasDescription: !!result.companyInfo.description },
+    "Lead enrichment completed",
+  )
+
+  return result
+}

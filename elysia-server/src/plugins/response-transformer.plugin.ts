@@ -23,6 +23,16 @@ export const responseTransformer = (app: Elysia) =>
       return response
     }
 
+    // Skip transformation for bigquery search endpoint (returns typed response)
+    if (request.url.includes("/api/v1/bigquery")) {
+      return response
+    }
+
+    // Skip transformation for lead-enrichment endpoint (returns typed response)
+    if (request.url.includes("/api/v1/lead-enrichment")) {
+      return response
+    }
+
     // Skip transformation for SSE streams (text/event-stream)
     if (set.headers?.["content-type"]?.includes("text/event-stream")) {
       return response

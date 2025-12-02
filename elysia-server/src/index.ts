@@ -10,6 +10,7 @@ import { responseTransformer } from "./plugins/response-transformer.plugin"
 import { activityLogRoutes } from "./routes/activity-logs.routes"
 import { aiRoutes } from "./routes/ai.routes"
 import { authRoutes } from "./routes/auth.routes"
+import { bigquerySearchRoutes } from "./routes/bigquery-search.routes"
 import { bulkEmailRoutes } from "./routes/bulk-email.routes"
 import { chatbotRoutes } from "./routes/chatbot.routes"
 import { adminCustomerGroupRoutes, customerGroupRoutes } from "./routes/customer-groups.routes"
@@ -22,6 +23,7 @@ import { adminEmailRoutes, emailRoutes } from "./routes/emails.routes"
 import { geminiFileSearchRoutes } from "./routes/gemini-file-search.routes"
 // Import routes
 import { healthRoutes } from "./routes/health.routes"
+import { leadEnrichmentRoutes } from "./routes/lead-enrichment.routes"
 import { leadImportRoutes } from "./routes/lead-import.routes"
 import { adminLeadRoutes, leadRoutes } from "./routes/leads.routes"
 import { openaiApiKeysRoutes } from "./routes/openai-api-keys.routes"
@@ -167,6 +169,8 @@ const app = new Elysia()
   .use(webExtractionRoutes)
   .use(websetRoutes)
   .use(geminiFileSearchRoutes)
+  .use(bigquerySearchRoutes)
+  .use(leadEnrichmentRoutes)
 
   .listen(config.port)
 

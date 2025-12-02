@@ -2,6 +2,7 @@ import { motion } from "framer-motion"
 import type { LucideIcon } from "lucide-react"
 import {
   BarChart3,
+  // Database, // TODO: BigQuery Search 기능 완성 후 주석 해제
   GitBranch,
   Mail,
   MessageSquare,
@@ -129,6 +130,12 @@ const getMainMenuItems = (t: (key: string) => string) => [
     url: "/gemini-search",
     icon: Sparkles,
   },
+  // TODO: BigQuery Search 기능 완성 후 주석 해제
+  // {
+  //   title: t("sidebar.menu.bigquerySearch"),
+  //   url: "/bigquery-search",
+  //   icon: Database,
+  // },
 ]
 
 interface AppSidebarProps {

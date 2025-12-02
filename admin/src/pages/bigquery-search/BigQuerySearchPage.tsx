@@ -25,7 +25,7 @@ import {
   User,
   X,
 } from "lucide-react"
-import { useCallback, useEffect, useId, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useId, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import * as XLSX from "xlsx"
 import { Badge } from "@/components/ui/badge"
@@ -254,6 +254,76 @@ const EXAMPLE_QUERIES = [
   "매출 10억 달러 이상인 제조업체",
 ]
 
+// 입력 컴포넌트 분리 - inputValue 변경 시 메시지 목록 리렌더링 방지
+interface ChatInputProps {
+  onSubmit: (value: string) => void
+  isLoading: boolean
+}
+
+const ChatInput = memo(function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
+  const [localInput, setLocalInput] = useState("")
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const inputId = useId()
+
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault()
+      if (!localInput.trim() || isLoading) return
+      onSubmit(localInput.trim())
+      setLocalInput("")
+    },
+    [localInput, isLoading, onSubmit],
+  )
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault()
+        if (localInput.trim() && !isLoading) {
+          onSubmit(localInput.trim())
+          setLocalInput("")
+        }
+      }
+    },
+    [localInput, isLoading, onSubmit],
+  )
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+      <div className="relative">
+        <Textarea
+          ref={textareaRef}
+          id={inputId}
+          value={localInput}
+          onChange={(e) => setLocalInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="예: 헬스케어 산업의 미국 회사 100개 보여줘..."
+          className="min-h-[60px] max-h-[200px] pr-14 resize-none rounded-2xl bg-muted/50 border-0 focus-visible:ring-2 focus-visible:ring-primary/20"
+          disabled={isLoading}
+        />
+        <Button
+          type="submit"
+          size="icon"
+          disabled={!localInput.trim() || isLoading}
+          className="absolute right-2 bottom-2 h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-lg"
+        >
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        </Button>
+      </div>
+      <div className="flex items-center justify-center gap-4 mt-3">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Sparkles className="h-3 w-3" />
+          <span>자연어를 SQL로 변환하여 검색합니다</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Database className="h-3 w-3" />
+          <span>1,048,575개 리드 데이터</span>
+        </div>
+      </div>
+    </form>
+  )
+})
+
 export default function BigQuerySearchPage() {
   const welcomeMessage: Message = {
     id: "welcome",
@@ -270,7 +340,6 @@ export default function BigQuerySearchPage() {
     const storedMessages = loadMessagesFromStorage()
     return storedMessages.length > 0 ? storedMessages : [welcomeMessage]
   })
-  const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [selectedResults, setSelectedResults] = useState<Set<number>>(new Set())
   const [customerGroups, setCustomerGroups] = useState<Array<{ id: string; name: string }>>([])
@@ -296,8 +365,6 @@ export default function BigQuerySearchPage() {
   >({})
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const inputId = useId()
 
   const workspaceId = localStorage.getItem("selectedWorkspace") || ""
   const API_BASE_URL = import.meta.env.VITE_API_URL || ""
@@ -356,90 +423,82 @@ export default function BigQuerySearchPage() {
     fetchCustomerGroups()
   }, [fetchCustomerGroups])
 
-  // 메시지 전송
-  const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault()
+  // 메시지 전송 - ChatInput 컴포넌트에서 값을 직접 받음
+  const handleChatSubmit = useCallback(
+    async (messageContent: string) => {
+      if (!messageContent.trim() || isLoading) return
 
-    if (!inputValue.trim() || isLoading) return
-
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: inputValue.trim(),
-      timestamp: new Date(),
-    }
-
-    const loadingMessage: Message = {
-      id: `assistant-${Date.now()}`,
-      role: "assistant",
-      content: "",
-      timestamp: new Date(),
-      isLoading: true,
-    }
-
-    setMessages((prev) => [...prev, userMessage, loadingMessage])
-    setInputValue("")
-    setIsLoading(true)
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/bigquery/search`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-        body: JSON.stringify({
-          query: userMessage.content,
-          dataDictionary: DATA_DICTIONARY,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error("검색 요청 실패")
+      const userMessage: Message = {
+        id: `user-${Date.now()}`,
+        role: "user",
+        content: messageContent.trim(),
+        timestamp: new Date(),
       }
 
-      const result = await response.json()
+      const loadingMessage: Message = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: "",
+        timestamp: new Date(),
+        isLoading: true,
+      }
 
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === loadingMessage.id
-            ? {
-                ...msg,
-                content: result.explanation || "검색 결과입니다.",
-                sql: result.sql,
-                results: result.results,
-                totalCount: result.totalCount,
-                isLoading: false,
-              }
-            : msg,
-        ),
-      )
-    } catch (error) {
-      console.error("Search error:", error)
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === loadingMessage.id
-            ? {
-                ...msg,
-                content: "죄송합니다. 검색 중 오류가 발생했습니다. 다시 시도해주세요.",
-                isLoading: false,
-              }
-            : msg,
-        ),
-      )
-      toast.error("검색 중 오류가 발생했습니다")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+      setMessages((prev) => [...prev, userMessage, loadingMessage])
+      setIsLoading(true)
 
-  // Enter 키 처리
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSubmit()
-    }
-  }
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/bigquery/search`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+          body: JSON.stringify({
+            query: userMessage.content,
+            dataDictionary: DATA_DICTIONARY,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("검색 요청 실패")
+        }
+
+        const result = await response.json()
+
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === loadingMessage.id
+              ? {
+                  ...msg,
+                  content: result.explanation || "검색 결과입니다.",
+                  sql: result.sql,
+                  results: result.results,
+                  totalCount: result.totalCount,
+                  isLoading: false,
+                }
+              : msg,
+          ),
+        )
+      } catch (error) {
+        console.error("Search error:", error)
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === loadingMessage.id
+              ? {
+                  ...msg,
+                  content: "죄송합니다. 검색 중 오류가 발생했습니다. 다시 시도해주세요.",
+                  isLoading: false,
+                }
+              : msg,
+          ),
+        )
+        toast.error("검색 중 오류가 발생했습니다")
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [isLoading],
+  )
 
   // SQL 복사
   const handleCopySql = async (sql: string, messageId: string) => {
@@ -776,7 +835,7 @@ export default function BigQuerySearchPage() {
                               <button
                                 key={query}
                                 type="button"
-                                onClick={() => setInputValue(query)}
+                                onClick={() => handleChatSubmit(query)}
                                 className="px-3 py-1.5 text-xs bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors border border-primary/20 hover:border-primary/40"
                               >
                                 {query}
@@ -1225,44 +1284,9 @@ export default function BigQuerySearchPage() {
         </div>
       </ScrollArea>
 
-      {/* 입력 영역 */}
+      {/* 입력 영역 - 별도 컴포넌트로 분리하여 리렌더링 최적화 */}
       <div className="flex-none border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6 py-4">
-        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-          <div className="relative">
-            <Textarea
-              ref={textareaRef}
-              id={inputId}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="예: 헬스케어 산업의 미국 회사 100개 보여줘..."
-              className="min-h-[60px] max-h-[200px] pr-14 resize-none rounded-2xl bg-muted/50 border-0 focus-visible:ring-2 focus-visible:ring-primary/20"
-              disabled={isLoading}
-            />
-            <Button
-              type="submit"
-              size="icon"
-              disabled={!inputValue.trim() || isLoading}
-              className="absolute right-2 bottom-2 h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-lg"
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-          <div className="flex items-center justify-center gap-4 mt-3">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Sparkles className="h-3 w-3" />
-              <span>자연어를 SQL로 변환하여 검색합니다</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Database className="h-3 w-3" />
-              <span>1,048,575개 리드 데이터</span>
-            </div>
-          </div>
-        </form>
+        <ChatInput onSubmit={handleChatSubmit} isLoading={isLoading} />
       </div>
 
       {/* 회사 정보 조회 모달 */}

@@ -98,6 +98,8 @@ export interface SequenceStep {
   attachments?: SequenceStepAttachment[] | null
   createdAt: string
   updatedAt: string
+  // Number of times this step has been sent (used to determine if step is editable)
+  executionCount?: number
 }
 
 export interface SequenceEnrollment {

@@ -394,7 +394,7 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
 
   /**
    * POST /api/v1/admin/lead-import/preview
-   * Excel 파일 데이터 미리보기 (DB 저장 전)
+   * Excel/CSV 파일 데이터 미리보기 (DB 저장 전)
    */
   .post(
     "/preview",
@@ -412,29 +412,87 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
 
       // 파일 확장자 검증
       const fileName = file.name.toLowerCase()
+      const isCSV = fileName.endsWith(".csv")
       const isExcel = fileName.endsWith(".xlsx") || fileName.endsWith(".xls")
 
-      if (!isExcel) {
+      if (!isCSV && !isExcel) {
         set.status = 400
         return {
           success: false,
-          error: "Only Excel (.xlsx, .xls) files are allowed",
+          error: "Only Excel (.xlsx, .xls) or CSV (.csv) files are allowed",
         }
       }
 
       try {
         // 파일을 ArrayBuffer로 읽기
         const arrayBuffer = await file.arrayBuffer()
-        const workbook = XLSX.read(arrayBuffer, { type: "buffer" })
+
+        let workbook: XLSX.WorkBook
+        if (isCSV) {
+          // CSV 파일: 인코딩 감지 및 변환 후 읽기
+          const uint8Array = new Uint8Array(arrayBuffer)
+
+          // 1. 인코딩 감지
+          const detectedEncoding = chardet.detect(Buffer.from(uint8Array))
+          const encoding = detectedEncoding || "UTF-8"
+
+          logger.info({ detectedEncoding: encoding, fileName }, "CSV encoding detected for preview")
+
+          // 2. UTF-8 BOM 제거 (있는 경우)
+          let startIndex = 0
+          if (
+            uint8Array.length >= 3 &&
+            uint8Array[0] === 0xef &&
+            uint8Array[1] === 0xbb &&
+            uint8Array[2] === 0xbf
+          ) {
+            startIndex = 3
+            logger.debug("UTF-8 BOM detected and removed")
+          }
+
+          const dataWithoutBOM = uint8Array.slice(startIndex)
+
+          // 3. 감지된 인코딩을 UTF-8로 변환
+          let utf8String: string
+          try {
+            if (encoding.toUpperCase() !== "UTF-8" && encoding.toUpperCase() !== "UTF8") {
+              const buffer = Buffer.from(dataWithoutBOM)
+              utf8String = iconv.decode(buffer, encoding)
+              logger.info({ from: encoding, to: "UTF-8" }, "Encoding conversion performed for preview")
+            } else {
+              utf8String = new TextDecoder("utf-8").decode(dataWithoutBOM)
+            }
+          } catch (conversionError) {
+            logger.warn(
+              { error: conversionError, encoding },
+              "Encoding conversion failed, forcing UTF-8",
+            )
+            utf8String = new TextDecoder("utf-8", { fatal: false }).decode(dataWithoutBOM)
+          }
+
+          // 4. UTF-8 문자열을 XLSX가 읽을 수 있는 형식으로 변환
+          const utf8Buffer = Buffer.from(utf8String, "utf-8")
+          workbook = XLSX.read(utf8Buffer, { type: "buffer", raw: false })
+        } else {
+          // Excel 파일: 그대로 읽기
+          workbook = XLSX.read(arrayBuffer, { type: "buffer" })
+        }
 
         // 시트 선택
-        const selectedSheetName = sheetName || workbook.SheetNames[0]
+        let selectedSheetName: string | undefined
+        if (isCSV) {
+          // CSV 파일: 항상 첫 번째 시트 사용
+          selectedSheetName = workbook.SheetNames[0]
+        } else {
+          // Excel 파일: sheetName이 제공되면 사용, 아니면 첫 번째 시트 사용
+          selectedSheetName = sheetName || workbook.SheetNames[0]
+        }
 
         if (!selectedSheetName) {
           set.status = 400
           return {
             success: false,
-            error: "No sheets found in the workbook",
+            error: "No sheets found in the file",
           }
         }
 
@@ -455,7 +513,7 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
           dateNF: "yyyy-mm-dd",
         })
 
-        logger.info({ rowCount: rawData.length }, "File preview parsed")
+        logger.info({ rowCount: rawData.length, fileType: isCSV ? "CSV" : "Excel" }, "File preview parsed")
 
         if (rawData.length === 0) {
           set.status = 400
@@ -549,12 +607,12 @@ Provide strategic recommendations for lead engagement and data optimization. Inc
           },
         }
       } catch (error: unknown) {
-        logger.error({ error }, "Failed to preview Excel file")
+        logger.error({ error }, "Failed to preview file")
 
         set.status = 500
         return {
           success: false,
-          error: error instanceof Error ? error.message : "Failed to preview Excel file",
+          error: error instanceof Error ? error.message : "Failed to preview file",
         }
       }
     },
@@ -567,9 +625,9 @@ Provide strategic recommendations for lead engagement and data optimization. Inc
       }),
       detail: {
         tags: ["admin", "lead-import"],
-        summary: "Excel 파일 데이터 미리보기",
+        summary: "Excel 또는 CSV 파일 데이터 미리보기",
         description:
-          "Excel 파일을 업로드하여 DB에 저장하기 전 데이터를 미리 확인합니다. 전체 데이터를 미리보기로 제공하며, 최대 10행을 샘플링하여 AI 분석 결과도 함께 제공합니다.",
+          "Excel(.xlsx, .xls) 또는 CSV(.csv) 파일을 업로드하여 DB에 저장하기 전 데이터를 미리 확인합니다. 전체 데이터를 미리보기로 제공하며, 최대 20행을 샘플링하여 AI 분석 결과도 함께 제공합니다. CSV 파일의 경우 인코딩을 자동 감지하여 UTF-8로 변환합니다.",
       },
     },
   )

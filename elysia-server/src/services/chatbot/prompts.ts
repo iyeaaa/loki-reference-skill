@@ -62,26 +62,38 @@ Available data:
 
 Respond in JSON format:
 {
-  "intent": "Question intent (e.g., performance, lead analysis, trend, lead creation, data update, data deletion)",
+  "intent": "Question intent (e.g., performance, lead analysis, trend, lead creation, data update, data deletion, sequence_generation_request)",
   "requiredTables": ["Required table list"],
   "timeRange": "Time range (e.g., today, this week, last 30 days) or null",
   "needsClarification": false,
   "clarificationQuestion": null,
   "analysisType": "aggregate | trend | comparison | detail",
-  "operationType": "read | create | update | delete"
+  "operationType": "read | create | update | delete | sequence_generation"
 }
 
 **operationType Classification:**
-- "read": Query, analyze, stats, show, tell (SELECT)
+- "read": Query, analyze, stats, show, tell, suggest, recommend, propose (SELECT)
 - "create": New data, add, insert (INSERT)
 - "update": Modify existing data, change, update (UPDATE)
 - "delete": Remove data, delete (DELETE)
+- "sequence_generation": ONLY when explicitly creating/generating an email sequence
+
+**Sequence Generation Detection (STRICT):**
+ONLY set operationType to "sequence_generation" when user EXPLICITLY requests to CREATE a sequence:
+- MUST include action words: "생성해줘", "만들어줘", "만들어", "생성", "create", "generate", "build"
+- Examples that ARE sequence generation: "시퀀스 생성해줘", "이메일 캠페인 만들어줘", "create a sequence"
+- Examples that are NOT sequence generation (use "read" instead):
+  - "전략을 제안해주세요" (suggesting strategy = read/analyze)
+  - "어떤 캠페인이 좋을까요" (asking for recommendation = read)
+  - "분석해주세요" (analyze = read)
+  - "캠페인 전략을 알려주세요" (explain strategy = read)
 
 **Important:**
 - For mutation operations (create/update/delete), set needsClarification to false
 - Don't request clarification when user clearly states the action
 - For sample data creation requests, classify as create and proceed
-- Only set needsClarification to true for ambiguous read queries`
+- Only set needsClarification to true for ambiguous read queries
+- "제안", "추천", "분석", "전략", "어떤" keywords indicate ANALYSIS, not sequence creation`
 }
 
 /**
@@ -612,4 +624,130 @@ ${JSON.stringify(leadAnalysis.samples.slice(0, 5), null, 2)}
 - End emails naturally (e.g., "Looking forward to hearing from you", "Best regards", "Thanks")
 
 Generate the complete sequence strategy now:`
+}
+
+/**
+ * AI-Powered Sequence Strategy Only Prompt (Without Email Content)
+ *
+ * Generates only the strategy metadata for a sequence.
+ * Email content will be generated separately using AITemplateGenerationService.
+ */
+export function getAISequenceStrategyOnlyPrompt(leadAnalysis: {
+  samples: Array<{
+    company_name: string | null
+    business_type: string | null
+    employee_count: string | null
+    lead_score: number | null
+    city: string | null
+    country: string | null
+  }>
+  avgLeadScore: number
+  dominantBusinessType: string
+  avgCompanySize: number
+  companySizeCategory: string
+  businessTypeFocus: string
+  customerGroupName: string
+  totalMembers: number
+}) {
+  // Determine dominant country from samples
+  const countryCounts: Record<string, number> = {}
+  for (const sample of leadAnalysis.samples) {
+    const country = sample.country || "Unknown"
+    countryCounts[country] = (countryCounts[country] || 0) + 1
+  }
+  const dominantCountry =
+    Object.entries(countryCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Korea"
+
+  return `You are an expert email marketing strategist specializing in B2B sales sequences.
+
+**Your Task:**
+Analyze the provided lead data and generate a sequence STRATEGY (without email content).
+Email content will be generated separately for each step.
+
+**Lead Analysis Summary:**
+- Customer Group: "${leadAnalysis.customerGroupName}"
+- Total Leads: ${leadAnalysis.totalMembers}
+- Average Lead Score: ${leadAnalysis.avgLeadScore.toFixed(1)}/100
+- Dominant Business Type: ${leadAnalysis.dominantBusinessType}
+- Average Company Size: ${Math.round(leadAnalysis.avgCompanySize)} employees
+- Company Size Category: ${leadAnalysis.companySizeCategory}
+- Business Type Focus: ${leadAnalysis.businessTypeFocus}
+- Dominant Country: ${dominantCountry}
+- Samples Analyzed: ${leadAnalysis.samples.length}
+
+**Sample Leads (for context):**
+${JSON.stringify(leadAnalysis.samples.slice(0, 5), null, 2)}
+
+**Requirements:**
+
+1. **Number of Steps:** Determine optimal number of emails (2-5 steps)
+   - High lead score (>70): Use 2-3 steps (they're warm, don't over-communicate)
+   - Medium lead score (40-70): Use 3-4 steps (standard nurture sequence)
+   - Low lead score (<40): Use 4-5 steps (need more touchpoints)
+
+2. **Step Strategy:** For each step, define:
+   - **purpose:** The goal of this email step (in Korean)
+   - **tone:** The tone and manner for this step (in Korean)
+   - **key_points:** Key points to include (in Korean, array of strings)
+
+3. **Timing Strategy:** For each step, determine:
+   - **delay_days:** Days after previous step
+     * CRITICAL: Step 1 MUST always be 0
+     * Short cycle (high score): 2-3 days between emails
+     * Standard cycle: 3-5 days between emails
+     * Long cycle (low score): 5-7 days between emails
+   - **scheduled_hour:** Best time to send (0-23 in 24h format, KST)
+     * B2B: Typically 9-11 AM or 2-4 PM KST
+   - **scheduled_minute:** Usually 0, 15, 30, or 45
+   - **timezone:** Use "Asia/Seoul" for KST
+
+**Email Sequence Pattern:**
+- Step 1: 첫 접촉 및 관심 유도 (Introduction + Value Proposition)
+- Step 2: 사례 공유 및 문제 해결 (Social Proof / Case Study)
+- Step 3: 교육적 콘텐츠 제공 (Educational Content / Industry Insights)
+- Step 4 (if needed): 긴급성 또는 특별 제안 (Urgency / Limited Offer)
+- Step 5 (if needed): 최종 팔로업 (Final Touch / Breakup Email)
+
+**Tone Matching:**
+- Large Enterprise (>500 employees): 공식적이고 데이터 중심적인 톤
+- Mid-sized (100-500): 전문적이면서 친근한 톤
+- Small Business (<100): 친근하고 솔루션 지향적인 톤
+
+**Output Format (JSON):**
+
+\`\`\`json
+{
+  "strategy_summary": "전체 전략에 대한 1-2 문장 설명 (한국어)",
+  "recommended_steps": 3,
+  "timezone": "Asia/Seoul",
+  "dominant_country": "${dominantCountry}",
+  "steps": [
+    {
+      "step_order": 1,
+      "delay_days": 0,
+      "scheduled_hour": 9,
+      "scheduled_minute": 0,
+      "purpose": "첫 접촉 및 관심 유도",
+      "tone": "전문적이고 친근한",
+      "key_points": ["가치 제안 소개", "회사 소개", "미팅 제안"]
+    }
+  ],
+  "personalization_tips": [
+    "이 시퀀스를 개인화하기 위한 구체적인 팁들"
+  ],
+  "expected_performance": {
+    "estimated_open_rate": "35-45%",
+    "estimated_response_rate": "8-12%",
+    "reasoning": "리드 데이터를 기반으로 한 예상 이유"
+  }
+}
+\`\`\`
+
+**Critical Rules:**
+- DO NOT generate email_subject or email_body (these will be generated separately)
+- ALL text fields (purpose, tone, key_points, strategy_summary, personalization_tips) should be in Korean
+- Base recommendations on the ACTUAL lead data provided
+- Consider the dominant country (${dominantCountry}) for timing and cultural context
+
+Generate the sequence strategy now:`
 }

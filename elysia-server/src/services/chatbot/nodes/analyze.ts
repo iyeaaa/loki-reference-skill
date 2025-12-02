@@ -79,6 +79,99 @@ export async function analyzeQuestion(state: ChatbotState): Promise<Partial<Chat
 
     const analysis = JSON.parse((jsonStr || content).trim())
 
+    // Check if this is a sequence generation request from LLM analysis
+    if (
+      analysis.operationType === "sequence_generation" ||
+      analysis.intent === "sequence_generation_request"
+    ) {
+      chatbotLogger.info("[Analyze] Detected sequence generation intent from LLM analysis")
+
+      // Extract customer group info from conversation context
+      // Look for leadGroupCreated metadata in recent messages
+      let customerGroupInfo: {
+        groupId?: string
+        groupName?: string
+        leadsCount?: number
+      } = {}
+
+      // Search through messages for lead group creation info
+      for (let i = state.messages.length - 1; i >= 0; i--) {
+        const msg = state.messages[i]
+        if (msg?.metadata?.leadGroupCreated) {
+          const leadGroup = msg.metadata.leadGroupCreated
+          customerGroupInfo = {
+            groupId: leadGroup.groupId,
+            groupName: leadGroup.groupName,
+            leadsCount: leadGroup.leadsCount,
+          }
+          chatbotLogger.info(
+            `[Analyze] Found customer group from context: ${customerGroupInfo.groupName}`,
+          )
+          break
+        }
+      }
+
+      const duration = Date.now() - startTime
+
+      // If no customer group found in context, ask user to upload leads first
+      if (!customerGroupInfo.groupId || !customerGroupInfo.groupName) {
+        chatbotLogger.info("[Analyze] No customer group found in context")
+        chatbotLogger.nodeSuccess("analyzeQuestion (no group)", duration)
+
+        if (emitter) {
+          emitter.nodeComplete("analyzeQuestion", "No customer group found", {
+            intent: "sequence_generation_request",
+            noCustomerGroup: true,
+          })
+        }
+
+        return {
+          metadata: {
+            intent: "sequence_generation_request",
+            operationType: "create",
+          },
+          analysis:
+            "이메일 시퀀스를 생성하려면 먼저 리드를 업로드해주세요.\n\n" +
+            '아래의 "Drop Your Leads Here" 버튼을 클릭하여 리드 파일(CSV/Excel)을 업로드하면, ' +
+            "해당 리드들에 대한 맞춤형 이메일 시퀀스를 자동으로 생성해 드립니다.",
+          needsClarification: false,
+          schemaContext: "",
+        }
+      }
+
+      chatbotLogger.nodeSuccess("analyzeQuestion (sequence direct)", duration)
+
+      // Emit progress event - starting sequence generation
+      if (emitter) {
+        emitter.progress(
+          "analyzeQuestion",
+          `"${customerGroupInfo.groupName}" 그룹에 대한 이메일 시퀀스 생성을 시작합니다...`,
+        )
+        emitter.nodeComplete("analyzeQuestion", "Starting sequence generation", {
+          intent: "sequence_generation",
+          isSequenceGenerationRequest: true,
+          customerGroupInfo,
+        })
+      }
+
+      // Directly route to sequence generation flow (no modal)
+      return {
+        metadata: {
+          intent: "sequence_generation",
+          operationType: "create",
+          requiredTables: ["sequences", "sequence_steps", "sequence_enrollments"],
+        },
+        sequenceGenerationRequest: {
+          customerGroupId: customerGroupInfo.groupId,
+          customerGroupName: customerGroupInfo.groupName,
+          membersCount: customerGroupInfo.leadsCount || 0,
+        },
+        isSequenceGenerationRequest: true,
+        needsClarification: false,
+        schemaContext: "",
+      }
+    }
+
     // 스키마 컨텍스트 준비
     const schemaContext = getRelevantSchema(state.currentQuestion)
 

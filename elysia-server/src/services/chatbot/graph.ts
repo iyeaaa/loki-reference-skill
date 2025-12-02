@@ -193,7 +193,19 @@ function routeAfterAnalysis(state: ChatbotState): NodeName {
     return NODE_NAMES.HANDLE_ERROR
   }
 
-  // PRIORITY: Check for sequence generation request first
+  // PRIORITY 1: Check if sequence modal should be opened (detected from LLM analysis)
+  // This is when user asks "시퀀스 생성해줘" without prior sequenceGenerationRequest metadata
+  const metadata = state.metadata as { openSequenceModal?: boolean } | undefined
+  if (metadata?.openSequenceModal) {
+    chatbotLogger.routeDecision(
+      NODE_NAMES.ANALYZE,
+      NODE_NAMES.FORMAT_RESPONSE,
+      "sequence modal open requested - ending workflow",
+    )
+    return NODE_NAMES.FORMAT_RESPONSE
+  }
+
+  // PRIORITY 2: Check for sequence generation request (from button click with metadata)
   if (state.isSequenceGenerationRequest || state.sequenceGenerationRequest) {
     chatbotLogger.routeDecision(
       NODE_NAMES.ANALYZE,
@@ -351,6 +363,7 @@ export function createChatbotGraph() {
     [NODE_NAMES.ASK_CLARIFICATION]: NODE_NAMES.ASK_CLARIFICATION,
     [NODE_NAMES.HANDLE_SEQUENCE_GENERATION_REQUEST]: NODE_NAMES.HANDLE_SEQUENCE_GENERATION_REQUEST,
     [NODE_NAMES.GENERATE_SQL]: NODE_NAMES.GENERATE_SQL,
+    [NODE_NAMES.FORMAT_RESPONSE]: NODE_NAMES.FORMAT_RESPONSE,
   })
 
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions

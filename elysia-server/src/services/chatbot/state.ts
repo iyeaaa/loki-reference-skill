@@ -121,6 +121,11 @@ export interface ChatMessage {
     insights?: Insight[]
     visualization?: VisualizationSuggestion[]
     followUpQuestions?: string[]
+    leadGroupCreated?: {
+      groupId: string
+      groupName: string
+      leadsCount: number
+    }
   }
 }
 

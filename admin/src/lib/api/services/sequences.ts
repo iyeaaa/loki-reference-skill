@@ -111,12 +111,9 @@ export const sequencesApi = {
       // Append all data fields
       formData.append("stepOrder", data.stepOrder.toString())
       formData.append("delayDays", data.delayDays.toString())
-      if (data.scheduledHour !== undefined) {
-        formData.append("scheduledHour", data.scheduledHour.toString())
-      }
-      if (data.scheduledMinute !== undefined) {
-        formData.append("scheduledMinute", data.scheduledMinute.toString())
-      }
+      // Ensure scheduledHour and scheduledMinute are not null (use defaults)
+      formData.append("scheduledHour", (data.scheduledHour ?? 9).toString())
+      formData.append("scheduledMinute", (data.scheduledMinute ?? 0).toString())
       if (data.timezone) formData.append("timezone", data.timezone)
       formData.append("emailSubject", data.emailSubject)
       if (data.emailBodyText) formData.append("emailBodyText", data.emailBodyText)
@@ -149,9 +146,18 @@ export const sequencesApi = {
       emailBodyHtmlLength: data.emailBodyHtml?.length || 0,
       emailBodyHtmlPreview: data.emailBodyHtml?.substring(0, 200),
     })
+
+    // Clean data to ensure no null values for scheduledHour/scheduledMinute
+    // API doesn't accept null, only number or string
+    const cleanedData = {
+      ...data,
+      scheduledHour: data.scheduledHour ?? 9,
+      scheduledMinute: data.scheduledMinute ?? 0,
+    }
+
     return apiFetch<SequenceStep>(`/api/v1/sequences/${sequenceId}/steps`, {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify(cleanedData),
     })
   },
 
@@ -179,12 +185,9 @@ export const sequencesApi = {
       // Append all data fields
       formData.append("stepOrder", data.stepOrder.toString())
       formData.append("delayDays", data.delayDays.toString())
-      if (data.scheduledHour !== undefined) {
-        formData.append("scheduledHour", data.scheduledHour.toString())
-      }
-      if (data.scheduledMinute !== undefined) {
-        formData.append("scheduledMinute", data.scheduledMinute.toString())
-      }
+      // Ensure scheduledHour and scheduledMinute are not null (use defaults)
+      formData.append("scheduledHour", (data.scheduledHour ?? 9).toString())
+      formData.append("scheduledMinute", (data.scheduledMinute ?? 0).toString())
       if (data.timezone) formData.append("timezone", data.timezone)
       formData.append("emailSubject", data.emailSubject)
       if (data.emailBodyText) formData.append("emailBodyText", data.emailBodyText)
@@ -217,9 +220,18 @@ export const sequencesApi = {
       emailBodyHtmlLength: data.emailBodyHtml?.length || 0,
       emailBodyHtmlPreview: data.emailBodyHtml?.substring(0, 200),
     })
+
+    // Clean data to ensure no null values for scheduledHour/scheduledMinute
+    // API doesn't accept null, only number or string
+    const cleanedData = {
+      ...data,
+      scheduledHour: data.scheduledHour ?? 9,
+      scheduledMinute: data.scheduledMinute ?? 0,
+    }
+
     return apiFetch<SequenceStep>(`/api/v1/sequences/${sequenceId}/steps/${stepId}`, {
       method: "PUT",
-      body: JSON.stringify(data),
+      body: JSON.stringify(cleanedData),
     })
   },
 

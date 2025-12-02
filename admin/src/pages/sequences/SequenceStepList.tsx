@@ -1,4 +1,4 @@
-import { Clock, Edit, Plus, Trash2, X } from "lucide-react"
+import { Check, Clock, Edit, Plus, Trash2, X } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
@@ -25,7 +25,7 @@ import { SequenceStepForm } from "./SequenceStepForm"
 interface SequenceStepsListProps {
   sequenceId?: string
   isEdit?: boolean
-  readOnly?: boolean
+  readOnly?: boolean // If true, only unsent steps can be edited
 }
 
 export function SequenceStepsList({
@@ -63,8 +63,8 @@ export function SequenceStepsList({
     stepData: {
       stepOrder: number
       delayDays: number
-      scheduledHour?: number
-      scheduledMinute?: number
+      scheduledHour?: number | null
+      scheduledMinute?: number | null
       timezone?: string
       emailSubject: string
       emailBodyText?: string
@@ -78,8 +78,9 @@ export function SequenceStepsList({
     const createData: SequenceStepCreateInput = {
       stepOrder: stepData.stepOrder,
       delayDays: stepData.delayDays,
-      scheduledHour: stepData.scheduledHour,
-      scheduledMinute: stepData.scheduledMinute,
+      // Ensure scheduledHour and scheduledMinute are not null (API doesn't accept null)
+      scheduledHour: stepData.scheduledHour ?? 9,
+      scheduledMinute: stepData.scheduledMinute ?? 0,
       timezone: stepData.timezone,
       emailSubject: stepData.emailSubject,
       emailBodyText: stepData.emailBodyText || "",
@@ -98,8 +99,8 @@ export function SequenceStepsList({
     stepData: {
       stepOrder: number
       delayDays: number
-      scheduledHour?: number
-      scheduledMinute?: number
+      scheduledHour?: number | null
+      scheduledMinute?: number | null
       timezone?: string
       emailSubject: string
       emailBodyText?: string
@@ -110,8 +111,9 @@ export function SequenceStepsList({
     const updateData: SequenceStepUpdateInput = {
       stepOrder: stepData.stepOrder,
       delayDays: stepData.delayDays,
-      scheduledHour: stepData.scheduledHour,
-      scheduledMinute: stepData.scheduledMinute,
+      // Ensure scheduledHour and scheduledMinute are not null (API doesn't accept null)
+      scheduledHour: stepData.scheduledHour ?? 9,
+      scheduledMinute: stepData.scheduledMinute ?? 0,
       timezone: stepData.timezone,
       emailSubject: stepData.emailSubject,
       emailBodyText: stepData.emailBodyText || "",
@@ -154,9 +156,10 @@ export function SequenceStepsList({
     const updateData: SequenceStepUpdateInput = {
       stepOrder: step.stepOrder,
       delayDays: inlineEditValues.delayDays,
-      scheduledHour: inlineEditValues.scheduledHour,
-      scheduledMinute: inlineEditValues.scheduledMinute,
-      timezone: step.timezone ?? undefined,
+      // Ensure scheduledHour and scheduledMinute are not null (API doesn't accept null)
+      scheduledHour: inlineEditValues.scheduledHour ?? 9,
+      scheduledMinute: inlineEditValues.scheduledMinute ?? 0,
+      timezone: step.timezone ?? "Asia/Seoul",
       emailSubject: step.emailSubject,
       emailBodyText: step.emailBodyText || "",
     }
@@ -243,6 +246,11 @@ export function SequenceStepsList({
                 .map((step) => {
                   const isInlineEditing = inlineEditingStepId === step.id
                   const isFullEditing = editingStep?.id === step.id
+                  // Step is editable if:
+                  // 1. readOnly is false (draft/ready mode), OR
+                  // 2. readOnly is true BUT this step has not been sent yet (executionCount === 0)
+                  const isStepEditable = !readOnly || (step.executionCount ?? 0) === 0
+                  const hasSentEmails = (step.executionCount ?? 0) > 0
 
                   return (
                     // biome-ignore lint/a11y/useSemanticElements: Complex card with nested interactive elements
@@ -372,15 +380,20 @@ export function SequenceStepsList({
                               ) : (
                                 <Badge
                                   variant="secondary"
-                                  className={`text-xs ${!readOnly ? "cursor-pointer hover:bg-secondary/80" : ""} transition-colors`}
+                                  className={`text-xs ${isStepEditable ? "cursor-pointer hover:bg-secondary/80" : ""} transition-colors`}
                                   onClick={(e) => {
-                                    if (readOnly) return
+                                    if (!isStepEditable) return
                                     e.stopPropagation()
                                     handleStartInlineEdit(step)
                                   }}
                                   title={
-                                    readOnly
-                                      ? undefined
+                                    !isStepEditable
+                                      ? hasSentEmails
+                                        ? t(
+                                            "sequences.stepsList.inlineEdit.alreadySent",
+                                            "이미 발송된 스텝은 수정할 수 없습니다",
+                                          )
+                                        : undefined
                                       : t(
                                           "sequences.stepsList.inlineEdit.clickToEdit",
                                           "클릭하여 날짜/시간 수정",
@@ -409,7 +422,8 @@ export function SequenceStepsList({
                               </p>
                             )}
                           </div>
-                          {!readOnly && (
+                          {/* Show edit/delete buttons OR sent indicator */}
+                          {isStepEditable ? (
                             // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation for event bubbling
                             <div
                               className="flex gap-2 flex-shrink-0"
@@ -424,17 +438,27 @@ export function SequenceStepsList({
                               >
                                 <Edit className="h-3 w-3" />
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteStep(step.id)}
-                                className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                disabled={isInlineEditing}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                              {!readOnly && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteStep(step.id)}
+                                  className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  disabled={isInlineEditing}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              )}
                             </div>
-                          )}
+                          ) : hasSentEmails ? (
+                            <Badge
+                              variant="outline"
+                              className="text-xs text-green-600 border-green-200 bg-green-50 flex-shrink-0"
+                            >
+                              <Check className="h-3 w-3 mr-1" />
+                              {t("sequences.stepsList.sent", "발송됨")} ({step.executionCount})
+                            </Badge>
+                          ) : null}
                         </div>
                       )}
                     </div>

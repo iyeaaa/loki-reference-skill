@@ -2,20 +2,23 @@ import { ArrowUp, Search, Square } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import TextPlus from "@/assets/text-plus.svg"
 import TextRinda from "@/assets/text-rinda.svg"
+import { AddLeadSheet } from "@/components/leads/AddLeadSheet"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { type ChatMessage, useChatbotHistory, useChatbotMutation } from "@/lib/api/hooks/chatbot"
+import { useCustomerGroupsByWorkspace } from "@/lib/api/hooks/customer-groups"
 import { chatbotApi } from "@/lib/api/services/chatbot"
 import type { PreviewLeadData } from "@/lib/api/services/lead-import"
 import type {
   FileAttachment as FileAttachmentType,
   NodeProgressUpdate,
+  SequenceModalPayload,
 } from "@/lib/api/types/chatbot"
 import { DataArtifact } from "./DataArtifact"
 import { FileAttachment } from "./FileAttachment"
-import { LeadUploadModal } from "./LeadUploadModal"
 import { MessageBubble } from "./MessageBubble"
 import type { NodeProgress } from "./NodeProgressTracker"
+import { SequenceGeneratorModal } from "./SequenceGeneratorModal"
 import { StreamingMessageContainer } from "./StreamingMessageContainer"
 
 interface ChatInterfaceProps {
@@ -46,9 +49,12 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     import("@/lib/api/services/lead-import").ImportProgress | null
   >(null)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
+  const [isSequenceModalOpen, setIsSequenceModalOpen] = useState(false)
+  const [defaultCustomerGroupId, setDefaultCustomerGroupId] = useState<string | undefined>(
+    undefined,
+  )
   const scrollRef = useRef<HTMLDivElement>(null)
   const lastUserMessageRef = useRef<HTMLDivElement>(null)
-  const isProcessingFileRef = useRef(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const textareaEmptyStateRef = useRef<HTMLTextAreaElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
@@ -57,6 +63,12 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   const { data: historyData, isLoading: isLoadingHistory } = useChatbotHistory(
     conversationId || "",
     !!conversationId,
+  )
+
+  // Load customer groups for the workspace (used by AddLeadSheet)
+  const { data: customerGroups } = useCustomerGroupsByWorkspace(
+    workspaceId,
+    workspaceId !== "all" && !!workspaceId,
   )
 
   // Memoize callbacks to prevent unnecessary re-renders
@@ -136,6 +148,17 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     })
   }, [])
 
+  // Handle open sequence modal event from chatbot
+  const handleOpenSequenceModal = useCallback((payload: SequenceModalPayload) => {
+    console.log("[ChatInterface] Opening sequence modal with payload:", payload)
+    setDefaultCustomerGroupId(payload.customerGroupId)
+    setIsSequenceModalOpen(true)
+    // Clear processing state since modal is taking over
+    setIsProcessing(false)
+    setStreamingMessage(null)
+    setCurrentThinking(null)
+  }, [])
+
   // Setup chatbot mutation with TanStack Query - memoized to prevent recreation
   const chatbotMutation = useChatbotMutation({
     onMessage: handleMessage,
@@ -145,6 +168,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     onConfirmationRequired: handleConfirmationRequired,
     onError: handleError,
     onNodeProgress: handleNodeProgress,
+    onOpenSequenceModal: handleOpenSequenceModal,
   })
 
   // Load history into messages when available
@@ -166,102 +190,57 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     }
   }, [messages.length, messages[messages.length - 1]?.role])
 
-  const handleFileSelect = useCallback(async (file: File) => {
-    // Prevent duplicate processing
-    if (isProcessingFileRef.current) {
-      console.log("[ChatInterface] File already being processed, skipping duplicate")
-      return
-    }
-
-    try {
-      // Mark as processing
-      isProcessingFileRef.current = true
-
-      // All files are Excel files now (xlsx/xls only)
-      // Step 1: Preview the data
-      const fileAttachment: FileAttachmentType = {
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-      }
-
-      // Display user message about xlsx upload
-      const userMessage: ChatMessage = {
-        role: "user",
-        content: "Here's my contact list!",
-        timestamp: new Date(),
-        attachment: fileAttachment,
-      }
-
-      setMessages((prev) => [...prev, userMessage])
-      setIsProcessing(true)
-
-      // Show thinking indicator with star spinner
-      setCurrentThinking("Reading your file...")
-
-      // Import preview service
-      const { previewLeadsFile } = await import("@/lib/api/services/lead-import")
-
-      try {
-        const previewResult = await previewLeadsFile({
-          file,
-          sheetName: "", // Will auto-select first sheet
-        })
-
-        if (!previewResult.success || !previewResult.data) {
-          throw new Error(previewResult.error || "Preview failed")
-        }
-
-        // Show preview message with AI analysis
-        let messageContent = `Perfect! We found ${previewResult.data.totalRows} leads in your file.\n\nYour contacts are ready to import.`
-
-        if (previewResult.data.aiAnalysis) {
-          messageContent += `\n\n## Data Analysis Report\n\n${previewResult.data.aiAnalysis}`
-        }
-
-        messageContent += `\n\nPlease review the preview below and confirm to proceed with the import.`
-
-        const previewMessage: ChatMessage = {
-          role: "assistant",
-          content: messageContent,
-          timestamp: new Date(),
-          metadata: {
-            leadPreview: previewResult.data,
-          },
-        }
-
-        setMessages((prev) => [...prev, previewMessage])
-        setCurrentThinking(null)
-
-        // Store preview data for later approval
-        setLeadPreviewData({
-          ...previewResult.data,
-          file,
-        })
-      } catch (error) {
-        console.error("Lead preview failed:", error)
-        const errorMessage: ChatMessage = {
-          role: "assistant",
-          content: `File analysis failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-          timestamp: new Date(),
-        }
-        setMessages((prev) => [...prev, errorMessage])
-        setCurrentThinking(null)
-      } finally {
-        setIsProcessing(false)
-        isProcessingFileRef.current = false
-      }
-    } catch (error) {
-      console.error("Failed to process file:", error)
-      alert("Failed to process file.")
-      isProcessingFileRef.current = false
-      setIsProcessing(false)
-    }
-  }, [])
-
   const handleRemoveFile = useCallback(() => {
     setAttachedFile(null)
   }, [])
+
+  // Handler for when leads are added via AddLeadSheet - auto-send message to AI
+  const handleLeadsAdded = useCallback(
+    (groupId: string, groupName: string, leadsCount: number) => {
+      // Create a user message that prompts AI to query and analyze the leads
+      const userMessage: ChatMessage = {
+        role: "user",
+        content: `"${groupName}" 그룹(ID: ${groupId})에 ${leadsCount}개의 리드가 추가되었습니다.
+
+이 그룹의 리드 데이터를 조회하고 분석해주세요:
+1. 먼저 customer_group_members와 leads 테이블을 조인하여 이 그룹의 리드를 조회해주세요
+2. 회사명, 업종, 국가/도시, 회사 규모 등의 패턴을 파악해주세요
+3. 이 리드들의 특성에 맞는 이메일 캠페인(시퀀스) 전략을 제안해주세요:
+   - 각 이메일의 주제 등`,
+        timestamp: new Date(),
+        metadata: {
+          leadGroupCreated: {
+            groupId,
+            groupName,
+            leadsCount,
+          },
+        },
+      }
+
+      // Add message and trigger chatbot
+      setMessages((prev) => [...prev, userMessage])
+      setIsProcessing(true)
+
+      // Initialize streaming message
+      setStreamingMessage({
+        role: "assistant",
+        content: "",
+        timestamp: new Date(),
+      })
+
+      // Call chatbot API with the lead group info
+      const convId = conversationId || `conv_${Date.now()}`
+      setCurrentConversationId(convId)
+
+      chatbotMutation.mutateAsync({
+        question: userMessage.content,
+        workspaceId,
+        conversationId: convId,
+        messages: [...messages, userMessage],
+      })
+    },
+    [messages, chatbotMutation, workspaceId, conversationId],
+  )
 
   const handleStop = useCallback(() => {
     // Stop the current processing
@@ -585,6 +564,52 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
     [messages, chatbotMutation, workspaceId, conversationId],
   )
 
+  // Handle sequence generation from modal
+  const handleSequenceModalSubmit = useCallback(
+    async (data: { customerGroupId: string; prompt: string }) => {
+      // Find the customer group name from the list
+      const group = customerGroups?.find((g) => g.id === data.customerGroupId)
+      const groupName = group?.name || "선택된 그룹"
+
+      // Create a user message with sequence generation request metadata
+      const userMessage: ChatMessage = {
+        role: "user",
+        content: `${groupName} 그룹에 대한 이메일 시퀀스를 생성해주세요:\n\n${data.prompt}`,
+        timestamp: new Date(),
+        metadata: {
+          sequenceGenerationRequest: {
+            customerGroupId: data.customerGroupId,
+            customerGroupName: groupName,
+            membersCount: group?.leadCount || 0,
+          },
+        },
+      }
+
+      // Add message and trigger chatbot
+      setMessages((prev) => [...prev, userMessage])
+      setIsProcessing(true)
+
+      // Initialize streaming message
+      setStreamingMessage({
+        role: "assistant",
+        content: "",
+        timestamp: new Date(),
+      })
+
+      // Call chatbot API with the sequence generation request
+      const convId = conversationId || `conv_${Date.now()}`
+      setCurrentConversationId(convId)
+
+      await chatbotMutation.mutateAsync({
+        question: userMessage.content,
+        workspaceId,
+        conversationId: convId,
+        messages: [...messages, userMessage],
+      })
+    },
+    [messages, chatbotMutation, workspaceId, conversationId, customerGroups],
+  )
+
   // Auto-resize textarea based on content
   useEffect(() => {
     const adjustHeight = (textarea: HTMLTextAreaElement | null) => {
@@ -702,11 +727,23 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
 
   return (
     <div className="flex h-full flex-col bg-background">
-      {/* Lead Upload Modal */}
-      <LeadUploadModal
+      {/* Add Lead Sheet - Smart CSV/XLSX parsing with column mapping */}
+      <AddLeadSheet
         open={isUploadModalOpen}
         onOpenChange={setIsUploadModalOpen}
-        onFileSelect={handleFileSelect}
+        workspaceId={workspaceId}
+        customerGroups={customerGroups || []}
+        uploadOnly={true}
+        onComplete={handleLeadsAdded}
+      />
+
+      {/* Sequence Generator Modal - Triggered by chatbot when user asks to create sequence */}
+      <SequenceGeneratorModal
+        open={isSequenceModalOpen}
+        onOpenChange={setIsSequenceModalOpen}
+        workspaceId={workspaceId}
+        onSubmit={handleSequenceModalSubmit}
+        defaultCustomerGroupId={defaultCustomerGroupId}
       />
 
       {messages.length === 0 ? (
@@ -789,9 +826,9 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                   className="absolute top-full mt-2 w-full bg-background border rounded-2xl shadow-lg overflow-hidden z-50"
                 >
                   <div className="max-h-[300px] overflow-y-auto">
-                    {displayQuestions.map((question, index) => (
+                    {displayQuestions.map((question) => (
                       <button
-                        key={index}
+                        key={question}
                         type="button"
                         onClick={() => handleSelectQuestion(question)}
                         className="w-full px-4 py-3 text-left hover:bg-accent transition-colors flex items-start gap-3 group"

@@ -1,5 +1,5 @@
 import { Loader2, Sparkles } from "lucide-react"
-import { useId, useState } from "react"
+import { useEffect, useId, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -25,6 +25,7 @@ interface SequenceGeneratorModalProps {
   onOpenChange: (open: boolean) => void
   workspaceId: string
   onSubmit: (data: { customerGroupId: string; prompt: string }) => void
+  defaultCustomerGroupId?: string
 }
 
 export function SequenceGeneratorModal({
@@ -32,8 +33,9 @@ export function SequenceGeneratorModal({
   onOpenChange,
   workspaceId,
   onSubmit,
+  defaultCustomerGroupId,
 }: SequenceGeneratorModalProps) {
-  const customerGroupId = useId()
+  const customerGroupIdHtmlId = useId()
   const promptId = useId()
   const [selectedGroupId, setSelectedGroupId] = useState<string>("")
   const [prompt, setPrompt] = useState<string>("")
@@ -44,6 +46,26 @@ export function SequenceGeneratorModal({
     open,
   )
 
+  // Auto-select default customer group when modal opens
+  useEffect(() => {
+    if (open && defaultCustomerGroupId && customerGroups) {
+      // Verify the group exists in the list
+      const groupExists = customerGroups.some((g) => g.id === defaultCustomerGroupId)
+      if (groupExists) {
+        setSelectedGroupId(defaultCustomerGroupId)
+      }
+    }
+  }, [open, defaultCustomerGroupId, customerGroups])
+
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!open) {
+      setSelectedGroupId("")
+      setPrompt("")
+      setIsSubmitting(false)
+    }
+  }, [open])
+
   const handleSubmit = async () => {
     if (!selectedGroupId || !prompt.trim()) return
 
@@ -53,13 +75,10 @@ export function SequenceGeneratorModal({
         customerGroupId: selectedGroupId,
         prompt: prompt.trim(),
       })
-      // Reset form and close modal
-      setSelectedGroupId("")
-      setPrompt("")
+      // Close modal - form will be reset by useEffect
       onOpenChange(false)
     } catch (error) {
       console.error("Failed to submit sequence generation:", error)
-    } finally {
       setIsSubmitting(false)
     }
   }
@@ -81,7 +100,7 @@ export function SequenceGeneratorModal({
         <div className="space-y-4 py-4">
           {/* Customer Group Selection */}
           <div className="space-y-2">
-            <Label htmlFor={customerGroupId}>Customer Group</Label>
+            <Label htmlFor={customerGroupIdHtmlId}>Customer Group</Label>
             {isLoadingGroups ? (
               <div className="flex items-center gap-2 px-3 py-2 border rounded-md text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -89,7 +108,7 @@ export function SequenceGeneratorModal({
               </div>
             ) : (
               <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-                <SelectTrigger id={customerGroupId}>
+                <SelectTrigger id={customerGroupIdHtmlId}>
                   <SelectValue placeholder="Select a customer group" />
                 </SelectTrigger>
                 <SelectContent>

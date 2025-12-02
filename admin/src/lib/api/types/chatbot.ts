@@ -75,6 +75,11 @@ export interface ChatMessage {
       customerGroupName: string
       membersCount: number
     }
+    leadGroupCreated?: {
+      groupId: string
+      groupName: string
+      leadsCount: number
+    }
   }
 }
 
@@ -84,6 +89,12 @@ export interface ChatbotAskRequest {
   userId?: string
   conversationId?: string
   messages?: ChatMessage[]
+}
+
+export interface SequenceModalPayload {
+  customerGroupId?: string
+  customerGroupName?: string
+  leadsCount?: number
 }
 
 export interface StreamEvent {
@@ -99,6 +110,7 @@ export interface StreamEvent {
     | "ping"
     | "thinking"
     | "progress"
+    | "open_sequence_modal"
   node?: string
   message?: string
   state?: {
@@ -134,6 +146,10 @@ export interface StreamEvent {
       sqlExplanation?: string
       queryCount?: number
     }
+    // Sequence modal payload
+    customerGroupId?: string
+    customerGroupName?: string
+    leadsCount?: number
   }
 }
 
@@ -158,4 +174,5 @@ export interface StreamCallbacks {
   onError?: (error: string) => void
   onConfirmationRequired?: (message: string) => void
   onNodeProgress?: (progress: NodeProgressUpdate) => void
+  onOpenSequenceModal?: (payload: SequenceModalPayload) => void
 }

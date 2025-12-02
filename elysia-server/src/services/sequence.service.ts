@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray, lte, ne, or, sql } from "drizzle-orm"
+import { and, count, desc, eq, ilike, inArray, lte, ne, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { db } from "../db/index"
 import { customerGroups } from "../db/schema/customer-groups"
@@ -531,7 +531,7 @@ export async function getSequencesByWorkspace(workspaceId: string) {
 // SEQUENCE STEPS OPERATIONS
 // ====================================
 
-// GetSequenceSteps :many
+// GetSequenceSteps :many (with execution count for each step)
 export async function getSequenceSteps(sequenceId: string) {
   const result = await db
     .select({
@@ -554,7 +554,36 @@ export async function getSequenceSteps(sequenceId: string) {
     .where(eq(sequenceSteps.sequenceId, sequenceId))
     .orderBy(sequenceSteps.stepOrder)
 
-  return result
+  // Get execution counts for each step (how many times each step was sent)
+  const executionCounts = await db
+    .select({
+      stepId: sequenceStepExecutions.stepId,
+      executionCount: count(sequenceStepExecutions.id),
+    })
+    .from(sequenceStepExecutions)
+    .where(
+      and(
+        inArray(
+          sequenceStepExecutions.stepId,
+          result.map((s) => s.id),
+        ),
+        // Only count sent executions (not pending or failed)
+        eq(sequenceStepExecutions.status, "sent"),
+      ),
+    )
+    .groupBy(sequenceStepExecutions.stepId)
+
+  // Create a map of stepId -> executionCount
+  const executionCountMap = new Map<string, number>()
+  for (const ec of executionCounts) {
+    executionCountMap.set(ec.stepId, ec.executionCount)
+  }
+
+  // Merge execution counts into result
+  return result.map((step) => ({
+    ...step,
+    executionCount: executionCountMap.get(step.id) || 0,
+  }))
 }
 
 // CreateSequenceStep :one

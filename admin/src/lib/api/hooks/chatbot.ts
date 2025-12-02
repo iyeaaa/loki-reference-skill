@@ -4,6 +4,7 @@ import type {
   ChatbotProgress,
   ChatMessage,
   NodeProgressUpdate,
+  SequenceModalPayload,
 } from "@/lib/api/types/chatbot"
 import { chatbotApi } from "../services/chatbot"
 
@@ -33,6 +34,7 @@ interface UseChatbotMutationOptions {
   onError?: (error: string) => void
   onConfirmationRequired?: (message: string) => void
   onNodeProgress?: (progress: NodeProgressUpdate) => void
+  onOpenSequenceModal?: (payload: SequenceModalPayload) => void
 }
 
 /**
@@ -48,6 +50,7 @@ export function useChatbotMutation(options: UseChatbotMutationOptions) {
     onError,
     onConfirmationRequired,
     onNodeProgress,
+    onOpenSequenceModal,
   } = options
 
   return useMutation({
@@ -61,6 +64,7 @@ export function useChatbotMutation(options: UseChatbotMutationOptions) {
         onError,
         onConfirmationRequired,
         onNodeProgress,
+        onOpenSequenceModal,
       })
     },
     retry: 1, // Retry once on failure

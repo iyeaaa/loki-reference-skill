@@ -268,6 +268,55 @@ export function DataArtifact({
           </div>
         )}
 
+        {/* Query Result Table Section */}
+        {data && data.length > 0 && (
+          <div
+            className={`
+              space-y-3 transition-all duration-500 ease-out
+              ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
+            `}
+            style={{ transitionDelay: sql ? "50ms" : "0ms" }}
+          >
+            <SectionHeader title={`Query Results (${data.length} rows)`} />
+            <div className="rounded-lg border border-border overflow-hidden">
+              <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/50 sticky top-0">
+                    <tr>
+                      {Object.keys(data[0] as Record<string, unknown>).map((key) => (
+                        <th
+                          key={key}
+                          className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap border-b"
+                        >
+                          {key}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.slice(0, 100).map((row, i) => (
+                      <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
+                        {Object.values(row as Record<string, unknown>).map((value, j) => (
+                          <td
+                            key={j}
+                            className="px-3 py-2 text-foreground whitespace-nowrap max-w-[200px] truncate"
+                          >
+                            {value === null ? (
+                              <span className="text-muted-foreground italic">null</span>
+                            ) : (
+                              String(value)
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Insights Section */}
         {insights.length > 0 && (
           <div

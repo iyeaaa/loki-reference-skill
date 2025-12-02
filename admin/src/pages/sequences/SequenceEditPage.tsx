@@ -341,9 +341,13 @@ export default function SequenceEditPage() {
                     <h2 className="text-xl font-semibold mb-4">
                       {t("sequences.editPage.scenarioMenu")}
                     </h2>
-                    <div className="mb-4 p-4 bg-muted/50 rounded-lg border">
-                      <p className="text-sm text-muted-foreground">
-                        {t("sequences.editPage.readOnlyNotice")}
+                    <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        ℹ️{" "}
+                        {t(
+                          "sequences.editPage.partialEditNotice",
+                          "발송되지 않은 이메일만 수정할 수 있습니다. 이미 발송된 이메일은 읽기 전용입니다.",
+                        )}
                       </p>
                     </div>
                     <SequenceStepsList sequenceId={sequence.id} isEdit={true} readOnly={true} />

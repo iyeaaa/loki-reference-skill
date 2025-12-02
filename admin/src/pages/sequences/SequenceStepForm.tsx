@@ -280,6 +280,9 @@ export function SequenceStepForm({
     onSave(
       {
         ...formData,
+        // Ensure scheduledHour and scheduledMinute are not null (API doesn't accept null)
+        scheduledHour: formData.scheduledHour ?? 9,
+        scheduledMinute: formData.scheduledMinute ?? 0,
         emailBodyText: emailBodyWithSignature,
         emailBodyHtml,
         conditionType: formData.stepOrder === 1 ? "always" : formData.conditionType,

@@ -46,6 +46,16 @@ export interface NodeEventEmitter {
   error(nodeName: string, error: string): void
 
   /**
+   * Emit open_sequence_modal event
+   * Triggers the sequence generator modal in the frontend
+   */
+  openSequenceModal(payload: {
+    customerGroupId?: string
+    customerGroupName?: string
+    leadsCount?: number
+  }): void
+
+  /**
    * Check if client is still connected
    */
   isConnected(): boolean
@@ -149,6 +159,29 @@ export function createNodeEmitter(session: SSESession): NodeEventEmitter {
       })
 
       chatbotLogger.error(`[Node] ${nodeName} error: ${error}`)
+    },
+
+    openSequenceModal(payload: {
+      customerGroupId?: string
+      customerGroupName?: string
+      leadsCount?: number
+    }) {
+      if (session.closed) return
+
+      const success = session.push({
+        event: "open_sequence_modal",
+        data: {
+          type: "open_sequence_modal",
+          payload,
+          timestamp: Date.now(),
+        },
+      })
+
+      if (success) {
+        chatbotLogger.info(
+          `[Node] Emitting open_sequence_modal event for group: ${payload.customerGroupName || "none"}`,
+        )
+      }
     },
 
     isConnected() {

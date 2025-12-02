@@ -2,8 +2,9 @@ import { Command, END } from "@langchain/langgraph"
 import { ChatOpenAI } from "@langchain/openai"
 import { sql } from "drizzle-orm"
 import { db } from "../../../db/drizzle"
+import { getAITemplateGenerationService } from "../../ai-template-generation.service"
 import { chatbotLogger } from "../../../utils/logger"
-import { getAISequenceStrategyPrompt } from "../prompts"
+import { getAISequenceStrategyOnlyPrompt } from "../prompts"
 import type { ChatbotState } from "../state"
 
 // LLM for AI-powered sequence strategy generation
@@ -245,16 +246,46 @@ export async function analyzeLeadsAndGenerateStrategy(state: ChatbotState): Prom
     })
 
     // ==================================================================================
-    // STEP 3: Generate AI-Powered Email Sequence Strategy with LLM
+    // STEP 3: Get Workspace Info for AI Template Generation
+    // ==================================================================================
+    const workspaceQuery = sql`
+      SELECT id, name, description FROM workspaces WHERE id = ${workspaceId}
+    `
+    const workspaceResult = await db.execute(workspaceQuery)
+    const workspace = workspaceResult.rows[0] as {
+      id: string
+      name: string
+      description: string | null
+    }
+
+    if (!workspace) {
+      throw new Error(`Workspace not found: ${workspaceId}`)
+    }
+
+    chatbotLogger.info(`[Sequence Strategy] Found workspace: ${workspace.name}`)
+
+    // Determine dominant country from samples
+    const countryCounts: Record<string, number> = {}
+    for (const sample of leadSamples) {
+      const country = sample.country || "Unknown"
+      countryCounts[country] = (countryCounts[country] || 0) + 1
+    }
+    const dominantCountry =
+      Object.entries(countryCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Korea"
+
+    chatbotLogger.info(`[Sequence Strategy] Dominant country: ${dominantCountry}`)
+
+    // ==================================================================================
+    // STEP 4: Generate AI-Powered Sequence Strategy (Without Email Content)
     // ==================================================================================
     if (state._emitter) {
       state._emitter.progress(
         "analyzeLeadsAndGenerateStrategy",
-        "AI is generating personalized email sequence strategy...",
+        "AI가 시퀀스 전략을 생성하고 있습니다...",
       )
     }
 
-    chatbotLogger.info("[Sequence Strategy] Invoking LLM for strategy generation")
+    chatbotLogger.info("[Sequence Strategy] Invoking LLM for strategy-only generation")
 
     // Prepare lead analysis data for AI prompt
     const leadAnalysisData = {
@@ -268,13 +299,13 @@ export async function analyzeLeadsAndGenerateStrategy(state: ChatbotState): Prom
       totalMembers: membersCount,
     }
 
-    const strategyPrompt = getAISequenceStrategyPrompt(leadAnalysisData)
+    const strategyPrompt = getAISequenceStrategyOnlyPrompt(leadAnalysisData)
 
     let aiStrategyResponse: string
     try {
       const response = await strategyLLM.invoke(strategyPrompt)
       aiStrategyResponse = response.content as string
-      chatbotLogger.info("[Sequence Strategy] LLM response received")
+      chatbotLogger.info("[Sequence Strategy] LLM strategy response received")
     } catch (llmError) {
       const llmErrorMessage = llmError instanceof Error ? llmError.message : String(llmError)
       chatbotLogger.error(`[Sequence Strategy] LLM invocation failed: ${llmErrorMessage}`)
@@ -287,18 +318,19 @@ export async function analyzeLeadsAndGenerateStrategy(state: ChatbotState): Prom
       aiStrategyResponse.match(/(\{[\s\S]*\})/)
     const jsonStr = jsonMatch?.[1] || aiStrategyResponse
 
-    interface AIStrategyResponse {
+    interface AIStrategyOnlyResponse {
       strategy_summary: string
       recommended_steps: number
       timezone: string
+      dominant_country: string
       steps: Array<{
         step_order: number
         delay_days: number
         scheduled_hour: number
         scheduled_minute: number
-        email_subject: string
-        email_body: string
-        strategy_note: string
+        purpose: string
+        tone: string
+        key_points: string[]
       }>
       personalization_tips: string[]
       expected_performance: {
@@ -308,7 +340,7 @@ export async function analyzeLeadsAndGenerateStrategy(state: ChatbotState): Prom
       }
     }
 
-    let aiStrategy: AIStrategyResponse
+    let aiStrategy: AIStrategyOnlyResponse
     try {
       aiStrategy = JSON.parse(jsonStr.trim())
       chatbotLogger.info(
@@ -333,6 +365,73 @@ export async function analyzeLeadsAndGenerateStrategy(state: ChatbotState): Prom
     }
 
     // ==================================================================================
+    // STEP 5: Generate Email Content for Each Step Using AITemplateGenerationService
+    // ==================================================================================
+    if (state._emitter) {
+      state._emitter.progress(
+        "analyzeLeadsAndGenerateStrategy",
+        `AI가 ${aiStrategy.steps.length}개의 이메일을 생성하고 있습니다...`,
+      )
+    }
+
+    chatbotLogger.info(
+      `[Sequence Strategy] Generating email content for ${aiStrategy.steps.length} steps`,
+    )
+
+    const aiService = getAITemplateGenerationService()
+    const emailSteps: Array<{
+      step_order: number
+      delay_days: number
+      scheduled_hour: number
+      scheduled_minute: number
+      email_subject: string
+      email_body: string
+      strategy_note: string
+    }> = []
+
+    for (const step of aiStrategy.steps) {
+      if (state._emitter) {
+        state._emitter.progress(
+          "analyzeLeadsAndGenerateStrategy",
+          `스텝 ${step.step_order}/${aiStrategy.steps.length} 이메일 생성 중...`,
+        )
+      }
+
+      // Build prompt for this step based on strategy
+      const stepPrompt = buildStepEmailPrompt(step, leadAnalysisData, aiStrategy.strategy_summary)
+
+      try {
+        const template = await aiService.generateEmailTemplate({
+          workspaceName: workspace.name,
+          workspaceDescription: workspace.description || undefined,
+          country: aiStrategy.dominant_country || dominantCountry,
+          userPrompt: stepPrompt,
+          temperature: 0.7,
+        })
+
+        emailSteps.push({
+          step_order: step.step_order,
+          delay_days: step.delay_days,
+          scheduled_hour: step.scheduled_hour,
+          scheduled_minute: step.scheduled_minute,
+          email_subject: template.subject,
+          email_body: template.bodyText,
+          strategy_note: step.purpose,
+        })
+
+        chatbotLogger.info(
+          `[Sequence Strategy] Generated email for step ${step.step_order}: "${template.subject}"`,
+        )
+      } catch (emailError) {
+        const emailErrorMessage = emailError instanceof Error ? emailError.message : String(emailError)
+        chatbotLogger.error(
+          `[Sequence Strategy] Failed to generate email for step ${step.step_order}: ${emailErrorMessage}`,
+        )
+        throw new Error(`Failed to generate email for step ${step.step_order}: ${emailErrorMessage}`)
+      }
+    }
+
+    // ==================================================================================
     // CRITICAL: Override Step 1 timing to be 2 minutes from now (KST)
     // ==================================================================================
     // Calculate current KST time + 2 minutes
@@ -349,10 +448,10 @@ export async function analyzeLeadsAndGenerateStrategy(state: ChatbotState): Prom
     )
 
     // Override Step 1 timing
-    if (aiStrategy.steps[0]) {
-      aiStrategy.steps[0].scheduled_hour = step1Hour
-      aiStrategy.steps[0].scheduled_minute = step1Minute
-      aiStrategy.steps[0].delay_days = 0 // Always 0 for Step 1
+    if (emailSteps[0]) {
+      emailSteps[0].scheduled_hour = step1Hour
+      emailSteps[0].scheduled_minute = step1Minute
+      emailSteps[0].delay_days = 0 // Always 0 for Step 1
     }
 
     // Convert AI strategy to internal format
@@ -366,7 +465,7 @@ export async function analyzeLeadsAndGenerateStrategy(state: ChatbotState): Prom
       strategy_summary: aiStrategy.strategy_summary,
       timezone: aiStrategy.timezone || "Asia/Seoul",
       recommended_steps: aiStrategy.recommended_steps,
-      email_steps: aiStrategy.steps, // Use AI-generated steps with overridden Step 1 timing
+      email_steps: emailSteps, // Use AI-generated email content
       personalization_tips: aiStrategy.personalization_tips,
       expected_performance: aiStrategy.expected_performance,
     }
@@ -532,6 +631,34 @@ export async function generateSequenceWithStrategy(state: ChatbotState): Promise
     chatbotLogger.info("[Sequence Generation] ✓ Workspace and customer group validated")
 
     // ==================================================================================
+    // Find default email account for the workspace
+    // ==================================================================================
+    const emailAccountCheck = await db.execute(sql`
+      SELECT id, email_address, display_name
+      FROM user_email_accounts
+      WHERE workspace_id = ${workspaceId}
+        AND status = 'active'
+      ORDER BY is_default DESC, created_at ASC
+      LIMIT 1
+    `)
+
+    if (!emailAccountCheck.rows || emailAccountCheck.rows.length === 0) {
+      throw new Error(
+        "이메일 계정을 찾을 수 없습니다. 먼저 이메일 계정을 연결해주세요.\n" +
+          "Settings > Email Accounts에서 이메일 계정을 추가할 수 있습니다.",
+      )
+    }
+
+    const defaultEmailAccount = emailAccountCheck.rows[0] as {
+      id: string
+      email_address: string
+      display_name: string
+    }
+    chatbotLogger.info(
+      `[Sequence Generation] ✓ Found default email account: ${defaultEmailAccount.email_address}`,
+    )
+
+    // ==================================================================================
     // Execute sequence generation in a transaction for atomicity
     // ==================================================================================
     const result = await db.transaction(async (tx) => {
@@ -691,6 +818,64 @@ ${cteName} AS (
         })
         .join("\n      UNION ALL ")
 
+      // Add enrollment CTE - auto-enroll all leads from the customer group
+      cteQuery += `,
+
+-- ==================================================================================
+-- CTE: Auto-enroll all leads from customer group
+-- ==================================================================================
+new_enrollments AS (
+  INSERT INTO sequence_enrollments (
+    id,
+    sequence_id,
+    lead_id,
+    user_email_account_id,
+    current_step_order,
+    status,
+    enrolled_at,
+    next_step_scheduled_at
+  )
+  SELECT
+    gen_random_uuid(),
+    (SELECT id FROM new_sequence),
+    cgm.lead_id,
+    '${defaultEmailAccount.id}',
+    1,
+    'active',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP + INTERVAL '2 minutes'
+  FROM customer_group_members cgm
+  WHERE cgm.group_id = '${customerGroupId}'
+  RETURNING *
+),
+
+-- ==================================================================================
+-- CTE: Create step executions for first step (schedule emails to be sent)
+-- ==================================================================================
+new_step_executions AS (
+  INSERT INTO sequence_step_executions (
+    id,
+    enrollment_id,
+    step_id,
+    step_order,
+    status,
+    scheduled_at,
+    generation_source,
+    created_at
+  )
+  SELECT
+    gen_random_uuid(),
+    ne.id,
+    (SELECT id FROM new_sequence_step_1),
+    1,
+    'pending',
+    CURRENT_TIMESTAMP + INTERVAL '2 minutes',
+    'manual',
+    CURRENT_TIMESTAMP
+  FROM new_enrollments ne
+  RETURNING *
+)`
+
       cteQuery += `
 
 -- ==================================================================================
@@ -703,12 +888,18 @@ SELECT json_build_object(
       ${unionAllSteps}
     ) steps
   ),
+  'enrollments_count', (SELECT COUNT(*) FROM new_enrollments),
+  'step_executions_count', (SELECT COUNT(*) FROM new_step_executions),
   'total_steps', ${escapedSteps.length},
   'status', 'active',
   'linked_to_group', true,
   'customer_group_id', '${customerGroupId}',
   'customer_group_name', '${escapedGroupName}',
   'total_leads_in_group', ${membersCount},
+  'email_account', json_build_object(
+    'id', '${defaultEmailAccount.id}',
+    'email', '${defaultEmailAccount.email_address}'
+  ),
   'ai_analysis', json_build_object(
     'avg_lead_score', ${avgLeadScore.toFixed(1)},
     'dominant_business_type', '${escapedBusinessType}',
@@ -743,9 +934,15 @@ SELECT json_build_object(
             scheduled_minute: number
             timezone: string
           }[]
+          enrollments_count: number
+          step_executions_count: number
           total_steps: number
           total_leads_in_group: number
           customer_group_name: string
+          email_account: {
+            id: string
+            email: string
+          }
           created_at: string
           ai_analysis: {
             avg_lead_score: number
@@ -904,7 +1101,9 @@ ${strategy.personalization_tips.map((tip) => `• ${tip}`).join("\n")}`
 - **Name:** ${result.sequence.name}
 - **Status:** ✅ ${result.sequence.status.toUpperCase()}
 - **ID:** ${result.sequence.id}
-- **Linked to Group:** ${result.customer_group_name} (${result.total_leads_in_group} leads)
+- **Customer Group:** ${result.customer_group_name}
+- **Recipients Enrolled:** ${result.enrollments_count}명
+- **Sending From:** ${result.email_account.email}
 
 **AI Strategy:**
 - **Summary:** ${strategySummary}
@@ -932,11 +1131,10 @@ ${result.steps
   .join("\n")}
 ${personalizationTips}
 
-**Next Steps:**
-✅ Your sequence is now **ACTIVE** and ready to use
-✅ Enroll leads from the "${result.customer_group_name}" group to start sending
-✅ Email content is AI-optimized based on analysis of ${result.ai_analysis.samples_analyzed} sample leads
-✅ Monitor performance metrics as emails are sent
+**Auto-Enrollment Complete:**
+✅ **${result.enrollments_count}명**의 리드가 자동으로 시퀀스에 등록되었습니다
+✅ 첫 번째 이메일이 약 2분 후에 발송됩니다
+✅ 이메일 성과 지표는 Sequences 페이지에서 모니터링할 수 있습니다
     `.trim()
 
     return new Command({
@@ -1037,4 +1235,65 @@ ${personalizationTips}
       },
     })
   }
+}
+
+/**
+ * Build email prompt for a specific step using AITemplateGenerationService
+ *
+ * @param step - Step strategy from AI
+ * @param leadAnalysis - Lead analysis data
+ * @param strategySummary - Overall strategy summary
+ * @returns Prompt string for email generation
+ */
+function buildStepEmailPrompt(
+  step: {
+    step_order: number
+    purpose: string
+    tone: string
+    key_points: string[]
+  },
+  leadAnalysis: {
+    samples: Array<{
+      company_name: string | null
+      business_type: string | null
+      employee_count: string | null
+      lead_score: number | null
+      city: string | null
+      country: string | null
+    }>
+    avgLeadScore: number
+    dominantBusinessType: string
+    avgCompanySize: number
+    companySizeCategory: string
+    businessTypeFocus: string
+    customerGroupName: string
+    totalMembers: number
+  },
+  strategySummary: string,
+): string {
+  const keyPointsText =
+    step.key_points.length > 0 ? `\n포함할 핵심 내용:\n${step.key_points.map((p) => `- ${p}`).join("\n")}` : ""
+
+  return `[시퀀스 전략 컨텍스트]
+전체 전략: ${strategySummary}
+
+[이메일 스텝 정보]
+스텝 번호: ${step.step_order}
+목표: ${step.purpose}
+톤앤매너: ${step.tone}
+${keyPointsText}
+
+[타겟 고객 정보]
+고객 그룹: ${leadAnalysis.customerGroupName}
+총 리드 수: ${leadAnalysis.totalMembers}명
+주요 비즈니스 타입: ${leadAnalysis.dominantBusinessType}
+평균 회사 규모: ${leadAnalysis.companySizeCategory} (약 ${Math.round(leadAnalysis.avgCompanySize)}명)
+평균 리드 점수: ${leadAnalysis.avgLeadScore.toFixed(1)}/100
+
+[중요 지침]
+1. 위 정보를 바탕으로 ${step.purpose}에 적합한 이메일을 작성해주세요.
+2. ${step.tone} 톤으로 작성해주세요.
+3. 이메일 시퀀스의 ${step.step_order}번째 스텝임을 고려해주세요.
+4. {{회사명}}, {{담당자명}} 등의 변수를 적절히 활용해주세요.
+5. 명확한 Call-to-Action을 포함해주세요.`
 }

@@ -14,8 +14,15 @@ export const chatbotApi = {
    * Stream chatbot response using Server-Sent Events
    */
   async streamAsk(request: ChatbotAskRequest, callbacks: StreamCallbacks): Promise<void> {
-    const { onMessage, onMessageUpdate, onThinking, onProgress, onError, onConfirmationRequired } =
-      callbacks
+    const {
+      onMessage,
+      onMessageUpdate,
+      onThinking,
+      onProgress,
+      onError,
+      onConfirmationRequired,
+      onOpenSequenceModal,
+    } = callbacks
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
 
     try {
@@ -65,6 +72,7 @@ export const chatbotApi = {
           onProgress,
           onError,
           onConfirmationRequired,
+          onOpenSequenceModal,
         },
       }
 

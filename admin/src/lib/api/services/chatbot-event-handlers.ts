@@ -339,6 +339,23 @@ export const handlePing: EventHandler = () => {
 }
 
 /**
+ * Handle open_sequence_modal event - triggers sequence generator modal
+ */
+export const handleOpenSequenceModal: EventHandler = (data, context) => {
+  console.log("[Chatbot] Open sequence modal event:", data.payload)
+
+  const { callbacks } = context
+
+  if (callbacks.onOpenSequenceModal && data.payload) {
+    callbacks.onOpenSequenceModal({
+      customerGroupId: data.payload.customerGroupId,
+      customerGroupName: data.payload.customerGroupName,
+      leadsCount: data.payload.leadsCount,
+    })
+  }
+}
+
+/**
  * Event Handler Map - dispatch events to appropriate handlers
  */
 export const eventHandlers: Record<string, EventHandler> = {
@@ -353,4 +370,5 @@ export const eventHandlers: Record<string, EventHandler> = {
   done: handleDone,
   error: handleError,
   ping: handlePing,
+  open_sequence_modal: handleOpenSequenceModal,
 }

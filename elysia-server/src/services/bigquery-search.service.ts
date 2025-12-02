@@ -41,11 +41,27 @@ const getBigQueryClient = (): BigQuery => {
       logger.info({ keyFilePath }, "BigQuery client initialized with key file")
     } else if (clientEmail && privateKey) {
       // 서버 환경: 환경변수에서 credentials 사용
+      // 다양한 환경에서의 줄바꿈 처리
+      const formattedKey = privateKey
+        // 따옴표 제거 (환경변수에 따옴표가 포함된 경우)
+        .replace(/^["']|["']$/g, "")
+        // 리터럴 \n을 실제 줄바꿈으로 변환
+        .replace(/\\n/g, "\n")
+
+      logger.info(
+        {
+          keyLength: formattedKey.length,
+          startsWithBegin: formattedKey.startsWith("-----BEGIN"),
+          endsWithEnd: formattedKey.includes("-----END"),
+        },
+        "BigQuery private key format check",
+      )
+
       bigqueryClient = new BigQuery({
         projectId,
         credentials: {
           client_email: clientEmail,
-          private_key: privateKey.replace(/\\n/g, "\n"), // 줄바꿈 처리
+          private_key: formattedKey,
         },
       })
       logger.info("BigQuery client initialized with environment credentials")

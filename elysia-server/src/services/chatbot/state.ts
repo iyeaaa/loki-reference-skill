@@ -8,6 +8,9 @@ export interface ChatbotState {
   currentQuestion: string
   conversationId: string
 
+  // Localization - language for AI responses
+  locale: string // e.g., "ko", "en"
+
   // SSE Context for real-time events (not serialized, injected at runtime)
   _emitter?: NodeEventEmitter
 
@@ -165,6 +168,10 @@ export const ChatbotStateAnnotation = Annotation.Root({
   conversationId: Annotation<string>({
     reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => "",
+  }),
+  locale: Annotation<string>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => "ko",
   }),
   metadata: Annotation<Record<string, unknown>>({
     reducer: (prev, next) => ({ ...prev, ...next }),

@@ -32,6 +32,7 @@ export async function generateInsights(state: ChatbotState): Promise<Partial<Cha
       state.currentQuestion,
       state.analysis,
       state.queryResult,
+      state.locale || "ko",
     )
 
     // Use non-streaming LLM call for intermediate node (no progress events)

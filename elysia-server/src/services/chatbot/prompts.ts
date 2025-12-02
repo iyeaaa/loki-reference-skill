@@ -315,8 +315,14 @@ export function getAnalysisResultPrompt(
   _sql: string,
   result: unknown[],
   executionTime: number,
+  locale = "ko",
 ) {
   const sample = result.slice(0, Math.min(result.length, 5))
+
+  const languageInstruction =
+    locale === "ko"
+      ? "**IMPORTANT: Write your entire response in Korean (한국어). All summaries, insights, and advice must be in Korean.**"
+      : "**IMPORTANT: Write your entire response in English.**"
 
   return `${SYSTEM_PROMPT}
 
@@ -330,6 +336,8 @@ export function getAnalysisResultPrompt(
 ${JSON.stringify(sample, null, 2)}
 \`\`\`
 
+${languageInstruction}
+
 Provide a clear answer with:
 1. Summary with key numbers
 2. Patterns/trends
@@ -339,15 +347,27 @@ Provide a clear answer with:
 Write your answer:`
 }
 
-export function getInsightGenerationPrompt(question: string, _analysis: string, result: unknown[]) {
+export function getInsightGenerationPrompt(
+  question: string,
+  _analysis: string,
+  result: unknown[],
+  locale = "ko",
+) {
   const sample = result.slice(0, 5) // Use more rows for better insights
   const rowCount = result.length
+
+  const languageInstruction =
+    locale === "ko"
+      ? "**IMPORTANT: All insights and recommendations MUST be written in Korean (한국어).**"
+      : "**IMPORTANT: All insights and recommendations MUST be written in English.**"
 
   return `Generate 2-3 actionable insights from this data analysis:
 
 **Question**: "${question}"
 **Total Rows**: ${rowCount}
 **Sample Data**: ${JSON.stringify(sample, null, 2)}
+
+${languageInstruction}
 
 **Requirements**:
 1. Focus on actionable business insights, not just data description
@@ -423,41 +443,27 @@ ${JSON.stringify(sampleData, null, 2)}
 Generate visualizations that maximize insight and clarity.`
 }
 
-export function getFollowUpQuestionsPrompt(question: string, analysis: string) {
-  return `Based on the user's question: "${question}" and the analysis result: "${analysis}"
+export function getFollowUpQuestionsPrompt(question: string, analysis: string, locale = "ko") {
+  const languageInstruction =
+    locale === "ko"
+      ? `**CRITICAL: Generate questions in Korean (한국어)**
+      
+**Style Guide (Korean):**
+✅ Good (natural, specific, short):
+- "이번 달 성과는 어떤가요?"
+- "오픈율이 왜 10%밖에 안 되나요?"
+- "어떤 산업이 전환율이 가장 높나요?"
+- "참여율이 가장 좋은 시간은?"
+- "리드 점수가 왜 낮나요?"
 
-Generate 5 highly contextual, natural follow-up questions that a real user would ask next.
-
-**Analysis Context:**
-- Study the actual data in the analysis result
-- Consider what specific numbers, trends, or patterns were mentioned
-- Think about what the user would naturally want to know next
-
-**Question Categories (pick diverse types):**
-1. **Time Comparison**: Compare different time periods based on current data
-   - Examples: "How does this compare to last week?", "Show me monthly trends", "What's the difference from yesterday?"
-
-2. **Deep Dive**: Drill down into specific aspects of the data
-   - Examples: "Why is the open rate low?", "What time period works best?", "What are common traits of unresponsive leads?"
-
-3. **Segment Analysis**: Break down by categories or attributes
-   - Examples: "Break down by industry", "Any regional differences?", "Compare new vs existing customers"
-
-4. **Performance Optimization**: Ask how to improve metrics
-   - Examples: "How to increase open rate?", "Ways to improve conversion?", "Which subject lines are effective?"
-
-5. **Related Insights**: Explore connected data or patterns
-   - Examples: "What patterns get more replies?", "When do people drop off?", "Common factors on high-performing days?"
-
-**Critical Requirements:**
-- Use the ACTUAL data from the analysis result to create specific questions
-- Keep questions VERY SHORT (3-8 words max)
-- Use CASUAL, CONVERSATIONAL English (simple, direct language)
-- Make questions ACTIONABLE and DATA-DRIVEN
-- Base questions on what was JUST revealed in the analysis
-- NO generic questions - be specific to the data shown
-
-**Style Guide:**
+❌ Bad (too formal, generic, long):
+- "세그먼트별로 분석이 가능할까요?"
+- "다른 지표도 확인할 수 있을까요?"
+- "추가 질문이 있으신가요?"
+- "상세 분석을 원하시나요?"`
+      : `**CRITICAL: Generate questions in English**
+      
+**Style Guide (English):**
 ✅ Good (natural, specific, short):
 - "How's this month's performance?"
 - "Why is open rate only 10%?"
@@ -469,23 +475,32 @@ Generate 5 highly contextual, natural follow-up questions that a real user would
 - "Would it be possible to analyze by segment?"
 - "Can we check other metrics as well?"
 - "Do you have any additional questions?"
-- "Would you like a detailed analysis?"
+- "Would you like a detailed analysis?"`
 
-**Context-Aware Examples:**
+  return `Based on the user's question: "${question}" and the analysis result: "${analysis}"
 
-If analysis mentions "100 emails sent, 45% open rate":
-→ "What's the click rate?"
-→ "What was last week's open rate?"
-→ "Who are the 55 non-openers?"
-→ "How does 45% compare to average?"
-→ "How many replies received?"
+Generate 5 highly contextual, natural follow-up questions that a real user would ask next.
 
-If analysis shows "50 leads, 30 new, 20 returning":
-→ "Conversion difference: new vs returning?"
-→ "Which channels brought them?"
-→ "Show leads by score"
-→ "Lead growth trend this month?"
-→ "Break down by industry"
+${languageInstruction}
+
+**Analysis Context:**
+- Study the actual data in the analysis result
+- Consider what specific numbers, trends, or patterns were mentioned
+- Think about what the user would naturally want to know next
+
+**Question Categories (pick diverse types):**
+1. **Time Comparison**: Compare different time periods based on current data
+2. **Deep Dive**: Drill down into specific aspects of the data
+3. **Segment Analysis**: Break down by categories or attributes
+4. **Performance Optimization**: Ask how to improve metrics
+5. **Related Insights**: Explore connected data or patterns
+
+**Critical Requirements:**
+- Use the ACTUAL data from the analysis result to create specific questions
+- Keep questions VERY SHORT (3-8 words max)
+- Make questions ACTIONABLE and DATA-DRIVEN
+- Base questions on what was JUST revealed in the analysis
+- NO generic questions - be specific to the data shown
 
 Return ONLY a JSON array with 5 questions: ["Question 1", "Question 2", "Question 3", "Question 4", "Question 5"]`
 }

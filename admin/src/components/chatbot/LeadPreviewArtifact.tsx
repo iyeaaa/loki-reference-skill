@@ -1,4 +1,5 @@
 import { CheckCircle2, FileSpreadsheet, XCircle } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -31,21 +32,23 @@ export function LeadPreviewArtifact({
   onReject,
   isProcessing = false,
 }: LeadPreviewArtifactProps) {
+  const { t } = useTranslation()
+
   return (
     <div className="flex flex-col h-full">
       {/* Header Section */}
       <div className="flex-none px-2 pt-3 pb-2 space-y-2">
-        <h2 className="text-base font-semibold">Review Lead Data</h2>
+        <h2 className="text-base font-semibold">{t("chatbot.leadPreview.title")}</h2>
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="gap-1 text-xs font-medium">
             <FileSpreadsheet className="h-3 w-3" />
             {data.sheetName}
           </Badge>
           <Badge variant="outline" className="gap-1 text-xs font-medium">
-            Total {data.totalRows.toLocaleString()} records
+            {t("chatbot.leadPreview.totalRecords", { count: data.totalRows })}
           </Badge>
           <span className="text-xs text-muted-foreground">
-            • Duplicate data will be automatically excluded
+            • {t("chatbot.leadPreview.duplicateNote")}
           </span>
         </div>
       </div>
@@ -62,14 +65,30 @@ export function LeadPreviewArtifact({
                       <TableHead className="w-[50px] text-xs font-medium sticky left-0 bg-white dark:bg-background z-20 border-r">
                         #
                       </TableHead>
-                      <TableHead className="w-[120px] text-xs font-medium">Company</TableHead>
-                      <TableHead className="w-[140px] text-xs font-medium">Website</TableHead>
-                      <TableHead className="w-[160px] text-xs font-medium">Email</TableHead>
-                      <TableHead className="w-[120px] text-xs font-medium">Phone</TableHead>
-                      <TableHead className="w-[160px] text-xs font-medium">Address</TableHead>
-                      <TableHead className="w-[120px] text-xs font-medium">Sector</TableHead>
-                      <TableHead className="w-[120px] text-xs font-medium">Industry</TableHead>
-                      <TableHead className="w-[140px] text-xs font-medium">Product</TableHead>
+                      <TableHead className="w-[120px] text-xs font-medium">
+                        {t("chatbot.leadPreview.column.company")}
+                      </TableHead>
+                      <TableHead className="w-[140px] text-xs font-medium">
+                        {t("chatbot.leadPreview.column.website")}
+                      </TableHead>
+                      <TableHead className="w-[160px] text-xs font-medium">
+                        {t("chatbot.leadPreview.column.email")}
+                      </TableHead>
+                      <TableHead className="w-[120px] text-xs font-medium">
+                        {t("chatbot.leadPreview.column.phone")}
+                      </TableHead>
+                      <TableHead className="w-[160px] text-xs font-medium">
+                        {t("chatbot.leadPreview.column.address")}
+                      </TableHead>
+                      <TableHead className="w-[120px] text-xs font-medium">
+                        {t("chatbot.leadPreview.column.sector")}
+                      </TableHead>
+                      <TableHead className="w-[120px] text-xs font-medium">
+                        {t("chatbot.leadPreview.column.industry")}
+                      </TableHead>
+                      <TableHead className="w-[140px] text-xs font-medium">
+                        {t("chatbot.leadPreview.column.product")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -320,7 +339,7 @@ export function LeadPreviewArtifact({
             size="default"
           >
             <XCircle className="h-4 w-4" />
-            Cancel
+            {t("chatbot.button.cancel")}
           </Button>
           <Button
             onClick={onApprove}
@@ -329,7 +348,7 @@ export function LeadPreviewArtifact({
             size="default"
           >
             <CheckCircle2 className="h-4 w-4" />
-            {isProcessing ? "Processing..." : "Approve"}
+            {isProcessing ? t("chatbot.leadPreview.processing") : t("chatbot.leadPreview.approve")}
           </Button>
         </div>
       </div>

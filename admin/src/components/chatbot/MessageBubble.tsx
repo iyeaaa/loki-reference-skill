@@ -1,6 +1,7 @@
 import { Check, Copy, CornerDownRight, FileCode2, ThumbsDown, ThumbsUp } from "lucide-react"
 import React, { useMemo, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import ReactMarkdown from "react-markdown"
 import { Streamdown } from "streamdown"
 import { Button } from "@/components/ui/button"
@@ -30,28 +31,29 @@ export const MessageBubble = React.memo(
     },
     ref,
   ) {
+    const { t } = useTranslation()
     const isUser = message.role === "user"
     const [feedback, setFeedback] = useState<"like" | "dislike" | null>(null)
     const [copied, setCopied] = useState(false)
 
     const handleLike = () => {
       setFeedback("like")
-      toast.success("Thank you for your feedback!")
+      toast.success(t("chatbot.feedback.thanks"))
     }
 
     const handleDislike = () => {
       setFeedback("dislike")
-      toast.success("Thank you for your feedback!")
+      toast.success(t("chatbot.feedback.thanks"))
     }
 
     const handleCopy = async () => {
       try {
         await navigator.clipboard.writeText(message.content)
         setCopied(true)
-        toast.success("Copied!")
+        toast.success(t("chatbot.copy.success"))
         setTimeout(() => setCopied(false), 2000)
       } catch (_err) {
-        toast.error("Failed to copy.")
+        toast.error(t("chatbot.copy.failed"))
       }
     }
 
@@ -199,7 +201,7 @@ export const MessageBubble = React.memo(
                   size="sm"
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
-                  ✓ Continue
+                  ✓ {t("chatbot.button.continue")}
                 </Button>
                 <Button
                   onClick={() => onConfirm(false)}
@@ -207,7 +209,7 @@ export const MessageBubble = React.memo(
                   variant="outline"
                   className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
                 >
-                  ✗ Cancel
+                  ✗ {t("chatbot.button.cancel")}
                 </Button>
               </div>
             )}
@@ -226,19 +228,23 @@ export const MessageBubble = React.memo(
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-foreground truncate">
                       {message.metadata?.importResult
-                        ? "Lead Import Results"
-                        : questionText || "View Artifact"}
+                        ? t("chatbot.artifact.importResults")
+                        : questionText || t("chatbot.artifact.viewArtifact")}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {message.metadata?.importResult
-                        ? `${message.metadata.importResult.success} succeeded · ${message.metadata.importResult.skipped} skipped · ${message.metadata.importResult.failed} failed`
+                        ? `${message.metadata.importResult.success} ${t("chatbot.artifact.succeeded")} · ${message.metadata.importResult.skipped} ${t("chatbot.artifact.skipped")} · ${message.metadata.importResult.failed} ${t("chatbot.artifact.failed")}`
                         : message.metadata?.sql &&
                             message.metadata?.insights?.length &&
                             message.metadata.insights.length > 0
-                          ? `SQL query and ${message.metadata.insights.length} insights`
+                          ? t("chatbot.artifact.sqlAndInsights", {
+                              count: message.metadata.insights.length,
+                            })
                           : message.metadata?.sql
-                            ? "SQL query"
-                            : `${message.metadata?.insights?.length || 0} insights`}
+                            ? t("chatbot.artifact.sqlQuery")
+                            : t("chatbot.artifact.insights", {
+                                count: message.metadata?.insights?.length || 0,
+                              })}
                     </div>
                   </div>
                 </div>
@@ -289,7 +295,7 @@ export const MessageBubble = React.memo(
               message.metadata.followUpQuestions.length > 0 && (
                 <div className="mt-6 space-y-0">
                   <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3">
-                    Related Questions
+                    {t("chatbot.followUp.title")}
                   </div>
                   <div className="divide-y divide-border/50">
                     {message.metadata.followUpQuestions.map((q: string, i: number) => (

@@ -89,6 +89,7 @@ export interface ChatbotAskRequest {
   userId?: string
   conversationId?: string
   messages?: ChatMessage[]
+  locale?: string // Language code for AI responses (e.g., "ko", "en")
 }
 
 export interface SequenceModalPayload {

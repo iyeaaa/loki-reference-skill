@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { Badge } from "@/components/ui/badge"
 import type { ImportProgress, ImportResult, PreviewLeadData } from "@/lib/api/services/lead-import"
@@ -133,6 +134,7 @@ export function DataArtifact({
   onLeadImportApproval,
   onGenerateSequence,
 }: DataArtifactProps) {
+  const { t } = useTranslation()
   const hasAnyContent =
     sql || insights.length > 0 || !!leadPreview || !!leadImportProgress || !!leadImportResult
   const [mounted, setMounted] = useState(false)
@@ -185,7 +187,7 @@ export function DataArtifact({
     return (
       <div className="h-full flex items-center justify-center p-8">
         <p className="text-sm text-muted-foreground text-center">
-          Analysis results will appear here
+          {t("chatbot.artifact.analysisResults")}
         </p>
       </div>
     )
@@ -193,10 +195,10 @@ export function DataArtifact({
 
   // Determine the main title based on what content is available
   const getTitle = () => {
-    if (leadImportProgress) return "Lead Import in Progress"
-    if (leadImportResult) return "Lead Import Complete"
-    if (leadPreview) return "Lead Preview"
-    return question || "Analysis Results"
+    if (leadImportProgress) return t("chatbot.artifact.leadImportProgress")
+    if (leadImportResult) return t("chatbot.artifact.leadImportComplete")
+    if (leadPreview) return t("chatbot.artifact.leadPreview")
+    return question || t("chatbot.artifact.analysisResults")
   }
 
   return (
@@ -208,7 +210,9 @@ export function DataArtifact({
           {isStreaming && (
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
-              <span className="text-xs text-muted-foreground">Streaming...</span>
+              <span className="text-xs text-muted-foreground">
+                {t("chatbot.artifact.streaming")}
+              </span>
             </div>
           )}
         </div>
@@ -246,7 +250,7 @@ export function DataArtifact({
               ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
             `}
           >
-            <SectionHeader title="Executed Query" />
+            <SectionHeader title={t("chatbot.artifact.executedQuery")} />
             <div className="rounded-lg border border-border bg-muted/50">
               <SyntaxHighlighter
                 language="sql"
@@ -277,7 +281,7 @@ export function DataArtifact({
             `}
             style={{ transitionDelay: sql ? "50ms" : "0ms" }}
           >
-            <SectionHeader title={`Query Results (${data.length} rows)`} />
+            <SectionHeader title={t("chatbot.artifact.queryResults", { count: data.length })} />
             <div className="rounded-lg border border-border overflow-hidden">
               <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
                 <table className="w-full text-xs">
@@ -326,7 +330,7 @@ export function DataArtifact({
             `}
             style={{ transitionDelay: sql ? "100ms" : "0ms" }}
           >
-            <SectionHeader title="Key Insights" />
+            <SectionHeader title={t("chatbot.artifact.keyInsights")} />
             <div className="space-y-3">
               {insights.map((insight, i) => (
                 <div

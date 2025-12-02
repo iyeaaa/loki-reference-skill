@@ -18,7 +18,11 @@ export async function generateFollowUpQuestions(
   }
 
   try {
-    const prompt = getFollowUpQuestionsPrompt(state.currentQuestion, state.analysis)
+    const prompt = getFollowUpQuestionsPrompt(
+      state.currentQuestion,
+      state.analysis,
+      state.locale || "ko",
+    )
 
     // Use non-streaming LLM call for intermediate node (no progress events)
     const response = await llm.invoke(prompt)

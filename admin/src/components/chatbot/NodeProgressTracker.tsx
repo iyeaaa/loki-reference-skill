@@ -1,4 +1,5 @@
 import { CheckCircle2, Circle, Loader2 } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
 
 export interface NodeProgress {
@@ -14,78 +15,102 @@ interface NodeProgressTrackerProps {
   className?: string
 }
 
-// Node metadata for display
-const NODE_METADATA: Record<
+// Node metadata keys for translations
+const NODE_KEYS: Record<
   string,
   {
-    displayName: string
-    description: string
+    nameKey: string
+    descKey: string
+    loadingKey: string
     order: number
   }
 > = {
   analyze: {
-    displayName: "질문 분석",
-    description: "질문 의도를 파악하고 필요한 데이터 확인 중",
+    nameKey: "chatbot.nodeProgress.analyze.name",
+    descKey: "chatbot.nodeProgress.analyze.desc",
+    loadingKey: "chatbot.nodeProgress.analyze.loading",
+    order: 1,
+  },
+  analyzeQuestion: {
+    nameKey: "chatbot.nodeProgress.analyze.name",
+    descKey: "chatbot.nodeProgress.analyze.desc",
+    loadingKey: "chatbot.nodeProgress.analyze.loading",
     order: 1,
   },
   generateSQL: {
-    displayName: "쿼리 생성",
-    description: "데이터베이스 쿼리 작성 중",
+    nameKey: "chatbot.nodeProgress.generateSQL.name",
+    descKey: "chatbot.nodeProgress.generateSQL.desc",
+    loadingKey: "chatbot.nodeProgress.generateSQL.loading",
     order: 2,
   },
   validateSQL: {
-    displayName: "쿼리 검증",
-    description: "쿼리 안전성 및 유효성 검증 중",
+    nameKey: "chatbot.nodeProgress.validateSQL.name",
+    descKey: "chatbot.nodeProgress.validateSQL.desc",
+    loadingKey: "chatbot.nodeProgress.validateSQL.loading",
     order: 3,
   },
   executeQuery: {
-    displayName: "쿼리 실행",
-    description: "데이터베이스에서 데이터 조회 중",
+    nameKey: "chatbot.nodeProgress.executeQuery.name",
+    descKey: "chatbot.nodeProgress.executeQuery.desc",
+    loadingKey: "chatbot.nodeProgress.executeQuery.loading",
     order: 4,
   },
   executeSequential: {
-    displayName: "순차 쿼리 실행",
-    description: "여러 쿼리를 순차적으로 실행 중",
+    nameKey: "chatbot.nodeProgress.executeSequential.name",
+    descKey: "chatbot.nodeProgress.executeSequential.desc",
+    loadingKey: "chatbot.nodeProgress.executeSequential.loading",
     order: 4,
   },
   analyzeResults: {
-    displayName: "결과 분석",
-    description: "조회된 데이터를 분석 중",
+    nameKey: "chatbot.nodeProgress.analyzeResults.name",
+    descKey: "chatbot.nodeProgress.analyzeResults.desc",
+    loadingKey: "chatbot.nodeProgress.analyzeResults.loading",
     order: 5,
   },
   generateInsights: {
-    displayName: "인사이트 생성",
-    description: "데이터에서 유의미한 패턴 발견 중",
+    nameKey: "chatbot.nodeProgress.generateInsights.name",
+    descKey: "chatbot.nodeProgress.generateInsights.desc",
+    loadingKey: "chatbot.nodeProgress.generateInsights.loading",
     order: 6,
   },
   suggestVisualizations: {
-    displayName: "시각화 제안",
-    description: "최적의 차트 및 그래프 추천 중",
+    nameKey: "chatbot.nodeProgress.suggestVisualizations.name",
+    descKey: "chatbot.nodeProgress.suggestVisualizations.desc",
+    loadingKey: "chatbot.nodeProgress.suggestVisualizations.loading",
     order: 7,
   },
   generateFollowUps: {
-    displayName: "후속 질문 생성",
-    description: "관련 질문 제안 생성 중",
+    nameKey: "chatbot.nodeProgress.generateFollowUps.name",
+    descKey: "chatbot.nodeProgress.generateFollowUps.desc",
+    loadingKey: "chatbot.nodeProgress.generateFollowUps.loading",
+    order: 8,
+  },
+  generateFollowUpQuestions: {
+    nameKey: "chatbot.nodeProgress.generateFollowUps.name",
+    descKey: "chatbot.nodeProgress.generateFollowUps.desc",
+    loadingKey: "chatbot.nodeProgress.generateFollowUps.loading",
     order: 8,
   },
   formatResponse: {
-    displayName: "응답 준비",
-    description: "최종 응답 포맷팅 중",
+    nameKey: "chatbot.nodeProgress.formatResponse.name",
+    descKey: "chatbot.nodeProgress.formatResponse.desc",
+    loadingKey: "chatbot.nodeProgress.formatResponse.loading",
     order: 9,
   },
   handleError: {
-    displayName: "오류 처리",
-    description: "오류 메시지 생성 중",
+    nameKey: "chatbot.nodeProgress.handleError.name",
+    descKey: "chatbot.nodeProgress.handleError.desc",
+    loadingKey: "chatbot.nodeProgress.handleError.loading",
     order: 10,
   },
 }
 
 function NodeProgressItem({ node }: { node: NodeProgress }) {
-  const metadata = NODE_METADATA[node.nodeName] || {
-    displayName: node.nodeName,
-    description: node.message || "",
-    order: 99,
-  }
+  const { t } = useTranslation()
+  const nodeKey = NODE_KEYS[node.nodeName]
+  const displayName = nodeKey ? t(nodeKey.nameKey) : node.nodeName
+  // Use translated loading message instead of server message
+  const loadingMessage = nodeKey ? t(nodeKey.loadingKey) : node.message
 
   const getIcon = () => {
     switch (node.status) {
@@ -119,14 +144,14 @@ function NodeProgressItem({ node }: { node: NodeProgress }) {
               node.status === "pending" && "text-muted-foreground",
             )}
           >
-            {metadata.displayName}
+            {displayName}
           </span>
           {node.status === "in_progress" && node.percent !== undefined && (
             <span className="text-xs text-muted-foreground">({node.percent}%)</span>
           )}
         </div>
-        {node.status === "in_progress" && node.message && (
-          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{node.message}</p>
+        {node.status === "in_progress" && loadingMessage && (
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{loadingMessage}</p>
         )}
       </div>
     </div>
@@ -134,6 +159,8 @@ function NodeProgressItem({ node }: { node: NodeProgress }) {
 }
 
 export function NodeProgressTracker({ progress, className }: NodeProgressTrackerProps) {
+  const { t } = useTranslation()
+
   if (progress.length === 0) return null
 
   // Get unique nodes (only show latest status for each node)
@@ -147,14 +174,16 @@ export function NodeProgressTracker({ progress, className }: NodeProgressTracker
 
   // Sort by order
   const sortedNodes = uniqueNodes.sort((a, b) => {
-    const orderA = NODE_METADATA[a.nodeName]?.order ?? 99
-    const orderB = NODE_METADATA[b.nodeName]?.order ?? 99
+    const orderA = NODE_KEYS[a.nodeName]?.order ?? 99
+    const orderB = NODE_KEYS[b.nodeName]?.order ?? 99
     return orderA - orderB
   })
 
   return (
     <div className={cn("rounded-lg border bg-muted/30 p-3 space-y-1", className)}>
-      <div className="text-xs font-medium text-muted-foreground mb-2">Processing Steps</div>
+      <div className="text-xs font-medium text-muted-foreground mb-2">
+        {t("chatbot.nodeProgress.title")}
+      </div>
       {sortedNodes.map((node) => (
         <NodeProgressItem key={`${node.nodeName}-${node.timestamp}`} node={node} />
       ))}

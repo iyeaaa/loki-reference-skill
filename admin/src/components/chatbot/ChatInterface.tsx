@@ -1,5 +1,6 @@
 import { ArrowUp, Search, Square } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 import TextPlus from "@/assets/text-plus.svg"
 import TextRinda from "@/assets/text-rinda.svg"
 import { AddLeadSheet } from "@/components/leads/AddLeadSheet"
@@ -27,6 +28,7 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProps) {
+  const { t, i18n } = useTranslation()
   const [input, setInput] = useState("")
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [streamingMessage, setStreamingMessage] = useState<ChatMessage | null>(null)
@@ -237,9 +239,10 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         workspaceId,
         conversationId: convId,
         messages: [...messages, userMessage],
+        locale: i18n.language,
       })
     },
-    [messages, chatbotMutation, workspaceId, conversationId],
+    [messages, chatbotMutation, workspaceId, conversationId, i18n.language],
   )
 
   const handleStop = useCallback(() => {
@@ -291,13 +294,23 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
           workspaceId,
           conversationId: convId,
           messages: [...messages, userMessage], // Use computed messages
+          locale: i18n.language,
         })
       } catch (error) {
         // Error is already handled in onError callback
         console.error("Submit error:", error)
       }
     },
-    [input, isProcessing, chatbotMutation, workspaceId, conversationId, attachedFile, messages],
+    [
+      input,
+      isProcessing,
+      chatbotMutation,
+      workspaceId,
+      conversationId,
+      attachedFile,
+      messages,
+      i18n.language,
+    ],
   )
 
   // Get previous questions from messages (user messages only)
@@ -310,12 +323,12 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
 
   // Suggested questions for empty state
   const suggestedQuestions = [
-    "How's this month's email performance?",
-    "Which email subjects have the highest open rate?",
-    "What do low click-rate emails have in common?",
-    "How has response rate changed from last week?",
-    "What sending times get the best engagement?",
-    "Which sequences have high drop-off rates?",
+    t("chatbot.suggested.question1"),
+    t("chatbot.suggested.question2"),
+    t("chatbot.suggested.question3"),
+    t("chatbot.suggested.question4"),
+    t("chatbot.suggested.question5"),
+    t("chatbot.suggested.question6"),
   ]
 
   // Use previous questions if available, otherwise use suggested questions
@@ -339,7 +352,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         // User rejected
         const rejectionMessage: ChatMessage = {
           role: "assistant",
-          content: "Lead import cancelled.",
+          content: t("chatbot.lead.import.cancelled"),
           timestamp: new Date(),
         }
         setMessages((prev) => [...prev, rejectionMessage])
@@ -353,7 +366,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       // Show approval message
       const approvalMessage: ChatMessage = {
         role: "user",
-        content: "Approved lead import",
+        content: t("chatbot.lead.import.approved"),
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, approvalMessage])
@@ -421,7 +434,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         // Save result as a message with metadata for artifact display
         const completionMessage: ChatMessage = {
           role: "assistant",
-          content: `Lead import complete!\n\n- Succeeded: ${result.success}\n- Skipped: ${result.skipped}\n- Failed: ${result.failed}\n\nClick the artifact below to view detailed results.`,
+          content: `${t("chatbot.lead.import.complete")}\n\n- ${t("chatbot.lead.import.succeeded")}: ${result.success}\n- ${t("chatbot.lead.import.skipped")}: ${result.skipped}\n- ${t("chatbot.lead.import.failed")}: ${result.failed}\n\n${t("chatbot.lead.import.viewArtifact")}`,
           timestamp: new Date(),
           metadata: {
             importResult: result,
@@ -453,7 +466,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         }, 5000)
       }
     },
-    [leadPreviewData, workspaceId],
+    [leadPreviewData, workspaceId, t],
   )
 
   const handleConfirmation = useCallback(
@@ -466,7 +479,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
             streamingMessage,
             {
               role: "assistant",
-              content: "Operation canceled.",
+              content: t("chatbot.operation.cancelled"),
               timestamp: new Date(),
             },
           ])
@@ -520,7 +533,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         setIsProcessing(false)
       }
     },
-    [streamingMessage, currentConversationId],
+    [streamingMessage, currentConversationId, t],
   )
 
   const handleGenerateSequenceFromImport = useCallback(
@@ -559,9 +572,10 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         workspaceId,
         conversationId: convId,
         messages: [...messages, userMessage],
+        locale: i18n.language,
       })
     },
-    [messages, chatbotMutation, workspaceId, conversationId],
+    [messages, chatbotMutation, workspaceId, conversationId, i18n.language],
   )
 
   // Handle sequence generation from modal
@@ -605,9 +619,10 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         workspaceId,
         conversationId: convId,
         messages: [...messages, userMessage],
+        locale: i18n.language,
       })
     },
-    [messages, chatbotMutation, workspaceId, conversationId, customerGroups],
+    [messages, chatbotMutation, workspaceId, conversationId, customerGroups, i18n.language],
   )
 
   // Auto-resize textarea based on content
@@ -674,7 +689,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
             className="h-1 w-1 animate-pulse rounded-full bg-current"
             style={{ animationDelay: "0.4s" }}
           />
-          <span className="ml-2 text-sm">Loading conversation...</span>
+          <span className="ml-2 text-sm">{t("chatbot.loading.conversation")}</span>
         </div>
       </div>
     )
@@ -791,7 +806,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                       handleSubmit()
                     }
                   }}
-                  placeholder="Who should I reach out to? Describe your ideal customer or drop a lead list..."
+                  placeholder={t("chatbot.input.placeholder")}
                   className="min-h-[64px] resize-none pl-4 pr-12 pt-4 pb-12 text-[15px] leading-relaxed border-0 focus-visible:ring-0 focus-visible:ring-offset-0 overflow-y-auto bg-transparent rounded-2xl placeholder:text-muted-foreground/60"
                   style={{ maxHeight: "400px" }}
                 />
@@ -815,7 +830,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                   disabled={!!attachedFile || isProcessing}
                   className="absolute bottom-3 left-3 h-8 px-3 rounded-lg text-sm font-medium"
                 >
-                  Drop Your Leads Here
+                  {t("chatbot.button.dropLeads")}
                 </Button>
               </div>
 
@@ -934,7 +949,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                             handleSubmit()
                           }
                         }}
-                        placeholder="Who should I reach out to? Describe your ideal customer or drop a lead list..."
+                        placeholder={t("chatbot.input.placeholder")}
                         className="min-h-[56px] resize-none pl-4 pr-12 pt-3 pb-11 text-[15px] leading-relaxed border-0 focus-visible:ring-0 focus-visible:ring-offset-0 overflow-y-auto bg-transparent rounded-2xl placeholder:text-muted-foreground/60"
                         style={{ maxHeight: "400px" }}
                       />
@@ -958,7 +973,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                         disabled={!!attachedFile || isProcessing}
                         className="absolute bottom-2 left-2 h-8 px-3 rounded-lg text-sm font-medium"
                       >
-                        Drop Your Leads Here
+                        {t("chatbot.button.dropLeads")}
                       </Button>
                     </div>
                   </div>

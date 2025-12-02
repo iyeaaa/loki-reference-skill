@@ -200,6 +200,7 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
                 currentQuestion: body.question,
                 workspaceId: body.workspaceId,
                 userId: body.userId || "anonymous",
+                locale: body.locale || "ko", // Default to Korean
                 // @ts-expect-error - Elysia body.messages type doesn't match ChatbotState messages type exactly
                 messages: body.messages || [],
                 conversationId: body.conversationId || `chat-${Date.now()}`,
@@ -401,6 +402,7 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
         workspaceId: t.String(),
         userId: t.Optional(t.String()),
         conversationId: t.Optional(t.String()),
+        locale: t.Optional(t.String()), // Language code for AI responses (e.g., "ko", "en")
         messages: t.Optional(
           t.Array(
             t.Object({

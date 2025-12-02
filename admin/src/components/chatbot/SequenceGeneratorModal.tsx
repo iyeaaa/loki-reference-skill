@@ -1,5 +1,6 @@
 import { Loader2, Sparkles } from "lucide-react"
 import { useEffect, useId, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -35,6 +36,7 @@ export function SequenceGeneratorModal({
   onSubmit,
   defaultCustomerGroupId,
 }: SequenceGeneratorModalProps) {
+  const { t } = useTranslation()
   const customerGroupIdHtmlId = useId()
   const promptId = useId()
   const [selectedGroupId, setSelectedGroupId] = useState<string>("")
@@ -89,38 +91,36 @@ export function SequenceGeneratorModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            Auto-Generate Sequence
+            {t("chatbot.modal.autoGenerate.title")}
           </DialogTitle>
-          <DialogDescription>
-            Select a customer group and describe your requirements. AI will automatically generate a
-            sequence for you.
-          </DialogDescription>
+          <DialogDescription>{t("chatbot.modal.autoGenerate.description")}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           {/* Customer Group Selection */}
           <div className="space-y-2">
-            <Label htmlFor={customerGroupIdHtmlId}>Customer Group</Label>
+            <Label htmlFor={customerGroupIdHtmlId}>{t("chatbot.modal.customerGroup")}</Label>
             {isLoadingGroups ? (
               <div className="flex items-center gap-2 px-3 py-2 border rounded-md text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Loading customer groups...
+                {t("chatbot.modal.loadingGroups")}
               </div>
             ) : (
               <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
                 <SelectTrigger id={customerGroupIdHtmlId}>
-                  <SelectValue placeholder="Select a customer group" />
+                  <SelectValue placeholder={t("chatbot.modal.selectGroup")} />
                 </SelectTrigger>
                 <SelectContent>
                   {customerGroups?.map((group) => (
                     <SelectItem key={group.id} value={group.id}>
                       {group.name}
-                      {group.leadCount !== undefined && ` (${group.leadCount} leads)`}
+                      {group.leadCount !== undefined &&
+                        ` (${group.leadCount} ${t("chatbot.modal.leads")})`}
                     </SelectItem>
                   ))}
                   {(!customerGroups || customerGroups.length === 0) && (
                     <div className="px-2 py-3 text-sm text-muted-foreground text-center">
-                      No customer groups available
+                      {t("chatbot.modal.noGroups")}
                     </div>
                   )}
                 </SelectContent>
@@ -130,23 +130,21 @@ export function SequenceGeneratorModal({
 
           {/* Prompt Input */}
           <div className="space-y-2">
-            <Label htmlFor={promptId}>Requirements</Label>
+            <Label htmlFor={promptId}>{t("chatbot.modal.requirementsLabel")}</Label>
             <Textarea
               id={promptId}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Example: Create a 5-step nurturing sequence for B2B SaaS companies. Start with company introduction, then include product demos and case studies in follow-ups."
+              placeholder={t("chatbot.modal.requirementsPlaceholder")}
               className="min-h-[120px] resize-none"
             />
-            <p className="text-xs text-muted-foreground">
-              Describe the purpose, steps, and content of the sequence you want to create.
-            </p>
+            <p className="text-xs text-muted-foreground">{t("chatbot.modal.requirementsHelp")}</p>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-            Cancel
+            {t("chatbot.button.cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -155,12 +153,12 @@ export function SequenceGeneratorModal({
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating...
+                {t("chatbot.modal.generating")}
               </>
             ) : (
               <>
                 <Sparkles className="mr-2 h-4 w-4" />
-                Generate
+                {t("chatbot.modal.generate")}
               </>
             )}
           </Button>

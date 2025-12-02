@@ -118,6 +118,7 @@ export async function analyzeResults(state: ChatbotState): Promise<Partial<Chatb
       state.generatedSQL,
       state.queryResult,
       state.executionTime,
+      state.locale || "ko",
     )
 
     let analysis = ""

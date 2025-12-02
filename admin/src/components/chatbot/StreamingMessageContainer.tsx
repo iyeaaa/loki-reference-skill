@@ -1,8 +1,30 @@
-import React from "react"
+import React, { useMemo } from "react"
+import { useTranslation } from "react-i18next"
 import type { ChatMessage } from "@/lib/api/types/chatbot"
 import { MessageBubble } from "./MessageBubble"
 import { type NodeProgress, NodeProgressTracker } from "./NodeProgressTracker"
 import { StarSpinner } from "./StarSpinner"
+
+// Map server messages to translation keys
+const THINKING_MESSAGE_KEYS: Record<string, string> = {
+  // Node start messages
+  "Analyzing your request...": "chatbot.thinking.analyzingRequest",
+  "Finding the data you need...": "chatbot.thinking.findingData",
+  "Validating request...": "chatbot.thinking.validatingRequest",
+  "Loading data...": "chatbot.thinking.loadingData",
+  "Organizing results...": "chatbot.thinking.organizingResults",
+  "Summarizing key insights...": "chatbot.thinking.summarizingInsights",
+  "Creating visualizations...": "chatbot.thinking.creatingVisualizations",
+  "Generating follow-up questions...": "chatbot.thinking.generatingFollowUps",
+  // Progress messages
+  "Analyzing results...": "chatbot.thinking.analyzingResults",
+  "Analysis complete": "chatbot.thinking.analysisComplete",
+  "Checking if query is safe to execute...": "chatbot.thinking.checkingQuerySafety",
+  "Checking data access permissions...": "chatbot.thinking.checkingPermissions",
+  "Checking query complexity...": "chatbot.thinking.checkingComplexity",
+  "Searching for data...": "chatbot.thinking.searchingData",
+  "Analyzing lead data with AI...": "chatbot.thinking.analyzingLeadData",
+}
 
 interface StreamingMessageContainerProps {
   message: ChatMessage | null
@@ -37,13 +59,22 @@ export const StreamingMessageContainer = React.memo(function StreamingMessageCon
   thinkingMessage,
   hideArtifact = false,
 }: StreamingMessageContainerProps) {
+  const { t } = useTranslation()
+
+  // Translate thinking message if it matches a known key
+  const translatedThinkingMessage = useMemo(() => {
+    if (!thinkingMessage) return null
+    const translationKey = THINKING_MESSAGE_KEYS[thinkingMessage]
+    return translationKey ? t(translationKey) : thinkingMessage
+  }, [thinkingMessage, t])
+
   // Don't render if there's nothing to show
   if (!message && nodeProgress.length === 0 && !thinkingMessage) {
     return null
   }
 
   const hasProgress = nodeProgress.length > 0
-  const hasThinking = !!thinkingMessage
+  const hasThinking = !!translatedThinkingMessage
 
   return (
     <div className="w-full space-y-3">
@@ -51,7 +82,7 @@ export const StreamingMessageContainer = React.memo(function StreamingMessageCon
       {hasThinking && (
         <div className="animate-in fade-in duration-200 flex items-center gap-2.5">
           <StarSpinner size={16} />
-          <p className="text-sm text-muted-foreground font-medium">{thinkingMessage}</p>
+          <p className="text-sm text-muted-foreground font-medium">{translatedThinkingMessage}</p>
         </div>
       )}
 

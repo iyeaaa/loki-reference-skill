@@ -463,19 +463,18 @@ export default function GeminiSearchPage() {
             <Sparkles className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">Gemini File Search</h1>
+            <h1 className="text-3xl font-bold">RINDA 해외 바이어 찾기</h1>
             <p className="text-muted-foreground">
-              Google Gemini AI로 전세계 리드를 스마트하게 검색하세요
+              수출이 처음이어도, 우리 상품을 사줄 해외 바이어를 몇 줄만 적어서 찾아볼 수 있습니다.
             </p>
           </div>
         </div>
 
-        {/* 알림: Gemini API 키 필요 */}
+        {/* 알림: 관리자 설정 필요 */}
         <Alert className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            이 기능을 사용하려면 서버에 <strong>GEMINI_API_KEY</strong> 환경 변수가 설정되어 있어야
-            합니다.
+            이 기능은 관리자 설정이 완료된 환경에서만 사용하실 수 있습니다.
           </AlertDescription>
         </Alert>
 
@@ -483,15 +482,15 @@ export default function GeminiSearchPage() {
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="search">
               <Search className="h-4 w-4 mr-2" />
-              검색
+              직접 찾기
             </TabsTrigger>
             <TabsTrigger value="drive">
               <Database className="h-4 w-4 mr-2" />
-              Drive 가져오기
+              Drive에서 불러오기
             </TabsTrigger>
             <TabsTrigger value="files">
               <Database className="h-4 w-4 mr-2" />
-              업로드된 파일
+              업로드한 파일
             </TabsTrigger>
           </TabsList>
 
@@ -499,17 +498,18 @@ export default function GeminiSearchPage() {
           <TabsContent value="search">
             <Card>
               <CardHeader>
-                <CardTitle>리드 검색</CardTitle>
+                <CardTitle>새로운 해외 바이어 찾기</CardTitle>
                 <CardDescription>
-                  자연어로 검색하세요 (예: "독일의 침구 도매업체 찾아줘")
+                  평소 말하듯 간단히 적어 주세요. (예: "독일에서 호텔에 침구를 납품하는 도매업체
+                  찾아줘")
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor={searchQueryId}>검색 쿼리</Label>
+                  <Label htmlFor={searchQueryId}>어떤 해외 바이어를 찾으시나요?</Label>
                   <Textarea
                     id={searchQueryId}
-                    placeholder="예: 독일에서 호텔에 침구를 공급하는 도매업체"
+                    placeholder="예: 독일에서 호텔에 침구를 납품하는 중형 도매업체"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     rows={3}
@@ -519,28 +519,28 @@ export default function GeminiSearchPage() {
                 {/* 필터 */}
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor={filterCountryId}>국가 (선택)</Label>
+                    <Label htmlFor={filterCountryId}>희망 국가 (선택)</Label>
                     <Input
                       id={filterCountryId}
-                      placeholder="예: Germany"
+                      placeholder="예: Germany(독일)"
                       value={filters.country}
                       onChange={(e) => setFilters({ ...filters, country: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor={filterRegionId}>지역 (선택)</Label>
+                    <Label htmlFor={filterRegionId}>지역 / 권역 (선택)</Label>
                     <Input
                       id={filterRegionId}
-                      placeholder="예: Europe"
+                      placeholder="예: Europe(유럽)"
                       value={filters.region}
                       onChange={(e) => setFilters({ ...filters, region: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor={filterVerticalId}>업종 (선택)</Label>
+                    <Label htmlFor={filterVerticalId}>제품 분야 / 업종 (선택)</Label>
                     <Input
                       id={filterVerticalId}
-                      placeholder="예: bedding"
+                      placeholder="예: bedding(침구)"
                       value={filters.vertical}
                       onChange={(e) => setFilters({ ...filters, vertical: e.target.value })}
                     />
@@ -556,12 +556,12 @@ export default function GeminiSearchPage() {
                     {isSearching ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        검색 중...
+                        찾는 중...
                       </>
                     ) : (
                       <>
                         <Search className="mr-2 h-4 w-4" />
-                        검색
+                        해외 바이어 찾기
                       </>
                     )}
                   </Button>
@@ -728,7 +728,7 @@ export default function GeminiSearchPage() {
 
                 {searchResults.length === 0 && !isSearching && (
                   <div className="text-center py-12 text-muted-foreground">
-                    검색 결과가 여기에 표시됩니다
+                    입력하신 조건에 맞는 해외 바이어가 여기에 표시됩니다.
                   </div>
                 )}
               </CardContent>
@@ -854,12 +854,12 @@ export default function GeminiSearchPage() {
             </Card>
           </TabsContent>
 
-          {/* 업로드된 파일 탭 */}
+          {/* 업로드한 파일 탭 */}
           <TabsContent value="files">
             <Card>
               <CardHeader>
-                <CardTitle>업로드된 파일</CardTitle>
-                <CardDescription>Gemini에 업로드된 리드 데이터 파일 목록</CardDescription>
+                <CardTitle>업로드한 파일</CardTitle>
+                <CardDescription>업로드한 해외 바이어 데이터 파일 목록</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoadingStores ? (

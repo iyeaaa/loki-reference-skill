@@ -1,6 +1,7 @@
 import { motion } from "framer-motion"
 import { Search } from "lucide-react"
 import { useQueryState } from "nuqs"
+import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -14,6 +15,7 @@ import { useWebsets } from "@/lib/api/hooks/websets"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 
 export default function WebsetPage() {
+  const { t } = useTranslation()
   const [query, setQuery] = useQueryState("query", { defaultValue: "" })
   const navigate = useNavigate()
   const { selectedWorkspace } = useWorkspace()
@@ -42,7 +44,7 @@ export default function WebsetPage() {
             initial="hidden"
             animate="visible"
           >
-            Webset Prototype
+            {t("webset.page.title")}
           </motion.h1>
           <motion.p
             className="text-lg text-slate-600 dark:text-slate-400"
@@ -51,7 +53,7 @@ export default function WebsetPage() {
             animate="visible"
             transition={{ delay: 0.2 }}
           >
-            Search the web for information
+            {t("webset.page.subtitle")}
           </motion.p>
         </div>
 
@@ -72,7 +74,7 @@ export default function WebsetPage() {
             <Search className="absolute left-4 h-5 w-5 text-slate-400" />
             <Input
               type="text"
-              placeholder="Search anything..."
+              placeholder={t("webset.search.placeholder")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="w-full h-14 pl-12 pr-4 text-lg rounded-full border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-500 shadow-lg hover:shadow-xl transition-all bg-white dark:bg-slate-800"

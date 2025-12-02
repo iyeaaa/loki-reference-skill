@@ -27,30 +27,59 @@ const getBigQueryClient = (): BigQuery => {
   if (!bigqueryClient) {
     const projectId = process.env.GOOGLE_CLOUD_PROJECT || "gen-lang-client-0140658679"
 
-    // 환경변수에서 서비스 계정 credentials 확인
+    // 인증 방법 우선순위:
+    // 1. GOOGLE_CREDENTIALS_BASE64 (Base64 인코딩된 JSON 키) - 배포 환경 추천
+    // 2. GOOGLE_APPLICATION_CREDENTIALS (키 파일 경로) - 로컬 테스트용
+    // 3. BIGQUERY_CLIENT_EMAIL + BIGQUERY_PRIVATE_KEY (개별 환경변수)
+    // 4. gcloud CLI 기본 credentials - 로컬 개발용
+
+    const credentialsBase64 = process.env.GOOGLE_CREDENTIALS_BASE64
+    const keyFilePath = process.env.GOOGLE_APPLICATION_CREDENTIALS
     const clientEmail = process.env.BIGQUERY_CLIENT_EMAIL
     const privateKey = process.env.BIGQUERY_PRIVATE_KEY
-    const keyFilePath = process.env.GOOGLE_APPLICATION_CREDENTIALS
 
-    if (keyFilePath) {
-      // JSON 키 파일 경로로 인증 (로컬 테스트용)
+    if (credentialsBase64) {
+      // 방법 1: Base64 인코딩된 JSON 키 (가장 안전하고 권장)
+      try {
+        const credentialsJson = Buffer.from(credentialsBase64, "base64").toString("utf-8")
+        const credentials = JSON.parse(credentialsJson)
+
+        bigqueryClient = new BigQuery({
+          projectId: credentials.project_id || projectId,
+          credentials: {
+            client_email: credentials.client_email,
+            private_key: credentials.private_key,
+          },
+        })
+        logger.info(
+          { clientEmail: credentials.client_email },
+          "BigQuery client initialized with Base64 credentials",
+        )
+      } catch (error) {
+        logger.error({ error }, "Failed to parse GOOGLE_CREDENTIALS_BASE64")
+        throw new Error("Invalid GOOGLE_CREDENTIALS_BASE64 format")
+      }
+    } else if (keyFilePath) {
+      // 방법 2: JSON 키 파일 경로로 인증 (로컬 테스트용)
       bigqueryClient = new BigQuery({
         projectId,
         keyFilename: keyFilePath,
       })
       logger.info({ keyFilePath }, "BigQuery client initialized with key file")
     } else if (clientEmail && privateKey) {
-      // 서버 환경: 환경변수에서 credentials 사용
+      // 방법 3: 개별 환경변수에서 credentials 사용
+      const formattedKey = privateKey.replace(/^["']|["']$/g, "").replace(/\\n/g, "\n")
+
       bigqueryClient = new BigQuery({
         projectId,
         credentials: {
           client_email: clientEmail,
-          private_key: privateKey.replace(/\\n/g, "\n"), // 줄바꿈 처리
+          private_key: formattedKey,
         },
       })
       logger.info("BigQuery client initialized with environment credentials")
     } else {
-      // 로컬 환경: gcloud CLI의 application-default credentials 사용
+      // 방법 4: 로컬 환경 - gcloud CLI의 application-default credentials 사용
       bigqueryClient = new BigQuery({ projectId })
       logger.info("BigQuery client initialized with default credentials (gcloud CLI)")
     }

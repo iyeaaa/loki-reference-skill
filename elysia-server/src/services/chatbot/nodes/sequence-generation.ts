@@ -2,8 +2,8 @@ import { Command, END } from "@langchain/langgraph"
 import { ChatOpenAI } from "@langchain/openai"
 import { sql } from "drizzle-orm"
 import { db } from "../../../db/drizzle"
-import { getAITemplateGenerationService } from "../../ai-template-generation.service"
 import { chatbotLogger } from "../../../utils/logger"
+import { getAITemplateGenerationService } from "../../ai-template-generation.service"
 import { getAISequenceStrategyOnlyPrompt } from "../prompts"
 import type { ChatbotState } from "../state"
 
@@ -423,11 +423,14 @@ export async function analyzeLeadsAndGenerateStrategy(state: ChatbotState): Prom
           `[Sequence Strategy] Generated email for step ${step.step_order}: "${template.subject}"`,
         )
       } catch (emailError) {
-        const emailErrorMessage = emailError instanceof Error ? emailError.message : String(emailError)
+        const emailErrorMessage =
+          emailError instanceof Error ? emailError.message : String(emailError)
         chatbotLogger.error(
           `[Sequence Strategy] Failed to generate email for step ${step.step_order}: ${emailErrorMessage}`,
         )
-        throw new Error(`Failed to generate email for step ${step.step_order}: ${emailErrorMessage}`)
+        throw new Error(
+          `Failed to generate email for step ${step.step_order}: ${emailErrorMessage}`,
+        )
       }
     }
 
@@ -1272,7 +1275,9 @@ function buildStepEmailPrompt(
   strategySummary: string,
 ): string {
   const keyPointsText =
-    step.key_points.length > 0 ? `\n포함할 핵심 내용:\n${step.key_points.map((p) => `- ${p}`).join("\n")}` : ""
+    step.key_points.length > 0
+      ? `\n포함할 핵심 내용:\n${step.key_points.map((p) => `- ${p}`).join("\n")}`
+      : ""
 
   return `[시퀀스 전략 컨텍스트]
 전체 전략: ${strategySummary}

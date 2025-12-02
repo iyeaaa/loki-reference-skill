@@ -458,7 +458,10 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
             if (encoding.toUpperCase() !== "UTF-8" && encoding.toUpperCase() !== "UTF8") {
               const buffer = Buffer.from(dataWithoutBOM)
               utf8String = iconv.decode(buffer, encoding)
-              logger.info({ from: encoding, to: "UTF-8" }, "Encoding conversion performed for preview")
+              logger.info(
+                { from: encoding, to: "UTF-8" },
+                "Encoding conversion performed for preview",
+              )
             } else {
               utf8String = new TextDecoder("utf-8").decode(dataWithoutBOM)
             }
@@ -513,7 +516,10 @@ export const leadImportRoutes = new Elysia({ prefix: "/api/v1/admin/lead-import"
           dateNF: "yyyy-mm-dd",
         })
 
-        logger.info({ rowCount: rawData.length, fileType: isCSV ? "CSV" : "Excel" }, "File preview parsed")
+        logger.info(
+          { rowCount: rawData.length, fileType: isCSV ? "CSV" : "Excel" },
+          "File preview parsed",
+        )
 
         if (rawData.length === 0) {
           set.status = 400

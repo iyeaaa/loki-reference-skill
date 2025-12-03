@@ -208,10 +208,100 @@ export async function analyzeQuestion(state: ChatbotState): Promise<Partial<Chat
     }
 
     // Check if this is a sequence generation request from LLM analysis
+    // CRITICAL: Validate that user EXPLICITLY requested sequence generation
+    // This prevents false positives where LLM classifies follow-up questions as generation requests
     if (
       analysis.operationType === "sequence_generation" ||
       analysis.intent === "sequence_generation_request"
     ) {
+      // ⭐ CRITICAL CHECK 1: If a sequence was ALREADY created (pendingSequenceActivation exists),
+      // do NOT create another one! This is likely a follow-up question about the existing sequence.
+      if (pendingSequenceInfo?.sequenceId) {
+        chatbotLogger.info(
+          `[Analyze] Sequence already exists (${pendingSequenceInfo.sequenceName}), treating as READ not generation`,
+        )
+
+        // Fall through to normal analysis - treat as READ operation
+        const schemaContext = getRelevantSchema(state.currentQuestion)
+
+        const duration = Date.now() - startTime
+        chatbotLogger.nodeSuccess(
+          "analyzeQuestion (existing sequence - override to read)",
+          duration,
+        )
+
+        if (emitter) {
+          emitter.nodeComplete("analyzeQuestion", "Analysis complete (sequence already exists)", {
+            intent: "read",
+            existingSequence: pendingSequenceInfo.sequenceName,
+          })
+        }
+
+        return {
+          metadata: {
+            ...analysis,
+            operationType: "read", // Override to read - sequence already exists
+            existingSequenceInfo: pendingSequenceInfo,
+          },
+          needsClarification: false,
+          clarificationQuestion: "",
+          schemaContext,
+        }
+      }
+
+      // ⭐ CRITICAL CHECK 2: Validate that user EXPLICITLY used generation keywords
+      const generationKeywords = [
+        "생성해",
+        "생성해줘",
+        "만들어",
+        "만들어줘",
+        "create",
+        "generate",
+        "build",
+        "새로운 시퀀스",
+        "시퀀스를 생성",
+        "시퀀스 생성",
+        "캠페인 생성",
+        "캠페인 만들",
+      ]
+
+      const questionLower = state.currentQuestion.toLowerCase()
+      const hasGenerationKeyword = generationKeywords.some(
+        (keyword) =>
+          questionLower.includes(keyword.toLowerCase()) || state.currentQuestion.includes(keyword),
+      )
+
+      // If no generation keyword found, treat as a READ operation instead
+      if (!hasGenerationKeyword) {
+        chatbotLogger.info(
+          `[Analyze] LLM classified as sequence_generation but no generation keyword found in: "${state.currentQuestion}"`,
+        )
+        chatbotLogger.info("[Analyze] Overriding to READ operation to prevent false positive")
+
+        // Fall through to normal analysis (will be handled as read)
+        const schemaContext = getRelevantSchema(state.currentQuestion)
+
+        const duration = Date.now() - startTime
+        chatbotLogger.nodeSuccess("analyzeQuestion (override to read)", duration)
+
+        if (emitter) {
+          emitter.nodeComplete("analyzeQuestion", "Analysis complete (override to read)", {
+            intent: "read",
+            originalIntent: analysis.intent,
+          })
+        }
+
+        return {
+          metadata: {
+            ...analysis,
+            operationType: "read", // Override to read
+          },
+          needsClarification: analysis.needsClarification || false,
+          clarificationQuestion: analysis.clarificationQuestion || "",
+          schemaContext,
+        }
+      }
+
       chatbotLogger.info("[Analyze] Detected sequence generation intent from LLM analysis")
 
       // Extract customer group info from conversation context

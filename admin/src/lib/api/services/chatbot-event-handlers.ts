@@ -303,6 +303,23 @@ export const handleDone: EventHandler = (data, context) => {
       finalMessage.metadata.followUpQuestions = data.state.followUpQuestions as string[]
       console.log("[Chatbot] Final follow-up questions:", data.state.followUpQuestions)
     }
+
+    // ⭐ CRITICAL: Include pendingSequenceActivation so follow-up questions know sequence exists
+    // This prevents the chatbot from re-creating the sequence on every follow-up question
+    const metadata = data.state.metadata as { pendingSequenceActivation?: unknown } | undefined
+    if (metadata?.pendingSequenceActivation && finalMessage.metadata) {
+      finalMessage.metadata.pendingSequenceActivation = metadata.pendingSequenceActivation as {
+        sequenceId: string
+        sequenceName?: string
+        customerGroupName?: string
+        enrollmentsCount?: number
+        totalSteps?: number
+      }
+      console.log(
+        "[Chatbot] ✅ pendingSequenceActivation included:",
+        metadata.pendingSequenceActivation,
+      )
+    }
   }
 
   console.log("[Chatbot] Final message:", finalMessage)

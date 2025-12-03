@@ -81,6 +81,15 @@ export interface ChatMessage {
       groupName: string
       leadsCount: number
     }
+    // ⭐ CRITICAL: This is set when a sequence is created and awaiting activation
+    // Used to prevent re-creating sequence on follow-up questions
+    pendingSequenceActivation?: {
+      sequenceId: string
+      sequenceName?: string
+      customerGroupName?: string
+      enrollmentsCount?: number
+      totalSteps?: number
+    }
   }
 }
 

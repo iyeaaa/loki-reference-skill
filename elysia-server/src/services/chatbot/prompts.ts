@@ -97,12 +97,24 @@ Respond in JSON format:
 }
 
 **operationType Classification:**
-- "read": Query, analyze, stats, show, tell, suggest, recommend, propose (SELECT)
-- "create": New data, add, insert (INSERT)
+- "read": Query, analyze, stats, show, tell, suggest, recommend, propose, explain, describe, summarize, acknowledge, ANY FOLLOW-UP QUESTIONS (SELECT)
+- "create": New data, add, insert (INSERT) - NOT for sequences unless explicitly requested
 - "update": Modify existing data, change, update (UPDATE)
 - "delete": Remove data, delete (DELETE)
-- "sequence_generation": ONLY when explicitly creating/generating an email sequence
+- "sequence_generation": ONLY when user EXPLICITLY says "생성해줘", "만들어줘", "create", "generate" for a NEW sequence
 - "sequence_activation": ONLY when user wants to activate/run/start a previously created sequence
+
+**DEFAULT TO "read" OPERATION!**
+When in doubt, use "read". Most follow-up questions are just asking for information.
+
+**Examples of "read" operations (NOT sequence_generation):**
+- "시퀀스를 실행하면 언제 메일이 발송되는 거야?" → READ (asking about timing)
+- "좋아 어떤 메일 내용을 썼어?" → READ (asking about content)
+- "몇 단계야?" → READ (asking about steps)
+- "언제 보내지는 거야?" → READ (asking about schedule)
+- "좋아" / "알겠어" / "그렇구나" / "고마워" → READ (just acknowledge and respond naturally)
+- "시퀀스 보여줘" → READ (show sequence info)
+- Any question ABOUT an existing sequence → READ
 
 **Sequence Activation Detection (HIGHEST PRIORITY - CHECK FIRST):**
 Set operationType to "sequence_activation" when user wants to START/RUN/ACTIVATE a sequence:
@@ -122,16 +134,28 @@ Set operationType to "sequence_activation" when user wants to START/RUN/ACTIVATE
   - "시퀀스 상태 보여줘" (show status = read)
   - "실행된 이메일 보여줘" (show executed emails = read)
 
-**Sequence Generation Detection (LOWER PRIORITY - CHECK AFTER ACTIVATION):**
+**Sequence Generation Detection (LOWEST PRIORITY - CHECK LAST):**
 ONLY set operationType to "sequence_generation" when user EXPLICITLY requests to CREATE/GENERATE a NEW sequence:
 - MUST include creation words: "생성해줘", "만들어줘", "만들어", "생성", "create", "generate", "build", "새로", "새로운"
 - **"시작" does NOT mean create! "시작" means activate/run!**
 - Examples that ARE sequence generation: "시퀀스 생성해줘", "이메일 캠페인 만들어줘", "create a sequence", "새로운 시퀀스"
-- Examples that are NOT sequence generation:
+- Examples that are NOT sequence generation (these are ALL "read" operations):
   - "시퀀스 시작해줘" → This is ACTIVATION, not generation!
   - "전략을 제안해주세요" (suggesting strategy = read/analyze)
   - "어떤 캠페인이 좋을까요" (asking for recommendation = read)
   - "분석해주세요" (analyze = read)
+  - "언제 메일이 발송되는 거야?" (asking about timing = read)
+  - "어떤 메일 내용을 썼어?" (asking about email content = read)
+  - "시퀀스 상태 보여줘" (asking status = read)
+  - "몇 단계야?" (asking about steps = read)
+  - "좋아" / "알겠어" / "그렇구나" (acknowledgment = read, just respond naturally)
+
+**CRITICAL: Questions ABOUT sequences are NOT sequence generation!**
+- Asking about schedule/timing → READ
+- Asking about email content → READ
+- Asking about status/progress → READ
+- Asking about number of steps → READ
+- Any acknowledgment or follow-up question → READ
 
 **Important:**
 - For mutation operations (create/update/delete), set needsClarification to false
@@ -140,8 +164,15 @@ ONLY set operationType to "sequence_generation" when user EXPLICITLY requests to
 - Only set needsClarification to true for ambiguous read queries
 - "제안", "추천", "분석", "전략", "어떤" keywords indicate ANALYSIS, not sequence creation
 - **"시작" = ACTIVATION, "생성" = GENERATION - these are DIFFERENT operations!**
-- Short affirmative responses like "응", "네", "좋아" should be treated as sequence_activation
-- When in doubt between generation and activation, choose ACTIVATION if the word is "시작"`
+- Short affirmative responses like "응", "네", "좋아" should be treated as READ (just acknowledge) unless there's a pending sequence activation
+- When in doubt between generation and activation, choose ACTIVATION if the word is "시작"
+
+**CRITICAL: DEFAULT TO READ!**
+- Most user messages are asking questions or acknowledging information → READ
+- Only use sequence_generation when user EXPLICITLY says "생성", "만들어", "create", "generate"
+- Questions about sequences (timing, content, status, steps) are READ, not generation
+- Follow-up questions like "언제?", "뭘?", "어떻게?", "왜?" are ALL READ operations
+- Acknowledgments like "좋아", "알겠어", "그렇구나" are READ (respond with helpful info)`
 }
 
 /**

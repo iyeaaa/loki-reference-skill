@@ -344,6 +344,11 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
                     })
 
                     // Save assistant message with metadata
+                    // ⭐ CRITICAL: Include pendingSequenceActivation so follow-up questions know sequence exists
+                    const pendingSeqActivation =
+                      (currentState.metadata as { pendingSequenceActivation?: unknown })
+                        ?.pendingSequenceActivation || undefined
+
                     await db.insert(chatMessages).values({
                       conversationId: convId,
                       role: "assistant",
@@ -362,6 +367,9 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
                         }),
                         ...(currentState.followUpQuestions?.length && {
                           followUpQuestions: currentState.followUpQuestions,
+                        }),
+                        ...(pendingSeqActivation && {
+                          pendingSequenceActivation: pendingSeqActivation,
                         }),
                       },
                     })

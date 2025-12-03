@@ -17,7 +17,6 @@ import {
   Loader2,
   Mail,
   Plus,
-  Search,
   Send,
   Sparkles,
   Table,
@@ -894,26 +893,63 @@ export default function BigQuerySearchPage() {
                   )}
 
                   {/* 결과 없음 메시지 */}
-                  {message.results && message.results.length === 0 && message.sql && (
-                    <Card className="w-full mt-2 border-0 shadow-lg">
-                      <CardContent className="py-8">
-                        <div className="flex flex-col items-center justify-center text-center gap-3">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
-                            <Search className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-foreground">검색 결과가 없습니다</p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              해당 조건에 맞는 데이터를 찾지 못했습니다.
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-2">
-                              다른 검색어나 조건으로 다시 시도해보세요.
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                  {message.results &&
+                    message.results.length === 0 &&
+                    message.sql &&
+                    (() => {
+                      // 이전 user 메시지에서 원래 쿼리 가져오기
+                      const messageIndex = messages.findIndex((m) => m.id === message.id)
+                      const userQuery = messageIndex > 0 ? messages[messageIndex - 1]?.content : ""
+
+                      return (
+                        <Card className="w-full mt-2 border-0 shadow-lg">
+                          <CardContent className="py-8">
+                            <div className="flex flex-col items-center justify-center text-center gap-4">
+                              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+                                <Database className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                              </div>
+                              <div className="space-y-2">
+                                <p className="font-medium text-foreground">
+                                  요청하신 조건에 해당하는 데이터가 없습니다
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  현재 데이터베이스에는{" "}
+                                  <span className="font-medium text-foreground">"{userQuery}"</span>
+                                  에 해당하는 데이터가 존재하지 않습니다.
+                                </p>
+                              </div>
+                              <div className="w-full max-w-2xl mt-2">
+                                <p className="text-xs font-medium text-muted-foreground mb-3">
+                                  🔍 검색 가능한 산업군 (클릭하여 검색)
+                                </p>
+                                <div className="flex flex-wrap gap-1.5 justify-center">
+                                  {DATA_DICTIONARY.industries.slice(0, 12).map((industry) => (
+                                    <Badge
+                                      key={industry}
+                                      variant="secondary"
+                                      className="text-xs cursor-pointer hover:bg-primary/20 transition-colors"
+                                      onClick={() =>
+                                        handleChatSubmit(`${industry} 산업의 미국 회사 50개 보여줘`)
+                                      }
+                                    >
+                                      {industry}
+                                    </Badge>
+                                  ))}
+                                  {DATA_DICTIONARY.industries.length > 12 && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs text-muted-foreground"
+                                    >
+                                      +{DATA_DICTIONARY.industries.length - 12}개 더
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    })()}
 
                   {/* 결과 테이블 */}
                   {message.results &&

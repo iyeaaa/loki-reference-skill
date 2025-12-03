@@ -5,12 +5,12 @@ import { errorResponse, ResponseCode } from "../types/response.types"
 const emailTemplateSchema = t.Object({
   workspaceId: t.String({ format: "uuid" }),
   name: t.String({ minLength: 1, maxLength: 255 }),
-  description: t.Optional(t.String()),
+  description: t.Optional(t.Union([t.String(), t.Null()])),
   subject: t.String({ minLength: 1, maxLength: 500 }),
-  bodyText: t.Optional(t.String()),
-  bodyHtml: t.Optional(t.String()),
+  bodyText: t.Optional(t.Union([t.String(), t.Null()])),
+  bodyHtml: t.Optional(t.Union([t.String(), t.Null()])),
   variables: t.Optional(t.Any()),
-  category: t.Optional(t.String({ maxLength: 100 })),
+  category: t.Optional(t.Union([t.String({ maxLength: 100 }), t.Null()])),
   isShared: t.Optional(t.Boolean()),
   createdBy: t.Optional(t.String({ format: "uuid" })),
 })

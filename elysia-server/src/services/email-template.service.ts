@@ -42,12 +42,12 @@ export async function getEmailTemplate(id: string) {
 export async function createEmailTemplate(data: {
   workspaceId: string
   name: string
-  description?: string
+  description?: string | null
   subject: string
-  bodyText?: string
-  bodyHtml?: string
+  bodyText?: string | null
+  bodyHtml?: string | null
   variables?: Record<string, unknown>
-  category?: string
+  category?: string | null
   isShared?: boolean
   createdBy?: string
 }) {

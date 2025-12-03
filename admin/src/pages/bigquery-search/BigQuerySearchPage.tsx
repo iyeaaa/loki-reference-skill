@@ -571,6 +571,46 @@ export default function BigQuerySearchPage() {
     toast.success(`${dataToExport.length}개 결과 다운로드 완료`)
   }
 
+  // CSV 다운로드
+  const handleDownloadCSV = (results: LeadResult[], messageId: string) => {
+    const dataToExport =
+      selectedResults.size > 0 ? results.filter((_, i) => selectedResults.has(i)) : results
+
+    if (dataToExport.length === 0) {
+      toast.error("다운로드할 데이터가 없습니다")
+      return
+    }
+
+    // CSV 헤더
+    const headers = Object.keys(dataToExport[0])
+    const csvRows = [headers.join(",")]
+
+    // CSV 데이터
+    for (const row of dataToExport) {
+      const values = headers.map((header) => {
+        const value = row[header]
+        // 쉼표, 줄바꿈, 따옴표가 포함된 경우 따옴표로 감싸기
+        const stringValue = value === null || value === undefined ? "" : String(value)
+        if (stringValue.includes(",") || stringValue.includes("\n") || stringValue.includes('"')) {
+          return `"${stringValue.replace(/"/g, '""')}"`
+        }
+        return stringValue
+      })
+      csvRows.push(values.join(","))
+    }
+
+    const csvContent = csvRows.join("\n")
+    const blob = new Blob([`\uFEFF${csvContent}`], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `bigquery_results_${messageId}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+
+    toast.success(`${dataToExport.length}개 결과 CSV 다운로드 완료`)
+  }
+
   // 리드 정보 조회 (Enrichment)
   const handleEnrichLead = async (lead: LeadResult) => {
     if (!lead.web_address) {
@@ -998,11 +1038,11 @@ export default function BigQuerySearchPage() {
                                 </button>
                               </div>
 
-                              {/* 페이지 크기 선택 */}
+                              {/* 페이지 크기 선택 및 CSV 다운로드 */}
                               {!collapsedResults.has(message.id) && (
                                 /* biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation only */
                                 <div
-                                  className="flex items-center gap-2"
+                                  className="flex items-center gap-3"
                                   onClick={(e) => e.stopPropagation()}
                                   onKeyDown={(e) => e.stopPropagation()}
                                 >
@@ -1022,6 +1062,15 @@ export default function BigQuerySearchPage() {
                                       ))}
                                     </SelectContent>
                                   </Select>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs gap-1.5"
+                                    onClick={() => handleDownloadCSV(results, message.id)}
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                    CSV
+                                  </Button>
                                 </div>
                               )}
                             </div>

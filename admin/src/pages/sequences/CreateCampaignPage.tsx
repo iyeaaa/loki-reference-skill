@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, Check, Save } from "lucide-react"
 import { useEffect, useId, useRef, useState } from "react"
 import toast from "react-hot-toast"
@@ -7,7 +8,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useSequence, useSequenceSteps, useUpdateSequence } from "@/lib/api/hooks/sequences"
+import {
+  sequenceKeys,
+  useSequence,
+  useSequenceSteps,
+  useUpdateSequence,
+} from "@/lib/api/hooks/sequences"
 import { sequencesApi } from "@/lib/api/services/sequences"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
@@ -18,9 +24,10 @@ import { CreateCampaignStep3 } from "./CreateCampaignStep3"
 export default function CreateCampaignPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const editingSequenceId = searchParams.get("id")
   const { selectedWorkspace } = useWorkspace()
+  const queryClient = useQueryClient()
   const updateSequence = useUpdateSequence()
   const campaignNameId = useId()
   const campaignDescriptionId = useId()
@@ -190,6 +197,10 @@ export default function CreateCampaignPage() {
           customerGroupId: "",
           selectedLeadIds: JSON.stringify([]),
         }
+        // URL에 시퀀스 ID 추가 (새로고침 시 중복 생성 방지)
+        setSearchParams({ id: sequence.id }, { replace: true })
+        // 시퀀스 목록 캐시 무효화 (돌아가기 시 바로 보이도록)
+        queryClient.invalidateQueries({ queryKey: sequenceKeys.lists() })
         toast.success(t("sequences.createPage.draftCreated"))
       })
       .catch((error) => {

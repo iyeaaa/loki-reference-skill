@@ -629,32 +629,35 @@ export default function BigQuerySearchPage() {
     setIsAddingToCampaign(true)
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/v1/customer-groups/${selectedGroupId}/members/bulk`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-          body: JSON.stringify({
-            leads: leadsToAdd.map((lead) => ({
-              email: lead.email,
-              firstName: lead.first_name,
-              lastName: lead.last_name,
-              companyName: lead.company_name,
-              phone: lead.phone,
-              country: lead.country,
-              city: lead.primary_city,
-              industry: lead.industry,
-            })),
-          }),
+      const response = await fetch(`${API_BASE_URL}/api/v1/bigquery/add-to-group`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
-      )
+        body: JSON.stringify({
+          groupId: selectedGroupId,
+          leads: leadsToAdd.map((lead) => ({
+            email: lead.email,
+            firstName: lead.first_name,
+            lastName: lead.last_name,
+            companyName: lead.company_name,
+            phone: lead.phone,
+            country: lead.country,
+            city: lead.primary_city,
+            industry: lead.industry,
+            webAddress: lead.web_address,
+          })),
+        }),
+      })
 
-      if (!response.ok) throw new Error("Failed to add leads to campaign")
+      const result = await response.json()
 
-      toast.success(`${leadsToAdd.length}개 리드가 캠페인에 추가되었습니다`)
+      if (!result.success) {
+        throw new Error(result.error || "Failed to add leads")
+      }
+
+      toast.success(`${result.addedCount}개 리드가 캠페인에 추가되었습니다`)
       setSelectedResults(new Set())
     } catch (error) {
       console.error("Error adding to campaign:", error)

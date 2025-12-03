@@ -1,16 +1,8 @@
 import { motion } from "framer-motion"
-import {
-  AlertCircle,
-  Database,
-  Download,
-  Loader2,
-  Plus,
-  Search,
-  Sparkles,
-  Upload,
-} from "lucide-react"
+import { AlertCircle, Database, Download, Plus, Search, Sparkles, Upload } from "lucide-react"
 import { useCallback, useEffect, useId, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import * as XLSX from "xlsx"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -64,6 +56,7 @@ interface UploadedStore {
 }
 
 export default function GeminiSearchPage() {
+  const { t, i18n } = useTranslation()
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<LeadResult[]>([])
@@ -148,6 +141,7 @@ export default function GeminiSearchPage() {
     fetchCustomerGroups()
   }, [fetchCustomerGroups])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: i18n.language triggers update on language change, t is stable
   const fetchStores = useCallback(async () => {
     try {
       setIsLoadingStores(true)
@@ -165,12 +159,11 @@ export default function GeminiSearchPage() {
       }
     } catch (error) {
       console.error("Failed to fetch stores:", error)
-      toast.error("스토어 목록을 불러오지 못했습니다")
+      toast.error(t("gemini-search.toast.storeLoadFailed"))
     } finally {
       setIsLoadingStores(false)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [i18n.language])
 
   // 업로드된 파일 목록 불러오기
   useEffect(() => {
@@ -180,12 +173,12 @@ export default function GeminiSearchPage() {
   // 리드 검색
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
-      toast.error("검색어를 입력해주세요")
+      toast.error(t("gemini-search.toast.enterQuery"))
       return
     }
 
     if (!workspaceId || workspaceId === "all") {
-      toast.error("워크스페이스를 선택해주세요")
+      toast.error(t("gemini-search.toast.selectWorkspace"))
       return
     }
 
@@ -219,14 +212,17 @@ export default function GeminiSearchPage() {
         setSearchResults(result.data.results)
         setSearchExplanation(result.data.explanation || "")
         toast.success(
-          `${result.data.totalResults}개의 리드를 찾았습니다 (${result.data.processingTime.toFixed(2)}초)`,
+          t("gemini-search.toast.searchSuccess", {
+            count: result.data.totalResults,
+            time: result.data.processingTime.toFixed(2),
+          }),
         )
       } else {
-        throw new Error(result.message || "검색 실패")
+        throw new Error(result.message || t("gemini-search.toast.searchFailed"))
       }
     } catch (error) {
       console.error("Search error:", error)
-      toast.error(error instanceof Error ? error.message : "검색에 실패했습니다")
+      toast.error(error instanceof Error ? error.message : t("gemini-search.toast.searchError"))
     } finally {
       setIsSearching(false)
     }
@@ -256,17 +252,17 @@ export default function GeminiSearchPage() {
   // 선택된 리드를 캠페인에 추가
   const handleAddToCampaign = async () => {
     if (selectedLeads.size === 0) {
-      toast.error("리드를 선택해주세요")
+      toast.error(t("gemini-search.toast.selectLeads"))
       return
     }
 
     if (!selectedGroupId) {
-      toast.error("고객 그룹을 선택해주세요")
+      toast.error(t("gemini-search.toast.selectGroup"))
       return
     }
 
     if (!workspaceId || workspaceId === "all") {
-      toast.error("워크스페이스를 선택해주세요")
+      toast.error(t("gemini-search.toast.selectWorkspace"))
       return
     }
 
@@ -350,7 +346,7 @@ export default function GeminiSearchPage() {
       if (!contentType || !contentType.includes("application/json")) {
         const text = await response.text()
         console.error("Non-JSON response:", text.substring(0, 500))
-        throw new Error(`서버 오류 (${response.status}): JSON 응답이 아닙니다`)
+        throw new Error(t("gemini-search.error.serverError", { status: response.status }))
       }
 
       const result = await response.json()
@@ -363,19 +359,26 @@ export default function GeminiSearchPage() {
         const duplicates = result.duplicateEmails?.length || stats.skipped || 0
         const actualCreated = selectedCount - duplicates
 
-        toast.success(
-          `${actualCreated}개 리드가 추가되었습니다!${duplicates > 0 ? ` (${duplicates}개 중복)` : ""}`,
-        )
+        if (duplicates > 0) {
+          toast.success(
+            t("gemini-search.toast.addSuccessWithDuplicates", {
+              count: actualCreated,
+              duplicates,
+            }),
+          )
+        } else {
+          toast.success(t("gemini-search.toast.addSuccess", { count: actualCreated }))
+        }
 
         // 선택 초기화
         setSelectedLeads(new Set())
         setSelectedGroupId("")
       } else {
-        throw new Error(result.message || result.error || "리드 추가 실패")
+        throw new Error(result.message || result.error || t("gemini-search.toast.addFailed"))
       }
     } catch (error) {
       console.error("❌ Add to campaign error:", error)
-      toast.error(error instanceof Error ? error.message : "캠페인 추가에 실패했습니다")
+      toast.error(error instanceof Error ? error.message : t("gemini-search.toast.addError"))
     } finally {
       setIsAddingToCampaign(false)
     }
@@ -384,7 +387,7 @@ export default function GeminiSearchPage() {
   // 엑셀 다운로드
   const handleDownloadExcel = () => {
     if (searchResults.length === 0) {
-      toast.error("다운로드할 결과가 없습니다")
+      toast.error(t("gemini-search.toast.noDownloadData"))
       return
     }
 
@@ -394,22 +397,22 @@ export default function GeminiSearchPage() {
       XLSX.utils.book_append_sheet(workbook, worksheet, "Leads")
 
       XLSX.writeFile(workbook, `gemini-search-results-${Date.now()}.xlsx`)
-      toast.success("엑셀 파일이 다운로드되었습니다")
+      toast.success(t("gemini-search.toast.downloadSuccess"))
     } catch (error) {
       console.error("Download error:", error)
-      toast.error("다운로드에 실패했습니다")
+      toast.error(t("gemini-search.toast.downloadFailed"))
     }
   }
 
   // Drive URL에서 파일 가져오기
   const handleImportFromDrive = async () => {
     if (!driveUrl.trim()) {
-      toast.error("Drive 공유 URL을 입력해주세요")
+      toast.error(t("gemini-search.toast.enterDriveUrl"))
       return
     }
 
     if (!workspaceId || workspaceId === "all") {
-      toast.error("워크스페이스를 선택해주세요")
+      toast.error(t("gemini-search.toast.selectWorkspace"))
       return
     }
 
@@ -440,16 +443,16 @@ export default function GeminiSearchPage() {
       const result = await response.json()
 
       if (result.success) {
-        toast.success(`가져오기 성공! ${result.data.totalRows}개 리드가 등록되었습니다`)
+        toast.success(t("gemini-search.toast.importSuccess", { count: result.data.totalRows }))
         setDriveUrl("")
         setMetadata({ country: "", region: "", vertical: "", source: "", dbVersion: "" })
         fetchStores()
       } else {
-        throw new Error(result.message || "가져오기 실패")
+        throw new Error(result.message || t("gemini-search.toast.importFailed"))
       }
     } catch (error) {
       console.error("Import error:", error)
-      toast.error(error instanceof Error ? error.message : "가져오기에 실패했습니다")
+      toast.error(error instanceof Error ? error.message : t("gemini-search.toast.importError"))
     } finally {
       setIsImportingFromDrive(false)
     }
@@ -459,38 +462,34 @@ export default function GeminiSearchPage() {
     <div className="container mx-auto py-6 space-y-6">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
-            <Sparkles className="h-6 w-6 text-white" />
+          <div className="p-3 bg-primary text-primary-foreground rounded-xl shadow-sm">
+            <Sparkles className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">RINDA 해외 바이어 찾기</h1>
-            <p className="text-muted-foreground">
-              수출이 처음이어도, 우리 상품을 사줄 해외 바이어를 몇 줄만 적어서 찾아볼 수 있습니다.
-            </p>
+            <h1 className="text-3xl font-bold">{t("gemini-search.header.title")}</h1>
+            <p className="text-muted-foreground">{t("gemini-search.header.description")}</p>
           </div>
         </div>
 
         {/* 알림: 관리자 설정 필요 */}
         <Alert className="mb-6">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            이 기능은 관리자 설정이 완료된 환경에서만 사용하실 수 있습니다.
-          </AlertDescription>
+          <AlertDescription>{t("gemini-search.alert.adminRequired")}</AlertDescription>
         </Alert>
 
         <Tabs defaultValue="search" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="search">
               <Search className="h-4 w-4 mr-2" />
-              직접 찾기
+              {t("gemini-search.tabs.search")}
             </TabsTrigger>
             <TabsTrigger value="drive">
               <Database className="h-4 w-4 mr-2" />
-              Drive에서 불러오기
+              {t("gemini-search.tabs.drive")}
             </TabsTrigger>
             <TabsTrigger value="files">
               <Database className="h-4 w-4 mr-2" />
-              업로드한 파일
+              {t("gemini-search.tabs.files")}
             </TabsTrigger>
           </TabsList>
 
@@ -498,18 +497,15 @@ export default function GeminiSearchPage() {
           <TabsContent value="search">
             <Card>
               <CardHeader>
-                <CardTitle>새로운 해외 바이어 찾기</CardTitle>
-                <CardDescription>
-                  평소 말하듯 간단히 적어 주세요. (예: "독일에서 호텔에 침구를 납품하는 도매업체
-                  찾아줘")
-                </CardDescription>
+                <CardTitle>{t("gemini-search.search.title")}</CardTitle>
+                <CardDescription>{t("gemini-search.search.description")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor={searchQueryId}>어떤 해외 바이어를 찾으시나요?</Label>
+                  <Label htmlFor={searchQueryId}>{t("gemini-search.search.queryLabel")}</Label>
                   <Textarea
                     id={searchQueryId}
-                    placeholder="예: 독일에서 호텔에 침구를 납품하는 중형 도매업체"
+                    placeholder={t("gemini-search.search.queryPlaceholder")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     rows={3}
@@ -519,28 +515,32 @@ export default function GeminiSearchPage() {
                 {/* 필터 */}
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor={filterCountryId}>희망 국가 (선택)</Label>
+                    <Label htmlFor={filterCountryId}>
+                      {t("gemini-search.search.filterCountry")}
+                    </Label>
                     <Input
                       id={filterCountryId}
-                      placeholder="예: Germany(독일)"
+                      placeholder={t("gemini-search.search.filterCountryPlaceholder")}
                       value={filters.country}
                       onChange={(e) => setFilters({ ...filters, country: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor={filterRegionId}>지역 / 권역 (선택)</Label>
+                    <Label htmlFor={filterRegionId}>{t("gemini-search.search.filterRegion")}</Label>
                     <Input
                       id={filterRegionId}
-                      placeholder="예: Europe(유럽)"
+                      placeholder={t("gemini-search.search.filterRegionPlaceholder")}
                       value={filters.region}
                       onChange={(e) => setFilters({ ...filters, region: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor={filterVerticalId}>제품 분야 / 업종 (선택)</Label>
+                    <Label htmlFor={filterVerticalId}>
+                      {t("gemini-search.search.filterVertical")}
+                    </Label>
                     <Input
                       id={filterVerticalId}
-                      placeholder="예: bedding(침구)"
+                      placeholder={t("gemini-search.search.filterVerticalPlaceholder")}
                       value={filters.vertical}
                       onChange={(e) => setFilters({ ...filters, vertical: e.target.value })}
                     />
@@ -554,14 +554,24 @@ export default function GeminiSearchPage() {
                     className="flex-1"
                   >
                     {isSearching ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        찾는 중...
-                      </>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary-foreground" />
+                          <div
+                            className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary-foreground"
+                            style={{ animationDelay: "0.2s" }}
+                          />
+                          <div
+                            className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary-foreground"
+                            style={{ animationDelay: "0.4s" }}
+                          />
+                        </div>
+                        <span>{t("gemini-search.search.searching")}</span>
+                      </div>
                     ) : (
                       <>
                         <Search className="mr-2 h-4 w-4" />
-                        해외 바이어 찾기
+                        {t("gemini-search.search.button")}
                       </>
                     )}
                   </Button>
@@ -569,7 +579,7 @@ export default function GeminiSearchPage() {
                   {searchResults.length > 0 && (
                     <Button onClick={handleDownloadExcel} variant="outline">
                       <Download className="mr-2 h-4 w-4" />
-                      엑셀 다운로드
+                      {t("gemini-search.search.downloadExcel")}
                     </Button>
                   )}
                 </div>
@@ -580,13 +590,13 @@ export default function GeminiSearchPage() {
                     <div className="flex-1">
                       <p className="text-sm font-medium">
                         {selectedLeads.size > 0
-                          ? `${selectedLeads.size}개 리드 선택됨`
-                          : "리드를 선택하고 캠페인에 추가하세요"}
+                          ? t("gemini-search.search.leadsSelected", { count: selectedLeads.size })
+                          : t("gemini-search.search.selectLeadsHint")}
                       </p>
                     </div>
                     <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
                       <SelectTrigger className="w-[250px]">
-                        <SelectValue placeholder="고객 그룹 선택" />
+                        <SelectValue placeholder={t("gemini-search.search.selectGroup")} />
                       </SelectTrigger>
                       <SelectContent>
                         {customerGroups.map((group) => (
@@ -601,14 +611,24 @@ export default function GeminiSearchPage() {
                       disabled={selectedLeads.size === 0 || !selectedGroupId || isAddingToCampaign}
                     >
                       {isAddingToCampaign ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          추가 중...
-                        </>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
+                            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary-foreground" />
+                            <div
+                              className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary-foreground"
+                              style={{ animationDelay: "0.2s" }}
+                            />
+                            <div
+                              className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary-foreground"
+                              style={{ animationDelay: "0.4s" }}
+                            />
+                          </div>
+                          <span>{t("gemini-search.search.adding")}</span>
+                        </div>
                       ) : (
                         <>
                           <Plus className="mr-2 h-4 w-4" />
-                          캠페인에 추가
+                          {t("gemini-search.search.addToCampaign")}
                         </>
                       )}
                     </Button>
@@ -628,7 +648,7 @@ export default function GeminiSearchPage() {
                   <div className="border rounded-lg overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow>
+                        <TableRow className="bg-gray-50 dark:bg-gray-700">
                           {/* 전체 선택 체크박스 */}
                           <TableHead className="w-[50px]">
                             <Checkbox
@@ -648,14 +668,19 @@ export default function GeminiSearchPage() {
                                   {key}
                                 </TableHead>
                               ))}
-                          <TableHead className="min-w-[100px]">신뢰도</TableHead>
-                          <TableHead className="min-w-[200px]">매칭 이유</TableHead>
+                          <TableHead className="min-w-[100px]">
+                            {t("gemini-search.table.confidence")}
+                          </TableHead>
+                          <TableHead className="min-w-[200px]">
+                            {t("gemini-search.table.matchReason")}
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {searchResults.map((result, idx) => (
                           <TableRow
                             key={`result-${idx}-${result.companyName || result["Company Name"] || idx}`}
+                            className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                           >
                             {/* 선택 체크박스 */}
                             <TableCell>
@@ -727,8 +752,14 @@ export default function GeminiSearchPage() {
                 )}
 
                 {searchResults.length === 0 && !isSearching && (
-                  <div className="text-center py-12 text-muted-foreground">
-                    입력하신 조건에 맞는 해외 바이어가 여기에 표시됩니다.
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Search className="h-12 w-12 text-muted-foreground mb-4" />
+                    <p className="text-lg font-medium text-muted-foreground">
+                      {t("gemini-search.search.emptyTitle")}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {t("gemini-search.search.emptyDescription")}
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -739,84 +770,82 @@ export default function GeminiSearchPage() {
           <TabsContent value="drive">
             <Card>
               <CardHeader>
-                <CardTitle>Google Drive에서 가져오기</CardTitle>
-                <CardDescription>
-                  Google Drive 공유 링크로 리드 데이터를 Gemini로 가져오세요 (API 인증 불필요!)
-                </CardDescription>
+                <CardTitle>{t("gemini-search.drive.title")}</CardTitle>
+                <CardDescription>{t("gemini-search.drive.description")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* 안내 메시지 */}
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    <strong>사용 방법:</strong>
+                    <strong>{t("gemini-search.drive.howToUse")}</strong>
                     <ol className="list-decimal list-inside mt-2 space-y-1 text-sm">
-                      <li>Google Drive에서 파일 우클릭 → "링크 복사"</li>
-                      <li>공유 설정: "링크가 있는 모든 사용자"로 변경</li>
-                      <li>아래에 URL 붙여넣기</li>
+                      <li>{t("gemini-search.drive.step1")}</li>
+                      <li>{t("gemini-search.drive.step2")}</li>
+                      <li>{t("gemini-search.drive.step3")}</li>
                     </ol>
                   </AlertDescription>
                 </Alert>
 
                 {/* Drive URL 입력 */}
                 <div className="space-y-2">
-                  <Label htmlFor={driveUrlId}>Google Drive 공유 URL</Label>
+                  <Label htmlFor={driveUrlId}>{t("gemini-search.drive.urlLabel")}</Label>
                   <Textarea
                     id={driveUrlId}
-                    placeholder="예: https://drive.google.com/file/d/YOUR_FILE_ID/view"
+                    placeholder={t("gemini-search.drive.urlPlaceholder")}
                     value={driveUrl}
                     onChange={(e) => setDriveUrl(e.target.value)}
                     rows={3}
                   />
                   <p className="text-xs text-muted-foreground">
-                    지원 형식: /file/d/FILE_ID/view, ?id=FILE_ID, 또는 직접 FILE_ID
+                    {t("gemini-search.drive.urlHint")}
                   </p>
                 </div>
 
                 {/* 메타데이터 입력 */}
                 <div className="space-y-2">
-                  <Label>메타데이터 (선택사항)</Label>
+                  <Label>{t("gemini-search.drive.metadataLabel")}</Label>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="drive-meta-country" className="text-xs">
-                        국가
+                        {t("gemini-search.drive.metaCountry")}
                       </Label>
                       <Input
                         id={driveMetaCountryId}
-                        placeholder="예: South Korea"
+                        placeholder={t("gemini-search.drive.metaCountryPlaceholder")}
                         value={metadata.country}
                         onChange={(e) => setMetadata({ ...metadata, country: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor={driveMetaRegionId} className="text-xs">
-                        지역
+                        {t("gemini-search.drive.metaRegion")}
                       </Label>
                       <Input
                         id={driveMetaRegionId}
-                        placeholder="예: Asia"
+                        placeholder={t("gemini-search.drive.metaRegionPlaceholder")}
                         value={metadata.region}
                         onChange={(e) => setMetadata({ ...metadata, region: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor={driveMetaVerticalId} className="text-xs">
-                        업종
+                        {t("gemini-search.drive.metaVertical")}
                       </Label>
                       <Input
                         id={driveMetaVerticalId}
-                        placeholder="예: bedding, beauty"
+                        placeholder={t("gemini-search.drive.metaVerticalPlaceholder")}
                         value={metadata.vertical}
                         onChange={(e) => setMetadata({ ...metadata, vertical: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor={driveMetaSourceId} className="text-xs">
-                        출처
+                        {t("gemini-search.drive.metaSource")}
                       </Label>
                       <Input
                         id={driveMetaSourceId}
-                        placeholder="예: Lead-DB-2025-Q1"
+                        placeholder={t("gemini-search.drive.metaSourcePlaceholder")}
                         value={metadata.source}
                         onChange={(e) => setMetadata({ ...metadata, source: e.target.value })}
                       />
@@ -831,21 +860,33 @@ export default function GeminiSearchPage() {
                   className="w-full"
                 >
                   {isImportingFromDrive ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      가져오는 중...
-                    </>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary-foreground" />
+                        <div
+                          className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary-foreground"
+                          style={{ animationDelay: "0.2s" }}
+                        />
+                        <div
+                          className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary-foreground"
+                          style={{ animationDelay: "0.4s" }}
+                        />
+                      </div>
+                      <span>{t("gemini-search.drive.importing")}</span>
+                    </div>
                   ) : (
                     <>
                       <Upload className="mr-2 h-4 w-4" />
-                      Drive에서 Gemini로 가져오기
+                      {t("gemini-search.drive.importButton")}
                     </>
                   )}
                 </Button>
 
                 {/* 예시 */}
                 <div className="border rounded-lg p-4 bg-muted/50">
-                  <p className="text-sm font-medium mb-2">💡 URL 예시:</p>
+                  <p className="text-sm font-medium mb-2">
+                    💡 {t("gemini-search.drive.urlExample")}
+                  </p>
                   <code className="text-xs break-all">
                     https://drive.google.com/file/d/1a2B3c4D5e6F7g8H9i0J/view
                   </code>
@@ -858,28 +899,43 @@ export default function GeminiSearchPage() {
           <TabsContent value="files">
             <Card>
               <CardHeader>
-                <CardTitle>업로드한 파일</CardTitle>
-                <CardDescription>업로드한 해외 바이어 데이터 파일 목록</CardDescription>
+                <CardTitle>{t("gemini-search.files.title")}</CardTitle>
+                <CardDescription>{t("gemini-search.files.description")}</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoadingStores ? (
-                  <div className="text-center py-12">
-                    <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground mt-2">불러오는 중...</p>
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+                      <div
+                        className="h-2 w-2 animate-pulse rounded-full bg-primary"
+                        style={{ animationDelay: "0.2s" }}
+                      />
+                      <div
+                        className="h-2 w-2 animate-pulse rounded-full bg-primary"
+                        style={{ animationDelay: "0.4s" }}
+                      />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {t("gemini-search.files.loading")}
+                    </p>
                   </div>
                 ) : uploadedStores.length > 0 ? (
                   <div className="border rounded-lg overflow-hidden">
                     <Table>
                       <TableHeader>
-                        <TableRow>
-                          <TableHead>파일명</TableHead>
-                          <TableHead>업로드 일시</TableHead>
-                          <TableHead>수정 일시</TableHead>
+                        <TableRow className="bg-gray-50 dark:bg-gray-700">
+                          <TableHead>{t("gemini-search.files.fileName")}</TableHead>
+                          <TableHead>{t("gemini-search.files.uploadedAt")}</TableHead>
+                          <TableHead>{t("gemini-search.files.updatedAt")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {uploadedStores.map((store) => (
-                          <TableRow key={store.name}>
+                          <TableRow
+                            key={store.name}
+                            className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                          >
                             <TableCell className="font-medium">{store.displayName}</TableCell>
                             <TableCell className="text-sm">
                               {new Date(store.createTime).toLocaleString("ko-KR")}
@@ -893,8 +949,14 @@ export default function GeminiSearchPage() {
                     </Table>
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-muted-foreground">
-                    업로드된 파일이 없습니다
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Database className="h-12 w-12 text-muted-foreground mb-4" />
+                    <p className="text-lg font-medium text-muted-foreground">
+                      {t("gemini-search.files.emptyTitle")}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {t("gemini-search.files.emptyDescription")}
+                    </p>
                   </div>
                 )}
               </CardContent>

@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import { memo, useCallback, useEffect, useId, useRef, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import * as XLSX from "xlsx"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -245,12 +246,12 @@ const saveCollapsedToStorage = (collapsed: Set<string>) => {
   }
 }
 
-// 예시 질문 목록
-const EXAMPLE_QUERIES = [
-  "헬스케어 산업의 미국 회사 100개 보여줘",
-  "직원 수 1000명 이상인 소프트웨어 회사 찾아줘",
-  "캐나다에 있는 금융 서비스 회사",
-  "매출 10억 달러 이상인 제조업체",
+// 예시 질문 키 목록 (실제 텍스트는 t() 함수로 가져옴)
+const EXAMPLE_QUERY_KEYS = [
+  "examples.query1",
+  "examples.query2",
+  "examples.query3",
+  "examples.query4",
 ]
 
 // 입력 컴포넌트 분리 - inputValue 변경 시 메시지 목록 리렌더링 방지
@@ -260,6 +261,7 @@ interface ChatInputProps {
 }
 
 const ChatInput = memo(function ChatInput({ onSubmit, isLoading }: ChatInputProps) {
+  const { t } = useTranslation()
   const [localInput, setLocalInput] = useState("")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const inputId = useId()
@@ -289,22 +291,22 @@ const ChatInput = memo(function ChatInput({ onSubmit, isLoading }: ChatInputProp
 
   return (
     <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-      <div className="relative">
+      <div className="relative border rounded-2xl shadow-sm bg-background">
         <Textarea
           ref={textareaRef}
           id={inputId}
           value={localInput}
           onChange={(e) => setLocalInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="예: 헬스케어 산업의 미국 회사 100개 보여줘..."
-          className="min-h-[60px] max-h-[200px] pr-14 resize-none rounded-2xl bg-muted/50 border-0 focus-visible:ring-2 focus-visible:ring-primary/20"
+          placeholder={t("bigquery-search.input.placeholder")}
+          className="min-h-[44px] max-h-[200px] pl-4 pr-14 py-2.5 resize-none rounded-2xl border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent leading-6"
           disabled={isLoading}
         />
         <Button
           type="submit"
           size="icon"
           disabled={!localInput.trim() || isLoading}
-          className="absolute right-2 bottom-2 h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-lg"
+          className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
         >
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
@@ -312,11 +314,11 @@ const ChatInput = memo(function ChatInput({ onSubmit, isLoading }: ChatInputProp
       <div className="flex items-center justify-center gap-4 mt-3">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Sparkles className="h-3 w-3" />
-          <span>자연어를 SQL로 변환하여 검색합니다</span>
+          <span>{t("bigquery-search.input.hint.nlToSql")}</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Database className="h-3 w-3" />
-          <span>1,048,575개 리드 데이터</span>
+          <span>{t("bigquery-search.input.hint.leadCount", { total: "1,048,575" })}</span>
         </div>
       </div>
     </form>
@@ -324,14 +326,16 @@ const ChatInput = memo(function ChatInput({ onSubmit, isLoading }: ChatInputProp
 })
 
 export default function BigQuerySearchPage() {
+  const { t, i18n } = useTranslation()
+
   const welcomeMessage: Message = {
     id: "welcome",
     role: "assistant",
-    content: `안녕하세요! 👋 BigQuery 리드 데이터베이스 검색 도우미입니다.
+    content: `${t("bigquery-search.welcome.greeting")}
 
-자연어로 질문하시면 SQL 쿼리로 변환해서 결과를 보여드릴게요.
+${t("bigquery-search.welcome.description")}
 
-**예시 질문:** (클릭하면 입력창에 복사됩니다)`,
+${t("bigquery-search.welcome.exampleHint")}`,
     timestamp: new Date(),
   }
 
@@ -423,6 +427,7 @@ export default function BigQuerySearchPage() {
   }, [fetchCustomerGroups])
 
   // 메시지 전송 - ChatInput 컴포넌트에서 값을 직접 받음
+  // biome-ignore lint/correctness/useExhaustiveDependencies: i18n.language triggers update on language change, t is stable
   const handleChatSubmit = useCallback(
     async (messageContent: string) => {
       if (!messageContent.trim() || isLoading) return
@@ -459,7 +464,7 @@ export default function BigQuerySearchPage() {
         })
 
         if (!response.ok) {
-          throw new Error("검색 요청 실패")
+          throw new Error(t("bigquery-search.error.searchFailed"))
         }
 
         const result = await response.json()
@@ -469,7 +474,7 @@ export default function BigQuerySearchPage() {
             msg.id === loadingMessage.id
               ? {
                   ...msg,
-                  content: result.explanation || "검색 결과입니다.",
+                  content: result.explanation || t("bigquery-search.result.default"),
                   sql: result.sql,
                   results: result.results,
                   totalCount: result.totalCount,
@@ -485,18 +490,18 @@ export default function BigQuerySearchPage() {
             msg.id === loadingMessage.id
               ? {
                   ...msg,
-                  content: "죄송합니다. 검색 중 오류가 발생했습니다. 다시 시도해주세요.",
+                  content: t("bigquery-search.error.searchError"),
                   isLoading: false,
                 }
               : msg,
           ),
         )
-        toast.error("검색 중 오류가 발생했습니다")
+        toast.error(t("bigquery-search.error.toast"))
       } finally {
         setIsLoading(false)
       }
     },
-    [isLoading],
+    [isLoading, i18n.language],
   )
 
   // SQL 복사
@@ -504,10 +509,10 @@ export default function BigQuerySearchPage() {
     try {
       await navigator.clipboard.writeText(sql)
       setCopiedId(messageId)
-      toast.success("SQL이 클립보드에 복사되었습니다")
+      toast.success(t("bigquery-search.sql.copied"))
       setTimeout(() => setCopiedId(null), 2000)
     } catch {
-      toast.error("복사 실패")
+      toast.error(t("bigquery-search.sql.copyFailed"))
     }
   }
 
@@ -568,7 +573,7 @@ export default function BigQuerySearchPage() {
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, "Results")
     XLSX.writeFile(wb, `bigquery_results_${messageId}.xlsx`)
-    toast.success(`${dataToExport.length}개 결과 다운로드 완료`)
+    toast.success(t("bigquery-search.download.excelComplete", { count: dataToExport.length }))
   }
 
   // CSV 다운로드
@@ -577,7 +582,7 @@ export default function BigQuerySearchPage() {
       selectedResults.size > 0 ? results.filter((_, i) => selectedResults.has(i)) : results
 
     if (dataToExport.length === 0) {
-      toast.error("다운로드할 데이터가 없습니다")
+      toast.error(t("bigquery-search.download.noData"))
       return
     }
 
@@ -608,13 +613,13 @@ export default function BigQuerySearchPage() {
     link.click()
     URL.revokeObjectURL(url)
 
-    toast.success(`${dataToExport.length}개 결과 CSV 다운로드 완료`)
+    toast.success(t("bigquery-search.download.csvComplete", { count: dataToExport.length }))
   }
 
   // 리드 정보 조회 (Enrichment)
   const handleEnrichLead = async (lead: LeadResult) => {
     if (!lead.web_address) {
-      toast.error("웹사이트 주소가 없어 정보를 조회할 수 없습니다")
+      toast.error(t("bigquery-search.enrichment.noWebsite"))
       return
     }
 
@@ -641,11 +646,11 @@ export default function BigQuerySearchPage() {
       if (result.success && result.data) {
         setEnrichmentData(result.data)
       } else {
-        toast.error(result.error || "정보 조회에 실패했습니다")
+        toast.error(result.error || t("bigquery-search.enrichment.failed"))
       }
     } catch (error) {
       console.error("Enrichment error:", error)
-      toast.error("정보 조회 중 오류가 발생했습니다")
+      toast.error(t("bigquery-search.enrichment.error"))
     } finally {
       setIsEnriching(false)
     }
@@ -654,7 +659,7 @@ export default function BigQuerySearchPage() {
   // 캠페인에 추가
   const handleAddToCampaign = async (results: LeadResult[]) => {
     if (!selectedGroupId) {
-      toast.error("고객 그룹을 선택해주세요")
+      toast.error(t("bigquery-search.campaign.selectGroup"))
       return
     }
 
@@ -662,7 +667,7 @@ export default function BigQuerySearchPage() {
       selectedResults.size > 0 ? results.filter((_, i) => selectedResults.has(i)) : results
 
     if (leadsToAdd.length === 0) {
-      toast.error("추가할 리드를 선택해주세요")
+      toast.error(t("bigquery-search.campaign.selectLeads"))
       return
     }
 
@@ -697,11 +702,11 @@ export default function BigQuerySearchPage() {
         throw new Error(result.error || "Failed to add leads")
       }
 
-      toast.success(`${result.addedCount}개 리드가 캠페인에 추가되었습니다`)
+      toast.success(t("bigquery-search.campaign.addedSuccess", { count: result.addedCount }))
       setSelectedResults(new Set())
     } catch (error) {
       console.error("Error adding to campaign:", error)
-      toast.error("캠페인 추가 실패")
+      toast.error(t("bigquery-search.campaign.addFailed"))
     } finally {
       setIsAddingToCampaign(false)
     }
@@ -757,13 +762,13 @@ export default function BigQuerySearchPage() {
       <div className="flex-none border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
               <Database className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold">BigQuery 리드 검색</h1>
+              <h1 className="text-lg font-semibold">{t("bigquery-search.header.title")}</h1>
               <p className="text-sm text-muted-foreground">
-                자연어로 100만+ 리드 데이터베이스 검색
+                {t("bigquery-search.header.description")}
               </p>
             </div>
           </div>
@@ -773,7 +778,7 @@ export default function BigQuerySearchPage() {
             <div className="flex items-center gap-3">
               <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
                 <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="고객 그룹 선택" />
+                  <SelectValue placeholder={t("bigquery-search.header.selectGroup")} />
                 </SelectTrigger>
                 <SelectContent>
                   {customerGroups.map((group) => (
@@ -793,7 +798,8 @@ export default function BigQuerySearchPage() {
                 ) : (
                   <Plus className="h-4 w-4" />
                 )}
-                캠페인에 추가 {selectedResults.size > 0 && `(${selectedResults.size})`}
+                {t("bigquery-search.header.addToCampaign")}{" "}
+                {selectedResults.size > 0 && `(${selectedResults.size})`}
               </Button>
               <Button
                 variant="outline"
@@ -814,10 +820,10 @@ export default function BigQuerySearchPage() {
                   setMessages([welcomeMessage])
                   setSelectedResults(new Set())
                   setCollapsedResults(new Set())
-                  toast.success("검색 기록이 삭제되었습니다")
+                  toast.success(t("bigquery-search.campaign.historyCleared"))
                 }}
                 className="text-muted-foreground hover:text-destructive"
-                title="검색 기록 삭제"
+                title={t("bigquery-search.header.clearHistory")}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -838,13 +844,13 @@ export default function BigQuerySearchPage() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
                 className={cn(
-                  "flex gap-4",
+                  "flex gap-4 items-center",
                   message.role === "user" ? "justify-end" : "justify-start",
                 )}
               >
                 {message.role === "assistant" && (
                   <div className="flex-none">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
                       <Bot className="h-4 w-4" />
                     </div>
                   </div>
@@ -858,14 +864,26 @@ export default function BigQuerySearchPage() {
                 >
                   <div
                     className={cn(
-                      "rounded-2xl px-4 py-3",
-                      message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted",
+                      "rounded-2xl px-4 py-2.5",
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground max-w-[80%]"
+                        : "bg-muted",
                     )}
                   >
                     {message.isLoading ? (
                       <div className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>검색 중...</span>
+                        <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+                        <div
+                          className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary"
+                          style={{ animationDelay: "0.2s" }}
+                        />
+                        <div
+                          className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary"
+                          style={{ animationDelay: "0.4s" }}
+                        />
+                        <span className="ml-1 text-sm text-muted-foreground">
+                          {t("bigquery-search.loading.searching")}
+                        </span>
                       </div>
                     ) : (
                       <>
@@ -873,14 +891,14 @@ export default function BigQuerySearchPage() {
                         {/* Welcome 메시지일 때 예시 질문 버튼 표시 */}
                         {message.id === "welcome" && (
                           <div className="flex flex-wrap gap-2 mt-3">
-                            {EXAMPLE_QUERIES.map((query) => (
+                            {EXAMPLE_QUERY_KEYS.map((key) => (
                               <button
-                                key={query}
+                                key={key}
                                 type="button"
-                                onClick={() => handleChatSubmit(query)}
+                                onClick={() => handleChatSubmit(t(`bigquery-search.${key}`))}
                                 className="px-3 py-1.5 text-xs bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors border border-primary/20 hover:border-primary/40"
                               >
-                                {query}
+                                {t(`bigquery-search.${key}`)}
                               </button>
                             ))}
                           </div>
@@ -902,7 +920,7 @@ export default function BigQuerySearchPage() {
                         ) : (
                           <ChevronDown className="h-3 w-3" />
                         )}
-                        SQL 쿼리 보기
+                        {t("bigquery-search.sql.viewQuery")}
                       </button>
 
                       <AnimatePresence>
@@ -914,18 +932,18 @@ export default function BigQuerySearchPage() {
                             className="overflow-hidden"
                           >
                             <div className="mt-2 relative group">
-                              <pre className="bg-zinc-950 text-zinc-100 rounded-lg p-4 text-xs overflow-x-auto">
+                              <pre className="bg-gray-900 dark:bg-gray-950 text-gray-100 rounded-lg p-4 text-xs overflow-x-auto">
                                 <code>{message.sql}</code>
                               </pre>
                               <button
                                 type="button"
                                 onClick={() => handleCopySql(message.sql ?? "", message.id)}
-                                className="absolute top-2 right-2 p-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors opacity-0 group-hover:opacity-100"
+                                className="absolute top-2 right-2 p-1.5 rounded-md bg-gray-800 hover:bg-gray-700 transition-colors opacity-0 group-hover:opacity-100"
                               >
                                 {copiedId === message.id ? (
                                   <Check className="h-3.5 w-3.5 text-green-400" />
                                 ) : (
-                                  <Copy className="h-3.5 w-3.5 text-zinc-400" />
+                                  <Copy className="h-3.5 w-3.5 text-gray-400" />
                                 )}
                               </button>
                             </div>
@@ -946,24 +964,20 @@ export default function BigQuerySearchPage() {
 
                       return (
                         <Card className="w-full mt-2 border-0 shadow-lg">
-                          <CardContent className="py-8">
+                          <CardContent className="py-12">
                             <div className="flex flex-col items-center justify-center text-center gap-4">
-                              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
-                                <Database className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                              </div>
+                              <Database className="h-12 w-12 text-muted-foreground mb-2" />
                               <div className="space-y-2">
-                                <p className="font-medium text-foreground">
-                                  요청하신 조건에 해당하는 데이터가 없습니다
+                                <p className="text-lg font-medium text-muted-foreground">
+                                  {t("bigquery-search.empty.title")}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                  현재 데이터베이스에는{" "}
-                                  <span className="font-medium text-foreground">"{userQuery}"</span>
-                                  에 해당하는 데이터가 존재하지 않습니다.
+                                  {t("bigquery-search.empty.description", { query: userQuery })}
                                 </p>
                               </div>
                               <div className="w-full max-w-2xl mt-2">
                                 <p className="text-xs font-medium text-muted-foreground mb-3">
-                                  🔍 검색 가능한 산업군 (클릭하여 검색)
+                                  {t("bigquery-search.empty.industries")}
                                 </p>
                                 <div className="flex flex-wrap gap-1.5 justify-center">
                                   {DATA_DICTIONARY.industries.slice(0, 12).map((industry) => (
@@ -972,7 +986,9 @@ export default function BigQuerySearchPage() {
                                       variant="secondary"
                                       className="text-xs cursor-pointer hover:bg-primary/20 transition-colors"
                                       onClick={() =>
-                                        handleChatSubmit(`${industry} 산업의 미국 회사 50개 보여줘`)
+                                        handleChatSubmit(
+                                          t("bigquery-search.empty.industryQuery", { industry }),
+                                        )
                                       }
                                     >
                                       {industry}
@@ -983,7 +999,9 @@ export default function BigQuerySearchPage() {
                                       variant="outline"
                                       className="text-xs text-muted-foreground"
                                     >
-                                      +{DATA_DICTIONARY.industries.length - 12}개 더
+                                      {t("bigquery-search.empty.moreIndustries", {
+                                        count: DATA_DICTIONARY.industries.length - 12,
+                                      })}
                                     </Badge>
                                   )}
                                 </div>
@@ -1005,26 +1023,30 @@ export default function BigQuerySearchPage() {
                       const startIndex = (page - 1) * pageSize
 
                       return (
-                        <Card className="w-full mt-2 overflow-hidden border-0 shadow-lg">
+                        <Card className="w-full mt-2 overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow">
                           <CardHeader
-                            className="py-3 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 cursor-pointer select-none"
+                            className="py-3 bg-muted cursor-pointer select-none"
                             onClick={() => toggleResultsCollapse(message.id)}
                           >
                             <div className="flex items-center justify-between flex-wrap gap-3">
                               <div className="flex items-center gap-2">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 shadow-md">
-                                  <Table className="h-4 w-4 text-white" />
+                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+                                  <Table className="h-4 w-4" />
                                 </div>
                                 <div>
-                                  <CardTitle className="text-sm font-semibold">검색 결과</CardTitle>
+                                  <CardTitle className="text-sm font-semibold">
+                                    {t("bigquery-search.results.title")}
+                                  </CardTitle>
                                   <CardDescription className="text-xs">
-                                    총 {message.totalCount?.toLocaleString() || results.length}개 중{" "}
-                                    {results.length}개 로드됨
+                                    {t("bigquery-search.results.count", {
+                                      total: message.totalCount?.toLocaleString() || results.length,
+                                      loaded: results.length,
+                                    })}
                                   </CardDescription>
                                 </div>
                                 <button
                                   type="button"
-                                  className="ml-2 p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                                  className="ml-2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     toggleResultsCollapse(message.id)
@@ -1046,7 +1068,9 @@ export default function BigQuerySearchPage() {
                                   onClick={(e) => e.stopPropagation()}
                                   onKeyDown={(e) => e.stopPropagation()}
                                 >
-                                  <span className="text-xs text-muted-foreground">표시 개수:</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {t("bigquery-search.results.pageSize")}
+                                  </span>
                                   <Select
                                     value={pageSize.toString()}
                                     onValueChange={(v) => setPageSize(message.id, Number(v))}
@@ -1057,7 +1081,7 @@ export default function BigQuerySearchPage() {
                                     <SelectContent>
                                       {[10, 25, 50, 100].map((size) => (
                                         <SelectItem key={size} value={size.toString()}>
-                                          {size}개
+                                          {t("bigquery-search.results.perPage", { size })}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -1087,7 +1111,7 @@ export default function BigQuerySearchPage() {
                                   <div className="overflow-x-auto">
                                     <UITable>
                                       <TableHeader>
-                                        <TableRow className="bg-slate-50/50 dark:bg-slate-900/50">
+                                        <TableRow className="bg-gray-50 dark:bg-gray-700">
                                           <TableHead className="w-[50px]">
                                             <Checkbox
                                               checked={
@@ -1098,15 +1122,29 @@ export default function BigQuerySearchPage() {
                                             />
                                           </TableHead>
                                           <TableHead className="font-semibold">#</TableHead>
-                                          <TableHead className="font-semibold">회사명</TableHead>
-                                          <TableHead className="font-semibold">웹사이트</TableHead>
-                                          <TableHead className="font-semibold">이름</TableHead>
-                                          <TableHead className="font-semibold">이메일</TableHead>
-                                          <TableHead className="font-semibold">산업</TableHead>
-                                          <TableHead className="font-semibold">국가/도시</TableHead>
-                                          <TableHead className="font-semibold">직원수</TableHead>
+                                          <TableHead className="font-semibold">
+                                            {t("bigquery-search.table.companyName")}
+                                          </TableHead>
+                                          <TableHead className="font-semibold">
+                                            {t("bigquery-search.table.website")}
+                                          </TableHead>
+                                          <TableHead className="font-semibold">
+                                            {t("bigquery-search.table.name")}
+                                          </TableHead>
+                                          <TableHead className="font-semibold">
+                                            {t("bigquery-search.table.email")}
+                                          </TableHead>
+                                          <TableHead className="font-semibold">
+                                            {t("bigquery-search.table.industry")}
+                                          </TableHead>
+                                          <TableHead className="font-semibold">
+                                            {t("bigquery-search.table.location")}
+                                          </TableHead>
+                                          <TableHead className="font-semibold">
+                                            {t("bigquery-search.table.employees")}
+                                          </TableHead>
                                           <TableHead className="font-semibold text-center">
-                                            정보
+                                            {t("bigquery-search.table.info")}
                                           </TableHead>
                                         </TableRow>
                                       </TableHeader>
@@ -1117,7 +1155,7 @@ export default function BigQuerySearchPage() {
                                             <TableRow
                                               key={globalIndex}
                                               className={cn(
-                                                "transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-900/50",
+                                                "transition-colors hover:bg-gray-50 dark:hover:bg-gray-700",
                                                 selectedResults.has(globalIndex) &&
                                                   "bg-blue-50/50 dark:bg-blue-950/30",
                                               )}
@@ -1211,8 +1249,8 @@ export default function BigQuerySearchPage() {
                                                   disabled={!result.web_address}
                                                   title={
                                                     result.web_address
-                                                      ? "회사 정보 조회"
-                                                      : "웹사이트 주소 없음"
+                                                      ? t("bigquery-search.tooltip.viewCompanyInfo")
+                                                      : t("bigquery-search.tooltip.noWebsite")
                                                   }
                                                 >
                                                   <Info className="h-4 w-4" />
@@ -1227,13 +1265,15 @@ export default function BigQuerySearchPage() {
 
                                   {/* 페이지네이션 UI */}
                                   {totalPages > 1 && (
-                                    <div className="flex items-center justify-between px-4 py-3 border-t bg-gradient-to-r from-slate-50/50 to-slate-100/50 dark:from-slate-900/50 dark:to-slate-800/50">
+                                    <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/50">
                                       <div className="text-xs text-muted-foreground">
                                         <span className="font-medium text-foreground">
                                           {startIndex + 1}-
                                           {Math.min(startIndex + pageSize, results.length)}
                                         </span>{" "}
-                                        / {results.length}개 항목
+                                        {t("bigquery-search.results.itemCount", {
+                                          count: results.length,
+                                        })}
                                       </div>
 
                                       <div className="flex items-center gap-1">
@@ -1306,9 +1346,8 @@ export default function BigQuerySearchPage() {
                                                   size="icon"
                                                   className={cn(
                                                     "h-8 w-8 text-xs font-medium transition-all",
-                                                    page === p
-                                                      ? "bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-md hover:from-blue-600 hover:to-cyan-600"
-                                                      : "hover:bg-slate-100 dark:hover:bg-slate-800",
+                                                    page !== p &&
+                                                      "hover:bg-gray-100 dark:hover:bg-gray-800",
                                                   )}
                                                   onClick={() => setPage(message.id, p as number)}
                                                 >
@@ -1343,9 +1382,10 @@ export default function BigQuerySearchPage() {
                                       </div>
 
                                       <div className="text-xs text-muted-foreground">
-                                        페이지{" "}
-                                        <span className="font-medium text-foreground">{page}</span>{" "}
-                                        / {totalPages}
+                                        {t("bigquery-search.results.pageInfo", {
+                                          page,
+                                          total: totalPages,
+                                        })}
                                       </div>
                                     </div>
                                   )}
@@ -1360,7 +1400,7 @@ export default function BigQuerySearchPage() {
 
                 {message.role === "user" && (
                   <div className="flex-none">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-500 text-white">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
                       <User className="h-4 w-4" />
                     </div>
                   </div>
@@ -1383,7 +1423,7 @@ export default function BigQuerySearchPage() {
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-blue-500" />
-              {selectedLeadForEnrichment?.company_name || "회사 정보"}
+              {selectedLeadForEnrichment?.company_name || t("bigquery-search.enrichment.title")}
             </DialogTitle>
             <DialogDescription>
               {selectedLeadForEnrichment?.web_address && (
@@ -1409,9 +1449,9 @@ export default function BigQuerySearchPage() {
               <div className="flex flex-col items-center justify-center py-12 gap-4">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                 <div className="text-center">
-                  <p className="font-medium">정보를 조회하고 있습니다...</p>
+                  <p className="font-medium">{t("bigquery-search.enrichment.loading")}</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    웹사이트 분석 및 이메일 검색 중
+                    {t("bigquery-search.enrichment.loadingDesc")}
                   </p>
                 </div>
               </div>
@@ -1421,10 +1461,10 @@ export default function BigQuerySearchPage() {
                 {enrichmentData.companyInfo?.description && (
                   <div className="space-y-2">
                     <h4 className="font-semibold flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-slate-500" />
-                      회사 소개
+                      <Building2 className="h-4 w-4 text-gray-500" />
+                      {t("bigquery-search.enrichment.companyIntro")}
                     </h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed bg-slate-50 dark:bg-slate-900 rounded-lg p-4">
+                    <p className="text-sm text-muted-foreground leading-relaxed bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                       {enrichmentData.companyInfo.description}
                     </p>
                     {enrichmentData.companyInfo?.industry && (
@@ -1440,13 +1480,15 @@ export default function BigQuerySearchPage() {
                   <div className="space-y-3">
                     <h4 className="font-semibold flex items-center gap-2">
                       <Mail className="h-4 w-4 text-blue-500" />
-                      발견된 이메일 ({enrichmentData.emails.length}개)
+                      {t("bigquery-search.enrichment.emailsFound", {
+                        count: enrichmentData.emails.length,
+                      })}
                     </h4>
                     <div className="space-y-2">
                       {enrichmentData.emails.map((email, idx) => (
                         <div
                           key={email.value}
-                          className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 rounded-lg p-3"
+                          className="flex items-center justify-between bg-gray-50 dark:bg-gray-900 rounded-lg p-3"
                         >
                           <div className="flex items-center gap-3">
                             <span className="text-xs text-muted-foreground font-mono">
@@ -1464,7 +1506,9 @@ export default function BigQuerySearchPage() {
                               variant={email.type === "generic" ? "default" : "secondary"}
                               className="text-xs"
                             >
-                              {email.type === "generic" ? "공용" : email.type}
+                              {email.type === "generic"
+                                ? t("bigquery-search.enrichment.emailGeneric")
+                                : email.type}
                             </Badge>
                             {email.confidence !== undefined && email.confidence > 0 && (
                               <span className="text-xs text-muted-foreground">
@@ -1478,7 +1522,7 @@ export default function BigQuerySearchPage() {
                               className="h-7 w-7 p-0"
                               onClick={() => {
                                 navigator.clipboard.writeText(email.value)
-                                toast.success("이메일 복사됨")
+                                toast.success(t("bigquery-search.enrichment.emailCopied"))
                               }}
                             >
                               <Copy className="h-3 w-3" />
@@ -1495,10 +1539,10 @@ export default function BigQuerySearchPage() {
                   <div className="text-center py-6 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
                     <Mail className="h-8 w-8 text-amber-500 mx-auto mb-2" />
                     <p className="text-sm text-amber-700 dark:text-amber-400">
-                      공개된 이메일을 찾지 못했습니다
+                      {t("bigquery-search.enrichment.noEmails")}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Hunter.io API 키를 설정하면 더 많은 이메일을 찾을 수 있습니다
+                      {t("bigquery-search.enrichment.hunterHint")}
                     </p>
                   </div>
                 )}
@@ -1507,31 +1551,39 @@ export default function BigQuerySearchPage() {
                 {selectedLeadForEnrichment && (
                   <div className="space-y-2">
                     <h4 className="font-semibold flex items-center gap-2">
-                      <User className="h-4 w-4 text-slate-500" />
-                      기존 리드 정보
+                      <User className="h-4 w-4 text-gray-500" />
+                      {t("bigquery-search.enrichment.existingLead")}
                     </h4>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       {selectedLeadForEnrichment.email && (
-                        <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-3">
-                          <span className="text-xs text-muted-foreground">이메일</span>
+                        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
+                          <span className="text-xs text-muted-foreground">
+                            {t("bigquery-search.lead.email")}
+                          </span>
                           <p className="font-mono truncate">{selectedLeadForEnrichment.email}</p>
                         </div>
                       )}
                       {selectedLeadForEnrichment.phone && (
-                        <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-3">
-                          <span className="text-xs text-muted-foreground">전화번호</span>
+                        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
+                          <span className="text-xs text-muted-foreground">
+                            {t("bigquery-search.lead.phone")}
+                          </span>
                           <p>{selectedLeadForEnrichment.phone}</p>
                         </div>
                       )}
                       {selectedLeadForEnrichment.industry && (
-                        <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-3">
-                          <span className="text-xs text-muted-foreground">산업</span>
+                        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
+                          <span className="text-xs text-muted-foreground">
+                            {t("bigquery-search.lead.industry")}
+                          </span>
                           <p>{selectedLeadForEnrichment.industry}</p>
                         </div>
                       )}
                       {selectedLeadForEnrichment.employee && (
-                        <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-3">
-                          <span className="text-xs text-muted-foreground">직원수</span>
+                        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
+                          <span className="text-xs text-muted-foreground">
+                            {t("bigquery-search.lead.employees")}
+                          </span>
                           <p>{selectedLeadForEnrichment.employee}</p>
                         </div>
                       )}
@@ -1542,7 +1594,9 @@ export default function BigQuerySearchPage() {
             ) : (
               <div className="flex flex-col items-center justify-center py-12 gap-4">
                 <X className="h-8 w-8 text-red-500" />
-                <p className="text-sm text-muted-foreground">정보를 불러오지 못했습니다</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("bigquery-search.enrichment.loadFailed")}
+                </p>
               </div>
             )}
           </div>

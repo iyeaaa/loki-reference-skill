@@ -28,8 +28,31 @@ export async function analyzeQuestion(state: ChatbotState): Promise<Partial<Chat
   })
 
   try {
+    // Look for pending sequence activation in messages (sequence was just created and awaiting activation)
+    let pendingSequenceInfo: {
+      sequenceId?: string
+      sequenceName?: string
+      customerGroupName?: string
+      enrollmentsCount?: number
+      totalSteps?: number
+    } | null = null
+
+    for (let i = state.messages.length - 1; i >= 0; i--) {
+      const msg = state.messages[i]
+      if (msg?.metadata?.pendingSequenceActivation) {
+        pendingSequenceInfo = msg.metadata.pendingSequenceActivation
+        break
+      }
+    }
+
+    // PRIORITY CHECK: If there's a pending sequence activation, let LLM decide the intent
+    // This is smarter than keyword matching - LLM understands natural language
+    // Skip the sequenceGenerationRequest bypass to allow proper analysis
+    const hasPendingActivation = !!pendingSequenceInfo?.sequenceId
+
     // PRIORITY CHECK: Sequence generation request bypasses normal analysis
-    if (state.sequenceGenerationRequest) {
+    // BUT only if there's no pending sequence activation (user might be trying to activate, not generate again)
+    if (state.sequenceGenerationRequest && !hasPendingActivation) {
       chatbotLogger.info(
         `[Analyze] Detected sequence generation request for group: ${state.sequenceGenerationRequest.customerGroupName}`,
       )
@@ -59,6 +82,9 @@ export async function analyzeQuestion(state: ChatbotState): Promise<Partial<Chat
     // Check if CSV data is present
     const hasCSV = !!state.csvData && state.csvData.rowCount > 0
 
+    // Pass pending sequence info to prompt so LLM can understand context
+    const pendingActivation = pendingSequenceInfo?.sequenceId ? pendingSequenceInfo : undefined
+
     const prompt =
       hasCSV && state.csvData
         ? getAnalysisPromptWithCSV(
@@ -67,7 +93,20 @@ export async function analyzeQuestion(state: ChatbotState): Promise<Partial<Chat
             state.csvData,
             state.messages,
           )
-        : getAnalysisPrompt(state.currentQuestion, state.workspaceId, state.messages)
+        : getAnalysisPrompt(
+            state.currentQuestion,
+            state.workspaceId,
+            state.messages,
+            pendingActivation as
+              | {
+                  sequenceId: string
+                  sequenceName?: string
+                  customerGroupName?: string
+                  enrollmentsCount?: number
+                  totalSteps?: number
+                }
+              | undefined,
+          )
 
     // Generate analysis using LLM (no intermediate progress events)
     const response = await llm.invoke(prompt)
@@ -78,6 +117,95 @@ export async function analyzeQuestion(state: ChatbotState): Promise<Partial<Chat
     const jsonStr = jsonMatch?.[1] || content
 
     const analysis = JSON.parse((jsonStr || content).trim())
+
+    // Check if this is a sequence ACTIVATION request from LLM analysis
+    if (
+      analysis.operationType === "sequence_activation" ||
+      analysis.intent === "sequence_activation_request"
+    ) {
+      chatbotLogger.info("[Analyze] Detected sequence activation intent from LLM analysis")
+
+      // Look for pending sequence activation info in conversation context
+      let pendingSequenceInfo: {
+        sequenceId?: string
+        sequenceName?: string
+        customerGroupName?: string
+        enrollmentsCount?: number
+        totalSteps?: number
+      } = {}
+
+      // Search through messages for pending sequence activation info
+      for (let i = state.messages.length - 1; i >= 0; i--) {
+        const msg = state.messages[i]
+        if (msg?.metadata?.pendingSequenceActivation) {
+          pendingSequenceInfo = msg.metadata.pendingSequenceActivation
+          chatbotLogger.info(
+            `[Analyze] Found pending sequence from context: ${pendingSequenceInfo.sequenceName}`,
+          )
+          break
+        }
+      }
+
+      const duration = Date.now() - startTime
+
+      // If no pending sequence found, inform user
+      if (!pendingSequenceInfo.sequenceId) {
+        chatbotLogger.info("[Analyze] No pending sequence found in context")
+        chatbotLogger.nodeSuccess("analyzeQuestion (no pending sequence)", duration)
+
+        if (emitter) {
+          emitter.nodeComplete("analyzeQuestion", "No pending sequence found", {
+            intent: "sequence_activation_request",
+            noPendingSequence: true,
+          })
+        }
+
+        return {
+          metadata: {
+            intent: "sequence_activation_request",
+            operationType: "sequence_activation",
+          },
+          analysis:
+            "활성화할 시퀀스가 없습니다.\n\n" +
+            "먼저 시퀀스를 생성해주세요. 리드를 업로드한 후 '시퀀스 생성해줘'라고 말씀해주시면 됩니다.",
+          needsClarification: false,
+          schemaContext: "",
+        }
+      }
+
+      chatbotLogger.nodeSuccess("analyzeQuestion (sequence activation)", duration)
+
+      if (emitter) {
+        emitter.progress(
+          "analyzeQuestion",
+          `"${pendingSequenceInfo.sequenceName}" 시퀀스를 활성화합니다...`,
+        )
+        emitter.nodeComplete("analyzeQuestion", "Starting sequence activation", {
+          intent: "sequence_activation",
+          isSequenceActivationRequest: true,
+          pendingSequenceInfo,
+        })
+      }
+
+      // Route to sequence activation flow
+      return {
+        metadata: {
+          intent: "sequence_activation",
+          operationType: "sequence_activation",
+          requiredTables: ["sequences", "sequence_enrollments", "sequence_step_executions"],
+        },
+        sequenceActivationRequest: {
+          sequenceId: pendingSequenceInfo.sequenceId,
+          sequenceName: pendingSequenceInfo.sequenceName,
+          customerGroupName: pendingSequenceInfo.customerGroupName,
+          enrollmentsCount: pendingSequenceInfo.enrollmentsCount || 0,
+          totalSteps: pendingSequenceInfo.totalSteps || 0,
+        },
+        isSequenceActivationRequest: true,
+        needsClarification: false,
+        schemaContext: "",
+      }
+    }
 
     // Check if this is a sequence generation request from LLM analysis
     if (

@@ -49,6 +49,7 @@ export interface ChatbotProgress {
 export interface ChatMessage {
   role: "user" | "assistant"
   content: string
+  additionalPrompt?: string // AI에게만 전달되는 추가 프롬프트 (사용자에게는 표시되지 않음)
   timestamp: Date
   attachment?: FileAttachment
   metadata?: {

@@ -1583,10 +1583,44 @@ export async function bulkEnrollWithScheduling(data: {
       ),
     )
 
-  // Separate active and completed enrollments
+  // Separate active, paused, and completed enrollments
   const activeEnrollments = existingEnrollments.filter((e) => e.status === "active")
+  const pausedEnrollments = existingEnrollments.filter((e) => e.status === "paused")
   const completedEnrollments = existingEnrollments.filter((e) => e.status === "completed")
   const completedLeadIds = new Set(completedEnrollments.map((e) => e.leadId))
+
+  // Activate paused enrollments (from chatbot-generated sequences)
+  if (pausedEnrollments.length > 0) {
+    logger.info(
+      {
+        sequenceId: data.sequenceId,
+        pausedCount: pausedEnrollments.length,
+        pausedLeadIds: pausedEnrollments.map((e) => e.leadId),
+      },
+      "🔄 [STEP-BASED] Activating paused enrollments",
+    )
+
+    // Update paused enrollments to active
+    const pausedEnrollmentIds = pausedEnrollments.map((e) => e.id)
+    await db
+      .update(sequenceEnrollments)
+      .set({
+        status: "active",
+        // nextStepScheduledAt will be set below when creating step executions
+      })
+      .where(or(...pausedEnrollmentIds.map((id) => eq(sequenceEnrollments.id, id))))
+
+    // Move activated enrollments to activeEnrollments list for step execution creation
+    activeEnrollments.push(...pausedEnrollments.map((e) => ({ ...e, status: "active" as const })))
+
+    logger.info(
+      {
+        sequenceId: data.sequenceId,
+        activatedCount: pausedEnrollments.length,
+      },
+      "✅ [STEP-BASED] Activated paused enrollments",
+    )
+  }
 
   // Check if all leads are already completed
   if (completedLeadIds.size === validLeadIds.length) {
@@ -1678,6 +1712,7 @@ export async function bulkEnrollWithScheduling(data: {
       totalValidLeads: validLeadIds.length,
       existingEnrollments: existingEnrollments.length,
       activeEnrollments: activeEnrollments.length,
+      pausedEnrollmentsActivated: pausedEnrollments.length,
       completedEnrollments: completedLeadIds.size,
       duplicateEmailsSkipped: duplicateEmailCount,
       newLeadsToEnroll: newLeadIds.length,
@@ -1921,7 +1956,8 @@ export async function bulkEnrollWithScheduling(data: {
 
   const result = {
     enrolledCount: newEnrollments.length,
-    updatedCount: activeEnrollments.length,
+    updatedCount: activeEnrollments.length - pausedEnrollments.length, // Subtract paused since we added them
+    activatedPausedCount: pausedEnrollments.length,
     skippedCompleted: completedLeadIds.size,
     totalSteps: steps.length,
     scheduledExecutions: stepExecutionValues.length,

@@ -443,4 +443,130 @@ export const chatbotApi = {
     console.log("[Chatbot] Sending final message from accumulated data:", finalMessage)
     onMessage(finalMessage)
   },
+
+  // ============================================
+  // Conversation Management APIs
+  // ============================================
+
+  /**
+   * Get all conversations for a user in a workspace
+   */
+  async getConversations(workspaceId: string, userId: string): Promise<ChatConversation[]> {
+    const token = getToken()
+    const params = new URLSearchParams({ workspaceId, userId })
+    const response = await fetch(`${API_BASE_URL}/api/chatbot/conversations?${params}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch conversations")
+    }
+
+    const result = await response.json()
+    return result.data || result
+  },
+
+  /**
+   * Create a new conversation
+   */
+  async createConversation(
+    workspaceId: string,
+    userId: string,
+    title?: string,
+  ): Promise<ChatConversation> {
+    const token = getToken()
+    const response = await fetch(`${API_BASE_URL}/api/chatbot/conversations`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ workspaceId, userId, title }),
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to create conversation")
+    }
+
+    const result = await response.json()
+    return result.data || result
+  },
+
+  /**
+   * Update conversation title
+   */
+  async updateConversationTitle(id: string, title: string): Promise<ChatConversation> {
+    const token = getToken()
+    const response = await fetch(`${API_BASE_URL}/api/chatbot/conversations/${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ title }),
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to update conversation title")
+    }
+
+    const result = await response.json()
+    return result.data || result
+  },
+
+  /**
+   * Delete a conversation (soft delete)
+   */
+  async deleteConversation(id: string): Promise<void> {
+    const token = getToken()
+    const response = await fetch(`${API_BASE_URL}/api/chatbot/conversations/${id}`, {
+      method: "DELETE",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to delete conversation")
+    }
+  },
+
+  /**
+   * Generate AI title for a conversation based on first message
+   */
+  async generateConversationTitle(
+    id: string,
+    firstMessage: string,
+    locale?: string,
+  ): Promise<{ title: string }> {
+    const token = getToken()
+    const response = await fetch(`${API_BASE_URL}/api/chatbot/conversations/${id}/generate-title`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ firstMessage, locale }),
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to generate conversation title")
+    }
+
+    const result = await response.json()
+    return result.data || result
+  },
+}
+
+// Export ChatConversation type
+export interface ChatConversation {
+  id: string
+  userId: string
+  workspaceId: string
+  title: string
+  createdAt: string
+  updatedAt: string
+  isDeleted: boolean
 }

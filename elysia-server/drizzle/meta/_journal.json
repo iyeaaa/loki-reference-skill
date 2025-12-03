@@ -204,6 +204,20 @@
       "when": 1763621169877,
       "tag": "0028_funny_oracle",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1764724447704,
+      "tag": "0029_broken_spitfire",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1764732381513,
+      "tag": "0030_boring_mister_fear",
+      "breakpoints": true
     }
   ]
 }

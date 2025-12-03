@@ -748,7 +748,7 @@ export async function generateSequenceWithStrategy(state: ChatbotState): Promise
       let cteQuery = `
 WITH
 -- ==================================================================================
--- CTE 1: Create Sequence (ACTIVE)
+-- CTE 1: Create Sequence (PAUSED - requires user activation)
 -- ==================================================================================
 new_sequence AS (
   INSERT INTO sequences (
@@ -766,7 +766,7 @@ new_sequence AS (
     '${customerGroupId}',
     'AI-Generated Sequence for ${escapedGroupName}',
     '${strategySummary.replace(/'/g, "''")} (${samplesAnalyzed} samples analyzed)',
-    'active',
+    'paused',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
   )
@@ -821,11 +821,12 @@ ${cteName} AS (
         })
         .join("\n      UNION ALL ")
 
-      // Add enrollment CTE - auto-enroll all leads from the customer group
+      // Add enrollment CTE - auto-enroll all leads from the customer group (PAUSED status)
+      // Note: step_executions will be created when user activates the sequence
       cteQuery += `,
 
 -- ==================================================================================
--- CTE: Auto-enroll all leads from customer group
+-- CTE: Auto-enroll all leads from customer group (PAUSED - awaiting activation)
 -- ==================================================================================
 new_enrollments AS (
   INSERT INTO sequence_enrollments (
@@ -844,38 +845,11 @@ new_enrollments AS (
     cgm.lead_id,
     '${defaultEmailAccount.id}',
     1,
-    'active',
+    'paused',
     CURRENT_TIMESTAMP,
-    CURRENT_TIMESTAMP + INTERVAL '2 minutes'
+    NULL
   FROM customer_group_members cgm
   WHERE cgm.group_id = '${customerGroupId}'
-  RETURNING *
-),
-
--- ==================================================================================
--- CTE: Create step executions for first step (schedule emails to be sent)
--- ==================================================================================
-new_step_executions AS (
-  INSERT INTO sequence_step_executions (
-    id,
-    enrollment_id,
-    step_id,
-    step_order,
-    status,
-    scheduled_at,
-    generation_source,
-    created_at
-  )
-  SELECT
-    gen_random_uuid(),
-    ne.id,
-    (SELECT id FROM new_sequence_step_1),
-    1,
-    'pending',
-    CURRENT_TIMESTAMP + INTERVAL '2 minutes',
-    'manual',
-    CURRENT_TIMESTAMP
-  FROM new_enrollments ne
   RETURNING *
 )`
 
@@ -892,9 +866,8 @@ SELECT json_build_object(
     ) steps
   ),
   'enrollments_count', (SELECT COUNT(*) FROM new_enrollments),
-  'step_executions_count', (SELECT COUNT(*) FROM new_step_executions),
   'total_steps', ${escapedSteps.length},
-  'status', 'active',
+  'status', 'paused',
   'linked_to_group', true,
   'customer_group_id', '${customerGroupId}',
   'customer_group_name', '${escapedGroupName}',
@@ -938,7 +911,6 @@ SELECT json_build_object(
             timezone: string
           }[]
           enrollments_count: number
-          step_executions_count: number
           total_steps: number
           total_leads_in_group: number
           customer_group_name: string
@@ -1029,10 +1001,10 @@ SELECT json_build_object(
         )
       }
 
-      // Validation: Verify sequence status is active
-      if (sequenceData.sequence.status !== "active") {
+      // Validation: Verify sequence status is paused (awaiting user activation)
+      if (sequenceData.sequence.status !== "paused") {
         chatbotLogger.warn(
-          `[Sequence Generation] Sequence created but status is not active: ${sequenceData.sequence.status}`,
+          `[Sequence Generation] Sequence created but status is not paused: ${sequenceData.sequence.status}`,
         )
       }
 
@@ -1102,7 +1074,7 @@ ${strategy.personalization_tips.map((tip) => `• ${tip}`).join("\n")}`
 
 **Sequence Details:**
 - **Name:** ${result.sequence.name}
-- **Status:** ✅ ${result.sequence.status.toUpperCase()}
+- **Status:** ⏸️ 일시정지 (사용자 승인 대기)
 - **ID:** ${result.sequence.id}
 - **Customer Group:** ${result.customer_group_name}
 - **Recipients Enrolled:** ${result.enrollments_count}명
@@ -1134,10 +1106,14 @@ ${result.steps
   .join("\n")}
 ${personalizationTips}
 
-**Auto-Enrollment Complete:**
-✅ **${result.enrollments_count}명**의 리드가 자동으로 시퀀스에 등록되었습니다
-✅ 첫 번째 이메일이 약 2분 후에 발송됩니다
-✅ 이메일 성과 지표는 Sequences 페이지에서 모니터링할 수 있습니다
+---
+
+⏸️ **시퀀스가 일시정지 상태로 생성되었습니다.**
+📝 **${result.enrollments_count}명**의 리드가 등록되어 실행 대기 중입니다.
+
+👉 **시퀀스 내용을 검토한 후 "실행해줘" 또는 "시퀀스 시작해줘"라고 말씀해주시면 이메일 발송이 시작됩니다.**
+
+💡 시퀀스 페이지에서 직접 내용을 확인하고 수정할 수도 있습니다: [시퀀스 편집](/sequences/edit?id=${result.sequence.id})
     `.trim()
 
     return new Command({
@@ -1147,6 +1123,17 @@ ${personalizationTips}
         generatedSequenceId: result.sequence.id,
         pendingSequenceGeneration: false,
         sequenceGenerationRequest: undefined,
+        // Store sequence info in metadata for later activation
+        metadata: {
+          ...(state.metadata || {}),
+          pendingSequenceActivation: {
+            sequenceId: result.sequence.id,
+            sequenceName: result.sequence.name,
+            customerGroupName: result.customer_group_name,
+            enrollmentsCount: result.enrollments_count,
+            totalSteps: result.total_steps,
+          },
+        },
       },
     })
   } catch (error) {
@@ -1301,4 +1288,151 @@ ${keyPointsText}
 3. 이메일 시퀀스의 ${step.step_order}번째 스텝임을 고려해주세요.
 4. {{회사명}}, {{담당자명}} 등의 변수를 적절히 활용해주세요.
 5. 명확한 Call-to-Action을 포함해주세요.`
+}
+
+/**
+ * Node: handleSequenceActivation
+ *
+ * Activates a paused sequence by calling the activate-step-based API.
+ * This node is triggered when user confirms they want to start the sequence.
+ *
+ * Flow:
+ * 1. Check if sequenceActivationRequest exists
+ * 2. Call activate-step-based API to activate the sequence
+ * 3. The API will:
+ *    - Update sequence status from 'paused' to 'active'
+ *    - Update enrollment status from 'paused' to 'active'
+ *    - Create step_executions with current time + 2 minutes
+ * 4. Return success message
+ */
+export async function handleSequenceActivation(state: ChatbotState): Promise<Command> {
+  const startTime = Date.now()
+  chatbotLogger.nodeStart("handleSequenceActivation")
+
+  const emitter = state._emitter
+
+  chatbotLogger.nodeDetail("handleSequenceActivation", {
+    hasRequest: !!state.sequenceActivationRequest,
+    sequenceId: state.sequenceActivationRequest?.sequenceId,
+    sequenceName: state.sequenceActivationRequest?.sequenceName,
+  })
+
+  // If no request, skip to end
+  if (!state.sequenceActivationRequest) {
+    const duration = Date.now() - startTime
+    chatbotLogger.nodeSuccess("handleSequenceActivation (no request)", duration)
+
+    return new Command({
+      goto: END,
+      update: {
+        analysis: "활성화할 시퀀스가 없습니다.",
+      },
+    })
+  }
+
+  const { sequenceId, sequenceName, customerGroupName, enrollmentsCount, totalSteps } =
+    state.sequenceActivationRequest
+
+  if (emitter) {
+    emitter.nodeStart("handleSequenceActivation", `"${sequenceName}" 시퀀스를 활성화하는 중...`)
+  }
+
+  try {
+    // Call the activate-step-based API internally
+    chatbotLogger.info(`[Sequence Activation] Activating sequence ${sequenceId}`)
+
+    // Get API base URL from environment
+    const apiBaseUrl = process.env.API_BASE_URL || "http://localhost:3010"
+    const activateUrl = `${apiBaseUrl}/api/v1/sequences/${sequenceId}/activate-step-based`
+
+    const response = await fetch(activateUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = (await response.json()) as { message?: string }
+      throw new Error(errorData.message || `Failed to activate sequence: ${response.status}`)
+    }
+
+    const result = (await response.json()) as {
+      success: boolean
+      message: string
+      stepsCount?: number
+      alreadyActive?: boolean
+    }
+
+    const duration = Date.now() - startTime
+    chatbotLogger.nodeSuccess("handleSequenceActivation", duration)
+
+    if (emitter) {
+      emitter.nodeComplete("handleSequenceActivation", `시퀀스가 활성화되었습니다!`, {
+        sequenceId,
+        success: true,
+      })
+    }
+
+    // Build success message
+    const alreadyActiveNote = result.alreadyActive ? " (이미 활성화된 상태입니다)" : ""
+    const successMessage = `
+🚀 **시퀀스가 활성화되었습니다!${alreadyActiveNote}**
+
+**활성화된 시퀀스 정보:**
+- **시퀀스명:** ${sequenceName || "AI-Generated Sequence"}
+- **고객 그룹:** ${customerGroupName || "Unknown"}
+- **등록된 리드:** ${enrollmentsCount || 0}명
+- **총 스텝 수:** ${totalSteps || result.stepsCount || 0}개
+
+✅ **첫 번째 이메일이 약 2분 후에 발송됩니다.**
+✅ 이메일 발송 상태는 [시퀀스 페이지](/sequences/edit?id=${sequenceId})에서 확인하실 수 있습니다.
+
+**알림:** 이메일 발송 후 오픈/클릭/답장 등의 성과 지표를 실시간으로 모니터링할 수 있습니다.
+    `.trim()
+
+    return new Command({
+      goto: END,
+      update: {
+        analysis: successMessage,
+        isSequenceActivationRequest: false,
+        sequenceActivationRequest: undefined,
+        // Clear the pending activation from metadata
+        metadata: {
+          ...(state.metadata || {}),
+          pendingSequenceActivation: undefined,
+        },
+      },
+    })
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    const duration = Date.now() - startTime
+
+    chatbotLogger.nodeError("handleSequenceActivation", errorMessage, duration)
+
+    if (emitter) {
+      emitter.error("handleSequenceActivation", `시퀀스 활성화 실패: ${errorMessage}`)
+    }
+
+    const failureMessage = `
+❌ **시퀀스 활성화 실패**
+
+**오류:** ${errorMessage}
+
+**가능한 원인:**
+- 시퀀스가 이미 삭제되었을 수 있습니다
+- 이메일 계정이 설정되지 않았을 수 있습니다
+- 네트워크 오류가 발생했을 수 있습니다
+
+다시 시도하시거나 [시퀀스 페이지](/sequences)에서 직접 활성화해주세요.
+    `.trim()
+
+    return new Command({
+      goto: END,
+      update: {
+        analysis: failureMessage,
+        error: errorMessage,
+      },
+    })
+  }
 }

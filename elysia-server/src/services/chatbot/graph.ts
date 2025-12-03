@@ -9,6 +9,7 @@ import { analyzeResults } from "./nodes/result-analyzer"
 import {
   analyzeLeadsAndGenerateStrategy,
   generateSequenceWithStrategy,
+  handleSequenceActivation,
   handleSequenceGenerationRequest,
 } from "./nodes/sequence-generation"
 import { executeSequential } from "./nodes/sequential-executor"
@@ -34,6 +35,7 @@ const NODE_NAMES = {
   HANDLE_SEQUENCE_GENERATION_REQUEST: "handleSequenceGenerationRequest",
   ANALYZE_LEADS_AND_GENERATE_STRATEGY: "analyzeLeadsAndGenerateStrategy",
   GENERATE_SEQUENCE_WITH_STRATEGY: "generateSequenceWithStrategy",
+  HANDLE_SEQUENCE_ACTIVATION: "handleSequenceActivation",
 } as const
 
 type NodeName = (typeof NODE_NAMES)[keyof typeof NODE_NAMES]
@@ -205,7 +207,17 @@ function routeAfterAnalysis(state: ChatbotState): NodeName {
     return NODE_NAMES.FORMAT_RESPONSE
   }
 
-  // PRIORITY 2: Check for sequence generation request (from button click with metadata)
+  // PRIORITY 2: Check for sequence ACTIVATION request (user wants to start a paused sequence)
+  if (state.isSequenceActivationRequest || state.sequenceActivationRequest) {
+    chatbotLogger.routeDecision(
+      NODE_NAMES.ANALYZE,
+      NODE_NAMES.HANDLE_SEQUENCE_ACTIVATION,
+      "sequence activation detected - activating paused sequence",
+    )
+    return NODE_NAMES.HANDLE_SEQUENCE_ACTIVATION
+  }
+
+  // PRIORITY 3: Check for sequence generation request (from button click with metadata)
   if (state.isSequenceGenerationRequest || state.sequenceGenerationRequest) {
     chatbotLogger.routeDecision(
       NODE_NAMES.ANALYZE,
@@ -355,12 +367,16 @@ export function createChatbotGraph() {
   workflow.addNode(NODE_NAMES.GENERATE_SEQUENCE_WITH_STRATEGY, generateSequenceWithStrategy, {
     ends: [END],
   })
+  workflow.addNode(NODE_NAMES.HANDLE_SEQUENCE_ACTIVATION, handleSequenceActivation, {
+    ends: [END],
+  })
 
   // 엣지 정의
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
   workflow.addConditionalEdges(NODE_NAMES.ANALYZE, routeAfterAnalysis, {
     [NODE_NAMES.HANDLE_ERROR]: NODE_NAMES.HANDLE_ERROR,
     [NODE_NAMES.ASK_CLARIFICATION]: NODE_NAMES.ASK_CLARIFICATION,
+    [NODE_NAMES.HANDLE_SEQUENCE_ACTIVATION]: NODE_NAMES.HANDLE_SEQUENCE_ACTIVATION,
     [NODE_NAMES.HANDLE_SEQUENCE_GENERATION_REQUEST]: NODE_NAMES.HANDLE_SEQUENCE_GENERATION_REQUEST,
     [NODE_NAMES.GENERATE_SQL]: NODE_NAMES.GENERATE_SQL,
     [NODE_NAMES.FORMAT_RESPONSE]: NODE_NAMES.FORMAT_RESPONSE,

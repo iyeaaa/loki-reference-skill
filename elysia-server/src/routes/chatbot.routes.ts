@@ -1,10 +1,14 @@
 import { cors } from "@elysiajs/cors"
 import { Command } from "@langchain/langgraph"
+import { ChatOpenAI } from "@langchain/openai"
+import { and, asc, desc, eq } from "drizzle-orm"
 import { Elysia, t } from "elysia"
+import { db } from "../db"
+import { chatConversations, chatMessages } from "../db/schema"
 import { createChatbotGraph } from "../services/chatbot"
 import { createNodeEmitter } from "../services/chatbot/sse-context"
 import type { ChatbotState } from "../services/chatbot/state"
-import { errorResponse, successResponse } from "../types/response.types"
+import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
 import { chatbotLogger } from "../utils/logger"
 import { createSSEResponse } from "../utils/sse-helper"
 
@@ -322,6 +326,60 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
 
               // Send final done event with complete state
               if (!isWaitingForConfirmation) {
+                // Save messages to database if conversationId looks like a valid UUID
+                const convId = body.conversationId || ""
+                const isValidUUID =
+                  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(convId)
+
+                if (isValidUUID && currentState?.analysis) {
+                  try {
+                    // Save user message
+                    await db.insert(chatMessages).values({
+                      conversationId: convId,
+                      role: "user",
+                      content: body.question,
+                      metadata: lastMessage?.attachment
+                        ? { attachment: lastMessage.attachment }
+                        : null,
+                    })
+
+                    // Save assistant message with metadata
+                    await db.insert(chatMessages).values({
+                      conversationId: convId,
+                      role: "assistant",
+                      content: currentState.analysis,
+                      metadata: {
+                        ...(currentState.generatedSQL && { sql: currentState.generatedSQL }),
+                        ...(currentState.sqlExplanation && {
+                          sqlExplanation: currentState.sqlExplanation,
+                        }),
+                        ...(currentState.queryResult?.length && {
+                          result: currentState.queryResult,
+                        }),
+                        ...(currentState.insights?.length && { insights: currentState.insights }),
+                        ...(currentState.visualizationSuggestions?.length && {
+                          visualization: currentState.visualizationSuggestions,
+                        }),
+                        ...(currentState.followUpQuestions?.length && {
+                          followUpQuestions: currentState.followUpQuestions,
+                        }),
+                      },
+                    })
+
+                    // Update conversation's updatedAt
+                    await db
+                      .update(chatConversations)
+                      .set({ updatedAt: new Date() })
+                      .where(eq(chatConversations.id, convId))
+
+                    chatbotLogger.info(`[DB] Saved messages to conversation ${convId}`)
+                  } catch (dbError) {
+                    chatbotLogger.error(
+                      `[DB] Failed to save messages: ${dbError instanceof Error ? dbError.message : String(dbError)}`,
+                    )
+                  }
+                }
+
                 const doneEvent = {
                   type: "done",
                   state: {
@@ -441,12 +499,20 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
     chatbotLogger.routeStart("GET", `/api/chatbot/history/${params.conversationId}`)
 
     try {
-      const graph = createChatbotGraph()
-      const config = {
-        configurable: { thread_id: params.conversationId },
-      }
+      // Fetch messages from database instead of LangGraph checkpoint
+      const messages = await db
+        .select()
+        .from(chatMessages)
+        .where(eq(chatMessages.conversationId, params.conversationId))
+        .orderBy(asc(chatMessages.createdAt))
 
-      const state = await graph.getState(config)
+      // Transform to match expected format
+      const formattedMessages = messages.map((msg) => ({
+        role: msg.role as "user" | "assistant",
+        content: msg.content,
+        timestamp: msg.createdAt,
+        metadata: msg.metadata as Record<string, unknown> | undefined,
+      }))
 
       const duration = Date.now() - startTime
       chatbotLogger.routeSuccess(
@@ -457,7 +523,7 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
       )
 
       return successResponse({
-        messages: state.values.messages || [],
+        messages: formattedMessages,
         conversationId: params.conversationId,
       })
     } catch (_error) {
@@ -661,6 +727,312 @@ export const chatbotRoutes = new Elysia({ prefix: "/api/chatbot" })
       body: t.Object({
         conversationId: t.String(),
         confirmed: t.Boolean(),
+      }),
+    },
+  )
+  // ============================================
+  // Conversation Management Endpoints
+  // ============================================
+  .options("/conversations", ({ set, request }) => {
+    const origin = request.headers.get("origin") || "*"
+    set.headers = {
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Credentials": "true",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Request-ID, Accept",
+      "Access-Control-Max-Age": "86400",
+    }
+    set.status = 204
+    return ""
+  })
+  // GET /api/chatbot/conversations - List user's conversations
+  .get(
+    "/conversations",
+    async ({ query }) => {
+      const startTime = Date.now()
+      chatbotLogger.routeStart("GET", "/api/chatbot/conversations")
+
+      try {
+        const { workspaceId, userId } = query
+
+        if (!workspaceId || !userId) {
+          return errorResponse("workspaceId and userId are required")
+        }
+
+        const conversations = await db
+          .select()
+          .from(chatConversations)
+          .where(
+            and(
+              eq(chatConversations.workspaceId, workspaceId),
+              eq(chatConversations.userId, userId),
+              eq(chatConversations.isDeleted, false),
+            ),
+          )
+          .orderBy(desc(chatConversations.updatedAt))
+
+        const duration = Date.now() - startTime
+        chatbotLogger.routeSuccess("GET", "/api/chatbot/conversations", 200, duration)
+
+        return successResponse(conversations)
+      } catch (error) {
+        const duration = Date.now() - startTime
+        const errorMessage =
+          error instanceof Error ? error.message : "Failed to fetch conversations"
+        chatbotLogger.routeError("GET", "/api/chatbot/conversations", 500, duration, errorMessage)
+        return errorResponse(errorMessage)
+      }
+    },
+    {
+      query: t.Object({
+        workspaceId: t.String(),
+        userId: t.String(),
+      }),
+    },
+  )
+  // POST /api/chatbot/conversations - Create new conversation
+  .post(
+    "/conversations",
+    async ({ body }) => {
+      const startTime = Date.now()
+      chatbotLogger.routeStart("POST", "/api/chatbot/conversations")
+
+      try {
+        const { workspaceId, userId, title } = body
+
+        const [conversation] = await db
+          .insert(chatConversations)
+          .values({
+            workspaceId,
+            userId,
+            title: title || "새 채팅",
+          })
+          .returning()
+
+        const duration = Date.now() - startTime
+        chatbotLogger.routeSuccess("POST", "/api/chatbot/conversations", 201, duration)
+
+        return successResponse(conversation)
+      } catch (error) {
+        const duration = Date.now() - startTime
+        const errorMessage =
+          error instanceof Error ? error.message : "Failed to create conversation"
+        chatbotLogger.routeError("POST", "/api/chatbot/conversations", 500, duration, errorMessage)
+        return errorResponse(errorMessage)
+      }
+    },
+    {
+      body: t.Object({
+        workspaceId: t.String(),
+        userId: t.String(),
+        title: t.Optional(t.String()),
+      }),
+    },
+  )
+  .options("/conversations/:id", ({ set, request }) => {
+    const origin = request.headers.get("origin") || "*"
+    set.headers = {
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Credentials": "true",
+      "Access-Control-Allow-Methods": "GET, PATCH, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Request-ID, Accept",
+      "Access-Control-Max-Age": "86400",
+    }
+    set.status = 204
+    return ""
+  })
+  // PATCH /api/chatbot/conversations/:id - Update conversation title
+  .patch(
+    "/conversations/:id",
+    async ({ params, body }) => {
+      const startTime = Date.now()
+      chatbotLogger.routeStart("PATCH", `/api/chatbot/conversations/${params.id}`)
+
+      try {
+        const { title } = body
+
+        const [updated] = await db
+          .update(chatConversations)
+          .set({
+            title,
+            updatedAt: new Date(),
+          })
+          .where(eq(chatConversations.id, params.id))
+          .returning()
+
+        if (!updated) {
+          return errorResponse("Conversation not found", ResponseCode.NOT_FOUND)
+        }
+
+        const duration = Date.now() - startTime
+        chatbotLogger.routeSuccess(
+          "PATCH",
+          `/api/chatbot/conversations/${params.id}`,
+          200,
+          duration,
+        )
+
+        return successResponse(updated)
+      } catch (error) {
+        const duration = Date.now() - startTime
+        const errorMessage =
+          error instanceof Error ? error.message : "Failed to update conversation"
+        chatbotLogger.routeError(
+          "PATCH",
+          `/api/chatbot/conversations/${params.id}`,
+          500,
+          duration,
+          errorMessage,
+        )
+        return errorResponse(errorMessage)
+      }
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        title: t.String(),
+      }),
+    },
+  )
+  // DELETE /api/chatbot/conversations/:id - Soft delete conversation
+  .delete(
+    "/conversations/:id",
+    async ({ params }) => {
+      const startTime = Date.now()
+      chatbotLogger.routeStart("DELETE", `/api/chatbot/conversations/${params.id}`)
+
+      try {
+        const [deleted] = await db
+          .update(chatConversations)
+          .set({
+            isDeleted: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(chatConversations.id, params.id))
+          .returning()
+
+        if (!deleted) {
+          return errorResponse("Conversation not found", ResponseCode.NOT_FOUND)
+        }
+
+        const duration = Date.now() - startTime
+        chatbotLogger.routeSuccess(
+          "DELETE",
+          `/api/chatbot/conversations/${params.id}`,
+          200,
+          duration,
+        )
+
+        return successResponse({ success: true })
+      } catch (error) {
+        const duration = Date.now() - startTime
+        const errorMessage =
+          error instanceof Error ? error.message : "Failed to delete conversation"
+        chatbotLogger.routeError(
+          "DELETE",
+          `/api/chatbot/conversations/${params.id}`,
+          500,
+          duration,
+          errorMessage,
+        )
+        return errorResponse(errorMessage)
+      }
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+    },
+  )
+  .options("/conversations/:id/generate-title", ({ set, request }) => {
+    const origin = request.headers.get("origin") || "*"
+    set.headers = {
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Credentials": "true",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Request-ID, Accept",
+      "Access-Control-Max-Age": "86400",
+    }
+    set.status = 204
+    return ""
+  })
+  // POST /api/chatbot/conversations/:id/generate-title - AI generate title from first message
+  .post(
+    "/conversations/:id/generate-title",
+    async ({ params, body }) => {
+      const startTime = Date.now()
+      chatbotLogger.routeStart("POST", `/api/chatbot/conversations/${params.id}/generate-title`)
+
+      try {
+        const { firstMessage, locale } = body
+
+        // Use OpenAI to generate a concise title
+        const llm = new ChatOpenAI({
+          modelName: "gpt-4o-mini",
+          temperature: 0.3,
+          maxTokens: 50,
+        })
+
+        const titlePrompt =
+          locale === "ko"
+            ? `다음 메시지의 핵심 주제를 5-10단어 이내의 짧은 제목으로 요약해주세요. 제목만 출력하세요:
+            
+"${firstMessage}"`
+            : `Summarize the core topic of the following message in a short title (5-10 words max). Output only the title:
+            
+"${firstMessage}"`
+
+        const response = await llm.invoke(titlePrompt)
+        const generatedTitle =
+          typeof response.content === "string"
+            ? response.content.trim().replace(/^["']|["']$/g, "")
+            : "새 채팅"
+
+        // Update the conversation with the generated title
+        const [updated] = await db
+          .update(chatConversations)
+          .set({
+            title: generatedTitle.substring(0, 255), // Ensure it fits in the column
+            updatedAt: new Date(),
+          })
+          .where(eq(chatConversations.id, params.id))
+          .returning()
+
+        if (!updated) {
+          return errorResponse("Conversation not found", ResponseCode.NOT_FOUND)
+        }
+
+        const duration = Date.now() - startTime
+        chatbotLogger.routeSuccess(
+          "POST",
+          `/api/chatbot/conversations/${params.id}/generate-title`,
+          200,
+          duration,
+        )
+
+        return successResponse({ title: updated.title })
+      } catch (error) {
+        const duration = Date.now() - startTime
+        const errorMessage = error instanceof Error ? error.message : "Failed to generate title"
+        chatbotLogger.routeError(
+          "POST",
+          `/api/chatbot/conversations/${params.id}/generate-title`,
+          500,
+          duration,
+          errorMessage,
+        )
+        return errorResponse(errorMessage)
+      }
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      body: t.Object({
+        firstMessage: t.String(),
+        locale: t.Optional(t.String()),
       }),
     },
   )

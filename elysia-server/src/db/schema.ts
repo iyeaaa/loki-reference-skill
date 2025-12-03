@@ -1,4 +1,5 @@
 export * from "./schema/activity-logs"
+export * from "./schema/chat-conversations"
 export * from "./schema/customer-groups"
 export * from "./schema/email-accounts"
 export * from "./schema/email-signatures"

@@ -41,14 +41,14 @@ artifact.executedQuery,실행된 쿼리,Executed Query
 artifact.queryResults,쿼리 결과 ({{count}}개 행),Query Results ({{count}} rows)
 artifact.keyInsights,주요 인사이트,Key Insights
 modal.autoGenerate.title,시퀀스 자동 생성,Auto-Generate Sequence
-modal.autoGenerate.description,"고객 그룹을 선택하고 요구사항을 설명해주세요. AI가 자동으로 시퀀스를 생성합니다.","Select a customer group and describe your requirements. AI will automatically generate a sequence for you."
+modal.autoGenerate.description,고객 그룹을 선택하고 요구사항을 설명해주세요. AI가 자동으로 시퀀스를 생성합니다.,Select a customer group and describe your requirements. AI will automatically generate a sequence for you.
 modal.customerGroup,고객 그룹,Customer Group
 modal.loadingGroups,고객 그룹을 불러오는 중...,Loading customer groups...
 modal.selectGroup,고객 그룹 선택,Select a customer group
 modal.leads,리드,leads
 modal.noGroups,사용 가능한 고객 그룹이 없습니다,No customer groups available
 modal.requirementsLabel,요구사항,Requirements
-modal.requirementsPlaceholder,"예시: B2B SaaS 회사를 위한 5단계 육성 시퀀스를 만들어주세요. 회사 소개로 시작하여 후속 메일에는 제품 데모와 사례 연구를 포함해주세요.","Example: Create a 5-step nurturing sequence for B2B SaaS companies. Start with company introduction then include product demos and case studies in follow-ups."
+modal.requirementsPlaceholder,예시: B2B SaaS 회사를 위한 5단계 육성 시퀀스를 만들어주세요. 회사 소개로 시작하여 후속 메일에는 제품 데모와 사례 연구를 포함해주세요.,Example: Create a 5-step nurturing sequence for B2B SaaS companies. Start with company introduction then include product demos and case studies in follow-ups.
 modal.requirementsHelp,"생성하려는 시퀀스의 목적, 단계 및 내용을 설명해주세요.",Describe the purpose steps and content of the sequence you want to create.
 modal.generating,생성 중...,Generating...
 modal.generate,생성,Generate
@@ -143,3 +143,13 @@ thinking.checkingPermissions,데이터 접근 권한을 확인하는 중...,Chec
 thinking.checkingComplexity,쿼리 복잡도를 확인하는 중...,Checking query complexity...
 thinking.searchingData,데이터를 검색하는 중...,Searching for data...
 thinking.analyzingLeadData,AI로 리드 데이터를 분석하는 중...,Analyzing lead data with AI...
+sidebar.delete,삭제,Delete
+sidebar.empty,채팅 기록이 없습니다,No chat history
+sidebar.last30Days,지난 30일,Last 30 days
+sidebar.last7Days,지난 7일,Last 7 days
+sidebar.loading,불러오는 중...,Loading...
+sidebar.newChat,새 채팅,New Chat
+sidebar.older,더 오래된,Older
+sidebar.rename,이름 변경,Rename
+sidebar.today,오늘,Today
+sidebar.yesterday,어제,Yesterday

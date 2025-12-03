@@ -37,21 +37,46 @@ export function getAnalysisPrompt(
   question: string,
   workspaceId: string,
   recentMessages: ChatMessage[],
+  pendingSequenceActivation?: {
+    sequenceId: string
+    sequenceName?: string
+    customerGroupName?: string
+    enrollmentsCount?: number
+    totalSteps?: number
+  },
 ) {
   const context =
     recentMessages.length > 0
       ? `\nRecent context:\n${recentMessages
           .slice(-3)
-          .map((m) => `${m.role}: ${m.content}`)
+          .map((m) => `${m.role}: ${m.additionalPrompt || m.content}`)
           .join("\n")}`
       : ""
+
+  // Add pending sequence context if exists - this helps LLM understand user might want to activate
+  const pendingSequenceContext = pendingSequenceActivation
+    ? `
+
+**IMPORTANT CONTEXT - Pending Sequence Activation:**
+A sequence was just created and is awaiting user activation:
+- Sequence Name: ${pendingSequenceActivation.sequenceName || "Unknown"}
+- Sequence ID: ${pendingSequenceActivation.sequenceId}
+- Customer Group: ${pendingSequenceActivation.customerGroupName || "Unknown"}
+- Enrolled Leads: ${pendingSequenceActivation.enrollmentsCount || 0}
+- Total Steps: ${pendingSequenceActivation.totalSteps || 0}
+
+The user was asked: "실행해줘라고 말씀해주시면 이메일 발송이 시작됩니다"
+If the user's message indicates they want to START/RUN/ACTIVATE this sequence (e.g., "응", "네", "좋아", "시작", "실행", "go", "yes", etc.), 
+set operationType to "sequence_activation", NOT "sequence_generation".
+Do NOT create a new sequence if user just wants to activate the existing one!`
+    : ""
 
   return `${SYSTEM_PROMPT}
 
 # Task: Analyze Question
 
 User question: "${question}"
-Workspace ID: ${workspaceId}${context}
+Workspace ID: ${workspaceId}${context}${pendingSequenceContext}
 
 Available data:
 - emails: Email records (status, opens, clicks, replies)
@@ -62,13 +87,13 @@ Available data:
 
 Respond in JSON format:
 {
-  "intent": "Question intent (e.g., performance, lead analysis, trend, lead creation, data update, data deletion, sequence_generation_request)",
+  "intent": "Question intent (e.g., performance, lead analysis, trend, lead creation, data update, data deletion, sequence_generation_request, sequence_activation_request)",
   "requiredTables": ["Required table list"],
   "timeRange": "Time range (e.g., today, this week, last 30 days) or null",
   "needsClarification": false,
   "clarificationQuestion": null,
   "analysisType": "aggregate | trend | comparison | detail",
-  "operationType": "read | create | update | delete | sequence_generation"
+  "operationType": "read | create | update | delete | sequence_generation | sequence_activation"
 }
 
 **operationType Classification:**
@@ -77,23 +102,46 @@ Respond in JSON format:
 - "update": Modify existing data, change, update (UPDATE)
 - "delete": Remove data, delete (DELETE)
 - "sequence_generation": ONLY when explicitly creating/generating an email sequence
+- "sequence_activation": ONLY when user wants to activate/run/start a previously created sequence
 
-**Sequence Generation Detection (STRICT):**
-ONLY set operationType to "sequence_generation" when user EXPLICITLY requests to CREATE a sequence:
-- MUST include action words: "생성해줘", "만들어줘", "만들어", "생성", "create", "generate", "build"
-- Examples that ARE sequence generation: "시퀀스 생성해줘", "이메일 캠페인 만들어줘", "create a sequence"
-- Examples that are NOT sequence generation (use "read" instead):
+**Sequence Activation Detection (HIGHEST PRIORITY - CHECK FIRST):**
+Set operationType to "sequence_activation" when user wants to START/RUN/ACTIVATE a sequence:
+- Keywords: "실행해줘", "실행", "시작해줘", "시작해", "시작", "활성화해줘", "활성화", "run", "start", "activate", "execute", "go", "발송", "발송해줘"
+- Positive responses: "응", "네", "좋아", "해줘", "ㅇㅇ", "오케이", "OK", "yes", "sure", "ㅇ"
+- **CRITICAL: "시작" means ACTIVATE, NOT CREATE!**
+- Examples that ARE sequence activation (operationType = "sequence_activation"):
+  - "실행해줘" (run it)
+  - "시퀀스 시작해줘" (start/activate the sequence - NOT create!)
+  - "시작해줘" (start it)
+  - "시작해" (start)
+  - "응" or "네" (yes - affirmative response)
+  - "활성화해줘" (activate it)
+  - "이메일 발송 시작해" (start email sending)
+  - "발송해줘" (send it)
+- Examples that are NOT sequence activation:
+  - "시퀀스 상태 보여줘" (show status = read)
+  - "실행된 이메일 보여줘" (show executed emails = read)
+
+**Sequence Generation Detection (LOWER PRIORITY - CHECK AFTER ACTIVATION):**
+ONLY set operationType to "sequence_generation" when user EXPLICITLY requests to CREATE/GENERATE a NEW sequence:
+- MUST include creation words: "생성해줘", "만들어줘", "만들어", "생성", "create", "generate", "build", "새로", "새로운"
+- **"시작" does NOT mean create! "시작" means activate/run!**
+- Examples that ARE sequence generation: "시퀀스 생성해줘", "이메일 캠페인 만들어줘", "create a sequence", "새로운 시퀀스"
+- Examples that are NOT sequence generation:
+  - "시퀀스 시작해줘" → This is ACTIVATION, not generation!
   - "전략을 제안해주세요" (suggesting strategy = read/analyze)
   - "어떤 캠페인이 좋을까요" (asking for recommendation = read)
   - "분석해주세요" (analyze = read)
-  - "캠페인 전략을 알려주세요" (explain strategy = read)
 
 **Important:**
 - For mutation operations (create/update/delete), set needsClarification to false
 - Don't request clarification when user clearly states the action
 - For sample data creation requests, classify as create and proceed
 - Only set needsClarification to true for ambiguous read queries
-- "제안", "추천", "분석", "전략", "어떤" keywords indicate ANALYSIS, not sequence creation`
+- "제안", "추천", "분석", "전략", "어떤" keywords indicate ANALYSIS, not sequence creation
+- **"시작" = ACTIVATION, "생성" = GENERATION - these are DIFFERENT operations!**
+- Short affirmative responses like "응", "네", "좋아" should be treated as sequence_activation
+- When in doubt between generation and activation, choose ACTIVATION if the word is "시작"`
 }
 
 /**
@@ -110,7 +158,7 @@ export function getAnalysisPromptWithCSV(
     recentMessages.length > 0
       ? `\nRecent context:\n${recentMessages
           .slice(-3)
-          .map((m) => `${m.role}: ${m.content}`)
+          .map((m) => `${m.role}: ${m.additionalPrompt || m.content}`)
           .join("\n")}`
       : ""
 

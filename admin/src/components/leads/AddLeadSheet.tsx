@@ -89,6 +89,7 @@ export function AddLeadSheet({
   const [isProcessingCSV, setIsProcessingCSV] = useState(false)
   const [csvErrors, setCsvErrors] = useState<string[]>([])
   const [isUploadingLeads, setIsUploadingLeads] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Smart CSV parsing state
@@ -180,100 +181,139 @@ export function AddLeadSheet({
     }
   }, [csvData, isNewGroup, generateGroupNameFromCSV])
 
+  // 파일 처리 공통 함수
+  const processFile = useCallback(
+    async (file: File) => {
+      const fileName = file.name.toLowerCase()
+      const isCSV = fileName.endsWith(".csv")
+      const isXLSX = fileName.endsWith(".xlsx") || fileName.endsWith(".xls")
+
+      if (!isCSV && !isXLSX) {
+        toast.error("CSV 또는 XLSX 파일만 업로드 가능합니다.")
+        return
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("파일 크기는 10MB를 초과할 수 없습니다.")
+        return
+      }
+
+      setIsProcessingCSV(true)
+      setCsvErrors([])
+
+      try {
+        // Smart parsing mode
+        if (useSmartParsing) {
+          let text: string
+
+          if (isCSV) {
+            text = await file.text()
+          } else {
+            // XLSX → CSV conversion
+            const XLSX = await import("xlsx")
+            const arrayBuffer = await file.arrayBuffer()
+            const workbook = XLSX.read(arrayBuffer, { type: "buffer" })
+            const firstSheetName = workbook.SheetNames[0]
+            const worksheet = workbook.Sheets[firstSheetName]
+            text = XLSX.utils.sheet_to_csv(worksheet)
+          }
+
+          setCsvText(text)
+          setCsvFileName(file.name)
+          setCsvFileSize(file.size)
+
+          // Smart analysis
+          const result = smartAnalyzeCSV(text)
+          setSmartParseResult(result)
+
+          if (result.errors.length > 0) {
+            toast.error(result.errors[0])
+            return
+          }
+
+          // Show column mapping modal
+          setShowColumnMappingModal(true)
+          toast.success(`${result.totalRows}개 행이 분석되었습니다. 컬럼 매핑을 확인해주세요.`)
+        } else {
+          // Legacy parsing mode
+          let parsedData: LeadCSVData[]
+
+          if (isCSV) {
+            const text = await file.text()
+            parsedData = parseCSV(text)
+          } else {
+            parsedData = await parseXLSX(file)
+          }
+
+          const validation = validateCSVData(parsedData)
+
+          if (!validation.valid) {
+            setCsvErrors(validation.errors)
+            toast.error("파일에 오류가 있습니다.")
+            return
+          }
+
+          if (validation.warnings.length > 0) {
+            validation.warnings.forEach((warning) => {
+              console.warn(warning)
+            })
+          }
+
+          setCsvData(parsedData)
+          setCsvFileName(file.name)
+          setCsvFileSize(file.size)
+          toast.success(`${parsedData.length}개의 리드 데이터를 성공적으로 파싱했습니다.`)
+        }
+      } catch (error) {
+        console.error("파일 파싱 오류:", error)
+        const errorMessage =
+          error instanceof Error ? error.message : "파일을 읽는 중 오류가 발생했습니다."
+        toast.error(errorMessage)
+      } finally {
+        setIsProcessingCSV(false)
+      }
+    },
+    [useSmartParsing],
+  )
+
   // File upload handler (CSV, XLSX support)
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-
-    const fileName = file.name.toLowerCase()
-    const isCSV = fileName.endsWith(".csv")
-    const isXLSX = fileName.endsWith(".xlsx") || fileName.endsWith(".xls")
-
-    if (!isCSV && !isXLSX) {
-      toast.error("CSV 또는 XLSX 파일만 업로드 가능합니다.")
-      return
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("파일 크기는 10MB를 초과할 수 없습니다.")
-      return
-    }
-
-    setIsProcessingCSV(true)
-    setCsvErrors([])
-
-    try {
-      // Smart parsing mode
-      if (useSmartParsing) {
-        let text: string
-
-        if (isCSV) {
-          text = await file.text()
-        } else {
-          // XLSX → CSV conversion
-          const XLSX = await import("xlsx")
-          const arrayBuffer = await file.arrayBuffer()
-          const workbook = XLSX.read(arrayBuffer, { type: "buffer" })
-          const firstSheetName = workbook.SheetNames[0]
-          const worksheet = workbook.Sheets[firstSheetName]
-          text = XLSX.utils.sheet_to_csv(worksheet)
-        }
-
-        setCsvText(text)
-        setCsvFileName(file.name)
-        setCsvFileSize(file.size)
-
-        // Smart analysis
-        const result = smartAnalyzeCSV(text)
-        setSmartParseResult(result)
-
-        if (result.errors.length > 0) {
-          toast.error(result.errors[0])
-          return
-        }
-
-        // Show column mapping modal
-        setShowColumnMappingModal(true)
-        toast.success(`${result.totalRows}개 행이 분석되었습니다. 컬럼 매핑을 확인해주세요.`)
-      } else {
-        // Legacy parsing mode
-        let parsedData: LeadCSVData[]
-
-        if (isCSV) {
-          const text = await file.text()
-          parsedData = parseCSV(text)
-        } else {
-          parsedData = await parseXLSX(file)
-        }
-
-        const validation = validateCSVData(parsedData)
-
-        if (!validation.valid) {
-          setCsvErrors(validation.errors)
-          toast.error("파일에 오류가 있습니다.")
-          return
-        }
-
-        if (validation.warnings.length > 0) {
-          validation.warnings.forEach((warning) => {
-            console.warn(warning)
-          })
-        }
-
-        setCsvData(parsedData)
-        setCsvFileName(file.name)
-        setCsvFileSize(file.size)
-        toast.success(`${parsedData.length}개의 리드 데이터를 성공적으로 파싱했습니다.`)
-      }
-    } catch (error) {
-      console.error("파일 파싱 오류:", error)
-      const errorMessage =
-        error instanceof Error ? error.message : "파일을 읽는 중 오류가 발생했습니다."
-      toast.error(errorMessage)
-    } finally {
-      setIsProcessingCSV(false)
-    }
+    await processFile(file)
   }
+
+  // 드래그앤드롭 핸들러
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }, [])
+
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setIsDragging(false)
+
+      const files = e.dataTransfer.files
+      if (files.length > 0) {
+        await processFile(files[0])
+      }
+    },
+    [processFile],
+  )
 
   // Smart parsing column mapping confirm handler
   const handleColumnMappingConfirm = useCallback(
@@ -533,6 +573,167 @@ export function AddLeadSheet({
             {/* Step 2: CSV Upload */}
             {step === 2 && mode === "upload" && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                {/* File Upload Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium">{t("leads.file.upload")} (CSV/XLSX)</h3>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadTemplate("csv")}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        {t("leads.button.csvTemplate")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadTemplate("xlsx")}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        {t("leads.button.xlsxTemplate")}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Required Fields Info */}
+                  <Card className="bg-blue-50 border-blue-200">
+                    <CardContent className="pt-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                          !
+                        </div>
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-blue-900">
+                            {t("leads.file.requiredFields")}
+                          </h4>
+                          <div className="text-sm text-blue-800">
+                            <p className="mb-2">
+                              <strong>{t("leads.file.requiredFieldsDescription")}</strong>
+                            </p>
+                            <p className="mb-2">
+                              <strong>{t("leads.file.optionalFields")}</strong>
+                            </p>
+                            <p className="text-xs text-blue-600">
+                              💡 {t("leads.file.templateTip")}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {!csvData ? (
+                    <Card>
+                      <CardContent className="pt-6">
+                        <button
+                          type="button"
+                          className={`w-full border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                            isDragging
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-300 hover:border-gray-400"
+                          }`}
+                          onDragEnter={handleDragEnter}
+                          onDragLeave={handleDragLeave}
+                          onDragOver={handleDragOver}
+                          onDrop={handleDrop}
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isProcessingCSV}
+                        >
+                          <Upload
+                            className={`h-12 w-12 mx-auto mb-4 ${isDragging ? "text-blue-500" : "text-gray-400"}`}
+                          />
+                          <div className="space-y-2">
+                            <h4 className="text-lg font-medium">
+                              {isDragging ? "여기에 파일을 놓으세요" : t("leads.file.upload")}
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              {isDragging
+                                ? "CSV 또는 XLSX 파일을 드롭하세요"
+                                : "CSV 또는 XLSX 파일을 드래그하거나 클릭하여 업로드하세요"}
+                            </p>
+                            <div className="pt-4">
+                              <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".csv,.xlsx,.xls"
+                                onChange={handleFileUpload}
+                                className="hidden"
+                              />
+                              <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+                                {isProcessingCSV
+                                  ? t("leads.button.processing")
+                                  : t("leads.button.selectFile")}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-blue-500" />
+                            <div>
+                              <p className="font-medium">{csvFileName}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {(csvFileSize / 1024).toFixed(1)} KB
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setCsvData(null)
+                              setCsvFileName("")
+                              setCsvFileSize(0)
+                              setCsvErrors([])
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">
+                              {csvData.length}
+                              {t("leads.file.leadsCount")}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {t("leads.file.parsingComplete")}
+                            </span>
+                          </div>
+
+                          {csvErrors.length > 0 && (
+                            <Alert>
+                              <AlertDescription>
+                                <div className="space-y-1">
+                                  <p className="font-medium">{t("leads.error.fixErrors")}</p>
+                                  <ul className="list-disc list-inside space-y-1">
+                                    {csvErrors.map((error) => (
+                                      <li key={error} className="text-sm">
+                                        {error}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
                 {/* Group Info */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">{t("leads.group.groupInfo")}</h3>
@@ -647,152 +848,6 @@ export function AddLeadSheet({
                       />
                     </div>
                   </div>
-                </div>
-
-                {/* File Upload Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium">{t("leads.file.upload")} (CSV/XLSX)</h3>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadTemplate("csv")}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        {t("leads.button.csvTemplate")}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadTemplate("xlsx")}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        {t("leads.button.xlsxTemplate")}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Required Fields Info */}
-                  <Card className="bg-blue-50 border-blue-200">
-                    <CardContent className="pt-4">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                          !
-                        </div>
-                        <div className="space-y-2">
-                          <h4 className="font-medium text-blue-900">
-                            {t("leads.file.requiredFields")}
-                          </h4>
-                          <div className="text-sm text-blue-800">
-                            <p className="mb-2">
-                              <strong>{t("leads.file.requiredFieldsDescription")}</strong>
-                            </p>
-                            <p className="mb-2">
-                              <strong>{t("leads.file.optionalFields")}</strong>
-                            </p>
-                            <p className="text-xs text-blue-600">
-                              💡 {t("leads.file.templateTip")}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {!csvData ? (
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                          <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                          <div className="space-y-2">
-                            <h4 className="text-lg font-medium">{t("leads.file.upload")}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {t("leads.file.uploadDescription")}
-                            </p>
-                            <div className="pt-4">
-                              <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept=".csv,.xlsx,.xls"
-                                onChange={handleFileUpload}
-                                className="hidden"
-                              />
-                              <Button
-                                type="button"
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={isProcessingCSV}
-                              >
-                                {isProcessingCSV
-                                  ? t("leads.button.processing")
-                                  : t("leads.button.selectFile")}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-5 w-5 text-blue-500" />
-                            <div>
-                              <p className="font-medium">{csvFileName}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {(csvFileSize / 1024).toFixed(1)} KB
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setCsvData(null)
-                              setCsvFileName("")
-                              setCsvFileSize(0)
-                              setCsvErrors([])
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">
-                              {csvData.length}
-                              {t("leads.file.leadsCount")}
-                            </Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {t("leads.file.parsingComplete")}
-                            </span>
-                          </div>
-
-                          {csvErrors.length > 0 && (
-                            <Alert>
-                              <AlertDescription>
-                                <div className="space-y-1">
-                                  <p className="font-medium">{t("leads.error.fixErrors")}</p>
-                                  <ul className="list-disc list-inside space-y-1">
-                                    {csvErrors.map((error) => (
-                                      <li key={error} className="text-sm">
-                                        {error}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              </AlertDescription>
-                            </Alert>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
                 </div>
               </div>
             )}

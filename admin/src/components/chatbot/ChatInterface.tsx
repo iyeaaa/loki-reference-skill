@@ -25,9 +25,17 @@ import { StreamingMessageContainer } from "./StreamingMessageContainer"
 interface ChatInterfaceProps {
   workspaceId: string
   conversationId?: string
+  onConversationCreated?: (
+    conversationId: string,
+    firstMessage: string,
+  ) => Promise<string | undefined>
 }
 
-export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProps) {
+export function ChatInterface({
+  workspaceId,
+  conversationId,
+  onConversationCreated,
+}: ChatInterfaceProps) {
   const { t, i18n } = useTranslation()
   const [input, setInput] = useState("")
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -59,6 +67,8 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   const lastUserMessageRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const textareaEmptyStateRef = useRef<HTMLTextAreaElement>(null)
+  // Track if we're in the middle of creating a new conversation (to avoid resetting messages)
+  const isCreatingConversationRef = useRef(false)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
   // Load conversation history if conversationId is provided
@@ -174,11 +184,41 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   })
 
   // Load history into messages when available
+  // Skip if we're creating a new conversation (to avoid overwriting user's first message)
   useEffect(() => {
-    if (historyData?.messages) {
-      setMessages(historyData.messages)
+    if (historyData?.messages && historyData.messages.length > 0) {
+      // Only load history if we're not in the middle of creating a conversation
+      if (!isCreatingConversationRef.current) {
+        setMessages(historyData.messages)
+      }
     }
   }, [historyData])
+
+  // Reset state when conversationId changes (including when switching to new chat)
+  useEffect(() => {
+    // Skip reset if we're in the middle of creating a new conversation
+    if (isCreatingConversationRef.current) {
+      isCreatingConversationRef.current = false
+      setCurrentConversationId(conversationId || "")
+      return
+    }
+
+    // When conversationId changes externally, reset the local state
+    setCurrentConversationId(conversationId || "")
+
+    // If switching to a new chat (no conversationId), clear messages
+    if (!conversationId) {
+      setMessages([])
+      setStreamingMessage(null)
+      setCurrentThinking(null)
+      setIsProcessing(false)
+      setNeedsConfirmation(false)
+      setNodeProgress([])
+      setSelectedArtifact(null)
+      setLeadPreviewData(null)
+      setLeadImportProgress(null)
+    }
+  }, [conversationId])
 
   // Auto-scroll when new user message is added
   useEffect(() => {
@@ -198,11 +238,12 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
 
   // Handler for when leads are added via AddLeadSheet - auto-send message to AI
   const handleLeadsAdded = useCallback(
-    (groupId: string, groupName: string, leadsCount: number) => {
+    async (groupId: string, groupName: string, leadsCount: number) => {
       // Create a user message that prompts AI to query and analyze the leads
       const userMessage: ChatMessage = {
         role: "user",
-        content: `"${groupName}" 그룹(ID: ${groupId})에 ${leadsCount}개의 리드가 추가되었습니다.
+        content: `"${groupName}" 그룹에 ${leadsCount}개의 고객 정보를 업로드했어요.`,
+        additionalPrompt: `"${groupName}" 그룹(ID: ${groupId})에 ${leadsCount}개의 리드가 추가되었습니다.
 
 이 그룹의 리드 데이터를 조회하고 분석해주세요:
 1. 먼저 customer_group_members와 leads 테이블을 조인하여 이 그룹의 리드를 조회해주세요
@@ -231,18 +272,34 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       })
 
       // Call chatbot API with the lead group info
-      const convId = conversationId || `conv_${Date.now()}`
+      let convId = conversationId || `conv_${Date.now()}`
+
+      // If this is a new conversation, create it in DB
+      const isNewConversation = !conversationId && messages.length === 0
+      if (isNewConversation && onConversationCreated) {
+        try {
+          isCreatingConversationRef.current = true
+          const newId = await onConversationCreated(convId, userMessage.content)
+          if (newId) {
+            convId = newId
+          }
+        } catch (error) {
+          console.error("Failed to create conversation:", error)
+          isCreatingConversationRef.current = false
+        }
+      }
+
       setCurrentConversationId(convId)
 
       chatbotMutation.mutateAsync({
-        question: userMessage.content,
+        question: userMessage.additionalPrompt || userMessage.content,
         workspaceId,
         conversationId: convId,
         messages: [...messages, userMessage],
         locale: i18n.language,
       })
     },
-    [messages, chatbotMutation, workspaceId, conversationId, i18n.language],
+    [messages, chatbotMutation, workspaceId, conversationId, i18n.language, onConversationCreated],
   )
 
   const handleStop = useCallback(() => {
@@ -283,7 +340,24 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       })
 
       // Use TanStack Query mutation
-      const convId = conversationId || `conv_${Date.now()}`
+      let convId = conversationId || `conv_${Date.now()}`
+
+      // If this is a new conversation (no conversationId), notify parent to create it in DB
+      const isNewConversation = !conversationId && messages.length === 0
+      if (isNewConversation && onConversationCreated) {
+        try {
+          // Mark that we're creating a conversation to avoid resetting messages in useEffect
+          isCreatingConversationRef.current = true
+          const newId = await onConversationCreated(convId, questionText)
+          if (newId) {
+            convId = newId
+          }
+        } catch (error) {
+          console.error("Failed to create conversation:", error)
+          isCreatingConversationRef.current = false
+        }
+      }
+
       setCurrentConversationId(convId)
 
       // CRITICAL FIX: Don't call API inside setState
@@ -310,6 +384,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       attachedFile,
       messages,
       i18n.language,
+      onConversationCreated,
     ],
   )
 
@@ -537,7 +612,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
   )
 
   const handleGenerateSequenceFromImport = useCallback(
-    (groupId: string, groupName: string, membersAdded: number) => {
+    async (groupId: string, groupName: string, membersAdded: number) => {
       // Create a user message with sequence generation request metadata
       const userMessage: ChatMessage = {
         role: "user",
@@ -564,7 +639,23 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       })
 
       // Call chatbot API with the sequence generation request
-      const convId = conversationId || `conv_${Date.now()}`
+      let convId = conversationId || `conv_${Date.now()}`
+
+      // If this is a new conversation, create it in DB
+      const isNewConversation = !conversationId && messages.length === 0
+      if (isNewConversation && onConversationCreated) {
+        try {
+          isCreatingConversationRef.current = true
+          const newId = await onConversationCreated(convId, userMessage.content)
+          if (newId) {
+            convId = newId
+          }
+        } catch (error) {
+          console.error("Failed to create conversation:", error)
+          isCreatingConversationRef.current = false
+        }
+      }
+
       setCurrentConversationId(convId)
 
       chatbotMutation.mutateAsync({
@@ -575,7 +666,7 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         locale: i18n.language,
       })
     },
-    [messages, chatbotMutation, workspaceId, conversationId, i18n.language],
+    [messages, chatbotMutation, workspaceId, conversationId, i18n.language, onConversationCreated],
   )
 
   // Handle sequence generation from modal
@@ -611,7 +702,23 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
       })
 
       // Call chatbot API with the sequence generation request
-      const convId = conversationId || `conv_${Date.now()}`
+      let convId = conversationId || `conv_${Date.now()}`
+
+      // If this is a new conversation, create it in DB
+      const isNewConversation = !conversationId && messages.length === 0
+      if (isNewConversation && onConversationCreated) {
+        try {
+          isCreatingConversationRef.current = true
+          const newId = await onConversationCreated(convId, userMessage.content)
+          if (newId) {
+            convId = newId
+          }
+        } catch (error) {
+          console.error("Failed to create conversation:", error)
+          isCreatingConversationRef.current = false
+        }
+      }
+
       setCurrentConversationId(convId)
 
       await chatbotMutation.mutateAsync({
@@ -622,7 +729,15 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
         locale: i18n.language,
       })
     },
-    [messages, chatbotMutation, workspaceId, conversationId, customerGroups, i18n.language],
+    [
+      messages,
+      chatbotMutation,
+      workspaceId,
+      conversationId,
+      customerGroups,
+      i18n.language,
+      onConversationCreated,
+    ],
   )
 
   // Auto-resize textarea based on content
@@ -887,9 +1002,16 @@ export function ChatInterface({ workspaceId, conversationId }: ChatInterfaceProp
                     const isLastUserMessage =
                       message.role === "user" && index === messages.length - 1
 
+                    // Ensure timestamp is a Date object for key generation
+                    const timestampValue = message.timestamp
+                      ? typeof message.timestamp === "string"
+                        ? new Date(message.timestamp).getTime()
+                        : message.timestamp.getTime()
+                      : index
+
                     return (
                       <MessageBubble
-                        key={`msg-${index}-${message.timestamp?.getTime() || index}`}
+                        key={`msg-${index}-${timestampValue}`}
                         ref={isLastUserMessage ? lastUserMessageRef : null}
                         message={message}
                         isStreaming={false}

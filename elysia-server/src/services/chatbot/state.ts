@@ -20,7 +20,20 @@ export interface ChatbotState {
     requiredTables?: string[]
     timeRange?: string | null
     analysisType?: string
-    operationType?: "read" | "create" | "update" | "delete"
+    operationType?:
+      | "read"
+      | "create"
+      | "update"
+      | "delete"
+      | "sequence_generation"
+      | "sequence_activation"
+    pendingSequenceActivation?: {
+      sequenceId: string
+      sequenceName?: string
+      customerGroupName?: string
+      enrollmentsCount?: number
+      totalSteps?: number
+    }
   }
 
   // SQL 생성
@@ -79,6 +92,16 @@ export interface ChatbotState {
   generatedSequenceId?: string
   isSequenceGenerationRequest?: boolean // Flag to bypass SQL generation
 
+  // Sequence Activation (for paused sequences)
+  sequenceActivationRequest?: {
+    sequenceId: string
+    sequenceName?: string
+    customerGroupName?: string
+    enrollmentsCount?: number
+    totalSteps?: number
+  }
+  isSequenceActivationRequest?: boolean // Flag to route to activation flow
+
   // AI-Generated Sequence Strategy (Dynamic Steps)
   sequenceStrategy?: {
     dominant_business_type: string
@@ -111,6 +134,7 @@ export interface ChatbotState {
 export interface ChatMessage {
   role: "user" | "assistant" | "system"
   content: string
+  additionalPrompt?: string // AI에게만 전달되는 추가 프롬프트 (사용자에게는 표시되지 않음)
   timestamp: Date
   attachment?: {
     fileName: string
@@ -128,6 +152,13 @@ export interface ChatMessage {
       groupId: string
       groupName: string
       leadsCount: number
+    }
+    pendingSequenceActivation?: {
+      sequenceId: string
+      sequenceName?: string
+      customerGroupName?: string
+      enrollmentsCount?: number
+      totalSteps?: number
     }
   }
 }
@@ -308,6 +339,23 @@ export const ChatbotStateAnnotation = Annotation.Root({
     default: () => undefined,
   }),
   isSequenceGenerationRequest: Annotation<boolean | undefined>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => undefined,
+  }),
+  sequenceActivationRequest: Annotation<
+    | {
+        sequenceId: string
+        sequenceName?: string
+        customerGroupName?: string
+        enrollmentsCount?: number
+        totalSteps?: number
+      }
+    | undefined
+  >({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => undefined,
+  }),
+  isSequenceActivationRequest: Annotation<boolean | undefined>({
     reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => undefined,
   }),

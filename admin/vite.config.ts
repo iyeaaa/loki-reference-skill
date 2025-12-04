@@ -6,6 +6,11 @@ import { cleanLoggerPlugin } from "./vite-plugins/clean-logger";
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), cleanLoggerPlugin()],
+  // Optimize dependency pre-bundling
+  optimizeDeps: {
+    // Exclude heavy packages from pre-bundling to allow dynamic imports
+    exclude: ["shiki", "mermaid"],
+  },
   customLogger: {
     info: (msg) => {
       // Filter out verbose vite messages
@@ -68,32 +73,72 @@ export default defineConfig({
         manualChunks(id) {
           // node_modules에 있는 패키지들만 처리
           if (id.includes("node_modules")) {
-            // MDEditor 및 관련 패키지 (매우 큰 라이브러리)
+            // ===== 최우선: 거대 라이브러리 분리 (10MB+ 문제 해결) =====
+
+            // Shiki - 구문 강조 (언어/테마 포함, ~8MB)
+            // streamdown이 shiki를 사용하므로 함께 묶음
+            if (id.includes("shiki") || id.includes("@shikijs")) {
+              return "shiki-vendor";
+            }
+
+            // Mermaid - 다이어그램 렌더링 (~2MB)
+            if (id.includes("mermaid")) {
+              return "mermaid-vendor";
+            }
+
+            // Streamdown - 마크다운 스트리밍 (shiki/mermaid 의존)
+            if (id.includes("streamdown")) {
+              return "streamdown-vendor";
+            }
+
+            // ===== 큰 라이브러리 분리 =====
+
+            // MDEditor 및 관련 패키지 (CodeMirror 포함)
             if (
               id.includes("@uiw/react-md-editor") ||
-              id.includes("codemirror")
+              id.includes("codemirror") ||
+              id.includes("@codemirror")
             ) {
               return "md-editor-vendor";
             }
 
-            // Monaco Editor (큰 라이브러리)
+            // Monaco Editor
             if (id.includes("@monaco-editor") || id.includes("monaco-editor")) {
               return "monaco-vendor";
             }
+
+            // Flow 차트 (ReactFlow + elkjs)
+            if (id.includes("@xyflow/react") || id.includes("elkjs")) {
+              return "flow-vendor";
+            }
+
+            // ===== React 생태계 =====
 
             // Radix UI를 먼저 체크 (React보다 우선)
             if (id.includes("@radix-ui")) {
               return "ui-vendor";
             }
 
-            // React 관련 라이브러리
+            // React 코어
             if (
-              id.includes("react") ||
-              id.includes("react-dom") ||
-              id.includes("react-router-dom")
+              id.includes("/react/") ||
+              id.includes("/react-dom/") ||
+              id.includes("react-router") ||
+              id.includes("scheduler")
             ) {
               return "react-vendor";
             }
+
+            // React 유틸리티 (react-xxx 패키지들)
+            if (
+              id.includes("react-hot-toast") ||
+              id.includes("react-resizable-panels") ||
+              id.includes("react-day-picker")
+            ) {
+              return "react-utils-vendor";
+            }
+
+            // ===== 폼 및 데이터 관리 =====
 
             // 폼 관련
             if (
@@ -104,32 +149,44 @@ export default defineConfig({
               return "form-vendor";
             }
 
-            // 데이터 페칭
-            if (id.includes("@tanstack/react-query") || id.includes("@tanstack/react-table")) {
-              return "query-vendor";
+            // TanStack (React Query + Table)
+            if (id.includes("@tanstack")) {
+              return "tanstack-vendor";
             }
 
-            // Flow 차트 관련 (큰 라이브러리)
-            if (id.includes("@xyflow/react") || id.includes("elkjs")) {
-              return "flow-vendor";
-            }
+            // ===== 시각화 =====
 
-            // 차트 라이브러리
+            // 차트 (Recharts + D3)
             if (id.includes("recharts") || id.includes("d3-")) {
               return "chart-vendor";
             }
 
-            // 마크다운 및 syntax highlighting
+            // ===== 마크다운 (shiki 제외) =====
+
+            // 일반 마크다운 파서
             if (
               id.includes("marked") ||
               id.includes("react-markdown") ||
-              id.includes("react-syntax-highlighter") ||
-              id.includes("highlight.js") ||
-              id.includes("shiki") ||
-              id.includes("prism")
+              id.includes("remark") ||
+              id.includes("rehype") ||
+              id.includes("unified") ||
+              id.includes("micromark") ||
+              id.includes("mdast") ||
+              id.includes("hast")
             ) {
               return "markdown-vendor";
             }
+
+            // 구문 강조 (shiki 외)
+            if (
+              id.includes("react-syntax-highlighter") ||
+              id.includes("highlight.js") ||
+              id.includes("prism")
+            ) {
+              return "syntax-vendor";
+            }
+
+            // ===== 기타 유틸리티 =====
 
             // 엑셀 라이브러리
             if (id.includes("xlsx") || id.includes("papaparse")) {
@@ -152,7 +209,7 @@ export default defineConfig({
             }
 
             // Date 관련
-            if (id.includes("date-fns") || id.includes("react-day-picker")) {
+            if (id.includes("date-fns")) {
               return "date-vendor";
             }
 
@@ -161,9 +218,14 @@ export default defineConfig({
               return "carousel-vendor";
             }
 
-            // 아이콘 (큰 라이브러리)
+            // 아이콘
             if (id.includes("lucide-react")) {
               return "icon-vendor";
+            }
+
+            // 상태 관리 (jotai, nuqs)
+            if (id.includes("jotai") || id.includes("nuqs")) {
+              return "state-vendor";
             }
 
             // 기타 유틸리티

@@ -1,12 +1,16 @@
 import { Check, Copy, CornerDownRight, FileCode2, ThumbsDown, ThumbsUp } from "lucide-react"
-import React, { useMemo, useState } from "react"
+import React, { Suspense, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 import ReactMarkdown from "react-markdown"
-import { Streamdown } from "streamdown"
 import { Button } from "@/components/ui/button"
 import type { ChatMessage } from "@/lib/api/types/chatbot"
 import { FileAttachment } from "./FileAttachment"
+
+// Lazy load Streamdown (includes shiki ~9MB, mermaid ~2MB)
+const Streamdown = React.lazy(() =>
+  import("streamdown").then((mod) => ({ default: mod.Streamdown })),
+)
 
 interface MessageBubbleProps {
   message: ChatMessage
@@ -185,8 +189,10 @@ export const MessageBubble = React.memo(
             {/* @ts-ignore - Complex markdown component types */}
             <div className="prose prose-sm max-w-none dark:prose-invert will-change-auto">
               {isStreaming ? (
-                // Streaming mode: real-time markdown rendering with Streamdown
-                <Streamdown>{message.content}</Streamdown>
+                // Streaming mode: real-time markdown rendering with Streamdown (lazy loaded)
+                <Suspense fallback={<div className="animate-pulse">{message.content}</div>}>
+                  <Streamdown>{message.content}</Streamdown>
+                </Suspense>
               ) : (
                 // Normal mode: show full content with ReactMarkdown
                 <ReactMarkdown components={markdownComponents}>{message.content}</ReactMarkdown>

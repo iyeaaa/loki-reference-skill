@@ -2,7 +2,7 @@ import { motion } from "framer-motion"
 import type { LucideIcon } from "lucide-react"
 import {
   BarChart3,
-  Compass,
+  // Compass, // TODO: 바이어 탐색 메뉴 완성 후 주석 해제
   // Database, // TODO: BigQuery Search 기능 완성 후 주석 해제
   GitBranch,
   Mail,
@@ -101,11 +101,11 @@ const getMainMenuItems = (t: (key: string) => string) => [
     url: "/dashboard",
     icon: BarChart3,
   },
-  {
-    title: t("sidebar.menu.leadDiscovery"),
-    url: "/lead-discovery",
-    icon: Compass,
-  },
+  // {
+  //   title: t("sidebar.menu.leadDiscovery"),
+  //   url: "/lead-discovery",
+  //   icon: Compass,
+  // },
   {
     title: t("sidebar.menu.customerManagement"),
     url: "/leads",

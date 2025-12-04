@@ -1,20 +1,37 @@
-import { useTranslation } from "react-i18next"
+import { useState } from "react"
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
+import { ChatRoom } from "./ChatRoom"
+import { CustomerTable } from "./CustomerTable"
 
 export default function LeadDiscoveryPage() {
-  const { t } = useTranslation()
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
+  // calc(100vh - 헤더 높이 64px), -m-4로 DashboardLayout의 패딩 상쇄
   return (
-    <div className="flex flex-col h-full p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">{t("sidebar.menu.leadDiscovery")}</h1>
-        <p className="text-muted-foreground mt-2">고객 탐색 기능이 여기에 구현됩니다.</p>
-      </div>
+    <div className="-m-4 w-[calc(100%+2rem)]" style={{ height: "calc(100vh - 64px)" }}>
+      {isFullscreen ? (
+        <CustomerTable
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={() => setIsFullscreen(false)}
+        />
+      ) : (
+        <ResizablePanelGroup direction="horizontal" className="h-full">
+          {/* 좌측: 채팅방 */}
+          <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
+            <ChatRoom />
+          </ResizablePanel>
 
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground">준비 중입니다.</p>
-        </div>
-      </div>
+          <ResizableHandle withHandle />
+
+          {/* 우측: 고객 테이블 */}
+          <ResizablePanel defaultSize={70} minSize={50}>
+            <CustomerTable
+              isFullscreen={isFullscreen}
+              onToggleFullscreen={() => setIsFullscreen(true)}
+            />
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      )}
     </div>
   )
 }

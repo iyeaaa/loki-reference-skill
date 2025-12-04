@@ -2,14 +2,14 @@ import { motion } from "framer-motion"
 import type { LucideIcon } from "lucide-react"
 import {
   BarChart3,
-  // Compass, // TODO: 바이어 탐색 메뉴 완성 후 주석 해제
+  Compass,
   // Database, // TODO: BigQuery Search 기능 완성 후 주석 해제
   GitBranch,
   Mail,
   MessageSquare,
   // Search, // TODO: Webset 기능 완성 후 주석 해제
   Settings,
-  Sparkles,
+  // Sparkles, // TODO: Gemini Search 기능 완성 후 주석 해제
   UserCheck,
 } from "lucide-react"
 import { Fragment } from "react"
@@ -101,11 +101,11 @@ const getMainMenuItems = (t: (key: string) => string) => [
     url: "/dashboard",
     icon: BarChart3,
   },
-  // {
-  //   title: t("sidebar.menu.leadDiscovery"),
-  //   url: "/lead-discovery",
-  //   icon: Compass,
-  // },
+  {
+    title: t("sidebar.menu.leadDiscovery"),
+    url: "/lead-discovery",
+    icon: Compass,
+  },
   {
     title: t("sidebar.menu.customerManagement"),
     url: "/leads",
@@ -121,11 +121,11 @@ const getMainMenuItems = (t: (key: string) => string) => [
     url: "/replied-emails",
     icon: Mail,
   },
-  {
-    title: t("sidebar.menu.geminiSearch"),
-    url: "/gemini-search",
-    icon: Sparkles,
-  },
+  // {
+  //   title: t("sidebar.menu.geminiSearch"),
+  //   url: "/gemini-search",
+  //   icon: Sparkles,
+  // },
   // {
   //   title: t("sidebar.menu.webset"),
   //   url: "/websets",

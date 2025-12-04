@@ -20,7 +20,7 @@ interface ThreadDetailPanelProps {
 }
 
 export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDetailPanelProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation("email-replies")
   const { user } = useAuth()
   const { data, isLoading, error } = useThreadEmails(threadId, workspaceId)
   const emails = data?.data || []
@@ -36,6 +36,11 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
 
+  // AI Summary 상태
+  const [summary, setSummary] = useState<string | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
+  const [summaryError, setSummaryError] = useState<string | null>(null)
+
   // 각 이메일의 펼침/접힘 상태 (기본값: 모두 펼침)
   const [expandedEmails, setExpandedEmails] = useState<Record<string, boolean>>({})
 
@@ -45,6 +50,8 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
     setExpandedEmails({})
     setShowReply(false)
     setAiError(null)
+    setSummary(null)
+    setSummaryError(null)
   }, [threadId])
 
   // 이메일이 펼쳐져 있는지 확인 (기본값: 마지막 이메일만 펼침)
@@ -63,6 +70,47 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
       ...prev,
       [emailId]: !currentState,
     }))
+  }
+
+  // AI Summary 생성 핸들러
+  const handleGenerateAISummary = async () => {
+    setSummaryLoading(true)
+    setSummaryError(null)
+
+    try {
+      const response = await fetch("/api/ai/generate-summary", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          threadId,
+          workspaceId,
+          language: i18n.language || "ko",
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to generate AI summary")
+      }
+
+      const result = await response.json()
+
+      if (result.success && result.data) {
+        const aiSummary = result.data.summary || ""
+        setSummary(aiSummary)
+        toast.success("대화 요약이 생성되었습니다!")
+      }
+    } catch (err) {
+      setSummaryError(
+        err instanceof Error
+          ? err.message
+          : "Unable to connect. Is the computer able to access the url?",
+      )
+      toast.error("AI 요약 생성에 실패했습니다")
+    } finally {
+      setSummaryLoading(false)
+    }
   }
 
   // AI Suggestion 생성 핸들러
@@ -204,6 +252,85 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
           </Button>
         </div>
       </div>
+
+      {/* AI Summary Section - Gmail Style */}
+      {emails.length > 0 && (
+        <div className="px-4 pb-3 border-b bg-gray-50/50 dark:bg-gray-900/50">
+          {!summary && !summaryLoading && (
+            <div className="flex justify-start">
+              <Button
+                onClick={handleGenerateAISummary}
+                disabled={summaryLoading}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2 text-sm font-medium shadow-sm"
+                size="sm"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                {t("email-replies.aiSummary.button.generate")}
+              </Button>
+            </div>
+          )}
+
+          {summaryLoading && (
+            <div className="flex items-center gap-3 py-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent" />
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {t("email-replies.aiSummary.loading")}
+              </span>
+            </div>
+          )}
+
+          {summary && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="bg-blue-600 rounded-full p-1">
+                    <Sparkles className="h-3 w-3 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {t("email-replies.aiSummary.title")}
+                  </span>
+                </div>
+                <Button
+                  onClick={handleGenerateAISummary}
+                  disabled={summaryLoading}
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs text-gray-500 hover:text-gray-700"
+                >
+                  {t("email-replies.aiSummary.button.regenerate")}
+                </Button>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+                <div className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-line">
+                  {summary}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {summaryError && (
+            <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-3 border border-red-200 dark:border-red-800">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="bg-red-600 rounded-full p-1">
+                  <Sparkles className="h-3 w-3 text-white" />
+                </div>
+                <span className="text-sm font-medium text-red-800 dark:text-red-200">
+                  {t("email-replies.aiSummary.error.title")}
+                </span>
+              </div>
+              <p className="text-sm text-red-600 dark:text-red-400 mb-3">{summaryError}</p>
+              <Button
+                onClick={handleGenerateAISummary}
+                disabled={summaryLoading}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-3 py-1 text-xs"
+                size="sm"
+              >
+                {t("email-replies.aiSummary.button.tryAgain")}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Email thread */}
       <TooltipProvider>

@@ -92,3 +92,9 @@ bulkModal.option.read,읽음,Read
 bulkModal.option.unread,읽지 않음,Unread
 bulkModal.button.cancel,취소,Cancel
 bulkModal.button.change,변경,Change
+aiSummary.button.generate,AI 요약 생성,AI Summarize
+aiSummary.loading,AI 요약 생성 중...,Generating summary...
+aiSummary.title,AI 대화 요약,AI Summary
+aiSummary.button.regenerate,새로고침,Regenerate
+aiSummary.error.title,요약 생성 실패,Failed to generate summary
+aiSummary.button.tryAgain,다시 시도,Try again

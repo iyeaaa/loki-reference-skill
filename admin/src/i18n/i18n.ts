@@ -10,8 +10,12 @@ import enTranslation from "./generated/en.json"
 import koTranslation from "./generated/ko.json"
 
 const resources = {
-  ko: koTranslation,
-  en: enTranslation,
+  ko: {
+    translation: koTranslation,
+  },
+  en: {
+    translation: enTranslation,
+  },
 }
 
 i18n

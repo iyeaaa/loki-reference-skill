@@ -2,9 +2,35 @@ import path from "path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "vite";
+import { cleanLoggerPlugin } from "./vite-plugins/clean-logger";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), cleanLoggerPlugin()],
+  customLogger: {
+    info: (msg) => {
+      // Filter out verbose vite messages
+      if (msg.includes("vite:react-swc") || msg.includes("ROLLDOWN-VITE")) {
+        return;
+      }
+      console.log(msg);
+    },
+    warn: (msg) => {
+      // Only show important warnings
+      if (msg.includes("vite:react-swc")) {
+        return; // Suppress react-swc plugin recommendation
+      }
+      console.warn(msg);
+    },
+    error: (msg) => {
+      console.error(msg);
+    },
+    clearScreen: () => {
+      // Disable default clear screen
+    },
+    hasErrorLogged: () => false,
+    hasWarned: false,
+    warnOnce: () => {},
+  },
   server: {
     host: true, // 모든 호스트 허용
     allowedHosts: [

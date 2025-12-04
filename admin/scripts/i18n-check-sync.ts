@@ -9,15 +9,17 @@ import "dotenv/config"
 import { calculateLocalHash, readSyncMetadata } from "./i18n-utils.js"
 import { getSheetRowCount, getSheetLastModified, initializeSheetsClient } from "./google-sheets-client.js"
 import type { SyncStatus } from "./i18n-types.js"
+import { createLogger } from "./logger.js"
+
+const logger = createLogger("i18n:check")
 
 async function checkSyncStatus(): Promise<SyncStatus> {
   // Show notification and exit if GOOGLE_CREDENTIALS is not set
   if (!process.env.GOOGLE_CREDENTIALS) {
-    console.log("\n⚠️  GOOGLE_CREDENTIALS environment variable is not set.")
-    console.log("   To use translation sync feature, add the following to .env file:")
-    console.log("   GOOGLE_CREDENTIALS='{...}'")
-    console.log("   GOOGLE_SHEET_ID='...'")
-    console.log("   See .env.example file for reference.\n")
+    logger.warning("GOOGLE_CREDENTIALS not set")
+    logger.item("Add to .env file: GOOGLE_CREDENTIALS='{...}'", 2)
+    logger.item("Add to .env file: GOOGLE_SHEET_ID='...'", 2)
+    logger.item("See .env.example for reference", 2)
     return "unknown"
   }
 
@@ -31,10 +33,9 @@ async function checkSyncStatus(): Promise<SyncStatus> {
 
     // First run or metadata lost - suggest initial sync
     if (!metadata.lastLocalHash && !metadata.lastPullTime && !metadata.lastPushTime) {
-      console.log("\n💡 Translation sync status unknown:")
-      console.log("   No sync history found. This might be your first run or after git pull.")
-      console.log("   Run yarn i18n:pull to sync from Google Sheet,")
-      console.log("   or yarn i18n:push to upload local translations.\n")
+      logger.info("Translation sync status unknown")
+      logger.item("No sync history found", 2)
+      logger.item("Run: yarn i18n:pull or yarn i18n:push", 2)
       return "unknown"
     }
 
@@ -46,21 +47,18 @@ async function checkSyncStatus(): Promise<SyncStatus> {
         currentSheetLastModified > metadata.lastPullTime)
 
     if (localChanged && sheetChanged) {
-      console.log("\n⚠️  Translation sync required:")
-      console.log("   - Local CSV files changed (possibly from git pull)")
-      console.log("   - Google Sheet also has changes")
-      console.log("   Check both sources and run yarn i18n:push or yarn i18n:pull.\n")
+      logger.warning("Translation sync conflict")
+      logger.item("Local CSV files changed", 2)
+      logger.item("Google Sheet also has changes", 2)
+      logger.item("Run: yarn i18n:push or yarn i18n:pull", 2)
       return "conflict"
     } else if (localChanged) {
-      console.log("\n💡 Translation changes detected:")
-      console.log("   Local CSV files have changed.")
-      console.log("   If you made changes: run yarn i18n:push to upload to Google Sheet.")
-      console.log("   If from git pull: run yarn i18n:pull to ensure sync with Google Sheet.\n")
+      logger.info("Local translation changes detected")
+      logger.item("Run: yarn i18n:push to upload", 2)
       return "local_ahead"
     } else if (sheetChanged) {
-      console.log("\n💡 Translation pull needed:")
-      console.log("   Google Sheet changes detected.")
-      console.log("   Run yarn i18n:pull to download to local.\n")
+      logger.info("Google Sheet changes detected")
+      logger.item("Run: yarn i18n:pull to download", 2)
       return "sheet_ahead"
     }
 
@@ -68,9 +66,9 @@ async function checkSyncStatus(): Promise<SyncStatus> {
     return "synced"
   } catch (error) {
     if (error instanceof Error) {
-      console.error("\n❌ Failed to check sync status:", error.message)
+      logger.error(`Failed to check sync: ${error.message}`)
       if (error.message.includes("GOOGLE_CREDENTIALS")) {
-        console.log("   Please check your .env file.\n")
+        logger.item("Check your .env file", 2)
       }
     }
     return "unknown"
@@ -82,12 +80,12 @@ if (import.meta.url.endsWith(process.argv[1]) || process.argv[1]?.includes("i18n
   checkSyncStatus()
     .then((status) => {
       if (status === "synced") {
-        console.log("✅ Translations are synced.")
+        logger.success("Translations are synced")
       }
       process.exit(0)
     })
     .catch((error) => {
-      console.error("❌ Error:", error)
+      logger.error(`Error: ${error instanceof Error ? error.message : error}`)
       process.exit(1)
     })
 }

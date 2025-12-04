@@ -9,12 +9,14 @@ import { parse } from "csv-parse/sync"
 import { readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs"
 import { join, basename } from "node:path"
 import { getLanguages } from "./i18n-config.js"
+import { createLogger } from "./logger.js"
 
 interface TranslationRow {
   key: string
   [lang: string]: string
 }
 
+const logger = createLogger("i18n:build")
 const LOCALES_DIR = join(process.cwd(), "locales")
 const OUTPUT_DIR = join(process.cwd(), "src", "i18n", "generated")
 
@@ -25,7 +27,7 @@ try {
   )
 
   if (csvFiles.length === 0) {
-    console.log("⚠️  No CSV files found in locales/")
+    logger.warning("No CSV files found in locales/")
     process.exit(0)
   }
 
@@ -75,12 +77,12 @@ try {
   for (const lang of languages) {
     const outputPath = join(OUTPUT_DIR, `${lang}.json`)
     writeFileSync(outputPath, JSON.stringify(translations[lang], null, 2), "utf-8")
-    console.log(`✅ Generated: ${outputPath}`)
+    logger.success(`Generated ${logger.dim(lang + ".json")}`)
   }
 
-  console.log(`\n🎉 Successfully converted ${csvFiles.length} CSV files to JSON!`)
+  logger.info(`Converted ${logger.bright(csvFiles.length.toString())} CSV files`)
 } catch (error) {
-  console.error("❌ Error converting CSV to JSON:", error)
+  logger.error(`Failed to convert CSV: ${error instanceof Error ? error.message : error}`)
   process.exit(1)
 }
 

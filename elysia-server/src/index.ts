@@ -171,4 +171,17 @@ const app = new Elysia()
 
   .listen(config.port)
 
-logger.info(`[Server] http://${app.server?.hostname}:${config.port} ready`)
+// Startup log
+logger.info(`
+📦 elysia-server
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+▸ Run:  bun dev
+▸ DB:   bun db:generate (generate migration files)
+▸ Lint: bun lint
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+※ CI/CD: auto deploy on main push (EC2)
+※ DB migrate runs on docker container start
+※ Code quality: husky hooks + send-ci.sh
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Server] http://${app.server?.hostname}:${config.port} ready
+`)

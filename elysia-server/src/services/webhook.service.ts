@@ -44,6 +44,7 @@ interface SendGridEvent {
   status?: string
   response?: string
   type?: string
+  sg_machine_open?: boolean // SendGrid의 봇 감지 결과
   [key: string]: unknown
 }
 
@@ -1467,41 +1468,27 @@ class WebhookService {
 
   /**
    * 보안 스캐너/이미지 프록시/자동 프리페치에 의한 오픈인지 판별
-   * - User-Agent 패턴
-   * - IP 대역
-   * - 발송 후 10초 이내 오픈
+   * - SendGrid의 sg_machine_open 필드를 주요 판단 기준으로 사용
+   * - Microsoft/Azure IP 대역은 추가 필터로 유지
    */
-  private isAutomatedOpen(event: SendGridEvent, sentAt: Date | null): boolean {
-    const userAgent = event.useragent || ""
+  private isAutomatedOpen(event: SendGridEvent, _sentAt: Date | null): boolean {
+    // 1. SendGrid가 봇이라고 판단하면 → 봇
+    if (event.sg_machine_open === true) {
+      return true
+    }
+
+    // 2. SendGrid가 사람이라고 판단해도 Microsoft/Azure IP는 봇으로 처리
     const ip = event.ip || ""
-
-    const automatedUserAgentPatterns = [
-      /Chrome\/109\.0\.0\.0/, // 기업 보안 게이트웨이
-      /Chrome\/113\.0\.0\.0/, // 기업 보안 게이트웨이 (구버전)
-      /ms-office; MSOffice/i, // Outlook 프리뷰
-    ]
-
-    if (userAgent && automatedUserAgentPatterns.some((pattern) => pattern.test(userAgent))) {
-      return true
-    }
-
-    const automatedIpPatterns = [
-      /^4\.182\./, // Microsoft ATP / Safe Links
+    const microsoftATPIpPatterns = [
+      /^4\.182\./, // Azure ATP / Safe Links
       /^57\.155\./, // Microsoft ATP
+      /^72\.145\./, // Defender for Office 365
+      /^48\.209\./, // Azure 보안 서비스
+      /^4\.204\./, // Azure
     ]
 
-    if (ip && automatedIpPatterns.some((pattern) => pattern.test(ip))) {
+    if (ip && microsoftATPIpPatterns.some((pattern) => pattern.test(ip))) {
       return true
-    }
-
-    // 이메일 발송 직후 10초 이내 오픈은 자동 오픈일 가능성이 높음
-    if (sentAt) {
-      const openTime = new Date(event.timestamp * 1000)
-      const timeDiffSeconds = (openTime.getTime() - sentAt.getTime()) / 1000
-
-      if (timeDiffSeconds >= 0 && timeDiffSeconds < 10) {
-        return true
-      }
     }
 
     return false

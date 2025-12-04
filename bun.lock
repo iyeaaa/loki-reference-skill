@@ -152,6 +152,7 @@
         "@mastra/memory": "^0.15.11",
         "@mastra/pg": "^0.17.8",
         "@sendgrid/mail": "^8.1.6",
+        "@sinclair/typebox": "^0.34.41",
         "@types/bcrypt": "^6.0.0",
         "@types/busboy": "^1.5.4",
         "@types/jsonwebtoken": "^9.0.10",
@@ -163,6 +164,7 @@
         "chardet": "^2.1.1",
         "cheerio": "^1.1.2",
         "csv-parse": "^6.1.0",
+        "domhandler": "^5.0.3",
         "drizzle-orm": "^0.44.5",
         "elysia": "^1.4.7",
         "iconv-lite": "^0.7.0",
@@ -170,6 +172,7 @@
         "marked": "^16.4.0",
         "mastra": "^0.18.0",
         "neverthrow": "^8.2.0",
+        "openai": "^6.9.1",
         "p-limit": "^5.0.0",
         "p-queue": "^9.0.0",
         "p-retry": "^7.1.0",
@@ -184,6 +187,7 @@
       "devDependencies": {
         "@biomejs/biome": "^2.2.4",
         "@elysiajs/eden": "^1.4.4",
+        "@types/domhandler": "^3.1.0",
         "@types/marked": "^6.0.0",
         "bun-types": "^1.3.1",
         "dotenv": "^17.2.2",
@@ -1152,6 +1156,8 @@
     "@types/diff-match-patch": ["@types/diff-match-patch@1.0.36", "", {}, "sha512-xFdR6tkm0MWvBfO8xXCSsinYxHcqkQUlcHeSpMC2ukzOb6lwQAfDmW+Qt0AvlGd8HpsS28qKsB+oPeJn9I39jg=="],
 
     "@types/doctrine": ["@types/doctrine@0.0.9", "", {}, "sha512-eOIHzCUSH7SMfonMG1LsC2f8vxBFtho6NGBznK41R84YzPuvSBzrhEps33IsQiOW9+VL6NQ9DbjQJznk/S4uRA=="],
+
+    "@types/domhandler": ["@types/domhandler@3.1.0", "", { "dependencies": { "domhandler": "*" } }, "sha512-3AOfYUR/uv83OKeNzeJimXt6NRk/eCHkfOPp5Q8yX7ceE/WxxyDgEWnKb+b54bqVZmgjxMZLtWKDdmmREpZjTA=="],
 
     "@types/dompurify": ["@types/dompurify@3.2.0", "", { "dependencies": { "dompurify": "*" } }, "sha512-Fgg31wv9QbLDA0SpTOXO3MaxySc4DKGLi8sna4/Utjo4r3ZRPdCt4UQee8BWr+Q5z21yifghREPJGYaEOEIACg=="],
 
@@ -3354,6 +3360,8 @@
     "d3-sankey/d3-array": ["d3-array@2.12.1", "", { "dependencies": { "internmap": "^1.0.0" } }, "sha512-B0ErZK/66mHtEsR1TkPEEkwdy+WDesimkM5gpZr5Dsg54BiTA5RXtYW5qTLIAcekaS9xfZrzBLF/OAkB3Qn1YQ=="],
 
     "d3-sankey/d3-shape": ["d3-shape@1.3.7", "", { "dependencies": { "d3-path": "1" } }, "sha512-EUkvKjqPFUAZyOlhY5gzCxCeI0Aep04LwIRpsZ/mLFelJiUfnK56jo5JMDSE7yyP2kLSb6LtF+S5chMk7uqPqw=="],
+
+    "elysia-server/openai": ["openai@6.9.1", "", { "peerDependencies": { "ws": "^8.18.0", "zod": "^3.25 || ^4.0" }, "optionalPeers": ["ws", "zod"], "bin": { "openai": "bin/cli" } }, "sha512-vQ5Rlt0ZgB3/BNmTa7bIijYFhz3YBceAA3Z4JuoMSBftBF9YqFHIEhZakSs+O/Ad7EaoEimZvHxD5ylRjN11Lg=="],
 
     "elysia-server/p-limit": ["p-limit@5.0.0", "", { "dependencies": { "yocto-queue": "^1.0.0" } }, "sha512-/Eaoq+QyLSiXQ4lyYV23f14mZRQcXnxfHrN0vCai+ak9G0pp9iEQukIIZq5NccEvwRB8PUnZT0KsOoDCINS1qQ=="],
 

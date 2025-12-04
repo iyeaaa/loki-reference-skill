@@ -135,8 +135,15 @@ export function DataArtifact({
   onGenerateSequence,
 }: DataArtifactProps) {
   const { t } = useTranslation()
+  // Note: SQL is only shown in development mode (process.env.NODE_ENV === 'development')
+  // In production, SQL queries are hidden for security, but results/insights are still shown
   const hasAnyContent =
-    sql || insights.length > 0 || !!leadPreview || !!leadImportProgress || !!leadImportResult
+    sql ||
+    insights.length > 0 ||
+    data.length > 0 ||
+    !!leadPreview ||
+    !!leadImportProgress ||
+    !!leadImportResult
   const [mounted, setMounted] = useState(false)
   const [isProcessingLead, setIsProcessingLead] = useState(false)
 
@@ -242,8 +249,8 @@ export function DataArtifact({
             onGenerateSequence={onGenerateSequence}
           />
         )}
-        {/* SQL Query Section */}
-        {sql && (
+        {/* SQL Query Section - Only show in development mode */}
+        {sql && process.env.NODE_ENV === "development" && (
           <div
             className={`
               space-y-3 transition-all duration-500 ease-out
@@ -279,18 +286,20 @@ export function DataArtifact({
               space-y-3 transition-all duration-500 ease-out
               ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
             `}
-            style={{ transitionDelay: sql ? "50ms" : "0ms" }}
+            style={{
+              transitionDelay: sql && process.env.NODE_ENV === "development" ? "50ms" : "0ms",
+            }}
           >
             <SectionHeader title={t("chatbot.artifact.queryResults", { count: data.length })} />
             <div className="rounded-lg border border-border overflow-hidden">
               <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
                 <table className="w-full text-xs">
-                  <thead className="bg-muted/50 sticky top-0">
+                  <thead className="bg-background sticky top-0 shadow-sm z-10">
                     <tr>
                       {Object.keys(data[0] as Record<string, unknown>).map((key) => (
                         <th
                           key={key}
-                          className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap border-b"
+                          className="px-3 py-2 text-left font-medium text-foreground whitespace-nowrap border-b border-border bg-background"
                         >
                           {key}
                         </th>
@@ -328,7 +337,9 @@ export function DataArtifact({
               space-y-3 transition-all duration-500 ease-out
               ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
             `}
-            style={{ transitionDelay: sql ? "100ms" : "0ms" }}
+            style={{
+              transitionDelay: sql && process.env.NODE_ENV === "development" ? "100ms" : "0ms",
+            }}
           >
             <SectionHeader title={t("chatbot.artifact.keyInsights")} />
             <div className="space-y-3">
@@ -341,7 +352,7 @@ export function DataArtifact({
                     ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
                   `}
                   style={{
-                    transitionDelay: `${(sql ? 100 : 0) + i * 100}ms`,
+                    transitionDelay: `${(sql && process.env.NODE_ENV === "development" ? 100 : 0) + i * 100}ms`,
                   }}
                 >
                   <div className="mb-2 flex items-center gap-2">

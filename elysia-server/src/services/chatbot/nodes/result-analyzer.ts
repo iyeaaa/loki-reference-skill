@@ -21,6 +21,15 @@ export async function analyzeResults(state: ChatbotState): Promise<Partial<Chatb
 
   chatbotLogger.nodeStart("analyzeResults")
 
+  // ⭐ CRITICAL: Send query result to frontend IMMEDIATELY
+  // Don't wait for LLM analysis to complete - show data right away!
+  if (emitter && state.queryResult.length > 0) {
+    emitter.nodeComplete("analyzeResults", "Query results ready", {
+      result: state.queryResult,
+      sql: state.generatedSQL,
+    })
+  }
+
   try {
     // Detect mutation queries (UPDATE/DELETE/INSERT) or CTE with mutation
     const sqlLower = state.generatedSQL.toLowerCase().trim()
@@ -139,8 +148,12 @@ export async function analyzeResults(state: ChatbotState): Promise<Partial<Chatb
     const duration = Date.now() - startTime
     chatbotLogger.nodeSuccess("analyzeResults", duration)
 
+    // Note: Don't send result again here - already sent at the start
+    // This prevents duplicate updates and ensures result displays immediately
     if (emitter) {
-      emitter.nodeComplete("analyzeResults", "Analysis complete")
+      emitter.nodeComplete("analyzeResults", "Analysis complete", {
+        analysis, // Send analysis text only
+      })
     }
 
     return { analysis }

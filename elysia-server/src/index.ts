@@ -22,7 +22,7 @@ import { adminEmailTemplateRoutes, emailTemplateRoutes } from "./routes/email-te
 import { adminEmailRoutes, emailRoutes } from "./routes/emails.routes"
 import { geminiFileSearchRoutes } from "./routes/gemini-file-search.routes"
 // Import routes
-import { healthRoutes } from "./routes/health.routes"
+import { apiHealthRoute, healthRoutes } from "./routes/health.routes"
 import { leadEnrichmentRoutes } from "./routes/lead-enrichment.routes"
 import { leadImportRoutes } from "./routes/lead-import.routes"
 import { adminLeadRoutes, leadRoutes } from "./routes/leads.routes"
@@ -132,6 +132,7 @@ const app = new Elysia()
   .get("/", () => ({ message: "SendGrid Email Service API", version: "2.1.0" }))
 
   // Register routes
+  .use(apiHealthRoute)
   .use(healthRoutes)
   .use(sseTestRoutes)
   .use(webhookRoutes)

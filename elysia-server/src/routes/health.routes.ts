@@ -22,6 +22,25 @@ async function checkDatabase(): Promise<{ healthy: boolean; latency?: number; er
   }
 }
 
+// API health route for nginx /api/* routing
+export const apiHealthRoute = new Elysia().get("/api/health", async () => {
+  const start = Date.now()
+  try {
+    await pool.query("SELECT 1")
+    return {
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      database: { status: "up", latency: Date.now() - start },
+    }
+  } catch (error) {
+    return {
+      status: "degraded",
+      timestamp: new Date().toISOString(),
+      database: { status: "down", error: error instanceof Error ? error.message : "Unknown" },
+    }
+  }
+})
+
 export const healthRoutes = new Elysia({ prefix: "/health" })
   // Detailed health check with all services
   .get("/", async ({ set }) => {

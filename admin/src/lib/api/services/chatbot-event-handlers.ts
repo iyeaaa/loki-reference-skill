@@ -62,15 +62,43 @@ export const handleNodeComplete: EventHandler = (data, context) => {
   }
 
   // ⭐ CRITICAL: Update accumulated data from node-complete payload
-  // This allows real-time streaming of insights and follow-up questions
+  // This allows real-time streaming of SQL, results, insights, and follow-up questions
   const resultData = data.result as Record<string, unknown> | undefined
   console.log("[Chatbot] Result data from node-complete:", resultData)
 
   if (resultData && typeof resultData === "object") {
+    // ✅ SQL and explanation - preserve from generateSQL node
+    if ("sql" in resultData && resultData.sql) {
+      context.accumulatedData.sql = resultData.sql as string
+      console.log("[Chatbot] ✅ SQL received:", resultData.sql)
+    }
+    if ("sqlExplanation" in resultData && resultData.sqlExplanation) {
+      console.log("[Chatbot] ✅ SQL explanation received:", resultData.sqlExplanation)
+    }
+
+    // ✅ Query results - preserve from executeQuery/analyzeResults node
+    if ("result" in resultData && resultData.result) {
+      context.accumulatedData.result = resultData.result as unknown[]
+      console.log(
+        "[Chatbot] ✅ Query result received (",
+        (resultData.result as unknown[]).length,
+        "rows )",
+      )
+    }
+
+    // ✅ Analysis text - from analyzeResults node
+    if ("analysis" in resultData && resultData.analysis) {
+      context.accumulatedData.analysis = resultData.analysis as string
+      console.log("[Chatbot] ✅ Analysis text received")
+    }
+
+    // ✅ Insights - from generateInsights node
     if ("insights" in resultData && resultData.insights) {
       context.accumulatedData.insights = resultData.insights as unknown[]
       console.log("[Chatbot] ✅ Insights received:", resultData.insights)
     }
+
+    // ✅ Follow-up questions - from generateFollowUps node
     if ("followUpQuestions" in resultData && resultData.followUpQuestions) {
       context.accumulatedData.followUpQuestions = resultData.followUpQuestions as string[]
       console.log("[Chatbot] ✅ Follow-up questions received:", resultData.followUpQuestions)
@@ -79,12 +107,12 @@ export const handleNodeComplete: EventHandler = (data, context) => {
     console.log("[Chatbot] ⚠️ No result data in node-complete event")
   }
 
-  // IMPORTANT: Stream updated content with new metadata
+  // IMPORTANT: Stream updated content with ALL metadata (including SQL)
   // This triggers real-time artifact updates in the UI
-  if (context.callbacks.onMessageUpdate && context.accumulatedData.analysis) {
+  if (context.callbacks.onMessageUpdate) {
     const completedMsg: ChatMessage = {
       role: "assistant",
-      content: context.accumulatedData.analysis, // Keep existing content
+      content: context.accumulatedData.analysis || "", // Keep existing content or empty
       timestamp: new Date(),
       metadata: {
         sql: context.accumulatedData.sql || undefined,
@@ -153,6 +181,15 @@ export const handleProgress: EventHandler = (data, context) => {
       timestamp: new Date(),
       metadata: {
         chatbotProgress: progress,
+        // ⭐ CRITICAL: Preserve ALL metadata during progress updates
+        sql: context.accumulatedData.sql || undefined,
+        result: context.accumulatedData.result?.length ? context.accumulatedData.result : undefined,
+        insights: context.accumulatedData.insights?.length
+          ? (context.accumulatedData.insights as Insight[])
+          : undefined,
+        followUpQuestions: context.accumulatedData.followUpQuestions?.length
+          ? context.accumulatedData.followUpQuestions
+          : undefined,
       },
     }
     context.callbacks.onMessageUpdate(progressMsg)
@@ -179,7 +216,16 @@ export const handleTextChunk: EventHandler = (data, context) => {
       content: accumulatedData.analysis,
       timestamp: new Date(),
       metadata: {
+        // ⭐ CRITICAL: Preserve ALL metadata during text streaming
+        // This prevents result/insights from disappearing while analysis text is streaming
         sql: accumulatedData.sql || undefined,
+        result: accumulatedData.result?.length ? accumulatedData.result : undefined,
+        insights: accumulatedData.insights?.length
+          ? (accumulatedData.insights as Insight[])
+          : undefined,
+        followUpQuestions: accumulatedData.followUpQuestions?.length
+          ? accumulatedData.followUpQuestions
+          : undefined,
       },
     }
     callbacks.onMessageUpdate(streamingMsg)
@@ -265,47 +311,69 @@ export const handleWaitingConfirmation: EventHandler = () => {
  * Handle done event - stream completion
  */
 export const handleDone: EventHandler = (data, context) => {
-  console.log("[Chatbot] Done event")
+  console.log("[Chatbot] Done event received")
+  console.log("[Chatbot] Done event state:", data.state)
+  console.log("[Chatbot] Accumulated data:", context.accumulatedData)
 
   const { accumulatedData, callbacks } = context
 
-  // Create final message with all accumulated data
+  // ⭐ OPTIMIZATION: Prefer accumulated data (already sent by nodes)
+  // Only use done state as fallback if accumulated data is missing
+  // This prevents duplicate updates and UI flickering
+  let finalSQL = accumulatedData.sql
+  let finalResult = accumulatedData.result
+  let finalInsights = accumulatedData.insights
+  let finalFollowUps = accumulatedData.followUpQuestions
+  let finalAnalysis = accumulatedData.analysis
+
+  // If accumulated data is missing, use done state as fallback (rare case)
+  if (data.state) {
+    if (!finalSQL && data.state.generatedSQL) {
+      finalSQL = data.state.generatedSQL as string
+      console.log("[Chatbot] ⚠️ Fallback: Using SQL from done state")
+    }
+    if (!finalResult && data.state.queryResult) {
+      finalResult = data.state.queryResult as unknown[]
+      console.log("[Chatbot] ⚠️ Fallback: Using result from done state")
+    }
+    if (!finalInsights && data.state.insights) {
+      finalInsights = data.state.insights as unknown[]
+      console.log("[Chatbot] ⚠️ Fallback: Using insights from done state")
+    }
+    if (!finalFollowUps && data.state.followUpQuestions) {
+      finalFollowUps = data.state.followUpQuestions as string[]
+      console.log("[Chatbot] ⚠️ Fallback: Using follow-ups from done state")
+    }
+    if (!finalAnalysis && data.state.analysis) {
+      finalAnalysis = data.state.analysis as string
+      console.log("[Chatbot] ⚠️ Fallback: Using analysis from done state")
+    }
+  }
+
+  console.log("[Chatbot] Final data sources:", {
+    sql: finalSQL ? "accumulated" : "none",
+    result: finalResult?.length ? "accumulated" : "none",
+    insights: finalInsights?.length ? "accumulated" : "none",
+    followUps: finalFollowUps?.length ? "accumulated" : "none",
+    analysis: finalAnalysis ? "accumulated" : "none",
+  })
+
+  // Create final message with all metadata
   const finalMessage: ChatMessage = {
     role: "assistant",
-    content: accumulatedData.analysis || "분석이 완료되었습니다.",
+    content: finalAnalysis || "분석이 완료되었습니다.",
     timestamp: new Date(),
     metadata: {
-      sql: accumulatedData.sql || undefined,
-      result: accumulatedData.result?.length ? accumulatedData.result : undefined,
-      insights: accumulatedData.insights?.length
-        ? (accumulatedData.insights as Insight[])
-        : undefined,
-      followUpQuestions: accumulatedData.followUpQuestions?.length
-        ? accumulatedData.followUpQuestions
-        : undefined,
+      sql: finalSQL || undefined,
+      result: finalResult?.length ? finalResult : undefined,
+      insights: finalInsights?.length ? (finalInsights as Insight[]) : undefined,
+      followUpQuestions: finalFollowUps?.length ? finalFollowUps : undefined,
     },
   }
 
-  // If done event has state, merge it
-  if (data.state) {
-    if (data.state.analysis) finalMessage.content = data.state.analysis as string
-    if (data.state.generatedSQL && finalMessage.metadata) {
-      finalMessage.metadata.sql = data.state.generatedSQL as string
-    }
-    if (data.state.queryResult && finalMessage.metadata) {
-      finalMessage.metadata.result = data.state.queryResult as unknown[]
-    }
-    if (data.state.insights && finalMessage.metadata) {
-      finalMessage.metadata.insights = data.state.insights
-      console.log("[Chatbot] Final insights:", data.state.insights)
-    }
-    if (data.state.followUpQuestions && finalMessage.metadata) {
-      finalMessage.metadata.followUpQuestions = data.state.followUpQuestions as string[]
-      console.log("[Chatbot] Final follow-up questions:", data.state.followUpQuestions)
-    }
-
-    // ⭐ CRITICAL: Include pendingSequenceActivation so follow-up questions know sequence exists
-    // This prevents the chatbot from re-creating the sequence on every follow-up question
+  // ⭐ CRITICAL: Include pendingSequenceActivation so follow-up questions know sequence exists
+  // This prevents the chatbot from re-creating the sequence on every follow-up question
+  if (data.state?.metadata) {
     const metadata = data.state.metadata as { pendingSequenceActivation?: unknown } | undefined
     if (metadata?.pendingSequenceActivation && finalMessage.metadata) {
       finalMessage.metadata.pendingSequenceActivation = metadata.pendingSequenceActivation as {
@@ -322,7 +390,12 @@ export const handleDone: EventHandler = (data, context) => {
     }
   }
 
-  console.log("[Chatbot] Final message:", finalMessage)
+  console.log("[Chatbot] ✅ Final message metadata:", finalMessage.metadata)
+  console.log("[Chatbot] ✅ Has SQL:", !!finalMessage.metadata?.sql)
+  console.log("[Chatbot] ✅ Has result:", !!finalMessage.metadata?.result)
+  console.log("[Chatbot] ✅ Has insights:", !!finalMessage.metadata?.insights)
+  console.log("[Chatbot] ✅ Has follow-ups:", !!finalMessage.metadata?.followUpQuestions)
+
   callbacks.onMessage(finalMessage)
 }
 

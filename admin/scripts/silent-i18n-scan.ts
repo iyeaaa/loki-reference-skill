@@ -18,8 +18,8 @@ async function silentScan() {
     // merge-keys-to-csv 실행
     const { stdout } = await execAsync("tsx scripts/merge-keys-to-csv.ts", { cwd: process.cwd() })
 
-    // 새로운 키가 추가된 경우만 출력
-    if (stdout.includes("Added") || stdout.includes("new key")) {
+    // 새로운 키가 추가된 경우만 출력 (Added가 포함된 경우)
+    if (stdout.includes("Added")) {
       console.log(`[scan] ${stdout.trim()}`)
     }
   } catch (error) {

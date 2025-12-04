@@ -27,6 +27,8 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
     hasError: !!state.error,
   })
 
+  let content: string | undefined
+
   try {
     // Check if CSV data is present
     const hasCSV = !!state.csvData && state.csvData.rowCount > 0
@@ -41,15 +43,21 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
 
     // Generate SQL using LLM (no intermediate progress events)
     const response = await llm.invoke(prompt)
-    const content = response.content as string
+    content = response.content as string
 
-    // JSON 추출 시도
-    const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || content.match(/(\{[\s\S]*\})/)
+    // JSON 추출 시도 (더 robust한 패턴)
+    const jsonMatch =
+      content.match(/```json\n?([\s\S]*?)\n?```/) ||
+      content.match(/```\n?(\{[\s\S]*?\})\n?```/) ||
+      content.match(/(\{[\s\S]*?\})/)
 
     // JSON 형식인 경우
     if (jsonMatch?.[1]) {
-      const jsonStr = jsonMatch[1]
-      const result = JSON.parse(jsonStr.trim())
+      const jsonStr = jsonMatch[1].trim()
+      chatbotLogger.info(
+        `[SQL Generator] Attempting to parse JSON: ${jsonStr.substring(0, 200)}...`,
+      )
+      const result = JSON.parse(jsonStr)
 
       // queries 배열이 있는 경우 (복잡한 순차 실행)
       if (result.queries && Array.isArray(result.queries)) {
@@ -64,10 +72,12 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
           `[LangGraph] Generated ${result.queries.length} sequential queries:\n${result.queries.map((q: string, i: number) => `${i + 1}. ${q.substring(0, 100)}...`).join("\n")}`,
         )
 
-        // Emit node complete event
+        // Emit node complete event with SQL metadata
         if (emitter) {
           emitter.nodeComplete("generateSQL", `Data ready (${result.queries.length} steps)`, {
             queryCount: result.queries.length,
+            sql: result.queries[0],
+            sqlExplanation: result.explanation,
           })
         }
 
@@ -90,9 +100,12 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
         })
         chatbotLogger.info(`[LangGraph] Generated SQL:\n${result.sql}`)
 
-        // Emit node complete event
+        // Emit node complete event with SQL metadata
         if (emitter) {
-          emitter.nodeComplete("generateSQL", "Data ready")
+          emitter.nodeComplete("generateSQL", "Data ready", {
+            sql: result.sql,
+            sqlExplanation: result.explanation,
+          })
         }
 
         return {
@@ -109,9 +122,11 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
 
     chatbotLogger.info(`[LangGraph] Generated raw SQL:\n${content}`)
 
-    // Emit node complete event
+    // Emit node complete event with SQL metadata
     if (emitter) {
-      emitter.nodeComplete("generateSQL", "Data ready")
+      emitter.nodeComplete("generateSQL", "Data ready", {
+        sql: content.trim(),
+      })
     }
 
     return {
@@ -128,6 +143,9 @@ export async function generateSQL(state: ChatbotState): Promise<Partial<ChatbotS
     if (errorMessage.includes("JSON") || errorMessage.includes("parse")) {
       userFriendlyError =
         "Unable to process your request. Please try rephrasing your question more specifically."
+
+      // Log the actual response for debugging
+      chatbotLogger.error(`[SQL Generator] JSON parsing failed. LLM response:\n${content}`)
     }
 
     chatbotLogger.nodeError("generateSQL", errorMessage, duration)

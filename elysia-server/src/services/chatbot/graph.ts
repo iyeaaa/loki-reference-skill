@@ -157,7 +157,14 @@ async function askConfirmation(state: ChatbotState): Promise<Command> {
 
 async function formatResponse(state: ChatbotState): Promise<Partial<ChatbotState>> {
   const startTime = Date.now()
+  const emitter = state._emitter
+
   chatbotLogger.nodeStart("formatResponse")
+
+  // Emit node start
+  if (emitter) {
+    emitter.nodeStart("formatResponse", "Creating final response...")
+  }
 
   // 최종 응답 메시지 생성
   const assistantMessage = {
@@ -166,6 +173,7 @@ async function formatResponse(state: ChatbotState): Promise<Partial<ChatbotState
     timestamp: new Date(),
     metadata: {
       sql: state.generatedSQL,
+      sqlExplanation: state.sqlExplanation,
       result: state.queryResult,
       insights: state.insights,
       visualization: state.visualizationSuggestions,
@@ -182,6 +190,26 @@ async function formatResponse(state: ChatbotState): Promise<Partial<ChatbotState
   if (state.error) {
     chatbotLogger.info(`[LangGraph] Formatting error response: ${state.error}`)
   }
+
+  // Log final metadata being sent
+  chatbotLogger.nodeDetail("formatResponse", {
+    hasSql: !!state.generatedSQL,
+    hasResult: !!state.queryResult?.length,
+    hasInsights: !!state.insights?.length,
+    hasFollowUps: !!state.followUpQuestions?.length,
+  })
+
+  // ⭐ OPTIMIZATION: Don't emit node-complete for formatResponse
+  // All data (sql, result, insights, followUps) has already been sent by respective nodes:
+  // - generateSQL → sql
+  // - executeQuery/analyzeResults → result
+  // - generateInsights → insights
+  // - generateFollowUps → followUpQuestions
+  // Emitting here causes duplicate updates and UI flickering
+  // The done event will contain final state if needed
+  chatbotLogger.info(
+    "[LangGraph] Skipping formatResponse node-complete to prevent duplicate updates",
+  )
 
   return {
     messages: [assistantMessage],
@@ -420,16 +448,21 @@ export function createChatbotGraph() {
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
   workflow.addEdge(NODE_NAMES.HANDLE_ERROR, NODE_NAMES.FORMAT_RESPONSE)
 
-  // 병렬 실행: 인사이트, 후속질문 동시 실행
-  // LangGraph는 자동으로 두 노드가 모두 완료될 때까지 대기 후 formatResponse 실행
+  // ⭐ OPTIMIZATION: Sequential execution instead of parallel
+  // BEFORE: analyzeResults → [generateInsights, generateFollowUps] (parallel)
+  //   Problem: insights arrive before analysis text completes streaming
+  // AFTER: analyzeResults → generateInsights → generateFollowUps → formatResponse
+  //   Solution: insights appear AFTER analysis text is fully displayed
+
+  // Step 1: analyzeResults completes (LLM streaming finishes)
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
   workflow.addEdge(NODE_NAMES.ANALYZE_RESULTS, NODE_NAMES.GENERATE_INSIGHTS)
-  // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
-  workflow.addEdge(NODE_NAMES.ANALYZE_RESULTS, NODE_NAMES.GENERATE_FOLLOW_UPS)
 
-  // 두 병렬 노드가 모두 완료되면 formatResponse 실행
+  // Step 2: generateInsights completes → insights displayed
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
-  workflow.addEdge(NODE_NAMES.GENERATE_INSIGHTS, NODE_NAMES.FORMAT_RESPONSE)
+  workflow.addEdge(NODE_NAMES.GENERATE_INSIGHTS, NODE_NAMES.GENERATE_FOLLOW_UPS)
+
+  // Step 3: generateFollowUps completes → follow-ups displayed
   // @ts-expect-error - LangGraph's StateGraph type inference doesn't properly handle dynamic node additions
   workflow.addEdge(NODE_NAMES.GENERATE_FOLLOW_UPS, NODE_NAMES.FORMAT_RESPONSE)
 

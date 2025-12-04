@@ -133,9 +133,8 @@ export const config = {
 
 // Log configuration on startup (only in development)
 if (isDevelopment) {
-  console.log("✅ Configuration loaded successfully")
-  console.log(`   - Environment: ${NODE_ENV}`)
-  console.log(`   - Port: ${config.port}`)
-  console.log(`   - Database: ${config.database.url.split("@")[1] || "configured"}`)
-  console.log(`   - SendGrid: ${config.sendgrid.fromEmail}`)
+  const dbHost = config.database.url.split("@")[1]?.split("/")[0] || "configured"
+  console.log(
+    `\n[Config] env=${NODE_ENV} port=${config.port} db=${dbHost} mail=${config.sendgrid.fromEmail}\n`,
+  )
 }

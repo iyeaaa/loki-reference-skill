@@ -2,13 +2,21 @@ import { Elysia } from "elysia"
 import logger from "../utils/logger"
 
 /**
- * Get status marker for Docker-style logging
+ * Get status icon for Docker-style logging
  */
-const getStatusMarker = (statusCode: number): string => {
-  if (statusCode < 300) return "[OK]"
-  if (statusCode < 400) return "[REDIRECT]"
-  if (statusCode < 500) return "[CLIENT_ERROR]"
-  return "[SERVER_ERROR]"
+const getStatusIcon = (statusCode: number): string => {
+  if (statusCode < 300) return "✓"
+  if (statusCode < 400) return "→"
+  if (statusCode < 500) return "⚠"
+  return "✗"
+}
+
+/**
+ * Format duration for display
+ */
+const formatDuration = (ms: number): string => {
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(1)}s`
 }
 
 /**
@@ -19,12 +27,11 @@ const shouldSkipLogging = (path: string): boolean =>
 
 /**
  * HTTP Request/Response Logger
- * Docker-style logging for API requests
+ * Docker-style compact logging
  *
- * Logs: [STATUS] METHOD PATH - CODE (DURATIONms)
- * Example: [OK] GET /api/v1/users - 200 (15ms)
+ * Format: ICON METHOD PATH STATUS DURATION [| ERROR]
+ * Example: ✓ GET /api/v1/users 200 15ms
  */
-// Store request start times
 const requestTimes = new WeakMap<Request, number>()
 
 export const httpLogger = new Elysia({ name: "http-logger" })
@@ -33,7 +40,6 @@ export const httpLogger = new Elysia({ name: "http-logger" })
     return {}
   })
   .mapResponse(({ request, set }) => {
-    // .onAfterHandle(({ request, set }) => {
     const { method, url } = request
     const path = new URL(url).pathname
 
@@ -46,10 +52,7 @@ export const httpLogger = new Elysia({ name: "http-logger" })
     const duration = Date.now() - startTime
     const status = typeof set.status === "number" ? set.status : 200
 
-    logger.info(
-      { method, path, status, duration },
-      `${getStatusMarker(status)} ${method} ${path} - ${status} (${duration}ms)`,
-    )
+    logger.info(`${getStatusIcon(status)} ${method} ${path} ${status} ${formatDuration(duration)}`)
 
     requestTimes.delete(request)
   })
@@ -65,10 +68,10 @@ export const httpLogger = new Elysia({ name: "http-logger" })
     const startTime = requestTimes.get(ctx.request) || Date.now()
     const duration = Date.now() - startTime
     const status = typeof ctx.set.status === "number" ? ctx.set.status : 500
+    const errorMsg = ctx.error instanceof Error ? ctx.error.message : String(ctx.error)
 
     logger.error(
-      { method, path, status, duration, err: ctx.error },
-      `[ERROR] ${method} ${path} - ${status} (${duration}ms)`,
+      `${getStatusIcon(status)} ${method} ${path} ${status} ${formatDuration(duration)} | ${errorMsg}`,
     )
 
     requestTimes.delete(ctx.request)

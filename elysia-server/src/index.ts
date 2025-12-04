@@ -43,13 +43,10 @@ import { startWorkflowExecutionWorker } from "./workers/workflow-execution-worke
 
 // Start workers
 if (!isDevelopment) {
-  logger.info("Starting background workers (production mode)...")
-  startEmailSequenceWorker() // 구 기능 (sequence_steps)
-  startWorkflowExecutionWorker() // 신 기능 (workflow 기반)
+  startEmailSequenceWorker()
+  startWorkflowExecutionWorker()
   startScheduledEmailWorker()
-  logger.info("✅ Background workers started")
-} else {
-  logger.info("⏸️  Background workers disabled in development mode")
+  logger.info("[Worker] sequence, workflow, scheduled-email started")
 }
 
 const app = new Elysia()
@@ -174,4 +171,4 @@ const app = new Elysia()
 
   .listen(config.port)
 
-logger.info(`🚀 Server ready at http://${app.server?.hostname}:${config.port}`)
+logger.info(`[Server] http://${app.server?.hostname}:${config.port} ready`)

@@ -4,8 +4,7 @@ import { config, isProduction } from "../config"
 export const logger = pino({
   level: config.logging.level,
 
-  // Pretty printing in development, JSON in production
-  // Note: Removed messageFormat to avoid DataCloneError with worker threads
+  // Docker-style compact logging in development, JSON in production
   transport: !isProduction
     ? {
         target: "pino-pretty",
@@ -13,7 +12,8 @@ export const logger = pino({
           colorize: true,
           translateTime: "HH:MM:ss",
           ignore: "pid,hostname",
-          singleLine: false,
+          singleLine: true,
+          messageFormat: "{msg}",
         },
       }
     : undefined,

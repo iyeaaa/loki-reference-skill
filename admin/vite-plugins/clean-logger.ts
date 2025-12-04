@@ -105,7 +105,7 @@ export function cleanLoggerPlugin(): Plugin {
         // Print notes
         printBoxNote("Hot reload: enabled")
         printBoxNote("i18n: auto-sync enabled")
-        printBoxNote("Type check: run 'yarn type-check'")
+        printBoxNote("Code quality: husky hooks + send-ci.sh")
 
         console.log() // Empty line for spacing
       }

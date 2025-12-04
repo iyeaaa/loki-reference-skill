@@ -124,28 +124,29 @@ export default function AdminLoginPage() {
 
   return (
     <motion.div
-      className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50 via-white to-blue-50"
+      className="min-h-screen flex items-center justify-center py-8 px-4 sm:py-12 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-50 via-white to-blue-50"
       variants={reducedMotion ? undefined : fadeVariants}
       initial="hidden"
       animate="visible"
     >
       <motion.div
+        className="w-full max-w-lg"
         variants={reducedMotion ? undefined : scaleVariants}
         initial="hidden"
         animate="visible"
       >
-        <Card className="w-full max-w-md shadow-2xl border-0 relative">
-          <div className="absolute top-4 right-4 z-10">
-            <LanguageSwitcher />
-          </div>
-          <CardHeader className="text-center pb-0">
+        <div className="flex justify-end mb-4">
+          <LanguageSwitcher className="bg-white/80 backdrop-blur-sm shadow-sm border border-gray-200/50 rounded-lg" />
+        </div>
+        <Card className="w-full shadow-2xl border-0">
+          <CardHeader className="text-center pb-0 pt-8">
             <motion.div
               className="flex justify-center mb-6"
               variants={reducedMotion ? undefined : slideUpVariants}
               initial="hidden"
               animate="visible"
             >
-              <div className="relative w-32 h-32">
+              <div className="relative w-24 h-24 sm:w-32 sm:h-32">
                 <img
                   src="/images/rinda-logo.png"
                   alt="Rinda Logo"
@@ -159,26 +160,26 @@ export default function AdminLoginPage() {
               animate="visible"
               transition={{ delay: 0.1 }}
             >
-              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] bg-clip-text text-transparent">
+              <CardTitle className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[#6B46C1] to-[#3B82F6] bg-clip-text text-transparent px-2">
                 {t("login.title")}
               </CardTitle>
-              <CardDescription className="text-gray-600 mt-2">
+              <CardDescription className="text-sm sm:text-base text-gray-600 mt-2 px-2">
                 {t("login.description")}
               </CardDescription>
             </motion.div>
           </CardHeader>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 px-4 sm:px-6 pb-8">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 h-12 bg-gray-100">
+              <TabsList className="grid w-full grid-cols-2 h-12 bg-gray-100 p-1.5 gap-1.5">
                 <TabsTrigger
                   value="login"
-                  className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium"
+                  className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium h-full px-4 py-2.5 rounded-md"
                 >
                   {t("login.tab.login")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="signup"
-                  className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium"
+                  className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 font-medium h-full px-4 py-2.5 rounded-md"
                 >
                   {t("login.tab.signup")}
                 </TabsTrigger>

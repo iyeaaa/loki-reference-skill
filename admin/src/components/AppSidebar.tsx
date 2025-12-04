@@ -2,15 +2,17 @@ import { motion } from "framer-motion"
 import type { LucideIcon } from "lucide-react"
 import {
   BarChart3,
+  Compass,
   // Database, // TODO: BigQuery Search 기능 완성 후 주석 해제
   GitBranch,
   Mail,
   MessageSquare,
-  Search,
+  // Search, // TODO: Webset 기능 완성 후 주석 해제
   Settings,
   Sparkles,
   UserCheck,
 } from "lucide-react"
+import { Fragment } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useLocation } from "react-router-dom"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
@@ -20,7 +22,6 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -96,14 +97,14 @@ function CustomMenuItem({ title, url, icon: Icon, isActive }: CustomMenuItemProp
 // 메인 메뉴 아이템 - Natural sales workflow order
 const getMainMenuItems = (t: (key: string) => string) => [
   {
-    title: t("sidebar.menu.aiSalesAutomation"),
-    url: "/chatbot",
-    icon: MessageSquare,
-  },
-  {
     title: t("sidebar.menu.dashboard"),
     url: "/dashboard",
     icon: BarChart3,
+  },
+  {
+    title: t("sidebar.menu.leadDiscovery"),
+    url: "/lead-discovery",
+    icon: Compass,
   },
   {
     title: t("sidebar.menu.customerManagement"),
@@ -121,21 +122,26 @@ const getMainMenuItems = (t: (key: string) => string) => [
     icon: Mail,
   },
   {
-    title: t("sidebar.menu.webset"),
-    url: "/websets",
-    icon: Search,
-  },
-  {
     title: t("sidebar.menu.geminiSearch"),
     url: "/gemini-search",
     icon: Sparkles,
   },
+  // {
+  //   title: t("sidebar.menu.webset"),
+  //   url: "/websets",
+  //   icon: Search,
+  // },
   // TODO: BigQuery Search 기능 완성 후 주석 해제
   // {
   //   title: t("sidebar.menu.bigquerySearch"),
   //   url: "/bigquery-search",
   //   icon: Database,
   // },
+  {
+    title: t("sidebar.menu.aiSalesAutomation"),
+    url: "/chatbot",
+    icon: MessageSquare,
+  },
 ]
 
 interface AppSidebarProps {
@@ -212,19 +218,25 @@ export function AppSidebar({
       <SidebarContent className="px-3 py-4 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-8">
         {/* Main Menu Section - Natural workflow order */}
         <SidebarGroup className="py-0">
-          <SidebarGroupLabel className="mb-3 px-2 text-xs font-bold text-muted-foreground uppercase tracking-wide">
-            MENU
-          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5 group-data-[collapsible=icon]:gap-8 group-data-[collapsible=icon]:items-center">
-              {mainMenuItems.map((item) => (
-                <CustomMenuItem
-                  key={item.title}
-                  title={item.title}
-                  url={item.url}
-                  icon={item.icon}
-                  isActive={pathname === item.url}
-                />
+              {mainMenuItems.map((item, index) => (
+                <Fragment key={item.title}>
+                  <CustomMenuItem
+                    title={item.title}
+                    url={item.url}
+                    icon={item.icon}
+                    isActive={pathname === item.url}
+                  />
+                  {/* 대시보드(첫번째) 밑에 구분선 */}
+                  {index === 0 && (
+                    <div className="my-3 border-t border-sidebar-border group-data-[collapsible=icon]:hidden" />
+                  )}
+                  {/* Rinda GPT(마지막) 위에 구분선 */}
+                  {index === mainMenuItems.length - 2 && (
+                    <div className="my-3 border-t border-sidebar-border group-data-[collapsible=icon]:hidden" />
+                  )}
+                </Fragment>
               ))}
             </SidebarMenu>
           </SidebarGroupContent>

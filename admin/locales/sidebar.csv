@@ -22,8 +22,8 @@ menu.userManagement,유저 관리,User Management
 menu.emailSendTest,메일 발송 테스트,Email Send Test
 menu.leadDataImport,리드 데이터 임포트,Lead Data Import
 menu.bulkEmailCSV,CSV 대량 메일 발송,Bulk Email CSV
-menu.aiSalesAutomation,AI 자동화,AI Sales Automation
+menu.aiSalesAutomation,린다 GPT,Rinda GPT
 menu.webset,웹 정보 수집,Web Information Search
 menu.geminiSearch,해외 바이어 찾기,Find Overseas Buyers
 menu.bigquerySearch,BigQuery 검색,BigQuery Search
-
+menu.leadDiscovery,고객 탐색,Lead Discovery

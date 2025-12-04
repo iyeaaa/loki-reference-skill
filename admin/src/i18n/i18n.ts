@@ -10,12 +10,8 @@ import enTranslation from "./generated/en.json"
 import koTranslation from "./generated/ko.json"
 
 const resources = {
-  ko: {
-    translation: koTranslation,
-  },
-  en: {
-    translation: enTranslation,
-  },
+  ko: koTranslation,
+  en: enTranslation,
 }
 
 i18n
@@ -47,7 +43,7 @@ i18n
 
     // 네임스페이스 설정
     defaultNS: "translation",
-    ns: ["translation"],
+    ns: ["translation", "email-replies", "leads", "common", "aiSummary"],
   })
 
 export default i18n

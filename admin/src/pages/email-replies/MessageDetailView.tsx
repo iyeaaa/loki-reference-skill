@@ -1,6 +1,7 @@
 import { Copy, Loader2, Mail, Send } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import toast from "react-hot-toast"
+import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -24,6 +25,7 @@ export function MessageDetailView({
   email,
   loading = false,
 }: MessageDetailViewProps) {
+  const { t } = useTranslation("email-replies")
   const replyContentId = useId()
   const [replyContent, setReplyContent] = useState("")
   const [isSending, setIsSending] = useState(false)
@@ -116,7 +118,7 @@ export function MessageDetailView({
         <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
           <div className="flex-1 flex flex-col items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-sm text-muted-foreground">Loading message...</p>
+            <p className="text-sm text-muted-foreground">{t("message.loading")}</p>
           </div>
         </SheetContent>
       </Sheet>

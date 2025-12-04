@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, Eye, Mail, MailOpen } from "lucide-react"
 import { useCallback, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -39,6 +40,7 @@ export function RepliesTableWithPagination({
   onToggleAll,
   onViewReply,
 }: RepliesTableWithPaginationProps) {
+  const { t } = useTranslation("email-replies")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInputValue, setPageInputValue] = useState("1")
   const limit = 10
@@ -121,7 +123,7 @@ export function RepliesTableWithPagination({
       {/* Loading overlay */}
       {isFetching && (
         <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
-          <div className="text-sm text-muted-foreground">로딩 중...</div>
+          <div className="text-sm text-muted-foreground">{t("table.loading")}</div>
         </div>
       )}
 

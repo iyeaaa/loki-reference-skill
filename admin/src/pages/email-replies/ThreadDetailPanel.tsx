@@ -99,7 +99,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
       if (result.success && result.data) {
         const aiSummary = result.data.summary || ""
         setSummary(aiSummary)
-        toast.success("대화 요약이 생성되었습니다!")
+        toast.success(t("aiSummary.success"))
       }
     } catch (err) {
       setSummaryError(
@@ -107,7 +107,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
           ? err.message
           : "Unable to connect. Is the computer able to access the url?",
       )
-      toast.error("AI 요약 생성에 실패했습니다")
+      toast.error(t("aiSummary.error.message"))
     } finally {
       setSummaryLoading(false)
     }
@@ -142,7 +142,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
 
         setInitialReplyText(aiReply)
         setShowReply(true)
-        toast.success("AI 답장이 생성되었습니다!")
+        toast.success(t("ai.success.reply"))
       }
     } catch (err) {
       setAiError(
@@ -150,7 +150,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
           ? err.message
           : "Unable to connect. Is the computer able to access the url?",
       )
-      toast.error("AI 제안 생성에 실패했습니다")
+      toast.error(t("ai.error.suggestion"))
     } finally {
       setAiLoading(false)
     }
@@ -159,7 +159,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
   // 답장 전송 핸들러
   const handleSendReply = async (replyText: string, subject: string, files?: File[]) => {
     if (!user) {
-      toast.error("로그인이 필요합니다")
+      toast.error(t("auth.loginRequired"))
       return
     }
 
@@ -169,14 +169,14 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
     const effectiveWorkspaceId = lastEmail.workspaceId || workspaceId
 
     if (!effectiveWorkspaceId || effectiveWorkspaceId === "" || effectiveWorkspaceId === "all") {
-      toast.error("워크스페이스가 선택되지 않았습니다")
+      toast.error(t("workspace.notSelected"))
       return
     }
 
     const toEmail = getReplyRecipient(lastEmail)
     const recipients = parseEmailList(toEmail)
     if (recipients.length === 0) {
-      toast.error("유효한 받는사람 이메일 주소를 입력하세요")
+      toast.error(t("email.invalidRecipient"))
       return
     }
 
@@ -213,7 +213,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
       <Card className="h-full flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
-          <div className="text-sm text-muted-foreground">{t("email-replies.thread.loading")}</div>
+          <div className="text-sm text-muted-foreground">{t("thread.loading")}</div>
         </div>
       </Card>
     )
@@ -223,7 +223,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
     return (
       <Card className="h-full flex items-center justify-center">
         <div className="text-center text-red-600">
-          <div className="text-sm">{t("email-replies.thread.loadError")}</div>
+          <div className="text-sm">{t("thread.loadError")}</div>
         </div>
       </Card>
     )
@@ -233,7 +233,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
     return (
       <Card className="h-full flex items-center justify-center">
         <div className="text-center text-muted-foreground">
-          <div className="text-sm">{t("email-replies.thread.noMessages")}</div>
+          <div className="text-sm">{t("thread.noMessages")}</div>
         </div>
       </Card>
     )
@@ -245,7 +245,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">
           <h3 className="font-medium text-base truncate flex-1">
-            {emails[0]?.subject || t("email-replies.thread.noSubject")}
+            {emails[0]?.subject || t("thread.noSubject")}
           </h3>
           <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0 ml-2">
             <X className="h-4 w-4" />
@@ -265,7 +265,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
                 size="sm"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
-                {t("email-replies.aiSummary.button.generate")}
+                {t("aiSummary.button.generate")}
               </Button>
             </div>
           )}
@@ -274,7 +274,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
             <div className="flex items-center gap-3 py-2">
               <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent" />
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                {t("email-replies.aiSummary.loading")}
+                {t("aiSummary.loading")}
               </span>
             </div>
           )}
@@ -287,7 +287,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
                     <Sparkles className="h-3 w-3 text-white" />
                   </div>
                   <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {t("email-replies.aiSummary.title")}
+                    {t("aiSummary.title")}
                   </span>
                 </div>
                 <Button
@@ -297,7 +297,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
                   size="sm"
                   className="h-7 px-2 text-xs text-gray-500 hover:text-gray-700"
                 >
-                  {t("email-replies.aiSummary.button.regenerate")}
+                  {t("aiSummary.button.regenerate")}
                 </Button>
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
@@ -315,7 +315,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
                   <Sparkles className="h-3 w-3 text-white" />
                 </div>
                 <span className="text-sm font-medium text-red-800 dark:text-red-200">
-                  {t("email-replies.aiSummary.error.title")}
+                  {t("aiSummary.error.title")}
                 </span>
               </div>
               <p className="text-sm text-red-600 dark:text-red-400 mb-3">{summaryError}</p>
@@ -325,7 +325,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
                 className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-3 py-1 text-xs"
                 size="sm"
               >
-                {t("email-replies.aiSummary.button.tryAgain")}
+                {t("aiSummary.button.tryAgain")}
               </Button>
             </div>
           )}
@@ -360,7 +360,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
               className="flex-1"
             >
               <Sparkles className="h-4 w-4 mr-2" />
-              {aiLoading ? "Generating..." : "AI Suggestion"}
+              {aiLoading ? t("ai.generating") : t("ai.suggestion")}
             </Button>
             <Button
               onClick={() => setShowReply(true)}
@@ -369,7 +369,7 @@ export function ThreadDetailPanel({ threadId, workspaceId, onClose }: ThreadDeta
               className="flex-1"
             >
               <Reply className="h-4 w-4 mr-2" />
-              {t("email-replies.thread.replyButton")}
+              {t("thread.replyButton")}
             </Button>
           </div>
           {aiError && <p className="text-sm text-red-600 dark:text-red-400">{aiError}</p>}

@@ -1,7 +1,8 @@
 import { motion } from "framer-motion"
-import { Chrome, Clock, Shield, Zap } from "lucide-react"
+import { Chrome, Clock, Check, Users, Building, Globe } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { Button } from "@/components/ui/button"
@@ -40,6 +41,7 @@ export default function TrialPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { login } = useAuth()
+  const { t } = useTranslation("translation")
   const [isLoading, setIsLoading] = useState(false)
   const [isProcessingCallback, setIsProcessingCallback] = useState(false)
   const [processedCode, setProcessedCode] = useState<string | null>(null)
@@ -149,68 +151,41 @@ export default function TrialPage() {
         >
           {/* Header */}
           <motion.div
-            className="text-center mb-8"
+            className="text-center mb-12"
             variants={shouldReduceMotion() ? {} : staggerItemVariants}
           >
             <motion.h1
-              className="text-4xl font-bold text-gray-900 mb-4"
+              className="text-4xl md:text-5xl font-bold text-gray-900 mb-4"
               variants={shouldReduceMotion() ? {} : slideUpVariants}
             >
-              무료 체험 시작하기
+              {t("trial.title.main")}
+              <br />
+              <span className="text-blue-600">{t("trial.title.subtitle")}</span>
             </motion.h1>
             <motion.p
-              className="text-xl text-gray-600 mb-6"
+              className="text-lg text-gray-600 mb-8"
               variants={shouldReduceMotion() ? {} : fadeVariants}
             >
-              Google 계정으로 간편하게 시작하세요
+              {t("trial.description")}
             </motion.p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Features */}
-            <motion.div
-              className="space-y-6"
-              variants={shouldReduceMotion() ? {} : staggerItemVariants}
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-blue-600" />
-                    7일 무료 체험
-                  </CardTitle>
-                  <CardDescription>모든 기능을 7일간 무료로 사용해보세요</CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-green-600" />
-                    안전한 Google 로그인
-                  </CardTitle>
-                  <CardDescription>Google OAuth 2.0을 통한 보안 인증</CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-yellow-600" />
-                    즉시 시작
-                  </CardTitle>
-                  <CardDescription>복잡한 가입 절차 없이 바로 시작하세요</CardDescription>
-                </CardHeader>
-              </Card>
-            </motion.div>
-
-            {/* Login Card */}
+          <div className="grid md:grid-cols-2 gap-12">
+            {/* Left Column - Login Card */}
             <motion.div variants={shouldReduceMotion() ? {} : staggerItemVariants}>
-              <Card className="h-full flex flex-col justify-center">
-                <CardHeader className="text-center">
-                  <CardTitle>Google 계정으로 시작하기</CardTitle>
-                  <CardDescription>Google 계정을 사용하여 안전하게 로그인하세요</CardDescription>
+              <Card className="bg-blue-50 border-blue-200">
+                <CardHeader>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                      <span className="text-white text-sm font-bold">G</span>
+                    </div>
+                    <CardTitle className="text-lg">{t("trial.card.title")}</CardTitle>
+                  </div>
+                  <CardDescription className="text-gray-600">
+                    {t("trial.card.description")}
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4">
                   <motion.div
                     variants={shouldReduceMotion() ? {} : scaleVariants}
                     whileHover={shouldReduceMotion() ? {} : { scale: 1.02 }}
@@ -219,33 +194,140 @@ export default function TrialPage() {
                     <Button
                       onClick={handleGoogleLogin}
                       disabled={isLoading}
-                      className="w-full h-12 text-lg bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm"
+                      className="w-full h-12 text-base bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm"
                     >
                       {isLoading ? (
                         <div className="flex items-center gap-2">
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-                          연결 중...
+                          {t("trial.card.loading")}
                         </div>
                       ) : (
                         <div className="flex items-center gap-3">
                           <Chrome className="h-5 w-5 text-blue-600" />
-                          Google로 계속하기
+                          {t("trial.card.button")}
                         </div>
                       )}
                     </Button>
                   </motion.div>
 
-                  <div className="text-center">
-                    <p className="text-sm text-gray-500">
-                      이미 계정이 있으신가요?{" "}
-                      <button
-                        type="button"
-                        onClick={() => navigate("/login")}
-                        className="text-blue-600 hover:text-blue-800 font-medium"
-                      >
-                        로그인하기
-                      </button>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-sm text-gray-700">
+                      <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      <span>{t("trial.features.cancelAnytime")}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-gray-700">
+                      <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      <span>{t("trial.features.noPaymentInfo")}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-gray-700">
+                      <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      <span>{t("trial.features.unlimitedAI")}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-center pt-2">
+                    <p className="text-xs text-gray-500">
+                      {t("trial.card.disclaimer")}
                     </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Right Column - Statistics and Process Steps */}
+            <motion.div
+              className="space-y-8"
+              variants={shouldReduceMotion() ? {} : staggerItemVariants}
+            >
+              {/* Statistics Section */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Users className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900">3.2백</div>
+                  <div className="text-sm text-gray-600">{t("trial.stats.activeUsers")}</div>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Building className="h-8 w-8 text-green-600" />
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900">500+</div>
+                  <div className="text-sm text-gray-600">{t("trial.stats.registeredCompanies")}</div>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Globe className="h-8 w-8 text-purple-600" />
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900">50+</div>
+                  <div className="text-sm text-gray-600">{t("trial.stats.supportedLanguages")}</div>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Clock className="h-8 w-8 text-orange-600" />
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900">48시간</div>
+                  <div className="text-sm text-gray-600">{t("trial.stats.averageResponseTime")}</div>
+                </div>
+              </div>
+
+              {/* Process Steps */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-gray-900">{t("trial.process.title")}</h3>
+                
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm font-bold">1</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{t("trial.process.step1.title")}</h4>
+                      <p className="text-sm text-gray-600">
+                        {t("trial.process.step1.description")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm font-bold">2</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{t("trial.process.step2.title")}</h4>
+                      <p className="text-sm text-gray-600">
+                        {t("trial.process.step2.description")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm font-bold">3</span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{t("trial.process.step3.title")}</h4>
+                      <p className="text-sm text-gray-600">
+                        {t("trial.process.step3.description")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pricing Section - moved to right column */}
+              <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <div className="text-2xl font-bold text-blue-600">WO</div>
+                      <div className="text-base text-gray-600">{t("trial.pricing.title")}</div>
+                    </div>
+                    <p className="text-gray-600 mb-4 text-sm">
+                      {t("trial.pricing.price")}
+                    </p>
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                      {t("trial.pricing.button")}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -254,20 +336,23 @@ export default function TrialPage() {
 
           {/* Footer */}
           <motion.div
-            className="text-center mt-8 text-sm text-gray-500"
+            className="text-center mt-12"
             variants={shouldReduceMotion() ? {} : fadeVariants}
           >
-            <p>
-              계속 진행하면{" "}
-              <a href="/terms" className="text-blue-600 hover:text-blue-800">
-                서비스 약관
-              </a>{" "}
-              및{" "}
-              <a href="/privacy" className="text-blue-600 hover:text-blue-800">
-                개인정보 처리방침
-              </a>
-              에 동의하는 것으로 간주됩니다.
-            </p>
+            <div className="flex justify-center items-center gap-8 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-blue-600" />
+                <span>{t("trial.footer.feature1")}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-blue-600" />
+                <span>{t("trial.footer.feature2")}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-blue-600" />
+                <span>{t("trial.footer.feature3")}</span>
+              </div>
+            </div>
           </motion.div>
         </motion.div>
       </div>

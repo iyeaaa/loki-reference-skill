@@ -1,13 +1,17 @@
 import { useAtom, useSetAtom } from "jotai"
 import { ArrowRight, Check, Globe, Lightbulb, Loader2, SlidersHorizontal } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import ReactMarkdown from "react-markdown"
 import TextPlus from "@/assets/text-plus.svg"
 import TextRinda from "@/assets/text-rinda.svg"
+import { StarSpinner } from "@/components/chatbot/StarSpinner"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useWebsiteAnalysis } from "@/lib/api/hooks/web-extraction"
+import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 
 type SearchMode = "website" | "detailed"
@@ -16,236 +20,142 @@ import {
   addChatMessageAtom,
   addCustomersAtom,
   type ChatMessage,
+  type ChatMessageAction,
   type Customer,
   chatMessagesAtom,
   isLoadingAtom,
+  isSubmittingAtom,
+  updateChatMessageAtom,
 } from "./store"
 
-// 임시 고객 생성 함수 (실제로는 AI API 응답으로 대체)
-function generateMockCustomers(query: string): Customer[] {
-  const count = 100
-  const companies = [
-    "Tesla Inc.",
-    "Google LLC",
-    "Apple Inc.",
-    "Microsoft Corporation",
-    "Amazon.com Inc.",
-    "Meta Platforms Inc.",
-    "Netflix Inc.",
-    "Spotify Technology",
-    "Salesforce Inc.",
-    "Adobe Systems",
-    "Oracle Corporation",
-    "IBM Corporation",
-    "Intel Corporation",
-    "Cisco Systems",
-    "NVIDIA Corporation",
-    "PayPal Holdings",
-    "Uber Technologies",
-    "Airbnb Inc.",
-    "Shopify Inc.",
-    "Square Inc.",
-    "Zoom Video",
-    "Slack Technologies",
-    "Dropbox Inc.",
-    "HubSpot Inc.",
-    "Atlassian Corporation",
-    "ServiceNow Inc.",
-    "Workday Inc.",
-    "Snowflake Inc.",
-    "Datadog Inc.",
-    "Twilio Inc.",
-    "Stripe Inc.",
-    "Coinbase Global",
-    "Robinhood Markets",
-    "DoorDash Inc.",
-    "Instacart Inc.",
-    "Lyft Inc.",
-    "Pinterest Inc.",
-    "Snap Inc.",
-    "Twitter Inc.",
-    "LinkedIn Corporation",
-  ]
-  const firstNames = [
-    "John",
-    "Jane",
-    "Michael",
-    "Sarah",
-    "David",
-    "Emily",
-    "Robert",
-    "Jessica",
-    "William",
-    "Ashley",
-    "James",
-    "Amanda",
-    "Daniel",
-    "Stephanie",
-    "Christopher",
-    "Nicole",
-    "Matthew",
-    "Elizabeth",
-    "Andrew",
-    "Jennifer",
-    "Joseph",
-    "Megan",
-    "Anthony",
-    "Rachel",
-    "Mark",
-    "Lauren",
-    "Steven",
-    "Samantha",
-    "Paul",
-    "Katherine",
-  ]
-  const lastNames = [
-    "Smith",
-    "Johnson",
-    "Williams",
-    "Brown",
-    "Jones",
-    "Garcia",
-    "Miller",
-    "Davis",
-    "Rodriguez",
-    "Martinez",
-    "Hernandez",
-    "Lopez",
-    "Gonzalez",
-    "Wilson",
-    "Anderson",
-    "Thomas",
-    "Taylor",
-    "Moore",
-    "Jackson",
-    "Martin",
-    "Lee",
-    "Perez",
-    "Thompson",
-    "White",
-    "Harris",
-    "Sanchez",
-    "Clark",
-    "Ramirez",
-    "Lewis",
-    "Robinson",
-  ]
-  const titles = [
-    "CEO",
-    "CTO",
-    "CFO",
-    "COO",
-    "VP Sales",
-    "VP Marketing",
-    "VP Engineering",
-    "Director of Sales",
-    "Director of Marketing",
-    "Director of Operations",
-    "Manager",
-    "Lead Engineer",
-    "Senior Developer",
-    "Product Manager",
-    "Business Development Manager",
-    "Account Executive",
-  ]
-  const industries = [
-    "Software & Internet",
-    "Business Services",
-    "Manufacturing",
-    "Financial Services",
-    "Healthcare",
-    "Retail",
-    "Real Estate & Construction",
-    "Computers & Electronics",
-    "Education",
-    "Media & Entertainment",
-  ]
-  const subIndustries = [
-    "SaaS",
-    "Cloud Computing",
-    "E-commerce",
-    "Fintech",
-    "Consulting",
-    "AI/ML",
-    "Cybersecurity",
-    "Data Analytics",
-    "Mobile Apps",
-    "IoT",
-  ]
-  const countries = ["USA", "Canada"]
-  const cities = [
-    "San Francisco",
-    "New York",
-    "Seattle",
-    "Austin",
-    "Boston",
-    "Toronto",
-    "Los Angeles",
-    "Chicago",
-    "Denver",
-    "Miami",
-    "Atlanta",
-    "Dallas",
-    "Portland",
-    "Phoenix",
-    "San Diego",
-    "Vancouver",
-    "Montreal",
-    "Calgary",
-  ]
-  const states = [
-    "CA",
-    "NY",
-    "WA",
-    "TX",
-    "MA",
-    "ON",
-    "IL",
-    "CO",
-    "FL",
-    "GA",
-    "OR",
-    "AZ",
-    "BC",
-    "QC",
-    "AB",
-  ]
-  const employeeRanges = ["0 - 25", "25 - 100", "100 - 250", "250 - 1000", "1K - 10K", "10K - 50K"]
-  const revenueRanges = [
-    "$0 - $1M",
-    "$1 - $10M",
-    "$10 - $50M",
-    "$50 - $100M",
-    "$100 - $250M",
-    "$250 - $500M",
+// 100개의 더미 Customer 데이터 생성 (테이블 테스트용)
+function createDummyCustomers(count: number = 100): Customer[] {
+  const baseCompanies = [
+    {
+      name: "Tesla",
+      industry: "Automotive",
+      sub_industry: "Electric Vehicles",
+      country: "United States",
+    },
+    {
+      name: "Apple",
+      industry: "Technology",
+      sub_industry: "Consumer Electronics",
+      country: "United States",
+    },
+    {
+      name: "Samsung",
+      industry: "Technology",
+      sub_industry: "Electronics",
+      country: "South Korea",
+    },
+    { name: "Toyota", industry: "Automotive", sub_industry: "Manufacturing", country: "Japan" },
+    {
+      name: "Microsoft",
+      industry: "Technology",
+      sub_industry: "Software",
+      country: "United States",
+    },
+    { name: "Amazon", industry: "E-commerce", sub_industry: "Retail", country: "United States" },
+    {
+      name: "Google",
+      industry: "Technology",
+      sub_industry: "Internet Services",
+      country: "United States",
+    },
+    { name: "BMW", industry: "Automotive", sub_industry: "Luxury Vehicles", country: "Germany" },
+    { name: "Sony", industry: "Technology", sub_industry: "Electronics", country: "Japan" },
+    {
+      name: "Intel",
+      industry: "Technology",
+      sub_industry: "Semiconductors",
+      country: "United States",
+    },
+    { name: "Nike", industry: "Retail", sub_industry: "Sportswear", country: "United States" },
+    { name: "Adidas", industry: "Retail", sub_industry: "Sportswear", country: "Germany" },
+    {
+      name: "Pfizer",
+      industry: "Healthcare",
+      sub_industry: "Pharmaceuticals",
+      country: "United States",
+    },
+    {
+      name: "Johnson & Johnson",
+      industry: "Healthcare",
+      sub_industry: "Medical Devices",
+      country: "United States",
+    },
+    {
+      name: "Siemens",
+      industry: "Manufacturing",
+      sub_industry: "Industrial Automation",
+      country: "Germany",
+    },
+    {
+      name: "General Electric",
+      industry: "Manufacturing",
+      sub_industry: "Conglomerate",
+      country: "United States",
+    },
+    { name: "Volkswagen", industry: "Automotive", sub_industry: "Automobile", country: "Germany" },
+    { name: "Ford", industry: "Automotive", sub_industry: "Automobile", country: "United States" },
+    { name: "Honda", industry: "Automotive", sub_industry: "Automobile", country: "Japan" },
+    { name: "Hyundai", industry: "Automotive", sub_industry: "Automobile", country: "South Korea" },
   ]
 
-  return Array.from({ length: count }, (_, i) => ({
-    id: `cust-${Date.now()}-${i}`,
-    first_name: firstNames[Math.floor(Math.random() * firstNames.length)],
-    last_name: lastNames[Math.floor(Math.random() * lastNames.length)],
-    title: titles[Math.floor(Math.random() * titles.length)],
-    company_name: companies[Math.floor(Math.random() * companies.length)],
-    email: `${firstNames[Math.floor(Math.random() * firstNames.length)].toLowerCase()}.${lastNames[Math.floor(Math.random() * lastNames.length)].toLowerCase()}${Math.floor(Math.random() * 100)}@${companies[Math.floor(Math.random() * companies.length)].toLowerCase().replace(/[^a-z]/g, "")}.com`,
-    phone: `+1-${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`,
-    web_address: `www.${companies[Math.floor(Math.random() * companies.length)].toLowerCase().replace(/[^a-z]/g, "")}.com`,
-    country: countries[Math.floor(Math.random() * countries.length)],
-    primary_city: cities[Math.floor(Math.random() * cities.length)],
-    primary_state: states[Math.floor(Math.random() * states.length)],
-    industry: industries[Math.floor(Math.random() * industries.length)],
-    sub_industry: subIndustries[Math.floor(Math.random() * subIndustries.length)],
-    employee: employeeRanges[Math.floor(Math.random() * employeeRanges.length)],
-    revenue: revenueRanges[Math.floor(Math.random() * revenueRanges.length)],
-    source: query,
-    createdAt: new Date(),
-  }))
+  const cities = {
+    "United States": [
+      "New York",
+      "Los Angeles",
+      "San Francisco",
+      "Seattle",
+      "Boston",
+      "Austin",
+      "Chicago",
+    ],
+    "South Korea": ["Seoul", "Busan", "Incheon", "Daegu", "Daejeon"],
+    Japan: ["Tokyo", "Osaka", "Yokohama", "Nagoya", "Sapporo"],
+    Germany: ["Berlin", "Munich", "Hamburg", "Frankfurt", "Stuttgart"],
+  }
+
+  const employees = ["50-100", "100-500", "500-1,000", "1,000-5,000", "5,000-10,000", "10,000+"]
+
+  const dummyCustomers: Customer[] = []
+
+  for (let i = 0; i < count; i++) {
+    const baseCompany = baseCompanies[i % baseCompanies.length]
+    const suffix = i < baseCompanies.length ? "" : ` ${Math.floor(i / baseCompanies.length) + 1}`
+    const companyCities = cities[baseCompany.country as keyof typeof cities] || ["Unknown City"]
+    const randomCity = companyCities[Math.floor(Math.random() * companyCities.length)]
+
+    dummyCustomers.push({
+      id: `cust-${Date.now()}-${i}-${Math.random().toString(36).substring(7)}`,
+      company_name: `${baseCompany.name}${suffix}`,
+      email: `contact${i}@${baseCompany.name.toLowerCase().replace(/\s+/g, "")}.com`,
+      phone: `+${Math.floor(Math.random() * 99)}-${Math.floor(Math.random() * 999)}-${Math.floor(Math.random() * 9999)}`,
+      web_address: `https://www.${baseCompany.name.toLowerCase().replace(/\s+/g, "")}${suffix.replace(/\s+/g, "")}.com`,
+      mailing_address: `${Math.floor(Math.random() * 9999)} ${baseCompany.name} Street`,
+      primary_city: randomCity,
+      primary_state: randomCity,
+      country: baseCompany.country,
+      industry: baseCompany.industry,
+      sub_industry: baseCompany.sub_industry,
+      employee: employees[Math.floor(Math.random() * employees.length)],
+      source: "Lead Discovery",
+      createdAt: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000), // 지난 30일 내 랜덤
+    })
+  }
+
+  return dummyCustomers
 }
 
 export function ChatRoom() {
   const [messages] = useAtom(chatMessagesAtom)
   const addMessage = useSetAtom(addChatMessageAtom)
+  const updateMessage = useSetAtom(updateChatMessageAtom)
   const addCustomers = useSetAtom(addCustomersAtom)
   const [isLoading, setIsLoading] = useAtom(isLoadingAtom)
+  const [isSubmitting, setIsSubmitting] = useAtom(isSubmittingAtom)
 
   const [input, setInput] = useState("")
   const [searchMode, setSearchMode] = useState<SearchMode>("website")
@@ -253,9 +163,118 @@ export function ChatRoom() {
   const [detailedTooltipOpen, setDetailedTooltipOpen] = useState(false)
   const [animatingCard, setAnimatingCard] = useState<string | null>(null)
   const [cardAnimationDistance, setCardAnimationDistance] = useState<number>(0)
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
+  const [_isStreamingStarted, setIsStreamingStarted] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+  const streamingMessageIdRef = useRef<string | null>(null)
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    streamingMessageIdRef.current = streamingMessageId
+  }, [streamingMessageId])
+
+  // Stable callback for content updates (memoized)
+  const handleContentUpdate = useCallback(
+    (content: string) => {
+      const currentMessageId = streamingMessageIdRef.current
+
+      // 첫 청크가 도착하면 스트리밍 시작 표시
+      if (content.length > 0) {
+        setIsStreamingStarted(true)
+      }
+
+      if (currentMessageId) {
+        updateMessage(currentMessageId, { content })
+      }
+    },
+    [updateMessage],
+  )
+
+  // API 훅
+  const { selectedWorkspace } = useWorkspace()
+  const hookOptions = useMemo(
+    () => ({
+      onContentUpdate: handleContentUpdate,
+    }),
+    [handleContentUpdate],
+  )
+
+  const {
+    status: _status,
+    isAnalyzing,
+    analyze,
+    streamingContent,
+    message: progressMessage,
+    foundPages,
+  } = useWebsiteAnalysis(hookOptions)
+
+  // 스트리밍 콘텐츠가 업데이트되면 해당 메시지 업데이트
+  useEffect(() => {
+    if (streamingContent && streamingMessageId) {
+      updateMessage(streamingMessageId, { content: streamingContent })
+    }
+  }, [streamingContent, streamingMessageId, updateMessage])
+
+  // Markdown components for consistent styling
+  const markdownComponents = useMemo(
+    () => ({
+      p: ({ children }: { children?: React.ReactNode }) => (
+        <p className="mb-4 leading-relaxed last:mb-0">{children}</p>
+      ),
+      h1: ({ children }: { children?: React.ReactNode }) => (
+        <h1 className="mb-4 mt-6 text-2xl font-bold first:mt-0">{children}</h1>
+      ),
+      h2: ({ children }: { children?: React.ReactNode }) => (
+        <h2 className="mb-3 mt-5 text-xl font-bold first:mt-0">{children}</h2>
+      ),
+      h3: ({ children }: { children?: React.ReactNode }) => (
+        <h3 className="mb-2 mt-4 text-lg font-semibold first:mt-0">{children}</h3>
+      ),
+      ul: ({ children }: { children?: React.ReactNode }) => (
+        <ul className="mb-4 ml-6 list-disc space-y-1">{children}</ul>
+      ),
+      ol: ({ children }: { children?: React.ReactNode }) => (
+        <ol className="mb-4 ml-6 list-decimal space-y-1">{children}</ol>
+      ),
+      li: ({ children }: { children?: React.ReactNode }) => (
+        <li className="leading-relaxed">{children}</li>
+      ),
+      code: ({ children, className }: { children?: React.ReactNode; className?: string }) => {
+        const isInline = !className
+        return isInline ? (
+          <code className="rounded bg-muted px-1.5 py-0.5 text-sm font-mono">{children}</code>
+        ) : (
+          <code className="font-mono text-sm">{children}</code>
+        )
+      },
+      pre: ({ children }: { children?: React.ReactNode }) => (
+        <pre className="mb-4 overflow-x-auto rounded-lg bg-muted p-3">{children}</pre>
+      ),
+      blockquote: ({ children }: { children?: React.ReactNode }) => (
+        <blockquote className="mb-4 border-l-4 border-border pl-4 italic text-muted-foreground">
+          {children}
+        </blockquote>
+      ),
+      a: (
+        props: React.AnchorHTMLAttributes<HTMLAnchorElement> & { children?: React.ReactNode },
+      ) => (
+        <a
+          {...props}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline hover:text-primary/80"
+        >
+          {props.children}
+        </a>
+      ),
+      strong: ({ children }: { children?: React.ReactNode }) => (
+        <strong className="font-bold">{children}</strong>
+      ),
+    }),
+    [],
+  )
 
   // 산업별 카드 데이터 (2025년 12월 기준 바이어 탐색 수요가 많은 순서)
   const industryTemplates = useMemo(
@@ -575,51 +594,196 @@ export function ChatRoom() {
   }, [input, animatingCard])
 
   // 모드 전환 시 입력값 초기화 (상세 -> 웹사이트 모드)
+  const prevSearchModeRef = useRef<SearchMode>(searchMode)
   useEffect(() => {
-    if (searchMode === "website" && input && !isValidWebsiteUrl(input)) {
+    // 실제로 모드가 변경되었을 때만 초기화
+    const modeChanged = prevSearchModeRef.current !== searchMode
+    if (modeChanged && searchMode === "website" && input && !isValidWebsiteUrl(input)) {
       setInput("")
       setAnimatingCard(null)
     }
+    prevSearchModeRef.current = searchMode
   }, [searchMode, input, isValidWebsiteUrl])
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
-      if (!isInputValid() || isLoading) return
+      if (!isInputValid() || isLoading || isAnalyzing || isSubmitting) return
 
+      // 제출 상태를 즉시 설정 (동기적으로 버튼 스피너 표시)
+      setIsSubmitting(true)
+      setIsLoading(true)
+
+      const userInput = input.trim()
       const userMessage: ChatMessage = {
         id: `msg-${Date.now()}`,
         role: "user",
-        content: input.trim(),
+        content: userInput,
         timestamp: new Date(),
       }
 
       addMessage(userMessage)
       setInput("")
       setAnimatingCard(null)
-      setIsLoading(true)
 
-      // 시뮬레이션: AI 응답 및 고객 생성
-      await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 1000))
+      if (searchMode === "website") {
+        // 웹사이트 분석 모드: 실제 API 호출
+        if (!selectedWorkspace?.id || selectedWorkspace.id === "all") {
+          const errorMessage: ChatMessage = {
+            id: `msg-${Date.now()}-error`,
+            role: "assistant",
+            content:
+              "워크스페이스를 먼저 선택해주세요.\n\n상단에서 워크스페이스를 선택하면 바로 시작할 수 있어요.",
+            timestamp: new Date(),
+          }
+          addMessage(errorMessage)
+          setIsLoading(false)
+          setIsSubmitting(false)
+          return
+        }
 
-      const newCustomers = generateMockCustomers(input.trim())
-      addCustomers(newCustomers)
+        try {
+          // 스트리밍 상태 초기화
+          setIsStreamingStarted(false)
 
-      const assistantMessage: ChatMessage = {
-        id: `msg-${Date.now()}-response`,
-        role: "assistant",
-        content:
-          searchMode === "website"
-            ? `"${input.trim()}" 웹사이트 분석 결과, ${newCustomers.length}명의 잠재 고객을 발견했습니다.`
-            : `"${input.trim()}" 조건에 맞는 ${newCustomers.length}명의 잠재 고객을 발견했습니다.`,
-        timestamp: new Date(),
-        customersAdded: newCustomers,
+          // 빈 assistant 메시지 먼저 추가 (스트리밍용)
+          const assistantMessageId = `msg-${Date.now()}-response`
+          const assistantMessage: ChatMessage = {
+            id: assistantMessageId,
+            role: "assistant",
+            content: "",
+            timestamp: new Date(),
+          }
+          addMessage(assistantMessage)
+
+          // 상태 업데이트를 기다림 (중요!)
+          await new Promise((resolve) => setTimeout(resolve, 0))
+
+          // Ref를 먼저 설정 (동기적으로 즉시 설정)
+          streamingMessageIdRef.current = assistantMessageId
+
+          // 그 다음 상태 설정 (UI 업데이트용)
+          setStreamingMessageId(assistantMessageId)
+
+          // 분석 시작 (스트리밍)
+          const finalContent = await analyze({
+            websiteUrl: userInput,
+            workspaceId: selectedWorkspace.id,
+          })
+          if (finalContent) {
+            // 버튼 액션 추가
+            const actions: ChatMessageAction[] = [
+              {
+                id: "collect-leads",
+                label: "고객 100건 탐색해줘",
+                variant: "default",
+                onClick: async () => {
+                  // 버튼 비활성화
+                  updateMessage(assistantMessageId, {
+                    actions: [
+                      {
+                        id: "collect-leads",
+                        label: "고객을 탐색하고 있어요",
+                        variant: "default",
+                        disabled: true,
+                        loading: true,
+                        onClick: async () => {},
+                      },
+                      {
+                        id: "skip-leads",
+                        label: "나중에 할게요",
+                        variant: "ghost",
+                        disabled: true,
+                        onClick: () => {},
+                      },
+                    ],
+                  })
+
+                  // 약간의 지연 후 더미 데이터 추가
+                  await new Promise((resolve) => setTimeout(resolve, 1500))
+
+                  const dummyCustomers = createDummyCustomers(100)
+                  addCustomers(dummyCustomers)
+
+                  // 완료 메시지로 버튼 업데이트
+                  updateMessage(assistantMessageId, {
+                    actions: [
+                      {
+                        id: "collect-complete",
+                        label: "100개 고객 탐색 완료",
+                        variant: "outline",
+                        disabled: true,
+                        onClick: () => {},
+                      },
+                    ],
+                  })
+                },
+              },
+              {
+                id: "skip-leads",
+                label: "나중에 할게요",
+                variant: "ghost",
+                onClick: () => {
+                  // 버튼 제거
+                  updateMessage(assistantMessageId, {
+                    actions: [],
+                  })
+                },
+              },
+            ]
+
+            updateMessage(assistantMessageId, {
+              content: finalContent,
+              actions,
+            })
+          }
+
+          // 분석 완료 후 스트리밍 메시지 ID 초기화 (ref와 state 모두)
+          streamingMessageIdRef.current = null
+          setStreamingMessageId(null)
+          setIsStreamingStarted(false)
+        } catch (error) {
+          streamingMessageIdRef.current = null
+          setStreamingMessageId(null)
+          setIsStreamingStarted(false)
+          const errorMessage: ChatMessage = {
+            id: `msg-${Date.now()}-error`,
+            role: "assistant",
+            content: `앗, 문제가 생겼어요.\n\n${error instanceof Error ? error.message : "조금 있다가 다시 시도해주세요."}`,
+            timestamp: new Date(),
+          }
+          addMessage(errorMessage)
+        }
+      } else {
+        // 상세 조건 모드: 추후 구현 예정
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        const assistantMessage: ChatMessage = {
+          id: `msg-${Date.now()}-response`,
+          role: "assistant",
+          content: `"${userInput}" 조건으로 검색하는 기능은 곧 만나볼 수 있어요.\n\n지금은 웹사이트 분석을 먼저 사용해보세요!`,
+          timestamp: new Date(),
+        }
+        addMessage(assistantMessage)
       }
 
-      addMessage(assistantMessage)
       setIsLoading(false)
+      setIsSubmitting(false)
     },
-    [input, isLoading, isInputValid, searchMode, addMessage, addCustomers, setIsLoading],
+    [
+      input,
+      isLoading,
+      isAnalyzing,
+      isSubmitting,
+      isInputValid,
+      searchMode,
+      selectedWorkspace,
+      addMessage,
+      addCustomers,
+      setIsLoading,
+      setIsSubmitting,
+      analyze,
+      updateMessage,
+    ],
   )
 
   return (
@@ -685,7 +849,7 @@ export function ChatRoom() {
                             ? "https://www.example.com"
                             : "예: 친환경 화장품 제조, 미국 캘리포니아 진출 희망"
                         }
-                        disabled={isLoading}
+                        disabled={isSubmitting || isLoading}
                         rows={3}
                         className="w-full min-h-[72px] resize-none bg-transparent text-base px-3 pt-3 pb-0 border-0 outline-none focus:outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
                       />
@@ -702,7 +866,9 @@ export function ChatRoom() {
                                   variant={searchMode === "website" ? "default" : "ghost"}
                                   size="icon"
                                   onClick={() => {
-                                    setSearchMode("website")
+                                    if (searchMode !== "website") {
+                                      setSearchMode("website")
+                                    }
                                     setWebsiteTooltipOpen(true)
                                   }}
                                   onMouseEnter={() => setWebsiteTooltipOpen(true)}
@@ -754,7 +920,9 @@ export function ChatRoom() {
                                   variant={searchMode === "detailed" ? "default" : "ghost"}
                                   size="icon"
                                   onClick={() => {
-                                    setSearchMode("detailed")
+                                    if (searchMode !== "detailed") {
+                                      setSearchMode("detailed")
+                                    }
                                     setDetailedTooltipOpen(true)
                                   }}
                                   onMouseEnter={() => setDetailedTooltipOpen(true)}
@@ -800,10 +968,10 @@ export function ChatRoom() {
                         <Button
                           type="submit"
                           size="icon"
-                          disabled={isLoading || !isInputValid()}
+                          disabled={isSubmitting || isLoading || isAnalyzing || !isInputValid()}
                           className="h-8 w-8 rounded-full"
                         >
-                          {isLoading ? (
+                          {isSubmitting || isLoading || isAnalyzing ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <ArrowRight className="h-4 w-4" />
@@ -950,43 +1118,196 @@ export function ChatRoom() {
               ref={scrollRef}
             >
               <div className="p-4 pt-6 space-y-4">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={cn(
-                      "flex",
-                      message.role === "user" ? "justify-end" : "justify-start",
-                    )}
-                  >
+                {messages
+                  .filter((message) => {
+                    // 빈 assistant 메시지는 스트리밍 중이 아닐 때만 필터링
+                    if (
+                      message.role === "assistant" &&
+                      !message.content &&
+                      message.id !== streamingMessageId
+                    ) {
+                      return false
+                    }
+                    return true
+                  })
+                  .map((message) => (
                     <div
+                      key={message.id}
                       className={cn(
-                        "max-w-[85%] rounded-lg px-4 py-2.5",
-                        message.role === "user"
-                          ? "bg-zinc-100 dark:bg-zinc-800 text-foreground"
-                          : "bg-zinc-100 dark:bg-zinc-800",
+                        "flex",
+                        message.role === "user" ? "justify-end" : "justify-start",
                       )}
                     >
-                      <p className="text-base">{message.content}</p>
-                      {message.customersAdded && message.customersAdded.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-border/50">
-                          <p className="text-sm opacity-70">
-                            추가된 고객:{" "}
-                            {message.customersAdded
-                              .map((c) => c.company_name || `${c.first_name} ${c.last_name}`)
-                              .join(", ")}
-                          </p>
+                      {message.role === "user" ? (
+                        <div className="max-w-[85%] rounded-lg px-4 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-foreground">
+                          <p className="text-base whitespace-pre-wrap">{message.content}</p>
+                        </div>
+                      ) : (
+                        <div className="w-full">
+                          {/* 스피너 - 로딩 중이거나 분석 중일 때 항상 표시 */}
+                          {(() => {
+                            const shouldShow =
+                              message.id === streamingMessageId && (isLoading || isAnalyzing)
+                            console.log("[ChatRoom] 🎯 Spinner render check (assistant message):", {
+                              messageId: message.id,
+                              streamingMessageId,
+                              isMatch: message.id === streamingMessageId,
+                              isLoading,
+                              isAnalyzing,
+                              shouldShow,
+                              progressMessage,
+                            })
+                            return shouldShow ? (
+                              <div className="mb-4 bg-muted rounded-lg px-4 py-3 w-full max-w-2xl">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <StarSpinner size={20} />
+                                  {(() => {
+                                    const willShowMessage = !!progressMessage
+                                    console.log(
+                                      "[ChatRoom] 📝 progressMessage render (assistant):",
+                                      {
+                                        progressMessage,
+                                        willShowMessage,
+                                        truthyCheck: !!progressMessage,
+                                      },
+                                    )
+                                    return willShowMessage ? (
+                                      <span className="text-sm text-muted-foreground">
+                                        {progressMessage}
+                                      </span>
+                                    ) : null
+                                  })()}
+                                </div>
+                                {foundPages.length > 0 && (
+                                  <div className="mt-3 space-y-2 pl-8">
+                                    {foundPages.map((page, index) => (
+                                      <div
+                                        key={index}
+                                        className="text-xs text-muted-foreground flex items-start gap-2"
+                                      >
+                                        <span className="text-primary">✓</span>
+                                        <div className="flex-1 min-w-0">
+                                          <div className="font-medium truncate">{page.title}</div>
+                                          <div className="text-muted-foreground/70 truncate">
+                                            {page.url}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ) : null
+                          })()}
+
+                          {/* 메시지 콘텐츠 - 스피너 아래에 표시 */}
+                          {message.content && (
+                            <div className="prose prose-sm max-w-none dark:prose-invert text-base">
+                              <ReactMarkdown components={markdownComponents}>
+                                {message.content}
+                              </ReactMarkdown>
+                            </div>
+                          )}
+
+                          {/* 액션 버튼들 */}
+                          {message.actions && message.actions.length > 0 && (
+                            <div className="mt-4 flex gap-2">
+                              {message.actions.map((action) => (
+                                <Button
+                                  key={action.id}
+                                  variant={action.variant || "default"}
+                                  onClick={action.onClick}
+                                  disabled={action.disabled || false}
+                                  className="relative"
+                                >
+                                  {action.loading && (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  )}
+                                  {action.label}
+                                </Button>
+                              ))}
+                            </div>
+                          )}
+
+                          {message.customersAdded && message.customersAdded.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-border/50">
+                              <p className="text-sm opacity-70">
+                                새로 추가된 고객{" "}
+                                {message.customersAdded
+                                  .map((c) => c.company_name || `${c.first_name} ${c.last_name}`)
+                                  .join(", ")}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  </div>
-                ))}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-muted rounded-lg px-4 py-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                  ))}
+
+                {/* 스트리밍 중이고 빈 assistant 메시지가 있을 때 스피너 표시 */}
+                {(() => {
+                  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null
+                  // 스트리밍 중이고, 마지막 메시지가 빈 assistant 메시지일 때 스피너 표시
+                  const shouldShow =
+                    streamingMessageId !== null &&
+                    (isLoading || isAnalyzing) &&
+                    lastMessage?.role === "assistant" &&
+                    !lastMessage?.content
+                  console.log("[ChatRoom] 🎯 Spinner render check (initial screen):", {
+                    lastMessageRole: lastMessage?.role,
+                    lastMessageContent: lastMessage?.content,
+                    lastMessageId: lastMessage?.id,
+                    streamingMessageId,
+                    isLoading,
+                    isAnalyzing,
+                    shouldShow,
+                    progressMessage,
+                    progressMessageType: typeof progressMessage,
+                    progressMessageLength: progressMessage?.length,
+                  })
+                  return shouldShow ? (
+                    <div className="flex justify-start">
+                      <div className="w-full">
+                        <div className="mb-4 bg-muted rounded-lg px-4 py-3 w-full max-w-2xl">
+                          <div className="flex items-center gap-3 mb-2">
+                            <StarSpinner size={20} />
+                            {(() => {
+                              const willShowMessage = !!progressMessage
+                              console.log("[ChatRoom] 📝 progressMessage render (initial):", {
+                                progressMessage,
+                                willShowMessage,
+                                truthyCheck: !!progressMessage,
+                              })
+                              return willShowMessage ? (
+                                <span className="text-sm text-muted-foreground">
+                                  {progressMessage}
+                                </span>
+                              ) : null
+                            })()}
+                          </div>
+                          {foundPages.length > 0 && (
+                            <div className="mt-3 space-y-2 pl-8">
+                              {foundPages.map((page, index) => (
+                                <div
+                                  key={index}
+                                  className="text-xs text-muted-foreground flex items-start gap-2"
+                                >
+                                  <span className="text-primary">✓</span>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium truncate">{page.title}</div>
+                                    <div className="text-muted-foreground/70 truncate">
+                                      {page.url}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  ) : null
+                })()}
               </div>
             </ScrollArea>
           )}
@@ -1012,7 +1333,7 @@ export function ChatRoom() {
                       ? "https://www.example.com"
                       : "예: 친환경 화장품 제조, 미국 캘리포니아 진출 희망"
                   }
-                  disabled={isLoading}
+                  disabled={isSubmitting || isLoading}
                   rows={3}
                   className="w-full min-h-[72px] resize-none bg-transparent text-base px-3 pt-3 pb-0 border-0 outline-none focus:outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
                 />
@@ -1029,7 +1350,9 @@ export function ChatRoom() {
                             variant={searchMode === "website" ? "default" : "ghost"}
                             size="icon"
                             onClick={() => {
-                              setSearchMode("website")
+                              if (searchMode !== "website") {
+                                setSearchMode("website")
+                              }
                               setWebsiteTooltipOpen(true)
                             }}
                             onMouseEnter={() => setWebsiteTooltipOpen(true)}
@@ -1078,7 +1401,9 @@ export function ChatRoom() {
                             variant={searchMode === "detailed" ? "default" : "ghost"}
                             size="icon"
                             onClick={() => {
-                              setSearchMode("detailed")
+                              if (searchMode !== "detailed") {
+                                setSearchMode("detailed")
+                              }
                               setDetailedTooltipOpen(true)
                             }}
                             onMouseEnter={() => setDetailedTooltipOpen(true)}
@@ -1124,10 +1449,10 @@ export function ChatRoom() {
                   <Button
                     type="submit"
                     size="icon"
-                    disabled={isLoading || !isInputValid()}
+                    disabled={isSubmitting || isLoading || isAnalyzing || !isInputValid()}
                     className="h-8 w-8 rounded-full"
                   >
-                    {isLoading ? (
+                    {isSubmitting || isLoading || isAnalyzing ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <ArrowRight className="h-4 w-4" />

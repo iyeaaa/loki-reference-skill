@@ -6,7 +6,11 @@
 import { Elysia, t } from "elysia"
 import * as XLSX from "xlsx"
 import { getActiveApiKeyCount } from "../services/openai-api-key.service"
-import { processBatch } from "../services/web-extraction.service"
+import {
+  analyzeWebsiteWithStreaming,
+  fetchWithDepth,
+  processBatch,
+} from "../services/web-extraction.service"
 import {
   type CompanyRecord,
   DEFAULT_EXTRACTION_CONFIG,
@@ -19,6 +23,188 @@ import { createSSEResponse } from "../utils/sse-helper"
 const resultsMap = new Map<string, CompanyRecord[]>()
 
 export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extraction" })
+  /**
+   * POST /api/v1/admin/web-extraction/analyze
+   * 단일 웹사이트 URL 분석 (SSE로 스트리밍 응답 전송)
+   */
+  .post(
+    "/analyze",
+    async ({ body }) => {
+      const { websiteUrl, workspaceId } = body
+
+      logger.info(
+        {
+          workspaceId,
+          websiteUrl,
+        },
+        "Starting single website streaming analysis",
+      )
+
+      // URL 유효성 검사
+      if (!websiteUrl || websiteUrl.trim().length < 3) {
+        return {
+          success: false,
+          error: "유효한 웹사이트 URL을 입력해주세요",
+        }
+      }
+
+      // SSE 스트림 생성
+      return createSSEResponse(
+        async (session) => {
+          try {
+            // 초기 연결 이벤트
+            session.push({
+              event: "connected",
+              data: {
+                type: "init",
+                message: `${websiteUrl} 분석을 시작할게요`,
+                timestamp: new Date().toISOString(),
+              },
+            })
+
+            // 웹사이트 크롤링 (페이지 발견 시 실시간 알림)
+            const { pagesContent } = await fetchWithDepth(
+              websiteUrl.trim(),
+              1, // depth
+              30, // timeout
+              (pageInfo) => {
+                // 페이지 발견 이벤트 전송
+                if (!session.closed) {
+                  session.push({
+                    event: "page_found",
+                    data: {
+                      type: "page_found",
+                      url: pageInfo.url,
+                      title: pageInfo.title,
+                      contentLength: pageInfo.contentLength,
+                      timestamp: new Date().toISOString(),
+                    },
+                  })
+                }
+              },
+              (message) => {
+                // 진행상황 메시지 전송
+                if (!session.closed) {
+                  session.push({
+                    event: "progress",
+                    data: {
+                      type: "progress",
+                      status: "crawling",
+                      message,
+                      timestamp: new Date().toISOString(),
+                    },
+                  })
+                }
+              },
+            )
+
+            if (pagesContent.size === 0) {
+              throw new Error("앗, 웹사이트에 연결할 수 없어요. 주소를 다시 확인해주세요")
+            }
+
+            // GPT 분석 준비 알림
+            session.push({
+              event: "progress",
+              data: {
+                type: "progress",
+                status: "analyzing",
+                message: "AI가 분석을 시작해요",
+                timestamp: new Date().toISOString(),
+              },
+            })
+
+            // GPT 스트리밍 분석 시작
+            const streamResult = await analyzeWebsiteWithStreaming(pagesContent, 60, workspaceId)
+
+            // AI 응답 생성 시작 알림
+            session.push({
+              event: "progress",
+              data: {
+                type: "progress",
+                status: "streaming",
+                message: "분석 결과를 정리하고 있어요",
+                timestamp: new Date().toISOString(),
+              },
+            })
+
+            // 스트림 청크를 SSE로 전송
+            logger.info("[Web Analysis] Starting to consume stream")
+            let chunkCount = 0
+            for await (const chunk of streamResult.textStream) {
+              if (session.closed) {
+                logger.info("[Web Analysis] Session closed, stopping stream")
+                break
+              }
+
+              chunkCount++
+              // 청크 전송 (DEBUG 로그 제거 - 너무 많은 로그 생성)
+              session.push({
+                event: "chunk",
+                data: {
+                  type: "chunk",
+                  content: chunk,
+                  timestamp: new Date().toISOString(),
+                },
+              })
+            }
+
+            logger.info({ totalChunks: chunkCount }, "[Web Analysis] Stream consumption completed")
+
+            if (session.closed) return
+
+            // 완료 메시지 전송
+            session.push({
+              event: "complete",
+              data: {
+                type: "complete",
+                timestamp: new Date().toISOString(),
+                message: "분석이 완료되었습니다",
+              },
+            })
+
+            logger.info(
+              {
+                websiteUrl,
+              },
+              "[Web Analysis] Streaming completed",
+            )
+
+            await new Promise((resolve) => setTimeout(resolve, 100))
+          } catch (error: unknown) {
+            logger.error({ error }, "[Web Analysis] Stream error")
+            session.push({
+              event: "error",
+              data: {
+                type: "error",
+                timestamp: new Date().toISOString(),
+                error: error instanceof Error ? error.message : "Analysis failed",
+              },
+            })
+          }
+        },
+        {
+          keepAlive: true,
+          keepAliveInterval: 15000,
+          onClose: () => {
+            logger.info("[Web Analysis] Client disconnected")
+          },
+        },
+      )
+    },
+    {
+      body: t.Object({
+        websiteUrl: t.String(),
+        workspaceId: t.String(),
+      }),
+      detail: {
+        tags: ["admin", "web-extraction"],
+        summary: "단일 웹사이트 URL 분석 (SSE 스트리밍)",
+        description:
+          "단일 웹사이트 URL을 분석하여 AI가 생성한 상세 분석 결과를 스트리밍으로 전송합니다.",
+      },
+    },
+  )
+
   /**
    * POST /api/v1/admin/web-extraction/upload
    * Excel/CSV 파일 업로드 및 웹 데이터 추출 (SSE로 진행상황 전송)

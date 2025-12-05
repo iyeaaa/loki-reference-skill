@@ -1,8 +1,13 @@
 import { useMutation } from "@tanstack/react-query"
-import { useState } from "react"
+import { useCallback, useState } from "react"
 import toast from "react-hot-toast"
 import { webExtractionApi } from "../services/web-extraction"
-import type { ExtractionProgress, WebExtractionUploadRequest } from "../types/web-extraction"
+import type {
+  ExtractionProgress,
+  PageInfo,
+  WebExtractionUploadRequest,
+  WebsiteAnalysisRequest,
+} from "../types/web-extraction"
 
 // Custom hook for managing web extraction with progress
 export function useWebExtraction() {
@@ -102,4 +107,119 @@ export function useCleanupResults() {
       console.error("Cleanup error:", error)
     },
   })
+}
+
+// 단일 웹사이트 분석 훅 (스트리밍)
+export interface WebsiteAnalysisState {
+  status: "idle" | "crawling" | "analyzing" | "streaming" | "complete" | "error"
+  message: string
+  streamingContent: string
+  foundPages: PageInfo[]
+  error: string | null
+}
+
+export interface UseWebsiteAnalysisOptions {
+  onContentUpdate?: (content: string) => void
+}
+
+export function useWebsiteAnalysis(options?: UseWebsiteAnalysisOptions) {
+  const [state, setState] = useState<WebsiteAnalysisState>({
+    status: "idle",
+    message: "",
+    streamingContent: "",
+    foundPages: [],
+    error: null,
+  })
+
+  const analyze = useCallback(
+    async (request: WebsiteAnalysisRequest): Promise<string> => {
+      // 초기 상태 리셋 - 백엔드가 모든 과정을 관리함
+      setState({
+        status: "idle",
+        message: "서버에 연결 중...",
+        streamingContent: "",
+        foundPages: [],
+        error: null,
+      })
+
+      return new Promise((resolve) => {
+        let accumulatedContent = ""
+
+        webExtractionApi.analyzeWebsite(request, {
+          onInit: (message) => {
+            setState((prev) => ({
+              ...prev,
+              message,
+            }))
+          },
+          onProgress: (status, message) => {
+            setState((prev) => ({
+              ...prev,
+              status: status as WebsiteAnalysisState["status"],
+              message,
+            }))
+          },
+          onPageFound: (pageInfo) => {
+            setState((prev) => ({
+              ...prev,
+              foundPages: [...prev.foundPages, pageInfo],
+            }))
+          },
+          onChunk: (content) => {
+            accumulatedContent += content
+
+            // Call the callback directly for immediate updates
+            if (options?.onContentUpdate) {
+              options.onContentUpdate(accumulatedContent)
+            }
+
+            // Use functional update to ensure we're working with latest state
+            setState((prev) => ({
+              ...prev,
+              status: "streaming" as const,
+              streamingContent: accumulatedContent,
+            }))
+          },
+          onComplete: () => {
+            setState((prev) => ({
+              ...prev,
+              status: "complete",
+              message: "분석이 완료되었습니다",
+            }))
+            resolve(accumulatedContent)
+          },
+          onError: (error) => {
+            console.error("[useWebsiteAnalysis] onError:", error)
+            setState({
+              status: "error",
+              message: error,
+              streamingContent: "",
+              foundPages: [],
+              error,
+            })
+            resolve("")
+          },
+        })
+      })
+    },
+    [options],
+  )
+
+  const reset = useCallback(() => {
+    setState({
+      status: "idle",
+      message: "",
+      streamingContent: "",
+      foundPages: [],
+      error: null,
+    })
+  }, [])
+
+  return {
+    ...state,
+    isAnalyzing:
+      state.status === "crawling" || state.status === "analyzing" || state.status === "streaming",
+    analyze,
+    reset,
+  }
 }

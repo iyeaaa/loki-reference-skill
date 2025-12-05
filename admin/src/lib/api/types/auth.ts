@@ -26,6 +26,11 @@ export interface AuthUser {
   lastLoginAt?: string
   departmentName?: string
   departmentCode?: string
+  trialStatus?: {
+    isTrialActive: boolean
+    daysRemaining: number
+    trialEndDate: string
+  }
 }
 
 export interface AuthResponse {

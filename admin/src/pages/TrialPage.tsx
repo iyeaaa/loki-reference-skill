@@ -1,8 +1,8 @@
 import { motion } from "framer-motion"
-import { Chrome, Clock, Check, Users, Building, Globe } from "lucide-react"
+import { Building, Check, Chrome, Clock, Globe, Users } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
-import { useNavigate, useSearchParams } from "react-router-dom"
 import { useTranslation } from "react-i18next"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { Button } from "@/components/ui/button"
@@ -226,9 +226,7 @@ export default function TrialPage() {
                   </div>
 
                   <div className="text-center pt-2">
-                    <p className="text-xs text-gray-500">
-                      {t("trial.card.disclaimer")}
-                    </p>
+                    <p className="text-xs text-gray-500">{t("trial.card.disclaimer")}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -253,7 +251,9 @@ export default function TrialPage() {
                     <Building className="h-8 w-8 text-green-600" />
                   </div>
                   <div className="text-2xl font-bold text-gray-900">500+</div>
-                  <div className="text-sm text-gray-600">{t("trial.stats.registeredCompanies")}</div>
+                  <div className="text-sm text-gray-600">
+                    {t("trial.stats.registeredCompanies")}
+                  </div>
                 </div>
                 <div className="text-center">
                   <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -267,21 +267,25 @@ export default function TrialPage() {
                     <Clock className="h-8 w-8 text-orange-600" />
                   </div>
                   <div className="text-2xl font-bold text-gray-900">48시간</div>
-                  <div className="text-sm text-gray-600">{t("trial.stats.averageResponseTime")}</div>
+                  <div className="text-sm text-gray-600">
+                    {t("trial.stats.averageResponseTime")}
+                  </div>
                 </div>
               </div>
 
               {/* Process Steps */}
               <div className="space-y-6">
                 <h3 className="text-xl font-semibold text-gray-900">{t("trial.process.title")}</h3>
-                
+
                 <div className="space-y-4">
                   <div className="flex items-start gap-4">
                     <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                       <span className="text-white text-sm font-bold">1</span>
                     </div>
                     <div>
-                      <h4 className="font-semibold text-gray-900">{t("trial.process.step1.title")}</h4>
+                      <h4 className="font-semibold text-gray-900">
+                        {t("trial.process.step1.title")}
+                      </h4>
                       <p className="text-sm text-gray-600">
                         {t("trial.process.step1.description")}
                       </p>
@@ -293,7 +297,9 @@ export default function TrialPage() {
                       <span className="text-white text-sm font-bold">2</span>
                     </div>
                     <div>
-                      <h4 className="font-semibold text-gray-900">{t("trial.process.step2.title")}</h4>
+                      <h4 className="font-semibold text-gray-900">
+                        {t("trial.process.step2.title")}
+                      </h4>
                       <p className="text-sm text-gray-600">
                         {t("trial.process.step2.description")}
                       </p>
@@ -305,7 +311,9 @@ export default function TrialPage() {
                       <span className="text-white text-sm font-bold">3</span>
                     </div>
                     <div>
-                      <h4 className="font-semibold text-gray-900">{t("trial.process.step3.title")}</h4>
+                      <h4 className="font-semibold text-gray-900">
+                        {t("trial.process.step3.title")}
+                      </h4>
                       <p className="text-sm text-gray-600">
                         {t("trial.process.step3.description")}
                       </p>
@@ -322,9 +330,7 @@ export default function TrialPage() {
                       <div className="text-2xl font-bold text-blue-600">WO</div>
                       <div className="text-base text-gray-600">{t("trial.pricing.title")}</div>
                     </div>
-                    <p className="text-gray-600 mb-4 text-sm">
-                      {t("trial.pricing.price")}
-                    </p>
+                    <p className="text-gray-600 mb-4 text-sm">{t("trial.pricing.price")}</p>
                     <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                       {t("trial.pricing.button")}
                     </Button>

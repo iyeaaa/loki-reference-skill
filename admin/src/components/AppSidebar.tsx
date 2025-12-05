@@ -164,22 +164,15 @@ export function AppSidebar({
   // 메뉴 아이템들 가져오기
   const mainMenuItems = getMainMenuItems(t)
 
-  // 현재 로그인한 유저의 trial 상태 확인
-  const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
-  const isTrialUser = currentUser?.trialStatus?.isTrialActive || false
-
   // "전체" 옵션을 포함한 워크스페이스 목록 생성
-  // Trial 사용자의 경우 "전체" 옵션을 숨김
-  const workspaceOptions: WorkspaceOption[] = isTrialUser
-    ? [...workspaces]
-    : [
-        {
-          value: "all",
-          label: t("sidebar.workspace.all"),
-          sublabel: t("sidebar.workspace.allSublabel"),
-        },
-        ...workspaces,
-      ]
+  const workspaceOptions: WorkspaceOption[] = [
+    {
+      value: "all",
+      label: t("sidebar.workspace.all"),
+      sublabel: t("sidebar.workspace.allSublabel"),
+    },
+    ...workspaces,
+  ]
 
   return (
     <Sidebar collapsible="icon">

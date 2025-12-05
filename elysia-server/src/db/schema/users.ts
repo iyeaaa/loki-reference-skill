@@ -11,13 +11,7 @@ import {
 } from "drizzle-orm/pg-core"
 
 // Enums
-export const userRoleEnum = pgEnum("user_role_enum", [
-  "super_admin",
-  "admin",
-  "paying_user",
-  "user",
-])
-export const authProviderEnum = pgEnum("auth_provider_enum", ["local", "google"])
+export const userRoleEnum = pgEnum("user_role_enum", ["admin", "user"])
 
 // Departments table
 export const departments = pgTable(
@@ -49,24 +43,12 @@ export const users = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     departmentId: uuid("department_id").references(() => departments.id),
     employeeId: varchar("employee_id", { length: 20 }),
-    // OAuth and SSO fields
-    authProvider: authProviderEnum("auth_provider").notNull().default("local"),
-    oauthId: varchar("oauth_id", { length: 255 }), // Google user ID or other OAuth provider ID
-    profilePicture: text("profile_picture"), // Profile picture URL from OAuth provider
-    // Trial period fields
-    trialStartDate: timestamp("trial_start_date", { withTimezone: true }),
-    trialEndDate: timestamp("trial_end_date", { withTimezone: true }),
-    isTrialActive: boolean("is_trial_active").default(false),
-    // Timestamps
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   },
   (table) => ({
     departmentIdx: index("users_department_id_idx").on(table.departmentId),
-    authProviderIdx: index("users_auth_provider_idx").on(table.authProvider),
-    oauthIdIdx: index("users_oauth_id_idx").on(table.oauthId),
-    trialActiveIdx: index("users_trial_active_idx").on(table.isTrialActive),
   }),
 )
 

@@ -61,4 +61,25 @@ export const authApi = {
       body: JSON.stringify(data),
     })
   },
+
+  // Google OAuth methods
+  getGoogleAuthUrl: () => {
+    return apiFetch<{ authUrl: string }>("/api/v1/auth/google", {
+      method: "GET",
+    })
+  },
+
+  googleCallback: (code: string) => {
+    return apiFetch<AuthResponse>("/api/v1/auth/google/callback", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    })
+  },
+
+  verifyGoogleToken: (idToken: string) => {
+    return apiFetch<AuthResponse>("/api/v1/auth/google/verify", {
+      method: "POST",
+      body: JSON.stringify({ idToken }),
+    })
+  },
 }

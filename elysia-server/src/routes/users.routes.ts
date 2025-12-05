@@ -6,7 +6,14 @@ const userSchema = t.Object({
   username: t.String({ minLength: 1, maxLength: 50 }),
   email: t.String({ format: "email", maxLength: 100 }),
   passwordHash: t.Optional(t.String({ maxLength: 255 })),
-  userRole: t.Optional(t.Union([t.Literal("admin"), t.Literal("user")])),
+  userRole: t.Optional(
+    t.Union([
+      t.Literal("admin"),
+      t.Literal("user"),
+      t.Literal("paying_user"),
+      t.Literal("super_admin"),
+    ]),
+  ),
   isActive: t.Optional(t.Boolean()),
   departmentId: t.String({ format: "uuid" }),
   employeeId: t.String({ maxLength: 20 }),
@@ -15,7 +22,12 @@ const userSchema = t.Object({
 const updateUserSchema = t.Object({
   username: t.String({ minLength: 1, maxLength: 50 }),
   email: t.String({ format: "email", maxLength: 100 }),
-  userRole: t.Union([t.Literal("admin"), t.Literal("user")]),
+  userRole: t.Union([
+    t.Literal("admin"),
+    t.Literal("user"),
+    t.Literal("paying_user"),
+    t.Literal("super_admin"),
+  ]),
   isActive: t.Boolean(),
   departmentId: t.Optional(t.Nullable(t.String({ format: "uuid" }))),
   employeeId: t.Optional(t.Nullable(t.String({ maxLength: 20 }))),
@@ -41,7 +53,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
         : undefined
 
       const filters = {
-        role: query.role as "admin" | "user" | undefined,
+        role: query.role as "super_admin" | "admin" | "paying_user" | "user" | undefined,
         isActive: query.isActive ? query.isActive === "true" : undefined,
         search: query.search,
         departmentIds,
@@ -222,17 +234,17 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
     },
   )
 
-  // Create or update Google user
-  .post(
-    "/google",
-    async ({ body }) => {
-      const user = await userService.createOrUpdateGoogleUser(body)
-      return user
-    },
-    {
-      body: userSchema,
-    },
-  )
+  // // Create or update Google user
+  // .post(
+  //   "/google",
+  //   async ({ body }) => {
+  //     const user = await userService.createOrUpdateGoogleUser(body)
+  //     return user
+  //   },
+  //   {
+  //     body: userSchema,
+  //   },
+  // )
 
   // Update last login
   .patch(
@@ -275,7 +287,12 @@ export const adminUserRoutes = new Elysia({ prefix: "/api/v1/admin/users" })
     {
       body: t.Object({
         userIds: t.Array(t.String({ format: "uuid" })),
-        userRole: t.Union([t.Literal("admin"), t.Literal("user")]),
+        userRole: t.Union([
+          t.Literal("admin"),
+          t.Literal("user"),
+          t.Literal("paying_user"),
+          t.Literal("super_admin"),
+        ]),
       }),
     },
   )

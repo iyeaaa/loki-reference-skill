@@ -83,22 +83,14 @@ export function useLogoutMutation() {
   return useMutation({
     mutationKey: ["auth", "logout"],
     mutationFn: async () => {
-      // Check if current user is trial user before logout
-      const currentUser = authApi.getStoredUser()
-      const isTrialUser = currentUser?.trialStatus?.isTrialActive || false
-
       authApi.logout()
-
-      return { isTrialUser }
     },
-    onSuccess: (result) => {
+    onSuccess: () => {
       queryClient.removeQueries({ queryKey: authKeys.all })
       queryClient.clear()
 
       toast.success("로그아웃되었습니다.")
-
-      // Redirect trial users to trial page, others to login page
-      navigate(result.isTrialUser ? "/trial" : "/login")
+      navigate("/login")
     },
   })
 }

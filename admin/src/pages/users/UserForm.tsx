@@ -111,7 +111,7 @@ export function UserForm({
           onValueChange={(value) =>
             setFormData({
               ...formData,
-              userRole: value as "super_admin" | "admin" | "paying_user" | "user",
+              userRole: value as "admin" | "user",
             })
           }
         >

@@ -20,22 +20,6 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  "/api/health": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiHealth"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
   "/health/": {
     parameters: {
       query?: never
@@ -164,38 +148,6 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  "/api/ai/generate-followup": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiAiGenerate-followup"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/ai/generate-summary": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiAiGenerate-summary"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
   "/api/chatbot/ask": {
     parameters: {
       query?: never
@@ -238,54 +190,6 @@ export interface paths {
     get?: never
     put?: never
     post: operations["postApiChatbotConfirm"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/chatbot/conversations": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiChatbotConversations"]
-    put?: never
-    post: operations["postApiChatbotConversations"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/chatbot/conversations/{id}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["deleteApiChatbotConversationsById"]
-    options?: never
-    head?: never
-    patch: operations["patchApiChatbotConversationsById"]
-    trace?: never
-  }
-  "/api/chatbot/conversations/{id}/generate-title": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiChatbotConversationsByIdGenerate-title"]
     delete?: never
     options?: never
     head?: never
@@ -386,54 +290,6 @@ export interface paths {
     options?: never
     head?: never
     patch: operations["patchApiV1AuthProfile"]
-    trace?: never
-  }
-  "/api/v1/auth/google": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AuthGoogle"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/auth/google/callback": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AuthGoogleCallback"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/auth/google/verify": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AuthGoogleVerify"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
     trace?: never
   }
   "/api/v1/departments/": {
@@ -594,6 +450,22 @@ export interface paths {
     options?: never
     head?: never
     patch: operations["patchApiV1UsersByIdPassword"]
+    trace?: never
+  }
+  "/api/v1/users/google": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiV1UsersGoogle"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
     trace?: never
   }
   "/api/v1/users/{id}/login": {
@@ -829,54 +701,6 @@ export interface paths {
     }
     get?: never
     put: operations["putApiV1AdminWorkspacesByIdTransfer"]
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/workspaces/{id}/products": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminWorkspacesByIdProducts"]
-    put?: never
-    post: operations["postApiV1AdminWorkspacesByIdProducts"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/workspaces/{id}/products/{productId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminWorkspacesByIdProductsByProductId"]
-    put: operations["putApiV1AdminWorkspacesByIdProductsByProductId"]
-    post?: never
-    delete: operations["deleteApiV1AdminWorkspacesByIdProductsByProductId"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/workspaces/{id}/with-products": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminWorkspacesByIdWith-products"]
-    put?: never
     post?: never
     delete?: never
     options?: never
@@ -1636,22 +1460,6 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  "/api/v1/emails/{id}/attachments/{attachmentIndex}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1EmailsByIdAttachmentsByAttachmentIndex"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
   "/api/v1/emails/{id}": {
     parameters: {
       query?: never
@@ -1682,22 +1490,6 @@ export interface paths {
     options?: never
     head?: never
     patch?: never
-    trace?: never
-  }
-  "/api/v1/emails/{id}/intent": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1EmailsByIdIntent"]
     trace?: never
   }
   "/api/v1/emails/{id}/status": {
@@ -1938,38 +1730,6 @@ export interface paths {
     options?: never
     head?: never
     patch?: never
-    trace?: never
-  }
-  "/api/v1/email-replies/thread/{threadId}/important": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1Email-repliesThreadByThreadIdImportant"]
-    trace?: never
-  }
-  "/api/v1/email-replies/thread/{threadId}/read": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch: operations["patchApiV1Email-repliesThreadByThreadIdRead"]
     trace?: never
   }
   "/api/v1/leads/search": {
@@ -2332,22 +2092,6 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  "/api/v1/sequences/{id}/generate": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1SequencesByIdGenerate"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
   "/api/v1/sequences/{id}/activate-step-based": {
     parameters: {
       query?: never
@@ -2452,22 +2196,6 @@ export interface paths {
       cookie?: never
     }
     get: operations["getApiV1SequencesByIdEnrollmentsByEnrollmentIdStep-executions"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/sequences/stats/overall": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1SequencesStatsOverall"]
     put?: never
     post?: never
     delete?: never
@@ -2928,8 +2656,8 @@ export interface paths {
     get?: never
     put?: never
     /**
-     * Excel 또는 CSV 파일 데이터 미리보기
-     * @description Excel(.xlsx, .xls) 또는 CSV(.csv) 파일을 업로드하여 DB에 저장하기 전 데이터를 미리 확인합니다. 전체 데이터를 미리보기로 제공하며, 최대 20행을 샘플링하여 AI 분석 결과도 함께 제공합니다. CSV 파일의 경우 인코딩을 자동 감지하여 UTF-8로 변환합니다.
+     * Excel 파일 데이터 미리보기
+     * @description Excel 파일을 업로드하여 DB에 저장하기 전 데이터를 미리 확인합니다. 전체 데이터를 미리보기로 제공하며, 최대 10행을 샘플링하여 AI 분석 결과도 함께 제공합니다.
      */
     post: operations["postApiV1AdminLead-importPreview"]
     delete?: never
@@ -3166,209 +2894,6 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  "/api/v1/admin/gemini-search/upload": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AdminGemini-searchUpload"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/gemini-search/search": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AdminGemini-searchSearch"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/gemini-search/stores": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations["getApiV1AdminGemini-searchStores"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/gemini-search/files/{fileId}": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1AdminGemini-searchFilesByFileId"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/gemini-search/estimate-cost": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AdminGemini-searchEstimate-cost"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/gemini-search/drive/import-url": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post: operations["postApiV1AdminGemini-searchDriveImport-url"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/admin/gemini-search/stores/all": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    post?: never
-    delete: operations["deleteApiV1AdminGemini-searchStoresAll"]
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/bigquery/search": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Search BigQuery with natural language
-     * @description Convert natural language query to SQL and execute against BigQuery
-     */
-    post: operations["postApiV1BigquerySearch"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/bigquery/add-to-group": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /** Add BigQuery search results to customer group */
-    post: operations["postApiV1BigqueryAdd-to-group"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/bigquery/health": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Health check for BigQuery service */
-    get: operations["getApiV1BigqueryHealth"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/lead-enrichment/enrich": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Enrich lead with company info and emails
-     * @description Fetch company information and emails using Hunter.io and Jina Reader
-     */
-    post: operations["postApiV1Lead-enrichmentEnrich"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/v1/lead-enrichment/health": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Check enrichment service status */
-    get: operations["getApiV1Lead-enrichmentHealth"]
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -3382,23 +2907,6 @@ export interface components {
 export type $defs = Record<string, never>
 export interface operations {
   getIndex: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiHealth: {
     parameters: {
       query?: never
       header?: never
@@ -3569,73 +3077,6 @@ export interface operations {
       }
     }
   }
-  "postApiAiGenerate-followup": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          threadId: string
-          workspaceId?: string
-        }
-        "multipart/form-data": {
-          threadId: string
-          workspaceId?: string
-        }
-        "text/plain": {
-          threadId: string
-          workspaceId?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiAiGenerate-summary": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          threadId: string
-          workspaceId?: string
-          language?: string
-        }
-        "multipart/form-data": {
-          threadId: string
-          workspaceId?: string
-          language?: string
-        }
-        "text/plain": {
-          threadId: string
-          workspaceId?: string
-          language?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
   postApiChatbotAsk: {
     parameters: {
       query?: never
@@ -3650,7 +3091,6 @@ export interface operations {
           workspaceId: string
           userId?: string
           conversationId?: string
-          locale?: string
           messages?: {
             role: "user" | "assistant"
             content: string
@@ -3669,7 +3109,6 @@ export interface operations {
           workspaceId: string
           userId?: string
           conversationId?: string
-          locale?: string
           messages?: {
             role: "user" | "assistant"
             content: string
@@ -3688,7 +3127,6 @@ export interface operations {
           workspaceId: string
           userId?: string
           conversationId?: string
-          locale?: string
           messages?: {
             role: "user" | "assistant"
             content: string
@@ -3752,145 +3190,6 @@ export interface operations {
         "text/plain": {
           conversationId: string
           confirmed: boolean
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiChatbotConversations: {
-    parameters: {
-      query: {
-        workspaceId: string
-        userId: string
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiChatbotConversations: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          workspaceId: string
-          userId: string
-          title?: string
-        }
-        "multipart/form-data": {
-          workspaceId: string
-          userId: string
-          title?: string
-        }
-        "text/plain": {
-          workspaceId: string
-          userId: string
-          title?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  deleteApiChatbotConversationsById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  patchApiChatbotConversationsById: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          title: string
-        }
-        "multipart/form-data": {
-          title: string
-        }
-        "text/plain": {
-          title: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiChatbotConversationsByIdGenerate-title": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          firstMessage: string
-          locale?: string
-        }
-        "multipart/form-data": {
-          firstMessage: string
-          locale?: string
-        }
-        "text/plain": {
-          firstMessage: string
-          locale?: string
         }
       }
     }
@@ -4053,84 +3352,6 @@ export interface operations {
           /** Format: email */
           email: string
           employeeId: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1AuthGoogle: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1AuthGoogleCallback: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          code: string
-          state?: string
-        }
-        "multipart/form-data": {
-          code: string
-          state?: string
-        }
-        "text/plain": {
-          code: string
-          state?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1AuthGoogleVerify: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          idToken: string
-        }
-        "multipart/form-data": {
-          idToken: string
-        }
-        "text/plain": {
-          idToken: string
         }
       }
     }
@@ -4351,7 +3572,7 @@ export interface operations {
           username: string
           /** Format: email */
           email: string
-          userRole: "admin" | "user" | "paying_user" | "super_admin"
+          userRole: "admin" | "user"
           isActive: boolean
           departmentId?: (string | null) | null
           employeeId?: (string | null) | null
@@ -4360,7 +3581,7 @@ export interface operations {
           username: string
           /** Format: email */
           email: string
-          userRole: "admin" | "user" | "paying_user" | "super_admin"
+          userRole: "admin" | "user"
           isActive: boolean
           departmentId?: (string | null) | null
           employeeId?: (string | null) | null
@@ -4369,7 +3590,7 @@ export interface operations {
           username: string
           /** Format: email */
           email: string
-          userRole: "admin" | "user" | "paying_user" | "super_admin"
+          userRole: "admin" | "user"
           isActive: boolean
           departmentId?: (string | null) | null
           employeeId?: (string | null) | null
@@ -4438,7 +3659,7 @@ export interface operations {
           /** Format: email */
           email: string
           passwordHash?: string
-          userRole?: "admin" | "user" | "paying_user" | "super_admin"
+          userRole?: "admin" | "user"
           isActive?: boolean
           /** Format: uuid */
           departmentId: string
@@ -4449,7 +3670,7 @@ export interface operations {
           /** Format: email */
           email: string
           passwordHash?: string
-          userRole?: "admin" | "user" | "paying_user" | "super_admin"
+          userRole?: "admin" | "user"
           isActive?: boolean
           /** Format: uuid */
           departmentId: string
@@ -4460,7 +3681,7 @@ export interface operations {
           /** Format: email */
           email: string
           passwordHash?: string
-          userRole?: "admin" | "user" | "paying_user" | "super_admin"
+          userRole?: "admin" | "user"
           isActive?: boolean
           /** Format: uuid */
           departmentId: string
@@ -4563,6 +3784,59 @@ export interface operations {
       }
     }
   }
+  postApiV1UsersGoogle: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          username: string
+          /** Format: email */
+          email: string
+          passwordHash?: string
+          userRole?: "admin" | "user"
+          isActive?: boolean
+          /** Format: uuid */
+          departmentId: string
+          employeeId: string
+        }
+        "multipart/form-data": {
+          username: string
+          /** Format: email */
+          email: string
+          passwordHash?: string
+          userRole?: "admin" | "user"
+          isActive?: boolean
+          /** Format: uuid */
+          departmentId: string
+          employeeId: string
+        }
+        "text/plain": {
+          username: string
+          /** Format: email */
+          email: string
+          passwordHash?: string
+          userRole?: "admin" | "user"
+          isActive?: boolean
+          /** Format: uuid */
+          departmentId: string
+          employeeId: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   patchApiV1UsersByIdLogin: {
     parameters: {
       query?: never
@@ -4625,15 +3899,15 @@ export interface operations {
       content: {
         "application/json": {
           userIds: string[]
-          userRole: "admin" | "user" | "paying_user" | "super_admin"
+          userRole: "admin" | "user"
         }
         "multipart/form-data": {
           userIds: string[]
-          userRole: "admin" | "user" | "paying_user" | "super_admin"
+          userRole: "admin" | "user"
         }
         "text/plain": {
           userIds: string[]
-          userRole: "admin" | "user" | "paying_user" | "super_admin"
+          userRole: "admin" | "user"
         }
       }
     }
@@ -5132,183 +4406,6 @@ export interface operations {
         }
       }
     }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1AdminWorkspacesByIdProducts: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1AdminWorkspacesByIdProducts: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          name?: string
-          description?: string
-          category?: string
-          features?: string[]
-          priceRange?: string
-          targetAudience?: string
-          imageUrl?: string
-        }
-        "multipart/form-data": {
-          name?: string
-          description?: string
-          category?: string
-          features?: string[]
-          priceRange?: string
-          targetAudience?: string
-          imageUrl?: string
-        }
-        "text/plain": {
-          name?: string
-          description?: string
-          category?: string
-          features?: string[]
-          priceRange?: string
-          targetAudience?: string
-          imageUrl?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1AdminWorkspacesByIdProductsByProductId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        productId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  putApiV1AdminWorkspacesByIdProductsByProductId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        productId: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          name?: string
-          description?: string
-          category?: string
-          features?: string[]
-          priceRange?: string
-          targetAudience?: string
-          imageUrl?: string
-        }
-        "multipart/form-data": {
-          name?: string
-          description?: string
-          category?: string
-          features?: string[]
-          priceRange?: string
-          targetAudience?: string
-          imageUrl?: string
-        }
-        "text/plain": {
-          name?: string
-          description?: string
-          category?: string
-          features?: string[]
-          priceRange?: string
-          targetAudience?: string
-          imageUrl?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  deleteApiV1AdminWorkspacesByIdProductsByProductId: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        productId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1AdminWorkspacesByIdWith-products": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
     responses: {
       200: {
         headers: {
@@ -6257,9 +5354,10 @@ export interface operations {
   }
   "getApiV1Email-signatures": {
     parameters: {
-      query?: {
+      query: {
+        workspaceId: string
+        userId: string
         includeInactive?: boolean
-        userId?: string
       }
       header?: never
       path?: never
@@ -6277,9 +5375,9 @@ export interface operations {
   }
   "postApiV1Email-signatures": {
     parameters: {
-      query?: {
-        workspaceId?: string
-        userId?: string
+      query: {
+        workspaceId: string
+        userId: string
       }
       header?: never
       path?: never
@@ -6291,18 +5389,21 @@ export interface operations {
           name: string
           signatureHtml: string
           signatureText: string
+          isDefault?: boolean
           isActive?: boolean
         }
         "multipart/form-data": {
           name: string
           signatureHtml: string
           signatureText: string
+          isDefault?: boolean
           isActive?: boolean
         }
         "text/plain": {
           name: string
           signatureHtml: string
           signatureText: string
+          isDefault?: boolean
           isActive?: boolean
         }
       }
@@ -6318,7 +5419,10 @@ export interface operations {
   }
   "getApiV1Email-signaturesById": {
     parameters: {
-      query?: never
+      query: {
+        workspaceId: string
+        userId: string
+      }
       header?: never
       path: {
         id: string
@@ -6337,7 +5441,10 @@ export interface operations {
   }
   "putApiV1Email-signaturesById": {
     parameters: {
-      query?: never
+      query: {
+        workspaceId: string
+        userId: string
+      }
       header?: never
       path: {
         id: string
@@ -6350,18 +5457,21 @@ export interface operations {
           name?: string
           signatureHtml?: string
           signatureText?: string
+          isDefault?: boolean
           isActive?: boolean
         }
         "multipart/form-data": {
           name?: string
           signatureHtml?: string
           signatureText?: string
+          isDefault?: boolean
           isActive?: boolean
         }
         "text/plain": {
           name?: string
           signatureHtml?: string
           signatureText?: string
+          isDefault?: boolean
           isActive?: boolean
         }
       }
@@ -6377,7 +5487,9 @@ export interface operations {
   }
   "deleteApiV1Email-signaturesById": {
     parameters: {
-      query?: {
+      query: {
+        workspaceId: string
+        userId: string
         hardDelete?: boolean
       }
       header?: never
@@ -6398,7 +5510,10 @@ export interface operations {
   }
   "getApiV1Email-signaturesDefault": {
     parameters: {
-      query?: never
+      query: {
+        workspaceId: string
+        userId: string
+      }
       header?: never
       path?: never
       cookie?: never
@@ -6415,8 +5530,9 @@ export interface operations {
   }
   "patchApiV1Email-signaturesByIdSet-default": {
     parameters: {
-      query?: {
-        userId?: string
+      query: {
+        workspaceId: string
+        userId: string
       }
       header?: never
       path: {
@@ -6529,32 +5645,32 @@ export interface operations {
       content: {
         "application/json": {
           name: string
-          description?: string | null
+          description?: string
           subject: string
-          bodyText?: string | null
-          bodyHtml?: string | null
+          bodyText?: string
+          bodyHtml?: string
           variables?: unknown
-          category?: string | null
+          category?: string
           isShared: boolean
         }
         "multipart/form-data": {
           name: string
-          description?: string | null
+          description?: string
           subject: string
-          bodyText?: string | null
-          bodyHtml?: string | null
+          bodyText?: string
+          bodyHtml?: string
           variables?: unknown
-          category?: string | null
+          category?: string
           isShared: boolean
         }
         "text/plain": {
           name: string
-          description?: string | null
+          description?: string
           subject: string
-          bodyText?: string | null
-          bodyHtml?: string | null
+          bodyText?: string
+          bodyHtml?: string
           variables?: unknown
-          category?: string | null
+          category?: string
           isShared: boolean
         }
       }
@@ -6620,12 +5736,12 @@ export interface operations {
           /** Format: uuid */
           workspaceId: string
           name: string
-          description?: string | null
+          description?: string
           subject: string
-          bodyText?: string | null
-          bodyHtml?: string | null
+          bodyText?: string
+          bodyHtml?: string
           variables?: unknown
-          category?: string | null
+          category?: string
           isShared?: boolean
           /** Format: uuid */
           createdBy?: string
@@ -6634,12 +5750,12 @@ export interface operations {
           /** Format: uuid */
           workspaceId: string
           name: string
-          description?: string | null
+          description?: string
           subject: string
-          bodyText?: string | null
-          bodyHtml?: string | null
+          bodyText?: string
+          bodyHtml?: string
           variables?: unknown
-          category?: string | null
+          category?: string
           isShared?: boolean
           /** Format: uuid */
           createdBy?: string
@@ -6648,12 +5764,12 @@ export interface operations {
           /** Format: uuid */
           workspaceId: string
           name: string
-          description?: string | null
+          description?: string
           subject: string
-          bodyText?: string | null
-          bodyHtml?: string | null
+          bodyText?: string
+          bodyHtml?: string
           variables?: unknown
-          category?: string | null
+          category?: string
           isShared?: boolean
           /** Format: uuid */
           createdBy?: string
@@ -7038,13 +6154,9 @@ export interface operations {
         sequenceId?: string
         search?: string
         intent?: string
-        isImportant?: string
-        isUnread?: string
         sentiment?: string
         category?: string
         priority?: string
-        dateFrom?: string
-        dateTo?: string
       }
       header?: never
       path?: never
@@ -7068,26 +6180,6 @@ export interface operations {
       header?: never
       path: {
         threadId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1EmailsByIdAttachmentsByAttachmentIndex: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-        attachmentIndex: string
       }
       cookie?: never
     }
@@ -7255,64 +6347,6 @@ export interface operations {
             | "spam"
             | "unsubscribed"
           scheduledAt?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  patchApiV1EmailsByIdIntent: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          intent?:
-            | "meeting_request"
-            | "question"
-            | "objection"
-            | "out_of_office"
-            | "not_interested"
-            | "positive_interest"
-            | "neutral"
-            | null
-          sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
-        }
-        "multipart/form-data": {
-          intent?:
-            | "meeting_request"
-            | "question"
-            | "objection"
-            | "out_of_office"
-            | "not_interested"
-            | "positive_interest"
-            | "neutral"
-            | null
-          sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
-        }
-        "text/plain": {
-          intent?:
-            | "meeting_request"
-            | "question"
-            | "objection"
-            | "out_of_office"
-            | "not_interested"
-            | "positive_interest"
-            | "neutral"
-            | null
-          sentiment?: "positive" | "neutral" | "negative" | "interested" | "not_interested" | null
         }
       }
     }
@@ -7868,56 +6902,6 @@ export interface operations {
         }
       }
     }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "patchApiV1Email-repliesThreadByThreadIdImportant": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        threadId: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          isImportant: boolean
-        }
-        "multipart/form-data": {
-          isImportant: boolean
-        }
-        "text/plain": {
-          isImportant: boolean
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "patchApiV1Email-repliesThreadByThreadIdRead": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        threadId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
     responses: {
       200: {
         headers: {
@@ -9442,8 +8426,7 @@ export interface operations {
         "application/json": {
           name?: string
           description?: string
-          memo?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
+          status?: "draft" | "generating" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           customerGroupId?: string
@@ -9452,8 +8435,7 @@ export interface operations {
         "multipart/form-data": {
           name?: string
           description?: string
-          memo?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
+          status?: "draft" | "generating" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           customerGroupId?: string
@@ -9462,8 +8444,7 @@ export interface operations {
         "text/plain": {
           name?: string
           description?: string
-          memo?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
+          status?: "draft" | "generating" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           customerGroupId?: string
@@ -9533,8 +8514,7 @@ export interface operations {
           workspaceId: string
           name: string
           description?: string
-          memo?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
+          status?: "draft" | "generating" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           createdBy?: string
@@ -9547,8 +8527,7 @@ export interface operations {
           workspaceId: string
           name: string
           description?: string
-          memo?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
+          status?: "draft" | "generating" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           createdBy?: string
@@ -9561,8 +8540,7 @@ export interface operations {
           workspaceId: string
           name: string
           description?: string
-          memo?: string
-          status?: "draft" | "ready" | "active" | "paused" | "archived"
+          status?: "draft" | "generating" | "ready" | "active" | "paused" | "archived"
           workflowData?: string
           /** Format: uuid */
           createdBy?: string
@@ -9615,40 +8593,6 @@ export interface operations {
           selectedLeadIds?: string[]
           /** Format: uuid */
           createdBy?: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  postApiV1SequencesByIdGenerate: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        id: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          userEmailAccountId?: string
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          userEmailAccountId?: string
-        }
-        "text/plain": {
-          /** Format: uuid */
-          userEmailAccountId?: string
         }
       }
     }
@@ -9740,7 +8684,6 @@ export interface operations {
           emailBodyHtml?: string
           /** Format: uuid */
           emailTemplateId?: string
-          generationSource?: "template" | "ai" | "manual"
           /** @default Files */
           files?: string[]
         }
@@ -9755,7 +8698,6 @@ export interface operations {
           emailBodyHtml?: string
           /** Format: uuid */
           emailTemplateId?: string
-          generationSource?: "template" | "ai" | "manual"
           /** @default Files */
           files?: string[]
         }
@@ -9770,7 +8712,6 @@ export interface operations {
           emailBodyHtml?: string
           /** Format: uuid */
           emailTemplateId?: string
-          generationSource?: "template" | "ai" | "manual"
           /** @default Files */
           files?: string[]
         }
@@ -9808,7 +8749,6 @@ export interface operations {
           emailBodyHtml?: string
           /** Format: uuid */
           emailTemplateId?: string
-          generationSource?: "template" | "ai" | "manual"
           /** @default Files */
           files?: string[]
         }
@@ -9823,7 +8763,6 @@ export interface operations {
           emailBodyHtml?: string
           /** Format: uuid */
           emailTemplateId?: string
-          generationSource?: "template" | "ai" | "manual"
           /** @default Files */
           files?: string[]
         }
@@ -9838,7 +8777,6 @@ export interface operations {
           emailBodyHtml?: string
           /** Format: uuid */
           emailTemplateId?: string
-          generationSource?: "template" | "ai" | "manual"
           /** @default Files */
           files?: string[]
         }
@@ -9989,25 +8927,6 @@ export interface operations {
         id: string
         enrollmentId: string
       }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1SequencesStatsOverall: {
-    parameters: {
-      query?: {
-        workspaceId?: string
-      }
-      header?: never
-      path?: never
       cookie?: never
     }
     requestBody?: never
@@ -10388,7 +9307,7 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": {
-          mode: "template" | "ai" | "manual"
+          mode: "ai" | "manual" | "template"
           aiPrompt?: string
           aiModel?: string
           templateSubject?: string
@@ -10397,7 +9316,7 @@ export interface operations {
           incremental?: boolean
         }
         "multipart/form-data": {
-          mode: "template" | "ai" | "manual"
+          mode: "ai" | "manual" | "template"
           aiPrompt?: string
           aiModel?: string
           templateSubject?: string
@@ -10406,7 +9325,7 @@ export interface operations {
           incremental?: boolean
         }
         "text/plain": {
-          mode: "template" | "ai" | "manual"
+          mode: "ai" | "manual" | "template"
           aiPrompt?: string
           aiModel?: string
           templateSubject?: string
@@ -11543,34 +10462,6 @@ export interface operations {
               updatedAt: string
               workspaceName?: (string | null) | null
             }
-            timestamp: string
-          }
-        }
-      }
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
             timestamp: string
           }
         }
@@ -12789,1035 +11680,6 @@ export interface operations {
             timestamp: string
           }
         }
-      }
-    }
-  }
-  "postApiV1AdminGemini-searchUpload": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-          /** Format: uuid */
-          workspaceId: string
-          storeName?: string
-          metadata?: {
-            country?: string
-            region?: string
-            vertical?: string
-            source?: string
-            dbVersion?: string
-          }
-        }
-        "multipart/form-data": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-          /** Format: uuid */
-          workspaceId: string
-          storeName?: string
-          metadata?: {
-            country?: string
-            region?: string
-            vertical?: string
-            source?: string
-            dbVersion?: string
-          }
-        }
-        "text/plain": {
-          /**
-           * Format: binary
-           * @default File
-           */
-          file: string
-          /** Format: uuid */
-          workspaceId: string
-          storeName?: string
-          metadata?: {
-            country?: string
-            region?: string
-            vertical?: string
-            source?: string
-            dbVersion?: string
-          }
-        }
-      }
-    }
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              storeName: string
-              fileName: string
-              fileId: string
-              totalRows: number
-              message: string
-              metadata?: {
-                [key: string]: string
-              }
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              storeName: string
-              fileName: string
-              fileId: string
-              totalRows: number
-              message: string
-              metadata?: {
-                [key: string]: string
-              }
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              storeName: string
-              fileName: string
-              fileId: string
-              totalRows: number
-              message: string
-              metadata?: {
-                [key: string]: string
-              }
-            }
-            timestamp: string
-          }
-        }
-      }
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  "postApiV1AdminGemini-searchSearch": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          workspaceId: string
-          query: string
-          filters?: {
-            country?: string
-            region?: string
-            vertical?: string
-            dbVersion?: string
-          }
-          limit?: number
-          storeNames?: string[]
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          workspaceId: string
-          query: string
-          filters?: {
-            country?: string
-            region?: string
-            vertical?: string
-            dbVersion?: string
-          }
-          limit?: number
-          storeNames?: string[]
-        }
-        "text/plain": {
-          /** Format: uuid */
-          workspaceId: string
-          query: string
-          filters?: {
-            country?: string
-            region?: string
-            vertical?: string
-            dbVersion?: string
-          }
-          limit?: number
-          storeNames?: string[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              query: string
-              results: {
-                [key: string]: string | number | boolean | null | Record<string, never>
-              }[]
-              totalResults: number
-              explanation?: string
-              processingTime: number
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              query: string
-              results: {
-                [key: string]: string | number | boolean | null | Record<string, never>
-              }[]
-              totalResults: number
-              explanation?: string
-              processingTime: number
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              query: string
-              results: {
-                [key: string]: string | number | boolean | null | Record<string, never>
-              }[]
-              totalResults: number
-              explanation?: string
-              processingTime: number
-            }
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  "getApiV1AdminGemini-searchStores": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              stores: {
-                name: string
-                displayName: string
-                fileCount: number
-                createTime: string
-                updateTime: string
-              }[]
-              total: number
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              stores: {
-                name: string
-                displayName: string
-                fileCount: number
-                createTime: string
-                updateTime: string
-              }[]
-              total: number
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              stores: {
-                name: string
-                displayName: string
-                fileCount: number
-                createTime: string
-                updateTime: string
-              }[]
-              total: number
-            }
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  "deleteApiV1AdminGemini-searchFilesByFileId": {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        fileId: string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: null
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: null
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: null
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  "postApiV1AdminGemini-searchEstimate-cost": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          csvSizeBytes: number
-          expectedSearchesPerMonth: number
-        }
-        "multipart/form-data": {
-          csvSizeBytes: number
-          expectedSearchesPerMonth: number
-        }
-        "text/plain": {
-          csvSizeBytes: number
-          expectedSearchesPerMonth: number
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              indexingCost: number
-              monthlyCost: number
-              costPerSearch: number
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              indexingCost: number
-              monthlyCost: number
-              costPerSearch: number
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              indexingCost: number
-              monthlyCost: number
-              costPerSearch: number
-            }
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  "postApiV1AdminGemini-searchDriveImport-url": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          workspaceId: string
-          driveUrl: string
-          metadata?: {
-            country?: string
-            region?: string
-            vertical?: string
-            source?: string
-            dbVersion?: string
-          }
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          workspaceId: string
-          driveUrl: string
-          metadata?: {
-            country?: string
-            region?: string
-            vertical?: string
-            source?: string
-            dbVersion?: string
-          }
-        }
-        "text/plain": {
-          /** Format: uuid */
-          workspaceId: string
-          driveUrl: string
-          metadata?: {
-            country?: string
-            region?: string
-            vertical?: string
-            source?: string
-            dbVersion?: string
-          }
-        }
-      }
-    }
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              storeName: string
-              fileName: string
-              fileId: string
-              totalRows: number
-              message: string
-              metadata?: {
-                [key: string]: string
-              }
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              storeName: string
-              fileName: string
-              fileId: string
-              totalRows: number
-              message: string
-              metadata?: {
-                [key: string]: string
-              }
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              storeName: string
-              fileName: string
-              fileId: string
-              totalRows: number
-              message: string
-              metadata?: {
-                [key: string]: string
-              }
-            }
-            timestamp: string
-          }
-        }
-      }
-      400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  "deleteApiV1AdminGemini-searchStoresAll": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              deletedCount: number
-            }
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              deletedCount: number
-            }
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: true
-            code: string
-            message: string
-            data: {
-              success: boolean
-              deletedCount: number
-            }
-            timestamp: string
-          }
-        }
-      }
-      500: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "multipart/form-data": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-          "text/plain": {
-            /** @constant */
-            success: false
-            code: string
-            message: string
-            timestamp: string
-          }
-        }
-      }
-    }
-  }
-  postApiV1BigquerySearch: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** @description Natural language search query */
-          query: string
-          dataDictionary: {
-            tableName: string
-            columns: string[]
-            industries: string[]
-            countries: string[]
-            employeeRanges: string[]
-            revenueRanges: string[]
-          }
-        }
-        "multipart/form-data": {
-          /** @description Natural language search query */
-          query: string
-          dataDictionary: {
-            tableName: string
-            columns: string[]
-            industries: string[]
-            countries: string[]
-            employeeRanges: string[]
-            revenueRanges: string[]
-          }
-        }
-        "text/plain": {
-          /** @description Natural language search query */
-          query: string
-          dataDictionary: {
-            tableName: string
-            columns: string[]
-            industries: string[]
-            countries: string[]
-            employeeRanges: string[]
-            revenueRanges: string[]
-          }
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1BigqueryAdd-to-group": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: uuid */
-          groupId: string
-          leads: {
-            email?: string
-            firstName?: string
-            lastName?: string
-            companyName?: string
-            phone?: string
-            country?: string
-            city?: string
-            industry?: string
-            webAddress?: string
-          }[]
-        }
-        "multipart/form-data": {
-          /** Format: uuid */
-          groupId: string
-          leads: {
-            email?: string
-            firstName?: string
-            lastName?: string
-            companyName?: string
-            phone?: string
-            country?: string
-            city?: string
-            industry?: string
-            webAddress?: string
-          }[]
-        }
-        "text/plain": {
-          /** Format: uuid */
-          groupId: string
-          leads: {
-            email?: string
-            firstName?: string
-            lastName?: string
-            companyName?: string
-            phone?: string
-            country?: string
-            city?: string
-            industry?: string
-            webAddress?: string
-          }[]
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  getApiV1BigqueryHealth: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "postApiV1Lead-enrichmentEnrich": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": {
-          /** @description Company website URL */
-          webAddress: string
-          /** @description Company name */
-          companyName: string
-        }
-        "multipart/form-data": {
-          /** @description Company website URL */
-          webAddress: string
-          /** @description Company name */
-          companyName: string
-        }
-        "text/plain": {
-          /** @description Company website URL */
-          webAddress: string
-          /** @description Company name */
-          companyName: string
-        }
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  "getApiV1Lead-enrichmentHealth": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
       }
     }
   }

@@ -8,17 +8,12 @@ interface User {
   user_role?: string
   department_name?: string | null
   employee_id?: string | null
-  trialStatus?: {
-    isTrialActive: boolean
-    daysRemaining: number
-    trialEndDate: string
-  }
 }
 
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  login: (emailOrToken: string, passwordOrUser?: string | User, isOAuth?: boolean) => Promise<void>
+  login: (token: string, user: User) => void
   logout: () => void
 }
 
@@ -47,30 +42,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false)
   }, [])
 
-  const login = async (emailOrToken: string, passwordOrUser?: string | User, isOAuth?: boolean) => {
-    if (isOAuth && typeof passwordOrUser === "object") {
-      // OAuth login - emailOrToken is actually the token, passwordOrUser is the user object
-      localStorage.setItem("authToken", emailOrToken)
-      localStorage.setItem("user", JSON.stringify(passwordOrUser))
-      setUser(passwordOrUser)
-    } else {
-      // Regular login - would need to call login API here
-      // For now, just handle the OAuth case
-      throw new Error("Regular login not implemented in this context")
-    }
+  const login = (token: string, userData: User) => {
+    localStorage.setItem("authToken", token)
+    localStorage.setItem("user", JSON.stringify(userData))
+    setUser(userData)
   }
 
   const logout = () => {
-    // Check if current user is trial user before clearing localStorage
-    const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
-    const isTrialUserLogout = currentUser?.trialStatus?.isTrialActive || false
-
     localStorage.removeItem("authToken")
     localStorage.removeItem("user")
     setUser(null)
-
-    // Redirect trial users to trial page, others to login page
-    window.location.href = isTrialUserLogout ? "/trial" : "/login"
+    window.location.href = "/login"
   }
 
   return (

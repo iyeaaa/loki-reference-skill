@@ -50,9 +50,6 @@ function DashboardContent() {
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
   const userId = currentUser?.id || ""
 
-  // 유저의 trial 상태 확인
-  const isTrialUser = currentUser?.trialStatus?.isTrialActive || false
-
   // 유저가 소유하거나 멤버인 워크스페이스 목록 가져오기
   const { data: userWorkspaces } = useUserWorkspaces(userId, !!userId)
 
@@ -70,21 +67,17 @@ function DashboardContent() {
   const hideWorkspaceSelector = false
 
   // "전체" 옵션을 포함한 워크스페이스 목록 생성 (useMemo로 메모이제이션)
-  // Trial 사용자의 경우 "전체" 옵션을 숨김
-  const workspaceOptions: WorkspaceOption[] = useMemo(() => {
-    const baseOptions = [...workspaces]
-
-    // Trial 사용자가 아닌 경우에만 "전체" 옵션 추가
-    if (!isTrialUser) {
-      baseOptions.unshift({
+  const workspaceOptions: WorkspaceOption[] = useMemo(
+    () => [
+      {
         value: "all",
         label: t("sidebar.workspace.all"),
         sublabel: t("sidebar.workspace.allSublabel"),
-      })
-    }
-
-    return baseOptions
-  }, [workspaces, t, isTrialUser])
+      },
+      ...workspaces,
+    ],
+    [workspaces, t],
+  )
 
   // 디버깅: 워크스페이스 정보 확인
   useEffect(() => {
@@ -114,23 +107,13 @@ function DashboardContent() {
 
   // 워크스페이스 목록이 로드되었을 때, 선택된 워크스페이스가 유효한지 확인
   useEffect(() => {
-    if (workspaces.length > 0) {
-      // Trial 사용자가 "all"을 선택한 경우, 첫 번째 워크스페이스로 변경
-      if (isTrialUser && selectedWorkspace === "all" && workspaces.length > 0) {
-        setSelectedWorkspace(workspaces[0].value)
-        return
-      }
-
-      // 선택된 워크스페이스가 유효하지 않은 경우
-      if (selectedWorkspace !== "all") {
-        const isValid = workspaces.some((ws) => ws.value === selectedWorkspace)
-        if (!isValid) {
-          // Trial 사용자는 첫 번째 워크스페이스로, 일반 사용자는 "all"로
-          setSelectedWorkspace(isTrialUser && workspaces.length > 0 ? workspaces[0].value : "all")
-        }
+    if (workspaces.length > 0 && selectedWorkspace !== "all") {
+      const isValid = workspaces.some((ws) => ws.value === selectedWorkspace)
+      if (!isValid) {
+        setSelectedWorkspace("all")
       }
     }
-  }, [workspaces, selectedWorkspace, isTrialUser])
+  }, [workspaces, selectedWorkspace])
 
   return (
     <>
@@ -201,15 +184,9 @@ function DashboardContent() {
         }}
         onLogout={() => {
           setShowProfileCard(false)
-
-          // Check if user is trial user before clearing localStorage
-          const isTrialUserLogout = isTrialUser
-
           localStorage.removeItem("authToken")
           localStorage.removeItem("user")
-
-          // Redirect trial users to trial page, others to login page
-          window.location.href = isTrialUserLogout ? "/trial" : "/login"
+          window.location.href = "/login"
         }}
       />
     </>

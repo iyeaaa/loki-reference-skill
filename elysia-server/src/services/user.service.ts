@@ -1,7 +1,6 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { departments, users } from "../db/schema/users"
-import * as workspaceService from "./workspace.service"
 
 // ====================================
 // USER CRUD OPERATIONS
@@ -38,7 +37,7 @@ export async function createUser(data: {
   username: string
   email: string
   passwordHash?: string
-  userRole?: "super_admin" | "admin" | "paying_user" | "user"
+  userRole?: "admin" | "user"
   isActive?: boolean
   departmentId?: string
   employeeId?: string
@@ -75,7 +74,7 @@ export async function updateUser(
   data: {
     username: string
     email: string
-    userRole: "super_admin" | "admin" | "paying_user" | "user"
+    userRole: "admin" | "user"
     isActive: boolean
     departmentId: string | null
     employeeId: string | null
@@ -172,7 +171,7 @@ export async function listUsersWithFilters(
   limit: number,
   offset: number,
   filters?: {
-    role?: "super_admin" | "admin" | "paying_user" | "user"
+    role?: "admin" | "user"
     isActive?: boolean
     search?: string
     departmentIds?: string[]
@@ -294,7 +293,7 @@ export async function countUsers() {
 
 // CountUsersWithFilters :one
 export async function countUsersWithFilters(filters?: {
-  role?: "super_admin" | "admin" | "paying_user" | "user"
+  role?: "admin" | "user"
   isActive?: boolean
   search?: string
   departmentIds?: string[]
@@ -377,21 +376,11 @@ export async function updateUserPassword(id: string, passwordHash: string) {
 export async function createOrUpdateGoogleUser(data: {
   username: string
   email: string
-  oauthId: string
-  profilePicture?: string
-  userRole?: "super_admin" | "admin" | "paying_user" | "user"
+  userRole?: "admin" | "user"
   isActive?: boolean
-  departmentId?: string
-  employeeId?: string
+  departmentId: string
+  employeeId: string
 }) {
-  // Check if user already exists
-  const existingUser = await getUserByEmail(data.email)
-
-  // Calculate trial period (7 days from now)
-  const trialStartDate = new Date()
-  const trialEndDate = new Date()
-  trialEndDate.setDate(trialEndDate.getDate() + 7)
-
   const [upsertedUser] = await db
     .insert(users)
     .values({
@@ -399,14 +388,8 @@ export async function createOrUpdateGoogleUser(data: {
       email: data.email,
       userRole: data.userRole || "user",
       isActive: data.isActive ?? true,
-      departmentId: data.departmentId || null,
-      employeeId: data.employeeId || null,
-      authProvider: "google",
-      oauthId: data.oauthId,
-      profilePicture: data.profilePicture,
-      trialStartDate,
-      trialEndDate,
-      isTrialActive: true,
+      departmentId: data.departmentId,
+      employeeId: data.employeeId,
       lastLoginAt: new Date(),
     })
     .onConflictDoUpdate({
@@ -414,7 +397,6 @@ export async function createOrUpdateGoogleUser(data: {
       set: {
         lastLoginAt: new Date(),
         updatedAt: new Date(),
-        profilePicture: data.profilePicture,
       },
     })
     .returning({
@@ -425,31 +407,10 @@ export async function createOrUpdateGoogleUser(data: {
       isActive: users.isActive,
       departmentId: users.departmentId,
       employeeId: users.employeeId,
-      authProvider: users.authProvider,
-      oauthId: users.oauthId,
-      profilePicture: users.profilePicture,
-      trialStartDate: users.trialStartDate,
-      trialEndDate: users.trialEndDate,
-      isTrialActive: users.isTrialActive,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
       lastLoginAt: users.lastLoginAt,
     })
-
-  // Create default workspace for new trial users
-  if (!existingUser && upsertedUser?.isTrialActive) {
-    try {
-      await workspaceService.createWorkspace({
-        name: `${upsertedUser.username}의 워크스페이스`,
-        description: "기본 워크스페이스",
-        ownerId: upsertedUser.id,
-        isActive: true,
-      })
-    } catch (error) {
-      console.error("Failed to create default workspace for trial user:", error)
-      // Don't throw error here to avoid breaking user registration
-    }
-  }
 
   return upsertedUser
 }
@@ -489,10 +450,7 @@ export async function bulkUpdateStatus(userIds: string[], isActive: boolean) {
 }
 
 // BulkUpdateRole :exec
-export async function bulkUpdateRole(
-  userIds: string[],
-  userRole: "super_admin" | "admin" | "paying_user" | "user",
-) {
+export async function bulkUpdateRole(userIds: string[], userRole: "admin" | "user") {
   const userCondition = or(...userIds.map((id) => eq(users.id, id)))
   if (!userCondition) {
     return 0
@@ -527,123 +485,4 @@ export async function bulkUpdateDepartment(userIds: string[], departmentId: stri
     .returning({ id: users.id })
 
   return result.length
-}
-
-// ====================================
-// TRIAL PERIOD AND OAUTH QUERIES
-// ====================================
-
-// GetUserByOAuthId :one
-export async function getUserByOAuthId(oauthId: string, authProvider: "google") {
-  const [user] = await db
-    .select({
-      id: users.id,
-      username: users.username,
-      email: users.email,
-      userRole: users.userRole,
-      isActive: users.isActive,
-      departmentId: users.departmentId,
-      employeeId: users.employeeId,
-      authProvider: users.authProvider,
-      oauthId: users.oauthId,
-      profilePicture: users.profilePicture,
-      trialStartDate: users.trialStartDate,
-      trialEndDate: users.trialEndDate,
-      isTrialActive: users.isTrialActive,
-      createdAt: users.createdAt,
-      updatedAt: users.updatedAt,
-      lastLoginAt: users.lastLoginAt,
-      departmentName: departments.name,
-      departmentCode: departments.code,
-    })
-    .from(users)
-    .leftJoin(departments, eq(users.departmentId, departments.id))
-    .where(and(eq(users.oauthId, oauthId), eq(users.authProvider, authProvider)))
-    .limit(1)
-
-  return user
-}
-
-// CheckTrialStatus :one
-export async function checkTrialStatus(userId: string) {
-  const [user] = await db
-    .select({
-      id: users.id,
-      trialStartDate: users.trialStartDate,
-      trialEndDate: users.trialEndDate,
-      isTrialActive: users.isTrialActive,
-    })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1)
-
-  if (!user) {
-    return null
-  }
-
-  // Check if trial has expired
-  const now = new Date()
-  const isTrialExpired = user.trialEndDate && now > user.trialEndDate
-
-  return {
-    ...user,
-    isTrialExpired,
-    daysRemaining: user.trialEndDate
-      ? Math.max(
-          0,
-          Math.ceil((user.trialEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
-        )
-      : null,
-  }
-}
-
-// UpdateTrialStatus :one
-export async function updateTrialStatus(userId: string, isTrialActive: boolean) {
-  const [updatedUser] = await db
-    .update(users)
-    .set({
-      isTrialActive,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, userId))
-    .returning({
-      id: users.id,
-      isTrialActive: users.isTrialActive,
-      trialStartDate: users.trialStartDate,
-      trialEndDate: users.trialEndDate,
-    })
-
-  return updatedUser
-}
-
-// ExtendTrial :one
-export async function extendTrial(userId: string, additionalDays: number) {
-  const user = await checkTrialStatus(userId)
-  if (!user) {
-    throw new Error("User not found")
-  }
-
-  const newEndDate = new Date()
-  if (user.trialEndDate && user.trialEndDate > new Date()) {
-    // Extend from current end date if trial is still active
-    newEndDate.setTime(user.trialEndDate.getTime())
-  }
-  newEndDate.setDate(newEndDate.getDate() + additionalDays)
-
-  const [updatedUser] = await db
-    .update(users)
-    .set({
-      trialEndDate: newEndDate,
-      isTrialActive: true,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, userId))
-    .returning({
-      id: users.id,
-      trialStartDate: users.trialStartDate,
-      trialEndDate: users.trialEndDate,
-      isTrialActive: users.isTrialActive,
-    })
-
-  return updatedUser
 }

@@ -47,6 +47,11 @@ const googleTokenSchema = t.Object({
   idToken: t.String(),
 })
 
+const emailRegistrationSchema = t.Object({
+  email: t.String({ format: "email" }),
+  username: t.Optional(t.String({ minLength: 3, maxLength: 50 })),
+})
+
 export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
   // Login endpoint
   .post(
@@ -176,6 +181,84 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     },
     {
       body: signupSchema,
+    },
+  )
+
+  // Email registration endpoint (no password required)
+  .post(
+    "/register-email",
+    async ({ body, set }) => {
+      try {
+        const { email, username } = body
+
+        // Check if user already exists
+        const existingUser = await userService.checkAccountExists(email)
+        if (existingUser) {
+          set.status = 400
+          return errorResponse("이미 등록된 이메일입니다.", ResponseCode.BAD_REQUEST)
+        }
+
+        const finalUsername = (
+          username && username.length >= 3 ? username : email.split("@")[0]
+        ) as string
+
+        const newUser = await userService.createUser({
+          username: finalUsername,
+          email: email,
+          userRole: "user",
+          isActive: true,
+        })
+
+        if (!newUser) {
+          set.status = 400
+          return errorResponse("사용자 생성에 실패했습니다.", ResponseCode.BAD_REQUEST)
+        }
+
+        // Generate JWT token for immediate login
+        const token = authService.generateToken({
+          userId: newUser.id,
+          email: newUser.email,
+          userRole: newUser.userRole,
+        })
+
+        // Get trial status
+        const trialStatus = await userService.checkTrialStatus(newUser.id)
+
+        return {
+          message: "이메일 등록이 완료되었습니다. 체험을 시작하세요!",
+          token,
+          user: {
+            id: newUser.id,
+            username: newUser.username,
+            email: newUser.email,
+            userRole: newUser.userRole,
+            isActive: newUser.isActive,
+            authProvider: "email",
+            trialStatus,
+            createdAt: newUser.createdAt,
+            updatedAt: newUser.updatedAt,
+          },
+        }
+      } catch (error) {
+        logger.error({ err: error }, "Email registration error")
+        if (error instanceof Error) {
+          if (error.message.includes("duplicate key value")) {
+            set.status = 400
+            if (error.message.includes("username")) {
+              return errorResponse("이미 사용 중인 사용자명입니다.", ResponseCode.BAD_REQUEST)
+            }
+            if (error.message.includes("email")) {
+              return errorResponse("이미 등록된 이메일입니다.", ResponseCode.BAD_REQUEST)
+            }
+          }
+        }
+
+        set.status = 500
+        return errorResponse("이메일 등록 중 오류가 발생했습니다.", ResponseCode.INTERNAL_ERROR)
+      }
+    },
+    {
+      body: emailRegistrationSchema,
     },
   )
 

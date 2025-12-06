@@ -8,7 +8,7 @@ import DashboardLayout from "../layouts/DashboardLayout"
 import RootLayout from "../layouts/RootLayout"
 // 로그인 페이지만 즉시 로드 (첫 진입점)
 import LoginPage from "../pages/LoginPage"
-import TrialPage from "../pages/TrialPage"
+import NewTrialPage from "../pages/NewTrialPage"
 
 // 모든 페이지 - Lazy Loading (성능 최적화)
 const ChatbotPage = lazy(() => import("../pages/ChatbotPage"))
@@ -62,7 +62,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "trial",
-        element: <TrialPage />,
+        element: <NewTrialPage />,
       },
       {
         path: "/",

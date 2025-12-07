@@ -43,6 +43,11 @@ export async function createUser(data: {
   departmentId?: string
   employeeId?: string
 }) {
+  // Calculate trial period (7 days from now)
+  const trialStartDate = new Date()
+  const trialEndDate = new Date()
+  trialEndDate.setDate(trialEndDate.getDate() + 7)
+
   const [newUser] = await db
     .insert(users)
     .values({
@@ -53,6 +58,9 @@ export async function createUser(data: {
       isActive: data.isActive !== undefined ? data.isActive : true,
       departmentId: data.departmentId || null,
       employeeId: data.employeeId || null,
+      trialStartDate,
+      trialEndDate,
+      isTrialActive: true,
     })
     .returning({
       id: users.id,
@@ -62,6 +70,9 @@ export async function createUser(data: {
       isActive: users.isActive,
       departmentId: users.departmentId,
       employeeId: users.employeeId,
+      trialStartDate: users.trialStartDate,
+      trialEndDate: users.trialEndDate,
+      isTrialActive: users.isTrialActive,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     })
@@ -383,6 +394,13 @@ export async function createOrUpdateGoogleUser(data: {
   isActive?: boolean
   departmentId?: string
   employeeId?: string
+  onboardingParams?: {
+    industry?: string | null
+    target?: string | null
+    country?: string | null
+    experience?: string | null
+    lang?: string | null
+  }
 }) {
   // Check if user already exists
   const existingUser = await getUserByEmail(data.email)
@@ -444,6 +462,7 @@ export async function createOrUpdateGoogleUser(data: {
         description: "기본 워크스페이스",
         ownerId: upsertedUser.id,
         isActive: true,
+        rawResearchOutput: data.onboardingParams || null,
       })
     } catch (error) {
       console.error("Failed to create default workspace for trial user:", error)

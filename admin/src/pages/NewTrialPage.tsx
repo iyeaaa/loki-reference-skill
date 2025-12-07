@@ -32,24 +32,64 @@ interface GoogleAuthResponse {
   }
 }
 
+interface OnboardingParams {
+  industry: string | null
+  target: string | null
+  country: string | null
+  experience: string | null
+  lang: string | null
+}
+
+const ONBOARDING_STORAGE_KEY = "onboarding_params"
+
 export default function NewTrialPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { login } = useAuth()
-  const { t } = useTranslation("translation")
+  const { t, i18n } = useTranslation("translation")
   const [isLoading, setIsLoading] = useState(false)
   const [isProcessingCallback, setIsProcessingCallback] = useState(false)
   const [processedCode, setProcessedCode] = useState<string | null>(null)
   const [email, setEmail] = useState("")
 
+  // Get onboarding params from sessionStorage (set on mount)
+  const getOnboardingParams = (): OnboardingParams => {
+    const stored = sessionStorage.getItem(ONBOARDING_STORAGE_KEY)
+    if (stored) {
+      try {
+        return JSON.parse(stored) as OnboardingParams
+      } catch {
+        return {
+          industry: null,
+          target: null,
+          country: null,
+          experience: null,
+          lang: i18n.language,
+        }
+      }
+    }
+    return { industry: null, target: null, country: null, experience: null, lang: i18n.language }
+  }
+
   const handleGoogleCallback = useCallback(
     async (code: string) => {
       setIsProcessingCallback(true)
       try {
+        const onboardingParams = getOnboardingParams()
         const response = await apiFetch<GoogleAuthResponse>("/api/v1/auth/google/callback", {
           method: "POST",
-          body: JSON.stringify({ code }),
+          body: JSON.stringify({
+            code,
+            industry: onboardingParams.industry,
+            target: onboardingParams.target,
+            country: onboardingParams.country,
+            experience: onboardingParams.experience,
+            lang: onboardingParams.lang,
+          }),
         })
+
+        // Clear stored onboarding params after successful login
+        sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
 
         // Create proper AuthUser format
         const authUser = {
@@ -75,7 +115,7 @@ export default function NewTrialPage() {
           toast.info(`무료 체험 기간: ${response.user.trialStatus.daysRemaining}일 남음`)
         }
 
-        navigate("/dashboard")
+        navigate("/app")
       } catch (error) {
         console.error("Google OAuth callback error:", error)
         toast.error("Google 로그인 처리 중 오류가 발생했습니다.")
@@ -86,6 +126,23 @@ export default function NewTrialPage() {
     },
     [login, navigate],
   )
+
+  // Store onboarding params on mount (before OAuth redirect)
+  useEffect(() => {
+    const industry = searchParams.get("industry")
+    const target = searchParams.get("target")
+    const country = searchParams.get("country")
+    const experience = searchParams.get("experience")
+
+    // Only store if we have onboarding params (coming from /onboarding)
+    if (industry || target || country || experience) {
+      sessionStorage.setItem(
+        ONBOARDING_STORAGE_KEY,
+        JSON.stringify({ industry, target, country, experience, lang: i18n.language }),
+      )
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run on mount to capture initial URL params
 
   // Handle OAuth callback
   useEffect(() => {
@@ -125,10 +182,21 @@ export default function NewTrialPage() {
 
     setIsLoading(true)
     try {
+      const onboardingParams = getOnboardingParams()
       const response = await apiFetch<GoogleAuthResponse>("/api/v1/auth/register-email", {
         method: "POST",
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({
+          email,
+          industry: onboardingParams.industry,
+          target: onboardingParams.target,
+          country: onboardingParams.country,
+          experience: onboardingParams.experience,
+          lang: onboardingParams.lang,
+        }),
       })
+
+      // Clear stored onboarding params after successful registration
+      sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
 
       // Create proper AuthUser format
       const authUser = {

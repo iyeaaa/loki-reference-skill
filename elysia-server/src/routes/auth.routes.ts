@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia"
 import * as authService from "../services/auth.service"
 import * as oauthService from "../services/oauth.service"
 import * as userService from "../services/user.service"
+import * as workspaceService from "../services/workspace.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
 import logger from "../utils/logger"
 
@@ -41,6 +42,12 @@ const signupSchema = t.Object({
 const googleCallbackSchema = t.Object({
   code: t.String(),
   state: t.Optional(t.String()),
+  // Onboarding params from trial signup
+  industry: t.Optional(t.String()),
+  target: t.Optional(t.String()),
+  country: t.Optional(t.String()),
+  experience: t.Optional(t.String()),
+  lang: t.Optional(t.String()),
 })
 
 const googleTokenSchema = t.Object({
@@ -50,6 +57,12 @@ const googleTokenSchema = t.Object({
 const emailRegistrationSchema = t.Object({
   email: t.String({ format: "email" }),
   username: t.Optional(t.String({ minLength: 3, maxLength: 50 })),
+  // Onboarding params from trial signup
+  industry: t.Optional(t.String()),
+  target: t.Optional(t.String()),
+  country: t.Optional(t.String()),
+  experience: t.Optional(t.String()),
+  lang: t.Optional(t.String()),
 })
 
 export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
@@ -189,7 +202,11 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     "/register-email",
     async ({ body, set }) => {
       try {
-        const { email, username } = body
+        const { email, username, industry, target, country, experience, lang } = body
+
+        // Log onboarding params for debugging
+        console.log("=== Email Registration - Onboarding Params ===")
+        console.log({ email, industry, target, country, experience, lang })
 
         // Check if user already exists
         const existingUser = await userService.checkAccountExists(email)
@@ -212,6 +229,20 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
         if (!newUser) {
           set.status = 400
           return errorResponse("사용자 생성에 실패했습니다.", ResponseCode.BAD_REQUEST)
+        }
+
+        // Create workspace with onboarding params for trial users
+        try {
+          await workspaceService.createWorkspace({
+            name: `${newUser.username}의 워크스페이스`,
+            description: "기본 워크스페이스",
+            ownerId: newUser.id,
+            isActive: true,
+            rawResearchOutput: { industry, target, country, experience, lang },
+          })
+        } catch (wsError) {
+          console.error("Failed to create default workspace for email user:", wsError)
+          // Don't throw error here to avoid breaking user registration
         }
 
         // Generate JWT token for immediate login
@@ -406,7 +437,11 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     "/google/callback",
     async ({ body, set }) => {
       try {
-        const { code } = body
+        const { code, industry, target, country, experience, lang } = body
+
+        // Log onboarding params for debugging
+        console.log("=== Google OAuth Callback - Onboarding Params ===")
+        console.log({ industry, target, country, experience, lang })
 
         const googleUser = await oauthService.getGoogleUserInfo(code)
 
@@ -422,6 +457,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
             email: googleUser.email,
             oauthId: googleUser.id,
             profilePicture: googleUser.picture || undefined,
+            onboardingParams: { industry, target, country, experience, lang },
           })
         }
 

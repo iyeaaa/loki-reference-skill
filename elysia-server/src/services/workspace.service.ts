@@ -141,6 +141,16 @@ export async function createWorkspace(data: {
       updatedAt: workspaces.updatedAt,
     })
 
+  // Create workspace member with owner role
+  if (newWorkspace) {
+    await addWorkspaceMember({
+      workspaceId: newWorkspace.id,
+      userId: data.ownerId,
+      role: "owner",
+      status: "active",
+    })
+  }
+
   return newWorkspace
 }
 

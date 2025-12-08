@@ -11,6 +11,10 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useWebsiteAnalysis } from "@/lib/api/hooks/web-extraction"
+import {
+  type CombinedBigQuerySearchResponse,
+  leadDiscoveryApi,
+} from "@/lib/api/services/lead-discovery"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 
@@ -27,127 +31,6 @@ import {
   isSubmittingAtom,
   updateChatMessageAtom,
 } from "./store"
-
-// 100개의 더미 Customer 데이터 생성 (테이블 테스트용)
-function createDummyCustomers(count: number = 100): Customer[] {
-  const baseCompanies = [
-    {
-      name: "Tesla",
-      industry: "Automotive",
-      sub_industry: "Electric Vehicles",
-      country: "United States",
-    },
-    {
-      name: "Apple",
-      industry: "Technology",
-      sub_industry: "Consumer Electronics",
-      country: "United States",
-    },
-    {
-      name: "Samsung",
-      industry: "Technology",
-      sub_industry: "Electronics",
-      country: "South Korea",
-    },
-    { name: "Toyota", industry: "Automotive", sub_industry: "Manufacturing", country: "Japan" },
-    {
-      name: "Microsoft",
-      industry: "Technology",
-      sub_industry: "Software",
-      country: "United States",
-    },
-    { name: "Amazon", industry: "E-commerce", sub_industry: "Retail", country: "United States" },
-    {
-      name: "Google",
-      industry: "Technology",
-      sub_industry: "Internet Services",
-      country: "United States",
-    },
-    { name: "BMW", industry: "Automotive", sub_industry: "Luxury Vehicles", country: "Germany" },
-    { name: "Sony", industry: "Technology", sub_industry: "Electronics", country: "Japan" },
-    {
-      name: "Intel",
-      industry: "Technology",
-      sub_industry: "Semiconductors",
-      country: "United States",
-    },
-    { name: "Nike", industry: "Retail", sub_industry: "Sportswear", country: "United States" },
-    { name: "Adidas", industry: "Retail", sub_industry: "Sportswear", country: "Germany" },
-    {
-      name: "Pfizer",
-      industry: "Healthcare",
-      sub_industry: "Pharmaceuticals",
-      country: "United States",
-    },
-    {
-      name: "Johnson & Johnson",
-      industry: "Healthcare",
-      sub_industry: "Medical Devices",
-      country: "United States",
-    },
-    {
-      name: "Siemens",
-      industry: "Manufacturing",
-      sub_industry: "Industrial Automation",
-      country: "Germany",
-    },
-    {
-      name: "General Electric",
-      industry: "Manufacturing",
-      sub_industry: "Conglomerate",
-      country: "United States",
-    },
-    { name: "Volkswagen", industry: "Automotive", sub_industry: "Automobile", country: "Germany" },
-    { name: "Ford", industry: "Automotive", sub_industry: "Automobile", country: "United States" },
-    { name: "Honda", industry: "Automotive", sub_industry: "Automobile", country: "Japan" },
-    { name: "Hyundai", industry: "Automotive", sub_industry: "Automobile", country: "South Korea" },
-  ]
-
-  const cities = {
-    "United States": [
-      "New York",
-      "Los Angeles",
-      "San Francisco",
-      "Seattle",
-      "Boston",
-      "Austin",
-      "Chicago",
-    ],
-    "South Korea": ["Seoul", "Busan", "Incheon", "Daegu", "Daejeon"],
-    Japan: ["Tokyo", "Osaka", "Yokohama", "Nagoya", "Sapporo"],
-    Germany: ["Berlin", "Munich", "Hamburg", "Frankfurt", "Stuttgart"],
-  }
-
-  const employees = ["50-100", "100-500", "500-1,000", "1,000-5,000", "5,000-10,000", "10,000+"]
-
-  const dummyCustomers: Customer[] = []
-
-  for (let i = 0; i < count; i++) {
-    const baseCompany = baseCompanies[i % baseCompanies.length]
-    const suffix = i < baseCompanies.length ? "" : ` ${Math.floor(i / baseCompanies.length) + 1}`
-    const companyCities = cities[baseCompany.country as keyof typeof cities] || ["Unknown City"]
-    const randomCity = companyCities[Math.floor(Math.random() * companyCities.length)]
-
-    dummyCustomers.push({
-      id: `cust-${Date.now()}-${i}-${Math.random().toString(36).substring(7)}`,
-      company_name: `${baseCompany.name}${suffix}`,
-      email: `contact${i}@${baseCompany.name.toLowerCase().replace(/\s+/g, "")}.com`,
-      phone: `+${Math.floor(Math.random() * 99)}-${Math.floor(Math.random() * 999)}-${Math.floor(Math.random() * 9999)}`,
-      web_address: `https://www.${baseCompany.name.toLowerCase().replace(/\s+/g, "")}${suffix.replace(/\s+/g, "")}.com`,
-      mailing_address: `${Math.floor(Math.random() * 9999)} ${baseCompany.name} Street`,
-      primary_city: randomCity,
-      primary_state: randomCity,
-      country: baseCompany.country,
-      industry: baseCompany.industry,
-      sub_industry: baseCompany.sub_industry,
-      employee: employees[Math.floor(Math.random() * employees.length)],
-      source: "Lead Discovery",
-      createdAt: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000), // 지난 30일 내 랜덤
-    })
-  }
-
-  return dummyCustomers
-}
 
 export function ChatRoom() {
   const [messages] = useAtom(chatMessagesAtom)
@@ -683,7 +566,7 @@ export function ChatRoom() {
                     actions: [
                       {
                         id: "collect-leads",
-                        label: "고객을 탐색하고 있어요",
+                        label: "BigQuery에서 고객을 검색하고 있어요",
                         variant: "default",
                         disabled: true,
                         loading: true,
@@ -699,24 +582,149 @@ export function ChatRoom() {
                     ],
                   })
 
-                  // 약간의 지연 후 더미 데이터 추가
-                  await new Promise((resolve) => setTimeout(resolve, 1500))
+                  try {
+                    // 웹사이트 분석 결과(finalContent)에서 키워드 추출하여 검색 쿼리 생성
+                    // finalContent에는 회사 설명, 제품/서비스, 타겟 시장 등이 포함되어 있음
+                    const extractKeywords = (content: string): string[] => {
+                      const keywords: string[] = []
 
-                  const dummyCustomers = createDummyCustomers(100)
-                  addCustomers(dummyCustomers)
+                      // 산업 관련 키워드 추출
+                      const industryPatterns = [
+                        /(?:AI|인공지능|머신러닝)/gi,
+                        /(?:SaaS|소프트웨어|플랫폼)/gi,
+                        /(?:마케팅|세일즈|영업)/gi,
+                        /(?:이커머스|전자상거래|쇼핑)/gi,
+                        /(?:헬스케어|의료|바이오)/gi,
+                        /(?:핀테크|금융|결제)/gi,
+                        /(?:교육|에듀테크)/gi,
+                        /(?:물류|배송|유통)/gi,
+                        /(?:제조|생산|공장)/gi,
+                        /(?:B2B|기업용|비즈니스)/gi,
+                      ]
 
-                  // 완료 메시지로 버튼 업데이트
-                  updateMessage(assistantMessageId, {
-                    actions: [
-                      {
-                        id: "collect-complete",
-                        label: "100개 고객 탐색 완료",
-                        variant: "outline",
-                        disabled: true,
-                        onClick: () => {},
-                      },
-                    ],
-                  })
+                      for (const pattern of industryPatterns) {
+                        const matches = content.match(pattern)
+                        if (matches) {
+                          keywords.push(...matches.slice(0, 2))
+                        }
+                      }
+
+                      return [...new Set(keywords)].slice(0, 5)
+                    }
+
+                    const extractedKeywords = extractKeywords(finalContent)
+                    const keywordStr =
+                      extractedKeywords.length > 0
+                        ? extractedKeywords.join(", ")
+                        : "Software & Internet"
+
+                    // 검색 쿼리 생성
+                    const searchQuery = `${keywordStr} 관련 미국 회사 100개`
+
+                    console.log("[Lead Discovery] 추출된 키워드:", extractedKeywords)
+                    console.log("[Lead Discovery] 생성된 쿼리:", searchQuery)
+
+                    // BigQuery 두 DB 동시 검색 (B2B Leads + Crunchbase, 총 200개)
+                    const result: CombinedBigQuerySearchResponse =
+                      await leadDiscoveryApi.searchBigQuery(searchQuery)
+
+                    console.log("[Lead Discovery] BigQuery 검색 완료:", result)
+
+                    if (result.success && result.combinedResults.length > 0) {
+                      // 검색 결과를 Customer 형식으로 변환
+                      const customers: Customer[] = result.combinedResults.map((lead, index) => ({
+                        id: `lead-${Date.now()}-${index}`,
+                        first_name: lead.first_name,
+                        last_name: lead.last_name,
+                        company_name: lead.company_name,
+                        email: lead.email,
+                        phone: lead.phone,
+                        country: lead.country,
+                        primary_city: lead.city,
+                        industry: lead.industry,
+                        sub_industry: lead.sub_industry,
+                        web_address: lead.web_address,
+                        employee: lead.employee,
+                        revenue: lead.revenue,
+                        source: "Lead Discovery",
+                        createdAt: new Date(),
+                      }))
+
+                      addCustomers(customers)
+
+                      // 검색 결과 설명 메시지 (SQL은 숨기고 설명만 표시)
+                      let queryInfo = `\n\n---\n\n`
+                      queryInfo += `**🎯 검색 결과 안내**\n\n`
+
+                      // 검색 기준 설명
+                      queryInfo += `**분석 기반:** ${userInput}\n`
+                      if (extractedKeywords.length > 0) {
+                        queryInfo += `**핵심 키워드:** ${extractedKeywords.join(", ")}\n\n`
+                      }
+
+                      // B2B Leads 결과 설명
+                      if (result.b2bLeads.results.length > 0) {
+                        queryInfo += `**🇺🇸 B2B Leads (${result.b2bLeads.results.length}개)**\n`
+                        if (result.b2bLeads.explanation) {
+                          queryInfo += `${result.b2bLeads.explanation}\n\n`
+                        }
+                      }
+
+                      // Crunchbase 결과 설명
+                      if (result.crunchbase.results.length > 0) {
+                        queryInfo += `**🌍 Crunchbase (${result.crunchbase.results.length}개)**\n`
+                        if (result.crunchbase.explanation) {
+                          queryInfo += `${result.crunchbase.explanation}\n`
+                        }
+                      }
+
+                      // 기존 콘텐츠에 쿼리 정보 추가
+                      updateMessage(assistantMessageId, {
+                        content: finalContent + queryInfo,
+                        actions: [
+                          {
+                            id: "collect-complete",
+                            label: `${result.combinedResults.length}개 고객 탐색 완료 (B2B: ${result.b2bLeads.results.length}, Crunchbase: ${result.crunchbase.results.length})`,
+                            variant: "outline",
+                            disabled: true,
+                            onClick: () => {},
+                          },
+                        ],
+                      })
+                    } else {
+                      // 검색 실패 또는 결과 없음
+                      const errorMsg = result.error || "검색 결과가 없습니다"
+                      let errorInfo = `\n\n---\n\n`
+                      errorInfo += `**📝 검색 쿼리:** \`${searchQuery}\`\n\n`
+                      errorInfo += `⚠️ ${errorMsg}`
+
+                      updateMessage(assistantMessageId, {
+                        content: finalContent + errorInfo,
+                        actions: [
+                          {
+                            id: "collect-error",
+                            label: "검색 결과 없음",
+                            variant: "outline",
+                            disabled: true,
+                            onClick: () => {},
+                          },
+                        ],
+                      })
+                    }
+                  } catch (error) {
+                    console.error("BigQuery search error:", error)
+                    updateMessage(assistantMessageId, {
+                      actions: [
+                        {
+                          id: "collect-error",
+                          label: `오류: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
+                          variant: "destructive",
+                          disabled: true,
+                          onClick: () => {},
+                        },
+                      ],
+                    })
+                  }
                 },
               },
               {
@@ -1180,9 +1188,9 @@ export function ChatRoom() {
                                 </div>
                                 {foundPages.length > 0 && (
                                   <div className="mt-3 space-y-2 pl-8">
-                                    {foundPages.map((page, index) => (
+                                    {foundPages.map((page) => (
                                       <div
-                                        key={index}
+                                        key={page.url}
                                         className="text-xs text-muted-foreground flex items-start gap-2"
                                       >
                                         <span className="text-primary">✓</span>
@@ -1287,9 +1295,9 @@ export function ChatRoom() {
                           </div>
                           {foundPages.length > 0 && (
                             <div className="mt-3 space-y-2 pl-8">
-                              {foundPages.map((page, index) => (
+                              {foundPages.map((page) => (
                                 <div
-                                  key={index}
+                                  key={page.url}
                                   className="text-xs text-muted-foreground flex items-start gap-2"
                                 >
                                   <span className="text-primary">✓</span>

@@ -195,6 +195,12 @@ export async function generateBigQueryParams(
   const startTime = Date.now()
   const emitter = state._emitter
 
+  // 상세 로그: 검색 조건 생성 시작
+  leadDiscoveryLogger.info(`[검색 조건] 생성 시작`)
+  leadDiscoveryLogger.info(
+    `  - 모드: ${state.searchMode === "basic" ? "웹사이트 분석" : "고급 검색"}`,
+  )
+  leadDiscoveryLogger.info(`  - 추천 선택됨: ${state.selectedRecommendation ? "예" : "아니오"}`)
   leadDiscoveryLogger.nodeStart("generateBigQueryParams", {
     mode: state.searchMode,
     hasRecommendation: !!state.selectedRecommendation,
@@ -202,7 +208,7 @@ export async function generateBigQueryParams(
   })
 
   if (emitter) {
-    emitter.nodeStart("generateBigQueryParams", "Generating search parameters...")
+    emitter.nodeStart("generateBigQueryParams", "검색 조건을 만들고 있어요")
   }
 
   try {
@@ -212,6 +218,18 @@ export async function generateBigQueryParams(
       // Basic mode: Build query from selected recommendation
       const recommendation = state.selectedRecommendation
       const analysis = state.websiteAnalysis
+
+      leadDiscoveryLogger.info(`[검색 조건] 선택된 추천으로 쿼리 생성 중`)
+      leadDiscoveryLogger.info(`  - 국가: ${recommendation.country}`)
+      leadDiscoveryLogger.info(`  - 산업: ${recommendation.industry}`)
+
+      if (emitter) {
+        emitter.progress(
+          "generateBigQueryParams",
+          `${recommendation.country} ${recommendation.industry} 검색을 준비하고 있어요`,
+          30,
+        )
+      }
 
       const query = buildQueryFromRecommendation(
         {
@@ -237,10 +255,15 @@ export async function generateBigQueryParams(
         limit: 100,
       }
 
-      leadDiscoveryLogger.info(`Built query from recommendation: "${query}"`)
+      leadDiscoveryLogger.info(`[검색 조건] 추천 기반 쿼리 생성 완료: "${query}"`)
     } else {
       // Advanced mode: Optimize user query with LLM
       const existingParams = state.bigQueryParams
+
+      leadDiscoveryLogger.info(`[검색 조건] 고급 검색 - AI로 쿼리 최적화 중`)
+      if (emitter) {
+        emitter.progress("generateBigQueryParams", "AI가 최적의 검색 조건을 찾고 있어요", 40)
+      }
 
       // Apply mappings to existing params
       if (existingParams?.country) {
@@ -255,14 +278,25 @@ export async function generateBigQueryParams(
       const employeeRange = parseEmployeeRange(state.userInput)
       if (employeeRange && existingParams && !existingParams.employeeRange) {
         existingParams.employeeRange = employeeRange
+        leadDiscoveryLogger.info(`[검색 조건] 직원 수 범위 감지: ${employeeRange}`)
       }
 
       params = await optimizeSearchQuery(state.userInput, existingParams)
 
-      leadDiscoveryLogger.info(`Optimized query: "${params.query}"`)
+      leadDiscoveryLogger.info(`[검색 조건] AI 최적화 쿼리: "${params.query}"`)
     }
 
     const duration = Date.now() - startTime
+
+    // 최종 검색 조건 상세 로그
+    leadDiscoveryLogger.info(`[검색 조건] 생성 완료:`)
+    leadDiscoveryLogger.info(`  - 쿼리: "${params.query}"`)
+    leadDiscoveryLogger.info(`  - 국가: ${params.country || "전체"}`)
+    leadDiscoveryLogger.info(`  - 산업: ${params.industry || "전체"}`)
+    leadDiscoveryLogger.info(`  - 세부 산업: ${params.subIndustry || "(없음)"}`)
+    leadDiscoveryLogger.info(`  - 직원 수: ${params.employeeRange || "제한 없음"}`)
+    leadDiscoveryLogger.info(`  - 검색 수: ${params.limit}개`)
+    leadDiscoveryLogger.info(`  - 소요시간: ${(duration / 1000).toFixed(1)}초`)
 
     leadDiscoveryLogger.bigQueryParamsGenerated({
       query: params.query,
@@ -274,7 +308,9 @@ export async function generateBigQueryParams(
     })
 
     if (emitter) {
-      emitter.nodeComplete("generateBigQueryParams", "Parameters generated", {
+      const targetDesc =
+        params.country && params.industry ? `${params.country} ${params.industry}` : "검색 대상"
+      emitter.nodeComplete("generateBigQueryParams", `${targetDesc} 검색 조건 준비 완료`, {
         query: params.query,
         country: params.country,
         industry: params.industry,
@@ -294,14 +330,18 @@ export async function generateBigQueryParams(
     const duration = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : String(error)
 
+    leadDiscoveryLogger.error(`[검색 조건] 오류 발생: ${errorMessage}`)
     leadDiscoveryLogger.nodeError("generateBigQueryParams", errorMessage, duration)
 
     if (emitter) {
-      emitter.error("generateBigQueryParams", errorMessage)
+      emitter.error(
+        "generateBigQueryParams",
+        `검색 조건 생성 중 문제가 발생했어요: ${errorMessage}`,
+      )
     }
 
     return {
-      error: `Failed to generate search parameters: ${errorMessage}`,
+      error: `검색 조건을 만드는 데 실패했어요: ${errorMessage}`,
     }
   }
 }

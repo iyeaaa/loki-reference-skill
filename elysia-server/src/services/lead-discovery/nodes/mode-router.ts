@@ -123,38 +123,61 @@ export async function routeMode(state: LeadDiscoveryState): Promise<Partial<Lead
   const startTime = Date.now()
   const emitter = state._emitter
 
+  // 상세 로그: 입력 분석 시작
+  leadDiscoveryLogger.info(`[입력 분석] 시작 - 입력: "${state.userInput}"`)
   leadDiscoveryLogger.nodeStart("routeMode", {
     userInput: state.userInput,
     sessionId: state.sessionId,
   })
 
   if (emitter) {
-    emitter.nodeStart("routeMode", "Analyzing search mode...")
+    emitter.nodeStart("routeMode", "입력하신 내용을 분석하고 있어요")
   }
 
   try {
-    // Step 1: Detect URL in input
+    // Step 1: URL 감지
     const detectedUrl = detectWebsiteUrl(state.userInput)
     const hasUrl = !!detectedUrl
 
-    leadDiscoveryLogger.debug(`URL detection: ${hasUrl ? detectedUrl : "none"}`)
+    leadDiscoveryLogger.info(`[입력 분석] URL 감지 결과: ${hasUrl ? detectedUrl : "URL 없음"}`)
 
-    // Step 2: Analyze input mode using LLM
+    if (emitter && hasUrl) {
+      emitter.progress("routeMode", `${detectedUrl} 웹사이트를 발견했어요`, 30)
+    }
+
+    // Step 2: LLM으로 입력 모드 분석
+    leadDiscoveryLogger.info(`[입력 분석] AI로 검색 모드 판별 중`)
+    if (emitter) {
+      emitter.progress("routeMode", "검색 방식을 결정하고 있어요", 60)
+    }
+
     const analysis = await analyzeInputMode(state.userInput, hasUrl)
+
+    // 분석 결과 상세 로그
+    leadDiscoveryLogger.info(`[입력 분석] 모드 판별 완료:`)
+    leadDiscoveryLogger.info(
+      `  - 모드: ${analysis.mode === "basic" ? "웹사이트 분석" : "고급 검색"}`,
+    )
+    leadDiscoveryLogger.info(`  - 신뢰도: ${analysis.confidence}%`)
+    leadDiscoveryLogger.info(`  - 판별 근거: ${analysis.indicators.join(", ")}`)
 
     leadDiscoveryLogger.modeDetected(analysis.mode, analysis.confidence, analysis.indicators)
 
     const duration = Date.now() - startTime
 
-    // Emit progress
+    // Emit progress (토스 스타일)
     if (emitter) {
-      emitter.nodeComplete("routeMode", `Mode: ${analysis.mode.toUpperCase()}`, {
+      const modeText = analysis.mode === "basic" ? "웹사이트 분석 모드" : "고급 검색 모드"
+      emitter.nodeComplete("routeMode", `${modeText}로 진행할게요`, {
         mode: analysis.mode,
         confidence: analysis.confidence,
         websiteUrl: detectedUrl,
       })
     }
 
+    leadDiscoveryLogger.info(
+      `[입력 분석] 완료 - 모드: ${analysis.mode}, 소요시간: ${(duration / 1000).toFixed(1)}초`,
+    )
     leadDiscoveryLogger.nodeSuccess("routeMode", duration, {
       mode: analysis.mode,
       confidence: analysis.confidence,
@@ -167,11 +190,20 @@ export async function routeMode(state: LeadDiscoveryState): Promise<Partial<Lead
         searchMode: "basic",
         isWebsiteMode: true,
         websiteUrl: detectedUrl,
-        analysisStatus: "Website detected, starting analysis...",
+        analysisStatus: "웹사이트를 분석할게요",
       }
     }
 
     // Advanced mode - may have extracted criteria
+    if (analysis.extractedCriteria) {
+      leadDiscoveryLogger.info(`[입력 분석] 추출된 검색 조건:`)
+      leadDiscoveryLogger.info(`  - 국가: ${analysis.extractedCriteria.country || "(없음)"}`)
+      leadDiscoveryLogger.info(`  - 산업: ${analysis.extractedCriteria.industry || "(없음)"}`)
+      leadDiscoveryLogger.info(
+        `  - 직원수: ${analysis.extractedCriteria.employeeRange || "(없음)"}`,
+      )
+    }
+
     return {
       searchMode: "advanced",
       isWebsiteMode: false,
@@ -186,20 +218,21 @@ export async function routeMode(state: LeadDiscoveryState): Promise<Partial<Lead
         : {
             query: state.userInput,
           },
-      analysisStatus: "Direct search mode, generating parameters...",
+      analysisStatus: "검색 조건을 생성하고 있어요",
     }
   } catch (error) {
     const duration = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : String(error)
 
+    leadDiscoveryLogger.error(`[입력 분석] 오류 발생: ${errorMessage}`)
     leadDiscoveryLogger.nodeError("routeMode", errorMessage, duration)
 
     if (emitter) {
-      emitter.error("routeMode", errorMessage)
+      emitter.error("routeMode", `입력 분석 중 문제가 발생했어요: ${errorMessage}`)
     }
 
     return {
-      error: `Mode detection failed: ${errorMessage}`,
+      error: `입력 분석에 실패했어요: ${errorMessage}`,
       searchMode: "advanced", // Fallback to advanced mode
       isWebsiteMode: false,
     }

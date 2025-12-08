@@ -3,7 +3,7 @@
  * Generates 3 buyer country/industry recommendations based on website analysis
  */
 
-import { Command, interrupt } from "@langchain/langgraph"
+import { type Command, GraphInterrupt, interrupt } from "@langchain/langgraph"
 import { ChatOpenAI } from "@langchain/openai"
 import { v4 as uuidv4 } from "uuid"
 import { leadDiscoveryLogger } from "../logger"
@@ -17,20 +17,31 @@ const llm = new ChatOpenAI({
 // Available industries in BigQuery
 const AVAILABLE_INDUSTRIES = [
   "Business Services",
-  "Software & Internet",
-  "Healthcare",
-  "Financial Services",
   "Manufacturing",
   "Retail",
-  "Food & Beverage",
+  "Financial Services",
+  "Healthcare",
   "Real Estate & Construction",
+  "Computers & Electronics",
+  "Software & Internet",
   "Education",
   "Media & Entertainment",
+  "Consumer Services",
+  "Travel, Recreation, and Leisure",
   "Telecommunications",
+  "Non-Profit",
   "Transportation & Storage",
-  "Agriculture & Mining",
-  "Computers & Electronics",
+  "Other",
+  "Energy & Utilities",
+  "Wholesale & Distribution",
   "Government",
+  "Agriculture & Mining",
+  "Retail & Wholesale",
+  "Services (Miscellaneous)",
+  "Food & Beverage",
+  "Travel & Accommodation",
+  "Recreation & Leisure",
+  "Conglomerates",
 ]
 
 // Available countries
@@ -152,29 +163,47 @@ export async function recommendBuyers(
   const startTime = Date.now()
   const emitter = state._emitter
 
+  // 상세 로그: 바이어 추천 시작
+  const companyName = state.websiteAnalysis?.companyName || "알 수 없는 회사"
+  leadDiscoveryLogger.info(`[바이어 추천] 시작 - 회사: ${companyName}`)
   leadDiscoveryLogger.nodeStart("recommendBuyers", {
     hasAnalysis: !!state.websiteAnalysis,
     companyName: state.websiteAnalysis?.companyName,
   })
 
   if (emitter) {
-    emitter.nodeStart("recommendBuyers", "Generating buyer recommendations...")
+    emitter.nodeStart("recommendBuyers", `${companyName}에 맞는 바이어를 찾고 있어요`)
   }
 
   try {
-    // Check if we already have a selected recommendation (resuming from interrupt)
+    // 이미 선택된 추천이 있는 경우 (interrupt에서 재개)
     if (state.selectedRecommendation) {
-      leadDiscoveryLogger.info("Resuming with already selected recommendation")
+      leadDiscoveryLogger.info(
+        `[바이어 추천] 이미 선택됨 - ${state.selectedRecommendation.country} / ${state.selectedRecommendation.industry}`,
+      )
       const duration = Date.now() - startTime
       leadDiscoveryLogger.nodeSuccess("recommendBuyers", duration, {
         status: "resumed_with_selection",
       })
-      return {} // Continue to next node
+      return {} // 다음 노드로 진행
     }
 
-    // Generate recommendations based on website analysis
+    // 웹사이트 분석 기반 추천 생성
+    leadDiscoveryLogger.info(`[바이어 추천] AI로 추천 바이어 생성 중`)
+    if (emitter) {
+      emitter.progress("recommendBuyers", "우리 제품에 관심 있을 바이어를 분석하고 있어요", 40)
+    }
+
     const analysis = state.websiteAnalysis || {}
     const recommendations = await generateRecommendations(analysis, state.userInput)
+
+    // 추천 결과 상세 로그
+    leadDiscoveryLogger.info(`[바이어 추천] ${recommendations.length}개 바이어 타겟 생성 완료:`)
+    recommendations.forEach((r, idx) => {
+      leadDiscoveryLogger.info(`  ${idx + 1}. ${r.country} / ${r.industry}`)
+      leadDiscoveryLogger.info(`     - 추천 이유: ${r.reasoning}`)
+      leadDiscoveryLogger.info(`     - 예상 리드 수: ${r.estimatedLeadCount || "미정"}`)
+    })
 
     leadDiscoveryLogger.recommendationsGenerated(
       recommendations.length,
@@ -182,25 +211,31 @@ export async function recommendBuyers(
     )
 
     if (emitter) {
-      emitter.progress("recommendBuyers", "Recommendations generated", 80, {
-        count: recommendations.length,
-      })
+      emitter.progress(
+        "recommendBuyers",
+        `${recommendations.length}개 바이어 타겟을 찾았어요`,
+        80,
+        {
+          count: recommendations.length,
+        },
+      )
     }
 
-    // Use interrupt for Human-in-the-Loop selection
+    // Human-in-the-Loop 선택을 위한 interrupt
+    leadDiscoveryLogger.info(`[바이어 추천] 사용자 선택 대기 중`)
     leadDiscoveryLogger.waitingForUserSelection(
       recommendations.map((r) => `${r.country} / ${r.industry}`),
     )
 
-    // Store recommendations in state before interrupt
+    // interrupt 전 state에 추천 저장
     const stateUpdate: Partial<LeadDiscoveryState> = {
       buyerRecommendations: recommendations,
       needsUserSelection: true,
     }
 
-    // Emit recommendations to client
+    // 클라이언트에 추천 목록 전송 (토스 스타일)
     if (emitter) {
-      emitter.nodeComplete("recommendBuyers", "Select a buyer segment", {
+      emitter.nodeComplete("recommendBuyers", "원하시는 바이어 타겟을 선택해주세요", {
         recommendations: recommendations.map((r) => ({
           id: r.id,
           country: r.country,
@@ -213,11 +248,19 @@ export async function recommendBuyers(
       })
     }
 
-    // Interrupt and wait for user selection
-    // The interrupt payload will be sent to the client
-    const userSelection = interrupt({
+    const duration = Date.now() - startTime
+    leadDiscoveryLogger.nodeSuccess("recommendBuyers", duration, {
+      recommendationCount: recommendations.length,
+      status: "waiting_selection",
+    })
+
+    // Interrupt: 사용자 선택 대기
+    // interrupt 호출 후 그래프 실행이 중단됨
+    // resume 시 state.selectedRecommendation이 Command.update로 설정되어
+    // 함수 시작 부분의 if (state.selectedRecommendation) 에서 처리됨
+    interrupt({
       type: "buyer_selection_required",
-      message: "Please select a buyer segment to search",
+      message: "원하시는 바이어 타겟을 선택해주세요",
       recommendations: recommendations.map((r) => ({
         id: r.id,
         country: r.country,
@@ -228,58 +271,28 @@ export async function recommendBuyers(
       })),
     })
 
-    const duration = Date.now() - startTime
-
-    // Process user selection
-    if (userSelection && typeof userSelection === "object") {
-      const selection = userSelection as { selectedId?: string; confirmed?: boolean }
-
-      if (selection.selectedId) {
-        const selected = recommendations.find((r) => r.id === selection.selectedId)
-
-        if (selected) {
-          leadDiscoveryLogger.recommendationSelected({
-            country: selected.country,
-            industry: selected.industry,
-            reasoning: selected.reasoning,
-          })
-
-          leadDiscoveryLogger.nodeSuccess("recommendBuyers", duration, {
-            selectedCountry: selected.country,
-            selectedIndustry: selected.industry,
-          })
-
-          return {
-            ...stateUpdate,
-            selectedRecommendation: selected,
-            needsUserSelection: false,
-            isConfirmed: true,
-          }
-        }
-      }
+    // interrupt 이후에는 실행되지 않음 (resume 시 함수가 처음부터 다시 실행됨)
+    // 하지만 TypeScript를 위해 return 필요
+    return stateUpdate
+  } catch (error) {
+    // GraphInterrupt는 정상적인 interrupt 동작이므로 다시 던짐
+    if (error instanceof GraphInterrupt) {
+      leadDiscoveryLogger.info(`[바이어 추천] Interrupt 발생 - 사용자 선택 대기`)
+      throw error
     }
 
-    // User cancelled or invalid selection
-    leadDiscoveryLogger.warn("User cancelled selection or invalid selection received")
-    return new Command({
-      goto: "handleError",
-      update: {
-        error: "Selection cancelled by user",
-        buyerRecommendations: recommendations,
-      },
-    })
-  } catch (error) {
     const duration = Date.now() - startTime
     const errorMessage = error instanceof Error ? error.message : String(error)
 
+    leadDiscoveryLogger.error(`[바이어 추천] 오류 발생: ${errorMessage}`)
     leadDiscoveryLogger.nodeError("recommendBuyers", errorMessage, duration)
 
     if (emitter) {
-      emitter.error("recommendBuyers", errorMessage)
+      emitter.error("recommendBuyers", `바이어 추천 중 문제가 발생했어요: ${errorMessage}`)
     }
 
     return {
-      error: `Failed to generate recommendations: ${errorMessage}`,
+      error: `바이어 추천에 실패했어요: ${errorMessage}`,
     }
   }
 }

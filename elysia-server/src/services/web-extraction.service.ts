@@ -241,15 +241,29 @@ export async function fetchWebsiteContent(
  * 깊이 크롤링 (Contact, About 페이지 등)
  * 중복 fetch 제거: 한 번의 fetch로 content와 links를 모두 추출
  */
+export interface PageInfo {
+  url: string
+  title?: string
+  favicon?: string
+  contentLength: number
+}
+
 export async function fetchWithDepth(
   baseUrl: string,
   depth: number,
   timeoutSeconds: number,
-  onPageFound?: (info: { url: string; title?: string; contentLength: number }) => void,
+  onPageFound?: (info: PageInfo) => void,
   onProgress?: (message: string) => void,
-): Promise<{ pagesContent: Map<string, string>; httpStatus: number }> {
+): Promise<{
+  pagesContent: Map<string, string>
+  httpStatus: number
+  pages: PageInfo[]
+  siteFavicon?: string
+}> {
   const pagesContent = new Map<string, string>()
+  const pages: PageInfo[] = []
   let httpStatus = 0
+  let siteFavicon: string | undefined
 
   try {
     // URL 정규화
@@ -293,6 +307,29 @@ export async function fetchWithDepth(
 
     // 페이지 제목 추출
     const title = $("title").text().trim() || $("h1").first().text().trim() || "제목 없음"
+
+    // Favicon 추출
+    const faviconSelectors = [
+      'link[rel="icon"]',
+      'link[rel="shortcut icon"]',
+      'link[rel="apple-touch-icon"]',
+      'link[rel="apple-touch-icon-precomposed"]',
+    ]
+    for (const selector of faviconSelectors) {
+      const faviconHref = $(selector).attr("href")
+      if (faviconHref) {
+        try {
+          siteFavicon = new URL(faviconHref, normalizedUrl).href
+          break
+        } catch {
+          // Invalid URL, try next
+        }
+      }
+    }
+    // Fallback to /favicon.ico
+    if (!siteFavicon) {
+      siteFavicon = new URL("/favicon.ico", normalizedUrl).href
+    }
 
     // 메타데이터 추출 (script 제거 전에 수행 - JSON-LD가 script 태그 안에 있음)
     const metadata = extractMetadata($)
@@ -354,12 +391,17 @@ export async function fetchWithDepth(
       )
       onProgress?.("페이지 내용을 읽고 있어요")
 
-      // 페이지 발견 콜백 호출
-      onPageFound?.({
+      // 메인 페이지 정보 저장
+      const mainPageInfo: PageInfo = {
         url: normalizedUrl,
         title,
+        favicon: siteFavicon,
         contentLength: pageContent.length,
-      })
+      }
+      pages.push(mainPageInfo)
+
+      // 페이지 발견 콜백 호출
+      onPageFound?.(mainPageInfo)
     }
 
     // depth가 0이면 추가 크롤링 없이 반환
@@ -368,7 +410,7 @@ export async function fetchWithDepth(
         { totalPages: pagesContent.size },
         "[fetchWithDepth] Depth is 0, skipping additional pages",
       )
-      return { pagesContent, httpStatus }
+      return { pagesContent, httpStatus, pages, siteFavicon }
     }
 
     // 추가 페이지 크롤링 (링크는 위에서 이미 추출됨)
@@ -407,12 +449,17 @@ export async function fetchWithDepth(
             "[fetchWithDepth] Successfully fetched and extracted additional page",
           )
 
-          // 추가 페이지 발견 콜백 호출
-          onPageFound?.({
+          // 추가 페이지 정보 저장
+          const additionalPageInfo: PageInfo = {
             url: link,
             title: pageName,
+            favicon: siteFavicon, // 사이트 공통 favicon 사용
             contentLength: pageResult.content.length,
-          })
+          }
+          pages.push(additionalPageInfo)
+
+          // 추가 페이지 발견 콜백 호출
+          onPageFound?.(additionalPageInfo)
         }
       } catch (error) {
         logger.debug({ error, link }, "[fetchWithDepth] Failed to fetch additional page")
@@ -425,7 +472,7 @@ export async function fetchWithDepth(
     logger.error({ error, baseUrl }, "[fetchWithDepth] Failed to fetch with depth")
   }
 
-  return { pagesContent, httpStatus }
+  return { pagesContent, httpStatus, pages, siteFavicon }
 }
 
 /**

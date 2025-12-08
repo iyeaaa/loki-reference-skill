@@ -35,17 +35,29 @@ export interface BigQuerySearchParams {
 export interface BigQueryResult {
   email?: string
   firstName?: string
+  middleName?: string
   lastName?: string
+  title?: string
   companyName?: string
   phone?: string
   country?: string
-  city?: string
+  primaryCity?: string
+  primaryState?: string
+  mailingAddress?: string
+  zipCode?: string
   industry?: string
   subIndustry?: string
   webAddress?: string
   employee?: string
   revenue?: string
-  [key: string]: unknown
+}
+
+// Analyzed page info
+export interface AnalyzedPage {
+  url: string
+  title?: string
+  favicon?: string
+  contentLength: number
 }
 
 // Website analysis result
@@ -58,6 +70,11 @@ export interface WebsiteAnalysis {
   businessModel?: string
   strengths?: string[]
   rawContent?: string
+  // 분석된 페이지 목록
+  analyzedPages?: AnalyzedPage[]
+  siteFavicon?: string
+  // AI 분석 요약 (스트리밍)
+  summary?: string
 }
 
 // Chat message for conversation history
@@ -113,6 +130,9 @@ export interface LeadDiscoveryState {
   searchResults: BigQueryResult[]
   totalResultCount: number
   executionTime: number
+
+  // Customer analysis (GPT analysis of search results)
+  customerAnalysisSummary?: string
 
   // Error handling
   error: string | null
@@ -207,6 +227,10 @@ export const LeadDiscoveryStateAnnotation = Annotation.Root({
   executionTime: Annotation<number>({
     reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => 0,
+  }),
+  customerAnalysisSummary: Annotation<string | undefined>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => undefined,
   }),
   error: Annotation<string | null>({
     reducer: (prev, next) => (next !== undefined ? next : prev),

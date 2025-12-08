@@ -1,3 +1,9 @@
+/**
+ * Lead Discovery Store
+ * - 크로스 컴포넌트 상태 및 레이아웃 전환 시 유지할 상태 관리
+ * - 메시지 상태는 레이아웃 전환 시 리마운트되어도 유지되어야 함
+ */
+
 import { atom } from "jotai"
 
 // BigQuery LeadResult 구조와 일치하는 Customer 인터페이스
@@ -24,16 +30,6 @@ export interface Customer {
   createdAt: Date
 }
 
-// 액션 버튼 설정 (대화형 메시지용)
-export interface ChatMessageAction {
-  id: string
-  label: string
-  variant?: "default" | "outline" | "ghost" | "destructive"
-  onClick: () => void | Promise<void>
-  disabled?: boolean
-  loading?: boolean
-}
-
 // 채팅 메시지 인터페이스
 export interface ChatMessage {
   id: string
@@ -41,61 +37,20 @@ export interface ChatMessage {
   content: string
   timestamp: Date
   customersAdded?: Customer[]
-  actions?: ChatMessageAction[] // 대화형 버튼
-  metadata?: {
-    type?: "strategy" | "result" | "confirmation"
-    websiteUrl?: string
-    pendingCustomers?: Customer[]
-  }
 }
 
-// 채팅 메시지 목록
-export const chatMessagesAtom = atom<ChatMessage[]>([])
+// ============================================
+// Cross-Component State (CustomerTable과 공유)
+// ============================================
 
 // 발견된 고객 목록
 export const customersAtom = atom<Customer[]>([])
 
-// 로딩 상태
-export const isLoadingAtom = atom(false)
-
-// 제출 중 상태 (버튼 즉시 반응용, 컴포넌트 unmount/mount 시에도 유지)
-export const isSubmittingAtom = atom(false)
-
 // 고객 추가 액션
-export const addCustomerAtom = atom(null, (get, set, customer: Customer) => {
-  const customers = get(customersAtom)
-  set(customersAtom, [...customers, customer])
-})
-
-// 다수 고객 추가 액션
 export const addCustomersAtom = atom(null, (get, set, newCustomers: Customer[]) => {
   const customers = get(customersAtom)
   set(customersAtom, [...customers, ...newCustomers])
 })
-
-// 채팅 메시지 추가 액션
-export const addChatMessageAtom = atom(null, (get, set, message: ChatMessage) => {
-  const messages = get(chatMessagesAtom)
-  set(chatMessagesAtom, [...messages, message])
-})
-
-// 채팅 메시지 업데이트 액션
-export const updateChatMessageAtom = atom(
-  null,
-  (get, set, messageId: string, updates: Partial<ChatMessage>) => {
-    const messages = get(chatMessagesAtom)
-    const updatedMessages = messages.map((m) => (m.id === messageId ? { ...m, ...updates } : m))
-    console.log(
-      "[store] updateChatMessageAtom:",
-      messageId,
-      "Found:",
-      messages.some((m) => m.id === messageId),
-      "Updates:",
-      updates,
-    )
-    set(chatMessagesAtom, updatedMessages)
-  },
-)
 
 // 고객 삭제 액션
 export const removeCustomerAtom = atom(null, (get, set, customerId: string) => {
@@ -118,8 +73,91 @@ export const updateCustomerAtom = atom(
   },
 )
 
-// 전체 초기화 액션
-export const resetAllAtom = atom(null, (_get, set) => {
-  set(chatMessagesAtom, [])
+// 전체 고객 초기화
+export const resetCustomersAtom = atom(null, (_get, set) => {
   set(customersAtom, [])
+})
+
+// ============================================
+// Chat State (레이아웃 전환 시에도 유지)
+// ============================================
+
+// 채팅 메시지 목록 - 레이아웃 전환(리마운트) 시에도 유지
+export const chatMessagesAtom = atom<ChatMessage[]>([])
+
+// 메시지 추가
+export const addChatMessageAtom = atom(null, (get, set, message: ChatMessage) => {
+  const messages = get(chatMessagesAtom)
+  const newMessages = [...messages, message]
+  console.log("[store] Adding message:", message.id, "Total messages:", newMessages.length)
+  set(chatMessagesAtom, newMessages)
+})
+
+// 메시지 업데이트
+export const updateChatMessageAtom = atom(
+  null,
+  (get, set, messageId: string, updates: Partial<ChatMessage>) => {
+    const messages = get(chatMessagesAtom)
+    set(
+      chatMessagesAtom,
+      messages.map((m) => (m.id === messageId ? { ...m, ...updates } : m)),
+    )
+  },
+)
+
+// 메시지 초기화
+export const resetChatMessagesAtom = atom(null, (_get, set) => {
+  set(chatMessagesAtom, [])
+})
+
+// ============================================
+// Streaming State (ChatRoom 리마운트 시에도 유지)
+// ============================================
+
+import type { LeadDiscoveryStatus } from "@/lib/api/hooks/lead-discovery"
+import type { AnalyzedPage, BuyerRecommendation } from "@/lib/api/types/lead-discovery"
+
+// 스트리밍 상태 인터페이스
+export interface StreamingState {
+  messageId: string | null
+  status: LeadDiscoveryStatus
+  message: string
+  progress: number
+  mode?: "basic" | "advanced"
+  recommendations: BuyerRecommendation[]
+  selectedRecommendationId?: string // 선택된 추천 ID
+  sessionId?: string
+  // 분석된 페이지 목록
+  analyzedPages: AnalyzedPage[]
+  siteFavicon?: string
+  // AI 분석 요약 (스트리밍 텍스트)
+  analysisSummary: string
+  // 고객군 분석 요약 (BigQuery 결과 분석, 스트리밍 텍스트)
+  customerAnalysisSummary: string
+}
+
+export const initialStreamingState: StreamingState = {
+  messageId: null,
+  status: "idle",
+  message: "",
+  progress: 0,
+  recommendations: [],
+  selectedRecommendationId: undefined,
+  analyzedPages: [],
+  analysisSummary: "",
+  customerAnalysisSummary: "",
+}
+
+// 스트리밍 상태 atom
+export const streamingStateAtom = atom<StreamingState>(initialStreamingState)
+
+// 스트리밍 상태 업데이트
+export const updateStreamingStateAtom = atom(null, (get, set, updates: Partial<StreamingState>) => {
+  const current = get(streamingStateAtom)
+  set(streamingStateAtom, { ...current, ...updates })
+})
+
+// 스트리밍 상태 리셋
+export const resetStreamingStateAtom = atom(null, (_get, set) => {
+  set(streamingStateAtom, initialStreamingState)
 })

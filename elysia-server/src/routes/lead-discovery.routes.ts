@@ -1,16 +1,93 @@
 /**
  * Lead Discovery API Routes
  * Integrates with LangGraph for AI-powered lead discovery
+ *
+ * interrupt() 처리 방식:
+ * - stream() 모드: GraphInterrupt 예외 발생 → catch에서 처리
+ * - invoke() 모드: 결과 객체에 __interrupt__ 필드 포함
+ *
+ * 현재는 실시간 progress를 위해 stream()을 사용하고,
+ * GraphInterrupt를 catch해서 정상적인 interrupt로 처리
  */
 
-import { Command } from "@langchain/langgraph"
+import { Command, GraphInterrupt } from "@langchain/langgraph"
 import { Elysia, t } from "elysia"
 import { v4 as uuidv4 } from "uuid"
-import { createNodeEmitter, type SSESession } from "../services/chatbot/sse-context"
+import { createNodeEmitter } from "../services/chatbot/sse-context"
 import { clearCheckpoints, createLeadDiscoveryGraph } from "../services/lead-discovery/graph"
 import { leadDiscoveryLogger } from "../services/lead-discovery/logger"
 import type { LeadDiscoveryState } from "../services/lead-discovery/state"
 import logger from "../utils/logger"
+import { createSSEResponse } from "../utils/sse-helper"
+
+// SSE 세션에 interrupt 이벤트 전송
+async function sendInterruptEvent(
+  session: { push: (data: { event: string; data: unknown }) => void },
+  graph: ReturnType<typeof createLeadDiscoveryGraph>,
+  config: { configurable: { thread_id: string } },
+  sessionId: string,
+  startTime: number,
+): Promise<void> {
+  const interruptState = await graph.getState(config)
+  const stateValues = interruptState.values as LeadDiscoveryState
+  const duration = Date.now() - startTime
+
+  // ⭐ interrupt() payload에서 recommendations 추출
+  // interrupt()가 예외를 던지기 때문에 state에는 저장되지 않고
+  // tasks[].interrupts[].value에 payload가 저장됨
+  type InterruptTask = {
+    interrupts?: Array<{
+      value?: {
+        type?: string
+        message?: string
+        recommendations?: Array<{
+          id: string
+          country: string
+          industry: string
+          subIndustry?: string
+          reasoning: string
+          estimatedLeadCount?: number
+          keywords?: string[]
+        }>
+      }
+    }>
+  }
+
+  const tasks = interruptState.tasks as InterruptTask[] | undefined
+  const interruptPayload = tasks?.[0]?.interrupts?.[0]?.value
+
+  // payload에서 recommendations 가져오기 (state보다 우선)
+  const recommendations =
+    interruptPayload?.recommendations || stateValues.buyerRecommendations || []
+
+  leadDiscoveryLogger.info(
+    `[SSE] Interrupt payload: hasPayload=${!!interruptPayload} payloadRecs=${interruptPayload?.recommendations?.length || 0} stateRecs=${stateValues.buyerRecommendations?.length || 0}`,
+  )
+
+  session.push({
+    event: "interrupt",
+    data: {
+      type: interruptPayload?.type || "buyer_selection_required",
+      message: interruptPayload?.message || "원하시는 바이어 타겟을 선택해주세요",
+      sessionId,
+      recommendations: recommendations.map((r) => ({
+        id: r.id,
+        country: r.country,
+        industry: r.industry,
+        subIndustry: r.subIndustry,
+        reasoning: r.reasoning,
+        estimatedLeadCount: r.estimatedLeadCount,
+        keywords: r.keywords,
+      })),
+      websiteAnalysis: stateValues.websiteAnalysis,
+      duration,
+    },
+  })
+
+  leadDiscoveryLogger.info(
+    `[SSE] Interrupt event sent with ${recommendations.length} recommendations`,
+  )
+}
 
 // Create graph instance
 const leadDiscoveryGraph = createLeadDiscoveryGraph()
@@ -35,138 +112,172 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
   // Main search endpoint with SSE streaming
   .post(
     "/search",
-    async function* ({ body }) {
+    async ({ body }) => {
+      // 즉시 로그 출력 (라우트 진입 확인)
+      console.log("[lead-discovery] POST /search - Route entered")
+      logger.info("[lead-discovery] POST /search - Route entered")
+
       const { query, workspaceId, sessionId: providedSessionId, locale } = body
+
+      console.log("[lead-discovery] Request body:", { query, workspaceId, locale })
+      logger.info(`[lead-discovery] Request: query="${query}" workspace=${workspaceId}`)
 
       const sessionId = providedSessionId || uuidv4()
       const startTime = Date.now()
 
       leadDiscoveryLogger.sessionStart(sessionId, workspaceId, "auto-detect")
 
-      // Create SSE session for real-time events
-      const events: Array<{ event: string; data: unknown }> = []
-      let sessionClosed = false
-
-      const sseSession: SSESession = {
-        push: (event) => {
-          if (!sessionClosed) {
-            events.push(event)
-            return true
-          }
-          return false
+      // LangGraph config (catch 블록에서도 접근 필요)
+      const config = {
+        configurable: {
+          thread_id: sessionId,
         },
-        closed: false,
       }
 
-      const emitter = createNodeEmitter(sseSession)
+      // Use createSSEResponse for real-time event streaming (same pattern as chatbot)
+      return createSSEResponse(
+        async (session) => {
+          try {
+            // ⭐ Create emitter that pushes directly to SSE session (immediate transmission)
+            const emitter = createNodeEmitter(session)
 
-      // Send initial connected event
-      yield {
-        event: "connected",
-        data: { sessionId, timestamp: Date.now() },
-      }
+            // Send initial connected event
+            session.push({
+              event: "connected",
+              data: { sessionId, timestamp: Date.now() },
+            })
 
-      try {
-        // Initial state
-        const initialState: Partial<LeadDiscoveryState> = {
-          sessionId,
-          workspaceId,
-          locale: locale || "ko",
-          userInput: query,
-          _emitter: emitter,
-          messages: [
-            {
-              role: "user",
-              content: query,
-              timestamp: new Date(),
-            },
-          ],
-        }
-
-        // Run the graph with streaming
-        const config = {
-          configurable: {
-            thread_id: sessionId,
-          },
-        }
-
-        leadDiscoveryLogger.info(`Starting graph execution for session: ${sessionId}`)
-
-        // Stream graph execution
-        for await (const event of await leadDiscoveryGraph.stream(initialState, {
-          ...config,
-          streamMode: "values",
-        })) {
-          // Yield any accumulated SSE events
-          while (events.length > 0) {
-            const sseEvent = events.shift()
-            if (sseEvent) {
-              yield sseEvent
+            // Initial state
+            const initialState: Partial<LeadDiscoveryState> = {
+              sessionId,
+              workspaceId,
+              locale: locale || "ko",
+              userInput: query,
+              _emitter: emitter,
+              messages: [
+                {
+                  role: "user",
+                  content: query,
+                  timestamp: new Date(),
+                },
+              ],
             }
-          }
 
-          // Check for interrupt (user selection required)
-          // Cast to any to access __interrupt__ property which exists at runtime
-          const eventWithInterrupt = event as Record<string, unknown>
-          if (eventWithInterrupt.__interrupt__) {
-            const interruptData = eventWithInterrupt.__interrupt__ as Array<{
-              value?: Record<string, unknown>
-            }>
-            yield {
-              event: "interrupt",
+            leadDiscoveryLogger.info(`Starting graph execution for session: ${sessionId}`)
+
+            // Stream graph execution
+            for await (const event of await leadDiscoveryGraph.stream(initialState, {
+              ...config,
+              streamMode: "values",
+            })) {
+              // Check for client disconnect
+              if (session.closed) {
+                leadDiscoveryLogger.warn("[SSE] Client disconnected during streaming")
+                break
+              }
+
+              // Check for interrupt (user selection required)
+              const eventWithInterrupt = event as Record<string, unknown>
+              if (eventWithInterrupt.__interrupt__) {
+                const interruptData = eventWithInterrupt.__interrupt__ as Array<{
+                  value?: Record<string, unknown>
+                }>
+                session.push({
+                  event: "interrupt",
+                  data: {
+                    type: interruptData[0]?.value?.type || "selection_required",
+                    payload: interruptData[0]?.value,
+                    sessionId,
+                  },
+                })
+              }
+            }
+
+            // Get final state
+            const finalState = await leadDiscoveryGraph.getState(config)
+            const state = finalState.values as LeadDiscoveryState
+            const duration = Date.now() - startTime
+
+            // ⭐ stream() 모드에서 interrupt 감지
+            // finalState.next가 비어있지 않으면 그래프가 중단된 상태
+            // finalState.tasks에 interrupt 정보가 있을 수 있음
+            const isInterrupted = finalState.next && finalState.next.length > 0
+            const hasInterruptTasks = finalState.tasks?.some(
+              (task: { interrupts?: unknown[] }) => task.interrupts && task.interrupts.length > 0,
+            )
+
+            leadDiscoveryLogger.info(
+              `[SSE] Final state check: next=${finalState.next?.join(",") || "none"} isInterrupted=${isInterrupted} hasInterruptTasks=${hasInterruptTasks} needsUserSelection=${state.needsUserSelection} recommendations=${state.buyerRecommendations?.length || 0}`,
+            )
+
+            // Interrupt 상태인 경우 - 사용자 선택 대기
+            if (isInterrupted || hasInterruptTasks || state.needsUserSelection) {
+              leadDiscoveryLogger.info(`[SSE] Interrupt detected - sending interrupt event`)
+              await sendInterruptEvent(session, leadDiscoveryGraph, config, sessionId, startTime)
+              await new Promise((resolve) => setTimeout(resolve, 300))
+              return
+            }
+
+            // 정상 완료
+            const success = !state.error && state.searchResults.length > 0
+            leadDiscoveryLogger.sessionEnd(sessionId, duration, success, state.totalResultCount)
+
+            // Send complete event
+            session.push({
+              event: "complete",
               data: {
-                type: interruptData[0]?.value?.type || "selection_required",
-                payload: interruptData[0]?.value,
                 sessionId,
+                success,
+                resultCount: state.searchResults.length,
+                totalCount: state.totalResultCount,
+                results: state.searchResults,
+                sql: state.bigQuerySQL,
+                explanation: state.bigQueryExplanation,
+                mode: state.searchMode,
+                recommendations: state.buyerRecommendations,
+                selectedRecommendation: state.selectedRecommendation,
+                websiteAnalysis: state.websiteAnalysis,
+                error: state.error,
+                duration,
               },
+            })
+
+            // Give client time to process final events
+            await new Promise((resolve) => setTimeout(resolve, 300))
+          } catch (error) {
+            // GraphInterrupt는 정상적인 interrupt 동작 - 사용자 선택 대기 상태
+            // stream() 모드에서 interrupt()가 호출되면 GraphInterrupt 예외 발생
+            if (error instanceof GraphInterrupt) {
+              leadDiscoveryLogger.info(`[SSE] GraphInterrupt caught - 사용자 선택 대기 상태`)
+              await sendInterruptEvent(session, leadDiscoveryGraph, config, sessionId, startTime)
+              await new Promise((resolve) => setTimeout(resolve, 300))
+              return
             }
+
+            // 실제 에러 처리
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            leadDiscoveryLogger.error("Graph execution failed", { error: errorMessage })
+
+            session.push({
+              event: "error",
+              data: {
+                sessionId,
+                error: errorMessage,
+                timestamp: Date.now(),
+              },
+            })
           }
-        }
-
-        // Get final state
-        const finalState = await leadDiscoveryGraph.getState(config)
-        const state = finalState.values as LeadDiscoveryState
-
-        const duration = Date.now() - startTime
-        const success = !state.error && state.searchResults.length > 0
-
-        leadDiscoveryLogger.sessionEnd(sessionId, duration, success, state.totalResultCount)
-
-        // Send complete event
-        yield {
-          event: "complete",
-          data: {
-            sessionId,
-            success,
-            resultCount: state.searchResults.length,
-            totalCount: state.totalResultCount,
-            results: state.searchResults,
-            sql: state.bigQuerySQL,
-            explanation: state.bigQueryExplanation,
-            mode: state.searchMode,
-            recommendations: state.buyerRecommendations,
-            selectedRecommendation: state.selectedRecommendation,
-            websiteAnalysis: state.websiteAnalysis,
-            error: state.error,
-            duration,
+        },
+        {
+          keepAlive: true,
+          keepAliveInterval: 30000,
+          onClose: () => {
+            leadDiscoveryLogger.info(
+              `[SSE] Client disconnected from /search (session: ${sessionId})`,
+            )
           },
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        leadDiscoveryLogger.error("Graph execution failed", { error: errorMessage })
-
-        yield {
-          event: "error",
-          data: {
-            sessionId,
-            error: errorMessage,
-            timestamp: Date.now(),
-          },
-        }
-      } finally {
-        sessionClosed = true
-        sseSession.closed = true
-      }
+        },
+      )
     },
     {
       body: t.Object({
@@ -187,143 +298,172 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
   // Resume with user selection (for interrupt/resume flow)
   .post(
     "/select",
-    async function* ({ body }) {
+    async ({ body }) => {
       const { sessionId, selectedRecommendationId } = body
       const startTime = Date.now()
 
       leadDiscoveryLogger.userSelectionReceived(selectedRecommendationId)
 
-      // Create SSE session
-      const events: Array<{ event: string; data: unknown }> = []
-      let sessionClosed = false
+      // Use createSSEResponse for real-time event streaming (same pattern as chatbot)
+      return createSSEResponse(
+        async (session) => {
+          try {
+            // ⭐ Create emitter that pushes directly to SSE session
+            const emitter = createNodeEmitter(session)
 
-      const sseSession: SSESession = {
-        push: (event) => {
-          if (!sessionClosed) {
-            events.push(event)
-            return true
-          }
-          return false
-        },
-        closed: false,
-      }
+            session.push({
+              event: "connected",
+              data: { sessionId, resuming: true, timestamp: Date.now() },
+            })
 
-      createNodeEmitter(sseSession)
-
-      yield {
-        event: "connected",
-        data: { sessionId, resuming: true, timestamp: Date.now() },
-      }
-
-      try {
-        const config = {
-          configurable: {
-            thread_id: sessionId,
-          },
-        }
-
-        // Get current state to find the selected recommendation
-        const currentState = await leadDiscoveryGraph.getState(config)
-        const state = currentState.values as LeadDiscoveryState
-
-        // Find the selected recommendation
-        const selectedRec = state.buyerRecommendations.find(
-          (r) => r.id === selectedRecommendationId,
-        )
-
-        if (!selectedRec) {
-          yield {
-            event: "error",
-            data: {
-              sessionId,
-              error: "Selected recommendation not found",
-              timestamp: Date.now(),
-            },
-          }
-          return
-        }
-
-        leadDiscoveryLogger.recommendationSelected({
-          country: selectedRec.country,
-          industry: selectedRec.industry,
-          reasoning: selectedRec.reasoning,
-        })
-
-        leadDiscoveryLogger.info(`Resuming graph with selection: ${selectedRecommendationId}`)
-
-        // Resume graph with user selection
-        // Using Command with resume: the selection value and update for state changes
-        const resumeCommand = new Command({
-          resume: { selectedId: selectedRecommendationId, confirmed: true },
-          update: {
-            selectedRecommendation: selectedRec,
-            needsUserSelection: false,
-            isConfirmed: true,
-          },
-        })
-
-        // Stream resumed execution
-        for await (const _event of await leadDiscoveryGraph.stream(
-          resumeCommand as unknown as null,
-          {
-            ...config,
-            streamMode: "values",
-          },
-        )) {
-          // Yield accumulated events
-          while (events.length > 0) {
-            const sseEvent = events.shift()
-            if (sseEvent) {
-              yield sseEvent
+            const config = {
+              configurable: {
+                thread_id: sessionId,
+              },
             }
+
+            // Get current state to find the selected recommendation
+            const currentState = await leadDiscoveryGraph.getState(config)
+            const state = currentState.values as LeadDiscoveryState
+
+            // ⭐ interrupt payload에서도 recommendations 찾기
+            // interrupt()가 예외를 던지기 때문에 state에 저장되지 않고
+            // tasks[].interrupts[].value에 payload가 저장됨
+            type InterruptTask = {
+              interrupts?: Array<{
+                value?: {
+                  recommendations?: Array<{
+                    id: string
+                    country: string
+                    industry: string
+                    subIndustry?: string
+                    reasoning: string
+                    estimatedLeadCount?: number
+                    keywords?: string[]
+                  }>
+                }
+              }>
+            }
+
+            const tasks = currentState.tasks as InterruptTask[] | undefined
+            const interruptPayload = tasks?.[0]?.interrupts?.[0]?.value
+            const allRecommendations = [
+              ...(interruptPayload?.recommendations || []),
+              ...(state.buyerRecommendations || []),
+            ]
+
+            leadDiscoveryLogger.info(
+              `[Select] Looking for recommendation ${selectedRecommendationId} in ${allRecommendations.length} recommendations (payload: ${interruptPayload?.recommendations?.length || 0}, state: ${state.buyerRecommendations?.length || 0})`,
+            )
+
+            // Find the selected recommendation from both sources
+            const selectedRec = allRecommendations.find((r) => r.id === selectedRecommendationId)
+
+            if (!selectedRec) {
+              leadDiscoveryLogger.error(
+                `[Select] Recommendation not found. Available IDs: ${allRecommendations.map((r) => r.id).join(", ")}`,
+              )
+              session.push({
+                event: "error",
+                data: {
+                  sessionId,
+                  error: "Selected recommendation not found",
+                  timestamp: Date.now(),
+                },
+              })
+              return
+            }
+
+            leadDiscoveryLogger.recommendationSelected({
+              country: selectedRec.country,
+              industry: selectedRec.industry,
+              reasoning: selectedRec.reasoning,
+            })
+
+            leadDiscoveryLogger.info(`Resuming graph with selection: ${selectedRecommendationId}`)
+
+            // Update state with emitter for resumed execution
+            const resumeCommand = new Command({
+              resume: { selectedId: selectedRecommendationId, confirmed: true },
+              update: {
+                selectedRecommendation: selectedRec,
+                needsUserSelection: false,
+                isConfirmed: true,
+                _emitter: emitter,
+              },
+            })
+
+            // Stream resumed execution
+            for await (const _event of await leadDiscoveryGraph.stream(
+              resumeCommand as unknown as null,
+              {
+                ...config,
+                streamMode: "values",
+              },
+            )) {
+              // Check for client disconnect
+              if (session.closed) {
+                leadDiscoveryLogger.warn("[SSE] Client disconnected during select streaming")
+                break
+              }
+            }
+
+            // Get final state
+            const finalState = await leadDiscoveryGraph.getState(config)
+            const finalStateValues = finalState.values as LeadDiscoveryState
+
+            const duration = Date.now() - startTime
+            const success = !finalStateValues.error && finalStateValues.searchResults.length > 0
+
+            leadDiscoveryLogger.sessionEnd(
+              sessionId,
+              duration,
+              success,
+              finalStateValues.totalResultCount,
+            )
+
+            session.push({
+              event: "complete",
+              data: {
+                sessionId,
+                success,
+                resultCount: finalStateValues.searchResults.length,
+                totalCount: finalStateValues.totalResultCount,
+                results: finalStateValues.searchResults,
+                sql: finalStateValues.bigQuerySQL,
+                explanation: finalStateValues.bigQueryExplanation,
+                selectedRecommendation: finalStateValues.selectedRecommendation,
+                error: finalStateValues.error,
+                duration,
+              },
+            })
+
+            // Give client time to process final events
+            await new Promise((resolve) => setTimeout(resolve, 300))
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            leadDiscoveryLogger.error("Resume failed", { error: errorMessage })
+
+            session.push({
+              event: "error",
+              data: {
+                sessionId,
+                error: errorMessage,
+                timestamp: Date.now(),
+              },
+            })
           }
-        }
-
-        // Get final state
-        const finalState = await leadDiscoveryGraph.getState(config)
-        const finalStateValues = finalState.values as LeadDiscoveryState
-
-        const duration = Date.now() - startTime
-        const success = !finalStateValues.error && finalStateValues.searchResults.length > 0
-
-        leadDiscoveryLogger.sessionEnd(
-          sessionId,
-          duration,
-          success,
-          finalStateValues.totalResultCount,
-        )
-
-        yield {
-          event: "complete",
-          data: {
-            sessionId,
-            success,
-            resultCount: finalStateValues.searchResults.length,
-            totalCount: finalStateValues.totalResultCount,
-            results: finalStateValues.searchResults,
-            sql: finalStateValues.bigQuerySQL,
-            explanation: finalStateValues.bigQueryExplanation,
-            selectedRecommendation: finalStateValues.selectedRecommendation,
-            error: finalStateValues.error,
-            duration,
+        },
+        {
+          keepAlive: true,
+          keepAliveInterval: 30000,
+          onClose: () => {
+            leadDiscoveryLogger.info(
+              `[SSE] Client disconnected from /select (session: ${sessionId})`,
+            )
           },
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        leadDiscoveryLogger.error("Resume failed", { error: errorMessage })
-
-        yield {
-          event: "error",
-          data: {
-            sessionId,
-            error: errorMessage,
-            timestamp: Date.now(),
-          },
-        }
-      } finally {
-        sessionClosed = true
-        sseSession.closed = true
-      }
+        },
+      )
     },
     {
       body: t.Object({

@@ -223,16 +223,19 @@ export const webExtractionApi = {
     const { onInit, onProgress, onPageFound, onComplete, onError, onChunk } = callbacks
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/admin/web-extraction/lead-discovery/analyze`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/admin/web-extraction/lead-discovery/analyze`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            websiteUrl,
+            workspaceId,
+          }),
         },
-        body: JSON.stringify({
-          websiteUrl,
-          workspaceId,
-        }),
-      })
+      )
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))

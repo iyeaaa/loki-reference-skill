@@ -249,6 +249,10 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
       const cleaned = DOMPurify.sanitize(decodedHtml, {
         // Allow almost all HTML tags (email templates are complex)
         ALLOWED_TAGS: [
+          "html",
+          "head",
+          "body",
+          "title",
           "p",
           "br",
           "strong",
@@ -315,6 +319,11 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
           "id",
           "name",
           "type",
+          "xmlns",
+          "xmlns:v",
+          "xmlns:o",
+          "http-equiv",
+          "content",
         ],
         ALLOW_DATA_ATTR: false,
         ALLOW_UNKNOWN_PROTOCOLS: false,
@@ -326,13 +335,44 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
         // Return DOM instead of string for better handling
         RETURN_DOM: false,
         RETURN_DOM_FRAGMENT: false,
-        // More permissive settings
-        WHOLE_DOCUMENT: false,
-        FORCE_BODY: false,
+        // More permissive settings - allow full document for email HTML
+        WHOLE_DOCUMENT: true,
+        FORCE_BODY: true,
       })
 
       console.log("Cleaned HTML length:", cleaned.length)
       console.log("First 500 chars of cleaned:", cleaned.substring(0, 500))
+
+      // Extract actual text content from HTML to check if there's meaningful content
+      const tempDiv = document.createElement("div")
+      tempDiv.innerHTML = cleaned
+      const textContent = tempDiv.textContent || tempDiv.innerText || ""
+      const actualTextLength = textContent.trim().length
+      console.log("Actual text content length:", actualTextLength)
+
+      // If cleaned HTML has no meaningful text content, fallback to bodyText
+      if (cleaned.length === 0 || actualTextLength < 10) {
+        console.log("📧 Cleaned HTML has no meaningful text content, falling back to bodyText")
+        if (bodyText) {
+          const cleanedText = removeMimeHeaders(bodyText)
+          const decoded = decodeEncodedText(cleanedText)
+          console.log("📧 Fallback bodyText length:", decoded.length)
+          console.log("📧 Fallback bodyText preview:", decoded.substring(0, 200))
+          if (decoded.includes("[") && decoded.includes("]")) {
+            const withLineBreaks = decoded.replace(/\n/g, "<br>")
+            const formatted = formatBracketedContent(withLineBreaks)
+            const cleanedFormatted = DOMPurify.sanitize(formatted, {
+              ALLOWED_TAGS: ["a", "span", "br", "div", "p"],
+              ALLOWED_ATTR: ["href", "target", "rel", "class"],
+              ALLOW_DATA_ATTR: false,
+              ALLOW_UNKNOWN_PROTOCOLS: false,
+              KEEP_CONTENT: true,
+            })
+            return { type: "html" as const, content: cleanedFormatted }
+          }
+          return { type: "text" as const, content: decoded }
+        }
+      }
 
       return { type: "html" as const, content: cleaned }
     }
@@ -366,6 +406,10 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
         // Sanitize as HTML
         const cleaned = DOMPurify.sanitize(decoded, {
           ALLOWED_TAGS: [
+            "html",
+            "head",
+            "body",
+            "title",
             "p",
             "br",
             "strong",
@@ -431,6 +475,11 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
             "id",
             "name",
             "type",
+            "xmlns",
+            "xmlns:v",
+            "xmlns:o",
+            "http-equiv",
+            "content",
           ],
           ALLOW_DATA_ATTR: false,
           ALLOW_UNKNOWN_PROTOCOLS: false,
@@ -439,12 +488,30 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
           ADD_ATTR: ["target", "xmlns"],
           RETURN_DOM: false,
           RETURN_DOM_FRAGMENT: false,
-          WHOLE_DOCUMENT: false,
-          FORCE_BODY: false,
+          WHOLE_DOCUMENT: true,
+          FORCE_BODY: true,
         })
 
         console.log("Cleaned bodyText HTML length:", cleaned.length)
         console.log("First 500 chars of cleaned:", cleaned.substring(0, 500))
+
+        // If cleaned HTML is empty, fallback to plain text rendering
+        if (cleaned.length === 0) {
+          console.log("📧 Cleaned bodyText HTML is empty, falling back to plain text")
+          if (decoded.includes("[") && decoded.includes("]")) {
+            const withLineBreaks = decoded.replace(/\n/g, "<br>")
+            const formatted = formatBracketedContent(withLineBreaks)
+            const cleanedFormatted = DOMPurify.sanitize(formatted, {
+              ALLOWED_TAGS: ["a", "span", "br", "div", "p"],
+              ALLOWED_ATTR: ["href", "target", "rel", "class"],
+              ALLOW_DATA_ATTR: false,
+              ALLOW_UNKNOWN_PROTOCOLS: false,
+              KEEP_CONTENT: true,
+            })
+            return { type: "html" as const, content: cleanedFormatted }
+          }
+          return { type: "text" as const, content: decoded }
+        }
 
         return { type: "html" as const, content: cleaned }
       }

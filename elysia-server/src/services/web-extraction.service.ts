@@ -4,7 +4,8 @@
  */
 
 import { createOpenAI } from "@ai-sdk/openai"
-import { generateText } from "ai"
+import { generateText, streamText } from "ai"
+import type { CheerioAPI } from "cheerio"
 import * as cheerio from "cheerio"
 import type { AnyNode, Element } from "domhandler"
 import pLimit from "p-limit"
@@ -19,6 +20,155 @@ import type {
 import { GPT_COST_PER_REQUEST } from "../types/web-extraction.types"
 import logger from "../utils/logger"
 import { getNextApiKey } from "./openai-api-key.service"
+
+/**
+ * HTML에서 메타데이터 추출 (title, meta tags, Open Graph, JSON-LD)
+ */
+function extractMetadata($: CheerioAPI): string {
+  const metadata: string[] = []
+
+  // 1. Title
+  const title = $("title").text().trim()
+  if (title) {
+    metadata.push(`[페이지 제목] ${title}`)
+  }
+
+  // 2. Meta description
+  const description =
+    $('meta[name="description"]').attr("content") ||
+    $('meta[property="og:description"]').attr("content")
+  if (description) {
+    metadata.push(`[설명] ${description.trim()}`)
+  }
+
+  // 3. Meta keywords
+  const keywords = $('meta[name="keywords"]').attr("content")
+  if (keywords) {
+    metadata.push(`[키워드] ${keywords.trim()}`)
+  }
+
+  // 4. Open Graph tags
+  const ogTags: Record<string, string> = {}
+  $('meta[property^="og:"]').each((_, el) => {
+    const property = $(el).attr("property")?.replace("og:", "")
+    const content = $(el).attr("content")
+    if (property && content && !["description", "image", "url"].includes(property)) {
+      ogTags[property] = content.trim()
+    }
+  })
+  if (ogTags.site_name) {
+    metadata.push(`[사이트명] ${ogTags.site_name}`)
+  }
+  if (ogTags.title && ogTags.title !== title) {
+    metadata.push(`[OG 제목] ${ogTags.title}`)
+  }
+  if (ogTags.type) {
+    metadata.push(`[사이트 유형] ${ogTags.type}`)
+  }
+  if (ogTags.locale) {
+    metadata.push(`[언어/지역] ${ogTags.locale}`)
+  }
+
+  // 5. Twitter Card
+  const twitterSite = $('meta[name="twitter:site"]').attr("content")
+  if (twitterSite) {
+    metadata.push(`[트위터] ${twitterSite}`)
+  }
+
+  // 6. JSON-LD 구조화 데이터 (Organization, LocalBusiness 등)
+  $('script[type="application/ld+json"]').each((_, el) => {
+    try {
+      const jsonText = $(el).html()
+      if (!jsonText) return
+
+      const jsonData = JSON.parse(jsonText)
+      const items = Array.isArray(jsonData) ? jsonData : [jsonData]
+
+      for (const item of items) {
+        // @graph 배열 처리
+        const entities = item["@graph"] ? item["@graph"] : [item]
+
+        for (const entity of entities) {
+          const type = entity["@type"]
+          if (!type) continue
+
+          // Organization, LocalBusiness, Company 등
+          if (
+            typeof type === "string" &&
+            (type.includes("Organization") ||
+              type.includes("Business") ||
+              type.includes("Company") ||
+              type.includes("Corporation"))
+          ) {
+            if (entity.name) metadata.push(`[회사명] ${entity.name}`)
+            if (entity.description) metadata.push(`[회사 설명] ${entity.description}`)
+            if (entity.telephone) metadata.push(`[전화번호] ${entity.telephone}`)
+            if (entity.email) metadata.push(`[이메일] ${entity.email}`)
+            if (entity.foundingDate) metadata.push(`[설립일] ${entity.foundingDate}`)
+            if (entity.numberOfEmployees?.value) {
+              metadata.push(`[직원수] ${entity.numberOfEmployees.value}`)
+            }
+
+            // 주소
+            if (entity.address) {
+              const addr = entity.address
+              if (typeof addr === "string") {
+                metadata.push(`[주소] ${addr}`)
+              } else if (addr.streetAddress || addr.addressLocality) {
+                const parts = [
+                  addr.streetAddress,
+                  addr.addressLocality,
+                  addr.addressRegion,
+                  addr.postalCode,
+                  addr.addressCountry,
+                ].filter(Boolean)
+                metadata.push(`[주소] ${parts.join(", ")}`)
+              }
+            }
+
+            // 소셜 미디어
+            if (entity.sameAs && Array.isArray(entity.sameAs)) {
+              const socials = entity.sameAs.filter(
+                (url: string) =>
+                  url.includes("facebook") ||
+                  url.includes("instagram") ||
+                  url.includes("twitter") ||
+                  url.includes("linkedin"),
+              )
+              if (socials.length > 0) {
+                metadata.push(`[소셜미디어] ${socials.join(", ")}`)
+              }
+            }
+          }
+
+          // ContactPoint
+          if (type === "ContactPoint" || entity.contactPoint) {
+            const contact = entity.contactPoint || entity
+            if (contact.telephone) metadata.push(`[연락처] ${contact.telephone}`)
+            if (contact.email) metadata.push(`[이메일] ${contact.email}`)
+          }
+        }
+      }
+    } catch (_e) {
+      // JSON 파싱 실패 - 무시
+    }
+  })
+
+  // 7. 기타 유용한 메타 태그
+  const author = $('meta[name="author"]').attr("content")
+  if (author) {
+    metadata.push(`[작성자/회사] ${author}`)
+  }
+
+  const copyright = $('meta[name="copyright"]').attr("content")
+  if (copyright) {
+    metadata.push(`[저작권] ${copyright}`)
+  }
+
+  // 중복 제거 후 반환
+  const uniqueMetadata = [...new Set(metadata)]
+  return uniqueMetadata.length > 0 ? `=== 메타데이터 ===\n${uniqueMetadata.join("\n")}\n\n` : ""
+}
 
 /**
  * 웹사이트에서 HTML 콘텐츠 가져오기
@@ -53,6 +203,9 @@ export async function fetchWebsiteContent(
     const html = await response.text()
     const $ = cheerio.load(html)
 
+    // 메타데이터 추출 (script 제거 전에 수행 - JSON-LD가 script 태그 안에 있음)
+    const metadata = extractMetadata($)
+
     // 스크립트, 스타일, 주석 제거
     $("script, style, noscript").remove()
     $("*")
@@ -63,10 +216,13 @@ export async function fetchWebsiteContent(
       .remove()
 
     // 본문 텍스트 추출
-    const bodyText = $("body").text().replace(/\s+/g, " ").trim().substring(0, 50000) // GPT 토큰 제한을 고려하여 50KB로 제한
+    const bodyText = $("body").text().replace(/\s+/g, " ").trim().substring(0, 48000) // 메타데이터 공간 확보를 위해 48KB로 제한
+
+    // 메타데이터 + 본문 결합
+    const content = metadata + bodyText
 
     return {
-      content: bodyText,
+      content: content.substring(0, 50000), // 최종 50KB 제한
       statusCode: response.status,
       finalUrl: response.url,
     }
@@ -89,6 +245,8 @@ export async function fetchWithDepth(
   baseUrl: string,
   depth: number,
   timeoutSeconds: number,
+  onPageFound?: (info: { url: string; title?: string; contentLength: number }) => void,
+  onProgress?: (message: string) => void,
 ): Promise<{ pagesContent: Map<string, string>; httpStatus: number }> {
   const pagesContent = new Map<string, string>()
   let httpStatus = 0
@@ -99,6 +257,12 @@ export async function fetchWithDepth(
     if (!normalizedUrl.match(/^https?:\/\//i)) {
       normalizedUrl = `https://${normalizedUrl}`
     }
+
+    logger.info(
+      { url: normalizedUrl, depth, timeout: timeoutSeconds },
+      "[fetchWithDepth] Starting crawl",
+    )
+    onProgress?.("웹사이트에 접속하고 있어요")
 
     // 첫 페이지 가져오기 (한 번만 fetch)
     const controller = new AbortController()
@@ -118,8 +282,49 @@ export async function fetchWithDepth(
     clearTimeout(timeoutId)
     httpStatus = response.status
 
+    logger.info(
+      { status: httpStatus, url: normalizedUrl },
+      "[fetchWithDepth] Successfully fetched main page",
+    )
+    onProgress?.("홈페이지를 찾았어요")
+
     const html = await response.text()
     const $ = cheerio.load(html)
+
+    // 페이지 제목 추출
+    const title = $("title").text().trim() || $("h1").first().text().trim() || "제목 없음"
+
+    // 메타데이터 추출 (script 제거 전에 수행 - JSON-LD가 script 태그 안에 있음)
+    const metadata = extractMetadata($)
+
+    // 링크 추출 (script 제거 전에 수행)
+    const links: string[] = []
+    if (depth > 0) {
+      const baseHostname = new URL(normalizedUrl).hostname
+      $("a[href]").each((_: number, element: Element) => {
+        if (links.length >= 10) return // 최대 10개
+
+        const href = $(element).attr("href")
+
+        if (href) {
+          try {
+            const absoluteUrl = new URL(href, normalizedUrl).href
+            const linkHostname = new URL(absoluteUrl).hostname
+
+            // 같은 도메인이고, 중복이 아니고, 메인 페이지가 아닌 경우
+            if (
+              linkHostname === baseHostname &&
+              !links.includes(absoluteUrl) &&
+              absoluteUrl !== normalizedUrl
+            ) {
+              links.push(absoluteUrl)
+            }
+          } catch (_e) {
+            // Invalid URL, skip
+          }
+        }
+      })
+    }
 
     // 스크립트, 스타일, 주석 제거
     $("script, style, noscript").remove()
@@ -131,56 +336,93 @@ export async function fetchWithDepth(
       .remove()
 
     // 본문 텍스트 추출
-    const bodyText = $("body").text().replace(/\s+/g, " ").trim().substring(0, 50000)
+    const bodyText = $("body").text().replace(/\s+/g, " ").trim().substring(0, 48000) // 메타데이터 공간 확보
 
-    if (bodyText) {
-      pagesContent.set(normalizedUrl, bodyText)
+    // 메타데이터 + 본문 결합
+    const pageContent = (metadata + bodyText).substring(0, 50000)
+
+    if (pageContent) {
+      pagesContent.set(normalizedUrl, pageContent)
+      logger.info(
+        {
+          contentLength: pageContent.length,
+          metadataLength: metadata.length,
+          url: normalizedUrl,
+          title,
+        },
+        "[fetchWithDepth] Extracted content with metadata from main page",
+      )
+      onProgress?.("페이지 내용을 읽고 있어요")
+
+      // 페이지 발견 콜백 호출
+      onPageFound?.({
+        url: normalizedUrl,
+        title,
+        contentLength: pageContent.length,
+      })
     }
 
     // depth가 0이면 추가 크롤링 없이 반환
     if (depth === 0) {
+      logger.info(
+        { totalPages: pagesContent.size },
+        "[fetchWithDepth] Depth is 0, skipping additional pages",
+      )
       return { pagesContent, httpStatus }
     }
 
-    // Contact, About 관련 링크 찾기 (이미 로드된 HTML에서 추출)
-    const targetKeywords = ["contact", "about", "company", "team"]
-    const links: string[] = []
+    // 추가 페이지 크롤링 (링크는 위에서 이미 추출됨)
+    logger.info({ linksFound: links.length }, "[fetchWithDepth] Found additional links to crawl")
+    if (links.length > 0) {
+      onProgress?.(`${links.length}개의 추가 페이지를 발견했어요`)
+    }
 
-    $("a[href]").each((_: number, element: Element) => {
-      const href = $(element).attr("href")
-      const text = $(element).text().toLowerCase()
-
-      if (
-        href &&
-        targetKeywords.some((kw) => href.toLowerCase().includes(kw) || text.includes(kw))
-      ) {
-        // 상대 경로를 절대 경로로 변환
-        try {
-          const absoluteUrl = new URL(href, normalizedUrl).href
-          if (links.length < 3 && !links.includes(absoluteUrl)) {
-            // 최대 3개까지만
-            links.push(absoluteUrl)
-          }
-        } catch (_e) {
-          // Invalid URL, skip
-        }
-      }
-    })
-
-    // 추가 페이지 크롤링 (더 긴 딜레이 적용 - tmp/csv-tools와 동일하게 3~4초)
-    for (const link of links) {
+    for (const [i, link] of links.entries()) {
       try {
-        await new Promise((resolve) => setTimeout(resolve, 3500)) // 3.5초 지연 (Go 코드의 3~4.5초와 유사)
+        // 페이지 이름 추출 (URL에서)
+        const pageName = link.includes("contact")
+          ? "연락처"
+          : link.includes("about")
+            ? "회사 소개"
+            : link.includes("company")
+              ? "회사 정보"
+              : link.includes("team")
+                ? "팀 소개"
+                : "추가"
+        logger.info(
+          { link, index: i + 1, total: links.length },
+          "[fetchWithDepth] Fetching additional page",
+        )
+        onProgress?.(`${pageName} 페이지를 확인하는 중이에요`)
+        await new Promise((resolve) => setTimeout(resolve, 3500)) // 3.5초 지연
         const pageResult = await fetchWebsiteContent(link, Math.floor(timeoutSeconds / 2))
         if (pageResult.content) {
           pagesContent.set(link, pageResult.content)
+
+          // 추가 페이지 제목 추출 (간단하게)
+          const pageName = link.split("/").pop() || "추가 페이지"
+
+          logger.info(
+            { link, contentLength: pageResult.content.length },
+            "[fetchWithDepth] Successfully fetched and extracted additional page",
+          )
+
+          // 추가 페이지 발견 콜백 호출
+          onPageFound?.({
+            url: link,
+            title: pageName,
+            contentLength: pageResult.content.length,
+          })
         }
       } catch (error) {
-        logger.debug({ error, link }, "Failed to fetch additional page")
+        logger.debug({ error, link }, "[fetchWithDepth] Failed to fetch additional page")
       }
     }
+
+    logger.info({ totalPages: pagesContent.size }, "[fetchWithDepth] Completed crawling")
+    onProgress?.(`총 ${pagesContent.size}개 페이지 수집 완료`)
   } catch (error) {
-    logger.error({ error, baseUrl }, "Failed to fetch with depth")
+    logger.error({ error, baseUrl }, "[fetchWithDepth] Failed to fetch with depth")
   }
 
   return { pagesContent, httpStatus }
@@ -269,7 +511,15 @@ customSearchResults의 각 검색 조건에 대해서는:
 6. 추상적이거나 일반적인 근거가 아닌, 페이지에서 확인 가능한 구체적인 증거를 제시해주세요`
 
     // Workspace에 설정된 API 키 가져오기 (round-robin)
-    const apiKey = workspaceId ? await getNextApiKey(workspaceId) : null
+    let apiKey = workspaceId ? await getNextApiKey(workspaceId) : null
+
+    // Workspace API 키가 없으면 환경변수 사용 (단일 웹사이트 분석용)
+    if (!apiKey) {
+      apiKey = process.env.OPENAI_API_KEY || null
+      if (apiKey) {
+        logger.info("Using OPENAI_API_KEY from environment variable")
+      }
+    }
 
     if (!apiKey) {
       logger.error({ workspaceId }, "No API key available for GPT extraction")
@@ -341,6 +591,95 @@ customSearchResults의 각 검색 조건에 대해서는:
     return {
       errorMessage: error instanceof Error ? error.message : "Unknown error",
     }
+  }
+}
+
+/**
+ * GPT 스트리밍을 사용하여 웹사이트 분석 (단일 웹사이트 분석용)
+ */
+export async function analyzeWebsiteWithStreaming(
+  pagesContent: Map<string, string>,
+  gptTimeout: number,
+  _workspaceId?: string,
+) {
+  try {
+    // 모든 페이지 내용 합치기
+    const combinedContent = Array.from(pagesContent.values()).join("\n\n")
+
+    if (!combinedContent || combinedContent.length < 50) {
+      throw new Error("웹사이트 콘텐츠가 너무 짧거나 비어있습니다")
+    }
+
+    // 자연스러운 대화형 프롬프트 (토스 스타일)
+    const prompt = `아래 웹사이트 콘텐츠를 분석해서 이 회사가 어떤 일을 하는지 쉽게 설명해주세요.
+
+웹사이트 콘텐츠:
+${combinedContent.substring(0, 15000)}
+
+분석할 때 다음 내용을 포함해주세요:
+
+**이 회사는 뭐 하는 곳인가요?**
+- 회사명과 간단한 소개를 자연스럽게 써주세요
+- 어떤 제품이나 서비스를 만드는지 설명해주세요
+- 어떤 업종이고, 누구를 위한 비즈니스인지 알려주세요
+
+**기본 정보**
+웹사이트에서 찾을 수 있는 정보가 있다면 자연스럽게 언급해주세요:
+- 회사 위치 (국가, 도시, 주소)
+- 설립 시기나 회사 규모
+- 이메일, 전화번호 등 연락처
+- SNS 계정 (LinkedIn, Facebook, Instagram 등)
+
+**특징과 강점**
+- 이 회사만의 특별한 점이 있나요?
+- 어떤 고객들이 관심을 가질까요?
+- 주목할 만한 내용이 있다면 알려주세요
+
+**작성 가이드**:
+- 마크다운 형식으로 깔끔하게 정리해주세요
+- 이모지는 사용하지 마세요
+- 정보를 찾을 수 없으면 억지로 만들지 말고 언급하지 마세요
+- 친근하고 쉬운 말로 설명해주세요
+- 한국어로 작성해주세요`
+
+    // 환경변수에서 OpenAI API 키 사용
+    const apiKey = process.env.OPENAI_API_KEY
+
+    if (!apiKey) {
+      logger.error("[analyzeWebsiteWithStreaming] OPENAI_API_KEY environment variable not set")
+      throw new Error("OpenAI API 키가 환경변수에 설정되어 있지 않습니다")
+    }
+
+    logger.info("[analyzeWebsiteWithStreaming] Using OPENAI_API_KEY from environment variable")
+    logger.info("[analyzeWebsiteWithStreaming] Starting GPT streaming analysis")
+
+    const openai = createOpenAI({
+      apiKey: apiKey,
+    })
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), gptTimeout * 1000)
+
+    const result = await streamText({
+      model: openai("gpt-4o-mini"),
+      system:
+        "You are a friendly business analyst who explains company information in a clear, conversational way. Write in Korean using natural language, not rigid formats. Be informative but approachable.",
+      prompt: prompt,
+      temperature: 0.4,
+      abortSignal: controller.signal,
+    })
+
+    clearTimeout(timeoutId)
+
+    logger.info("[analyzeWebsiteWithStreaming] GPT streaming initialized successfully")
+
+    return result
+  } catch (error) {
+    logger.error(
+      { error },
+      "[analyzeWebsiteWithStreaming] Failed to analyze website with streaming",
+    )
+    throw error
   }
 }
 

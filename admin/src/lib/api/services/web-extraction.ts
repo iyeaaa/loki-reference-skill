@@ -1,8 +1,11 @@
 import { API_BASE_URL } from "@/lib/api/client"
 import type {
   ExtractionProgress,
+  ExtractionResult,
   WebExtractionProgressCallback,
   WebExtractionUploadRequest,
+  WebsiteAnalysisCallbacks,
+  WebsiteAnalysisRequest,
 } from "../types/web-extraction"
 
 export const webExtractionApi = {
@@ -179,5 +182,149 @@ export const webExtractionApi = {
     await fetch(`${API_BASE_URL}/api/v1/admin/web-extraction/cleanup/${jobId}`, {
       method: "DELETE",
     })
+  },
+
+  /**
+   * Analyze single URL (structured JSON response for web-extraction)
+   */
+  analyzeUrl: async (request: {
+    websiteUrl: string
+    workspaceId: string
+    searchCriteria?: string[]
+  }): Promise<{
+    success: boolean
+    error?: string
+    data?: ExtractionResult
+  }> => {
+    const response = await fetch(`${API_BASE_URL}/api/v1/admin/web-extraction/analyze`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `서버 오류 (${response.status})`)
+    }
+
+    return response.json()
+  },
+
+  /**
+   * Analyze single website URL with SSE streaming updates
+   */
+  analyzeWebsite: async (
+    request: WebsiteAnalysisRequest,
+    callbacks: WebsiteAnalysisCallbacks,
+  ): Promise<void> => {
+    const { websiteUrl, workspaceId } = request
+    const { onInit, onProgress, onPageFound, onComplete, onError, onChunk } = callbacks
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/admin/web-extraction/lead-discovery/analyze`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            websiteUrl,
+            workspaceId,
+          }),
+        },
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `서버 오류 (${response.status})`)
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error("응답 스트림을 읽을 수 없습니다")
+      }
+
+      const decoder = new TextDecoder()
+      let buffer = ""
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+
+          if (done) {
+            break
+          }
+
+          buffer += decoder.decode(value, { stream: true })
+          const events = buffer.split("\n\n")
+          buffer = events.pop() || ""
+
+          for (const eventStr of events) {
+            if (!eventStr.trim() || eventStr.trim().startsWith(":")) continue
+
+            const lines = eventStr.split("\n")
+            let eventType: string | undefined
+            let eventData: string | undefined
+
+            for (const line of lines) {
+              if (line.startsWith("event: ")) {
+                eventType = line.slice(7).trim()
+              } else if (line.startsWith("data: ")) {
+                eventData = line.slice(6)
+              }
+            }
+
+            if (eventData) {
+              try {
+                const data = JSON.parse(eventData)
+                const type = data.type || eventType
+
+                if (type === "init") {
+                  if (onInit) {
+                    onInit(data.message || "분석을 시작합니다")
+                  }
+                } else if (type === "progress") {
+                  if (onProgress) {
+                    onProgress(
+                      data.status || "processing",
+                      data.message || "데이터를 처리하고 있습니다",
+                    )
+                  }
+                } else if (type === "page_found") {
+                  onPageFound?.({
+                    url: data.url,
+                    title: data.title,
+                    contentLength: data.contentLength,
+                  })
+                } else if (type === "chunk") {
+                  onChunk?.(data.content || "")
+                } else if (type === "complete") {
+                  onComplete(true, null)
+                } else if (type === "error") {
+                  onError(data.error || "분석 중 오류가 발생했습니다")
+                }
+              } catch (parseError) {
+                console.error("Failed to parse event:", parseError)
+              }
+            }
+          }
+        }
+      } finally {
+        try {
+          reader.releaseLock()
+        } catch {
+          // Ignore release errors
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        onError(error.message)
+      } else {
+        onError("분석 중 알 수 없는 오류가 발생했습니다")
+      }
+    }
   },
 }

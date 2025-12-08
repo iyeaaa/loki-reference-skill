@@ -19,6 +19,7 @@ import { DataArtifact } from "./DataArtifact"
 import { FileAttachment } from "./FileAttachment"
 import { MessageBubble } from "./MessageBubble"
 import type { NodeProgress } from "./NodeProgressTracker"
+import { ResizableDivider } from "./ResizableDivider"
 import { SequenceGeneratorModal } from "./SequenceGeneratorModal"
 import { StreamingMessageContainer } from "./StreamingMessageContainer"
 
@@ -63,6 +64,14 @@ export function ChatInterface({
   const [defaultCustomerGroupId, setDefaultCustomerGroupId] = useState<string | undefined>(
     undefined,
   )
+  // Resizable split pane - left panel width percentage
+  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(() => {
+    // Load from localStorage on mount
+    const saved = localStorage.getItem("chatbot-split-width")
+    return saved ? Number.parseFloat(saved) : 50 // Default 50%
+  })
+  const [isResizing, setIsResizing] = useState(false)
+  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const lastUserMessageRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -264,11 +273,19 @@ export function ChatInterface({
       setMessages((prev) => [...prev, userMessage])
       setIsProcessing(true)
 
-      // Initialize streaming message
+      // ⭐ CRITICAL: Clear selectedArtifact and initialize empty streamingMessage
+      // This ensures artifact panel shows ONLY current streaming data
+      setSelectedArtifact(null)
       setStreamingMessage({
         role: "assistant",
         content: "",
         timestamp: new Date(),
+        metadata: {
+          sql: undefined,
+          result: undefined,
+          insights: undefined,
+          followUpQuestions: undefined,
+        },
       })
 
       // Call chatbot API with the lead group info
@@ -332,11 +349,19 @@ export function ChatInterface({
       setInput("")
       setAttachedFile(null)
 
-      // Initialize streaming message
+      // ⭐ CRITICAL: Clear selectedArtifact and initialize empty streamingMessage
+      // This ensures artifact panel shows ONLY current streaming data
+      setSelectedArtifact(null)
       setStreamingMessage({
         role: "assistant",
         content: "",
         timestamp: new Date(),
+        metadata: {
+          sql: undefined,
+          result: undefined,
+          insights: undefined,
+          followUpQuestions: undefined,
+        },
       })
 
       // Use TanStack Query mutation
@@ -631,11 +656,19 @@ export function ChatInterface({
       setMessages((prev) => [...prev, userMessage])
       setIsProcessing(true)
 
-      // Initialize streaming message
+      // ⭐ CRITICAL: Clear selectedArtifact and initialize empty streamingMessage
+      // This ensures artifact panel shows ONLY current streaming data
+      setSelectedArtifact(null)
       setStreamingMessage({
         role: "assistant",
         content: "",
         timestamp: new Date(),
+        metadata: {
+          sql: undefined,
+          result: undefined,
+          insights: undefined,
+          followUpQuestions: undefined,
+        },
       })
 
       // Call chatbot API with the sequence generation request
@@ -694,11 +727,19 @@ export function ChatInterface({
       setMessages((prev) => [...prev, userMessage])
       setIsProcessing(true)
 
-      // Initialize streaming message
+      // ⭐ CRITICAL: Clear selectedArtifact and initialize empty streamingMessage
+      // This ensures artifact panel shows ONLY current streaming data
+      setSelectedArtifact(null)
       setStreamingMessage({
         role: "assistant",
         content: "",
         timestamp: new Date(),
+        metadata: {
+          sql: undefined,
+          result: undefined,
+          insights: undefined,
+          followUpQuestions: undefined,
+        },
       })
 
       // Call chatbot API with the sequence generation request
@@ -790,6 +831,32 @@ export function ChatInterface({
     }
   }, [handleSubmit])
 
+  // Handle split pane resize - optimized with instant state update
+  const handleResize = useCallback((newLeftWidth: number) => {
+    setLeftPanelWidth(newLeftWidth)
+
+    // Debounce localStorage write - only save after user stops dragging for 300ms
+    if (resizeTimeoutRef.current) {
+      clearTimeout(resizeTimeoutRef.current)
+    }
+    resizeTimeoutRef.current = setTimeout(() => {
+      localStorage.setItem("chatbot-split-width", newLeftWidth.toString())
+    }, 300)
+  }, [])
+
+  const handleDragStart = useCallback(() => {
+    setIsResizing(true)
+  }, [])
+
+  const handleDragEnd = useCallback(() => {
+    setIsResizing(false)
+    // Ensure final width is saved immediately
+    if (resizeTimeoutRef.current) {
+      clearTimeout(resizeTimeoutRef.current)
+    }
+    localStorage.setItem("chatbot-split-width", leftPanelWidth.toString())
+  }, [leftPanelWidth])
+
   // Show loading state while history is being fetched
   if (isLoadingHistory) {
     return (
@@ -810,48 +877,33 @@ export function ChatInterface({
     )
   }
 
-  // Helper functions to get latest data from messages
-  const getLatestSql = () => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].metadata?.sql) {
-        return messages[i].metadata?.sql
-      }
-    }
-    return undefined
+  // Helper function to check if metadata has any artifact data
+  const hasArtifactData = (metadata: ChatMessage["metadata"]) => {
+    if (!metadata) return false
+    return (
+      (metadata.insights && metadata.insights.length > 0) ||
+      !!metadata.sql ||
+      !!metadata.result ||
+      !!metadata.leadPreview ||
+      !!metadata.importResult
+    )
   }
 
-  const getLatestInsights = () => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const insights = messages[i].metadata?.insights
-      if (insights && insights.length > 0) {
-        return insights
-      }
-    }
-    return undefined
-  }
-
-  const getLatestResult = () => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].metadata?.result) {
-        return messages[i].metadata?.result
-      }
-    }
-    return undefined
-  }
+  // ⭐ SMART ARTIFACT SOURCE SELECTION
+  // Determines which message to display artifacts from, with priority:
+  // 1. Explicit user selection (selectedArtifact)
+  // 2. Current streaming message (streamingMessage)
+  // 3. Latest completed message (when idle)
+  const currentArtifactSource =
+    selectedArtifact ||
+    streamingMessage ||
+    (!isProcessing && !selectedArtifact && messages.length > 0
+      ? messages[messages.length - 1]
+      : null)
 
   // Check if any message has artifact data (for split view)
   const hasAnyArtifact =
-    messages.some(
-      (msg) =>
-        (msg.metadata?.insights && msg.metadata.insights.length > 0) ||
-        !!msg.metadata?.sql ||
-        !!msg.metadata?.leadPreview ||
-        !!msg.metadata?.importResult,
-    ) ||
-    (streamingMessage?.metadata?.insights && streamingMessage.metadata.insights.length > 0) ||
-    !!streamingMessage?.metadata?.sql ||
-    !!streamingMessage?.metadata?.leadPreview ||
-    !!streamingMessage?.metadata?.importResult ||
+    (currentArtifactSource?.metadata && hasArtifactData(currentArtifactSource.metadata)) ||
     !!leadPreviewData ||
     !!leadImportProgress
 
@@ -978,9 +1030,12 @@ export function ChatInterface({
       ) : (
         // Messages view - Claude-style split layout when artifacts exist
         <div className="flex-1 flex overflow-hidden">
-          {/* Left side: Messages + Input (50% when artifact exists, 100% otherwise) */}
+          {/* Left side: Messages + Input (dynamic width when artifact exists, 100% otherwise) */}
           <div
-            className={`flex flex-col ${hasAnyArtifact ? "w-1/2" : "w-full"} transition-all duration-300`}
+            className={`flex flex-col ${!isResizing ? "transition-all duration-300" : ""}`}
+            style={{
+              width: hasAnyArtifact ? `${leftPanelWidth}%` : "100%",
+            }}
           >
             {/* Messages area */}
             <div className="flex-1 overflow-y-auto">
@@ -1104,68 +1159,50 @@ export function ChatInterface({
             </div>
           </div>
 
-          {/* Right side: Artifact panel (50% width, full height, sticky) */}
+          {/* Resizable divider */}
           {hasAnyArtifact && (
-            <div className="w-1/2 border-l border-border bg-muted/20 overflow-hidden">
+            <ResizableDivider
+              onResize={handleResize}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            />
+          )}
+
+          {/* Right side: Artifact panel (dynamic width, full height, sticky) */}
+          {hasAnyArtifact && (
+            <div
+              className={`bg-muted/20 overflow-hidden ${!isResizing ? "transition-all duration-300" : ""}`}
+              style={{
+                width: `${100 - leftPanelWidth}%`,
+              }}
+            >
               <DataArtifact
-                sql={
-                  selectedArtifact?.metadata?.sql ||
-                  streamingMessage?.metadata?.sql ||
-                  getLatestSql()
-                }
-                insights={
-                  selectedArtifact?.metadata?.insights ||
-                  streamingMessage?.metadata?.insights ||
-                  getLatestInsights()
-                }
-                data={
-                  selectedArtifact?.metadata?.result ||
-                  streamingMessage?.metadata?.result ||
-                  getLatestResult()
-                }
+                sql={currentArtifactSource?.metadata?.sql}
+                insights={currentArtifactSource?.metadata?.insights}
+                data={currentArtifactSource?.metadata?.result}
                 isStreaming={!selectedArtifact && isProcessing}
                 question={(() => {
-                  // If selected artifact, find its corresponding user message
-                  if (selectedArtifact) {
-                    const selectedIndex = messages.indexOf(selectedArtifact)
-                    if (selectedIndex > 0) {
+                  // Find the corresponding user question for the artifact source
+                  if (currentArtifactSource) {
+                    const sourceIndex = messages.indexOf(currentArtifactSource)
+                    if (sourceIndex > 0) {
                       // Find the user message before this assistant message
-                      for (let i = selectedIndex - 1; i >= 0; i--) {
+                      for (let i = sourceIndex - 1; i >= 0; i--) {
                         if (messages[i].role === "user") {
                           return messages[i].content
                         }
                       }
                     }
                   }
-                  // Otherwise, find the last user message
+                  // Fallback: find the last user message
                   const userMessages = messages.filter((m) => m.role === "user")
                   return userMessages[userMessages.length - 1]?.content || undefined
                 })()}
-                leadPreview={
-                  leadPreviewData ||
-                  selectedArtifact?.metadata?.leadPreview ||
-                  streamingMessage?.metadata?.leadPreview ||
-                  messages[messages.length - 1]?.metadata?.leadPreview
-                }
+                leadPreview={leadPreviewData || currentArtifactSource?.metadata?.leadPreview}
                 leadImportProgress={leadImportProgress || undefined}
-                leadImportResult={
-                  selectedArtifact?.metadata?.importResult ||
-                  streamingMessage?.metadata?.importResult ||
-                  messages[messages.length - 1]?.metadata?.importResult ||
-                  undefined
-                }
-                progressLogs={
-                  selectedArtifact?.metadata?.progressLogs ||
-                  streamingMessage?.metadata?.progressLogs ||
-                  messages[messages.length - 1]?.metadata?.progressLogs ||
-                  undefined
-                }
-                startTime={
-                  selectedArtifact?.metadata?.startTime ||
-                  streamingMessage?.metadata?.startTime ||
-                  messages[messages.length - 1]?.metadata?.startTime ||
-                  undefined
-                }
+                leadImportResult={currentArtifactSource?.metadata?.importResult}
+                progressLogs={currentArtifactSource?.metadata?.progressLogs}
+                startTime={currentArtifactSource?.metadata?.startTime}
                 onLeadImportApproval={handleLeadImportApproval}
                 onGenerateSequence={handleGenerateSequenceFromImport}
               />

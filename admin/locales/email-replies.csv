@@ -92,3 +92,20 @@ bulkModal.option.read,읽음,Read
 bulkModal.option.unread,읽지 않음,Unread
 bulkModal.button.cancel,취소,Cancel
 bulkModal.button.change,변경,Change
+aiSummary.button.generate,AI 요약,AI Summary
+aiSummary.loading,AI 요약 중입니다..,Summarizing with AI..
+aiSummary.title,AI 요약 결과,AI Summary Result
+aiSummary.button.regenerate,다시 요약하기,Generate Again
+aiSummary.error.title,요약 생성 실패,Failed to generate summary
+aiSummary.error.message,AI 요약 생성에 실패했습니다,Failed to generate AI summary
+aiSummary.success,AI 요약이 생성되었습니다!,AI summary has been generated!
+aiSummary.button.tryAgain,다시 시도,Try again
+message.loading,메시지 로딩 중...,Loading message...
+ai.generating,생성 중...,Generating...
+ai.suggestion,AI 제안,AI Suggestion
+table.loading,로딩 중...,Loading...
+ai.error.suggestion,AI 제안 생성에 실패했습니다,Failed to generate AI suggestion
+ai.success.reply,AI 답장이 생성되었습니다!,AI reply has been generated!
+auth.loginRequired,로그인이 필요합니다,Login required
+workspace.notSelected,워크스페이스가 선택되지 않았습니다,Workspace not selected
+email.invalidRecipient,유효한 받는사람 이메일 주소를 입력하세요,Please enter a valid recipient email address

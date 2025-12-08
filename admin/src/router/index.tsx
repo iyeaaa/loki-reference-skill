@@ -8,12 +8,14 @@ import DashboardLayout from "../layouts/DashboardLayout"
 import RootLayout from "../layouts/RootLayout"
 // 로그인 페이지만 즉시 로드 (첫 진입점)
 import LoginPage from "../pages/LoginPage"
+import NewTrialPage from "../pages/NewTrialPage"
 
 // 모든 페이지 - Lazy Loading (성능 최적화)
 const ChatbotPage = lazy(() => import("../pages/ChatbotPage"))
 const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"))
 const RepliedEmailsPage = lazy(() => import("../pages/email-replies/EmailRepliesPage"))
 const LeadsPage = lazy(() => import("../pages/leads"))
+const LeadDiscoveryPage = lazy(() => import("../pages/lead-discovery"))
 const SequencesPage = lazy(() => import("../pages/sequences"))
 const CreateSequencePage = lazy(() => import("../pages/sequences/CreateCampaignPage"))
 const SequenceEditPage = lazy(() => import("../pages/sequences/SequenceEditPage"))
@@ -59,6 +61,10 @@ export const router = createBrowserRouter([
         element: <LoginPage />,
       },
       {
+        path: "trial",
+        element: <NewTrialPage />,
+      },
+      {
         path: "/",
         element: (
           <ProtectedRoute>
@@ -68,7 +74,7 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Navigate to="/chatbot" replace />,
+            element: <Navigate to="/dashboard" replace />,
           },
           {
             path: "dashboard",
@@ -77,6 +83,10 @@ export const router = createBrowserRouter([
           {
             path: "leads",
             element: <LeadsPage />,
+          },
+          {
+            path: "lead-discovery",
+            element: <LeadDiscoveryPage />,
           },
           {
             path: "customer-groups",

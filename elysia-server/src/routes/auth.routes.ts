@@ -1,8 +1,31 @@
 import { Elysia, t } from "elysia"
 import * as authService from "../services/auth.service"
+import * as oauthService from "../services/oauth.service"
 import * as userService from "../services/user.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
 import logger from "../utils/logger"
+
+// Type for user objects returned by different user service functions
+type AuthUser = {
+  id: string
+  username: string
+  email: string
+  userRole: "super_admin" | "admin" | "paying_user" | "user"
+  isActive: boolean
+  departmentId: string | null
+  employeeId: string | null
+  createdAt: Date
+  updatedAt: Date
+  lastLoginAt: Date | null
+  authProvider?: "local" | "google"
+  oauthId?: string | null
+  profilePicture?: string | null
+  trialStartDate?: Date | null
+  trialEndDate?: Date | null
+  isTrialActive?: boolean | null
+  departmentName?: string | null
+  departmentCode?: string | null
+}
 
 const loginSchema = t.Object({
   email: t.String({ format: "email" }),
@@ -13,6 +36,20 @@ const signupSchema = t.Object({
   username: t.String({ minLength: 3, maxLength: 50 }),
   email: t.String({ format: "email" }),
   password: t.String({ minLength: 6 }),
+})
+
+const googleCallbackSchema = t.Object({
+  code: t.String(),
+  state: t.Optional(t.String()),
+})
+
+const googleTokenSchema = t.Object({
+  idToken: t.String(),
+})
+
+const emailRegistrationSchema = t.Object({
+  email: t.String({ format: "email" }),
+  username: t.Optional(t.String({ minLength: 3, maxLength: 50 })),
 })
 
 export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
@@ -49,7 +86,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
       await userService.updateLastLogin(user.id)
 
       // Generate JWT token
-      const token = await authService.generateToken({
+      const token = authService.generateToken({
         userId: user.id,
         email: user.email,
         userRole: user.userRole,
@@ -147,6 +184,84 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     },
   )
 
+  // Email registration endpoint (no password required)
+  .post(
+    "/register-email",
+    async ({ body, set }) => {
+      try {
+        const { email, username } = body
+
+        // Check if user already exists
+        const existingUser = await userService.checkAccountExists(email)
+        if (existingUser) {
+          set.status = 400
+          return errorResponse("이미 등록된 이메일입니다.", ResponseCode.BAD_REQUEST)
+        }
+
+        const finalUsername = (
+          username && username.length >= 3 ? username : email.split("@")[0]
+        ) as string
+
+        const newUser = await userService.createUser({
+          username: finalUsername,
+          email: email,
+          userRole: "user",
+          isActive: true,
+        })
+
+        if (!newUser) {
+          set.status = 400
+          return errorResponse("사용자 생성에 실패했습니다.", ResponseCode.BAD_REQUEST)
+        }
+
+        // Generate JWT token for immediate login
+        const token = authService.generateToken({
+          userId: newUser.id,
+          email: newUser.email,
+          userRole: newUser.userRole,
+        })
+
+        // Get trial status
+        const trialStatus = await userService.checkTrialStatus(newUser.id)
+
+        return {
+          message: "이메일 등록이 완료되었습니다. 체험을 시작하세요!",
+          token,
+          user: {
+            id: newUser.id,
+            username: newUser.username,
+            email: newUser.email,
+            userRole: newUser.userRole,
+            isActive: newUser.isActive,
+            authProvider: "email",
+            trialStatus,
+            createdAt: newUser.createdAt,
+            updatedAt: newUser.updatedAt,
+          },
+        }
+      } catch (error) {
+        logger.error({ err: error }, "Email registration error")
+        if (error instanceof Error) {
+          if (error.message.includes("duplicate key value")) {
+            set.status = 400
+            if (error.message.includes("username")) {
+              return errorResponse("이미 사용 중인 사용자명입니다.", ResponseCode.BAD_REQUEST)
+            }
+            if (error.message.includes("email")) {
+              return errorResponse("이미 등록된 이메일입니다.", ResponseCode.BAD_REQUEST)
+            }
+          }
+        }
+
+        set.status = 500
+        return errorResponse("이메일 등록 중 오류가 발생했습니다.", ResponseCode.INTERNAL_ERROR)
+      }
+    },
+    {
+      body: emailRegistrationSchema,
+    },
+  )
+
   // Verify token endpoint
   .post("/verify", async ({ headers, set }) => {
     const token = headers.authorization?.replace("Bearer ", "")
@@ -190,7 +305,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     }
 
     const payload = await authService.verifyToken(token)
-    const newToken = await authService.generateToken({
+    const newToken = authService.generateToken({
       userId: payload.userId,
       email: payload.email,
       userRole: payload.userRole,
@@ -272,5 +387,191 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
         email: t.String({ format: "email", maxLength: 100 }),
         employeeId: t.String({ maxLength: 20 }),
       }),
+    },
+  )
+
+  // Google OAuth authorization URL
+  .get("/google", async ({ set }) => {
+    try {
+      const authUrl = oauthService.getGoogleAuthUrl()
+      return { authUrl }
+    } catch (error) {
+      logger.error({ error }, "Failed to generate Google auth URL")
+      set.status = 500
+      return errorResponse("Google 인증 URL 생성에 실패했습니다.", ResponseCode.INTERNAL_ERROR)
+    }
+  })
+
+  .post(
+    "/google/callback",
+    async ({ body, set }) => {
+      try {
+        const { code } = body
+
+        const googleUser = await oauthService.getGoogleUserInfo(code)
+
+        const existingUser = await userService.getUserByEmail(googleUser.email)
+        let user: AuthUser | undefined
+
+        if (existingUser) {
+          await userService.updateLastLogin(existingUser.id)
+          user = (await userService.getUserByOAuthId(googleUser.id, "google")) || existingUser
+        } else {
+          user = await userService.createOrUpdateGoogleUser({
+            username: googleUser.name ?? googleUser.email.split("@")[0],
+            email: googleUser.email,
+            oauthId: googleUser.id,
+            profilePicture: googleUser.picture || undefined,
+          })
+        }
+
+        if (!user) {
+          set.status = 500
+          return errorResponse("사용자 생성에 실패했습니다.", ResponseCode.INTERNAL_ERROR)
+        }
+
+        if (!user.isActive) {
+          set.status = 401
+          return errorResponse(
+            "비활성화된 계정입니다. 관리자에게 문의하세요.",
+            ResponseCode.UNAUTHORIZED,
+          )
+        }
+
+        // Generate JWT token
+        const token = authService.generateToken({
+          userId: user.id,
+          email: user.email,
+          userRole: user.userRole,
+        })
+
+        // Get trial status
+        const trialStatus = await userService.checkTrialStatus(user.id)
+
+        return {
+          token,
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            userRole: user.userRole,
+            isActive: user.isActive,
+            departmentId: user.departmentId,
+            employeeId: user.employeeId,
+            authProvider: "authProvider" in user ? user.authProvider : "local",
+            profilePicture: "profilePicture" in user ? user.profilePicture : null,
+            trialStatus,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+            lastLoginAt: user.lastLoginAt,
+            departmentName: "departmentName" in user ? user.departmentName : null,
+            departmentCode: "departmentCode" in user ? user.departmentCode : null,
+          },
+        }
+      } catch (error) {
+        logger.error(
+          {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            code: `${body.code?.substring(0, 20)}...`,
+          },
+          "Google OAuth callback error",
+        )
+        set.status = 400
+        return errorResponse(
+          error instanceof Error ? error.message : "Google 인증에 실패했습니다.",
+          ResponseCode.BAD_REQUEST,
+        )
+      }
+    },
+    {
+      body: googleCallbackSchema,
+    },
+  )
+
+  // Google ID Token verification (for client-side authentication)
+  .post(
+    "/google/verify",
+    async ({ body, set }) => {
+      try {
+        const { idToken } = body
+
+        // Verify Google ID token
+        const googleUser = await oauthService.verifyGoogleIdToken(idToken)
+
+        // Check if user already exists
+        const existingUser = await userService.getUserByEmail(googleUser.email)
+        let user: AuthUser | undefined
+
+        if (existingUser) {
+          // Update existing user's last login
+          await userService.updateLastLogin(existingUser.id)
+          // Get updated user with OAuth fields
+          user = (await userService.getUserByOAuthId(googleUser.id, "google")) || existingUser
+        } else {
+          // Create new user with trial period
+          user = await userService.createOrUpdateGoogleUser({
+            username: googleUser.name ?? googleUser.email.split("@")[0],
+            email: googleUser.email,
+            oauthId: googleUser.id,
+            profilePicture: googleUser.picture || undefined,
+          })
+        }
+
+        if (!user) {
+          set.status = 500
+          return errorResponse("사용자 생성에 실패했습니다.", ResponseCode.INTERNAL_ERROR)
+        }
+
+        // Check if user is active
+        if (!user.isActive) {
+          set.status = 401
+          return errorResponse(
+            "비활성화된 계정입니다. 관리자에게 문의하세요.",
+            ResponseCode.UNAUTHORIZED,
+          )
+        }
+
+        // Generate JWT token
+        const token = authService.generateToken({
+          userId: user.id,
+          email: user.email,
+          userRole: user.userRole,
+        })
+
+        // Get trial status
+        const trialStatus = await userService.checkTrialStatus(user.id)
+
+        return {
+          token,
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            userRole: user.userRole,
+            isActive: user.isActive,
+            departmentId: user.departmentId,
+            employeeId: user.employeeId,
+            authProvider: "authProvider" in user ? user.authProvider : "local",
+            profilePicture: "profilePicture" in user ? user.profilePicture : null,
+            trialStatus,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+            lastLoginAt: user.lastLoginAt,
+            departmentName: "departmentName" in user ? user.departmentName : null,
+            departmentCode: "departmentCode" in user ? user.departmentCode : null,
+          },
+        }
+      } catch (error) {
+        logger.error({ error }, "Google ID token verification error")
+        set.status = 400
+        return errorResponse(
+          error instanceof Error ? error.message : "Google ID 토큰 검증에 실패했습니다.",
+          ResponseCode.BAD_REQUEST,
+        )
+      }
+    },
+    {
+      body: googleTokenSchema,
     },
   )

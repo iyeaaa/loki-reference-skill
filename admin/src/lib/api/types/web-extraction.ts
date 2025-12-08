@@ -67,3 +67,35 @@ export interface WebExtractionProgressCallback {
   onComplete: (jobId: string, progress: ExtractionProgress) => void
   onError: (error: Error) => void
 }
+
+// 단일 URL 분석 관련 타입
+export interface WebsiteAnalysisRequest {
+  websiteUrl: string
+  workspaceId: string
+  searchCriteria?: string[]
+}
+
+export interface WebsiteAnalysisProgress {
+  type: "init" | "progress" | "complete" | "error"
+  status?: "crawling" | "analyzing"
+  message?: string
+  timestamp: string
+  success?: boolean
+  result?: ExtractionResult
+  error?: string
+}
+
+export interface PageInfo {
+  url: string
+  title?: string
+  contentLength: number
+}
+
+export interface WebsiteAnalysisCallbacks {
+  onInit?: (message: string) => void
+  onProgress?: (status: string, message: string) => void
+  onPageFound?: (pageInfo: PageInfo) => void
+  onChunk?: (content: string) => void
+  onComplete: (success: boolean, result: ExtractionResult | null) => void
+  onError: (error: string) => void
+}

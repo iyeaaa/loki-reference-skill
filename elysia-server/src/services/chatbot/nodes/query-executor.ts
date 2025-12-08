@@ -116,6 +116,14 @@ export async function executeQuery(state: ChatbotState): Promise<Partial<Chatbot
 
       chatbotLogger.nodeSuccess(`executeQuery (${rows.length} rows)`, executionTime)
 
+      // Emit completion event with result metadata
+      if (emitter) {
+        emitter.nodeComplete("executeQuery", `Query complete (${rows.length} rows)`, {
+          result: rows,
+          affectedRows: rows.length,
+        })
+      }
+
       return {
         queryResult: rows,
         executionTime,
@@ -129,6 +137,13 @@ export async function executeQuery(state: ChatbotState): Promise<Partial<Chatbot
       `executeQuery (mutation: ${affectedRows} rows affected)`,
       executionTime,
     )
+
+    // Emit completion event with mutation result
+    if (emitter) {
+      emitter.nodeComplete("executeQuery", `Mutation complete (${affectedRows} rows affected)`, {
+        affectedRows,
+      })
+    }
 
     return {
       queryResult: [],

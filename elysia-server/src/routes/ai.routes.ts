@@ -190,3 +190,181 @@ Please write a professional follow-up email reply in Korean based on this conver
       }),
     },
   )
+  .post(
+    "/generate-summary",
+    async ({ body }) => {
+      try {
+        const { threadId, workspaceId, language = "ko" } = body
+
+        logger.info({
+          msg: "Generating AI conversation summary",
+          threadId,
+          workspaceId,
+          language,
+        })
+
+        // Fetch thread emails (same logic as /thread/:threadId endpoint)
+        const initialConditions = [eq(emails.threadId, threadId)]
+        if (workspaceId && workspaceId !== "all") {
+          initialConditions.push(eq(emails.workspaceId, workspaceId))
+        }
+
+        const threadMessageIds = await db
+          .select({ messageId: emails.messageId })
+          .from(emails)
+          .where(and(...initialConditions))
+
+        const messageIdSet = new Set(threadMessageIds.map((e) => e.messageId).filter(Boolean))
+        messageIdSet.add(threadId)
+
+        const messageIdArray = Array.from(messageIdSet).filter(Boolean) as string[]
+        const orConditions = [eq(emails.threadId, threadId)]
+
+        if (messageIdArray.length > 0) {
+          orConditions.push(inArray(emails.messageId, messageIdArray))
+          orConditions.push(inArray(emails.inReplyTo, messageIdArray))
+        }
+
+        const conditions = [or(...orConditions)]
+        if (workspaceId && workspaceId !== "all") {
+          conditions.push(eq(emails.workspaceId, workspaceId))
+        }
+
+        // Get all emails in thread
+        const threadEmails = await db
+          .select({
+            id: emails.id,
+            direction: emails.direction,
+            fromEmail: emails.fromEmail,
+            toEmail: emails.toEmail,
+            subject: emails.subject,
+            bodyText: emails.bodyText,
+            sentAt: emails.sentAt,
+            createdAt: emails.createdAt,
+            replyIntent: emailReplies.intent,
+            replySentiment: emailReplies.sentiment,
+          })
+          .from(emails)
+          .leftJoin(emailReplies, eq(emailReplies.replyEmailId, emails.id))
+          .where(and(...conditions))
+          .orderBy(asc(emails.createdAt))
+
+        if (threadEmails.length === 0) {
+          return errorResponse("Thread not found", ResponseCode.NOT_FOUND)
+        }
+
+        // Prepare conversation context for AI
+        const subject = threadEmails[0]?.subject || "No subject"
+        const conversationHistory = threadEmails
+          .map((email, index) => {
+            const direction = email.direction === "inbound" ? "Customer" : "Company"
+            const intent = email.replyIntent ? ` [Intent: ${email.replyIntent}]` : ""
+            const sentiment = email.replySentiment ? ` [Sentiment: ${email.replySentiment}]` : ""
+            return `${index + 1}. ${direction}${intent}${sentiment}:\n${email.bodyText || "(No content)"}\n`
+          })
+          .join("\n")
+
+        // Determine language settings
+        const languageMap: Record<string, { name: string; instruction: string }> = {
+          ko: {
+            name: "Korean (한국어)",
+            instruction: "Please create a 3-line summary of this email conversation in Korean.",
+          },
+          en: {
+            name: "English",
+            instruction: "Please create a 3-line summary of this email conversation in English.",
+          },
+          vi: {
+            name: "Vietnamese (Tiếng Việt)",
+            instruction: "Please create a 3-line summary of this email conversation in Vietnamese.",
+          },
+          ja: {
+            name: "Japanese (日本語)",
+            instruction: "Please create a 3-line summary of this email conversation in Japanese.",
+          },
+          zh: {
+            name: "Chinese (中文)",
+            instruction: "Please create a 3-line summary of this email conversation in Chinese.",
+          },
+        }
+
+        const selectedLanguage = languageMap[language] || {
+          name: "Korean (한국어)",
+          instruction: "Please create a 3-line summary of this email conversation in Korean.",
+        }
+
+        // Call OpenAI API for summary
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: `You are an AI assistant that creates concise email conversation summaries.
+Analyze the email thread and create a brief summary in exactly 3 lines.
+
+Your summary should:
+- Be written in ${selectedLanguage.name}
+- Capture the main topic and key points
+- Include the current status or outcome
+- Be concise but informative
+- Each line should be a complete sentence
+- Focus on business-relevant information
+
+Format: Return exactly 3 lines, each ending with a period.`,
+            },
+            {
+              role: "user",
+              content: `Email Thread Subject: ${subject}
+
+Conversation History:
+${conversationHistory}
+
+${selectedLanguage.instruction}`,
+            },
+          ],
+          temperature: 0.3,
+          max_tokens: 300,
+        })
+
+        const aiSummary = completion.choices[0]?.message?.content || ""
+
+        // Ensure the summary has exactly 3 lines
+        const summaryLines = aiSummary.split("\n").filter((line) => line.trim().length > 0)
+        const finalSummary = summaryLines.slice(0, 3).join("\n")
+
+        logger.info({
+          msg: "AI conversation summary generated",
+          threadId,
+          summaryLength: finalSummary.length,
+          lineCount: summaryLines.length,
+        })
+
+        return successResponse(
+          {
+            threadId,
+            subject,
+            emailCount: threadEmails.length,
+            summary: finalSummary,
+          },
+          "Conversation summary generated successfully",
+        )
+      } catch (error) {
+        logger.error({
+          msg: "Failed to generate AI conversation summary",
+          error: error instanceof Error ? error.message : String(error),
+        })
+
+        return errorResponse(
+          error instanceof Error ? error.message : "Failed to generate conversation summary",
+          ResponseCode.INTERNAL_ERROR,
+        )
+      }
+    },
+    {
+      body: t.Object({
+        threadId: t.String({ minLength: 1 }),
+        workspaceId: t.Optional(t.String()),
+        language: t.Optional(t.String()),
+      }),
+    },
+  )

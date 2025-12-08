@@ -10,6 +10,7 @@ import {
   analyzeWebsiteWithStreaming,
   fetchWithDepth,
   processBatch,
+  processCompanyRecord,
 } from "../services/web-extraction.service"
 import {
   type CompanyRecord,
@@ -24,11 +25,11 @@ const resultsMap = new Map<string, CompanyRecord[]>()
 
 export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extraction" })
   /**
-   * POST /api/v1/admin/web-extraction/analyze
-   * 단일 웹사이트 URL 분석 (SSE로 스트리밍 응답 전송)
+   * POST /api/v1/admin/web-extraction/lead-discovery/analyze
+   * Lead Discovery 단일 웹사이트 URL 분석 (SSE로 스트리밍 응답 전송)
    */
   .post(
-    "/analyze",
+    "/lead-discovery/analyze",
     async ({ body }) => {
       const { websiteUrl, workspaceId } = body
 
@@ -201,6 +202,110 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
         summary: "단일 웹사이트 URL 분석 (SSE 스트리밍)",
         description:
           "단일 웹사이트 URL을 분석하여 AI가 생성한 상세 분석 결과를 스트리밍으로 전송합니다.",
+      },
+    },
+  )
+
+  /**
+   * POST /api/v1/admin/web-extraction/analyze
+   * 웹데추용 단일 웹사이트 URL 분석 (정형화된 JSON 응답)
+   */
+  .post(
+    "/analyze",
+    async ({ body, set }) => {
+      const { websiteUrl, workspaceId, searchCriteria } = body
+
+      logger.info(
+        {
+          workspaceId,
+          websiteUrl,
+          searchCriteriaCount: searchCriteria?.length || 0,
+        },
+        "Starting single website analysis (structured)",
+      )
+
+      // URL 유효성 검사
+      if (!websiteUrl || websiteUrl.trim().length < 3) {
+        set.status = 400
+        return {
+          success: false,
+          error: "유효한 웹사이트 URL을 입력해주세요",
+        }
+      }
+
+      try {
+        // processCompanyRecord 호출
+        const result = await processCompanyRecord(
+          { websiteUrl: websiteUrl.trim() },
+          DEFAULT_EXTRACTION_CONFIG,
+          workspaceId,
+          searchCriteria,
+        )
+
+        // 에러가 있는 경우
+        if (result.errorMessage) {
+          return {
+            success: false,
+            error: result.errorMessage,
+            data: {
+              website_url: result.websiteUrl,
+              http_status: result.httpStatus || null,
+              crawl_time_seconds: result.crawlTimeSeconds || null,
+            },
+          }
+        }
+
+        // 성공 응답
+        return {
+          success: true,
+          data: {
+            website_url: result.websiteUrl,
+            final_url: result.finalUrl || null,
+            http_status: result.httpStatus || null,
+            found_company_name: result.foundCompanyName || null,
+            description: result.description || null,
+            address: result.address || null,
+            country: result.country || null,
+            city: result.city || null,
+            state: result.state || null,
+            founded_year: result.foundedYear || null,
+            phone_number: result.phoneNumber || null,
+            email: result.email || null,
+            facebook_url: result.facebookUrl || null,
+            instagram_url: result.instagramUrl || null,
+            twitter_url: result.twitterUrl || null,
+            linkedin_url: result.linkedinUrl || null,
+            employee_count: result.employeeCount || null,
+            products: result.products || null,
+            business_sectors: result.businessSectors || null,
+            product_categories: result.productCategories || null,
+            industry_types: result.industryTypes || null,
+            custom_search_results: result.customSearchResults || null,
+            crawl_time_seconds: result.crawlTimeSeconds || null,
+            gpt_time_seconds: result.gptTimeSeconds || null,
+            collected_at: result.collectedAt || null,
+          },
+        }
+      } catch (error) {
+        logger.error({ error, websiteUrl }, "Failed to analyze website")
+        set.status = 500
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "분석 중 오류가 발생했습니다",
+        }
+      }
+    },
+    {
+      body: t.Object({
+        websiteUrl: t.String(),
+        workspaceId: t.String(),
+        searchCriteria: t.Optional(t.Array(t.String())),
+      }),
+      detail: {
+        tags: ["admin", "web-extraction"],
+        summary: "웹데추용 단일 웹사이트 URL 분석",
+        description:
+          "단일 웹사이트 URL을 분석하여 정형화된 회사 정보 및 연락처를 JSON으로 반환합니다.",
       },
     },
   )

@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "@/lib/api/client"
 import type {
   ExtractionProgress,
+  ExtractionResult,
   WebExtractionProgressCallback,
   WebExtractionUploadRequest,
   WebsiteAnalysisCallbacks,
@@ -184,6 +185,34 @@ export const webExtractionApi = {
   },
 
   /**
+   * Analyze single URL (structured JSON response for web-extraction)
+   */
+  analyzeUrl: async (request: {
+    websiteUrl: string
+    workspaceId: string
+    searchCriteria?: string[]
+  }): Promise<{
+    success: boolean
+    error?: string
+    data?: ExtractionResult
+  }> => {
+    const response = await fetch(`${API_BASE_URL}/api/v1/admin/web-extraction/analyze`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `서버 오류 (${response.status})`)
+    }
+
+    return response.json()
+  },
+
+  /**
    * Analyze single website URL with SSE streaming updates
    */
   analyzeWebsite: async (
@@ -194,7 +223,7 @@ export const webExtractionApi = {
     const { onInit, onProgress, onPageFound, onComplete, onError, onChunk } = callbacks
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/admin/web-extraction/analyze`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/web-extraction/lead-discovery/analyze`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

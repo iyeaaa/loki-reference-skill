@@ -1,4 +1,4 @@
-import { Building2, FileText, Mail, Menu, Upload, User, Users, X } from "lucide-react"
+import { Building2, FileText, Globe, Mail, Menu, Upload, User, Users, X } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
@@ -11,6 +11,7 @@ import { useCurrentUser, useUpdateProfileMutation } from "@/lib/api/hooks/auth"
 import EmailTemplatesPage from "./email-templates/EmailTemplatesPage"
 import LeadImportPage from "./lead-import/index"
 import { EmailSignatureManagement } from "./settings/EmailSignatureManagement"
+import { WebDataExtraction } from "./settings/WebDataExtraction"
 import UsersPage from "./users/UsersPage"
 import WorkspacesPage from "./workspaces/WorkspacesPage"
 
@@ -84,6 +85,11 @@ export default function SettingsPage() {
       id: "bulk-lead-import",
       label: t("settings.system.import.title"),
       icon: <Upload className="h-4 w-4" />,
+    },
+    {
+      id: "web-extraction",
+      label: t("settings.system.webExtraction.title"),
+      icon: <Globe className="h-4 w-4" />,
     },
   ]
 
@@ -164,6 +170,8 @@ export default function SettingsPage() {
         return <EmailTemplatesPage />
       case "bulk-lead-import":
         return <LeadImportPage />
+      case "web-extraction":
+        return <WebDataExtraction />
       default:
         return null
     }

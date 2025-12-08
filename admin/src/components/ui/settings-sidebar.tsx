@@ -1,4 +1,4 @@
-import { FileText, Mail, Settings, Upload, User, Users } from "lucide-react"
+import { FileText, Globe, Mail, Settings, Upload, User, Users } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 
@@ -48,6 +48,11 @@ const defaultItems: SettingsSidebarItem[] = [
     id: "bulk-lead-import",
     label: "Bulk Lead Import",
     icon: <Upload className="h-4 w-4" />,
+  },
+  {
+    id: "web-extraction",
+    label: "Web Data Extraction",
+    icon: <Globe className="h-4 w-4" />,
   },
 ]
 

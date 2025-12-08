@@ -1,7 +1,7 @@
 import DOMPurify from "dompurify"
 import Encoding from "encoding-japanese"
 import quotedPrintable from "quoted-printable"
-import { useMemo } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import utf8 from "utf8"
 
 interface EmailBodyProps {
@@ -239,7 +239,7 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
             KEEP_CONTENT: true,
           })
           console.log("✅ Cleaned formatted HTML length:", cleaned.length)
-          return { type: "html" as const, content: cleaned }
+          return { type: "html" as const, content: cleaned, hasFullHtml: false }
         }
         return { type: "text" as const, content: decodedHtml }
       }
@@ -368,13 +368,17 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
               ALLOW_UNKNOWN_PROTOCOLS: false,
               KEEP_CONTENT: true,
             })
-            return { type: "html" as const, content: cleanedFormatted }
+            return { type: "html" as const, content: cleanedFormatted, hasFullHtml: false }
           }
           return { type: "text" as const, content: decoded }
         }
       }
 
-      return { type: "html" as const, content: cleaned }
+      // Check if HTML contains <style> tags (needs iframe isolation)
+      const hasStyleTags = /<style[\s>]/i.test(cleaned)
+      console.log("Has style tags:", hasStyleTags)
+
+      return { type: "html" as const, content: cleaned, hasFullHtml: hasStyleTags }
     }
 
     // Fall back to text content
@@ -508,12 +512,14 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
               ALLOW_UNKNOWN_PROTOCOLS: false,
               KEEP_CONTENT: true,
             })
-            return { type: "html" as const, content: cleanedFormatted }
+            return { type: "html" as const, content: cleanedFormatted, hasFullHtml: false }
           }
           return { type: "text" as const, content: decoded }
         }
 
-        return { type: "html" as const, content: cleaned }
+        // Check if HTML contains <style> tags (needs iframe isolation)
+        const hasStyleTagsInBodyText = /<style[\s>]/i.test(cleaned)
+        return { type: "html" as const, content: cleaned, hasFullHtml: hasStyleTagsInBodyText }
       }
 
       // Plain text - check if it has bracketed content to format
@@ -531,7 +537,7 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
           KEEP_CONTENT: true,
         })
         console.log("✅ Cleaned formatted HTML length:", cleaned.length)
-        return { type: "html" as const, content: cleaned }
+        return { type: "html" as const, content: cleaned, hasFullHtml: false }
       }
 
       return { type: "text" as const, content: decoded }
@@ -540,11 +546,61 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
     return { type: "empty" as const, content: "" }
   }, [bodyHtml, bodyText])
 
+  // State for iframe height auto-adjustment
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [iframeHeight, setIframeHeight] = useState(200)
+
+  // Adjust iframe height based on content
+  useEffect(() => {
+    if (sanitizedContent.type !== "html" || !sanitizedContent.hasFullHtml) {
+      return
+    }
+
+    const iframe = iframeRef.current
+    if (!iframe) return
+
+    const adjustHeight = () => {
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow?.document
+        if (doc?.body) {
+          const height = doc.body.scrollHeight
+          if (height > 0) {
+            setIframeHeight(Math.min(height + 20, 2000)) // Max 2000px
+          }
+        }
+      } catch (_e) {
+        // Cross-origin errors are expected, ignore
+      }
+    }
+
+    // Adjust after initial load
+    iframe.onload = adjustHeight
+
+    // Also try after a short delay for slow-loading content
+    const timeout = setTimeout(adjustHeight, 500)
+    return () => clearTimeout(timeout)
+  }, [sanitizedContent])
+
   if (sanitizedContent.type === "empty") {
     return <div className="text-muted-foreground italic">(내용 없음)</div>
   }
 
   if (sanitizedContent.type === "html") {
+    // For full HTML documents with <style> tags, use iframe to isolate styles
+    if (sanitizedContent.hasFullHtml) {
+      return (
+        <iframe
+          ref={iframeRef}
+          srcDoc={sanitizedContent.content}
+          title="Email content"
+          className="w-full border-0"
+          style={{ height: `${iframeHeight}px`, minHeight: "200px" }}
+          sandbox="allow-same-origin"
+        />
+      )
+    }
+
+    // For simple HTML without <style> tags, use dangerouslySetInnerHTML
     return (
       <div
         className="prose prose-sm max-w-none break-words [&_img]:max-w-full [&_img]:h-auto [&_a]:text-blue-600 [&_a]:underline"

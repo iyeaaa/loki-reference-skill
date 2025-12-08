@@ -129,6 +129,17 @@ export const config = {
     temperature: Number.parseFloat(getEnvOrDefault("MASTRA_TEMPERATURE", "0.7")),
     rindaLeadPgUrl: getEnv("RINDA_LEAD_PG_URL"),
   },
+
+  // Nylas (Email Integration)
+  nylas: {
+    apiKey: process.env.NYLAS_API_KEY || "",
+    apiUri: getEnvOrDefault("NYLAS_API_URI", "https://api.us.nylas.com"),
+    clientId: process.env.NYLAS_CLIENT_ID || "",
+    redirectUri: getEnvOrDefault(
+      "NYLAS_REDIRECT_URI",
+      "http://localhost:3001/api/v1/nylas/callback",
+    ),
+  },
 } as const
 
 // Log configuration on startup (only in development)

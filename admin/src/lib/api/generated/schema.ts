@@ -324,6 +324,22 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/v1/auth/register-email": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiV1AuthRegister-email"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/v1/auth/verify": {
     parameters: {
       query?: never
@@ -3002,6 +3018,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/v1/admin/web-extraction/analyze": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * 단일 웹사이트 URL 분석 (SSE 스트리밍)
+     * @description 단일 웹사이트 URL을 분석하여 AI가 생성한 상세 분석 결과를 스트리밍으로 전송합니다.
+     */
+    post: operations["postApiV1AdminWeb-extractionAnalyze"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/v1/admin/web-extraction/upload": {
     parameters: {
       query?: never
@@ -3363,6 +3399,110 @@ export interface paths {
     get: operations["getApiV1Lead-enrichmentHealth"]
     put?: never
     post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/nylas/auth": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Nylas OAuth URL
+     * @description Generate OAuth authorization URL for Google email integration via Nylas
+     */
+    get: operations["getApiV1NylasAuth"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/nylas/callback": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Nylas OAuth Callback
+     * @description OAuth redirect handler - exchange authorization code for Nylas grant
+     */
+    get: operations["getApiV1NylasCallback"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/nylas/grant/{grantId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Grant Info
+     * @description Get information about a connected email account
+     */
+    get: operations["getApiV1NylasGrantByGrantId"]
+    put?: never
+    post?: never
+    /**
+     * Disconnect Email Account
+     * @description Disconnect/delete a connected email account
+     */
+    delete: operations["deleteApiV1NylasGrantByGrantId"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/nylas/setup-connector": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Setup Google Connector
+     * @description One-time setup to create Google OAuth connector in Nylas
+     */
+    post: operations["postApiV1NylasSetup-connector"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/nylas/webhook": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Nylas Webhook
+     * @description Receive webhook events for email tracking (opens, clicks, thread replies)
+     */
+    post: operations["postApiV1NylasWebhook"]
     delete?: never
     options?: never
     head?: never
@@ -3976,6 +4116,56 @@ export interface operations {
       }
     }
   }
+  "postApiV1AuthRegister-email": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          /** Format: email */
+          email: string
+          username?: string
+          industry?: string
+          target?: string
+          country?: string
+          experience?: string
+          lang?: string
+        }
+        "multipart/form-data": {
+          /** Format: email */
+          email: string
+          username?: string
+          industry?: string
+          target?: string
+          country?: string
+          experience?: string
+          lang?: string
+        }
+        "text/plain": {
+          /** Format: email */
+          email: string
+          username?: string
+          industry?: string
+          target?: string
+          country?: string
+          experience?: string
+          lang?: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   postApiV1AuthVerify: {
     parameters: {
       query?: never
@@ -4094,14 +4284,29 @@ export interface operations {
         "application/json": {
           code: string
           state?: string
+          industry?: string
+          target?: string
+          country?: string
+          experience?: string
+          lang?: string
         }
         "multipart/form-data": {
           code: string
           state?: string
+          industry?: string
+          target?: string
+          country?: string
+          experience?: string
+          lang?: string
         }
         "text/plain": {
           code: string
           state?: string
+          industry?: string
+          target?: string
+          country?: string
+          experience?: string
+          lang?: string
         }
       }
     }
@@ -11185,6 +11390,38 @@ export interface operations {
       }
     }
   }
+  "postApiV1AdminWeb-extractionAnalyze": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          websiteUrl: string
+          workspaceId: string
+        }
+        "multipart/form-data": {
+          websiteUrl: string
+          workspaceId: string
+        }
+        "text/plain": {
+          websiteUrl: string
+          workspaceId: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   "postApiV1AdminWeb-extractionUpload": {
     parameters: {
       query?: never
@@ -13805,6 +14042,118 @@ export interface operations {
     }
   }
   "getApiV1Lead-enrichmentHealth": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getApiV1NylasAuth: {
+    parameters: {
+      query?: {
+        state?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getApiV1NylasCallback: {
+    parameters: {
+      query: {
+        code: string
+        workspaceId?: string
+        state?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getApiV1NylasGrantByGrantId: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        grantId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  deleteApiV1NylasGrantByGrantId: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        grantId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1NylasSetup-connector": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  postApiV1NylasWebhook: {
     parameters: {
       query?: never
       header?: never

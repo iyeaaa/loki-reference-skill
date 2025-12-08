@@ -10,6 +10,7 @@ import { workspaces } from "../db/schema/workspaces"
 import type { Attachment, SendGridAttachment } from "../models/email.model"
 import { htmlToText } from "../utils/email.util"
 import logger from "../utils/logger"
+import * as nylasService from "./nylas.service"
 
 class EmailService {
   constructor() {
@@ -240,7 +241,7 @@ This email contains confidential information that is protected by law or under t
     inReplyTo?: string
     references?: string[]
     attachments?: SendGridAttachment[] // 첨부 파일 (Base64 인코딩된 파일)
-    apiKey?: string // 특정 계정의 API Key 사용
+    apiKey?: string // SendGrid API Key (starts with "SG") OR Nylas grantId
     includeSignature?: boolean // 서명 포함 여부 (기본값: true)
     userId?: string // 서명 생성을 위한 사용자 ID
     workspaceId?: string // 서명 생성을 위한 워크스페이스 ID
@@ -249,10 +250,17 @@ This email contains confidential information that is protected by law or under t
     success: boolean
     messageId?: string
     sendgridMessageId?: string
+    nylasMessageId?: string
     error?: string
   }> {
     try {
       const apiKey = data.apiKey || config.sendgrid.apiKey
+
+      // Route to Nylas if apiKey doesn't start with "SG" (it's a Nylas grantId)
+      if (apiKey && !apiKey.startsWith("SG")) {
+        return await this.sendEmailViaNylas(data, apiKey)
+      }
+
       if (!apiKey) {
         return {
           success: false,
@@ -398,6 +406,125 @@ This email contains confidential information that is protected by law or under t
       // API Key 원복 (다른 요청에 영향 없도록)
       if (data.apiKey && config.sendgrid.apiKey) {
         sgMail.setApiKey(config.sendgrid.apiKey)
+      }
+    }
+  }
+
+  /**
+   * Send email via Nylas
+   * Used when apiKey is a Nylas grantId (doesn't start with "SG")
+   */
+  private async sendEmailViaNylas(
+    data: {
+      fromEmail: string
+      fromName?: string
+      toEmail: string
+      subject: string
+      bodyText?: string
+      bodyHtml?: string
+      ccEmails?: string[]
+      bccEmails?: string[]
+      inReplyTo?: string
+      attachments?: SendGridAttachment[]
+      includeSignature?: boolean
+      userId?: string
+      workspaceId?: string
+      signatureHtml?: string
+    },
+    grantId: string,
+  ): Promise<{
+    success: boolean
+    messageId?: string
+    nylasMessageId?: string
+    error?: string
+  }> {
+    try {
+      // Generate Message-ID for tracking
+      const timestamp = Date.now()
+      const randomString = Math.random().toString(36).substring(2, 15)
+      const domain = data.fromEmail.split("@")[1] || "mail.grinda.ai"
+      const generatedMessageId = `<${timestamp}.${randomString}@${domain}>`
+
+      // Handle signature (reuse existing logic)
+      let finalBodyHtml = data.bodyHtml || ""
+      const includeSignature = data.includeSignature !== false
+
+      if (includeSignature) {
+        try {
+          let signatureHtml = ""
+
+          if (data.signatureHtml) {
+            signatureHtml = data.signatureHtml
+          } else if (data.userId && data.workspaceId) {
+            const userSignature = await this.generateUserSignature(data.userId, data.workspaceId)
+            signatureHtml = userSignature.signatureHtml
+          } else {
+            const defaultSignature = this.generateGrindaSignature(
+              "김규동 Gyudong Kim",
+              "Project Lead",
+            )
+            signatureHtml = defaultSignature.signatureHtml
+          }
+
+          if (finalBodyHtml && signatureHtml) {
+            finalBodyHtml = this.appendSignatureToEmail(finalBodyHtml, signatureHtml, "", true)
+          }
+        } catch (error) {
+          logger.warn({ err: error }, "Failed to add signature to Nylas email")
+        }
+      }
+
+      // Convert CC/BCC to Nylas format: string[] → { email, name }[]
+      const cc = data.ccEmails?.map((email) => ({ email }))
+      const bcc = data.bccEmails?.map((email) => ({ email }))
+
+      // Convert attachments to Nylas format
+      // SendGrid: { content, filename, type, disposition, content_id }
+      // Nylas: { content, filename, contentType, isInline, contentId, contentDisposition }
+      const nylasAttachments = data.attachments?.map((att) => ({
+        content: att.content,
+        filename: att.filename,
+        contentType: att.type || "application/octet-stream",
+        isInline: att.disposition === "inline",
+        contentId: att.content_id,
+        contentDisposition: att.disposition,
+      }))
+
+      // Send via Nylas
+      const result = await nylasService.sendEmail({
+        grantId,
+        to: [{ email: data.toEmail, name: data.fromName }],
+        subject: data.subject,
+        body: finalBodyHtml || data.bodyText || "",
+        cc,
+        bcc,
+        replyToMessageId: data.inReplyTo,
+        attachments: nylasAttachments,
+        trackingLabel: data.workspaceId,
+      })
+
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error || "Failed to send email via Nylas",
+        }
+      }
+
+      logger.info(
+        { grantId, nylasMessageId: result.messageId, generatedMessageId },
+        "Email sent via Nylas successfully",
+      )
+
+      return {
+        success: true,
+        messageId: generatedMessageId,
+        nylasMessageId: result.messageId,
+      }
+    } catch (error) {
+      logger.error({ err: error, grantId }, "Failed to send email via Nylas")
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to send email via Nylas",
       }
     }
   }

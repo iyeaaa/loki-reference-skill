@@ -26,6 +26,7 @@ import { apiHealthRoute, healthRoutes } from "./routes/health.routes"
 import { leadEnrichmentRoutes } from "./routes/lead-enrichment.routes"
 import { leadImportRoutes } from "./routes/lead-import.routes"
 import { adminLeadRoutes, leadRoutes } from "./routes/leads.routes"
+import { nylasRoutes } from "./routes/nylas.routes"
 import { openaiApiKeysRoutes } from "./routes/openai-api-keys.routes"
 import { adminSequenceRoutes, sequenceRoutes } from "./routes/sequences.routes"
 import { sseTestRoutes } from "./routes/sse-test.routes"
@@ -169,6 +170,7 @@ const app = new Elysia()
   .use(geminiFileSearchRoutes)
   .use(bigquerySearchRoutes)
   .use(leadEnrichmentRoutes)
+  .use(nylasRoutes)
 
   .listen(config.port)
 

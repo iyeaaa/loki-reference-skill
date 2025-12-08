@@ -53,7 +53,7 @@ export default function NewTrialPage() {
   const [email, setEmail] = useState("")
 
   // Get onboarding params from sessionStorage (set on mount)
-  const getOnboardingParams = (): OnboardingParams => {
+  const getOnboardingParams = useCallback((): OnboardingParams => {
     const stored = sessionStorage.getItem(ONBOARDING_STORAGE_KEY)
     if (stored) {
       try {
@@ -69,23 +69,24 @@ export default function NewTrialPage() {
       }
     }
     return { industry: null, target: null, country: null, experience: null, lang: i18n.language }
-  }
+  }, [i18n.language])
 
   const handleGoogleCallback = useCallback(
     async (code: string) => {
       setIsProcessingCallback(true)
       try {
         const onboardingParams = getOnboardingParams()
+        // Filter out null values to avoid validation errors
+        const body: Record<string, string> = { code }
+        if (onboardingParams.industry) body.industry = onboardingParams.industry
+        if (onboardingParams.target) body.target = onboardingParams.target
+        if (onboardingParams.country) body.country = onboardingParams.country
+        if (onboardingParams.experience) body.experience = onboardingParams.experience
+        if (onboardingParams.lang) body.lang = onboardingParams.lang
+
         const response = await apiFetch<GoogleAuthResponse>("/api/v1/auth/google/callback", {
           method: "POST",
-          body: JSON.stringify({
-            code,
-            industry: onboardingParams.industry,
-            target: onboardingParams.target,
-            country: onboardingParams.country,
-            experience: onboardingParams.experience,
-            lang: onboardingParams.lang,
-          }),
+          body: JSON.stringify(body),
         })
 
         // Clear stored onboarding params after successful login
@@ -124,10 +125,11 @@ export default function NewTrialPage() {
         setIsProcessingCallback(false)
       }
     },
-    [login, navigate],
+    [login, navigate, getOnboardingParams],
   )
 
   // Store onboarding params on mount (before OAuth redirect)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Intentionally run only on mount to capture initial URL params
   useEffect(() => {
     const industry = searchParams.get("industry")
     const target = searchParams.get("target")
@@ -141,8 +143,7 @@ export default function NewTrialPage() {
         JSON.stringify({ industry, target, country, experience, lang: i18n.language }),
       )
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Only run on mount to capture initial URL params
+  }, [])
 
   // Handle OAuth callback
   useEffect(() => {
@@ -183,16 +184,17 @@ export default function NewTrialPage() {
     setIsLoading(true)
     try {
       const onboardingParams = getOnboardingParams()
+      // Filter out null values to avoid validation errors
+      const body: Record<string, string> = { email }
+      if (onboardingParams.industry) body.industry = onboardingParams.industry
+      if (onboardingParams.target) body.target = onboardingParams.target
+      if (onboardingParams.country) body.country = onboardingParams.country
+      if (onboardingParams.experience) body.experience = onboardingParams.experience
+      if (onboardingParams.lang) body.lang = onboardingParams.lang
+
       const response = await apiFetch<GoogleAuthResponse>("/api/v1/auth/register-email", {
         method: "POST",
-        body: JSON.stringify({
-          email,
-          industry: onboardingParams.industry,
-          target: onboardingParams.target,
-          country: onboardingParams.country,
-          experience: onboardingParams.experience,
-          lang: onboardingParams.lang,
-        }),
+        body: JSON.stringify(body),
       })
 
       // Clear stored onboarding params after successful registration

@@ -338,15 +338,94 @@ export const leadDiscoveryApi = {
   },
 
   /**
+   * 쿼리에서 국가/지역 키워드를 감지하여 적합한 DB 판단
+   */
+  detectQueryTarget: (
+    query: string,
+  ): { searchB2B: boolean; searchCrunchbase: boolean; reason?: string } => {
+    const lowerQuery = query.toLowerCase()
+
+    // B2B Leads 전용 키워드 (USA, Canada만 지원)
+    const b2bOnlyKeywords = ["캐나다", "canada", "canadian"]
+    // Crunchbase 전용 키워드 (글로벌/지역 기반)
+    const crunchbaseOnlyKeywords = [
+      "유럽",
+      "europe",
+      "emea",
+      "아시아",
+      "asia",
+      "apac",
+      "중동",
+      "middle east",
+      "mena",
+      "남미",
+      "latin america",
+      "호주",
+      "australia",
+      "australasia",
+      "동남아",
+      "southeast asia",
+      "글로벌",
+      "global",
+      "worldwide",
+    ]
+
+    const isB2BOnly = b2bOnlyKeywords.some((kw) => lowerQuery.includes(kw))
+    const isCrunchbaseOnly = crunchbaseOnlyKeywords.some((kw) => lowerQuery.includes(kw))
+
+    if (isB2BOnly) {
+      return {
+        searchB2B: true,
+        searchCrunchbase: false,
+        reason: "캐나다는 B2B Leads에서만 검색 가능합니다.",
+      }
+    }
+
+    if (isCrunchbaseOnly) {
+      return {
+        searchB2B: false,
+        searchCrunchbase: true,
+        reason: "해당 지역은 Crunchbase에서만 검색 가능합니다.",
+      }
+    }
+
+    // 기본: 둘 다 검색
+    return { searchB2B: true, searchCrunchbase: true }
+  },
+
+  /**
    * BigQuery 두 DB 모두 검색 (B2B Leads + Crunchbase, 총 200개)
+   * 쿼리에 따라 적합한 DB만 선택적으로 검색
    */
   searchBigQuery: async (query: string): Promise<CombinedBigQuerySearchResponse> => {
     try {
-      // 두 DB 동시에 검색 (각각 100개씩)
-      const [b2bResult, crunchbaseResult] = await Promise.all([
-        leadDiscoveryApi.searchBigQuerySingle(`${query} 100개`, "b2b_leads"),
-        leadDiscoveryApi.searchBigQuerySingle(`${query} 100개`, "crunchbase"),
-      ])
+      // 쿼리 분석하여 검색 대상 DB 결정
+      const { searchB2B, searchCrunchbase, reason } = leadDiscoveryApi.detectQueryTarget(query)
+
+      console.log("[Lead Discovery] DB 선택:", { searchB2B, searchCrunchbase, reason })
+
+      // 선택된 DB만 검색
+      const b2bPromise = searchB2B
+        ? leadDiscoveryApi.searchBigQuerySingle(`${query} 100개`, "b2b_leads")
+        : Promise.resolve({
+            success: true,
+            sql: null,
+            explanation: reason || "이 쿼리에서는 B2B Leads를 검색하지 않았습니다.",
+            results: [] as LeadResult[],
+            totalCount: 0,
+          })
+
+      const crunchbasePromise = searchCrunchbase
+        ? leadDiscoveryApi.searchBigQuerySingle(`${query} 100개`, "crunchbase")
+        : Promise.resolve({
+            success: true,
+            sql: null,
+            explanation: reason || "이 쿼리에서는 Crunchbase를 검색하지 않았습니다.",
+            results: [] as LeadResult[],
+            totalCount: 0,
+          })
+
+      const [b2bResult, crunchbaseResult] = await Promise.all([b2bPromise, crunchbasePromise])
 
       // Crunchbase 결과를 B2B Leads 형식으로 정규화
       const normalizedCrunchbaseResults: LeadResult[] = crunchbaseResult.results.map((lead) => ({

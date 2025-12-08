@@ -763,15 +763,100 @@ export function ChatRoom() {
           addMessage(errorMessage)
         }
       } else {
-        // 상세 조건 모드: 추후 구현 예정
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        // 상세 조건 모드: 자연어로 직접 BigQuery 검색
+        const assistantMessageId = `msg-${Date.now()}-response`
         const assistantMessage: ChatMessage = {
-          id: `msg-${Date.now()}-response`,
+          id: assistantMessageId,
           role: "assistant",
-          content: `"${userInput}" 조건으로 검색하는 기능은 곧 만나볼 수 있어요.\n\n지금은 웹사이트 분석을 먼저 사용해보세요!`,
+          content: "",
           timestamp: new Date(),
         }
         addMessage(assistantMessage)
+
+        try {
+          // 로딩 메시지 표시
+          updateMessage(assistantMessageId, {
+            content: `🔍 "${userInput}" 조건으로 검색 중...`,
+          })
+
+          // BigQuery 두 DB 동시 검색
+          const result: CombinedBigQuerySearchResponse =
+            await leadDiscoveryApi.searchBigQuery(userInput)
+
+          console.log("[Lead Discovery] 상세 조건 검색 완료:", result)
+
+          if (result.success && result.combinedResults.length > 0) {
+            // 검색 결과를 Customer 형식으로 변환
+            const customers: Customer[] = result.combinedResults.map((lead, index) => ({
+              id: `lead-${Date.now()}-${index}`,
+              first_name: lead.first_name,
+              last_name: lead.last_name,
+              company_name: lead.company_name,
+              email: lead.email,
+              phone: lead.phone,
+              country: lead.country,
+              primary_city: lead.city,
+              industry: lead.industry,
+              sub_industry: lead.sub_industry,
+              web_address: lead.web_address,
+              employee: lead.employee,
+              revenue: lead.revenue,
+              source: "Lead Discovery",
+              createdAt: new Date(),
+            }))
+
+            addCustomers(customers)
+
+            // 검색 결과 설명 메시지
+            let resultInfo = `**🎯 "${userInput}" 검색 결과**\n\n`
+
+            // B2B Leads 결과 설명
+            if (result.b2bLeads.results.length > 0) {
+              resultInfo += `**🇺🇸 B2B Leads (${result.b2bLeads.results.length}개)**\n`
+              if (result.b2bLeads.explanation) {
+                resultInfo += `${result.b2bLeads.explanation}\n\n`
+              }
+            } else if (result.b2bLeads.sql === null && result.b2bLeads.explanation) {
+              // 검색을 스킵한 경우
+              resultInfo += `~~🇺🇸 B2B Leads~~ - ${result.b2bLeads.explanation}\n\n`
+            }
+
+            // Crunchbase 결과 설명
+            if (result.crunchbase.results.length > 0) {
+              resultInfo += `**🌍 Crunchbase (${result.crunchbase.results.length}개)**\n`
+              if (result.crunchbase.explanation) {
+                resultInfo += `${result.crunchbase.explanation}\n\n`
+              }
+            } else if (result.crunchbase.sql === null && result.crunchbase.explanation) {
+              // 검색을 스킵한 경우
+              resultInfo += `~~🌍 Crunchbase~~ - ${result.crunchbase.explanation}\n\n`
+            }
+
+            resultInfo += `총 **${result.combinedResults.length}개**의 고객을 찾았습니다.`
+
+            updateMessage(assistantMessageId, {
+              content: resultInfo,
+            })
+          } else {
+            // 검색 실패 또는 결과 없음
+            const errorMsg = result.error || "검색 결과가 없습니다"
+            let errorInfo = `**🔍 "${userInput}" 검색 결과**\n\n`
+            errorInfo += `⚠️ ${errorMsg}\n\n`
+            errorInfo += `다른 조건으로 검색해보세요. 예시:\n`
+            errorInfo += `- "미국 소프트웨어 회사 100개"\n`
+            errorInfo += `- "캐나다 헬스케어 기업"\n`
+            errorInfo += `- "금융 서비스 스타트업"`
+
+            updateMessage(assistantMessageId, {
+              content: errorInfo,
+            })
+          }
+        } catch (error) {
+          console.error("상세 조건 검색 오류:", error)
+          updateMessage(assistantMessageId, {
+            content: `앗, 검색 중 문제가 생겼어요.\n\n${error instanceof Error ? error.message : "조금 있다가 다시 시도해주세요."}`,
+          })
+        }
       }
 
       setIsLoading(false)

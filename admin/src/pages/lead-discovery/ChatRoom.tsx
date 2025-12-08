@@ -37,6 +37,14 @@ import {
   updateChatMessageAtom,
 } from "./store"
 
+// 코드 펜스 제거 유틸리티 (GPT가 ```markdown 으로 감싸는 경우 대비)
+function stripCodeFences(text: string): string {
+  let result = text
+  result = result.replace(/^```(?:markdown)?\s*\n?/i, "")
+  result = result.replace(/\n?```\s*$/i, "")
+  return result
+}
+
 type SearchMode = "website" | "detailed"
 
 export function ChatRoom() {
@@ -147,8 +155,21 @@ export function ChatRoom() {
 
       setStreamingState((prev) => {
         if (prev.messageId) {
+          // 분석 결과를 메시지에 포함 (코드 펜스 제거)
+          const cleanAnalysis = prev.analysisSummary ? stripCodeFences(prev.analysisSummary) : ""
+          const cleanCustomerAnalysis = prev.customerAnalysisSummary
+            ? stripCodeFences(prev.customerAnalysisSummary)
+            : ""
+
+          const analysisPart = cleanAnalysis
+            ? `---\n\n### 📊 웹사이트 분석 리포트\n\n${cleanAnalysis}\n\n`
+            : ""
+          const customerAnalysisPart = cleanCustomerAnalysis
+            ? `---\n\n### 👥 잠재 바이어 분석 리포트\n\n${cleanCustomerAnalysis}\n\n`
+            : ""
+
           updateMessage(prev.messageId, {
-            content: `${recInfo}**${data.totalCount}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.`,
+            content: `${recInfo}**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.\n\n${analysisPart}${customerAnalysisPart}`,
           })
         }
         return initialStreamingState
@@ -190,8 +211,21 @@ export function ChatRoom() {
 
       setStreamingState((prev) => {
         if (prev.messageId) {
+          // 분석 결과를 메시지에 포함 (코드 펜스 제거)
+          const cleanAnalysis = prev.analysisSummary ? stripCodeFences(prev.analysisSummary) : ""
+          const cleanCustomerAnalysis = prev.customerAnalysisSummary
+            ? stripCodeFences(prev.customerAnalysisSummary)
+            : ""
+
+          const analysisPart = cleanAnalysis
+            ? `---\n\n### 📊 웹사이트 분석 리포트\n\n${cleanAnalysis}\n\n`
+            : ""
+          const customerAnalysisPart = cleanCustomerAnalysis
+            ? `---\n\n### 👥 잠재 바이어 분석 리포트\n\n${cleanCustomerAnalysis}\n\n`
+            : ""
+
           updateMessage(prev.messageId, {
-            content: `${recInfo}**${data.totalCount}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.`,
+            content: `${recInfo}**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.\n\n${analysisPart}${customerAnalysisPart}`,
           })
         }
         return initialStreamingState
@@ -269,6 +303,8 @@ export function ChatRoom() {
       strong: ({ children }: { children?: React.ReactNode }) => (
         <strong className="font-bold">{children}</strong>
       ),
+      em: ({ children }: { children?: React.ReactNode }) => <em className="italic">{children}</em>,
+      hr: () => <hr className="my-6 border-border" />,
     }),
     [],
   )

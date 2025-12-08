@@ -151,10 +151,14 @@ If the user is asking about:
 - Available search options or filters
 
 Then respond with:
-HELP_QUERY: [Detailed Korean response explaining available data]
+HELP_QUERY: [Detailed Korean response explaining available data based on the provided industries and countries below]
 
-Example responses:
-- "어떤 산업 검색할 수 있어?" → HELP_QUERY: 검색 가능한 산업군입니다:\n\n**주요 산업 (Industry):**\n- Business Services (비즈니스 서비스)\n- Software & Internet (소프트웨어/IT)\n- Healthcare (헬스케어)\n- Financial Services (금융)\n- Manufacturing (제조업)\n- Retail (소매업)\n- Food & Beverage (식음료)\n- Real Estate & Construction (부동산/건설)\n- Education (교육)\n- Media & Entertainment (미디어/엔터테인먼트)\n\n**국가:** USA, Canada\n\n**검색 예시:**\n- "미국 소프트웨어 회사 100개"\n- "직원 1000명 이상 헬스케어 회사"\n- "캐나다 금융 서비스 회사"
+For HELP_QUERY responses, use the ACTUAL data from this database:
+- Industries: ${dataDictionary.industries.slice(0, 15).join(", ")}${dataDictionary.industries.length > 15 ? ` 외 ${dataDictionary.industries.length - 15}개` : ""}
+- Countries/Regions: ${dataDictionary.countries.join(", ")}
+- Employee Ranges: ${dataDictionary.employeeRanges.slice(0, 5).join(", ")}
+
+Generate a helpful Korean response listing the available industries and regions from THIS database.
 
 ### Type 2: INVALID_QUERY (무효한 쿼리)
 If the query is:
@@ -164,21 +168,29 @@ If the query is:
 
 Then respond with ONLY: INVALID_QUERY
 
-## IMPORTANT: Smart Search with Fallback to sub_industry
-If the user's query doesn't exactly match an industry name, AUTOMATICALLY search in sub_industry instead.
-DO NOT return NO_DATA if the term can be found in sub_industry.
+## CRITICAL: Only use columns that exist in this table!
+Available columns: ${dataDictionary.columns.join(", ")}
+DO NOT use any column that is not in the list above (e.g., if "sub_industry" is not listed, don't use it!)
 
-Examples of automatic expansion:
-- "IT 회사" → Search: industry = 'Software & Internet' OR industry = 'Computers & Electronics' OR sub_industry LIKE '%IT%'
-- "자동차 회사" → Search: sub_industry LIKE '%Automobile%' OR sub_industry LIKE '%Automotive%'
-- "패션 회사" → Search: sub_industry LIKE '%Clothing%' OR sub_industry LIKE '%Apparel%' OR sub_industry LIKE '%Fashion%'
-- "스타트업" → Search: industry = 'Software & Internet' (best match)
-- "테크 회사" → Search: industry IN ('Software & Internet', 'Computers & Electronics', 'Telecommunications')
+## Smart Search with LIKE
+Use LIKE '%keyword%' to find matches in the industry column.
 
-Only use NO_DATA when the data truly doesn't exist:
-- "한국 회사 찾아줘" → NO_DATA: 현재 데이터베이스에는 USA와 Canada 회사만 있습니다.
-- "일본 기업" → NO_DATA: 현재 데이터베이스에는 USA와 Canada 회사만 있습니다.
-- "유럽 회사" → NO_DATA: 현재 데이터베이스에는 USA와 Canada 회사만 있습니다.
+### CRITICAL: AND vs OR logic
+- When user wants COMBINATION of multiple attributes, use AND:
+  - "뷰티 유통업체" → industry LIKE '%Beauty%' AND industry LIKE '%Retail%'
+  - "IT 컨설팅" → industry LIKE '%Information Technology%' AND industry LIKE '%Consulting%'
+  - "헬스케어 스타트업" → industry LIKE '%Health%' (스타트업 is about company size, not industry)
+  
+- When user wants ANY of multiple similar terms, use OR:
+  - "IT 회사" → industry LIKE '%Software%' OR industry LIKE '%Information Technology%'
+  - "채용 회사" → industry LIKE '%Human Resources%' OR industry LIKE '%Recruiting%' OR industry LIKE '%Staffing%'
+  - "자동차 회사" → industry LIKE '%Automotive%' OR industry LIKE '%Automobile%'
+
+The key difference:
+- "A B업체" (A + B = specific type) → use AND
+- "A 회사" (synonyms of A) → use OR
+
+Only use NO_DATA when the requested region/country is NOT in the available countries list above.
 
 ## Table Information
 - Table Name: \`${dataDictionary.tableName}\`
@@ -200,45 +212,34 @@ ${dataDictionary.revenueRanges.map((r) => `- "${r}"`).join("\n")}
 
 ## Important Rules:
 1. ALWAYS use LIMIT clause (default 100, max 1000)
-2. Use UPPER() for country comparisons to handle case variations
-3. For revenue queries like "10억 달러 이상" or "over $1B", use: revenue = '> $1B'
-4. For employee queries like "1000명 이상", use employee ranges like '1K - 10K', '10K - 50K', etc.
-5. Return ONLY the SQL query, no explanations (or INVALID_QUERY if not a valid search)
-6. For Korean queries, understand common patterns:
-   - "미국" = USA
-   - "캐나다" = Canada  
-   - "헬스케어" = Healthcare
-   - "소프트웨어" = Software & Internet
-   - "제조업" = Manufacturing
-   - "금융" = Financial Services
-   - "식음료", "음식", "식품", "요식업" = Food & Beverage
-   - "소매" = Retail
-   - "교육" = Education
-   - "통신" = Telecommunications
-   - "정부" = Government
-   - "농업" = Agriculture & Mining
-   - "운송", "물류" = Transportation & Storage
-   - "대기업" = employee in ('10K - 50K', '50K - 100K', '> 100K')
-   - "중소기업" = employee in ('0 - 25', '25 - 100', '100 - 250')
-7. ALWAYS try to find matches - use sub_industry when industry doesn't match exactly:
-   - "IT", "IT회사" = industry IN ('Software & Internet', 'Computers & Electronics') OR sub_industry LIKE '%IT%'
-   - "테크", "기술" = industry IN ('Software & Internet', 'Computers & Electronics', 'Telecommunications')
-   - "자동차", "차량" = sub_industry LIKE '%Automobile%' OR sub_industry LIKE '%Automotive%'
-   - "병원" = sub_industry = 'Hospitals'
-   - "은행" = sub_industry = 'Banks'
-   - "호텔" = sub_industry = 'Hotels, Motels and Lodging'
-   - "레스토랑", "음식점" = sub_industry = 'Restaurants and Bars'
-   - "법률", "법무법인", "로펌" = sub_industry = 'Legal Services'
-   - "보험" = sub_industry = 'Insurance and Risk Management'
-   - "부동산" = sub_industry = 'Real Estate Agents and Appraisers'
-   - "광고", "마케팅" = sub_industry = 'Advertising, Marketing and PR'
-   - "제약" = sub_industry = 'Pharmaceuticals'
-   - "바이오" = sub_industry = 'Biotechnology'
-   - "항공", "항공우주" = sub_industry = 'Aerospace and Defense'
-   - "패션", "의류" = sub_industry LIKE '%Clothing%' OR sub_industry LIKE '%Apparel%'
-   - "화장품", "뷰티" = sub_industry LIKE '%Cosmetic%' OR sub_industry LIKE '%Beauty%'
-   - "게임" = sub_industry LIKE '%Game%' OR sub_industry LIKE '%Entertainment%'
-8. When in doubt, use LIKE with wildcards to find related sub_industries
+2. Return ONLY the SQL query, no explanations (or INVALID_QUERY if not a valid search)
+3. For Korean location queries, match to the available countries/regions:
+   - "미국" → Look for regions containing "US" (e.g., "Southern US", "Western US", "Northeastern US", "Midwestern US", "Great Lakes")
+   - "유럽" → Look for "EMEA" or "Europe"
+   - "아시아" → Look for "APAC" or "Asia-Pacific" or "Southeast Asia"
+   - "중동" → Look for "MENA" or "Middle East"
+   - "호주" → Look for "Australasia"
+   - "남미" → Look for "Latin America"
+   If the country column has exact values like "USA", "Canada", use those instead.
+
+4. For Korean industry queries, use LIKE to match (industries may contain multiple values):
+   - "소프트웨어", "IT" → industry LIKE '%Software%' OR industry LIKE '%Information Technology%'
+   - "헬스케어", "의료" → industry LIKE '%Health%' OR industry LIKE '%Medical%'
+   - "제조업" → industry LIKE '%Manufacturing%'
+   - "금융" → industry LIKE '%Financial%' OR industry LIKE '%Banking%'
+   - "부동산" → industry LIKE '%Real Estate%'
+   - "교육" → industry LIKE '%Education%'
+   - "광고", "마케팅" → industry LIKE '%Advertising%' OR industry LIKE '%Marketing%'
+   - "컨설팅" → industry LIKE '%Consulting%'
+   - "이커머스", "전자상거래" → industry LIKE '%E-Commerce%'
+   - "물류", "운송" → industry LIKE '%Logistics%' OR industry LIKE '%Transportation%'
+
+5. For employee range queries:
+   - Check the available employee ranges format (e.g., "0 - 25", "c_00001_00010")
+   - "대기업" = larger employee ranges
+   - "중소기업", "스타트업" = smaller employee ranges
+
+6. When in doubt, use LIKE with wildcards to find matches
 
 ## User Query:
 "${query}"

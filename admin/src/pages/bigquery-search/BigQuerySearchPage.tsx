@@ -82,85 +82,194 @@ interface EnrichmentResult {
   rawContent?: string
 }
 
-// 데이터 사전 (BigQuery 테이블 메타데이터)
-// 와일드카드 테이블로 lead_csv_data + lead_csv_data_02 모두 검색
-const DATA_DICTIONARY = {
-  tableName: "gen-lang-client-0140658679.test_lead_01.lead_csv_data*",
-  columns: [
-    "first_name",
-    "middle_name",
-    "last_name",
-    "title",
-    "company_name",
-    "mailing_address",
-    "primary_city",
-    "primary_state",
-    "zip_code",
-    "country",
-    "phone",
-    "web_address",
-    "email",
-    "revenue",
-    "employee",
-    "industry",
-    "sub_industry",
-  ],
-  industries: [
-    "Business Services",
-    "Manufacturing",
-    "Retail",
-    "Financial Services",
-    "Healthcare",
-    "Real Estate & Construction",
-    "Computers & Electronics",
-    "Software & Internet",
-    "Education",
-    "Media & Entertainment",
-    "Consumer Services",
-    "Travel, Recreation, and Leisure",
-    "Telecommunications",
-    "Non-Profit",
-    "Transportation & Storage",
-    "Other",
-    "Energy & Utilities",
-    "Wholesale & Distribution",
-    "Government",
-    "Agriculture & Mining",
-    "Retail & Wholesale",
-    "Services (Miscellaneous)",
-    "Food & Beverage",
-    "Travel & Accommodation",
-    "Recreation & Leisure",
-    "Conglomerates",
-  ],
-  countries: ["USA", "Canada"],
-  employeeRanges: [
-    "0 - 25",
-    "25 - 100",
-    "100 - 250",
-    "250 - 1000",
-    "1K - 10K",
-    "10K - 50K",
-    "50K - 100K",
-    "> 100K",
-  ],
-  revenueRanges: [
-    "$0 - $1M",
-    "$0 - 1M",
-    "$1 - $10M",
-    "$1 - 10M",
-    "$10 - $50M",
-    "$10 - 50M",
-    "$50 - $100M",
-    "$50 - 100M",
-    "$100 - $250M",
-    "$100 - 250M",
-    "$250 - $500M",
-    "$250 - 500M",
-    "$500M - $1B",
-    "$500M - 1B",
-    "> $1B",
-  ],
+// 데이터베이스 타입
+type DatabaseType = "b2b_leads" | "crunchbase"
+
+// 데이터베이스별 설정
+const DATABASE_OPTIONS: Record<DatabaseType, { label: string; description: string; icon: string }> =
+  {
+    b2b_leads: {
+      label: "B2B Leads",
+      description: "USA & Canada (100만+ 리드)",
+      icon: "🇺🇸",
+    },
+    crunchbase: {
+      label: "Crunchbase",
+      description: "Global (200만+ 기업)",
+      icon: "🌍",
+    },
+  }
+
+// 데이터 사전 (BigQuery 테이블별 메타데이터)
+const DATA_DICTIONARIES: Record<
+  DatabaseType,
+  {
+    tableName: string
+    columns: string[]
+    industries: string[]
+    countries: string[]
+    employeeRanges: string[]
+    revenueRanges: string[]
+  }
+> = {
+  b2b_leads: {
+    tableName: "gen-lang-client-0140658679.test_lead_01.lead_csv_data*",
+    columns: [
+      "first_name",
+      "middle_name",
+      "last_name",
+      "title",
+      "company_name",
+      "mailing_address",
+      "primary_city",
+      "primary_state",
+      "zip_code",
+      "country",
+      "phone",
+      "web_address",
+      "email",
+      "revenue",
+      "employee",
+      "industry",
+      "sub_industry",
+    ],
+    industries: [
+      "Business Services",
+      "Manufacturing",
+      "Retail",
+      "Financial Services",
+      "Healthcare",
+      "Real Estate & Construction",
+      "Computers & Electronics",
+      "Software & Internet",
+      "Education",
+      "Media & Entertainment",
+      "Consumer Services",
+      "Travel, Recreation, and Leisure",
+      "Telecommunications",
+      "Non-Profit",
+      "Transportation & Storage",
+      "Other",
+      "Energy & Utilities",
+      "Wholesale & Distribution",
+      "Government",
+      "Agriculture & Mining",
+      "Retail & Wholesale",
+      "Services (Miscellaneous)",
+      "Food & Beverage",
+      "Travel & Accommodation",
+      "Recreation & Leisure",
+      "Conglomerates",
+    ],
+    countries: ["USA", "Canada"],
+    employeeRanges: [
+      "0 - 25",
+      "25 - 100",
+      "100 - 250",
+      "250 - 1000",
+      "1K - 10K",
+      "10K - 50K",
+      "50K - 100K",
+      "> 100K",
+    ],
+    revenueRanges: [
+      "$0 - $1M",
+      "$0 - 1M",
+      "$1 - $10M",
+      "$1 - 10M",
+      "$10 - $50M",
+      "$10 - 50M",
+      "$50 - $100M",
+      "$50 - 100M",
+      "$100 - $250M",
+      "$100 - 250M",
+      "$250 - $500M",
+      "$250 - 500M",
+      "$500M - $1B",
+      "$500M - 1B",
+      "> $1B",
+    ],
+  },
+  crunchbase: {
+    tableName: "gen-lang-client-0140658679.test_lead_01.crunchbase_all",
+    columns: [
+      "first_name",
+      "last_name",
+      "title",
+      "email",
+      "company",
+      "website",
+      "country",
+      "industry",
+      "employees",
+      "revenue",
+      "phone",
+      "description",
+      "linkedin",
+      "facebook",
+      "twitter",
+    ],
+    industries: [
+      "Software",
+      "Information Technology",
+      "Manufacturing",
+      "Health Care",
+      "Real Estate",
+      "Education",
+      "E-Commerce",
+      "Consulting",
+      "Financial Services",
+      "Advertising",
+      "Marketing",
+      "Construction",
+      "Internet",
+      "Banking",
+      "Finance",
+      "Logistics",
+      "Transportation",
+      "Dental",
+      "Medical",
+      "Hospital",
+      "Human Resources",
+      "Recruiting",
+      "Staffing Agency",
+      "Property Management",
+      "Accounting",
+      "Freight Service",
+      "Wholesale",
+      "Mechanical Engineering",
+      "Wellness",
+    ],
+    // Crunchbase는 region 사용 (country 컬럼에 저장됨)
+    countries: [
+      "Southern US",
+      "Western US",
+      "Northeastern US",
+      "Midwestern US",
+      "Great Lakes",
+      "and Africa (EMEA)",
+      "Asia-Pacific (APAC)",
+      "Latin America",
+      "Australasia",
+      "Middle East and North Africa (MENA)",
+      "Southeast Asia",
+      "Middle East",
+      "Central America",
+      "Nordic Countries",
+    ],
+    employeeRanges: [
+      "c_00001_00010",
+      "c_00011_00050",
+      "c_00051_00100",
+      "c_00101_00250",
+      "c_00251_00500",
+      "c_00501_01000",
+      "c_01001_05000",
+      "c_05001_10000",
+      "c_10001_max",
+    ],
+    revenueRanges: [], // Crunchbase에는 revenue 데이터 없음
+  },
 }
 
 interface Message {
@@ -175,19 +284,33 @@ interface Message {
 }
 
 interface LeadResult {
+  // 공통 필드
   first_name?: string
   last_name?: string
-  company_name?: string
   email?: string
   phone?: string
-  web_address?: string
   industry?: string
-  sub_industry?: string
   country?: string
+  revenue?: string
+  // B2B Leads 전용 필드
+  company_name?: string
+  web_address?: string
+  sub_industry?: string
   primary_city?: string
   primary_state?: string
-  revenue?: string
   employee?: string
+  middle_name?: string
+  mailing_address?: string
+  zip_code?: string
+  // Crunchbase 전용 필드
+  company?: string
+  website?: string
+  employees?: string
+  description?: string
+  linkedin?: string
+  facebook?: string
+  twitter?: string
+  title?: string
   [key: string]: string | number | boolean | undefined
 }
 
@@ -354,6 +477,10 @@ ${t("bigquery-search.welcome.exampleHint")}`,
     loadCollapsedFromStorage(),
   )
 
+  // 선택된 데이터베이스
+  const [selectedDatabase, setSelectedDatabase] = useState<DatabaseType>("b2b_leads")
+  const currentDataDictionary = DATA_DICTIONARIES[selectedDatabase]
+
   // Enrichment 상태
   const [enrichmentModalOpen, setEnrichmentModalOpen] = useState(false)
   const [enrichmentData, setEnrichmentData] = useState<EnrichmentResult | null>(null)
@@ -459,7 +586,7 @@ ${t("bigquery-search.welcome.exampleHint")}`,
           },
           body: JSON.stringify({
             query: userMessage.content,
-            dataDictionary: DATA_DICTIONARY,
+            dataDictionary: currentDataDictionary,
           }),
         })
 
@@ -618,7 +745,10 @@ ${t("bigquery-search.welcome.exampleHint")}`,
 
   // 리드 정보 조회 (Enrichment)
   const handleEnrichLead = async (lead: LeadResult) => {
-    if (!lead.web_address) {
+    const webAddress = lead.web_address || lead.website
+    const companyName = lead.company_name || lead.company || ""
+
+    if (!webAddress) {
       toast.error(t("bigquery-search.enrichment.noWebsite"))
       return
     }
@@ -636,8 +766,8 @@ ${t("bigquery-search.welcome.exampleHint")}`,
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
         body: JSON.stringify({
-          webAddress: lead.web_address,
-          companyName: lead.company_name || "",
+          webAddress,
+          companyName,
         }),
       })
 
@@ -686,12 +816,12 @@ ${t("bigquery-search.welcome.exampleHint")}`,
             email: lead.email,
             firstName: lead.first_name,
             lastName: lead.last_name,
-            companyName: lead.company_name,
+            companyName: lead.company_name || lead.company,
             phone: lead.phone,
             country: lead.country,
             city: lead.primary_city,
             industry: lead.industry,
-            webAddress: lead.web_address,
+            webAddress: lead.web_address || lead.website,
           })),
         }),
       })
@@ -761,16 +891,53 @@ ${t("bigquery-search.welcome.exampleHint")}`,
       {/* 헤더 */}
       <div className="flex-none border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-              <Database className="h-5 w-5" />
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+                <Database className="h-5 w-5" />
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold">{t("bigquery-search.header.title")}</h1>
+                <p className="text-sm text-muted-foreground">
+                  {t("bigquery-search.header.description")}
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-lg font-semibold">{t("bigquery-search.header.title")}</h1>
-              <p className="text-sm text-muted-foreground">
-                {t("bigquery-search.header.description")}
-              </p>
-            </div>
+
+            {/* DB 선택 드롭다운 */}
+            <Select
+              value={selectedDatabase}
+              onValueChange={(value: DatabaseType) => setSelectedDatabase(value)}
+            >
+              <SelectTrigger className="w-[220px] border-dashed">
+                <div className="flex items-center gap-2">
+                  <span>{DATABASE_OPTIONS[selectedDatabase].icon}</span>
+                  <div className="flex flex-col items-start">
+                    <span className="text-sm font-medium">
+                      {DATABASE_OPTIONS[selectedDatabase].label}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {DATABASE_OPTIONS[selectedDatabase].description}
+                    </span>
+                  </div>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(DATABASE_OPTIONS) as DatabaseType[]).map((dbKey) => (
+                  <SelectItem key={dbKey} value={dbKey}>
+                    <div className="flex items-center gap-2">
+                      <span>{DATABASE_OPTIONS[dbKey].icon}</span>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{DATABASE_OPTIONS[dbKey].label}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {DATABASE_OPTIONS[dbKey].description}
+                        </span>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 캠페인 추가 버튼 */}
@@ -980,7 +1147,7 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                   {t("bigquery-search.empty.industries")}
                                 </p>
                                 <div className="flex flex-wrap gap-1.5 justify-center">
-                                  {DATA_DICTIONARY.industries.slice(0, 12).map((industry) => (
+                                  {currentDataDictionary.industries.slice(0, 12).map((industry) => (
                                     <Badge
                                       key={industry}
                                       variant="secondary"
@@ -994,13 +1161,13 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                       {industry}
                                     </Badge>
                                   ))}
-                                  {DATA_DICTIONARY.industries.length > 12 && (
+                                  {currentDataDictionary.industries.length > 12 && (
                                     <Badge
                                       variant="outline"
                                       className="text-xs text-muted-foreground"
                                     >
                                       {t("bigquery-search.empty.moreIndustries", {
-                                        count: DATA_DICTIONARY.industries.length - 12,
+                                        count: currentDataDictionary.industries.length - 12,
                                       })}
                                     </Badge>
                                   )}
@@ -1172,26 +1339,31 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                                 {globalIndex + 1}
                                               </TableCell>
                                               <TableCell className="font-medium max-w-[200px] truncate">
-                                                {result.company_name || "-"}
+                                                {result.company_name || result.company || "-"}
                                               </TableCell>
                                               <TableCell className="max-w-[180px]">
-                                                {result.web_address ? (
+                                                {result.web_address || result.website ? (
                                                   <a
                                                     href={
-                                                      result.web_address.startsWith("http")
-                                                        ? result.web_address
-                                                        : `https://${result.web_address}`
+                                                      (
+                                                        result.web_address ||
+                                                        result.website ||
+                                                        ""
+                                                      ).startsWith("http")
+                                                        ? result.web_address || result.website
+                                                        : `https://${result.web_address || result.website}`
                                                     }
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
-                                                    title={result.web_address}
+                                                    title={result.web_address || result.website}
                                                   >
                                                     <span className="truncate max-w-[140px]">
-                                                      {result.web_address.replace(
-                                                        /^https?:\/\//,
-                                                        "",
-                                                      )}
+                                                      {(
+                                                        result.web_address ||
+                                                        result.website ||
+                                                        ""
+                                                      ).replace(/^https?:\/\//, "")}
                                                     </span>
                                                     <ExternalLink className="h-3 w-3 flex-shrink-0" />
                                                   </a>
@@ -1236,7 +1408,7 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                                   variant="outline"
                                                   className="text-xs font-normal"
                                                 >
-                                                  {result.employee || "-"}
+                                                  {result.employee || result.employees || "-"}
                                                 </Badge>
                                               </TableCell>
                                               <TableCell className="text-center">
@@ -1246,9 +1418,9 @@ ${t("bigquery-search.welcome.exampleHint")}`,
                                                   size="sm"
                                                   className="h-7 w-7 p-0"
                                                   onClick={() => handleEnrichLead(result)}
-                                                  disabled={!result.web_address}
+                                                  disabled={!(result.web_address || result.website)}
                                                   title={
-                                                    result.web_address
+                                                    result.web_address || result.website
                                                       ? t("bigquery-search.tooltip.viewCompanyInfo")
                                                       : t("bigquery-search.tooltip.noWebsite")
                                                   }
@@ -1423,21 +1595,27 @@ ${t("bigquery-search.welcome.exampleHint")}`,
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-blue-500" />
-              {selectedLeadForEnrichment?.company_name || t("bigquery-search.enrichment.title")}
+              {selectedLeadForEnrichment?.company_name ||
+                selectedLeadForEnrichment?.company ||
+                t("bigquery-search.enrichment.title")}
             </DialogTitle>
             <DialogDescription>
-              {selectedLeadForEnrichment?.web_address && (
+              {(selectedLeadForEnrichment?.web_address || selectedLeadForEnrichment?.website) && (
                 <a
                   href={
-                    selectedLeadForEnrichment.web_address.startsWith("http")
-                      ? selectedLeadForEnrichment.web_address
-                      : `https://${selectedLeadForEnrichment.web_address}`
+                    (
+                      selectedLeadForEnrichment.web_address ||
+                      selectedLeadForEnrichment.website ||
+                      ""
+                    ).startsWith("http")
+                      ? selectedLeadForEnrichment.web_address || selectedLeadForEnrichment.website
+                      : `https://${selectedLeadForEnrichment.web_address || selectedLeadForEnrichment.website}`
                   }
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-blue-500 hover:underline"
                 >
-                  {selectedLeadForEnrichment.web_address}
+                  {selectedLeadForEnrichment.web_address || selectedLeadForEnrichment.website}
                   <ExternalLink className="h-3 w-3" />
                 </a>
               )}

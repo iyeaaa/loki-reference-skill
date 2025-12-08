@@ -1,12 +1,50 @@
 import DOMPurify from "dompurify"
 import Encoding from "encoding-japanese"
 import quotedPrintable from "quoted-printable"
-import { useMemo } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import utf8 from "utf8"
 
 interface EmailBodyProps {
   bodyText?: string
   bodyHtml?: string
+}
+
+/**
+ * Check if a string is Base64 encoded
+ */
+function isBase64(str: string): boolean {
+  if (!str || str.length === 0) return false
+  // Base64 strings should be at least 4 chars and have valid characters
+  // Also check that it doesn't look like regular HTML or plain text
+  if (str.startsWith("<") || str.startsWith("<!")) return false
+  if (str.startsWith("Dear") || str.startsWith("Hi") || str.startsWith("Hello")) return false
+  // Check for Base64 pattern: alphanumeric, +, /, =, and newlines
+  const base64Regex = /^[A-Za-z0-9+/\r\n]+=*$/
+  // Remove whitespace and check
+  const cleaned = str.replace(/[\r\n\s]/g, "")
+  return cleaned.length >= 4 && base64Regex.test(cleaned)
+}
+
+/**
+ * Decode Base64 string to UTF-8 text
+ */
+function decodeBase64(str: string): string {
+  try {
+    // Remove whitespace/newlines that might be in the base64 string
+    const cleaned = str.replace(/[\r\n\s]/g, "")
+    // Decode base64 to binary string
+    const binaryString = atob(cleaned)
+    // Convert binary string to UTF-8
+    const bytes = new Uint8Array(binaryString.length)
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i)
+    }
+    const decoder = new TextDecoder("utf-8")
+    return decoder.decode(bytes)
+  } catch (e) {
+    console.error("Failed to decode Base64:", e)
+    return str
+  }
 }
 
 /**
@@ -207,8 +245,17 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
     // Prefer HTML content if available
     if (bodyHtml) {
       console.log("📧 Processing bodyHtml...")
+
+      // Check if content is Base64 encoded first
+      let rawHtml = bodyHtml
+      if (isBase64(bodyHtml)) {
+        console.log("📧 bodyHtml is Base64 encoded, decoding...")
+        rawHtml = decodeBase64(bodyHtml)
+        console.log("📧 Decoded Base64 HTML preview:", rawHtml.substring(0, 200))
+      }
+
       // Remove MIME headers if present
-      const cleanedHtml = removeMimeHeaders(bodyHtml)
+      const cleanedHtml = removeMimeHeaders(rawHtml)
       // Then decode if needed
       const decodedHtml = decodeEncodedText(cleanedHtml)
 
@@ -239,7 +286,7 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
             KEEP_CONTENT: true,
           })
           console.log("✅ Cleaned formatted HTML length:", cleaned.length)
-          return { type: "html" as const, content: cleaned }
+          return { type: "html" as const, content: cleaned, hasFullHtml: false }
         }
         return { type: "text" as const, content: decodedHtml }
       }
@@ -249,6 +296,10 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
       const cleaned = DOMPurify.sanitize(decodedHtml, {
         // Allow almost all HTML tags (email templates are complex)
         ALLOWED_TAGS: [
+          "html",
+          "head",
+          "body",
+          "title",
           "p",
           "br",
           "strong",
@@ -315,6 +366,11 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
           "id",
           "name",
           "type",
+          "xmlns",
+          "xmlns:v",
+          "xmlns:o",
+          "http-equiv",
+          "content",
         ],
         ALLOW_DATA_ATTR: false,
         ALLOW_UNKNOWN_PROTOCOLS: false,
@@ -326,22 +382,66 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
         // Return DOM instead of string for better handling
         RETURN_DOM: false,
         RETURN_DOM_FRAGMENT: false,
-        // More permissive settings
-        WHOLE_DOCUMENT: false,
-        FORCE_BODY: false,
+        // More permissive settings - allow full document for email HTML
+        WHOLE_DOCUMENT: true,
+        FORCE_BODY: true,
       })
 
       console.log("Cleaned HTML length:", cleaned.length)
       console.log("First 500 chars of cleaned:", cleaned.substring(0, 500))
 
-      return { type: "html" as const, content: cleaned }
+      // Extract actual text content from HTML to check if there's meaningful content
+      const tempDiv = document.createElement("div")
+      tempDiv.innerHTML = cleaned
+      const textContent = tempDiv.textContent || tempDiv.innerText || ""
+      const actualTextLength = textContent.trim().length
+      console.log("Actual text content length:", actualTextLength)
+
+      // If cleaned HTML has no meaningful text content, fallback to bodyText
+      if (cleaned.length === 0 || actualTextLength < 10) {
+        console.log("📧 Cleaned HTML has no meaningful text content, falling back to bodyText")
+        if (bodyText) {
+          const cleanedText = removeMimeHeaders(bodyText)
+          const decoded = decodeEncodedText(cleanedText)
+          console.log("📧 Fallback bodyText length:", decoded.length)
+          console.log("📧 Fallback bodyText preview:", decoded.substring(0, 200))
+          if (decoded.includes("[") && decoded.includes("]")) {
+            const withLineBreaks = decoded.replace(/\n/g, "<br>")
+            const formatted = formatBracketedContent(withLineBreaks)
+            const cleanedFormatted = DOMPurify.sanitize(formatted, {
+              ALLOWED_TAGS: ["a", "span", "br", "div", "p"],
+              ALLOWED_ATTR: ["href", "target", "rel", "class"],
+              ALLOW_DATA_ATTR: false,
+              ALLOW_UNKNOWN_PROTOCOLS: false,
+              KEEP_CONTENT: true,
+            })
+            return { type: "html" as const, content: cleanedFormatted, hasFullHtml: false }
+          }
+          return { type: "text" as const, content: decoded }
+        }
+      }
+
+      // Check if HTML contains <style> tags (needs iframe isolation)
+      const hasStyleTags = /<style[\s>]/i.test(cleaned)
+      console.log("Has style tags:", hasStyleTags)
+
+      return { type: "html" as const, content: cleaned, hasFullHtml: hasStyleTags }
     }
 
     // Fall back to text content
     if (bodyText) {
       console.log("📧 Processing bodyText...")
+
+      // Check if content is Base64 encoded first
+      let rawText = bodyText
+      if (isBase64(bodyText)) {
+        console.log("📧 bodyText is Base64 encoded, decoding...")
+        rawText = decodeBase64(bodyText)
+        console.log("📧 Decoded Base64 text preview:", rawText.substring(0, 200))
+      }
+
       // Remove MIME headers if present
-      const cleanedText = removeMimeHeaders(bodyText)
+      const cleanedText = removeMimeHeaders(rawText)
       console.log("After MIME cleanup:", cleanedText.substring(0, 200))
       // Then decode if needed
       const decoded = decodeEncodedText(cleanedText)
@@ -366,6 +466,10 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
         // Sanitize as HTML
         const cleaned = DOMPurify.sanitize(decoded, {
           ALLOWED_TAGS: [
+            "html",
+            "head",
+            "body",
+            "title",
             "p",
             "br",
             "strong",
@@ -431,6 +535,11 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
             "id",
             "name",
             "type",
+            "xmlns",
+            "xmlns:v",
+            "xmlns:o",
+            "http-equiv",
+            "content",
           ],
           ALLOW_DATA_ATTR: false,
           ALLOW_UNKNOWN_PROTOCOLS: false,
@@ -439,14 +548,34 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
           ADD_ATTR: ["target", "xmlns"],
           RETURN_DOM: false,
           RETURN_DOM_FRAGMENT: false,
-          WHOLE_DOCUMENT: false,
-          FORCE_BODY: false,
+          WHOLE_DOCUMENT: true,
+          FORCE_BODY: true,
         })
 
         console.log("Cleaned bodyText HTML length:", cleaned.length)
         console.log("First 500 chars of cleaned:", cleaned.substring(0, 500))
 
-        return { type: "html" as const, content: cleaned }
+        // If cleaned HTML is empty, fallback to plain text rendering
+        if (cleaned.length === 0) {
+          console.log("📧 Cleaned bodyText HTML is empty, falling back to plain text")
+          if (decoded.includes("[") && decoded.includes("]")) {
+            const withLineBreaks = decoded.replace(/\n/g, "<br>")
+            const formatted = formatBracketedContent(withLineBreaks)
+            const cleanedFormatted = DOMPurify.sanitize(formatted, {
+              ALLOWED_TAGS: ["a", "span", "br", "div", "p"],
+              ALLOWED_ATTR: ["href", "target", "rel", "class"],
+              ALLOW_DATA_ATTR: false,
+              ALLOW_UNKNOWN_PROTOCOLS: false,
+              KEEP_CONTENT: true,
+            })
+            return { type: "html" as const, content: cleanedFormatted, hasFullHtml: false }
+          }
+          return { type: "text" as const, content: decoded }
+        }
+
+        // Check if HTML contains <style> tags (needs iframe isolation)
+        const hasStyleTagsInBodyText = /<style[\s>]/i.test(cleaned)
+        return { type: "html" as const, content: cleaned, hasFullHtml: hasStyleTagsInBodyText }
       }
 
       // Plain text - check if it has bracketed content to format
@@ -464,7 +593,7 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
           KEEP_CONTENT: true,
         })
         console.log("✅ Cleaned formatted HTML length:", cleaned.length)
-        return { type: "html" as const, content: cleaned }
+        return { type: "html" as const, content: cleaned, hasFullHtml: false }
       }
 
       return { type: "text" as const, content: decoded }
@@ -473,11 +602,61 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
     return { type: "empty" as const, content: "" }
   }, [bodyHtml, bodyText])
 
+  // State for iframe height auto-adjustment
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [iframeHeight, setIframeHeight] = useState(200)
+
+  // Adjust iframe height based on content
+  useEffect(() => {
+    if (sanitizedContent.type !== "html" || !sanitizedContent.hasFullHtml) {
+      return
+    }
+
+    const iframe = iframeRef.current
+    if (!iframe) return
+
+    const adjustHeight = () => {
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow?.document
+        if (doc?.body) {
+          const height = doc.body.scrollHeight
+          if (height > 0) {
+            setIframeHeight(Math.min(height + 20, 2000)) // Max 2000px
+          }
+        }
+      } catch (_e) {
+        // Cross-origin errors are expected, ignore
+      }
+    }
+
+    // Adjust after initial load
+    iframe.onload = adjustHeight
+
+    // Also try after a short delay for slow-loading content
+    const timeout = setTimeout(adjustHeight, 500)
+    return () => clearTimeout(timeout)
+  }, [sanitizedContent])
+
   if (sanitizedContent.type === "empty") {
     return <div className="text-muted-foreground italic">(내용 없음)</div>
   }
 
   if (sanitizedContent.type === "html") {
+    // For full HTML documents with <style> tags, use iframe to isolate styles
+    if (sanitizedContent.hasFullHtml) {
+      return (
+        <iframe
+          ref={iframeRef}
+          srcDoc={sanitizedContent.content}
+          title="Email content"
+          className="w-full border-0"
+          style={{ height: `${iframeHeight}px`, minHeight: "200px" }}
+          sandbox="allow-same-origin"
+        />
+      )
+    }
+
+    // For simple HTML without <style> tags, use dangerouslySetInnerHTML
     return (
       <div
         className="prose prose-sm max-w-none break-words [&_img]:max-w-full [&_img]:h-auto [&_a]:text-blue-600 [&_a]:underline"

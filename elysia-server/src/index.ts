@@ -23,6 +23,7 @@ import { adminEmailRoutes, emailRoutes } from "./routes/emails.routes"
 import { geminiFileSearchRoutes } from "./routes/gemini-file-search.routes"
 // Import routes
 import { apiHealthRoute, healthRoutes } from "./routes/health.routes"
+import { leadDiscoveryRoutes } from "./routes/lead-discovery.routes"
 import { leadEnrichmentRoutes } from "./routes/lead-enrichment.routes"
 import { leadImportRoutes } from "./routes/lead-import.routes"
 import { adminLeadRoutes, leadRoutes } from "./routes/leads.routes"
@@ -171,6 +172,7 @@ const app = new Elysia()
   .use(bigquerySearchRoutes)
   .use(leadEnrichmentRoutes)
   .use(nylasRoutes)
+  .use(leadDiscoveryRoutes)
 
   .listen(config.port)
 

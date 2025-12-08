@@ -20,6 +20,8 @@ system.emailTemplates.title,이메일 템플릿 관리,Email Template Management
 system.emailTemplates.desc,이메일 템플릿을 생성하고 관리합니다,Create and manage email templates
 system.bulkEmailCSV.title,CSV 대량 메일 발송,CSV Bulk Email Sending
 system.bulkEmailCSV.desc,CSV 파일로 여러 수신자에게 이메일을 한 번에 발송합니다,Send emails to multiple recipients at once via CSV file
+system.webExtraction.title,웹 데이터 추출,Web Data Extraction
+system.webExtraction.desc,웹사이트에서 회사 정보를 자동으로 추출합니다,Automatically extract company information from websites
 workspace.title,워크스페이스 정보,Workspace Information
 workspace.description,현재 워크스페이스의 회사 정보를 관리합니다,Manage company information for the current workspace
 workspace.descriptionFor,{{name}}의 회사 정보를 관리합니다,Manage company information for {{name}}

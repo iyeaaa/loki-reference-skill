@@ -33,6 +33,11 @@ export const responseTransformer = (app: Elysia) =>
       return response
     }
 
+    // Skip transformation for lead-discovery endpoint (SSE streaming)
+    if (request.url.includes("/api/v1/lead-discovery")) {
+      return response
+    }
+
     // Skip transformation for SSE streams (text/event-stream)
     if (set.headers?.["content-type"]?.includes("text/event-stream")) {
       return response

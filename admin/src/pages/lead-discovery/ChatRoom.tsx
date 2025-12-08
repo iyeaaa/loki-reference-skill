@@ -1,221 +1,252 @@
-import { useAtom, useSetAtom } from "jotai"
+/**
+ * ChatRoom Component (Optimized)
+ * - Jotai 기반 메시지 상태 (레이아웃 전환 시에도 유지)
+ * - TanStack Query mutation 사용
+ * - 스트리밍 메시지 분리
+ */
+
+import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import { ArrowRight, Check, Globe, Lightbulb, Loader2, SlidersHorizontal } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
 import TextPlus from "@/assets/text-plus.svg"
 import TextRinda from "@/assets/text-rinda.svg"
-import { StarSpinner } from "@/components/chatbot/StarSpinner"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useWebsiteAnalysis } from "@/lib/api/hooks/web-extraction"
+import {
+  type LeadDiscoveryEventData,
+  useLeadDiscoveryMutation,
+  useLeadDiscoverySelectMutation,
+} from "@/lib/api/hooks/lead-discovery"
+import type { BigQueryResult, BuyerRecommendation } from "@/lib/api/types/lead-discovery"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
-
-type SearchMode = "website" | "detailed"
-
+import { BuyerRecommendationCards } from "./components/BuyerRecommendationCards"
+import { LeadDiscoveryProgress } from "./components/LeadDiscoveryProgress"
 import {
   addChatMessageAtom,
   addCustomersAtom,
   type ChatMessage,
-  type ChatMessageAction,
   type Customer,
   chatMessagesAtom,
-  isLoadingAtom,
-  isSubmittingAtom,
+  initialStreamingState,
+  streamingStateAtom,
   updateChatMessageAtom,
 } from "./store"
 
-// 100개의 더미 Customer 데이터 생성 (테이블 테스트용)
-function createDummyCustomers(count: number = 100): Customer[] {
-  const baseCompanies = [
-    {
-      name: "Tesla",
-      industry: "Automotive",
-      sub_industry: "Electric Vehicles",
-      country: "United States",
-    },
-    {
-      name: "Apple",
-      industry: "Technology",
-      sub_industry: "Consumer Electronics",
-      country: "United States",
-    },
-    {
-      name: "Samsung",
-      industry: "Technology",
-      sub_industry: "Electronics",
-      country: "South Korea",
-    },
-    { name: "Toyota", industry: "Automotive", sub_industry: "Manufacturing", country: "Japan" },
-    {
-      name: "Microsoft",
-      industry: "Technology",
-      sub_industry: "Software",
-      country: "United States",
-    },
-    { name: "Amazon", industry: "E-commerce", sub_industry: "Retail", country: "United States" },
-    {
-      name: "Google",
-      industry: "Technology",
-      sub_industry: "Internet Services",
-      country: "United States",
-    },
-    { name: "BMW", industry: "Automotive", sub_industry: "Luxury Vehicles", country: "Germany" },
-    { name: "Sony", industry: "Technology", sub_industry: "Electronics", country: "Japan" },
-    {
-      name: "Intel",
-      industry: "Technology",
-      sub_industry: "Semiconductors",
-      country: "United States",
-    },
-    { name: "Nike", industry: "Retail", sub_industry: "Sportswear", country: "United States" },
-    { name: "Adidas", industry: "Retail", sub_industry: "Sportswear", country: "Germany" },
-    {
-      name: "Pfizer",
-      industry: "Healthcare",
-      sub_industry: "Pharmaceuticals",
-      country: "United States",
-    },
-    {
-      name: "Johnson & Johnson",
-      industry: "Healthcare",
-      sub_industry: "Medical Devices",
-      country: "United States",
-    },
-    {
-      name: "Siemens",
-      industry: "Manufacturing",
-      sub_industry: "Industrial Automation",
-      country: "Germany",
-    },
-    {
-      name: "General Electric",
-      industry: "Manufacturing",
-      sub_industry: "Conglomerate",
-      country: "United States",
-    },
-    { name: "Volkswagen", industry: "Automotive", sub_industry: "Automobile", country: "Germany" },
-    { name: "Ford", industry: "Automotive", sub_industry: "Automobile", country: "United States" },
-    { name: "Honda", industry: "Automotive", sub_industry: "Automobile", country: "Japan" },
-    { name: "Hyundai", industry: "Automotive", sub_industry: "Automobile", country: "South Korea" },
-  ]
-
-  const cities = {
-    "United States": [
-      "New York",
-      "Los Angeles",
-      "San Francisco",
-      "Seattle",
-      "Boston",
-      "Austin",
-      "Chicago",
-    ],
-    "South Korea": ["Seoul", "Busan", "Incheon", "Daegu", "Daejeon"],
-    Japan: ["Tokyo", "Osaka", "Yokohama", "Nagoya", "Sapporo"],
-    Germany: ["Berlin", "Munich", "Hamburg", "Frankfurt", "Stuttgart"],
-  }
-
-  const employees = ["50-100", "100-500", "500-1,000", "1,000-5,000", "5,000-10,000", "10,000+"]
-
-  const dummyCustomers: Customer[] = []
-
-  for (let i = 0; i < count; i++) {
-    const baseCompany = baseCompanies[i % baseCompanies.length]
-    const suffix = i < baseCompanies.length ? "" : ` ${Math.floor(i / baseCompanies.length) + 1}`
-    const companyCities = cities[baseCompany.country as keyof typeof cities] || ["Unknown City"]
-    const randomCity = companyCities[Math.floor(Math.random() * companyCities.length)]
-
-    dummyCustomers.push({
-      id: `cust-${Date.now()}-${i}-${Math.random().toString(36).substring(7)}`,
-      company_name: `${baseCompany.name}${suffix}`,
-      email: `contact${i}@${baseCompany.name.toLowerCase().replace(/\s+/g, "")}.com`,
-      phone: `+${Math.floor(Math.random() * 99)}-${Math.floor(Math.random() * 999)}-${Math.floor(Math.random() * 9999)}`,
-      web_address: `https://www.${baseCompany.name.toLowerCase().replace(/\s+/g, "")}${suffix.replace(/\s+/g, "")}.com`,
-      mailing_address: `${Math.floor(Math.random() * 9999)} ${baseCompany.name} Street`,
-      primary_city: randomCity,
-      primary_state: randomCity,
-      country: baseCompany.country,
-      industry: baseCompany.industry,
-      sub_industry: baseCompany.sub_industry,
-      employee: employees[Math.floor(Math.random() * employees.length)],
-      source: "Lead Discovery",
-      createdAt: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000), // 지난 30일 내 랜덤
-    })
-  }
-
-  return dummyCustomers
+// 코드 펜스 제거 유틸리티 (GPT가 ```markdown 으로 감싸는 경우 대비)
+function stripCodeFences(text: string): string {
+  let result = text
+  result = result.replace(/^```(?:markdown)?\s*\n?/i, "")
+  result = result.replace(/\n?```\s*$/i, "")
+  return result
 }
 
-export function ChatRoom() {
-  const [messages] = useAtom(chatMessagesAtom)
-  const addMessage = useSetAtom(addChatMessageAtom)
-  const updateMessage = useSetAtom(updateChatMessageAtom)
-  const addCustomers = useSetAtom(addCustomersAtom)
-  const [isLoading, setIsLoading] = useAtom(isLoadingAtom)
-  const [isSubmitting, setIsSubmitting] = useAtom(isSubmittingAtom)
+type SearchMode = "website" | "detailed"
 
+export function ChatRoom() {
+  // ============================================
+  // Jotai 상태 사용 (LeadDiscoveryPage와 동기화)
+  // ============================================
+  const messages = useAtomValue(chatMessagesAtom)
+  const addMessageToStore = useSetAtom(addChatMessageAtom)
+  const updateMessageInStore = useSetAtom(updateChatMessageAtom)
+
+  const addMessage = useCallback(
+    (message: ChatMessage) => {
+      console.log("[ChatRoom] addMessage called:", message.id)
+      addMessageToStore(message)
+    },
+    [addMessageToStore],
+  )
+
+  const updateMessage = useCallback(
+    (messageId: string, updates: Partial<ChatMessage>) => {
+      updateMessageInStore(messageId, updates)
+    },
+    [updateMessageInStore],
+  )
+
+  // Jotai 고객 상태
+  const addCustomers = useSetAtom(addCustomersAtom)
+
+  // Jotai 스트리밍 상태 (리마운트 시에도 유지)
+  const [streamingState, setStreamingState] = useAtom(streamingStateAtom)
   const [input, setInput] = useState("")
   const [searchMode, setSearchMode] = useState<SearchMode>("website")
   const [websiteTooltipOpen, setWebsiteTooltipOpen] = useState(false)
   const [detailedTooltipOpen, setDetailedTooltipOpen] = useState(false)
   const [animatingCard, setAnimatingCard] = useState<string | null>(null)
   const [cardAnimationDistance, setCardAnimationDistance] = useState<number>(0)
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
-  const [_isStreamingStarted, setIsStreamingStarted] = useState(false)
+
+  // Refs
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
-  const streamingMessageIdRef = useRef<string | null>(null)
 
-  // Keep ref in sync with state
-  useEffect(() => {
-    streamingMessageIdRef.current = streamingMessageId
-  }, [streamingMessageId])
-
-  // Stable callback for content updates (memoized)
-  const handleContentUpdate = useCallback(
-    (content: string) => {
-      const currentMessageId = streamingMessageIdRef.current
-
-      // 첫 청크가 도착하면 스트리밍 시작 표시
-      if (content.length > 0) {
-        setIsStreamingStarted(true)
-      }
-
-      if (currentMessageId) {
-        updateMessage(currentMessageId, { content })
-      }
-    },
-    [updateMessage],
-  )
-
-  // API 훅
+  // 워크스페이스
   const { selectedWorkspace } = useWorkspace()
-  const hookOptions = useMemo(
-    () => ({
-      onContentUpdate: handleContentUpdate,
-    }),
-    [handleContentUpdate],
-  )
 
-  const {
-    status: _status,
-    isAnalyzing,
-    analyze,
-    streamingContent,
-    message: progressMessage,
-    foundPages,
-  } = useWebsiteAnalysis(hookOptions)
+  // BigQuery 결과를 Customer 형식으로 변환
+  const convertResultsToCustomers = useCallback((results: BigQueryResult[]): Customer[] => {
+    return results.map((r, idx) => ({
+      id: `lead-${Date.now()}-${idx}`,
+      first_name: r.firstName,
+      middle_name: r.middleName,
+      last_name: r.lastName,
+      title: r.title,
+      company_name: r.companyName,
+      email: r.email,
+      phone: r.phone,
+      web_address: r.webAddress,
+      mailing_address: r.mailingAddress,
+      primary_city: r.primaryCity || r.city,
+      primary_state: r.primaryState,
+      zip_code: r.zipCode,
+      country: r.country,
+      industry: r.industry,
+      sub_industry: r.subIndustry,
+      employee: r.employee,
+      revenue: r.revenue,
+      source: "Lead Discovery",
+      createdAt: new Date(),
+    }))
+  }, [])
 
-  // 스트리밍 콘텐츠가 업데이트되면 해당 메시지 업데이트
-  useEffect(() => {
-    if (streamingContent && streamingMessageId) {
-      updateMessage(streamingMessageId, { content: streamingContent })
-    }
-  }, [streamingContent, streamingMessageId, updateMessage])
+  // ============================================
+  // TanStack Query Mutations (콜백 기반)
+  // ============================================
+  const searchMutation = useLeadDiscoveryMutation({
+    onStatusChange: (data: LeadDiscoveryEventData) => {
+      setStreamingState((prev) => ({
+        ...prev,
+        status: data.status,
+        message: data.message,
+        progress: data.progress,
+        mode: data.mode,
+        recommendations: data.recommendations || prev.recommendations,
+        sessionId: data.sessionId || prev.sessionId,
+        analyzedPages: data.analyzedPages || prev.analyzedPages,
+        siteFavicon: data.siteFavicon || prev.siteFavicon,
+        analysisSummary: data.analysisSummary || prev.analysisSummary,
+        customerAnalysisSummary: data.customerAnalysisSummary || prev.customerAnalysisSummary,
+      }))
+    },
+    onRecommendations: (recommendations, sessionId) => {
+      setStreamingState((prev) => ({
+        ...prev,
+        recommendations,
+        sessionId,
+      }))
+    },
+    onResults: (results, totalCount) => {
+      console.log("[ChatRoom] Lead discovery results:", totalCount)
+      const customers = convertResultsToCustomers(results)
+      addCustomers(customers)
+    },
+    onComplete: (data) => {
+      // 스트리밍 메시지를 완료된 메시지로 변환
+      const recInfo = data.selectedRecommendation
+        ? `**선택한 타겟**: ${data.selectedRecommendation.country} / ${data.selectedRecommendation.industry}\n\n`
+        : ""
+
+      setStreamingState((prev) => {
+        if (prev.messageId) {
+          // 분석 결과를 메시지에 포함 (코드 펜스 제거)
+          const cleanAnalysis = prev.analysisSummary ? stripCodeFences(prev.analysisSummary) : ""
+          const cleanCustomerAnalysis = prev.customerAnalysisSummary
+            ? stripCodeFences(prev.customerAnalysisSummary)
+            : ""
+
+          const analysisPart = cleanAnalysis
+            ? `---\n\n### 📊 웹사이트 분석 리포트\n\n${cleanAnalysis}\n\n`
+            : ""
+          const customerAnalysisPart = cleanCustomerAnalysis
+            ? `---\n\n### 👥 잠재 바이어 분석 리포트\n\n${cleanCustomerAnalysis}\n\n`
+            : ""
+
+          updateMessage(prev.messageId, {
+            content: `${recInfo}**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.\n\n${analysisPart}${customerAnalysisPart}`,
+          })
+        }
+        return initialStreamingState
+      })
+    },
+    onError: (error) => {
+      console.error("[ChatRoom] Lead discovery error:", error)
+      setStreamingState((prev) => {
+        if (prev.messageId) {
+          updateMessage(prev.messageId, {
+            content: `오류가 발생했습니다: ${error}`,
+          })
+        }
+        return initialStreamingState
+      })
+    },
+  })
+
+  const selectMutation = useLeadDiscoverySelectMutation({
+    onStatusChange: (data: LeadDiscoveryEventData) => {
+      setStreamingState((prev) => ({
+        ...prev,
+        status: data.status,
+        message: data.message,
+        progress: data.progress,
+        mode: data.mode,
+        customerAnalysisSummary: data.customerAnalysisSummary || prev.customerAnalysisSummary,
+      }))
+    },
+    onResults: (results, totalCount) => {
+      console.log("[ChatRoom] Selection results:", totalCount)
+      const customers = convertResultsToCustomers(results)
+      addCustomers(customers)
+    },
+    onComplete: (data) => {
+      const recInfo = data.selectedRecommendation
+        ? `**선택한 타겟**: ${data.selectedRecommendation.country} / ${data.selectedRecommendation.industry}\n\n`
+        : ""
+
+      setStreamingState((prev) => {
+        if (prev.messageId) {
+          // 분석 결과를 메시지에 포함 (코드 펜스 제거)
+          const cleanAnalysis = prev.analysisSummary ? stripCodeFences(prev.analysisSummary) : ""
+          const cleanCustomerAnalysis = prev.customerAnalysisSummary
+            ? stripCodeFences(prev.customerAnalysisSummary)
+            : ""
+
+          const analysisPart = cleanAnalysis
+            ? `---\n\n### 📊 웹사이트 분석 리포트\n\n${cleanAnalysis}\n\n`
+            : ""
+          const customerAnalysisPart = cleanCustomerAnalysis
+            ? `---\n\n### 👥 잠재 바이어 분석 리포트\n\n${cleanCustomerAnalysis}\n\n`
+            : ""
+
+          updateMessage(prev.messageId, {
+            content: `${recInfo}**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.\n\n${analysisPart}${customerAnalysisPart}`,
+          })
+        }
+        return initialStreamingState
+      })
+    },
+    onError: (error) => {
+      console.error("[ChatRoom] Selection error:", error)
+      setStreamingState((prev) => {
+        if (prev.messageId) {
+          updateMessage(prev.messageId, {
+            content: `오류가 발생했습니다: ${error}`,
+          })
+        }
+        return initialStreamingState
+      })
+    },
+  })
+
+  // 파생 상태
+  const isSearching = searchMutation.isPending || selectMutation.isPending
+  const isWaitingSelection = streamingState.status === "waiting_selection"
 
   // Markdown components for consistent styling
   const markdownComponents = useMemo(
@@ -272,6 +303,8 @@ export function ChatRoom() {
       strong: ({ children }: { children?: React.ReactNode }) => (
         <strong className="font-bold">{children}</strong>
       ),
+      em: ({ children }: { children?: React.ReactNode }) => <em className="italic">{children}</em>,
+      hr: () => <hr className="my-6 border-border" />,
     }),
     [],
   )
@@ -531,7 +564,7 @@ export function ChatRoom() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on message change
   useEffect(() => {
     scrollToBottom()
-  }, [messages.length, scrollToBottom])
+  }, [messages.length, streamingState.status, scrollToBottom])
 
   // 웹사이트 URL 유효성 검사
   const isValidWebsiteUrl = useCallback((url: string): boolean => {
@@ -605,14 +638,64 @@ export function ChatRoom() {
     prevSearchModeRef.current = searchMode
   }, [searchMode, input, isValidWebsiteUrl])
 
+  // 바이어 추천 선택 핸들러
+  const handleRecommendationSelect = useCallback(
+    async (rec: BuyerRecommendation) => {
+      if (!selectedWorkspace?.id || selectedWorkspace.id === "all") return
+      if (!streamingState.sessionId) {
+        console.error("[ChatRoom] No session ID for selection")
+        return
+      }
+
+      // 선택 메시지 추가
+      const selectMessage: ChatMessage = {
+        id: `msg-${Date.now()}-select`,
+        role: "user",
+        content: `${rec.country} / ${rec.industry} 선택`,
+        timestamp: new Date(),
+      }
+      addMessage(selectMessage)
+
+      // 새 응답 메시지 추가
+      const responseId = `msg-${Date.now()}-response`
+      const responseMessage: ChatMessage = {
+        id: responseId,
+        role: "assistant",
+        content: "",
+        timestamp: new Date(),
+      }
+      addMessage(responseMessage)
+
+      // 스트리밍 상태 업데이트 - 기존 데이터 유지하면서 선택 상태만 변경
+      setStreamingState((prev) => ({
+        ...prev,
+        messageId: responseId,
+        status: "searching",
+        message: "선택한 타겟으로 검색 중...",
+        progress: 65,
+        selectedRecommendationId: rec.id, // 선택된 추천 ID 저장 (카드 유지)
+        // recommendations, analysisSummary, analyzedPages 유지
+      }))
+
+      // 선택 API 호출
+      selectMutation.mutate({
+        sessionId: streamingState.sessionId,
+        selectedRecommendationId: rec.id,
+        workspaceId: selectedWorkspace.id,
+      })
+    },
+    [selectedWorkspace, streamingState.sessionId, addMessage, selectMutation, setStreamingState],
+  )
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
-      if (!isInputValid() || isLoading || isAnalyzing || isSubmitting) return
+      console.log("[ChatRoom] handleSubmit called", { input, isSearching, isValid: isInputValid() })
 
-      // 제출 상태를 즉시 설정 (동기적으로 버튼 스피너 표시)
-      setIsSubmitting(true)
-      setIsLoading(true)
+      if (!isInputValid() || isSearching) {
+        console.log("[ChatRoom] Submit blocked", { isInputValid: isInputValid(), isSearching })
+        return
+      }
 
       const userInput = input.trim()
       const userMessage: ChatMessage = {
@@ -622,167 +705,66 @@ export function ChatRoom() {
         timestamp: new Date(),
       }
 
+      console.log("[ChatRoom] Adding user message:", userMessage.id)
       addMessage(userMessage)
       setInput("")
       setAnimatingCard(null)
 
-      if (searchMode === "website") {
-        // 웹사이트 분석 모드: 실제 API 호출
-        if (!selectedWorkspace?.id || selectedWorkspace.id === "all") {
-          const errorMessage: ChatMessage = {
-            id: `msg-${Date.now()}-error`,
-            role: "assistant",
-            content:
-              "워크스페이스를 먼저 선택해주세요.\n\n상단에서 워크스페이스를 선택하면 바로 시작할 수 있어요.",
-            timestamp: new Date(),
-          }
-          addMessage(errorMessage)
-          setIsLoading(false)
-          setIsSubmitting(false)
-          return
-        }
-
-        try {
-          // 스트리밍 상태 초기화
-          setIsStreamingStarted(false)
-
-          // 빈 assistant 메시지 먼저 추가 (스트리밍용)
-          const assistantMessageId = `msg-${Date.now()}-response`
-          const assistantMessage: ChatMessage = {
-            id: assistantMessageId,
-            role: "assistant",
-            content: "",
-            timestamp: new Date(),
-          }
-          addMessage(assistantMessage)
-
-          // 상태 업데이트를 기다림 (중요!)
-          await new Promise((resolve) => setTimeout(resolve, 0))
-
-          // Ref를 먼저 설정 (동기적으로 즉시 설정)
-          streamingMessageIdRef.current = assistantMessageId
-
-          // 그 다음 상태 설정 (UI 업데이트용)
-          setStreamingMessageId(assistantMessageId)
-
-          // 분석 시작 (스트리밍)
-          const finalContent = await analyze({
-            websiteUrl: userInput,
-            workspaceId: selectedWorkspace.id,
-          })
-          if (finalContent) {
-            // 버튼 액션 추가
-            const actions: ChatMessageAction[] = [
-              {
-                id: "collect-leads",
-                label: "고객 100건 탐색해줘",
-                variant: "default",
-                onClick: async () => {
-                  // 버튼 비활성화
-                  updateMessage(assistantMessageId, {
-                    actions: [
-                      {
-                        id: "collect-leads",
-                        label: "고객을 탐색하고 있어요",
-                        variant: "default",
-                        disabled: true,
-                        loading: true,
-                        onClick: async () => {},
-                      },
-                      {
-                        id: "skip-leads",
-                        label: "나중에 할게요",
-                        variant: "ghost",
-                        disabled: true,
-                        onClick: () => {},
-                      },
-                    ],
-                  })
-
-                  // 약간의 지연 후 더미 데이터 추가
-                  await new Promise((resolve) => setTimeout(resolve, 1500))
-
-                  const dummyCustomers = createDummyCustomers(100)
-                  addCustomers(dummyCustomers)
-
-                  // 완료 메시지로 버튼 업데이트
-                  updateMessage(assistantMessageId, {
-                    actions: [
-                      {
-                        id: "collect-complete",
-                        label: "100개 고객 탐색 완료",
-                        variant: "outline",
-                        disabled: true,
-                        onClick: () => {},
-                      },
-                    ],
-                  })
-                },
-              },
-              {
-                id: "skip-leads",
-                label: "나중에 할게요",
-                variant: "ghost",
-                onClick: () => {
-                  // 버튼 제거
-                  updateMessage(assistantMessageId, {
-                    actions: [],
-                  })
-                },
-              },
-            ]
-
-            updateMessage(assistantMessageId, {
-              content: finalContent,
-              actions,
-            })
-          }
-
-          // 분석 완료 후 스트리밍 메시지 ID 초기화 (ref와 state 모두)
-          streamingMessageIdRef.current = null
-          setStreamingMessageId(null)
-          setIsStreamingStarted(false)
-        } catch (error) {
-          streamingMessageIdRef.current = null
-          setStreamingMessageId(null)
-          setIsStreamingStarted(false)
-          const errorMessage: ChatMessage = {
-            id: `msg-${Date.now()}-error`,
-            role: "assistant",
-            content: `앗, 문제가 생겼어요.\n\n${error instanceof Error ? error.message : "조금 있다가 다시 시도해주세요."}`,
-            timestamp: new Date(),
-          }
-          addMessage(errorMessage)
-        }
-      } else {
-        // 상세 조건 모드: 추후 구현 예정
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        const assistantMessage: ChatMessage = {
-          id: `msg-${Date.now()}-response`,
+      // 워크스페이스 확인
+      if (!selectedWorkspace?.id || selectedWorkspace.id === "all") {
+        console.log("[ChatRoom] No workspace selected")
+        const errorMessage: ChatMessage = {
+          id: `msg-${Date.now()}-error`,
           role: "assistant",
-          content: `"${userInput}" 조건으로 검색하는 기능은 곧 만나볼 수 있어요.\n\n지금은 웹사이트 분석을 먼저 사용해보세요!`,
+          content:
+            "워크스페이스를 먼저 선택해주세요.\n\n상단에서 워크스페이스를 선택하면 바로 시작할 수 있어요.",
           timestamp: new Date(),
         }
-        addMessage(assistantMessage)
+        addMessage(errorMessage)
+        return
       }
 
-      setIsLoading(false)
-      setIsSubmitting(false)
+      console.log("[ChatRoom] Calling searchMutation", {
+        query: userInput,
+        workspaceId: selectedWorkspace.id,
+      })
+
+      // 빈 assistant 메시지 먼저 추가 (스트리밍용)
+      const assistantMessageId = `msg-${Date.now()}-response`
+      const assistantMessage: ChatMessage = {
+        id: assistantMessageId,
+        role: "assistant",
+        content: "",
+        timestamp: new Date(),
+      }
+      addMessage(assistantMessage)
+
+      // 스트리밍 상태 초기화
+      setStreamingState({
+        messageId: assistantMessageId,
+        status: "connecting",
+        message: "서버에 연결 중...",
+        progress: 0,
+        recommendations: [],
+        analyzedPages: [],
+        analysisSummary: "",
+        customerAnalysisSummary: "",
+      })
+
+      // LangGraph API 호출
+      searchMutation.mutate({
+        query: userInput,
+        workspaceId: selectedWorkspace.id,
+      })
     },
     [
       input,
-      isLoading,
-      isAnalyzing,
-      isSubmitting,
+      isSearching,
       isInputValid,
-      searchMode,
       selectedWorkspace,
       addMessage,
-      addCustomers,
-      setIsLoading,
-      setIsSubmitting,
-      analyze,
-      updateMessage,
+      searchMutation,
+      setStreamingState,
     ],
   )
 
@@ -809,7 +791,8 @@ export function ChatRoom() {
       <div className="flex flex-col h-full min-h-0 bg-background border-r border-border">
         {/* 메시지 영역 - flex-1 + min-h-0으로 스크롤 영역 확보 */}
         <div className="flex-1 min-h-0 overflow-hidden">
-          {messages.length === 0 ? (
+          {/* 메시지가 없고 검색 중이 아닐 때 → 템플릿 카드 표시 */}
+          {messages.length === 0 && !isSearching ? (
             <div className="h-full flex items-center justify-center px-4 py-8">
               {/* 전체 콘텐츠를 하나로 묶어서 중앙 정렬 */}
               <div className="w-full space-y-8" style={{ maxWidth: "670px" }}>
@@ -849,7 +832,7 @@ export function ChatRoom() {
                             ? "https://www.example.com"
                             : "예: 친환경 화장품 제조, 미국 캘리포니아 진출 희망"
                         }
-                        disabled={isSubmitting || isLoading}
+                        disabled={isSearching}
                         rows={3}
                         className="w-full min-h-[72px] resize-none bg-transparent text-base px-3 pt-3 pb-0 border-0 outline-none focus:outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
                       />
@@ -968,10 +951,10 @@ export function ChatRoom() {
                         <Button
                           type="submit"
                           size="icon"
-                          disabled={isSubmitting || isLoading || isAnalyzing || !isInputValid()}
+                          disabled={isSearching || !isInputValid()}
                           className="h-8 w-8 rounded-full"
                         >
-                          {isSubmitting || isLoading || isAnalyzing ? (
+                          {isSearching ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <ArrowRight className="h-4 w-4" />
@@ -1118,13 +1101,29 @@ export function ChatRoom() {
               ref={scrollRef}
             >
               <div className="p-4 pt-6 space-y-4">
+                {/* 검색 중이고 메시지가 없을 때만 상단에 progress 표시 (메시지가 있으면 메시지 내부에서 표시) */}
+                {isSearching && messages.length === 0 && (
+                  <div className="flex justify-start">
+                    <div className="w-full space-y-4">
+                      <LeadDiscoveryProgress
+                        status={streamingState.status}
+                        message={streamingState.message}
+                        mode={streamingState.mode}
+                        analyzedPages={streamingState.analyzedPages}
+                        analysisSummary={streamingState.analysisSummary}
+                        customerAnalysisSummary={streamingState.customerAnalysisSummary}
+                        className="max-w-2xl"
+                      />
+                    </div>
+                  </div>
+                )}
                 {messages
                   .filter((message) => {
-                    // 빈 assistant 메시지는 스트리밍 중이 아닐 때만 필터링
+                    // 빈 assistant 메시지는 스트리밍 메시지가 아닐 때만 필터링
                     if (
                       message.role === "assistant" &&
                       !message.content &&
-                      message.id !== streamingMessageId
+                      message.id !== streamingState.messageId
                     ) {
                       return false
                     }
@@ -1143,89 +1142,43 @@ export function ChatRoom() {
                           <p className="text-base whitespace-pre-wrap">{message.content}</p>
                         </div>
                       ) : (
-                        <div className="w-full">
-                          {/* 스피너 - 로딩 중이거나 분석 중일 때 항상 표시 */}
-                          {(() => {
-                            const shouldShow =
-                              message.id === streamingMessageId && (isLoading || isAnalyzing)
-                            console.log("[ChatRoom] 🎯 Spinner render check (assistant message):", {
-                              messageId: message.id,
-                              streamingMessageId,
-                              isMatch: message.id === streamingMessageId,
-                              isLoading,
-                              isAnalyzing,
-                              shouldShow,
-                              progressMessage,
-                            })
-                            return shouldShow ? (
-                              <div className="mb-4 bg-muted rounded-lg px-4 py-3 w-full max-w-2xl">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <StarSpinner size={20} />
-                                  {(() => {
-                                    const willShowMessage = !!progressMessage
-                                    console.log(
-                                      "[ChatRoom] 📝 progressMessage render (assistant):",
-                                      {
-                                        progressMessage,
-                                        willShowMessage,
-                                        truthyCheck: !!progressMessage,
-                                      },
-                                    )
-                                    return willShowMessage ? (
-                                      <span className="text-sm text-muted-foreground">
-                                        {progressMessage}
-                                      </span>
-                                    ) : null
-                                  })()}
-                                </div>
-                                {foundPages.length > 0 && (
-                                  <div className="mt-3 space-y-2 pl-8">
-                                    {foundPages.map((page, index) => (
-                                      <div
-                                        key={index}
-                                        className="text-xs text-muted-foreground flex items-start gap-2"
-                                      >
-                                        <span className="text-primary">✓</span>
-                                        <div className="flex-1 min-w-0">
-                                          <div className="font-medium truncate">{page.title}</div>
-                                          <div className="text-muted-foreground/70 truncate">
-                                            {page.url}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            ) : null
-                          })()}
+                        <div className="w-full space-y-4">
+                          {/* LangGraph 진행 상태 표시 - 스트리밍 중일 때만 */}
+                          {message.id === streamingState.messageId &&
+                            streamingState.status !== "idle" &&
+                            streamingState.status !== "complete" &&
+                            streamingState.status !== "waiting_selection" && (
+                              <LeadDiscoveryProgress
+                                status={streamingState.status}
+                                message={streamingState.message}
+                                mode={streamingState.mode}
+                                analyzedPages={streamingState.analyzedPages}
+                                analysisSummary={streamingState.analysisSummary}
+                                customerAnalysisSummary={streamingState.customerAnalysisSummary}
+                                className="max-w-2xl"
+                              />
+                            )}
 
-                          {/* 메시지 콘텐츠 - 스피너 아래에 표시 */}
+                          {/* 바이어 추천 선택 UI - 선택 후에도 유지 */}
+                          {message.id === streamingState.messageId &&
+                            streamingState.recommendations.length > 0 &&
+                            (isWaitingSelection || streamingState.selectedRecommendationId) && (
+                              <BuyerRecommendationCards
+                                recommendations={streamingState.recommendations}
+                                onSelect={handleRecommendationSelect}
+                                disabled={isSearching || !!streamingState.selectedRecommendationId}
+                                selectedId={streamingState.selectedRecommendationId}
+                                analysisSummary={streamingState.analysisSummary}
+                                className="max-w-2xl"
+                              />
+                            )}
+
+                          {/* 메시지 콘텐츠 */}
                           {message.content && (
                             <div className="prose prose-sm max-w-none dark:prose-invert text-base">
                               <ReactMarkdown components={markdownComponents}>
                                 {message.content}
                               </ReactMarkdown>
-                            </div>
-                          )}
-
-                          {/* 액션 버튼들 */}
-                          {message.actions && message.actions.length > 0 && (
-                            <div className="mt-4 flex gap-2">
-                              {message.actions.map((action) => (
-                                <Button
-                                  key={action.id}
-                                  variant={action.variant || "default"}
-                                  onClick={action.onClick}
-                                  disabled={action.disabled || false}
-                                  className="relative"
-                                >
-                                  {action.loading && (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  )}
-                                  {action.label}
-                                </Button>
-                              ))}
                             </div>
                           )}
 
@@ -1243,78 +1196,13 @@ export function ChatRoom() {
                       )}
                     </div>
                   ))}
-
-                {/* 스트리밍 중이고 빈 assistant 메시지가 있을 때 스피너 표시 */}
-                {(() => {
-                  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null
-                  // 스트리밍 중이고, 마지막 메시지가 빈 assistant 메시지일 때 스피너 표시
-                  const shouldShow =
-                    streamingMessageId !== null &&
-                    (isLoading || isAnalyzing) &&
-                    lastMessage?.role === "assistant" &&
-                    !lastMessage?.content
-                  console.log("[ChatRoom] 🎯 Spinner render check (initial screen):", {
-                    lastMessageRole: lastMessage?.role,
-                    lastMessageContent: lastMessage?.content,
-                    lastMessageId: lastMessage?.id,
-                    streamingMessageId,
-                    isLoading,
-                    isAnalyzing,
-                    shouldShow,
-                    progressMessage,
-                    progressMessageType: typeof progressMessage,
-                    progressMessageLength: progressMessage?.length,
-                  })
-                  return shouldShow ? (
-                    <div className="flex justify-start">
-                      <div className="w-full">
-                        <div className="mb-4 bg-muted rounded-lg px-4 py-3 w-full max-w-2xl">
-                          <div className="flex items-center gap-3 mb-2">
-                            <StarSpinner size={20} />
-                            {(() => {
-                              const willShowMessage = !!progressMessage
-                              console.log("[ChatRoom] 📝 progressMessage render (initial):", {
-                                progressMessage,
-                                willShowMessage,
-                                truthyCheck: !!progressMessage,
-                              })
-                              return willShowMessage ? (
-                                <span className="text-sm text-muted-foreground">
-                                  {progressMessage}
-                                </span>
-                              ) : null
-                            })()}
-                          </div>
-                          {foundPages.length > 0 && (
-                            <div className="mt-3 space-y-2 pl-8">
-                              {foundPages.map((page, index) => (
-                                <div
-                                  key={index}
-                                  className="text-xs text-muted-foreground flex items-start gap-2"
-                                >
-                                  <span className="text-primary">✓</span>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="font-medium truncate">{page.title}</div>
-                                    <div className="text-muted-foreground/70 truncate">
-                                      {page.url}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ) : null
-                })()}
               </div>
             </ScrollArea>
           )}
         </div>
 
-        {/* 입력 영역 - 하단 고정 (메시지가 있을 때만 표시) */}
-        {messages.length > 0 && (
+        {/* 입력 영역 - 하단 고정 (메시지가 있거나 검색 중일 때 표시) */}
+        {(messages.length > 0 || isSearching) && (
           <div className="shrink-0 p-3 border-t bg-background">
             <form onSubmit={handleSubmit} className="space-y-2">
               <div className="rounded-2xl bg-muted/50 border border-border/50 overflow-hidden">
@@ -1333,7 +1221,7 @@ export function ChatRoom() {
                       ? "https://www.example.com"
                       : "예: 친환경 화장품 제조, 미국 캘리포니아 진출 희망"
                   }
-                  disabled={isSubmitting || isLoading}
+                  disabled={isSearching}
                   rows={3}
                   className="w-full min-h-[72px] resize-none bg-transparent text-base px-3 pt-3 pb-0 border-0 outline-none focus:outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
                 />
@@ -1449,10 +1337,10 @@ export function ChatRoom() {
                   <Button
                     type="submit"
                     size="icon"
-                    disabled={isSubmitting || isLoading || isAnalyzing || !isInputValid()}
+                    disabled={isSearching || !isInputValid()}
                     className="h-8 w-8 rounded-full"
                   >
-                    {isSubmitting || isLoading || isAnalyzing ? (
+                    {isSearching ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <ArrowRight className="h-4 w-4" />

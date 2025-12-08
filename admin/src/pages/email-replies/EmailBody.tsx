@@ -10,6 +10,44 @@ interface EmailBodyProps {
 }
 
 /**
+ * Check if a string is Base64 encoded
+ */
+function isBase64(str: string): boolean {
+  if (!str || str.length === 0) return false
+  // Base64 strings should be at least 4 chars and have valid characters
+  // Also check that it doesn't look like regular HTML or plain text
+  if (str.startsWith("<") || str.startsWith("<!")) return false
+  if (str.startsWith("Dear") || str.startsWith("Hi") || str.startsWith("Hello")) return false
+  // Check for Base64 pattern: alphanumeric, +, /, =, and newlines
+  const base64Regex = /^[A-Za-z0-9+/\r\n]+=*$/
+  // Remove whitespace and check
+  const cleaned = str.replace(/[\r\n\s]/g, "")
+  return cleaned.length >= 4 && base64Regex.test(cleaned)
+}
+
+/**
+ * Decode Base64 string to UTF-8 text
+ */
+function decodeBase64(str: string): string {
+  try {
+    // Remove whitespace/newlines that might be in the base64 string
+    const cleaned = str.replace(/[\r\n\s]/g, "")
+    // Decode base64 to binary string
+    const binaryString = atob(cleaned)
+    // Convert binary string to UTF-8
+    const bytes = new Uint8Array(binaryString.length)
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i)
+    }
+    const decoder = new TextDecoder("utf-8")
+    return decoder.decode(bytes)
+  } catch (e) {
+    console.error("Failed to decode Base64:", e)
+    return str
+  }
+}
+
+/**
  * Remove MIME headers from email body
  * Sometimes email parsing fails and MIME headers are left in the body
  */
@@ -207,8 +245,17 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
     // Prefer HTML content if available
     if (bodyHtml) {
       console.log("📧 Processing bodyHtml...")
+
+      // Check if content is Base64 encoded first
+      let rawHtml = bodyHtml
+      if (isBase64(bodyHtml)) {
+        console.log("📧 bodyHtml is Base64 encoded, decoding...")
+        rawHtml = decodeBase64(bodyHtml)
+        console.log("📧 Decoded Base64 HTML preview:", rawHtml.substring(0, 200))
+      }
+
       // Remove MIME headers if present
-      const cleanedHtml = removeMimeHeaders(bodyHtml)
+      const cleanedHtml = removeMimeHeaders(rawHtml)
       // Then decode if needed
       const decodedHtml = decodeEncodedText(cleanedHtml)
 
@@ -384,8 +431,17 @@ export function EmailBody({ bodyText, bodyHtml }: EmailBodyProps) {
     // Fall back to text content
     if (bodyText) {
       console.log("📧 Processing bodyText...")
+
+      // Check if content is Base64 encoded first
+      let rawText = bodyText
+      if (isBase64(bodyText)) {
+        console.log("📧 bodyText is Base64 encoded, decoding...")
+        rawText = decodeBase64(bodyText)
+        console.log("📧 Decoded Base64 text preview:", rawText.substring(0, 200))
+      }
+
       // Remove MIME headers if present
-      const cleanedText = removeMimeHeaders(bodyText)
+      const cleanedText = removeMimeHeaders(rawText)
       console.log("After MIME cleanup:", cleanedText.substring(0, 200))
       // Then decode if needed
       const decoded = decodeEncodedText(cleanedText)

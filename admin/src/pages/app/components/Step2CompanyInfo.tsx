@@ -8,7 +8,11 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useUpdateWorkspace, useUserWorkspaces } from "@/lib/api/hooks/workspaces"
+import {
+  useEnrichWorkspace,
+  useUpdateWorkspace,
+  useUserWorkspaces,
+} from "@/lib/api/hooks/workspaces"
 
 interface CompanyFormData {
   websiteUrl: string
@@ -46,8 +50,9 @@ export function Step2CompanyInfo() {
   // Get the first workspace (trial users have one workspace)
   const workspace = userWorkspaces?.[0]
 
-  // Mutation for updating workspace
+  // Mutations
   const updateWorkspace = useUpdateWorkspace()
+  const enrichWorkspace = useEnrichWorkspace()
 
   const handleInputChange = (field: keyof CompanyFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -70,6 +75,7 @@ export function Step2CompanyInfo() {
     }
 
     try {
+      // 1. Update workspace data
       await updateWorkspace.mutateAsync({
         workspaceId: workspace.id,
         data: {
@@ -81,6 +87,18 @@ export function Step2CompanyInfo() {
           // Note: products field will be handled separately later
         },
       })
+
+      // 2. Trigger enrichment if website URL provided (fire-and-forget)
+      if (formData.websiteUrl) {
+        const websiteUrl = formData.websiteUrl.startsWith("http")
+          ? formData.websiteUrl
+          : `https://${formData.websiteUrl}`
+
+        enrichWorkspace.mutate({
+          workspaceId: workspace.id,
+          websiteUrl,
+        })
+      }
 
       setSearchParams({ step: "3" })
     } catch (error) {

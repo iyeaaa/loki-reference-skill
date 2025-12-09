@@ -368,24 +368,6 @@ export async function updateWorkspace(
     rawResearchOutput: data.rawResearchOutput,
     updatedAt: new Date(),
   }
-  console.log(updateData)
-  if (updateData.companyWebsite) {
-    const oldWorkspaceData = await getWorkspaceOnlyById(id)
-    if (oldWorkspaceData) {
-      if (oldWorkspaceData.companyWebsite !== updateData.companyWebsite) {
-        // Ensure URL has protocol before passing to enrichment
-        const websiteUrl = updateData.companyWebsite.startsWith("http")
-          ? updateData.companyWebsite
-          : `https://${updateData.companyWebsite}`
-
-        // jina scraper background job
-        onboardingEnrichment({
-          workspaceId: id,
-          websiteUrl: websiteUrl,
-        })
-      }
-    }
-  }
 
   // Only update ownerId if provided
   if (data.ownerId) {

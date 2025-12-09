@@ -724,6 +724,22 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/v1/workspaces/{id}/enrich": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiV1WorkspacesByIdEnrich"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/v1/workspaces/owner/{ownerId}": {
     parameters: {
       query?: never
@@ -3018,7 +3034,7 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  "/api/v1/admin/web-extraction/analyze": {
+  "/api/v1/admin/web-extraction/lead-discovery/analyze": {
     parameters: {
       query?: never
       header?: never
@@ -3030,6 +3046,26 @@ export interface paths {
     /**
      * 단일 웹사이트 URL 분석 (SSE 스트리밍)
      * @description 단일 웹사이트 URL을 분석하여 AI가 생성한 상세 분석 결과를 스트리밍으로 전송합니다.
+     */
+    post: operations["postApiV1AdminWeb-extractionLead-discoveryAnalyze"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/admin/web-extraction/analyze": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * 웹데추용 단일 웹사이트 URL 분석
+     * @description 단일 웹사이트 URL을 분석하여 정형화된 회사 정보 및 연락처를 JSON으로 반환합니다.
      */
     post: operations["postApiV1AdminWeb-extractionAnalyze"]
     delete?: never
@@ -3504,6 +3540,103 @@ export interface paths {
      */
     post: operations["postApiV1NylasWebhook"]
     delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/lead-discovery/health": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Health check for Lead Discovery service */
+    get: operations["getApiV1Lead-discoveryHealth"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/lead-discovery/search": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Search for leads using natural language or website URL
+     * @description Streams search progress via SSE. Automatically detects basic (website) or advanced (direct search) mode.
+     */
+    post: operations["postApiV1Lead-discoverySearch"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/lead-discovery/select": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Resume search with user's buyer selection
+     * @description Called after user selects a buyer recommendation from the interrupt.
+     */
+    post: operations["postApiV1Lead-discoverySelect"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/lead-discovery/session/{sessionId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get session state
+     * @description Retrieve the current state of a lead discovery session.
+     */
+    get: operations["getApiV1Lead-discoverySessionBySessionId"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/lead-discovery/sessions": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Clear all sessions
+     * @description Admin endpoint to clear all lead discovery sessions.
+     */
+    delete: operations["deleteApiV1Lead-discoverySessions"]
     options?: never
     head?: never
     patch?: never
@@ -5081,6 +5214,37 @@ export interface operations {
           companySize?: string
           companyAddress?: string
           companyDescription?: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  postApiV1WorkspacesByIdEnrich: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          websiteUrl: string
+        }
+        "multipart/form-data": {
+          websiteUrl: string
+        }
+        "text/plain": {
+          websiteUrl: string
         }
       }
     }
@@ -11390,7 +11554,7 @@ export interface operations {
       }
     }
   }
-  "postApiV1AdminWeb-extractionAnalyze": {
+  "postApiV1AdminWeb-extractionLead-discoveryAnalyze": {
     parameters: {
       query?: never
       header?: never
@@ -11410,6 +11574,41 @@ export interface operations {
         "text/plain": {
           websiteUrl: string
           workspaceId: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1AdminWeb-extractionAnalyze": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          websiteUrl: string
+          workspaceId: string
+          searchCriteria?: string[]
+        }
+        "multipart/form-data": {
+          websiteUrl: string
+          workspaceId: string
+          searchCriteria?: string[]
+        }
+        "text/plain": {
+          websiteUrl: string
+          workspaceId: string
+          searchCriteria?: string[]
         }
       }
     }
@@ -14154,6 +14353,147 @@ export interface operations {
     }
   }
   postApiV1NylasWebhook: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "getApiV1Lead-discoveryHealth": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1Lead-discoverySearch": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          /** @description Search query or website URL */
+          query: string
+          /** Format: uuid */
+          workspaceId: string
+          sessionId?: string
+          locale?: string
+        }
+        "multipart/form-data": {
+          /** @description Search query or website URL */
+          query: string
+          /** Format: uuid */
+          workspaceId: string
+          sessionId?: string
+          locale?: string
+        }
+        "text/plain": {
+          /** @description Search query or website URL */
+          query: string
+          /** Format: uuid */
+          workspaceId: string
+          sessionId?: string
+          locale?: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1Lead-discoverySelect": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          /** @description Session ID from the search request */
+          sessionId: string
+          /** @description ID of the selected recommendation */
+          selectedRecommendationId: string
+          /** Format: uuid */
+          workspaceId: string
+        }
+        "multipart/form-data": {
+          /** @description Session ID from the search request */
+          sessionId: string
+          /** @description ID of the selected recommendation */
+          selectedRecommendationId: string
+          /** Format: uuid */
+          workspaceId: string
+        }
+        "text/plain": {
+          /** @description Session ID from the search request */
+          sessionId: string
+          /** @description ID of the selected recommendation */
+          selectedRecommendationId: string
+          /** Format: uuid */
+          workspaceId: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "getApiV1Lead-discoverySessionBySessionId": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        sessionId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "deleteApiV1Lead-discoverySessions": {
     parameters: {
       query?: never
       header?: never

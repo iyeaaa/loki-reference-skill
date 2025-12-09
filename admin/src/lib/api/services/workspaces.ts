@@ -67,6 +67,17 @@ export const workspacesApi = {
     })
   },
 
+  // Trigger onboarding enrichment for a workspace
+  enrichWorkspace: async (
+    workspaceId: string,
+    websiteUrl: string,
+  ): Promise<{ started: boolean }> => {
+    return apiFetch<{ started: boolean }>(`/api/v1/workspaces/${workspaceId}/enrich`, {
+      method: "POST",
+      body: JSON.stringify({ websiteUrl }),
+    })
+  },
+
   // Delete workspace
   delete: async (id: string): Promise<void> => {
     await apiFetch(`/api/v1/workspaces/${id}`, {

@@ -10,7 +10,7 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table"
-import { useAtom, useSetAtom } from "jotai"
+import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import {
   ArrowDown,
   ArrowUp,
@@ -20,6 +20,7 @@ import {
   Filter,
   GripVertical,
   LayoutGrid,
+  Loader2,
   Maximize2,
   Menu,
   Minimize2,
@@ -28,7 +29,7 @@ import {
   SortAsc,
   Trash2,
 } from "lucide-react"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -49,8 +50,56 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { calculateFitScores } from "@/lib/api/hooks/lead-discovery"
 import { cn } from "@/lib/utils"
-import { type Customer, customersAtom, removeCustomerAtom } from "./store"
+import {
+  type Customer,
+  customersAtom,
+  fitScoreStateAtom,
+  removeCustomerAtom,
+  selectedTargetAtom,
+  setFitScoreLoadingAtom,
+  streamingStateAtom,
+  updateFitScoreAtom,
+} from "./store"
+
+// 적합도 배지 컴포넌트
+function FitScoreBadge({ score, isLoading }: { score?: number; isLoading?: boolean }) {
+  // 로딩 중
+  if (isLoading || score === undefined) {
+    return (
+      <div className="inline-flex items-center justify-center w-8 h-6">
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  let bgColor: string
+  let textColor: string
+
+  if (score >= 80) {
+    bgColor = "bg-emerald-100 dark:bg-emerald-900/30"
+    textColor = "text-emerald-700 dark:text-emerald-400"
+  } else if (score >= 50) {
+    bgColor = "bg-amber-100 dark:bg-amber-900/30"
+    textColor = "text-amber-700 dark:text-amber-400"
+  } else {
+    bgColor = "bg-rose-100 dark:bg-rose-900/30"
+    textColor = "text-rose-700 dark:text-rose-400"
+  }
+
+  return (
+    <div
+      className={cn(
+        "inline-flex items-center justify-center w-8 h-6 rounded-full text-xs font-medium tabular-nums",
+        bgColor,
+        textColor,
+      )}
+    >
+      {score}
+    </div>
+  )
+}
 
 // 행 번호 + 체크박스 셀 컴포넌트 (CSS group-hover 사용)
 function RowIndexCell({
@@ -94,6 +143,108 @@ interface CustomerTableProps {
 export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTableProps) {
   const [customers] = useAtom(customersAtom)
   const removeCustomer = useSetAtom(removeCustomerAtom)
+  const streamingState = useAtomValue(streamingStateAtom)
+
+  // 적합도 점수 상태
+  const fitScoreState = useAtomValue(fitScoreStateAtom)
+  const updateFitScore = useSetAtom(updateFitScoreAtom)
+  const setFitScoreLoading = useSetAtom(setFitScoreLoadingAtom)
+
+  // 선택된 바이어 타겟 (스트리밍 완료 후에도 유지)
+  const selectedTarget = useAtomValue(selectedTargetAtom)
+
+  // API 호출 중 여부 추적
+  const isCalculatingRef = useRef(false)
+
+  // 고객이 있고 선택된 추천이 있으면 적합도 계산 API 호출
+  useEffect(() => {
+    console.log("[FitScore] useEffect 실행", {
+      customersLength: customers.length,
+      selectedTarget: selectedTarget
+        ? `${selectedTarget.country}/${selectedTarget.industry}`
+        : null,
+      isCalculating: isCalculatingRef.current,
+      scoresCount: Object.keys(fitScoreState.scores).length,
+    })
+
+    // 조건: 고객이 있고, 선택된 타겟이 있고, API 호출 중이 아닐 때
+    if (customers.length === 0) {
+      console.log("[FitScore] 조건 실패: 고객이 없음")
+      return
+    }
+    if (!selectedTarget) {
+      console.log("[FitScore] 조건 실패: 선택된 타겟이 없음")
+      return
+    }
+    if (isCalculatingRef.current) {
+      console.log("[FitScore] 조건 실패: 이미 계산 중")
+      return
+    }
+
+    // 점수가 없는 고객 찾기
+    const customersToScore = customers.filter((c) => fitScoreState.scores[c.id] === undefined)
+
+    if (customersToScore.length === 0) {
+      console.log("[FitScore] 조건 실패: 점수 계산할 고객이 없음")
+      return
+    }
+
+    console.log(`[FitScore] 적합도 계산 시작: ${customersToScore.length}개 리드`)
+    isCalculatingRef.current = true
+
+    // 로딩 상태 설정
+    setFitScoreLoading({ isLoading: true, progress: 0 })
+
+    // API 호출
+    calculateFitScores(
+      customersToScore.map((c) => ({
+        id: c.id,
+        company_name: c.company_name,
+        email: c.email,
+        phone: c.phone,
+        web_address: c.web_address,
+        country: c.country,
+        industry: c.industry,
+        sub_industry: c.sub_industry,
+        employee: c.employee,
+        revenue: c.revenue,
+        title: c.title,
+      })),
+      {
+        companyName: streamingState.analysisSummary ? "분석된 회사" : undefined,
+        description: streamingState.analysisSummary,
+      },
+      {
+        country: selectedTarget.country,
+        industry: selectedTarget.industry,
+      },
+      {
+        onScore: (leadId, score) => {
+          updateFitScore({ leadId, score })
+        },
+        onProgress: (progress) => {
+          setFitScoreLoading({ isLoading: true, progress })
+        },
+        onComplete: () => {
+          console.log("[FitScore] 적합도 계산 완료")
+          setFitScoreLoading({ isLoading: false, progress: 100 })
+          isCalculatingRef.current = false
+        },
+        onError: (error) => {
+          console.error("[FitScore] 적합도 계산 에러:", error)
+          setFitScoreLoading({ isLoading: false, progress: 0 })
+          isCalculatingRef.current = false
+        },
+      },
+    )
+  }, [
+    customers,
+    selectedTarget,
+    fitScoreState.scores,
+    streamingState.analysisSummary,
+    updateFitScore,
+    setFitScoreLoading,
+  ])
 
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -296,6 +447,36 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         ),
       },
       {
+        id: "fitScore",
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-8 px-2 -ml-2"
+          >
+            적합도
+            {column.getIsSorted() === "asc" ? (
+              <ArrowUp className="ml-2 h-4 w-4" />
+            ) : column.getIsSorted() === "desc" ? (
+              <ArrowDown className="ml-2 h-4 w-4" />
+            ) : (
+              <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />
+            )}
+          </Button>
+        ),
+        cell: ({ row }) => {
+          const score = fitScoreState.scores[row.original.id]
+          const isLoading = fitScoreState.isLoading && score === undefined
+          return <FitScoreBadge score={score} isLoading={isLoading} />
+        },
+        sortingFn: (rowA, rowB) => {
+          const scoreA = fitScoreState.scores[rowA.original.id] ?? 0
+          const scoreB = fitScoreState.scores[rowB.original.id] ?? 0
+          return scoreA - scoreB
+        },
+        size: 70,
+      },
+      {
         id: "actions",
         enableHiding: false,
         cell: ({ row }) => {
@@ -330,7 +511,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         },
       },
     ],
-    [removeCustomer],
+    [removeCustomer, fitScoreState],
   )
 
   const table = useReactTable({

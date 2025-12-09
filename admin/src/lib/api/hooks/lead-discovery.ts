@@ -560,3 +560,112 @@ export const leadDiscoveryKeys = {
   search: () => [...leadDiscoveryKeys.all, "search"] as const,
   select: () => [...leadDiscoveryKeys.all, "select"] as const,
 }
+
+// ============================================
+// Fit Score API
+// ============================================
+
+export interface LeadForScoring {
+  id: string
+  company_name?: string
+  email?: string
+  phone?: string
+  web_address?: string
+  country?: string
+  industry?: string
+  sub_industry?: string
+  employee?: string
+  revenue?: string
+  title?: string
+}
+
+export interface FitScoreCallbackOptions {
+  onScore?: (leadId: string, score: number) => void
+  onProgress?: (progress: number) => void
+  onComplete?: (totalProcessed: number) => void
+  onError?: (error: string) => void
+}
+
+/**
+ * AI 기반 적합도 계산 API 호출
+ * SSE 스트리밍으로 각 리드별 점수를 실시간으로 받아옴
+ */
+export async function calculateFitScores(
+  leads: LeadForScoring[],
+  websiteAnalysis: {
+    companyName?: string
+    description?: string
+    industry?: string
+    products?: string[]
+    targetMarkets?: string[]
+    businessModel?: string
+  },
+  selectedTarget: { country: string; industry: string },
+  callbacks: FitScoreCallbackOptions,
+): Promise<void> {
+  const url = `${BASE_URL}/api/v1/lead-discovery/score`
+
+  log.request("FitScore", { leadCount: leads.length, target: selectedTarget })
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      },
+      body: JSON.stringify({
+        leads,
+        websiteAnalysis,
+        selectedTarget,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) throw new Error("스트림을 읽을 수 없습니다")
+
+    const decoder = new TextDecoder()
+    let buffer = ""
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+
+      // SSE 이벤트 파싱
+      const lastDoubleNewline = buffer.lastIndexOf("\n\n")
+      if (lastDoubleNewline !== -1) {
+        const completeChunks = buffer.substring(0, lastDoubleNewline + 2)
+        buffer = buffer.substring(lastDoubleNewline + 2)
+
+        const events = parseSSEChunk(completeChunks)
+        for (const { event, data } of events) {
+          const eventData = data as Record<string, unknown>
+
+          switch (event) {
+            case "score":
+              callbacks.onScore?.(eventData.leadId as string, eventData.score as number)
+              callbacks.onProgress?.(eventData.progress as number)
+              break
+            case "complete":
+              callbacks.onComplete?.(eventData.totalProcessed as number)
+              break
+            case "error":
+              callbacks.onError?.(eventData.error as string)
+              break
+          }
+        }
+      }
+    }
+
+    log.response("FitScore complete", { leadCount: leads.length })
+  } catch (error) {
+    log.error("FitScore failed", error)
+    callbacks.onError?.(error instanceof Error ? error.message : "적합도 계산 실패")
+  }
+}

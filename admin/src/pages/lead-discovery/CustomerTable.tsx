@@ -10,6 +10,7 @@ import {
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table"
+import { AnimatePresence, motion } from "framer-motion"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import {
   ArrowDown,
@@ -256,6 +257,37 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
   // 드래그 상태
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null)
 
+  // 적합도 계산 완료 시 자동 정렬
+  const hasSortedRef = useRef(false)
+  const prevScoresCountRef = useRef(0)
+
+  useEffect(() => {
+    const scoresCount = Object.keys(fitScoreState.scores).length
+    const customersCount = customers.length
+
+    // 점수가 새로 계산되기 시작하면 정렬 플래그 리셋
+    if (scoresCount < prevScoresCountRef.current) {
+      hasSortedRef.current = false
+    }
+    prevScoresCountRef.current = scoresCount
+
+    // 모든 고객의 점수가 계산 완료되고, 아직 정렬하지 않았으면 정렬
+    if (
+      !hasSortedRef.current &&
+      !fitScoreState.isLoading &&
+      scoresCount > 0 &&
+      scoresCount >= customersCount
+    ) {
+      console.log("[FitScore] 자동 정렬 실행:", scoresCount, "scores")
+      // 정렬 상태를 클리어했다가 다시 설정 (캐싱 방지)
+      setSorting([])
+      requestAnimationFrame(() => {
+        setSorting([{ id: "fitScore", desc: true }])
+      })
+      hasSortedRef.current = true
+    }
+  }, [fitScoreState.isLoading, fitScoreState.scores, customers.length])
+
   const columns = useMemo<ColumnDef<Customer>[]>(
     () => [
       {
@@ -448,6 +480,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
       },
       {
         id: "fitScore",
+        accessorFn: (row) => fitScoreState.scores[row.id] ?? -1,
         header: ({ column }) => (
           <Button
             variant="ghost"
@@ -468,11 +501,6 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           const score = fitScoreState.scores[row.original.id]
           const isLoading = fitScoreState.isLoading && score === undefined
           return <FitScoreBadge score={score} isLoading={isLoading} />
-        },
-        sortingFn: (rowA, rowB) => {
-          const scoreA = fitScoreState.scores[rowA.original.id] ?? 0
-          const scoreB = fitScoreState.scores[rowB.original.id] ?? 0
-          return scoreA - scoreB
         },
         size: 70,
       },
@@ -765,39 +793,52 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className="border-b border-border/30 hover:bg-muted/40"
-                >
-                  {row.getVisibleCells().map((cell, index) => {
-                    const isFirstColumn = index === 0
-                    return (
-                      <TableCell
-                        key={cell.id}
-                        className={cn(
-                          "border-r border-border/20",
-                          isFirstColumn && "bg-zinc-50 dark:bg-zinc-900 sticky left-0 z-10",
-                        )}
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    )
-                  })}
+            <AnimatePresence mode="popLayout">
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <motion.tr
+                    key={row.original.id}
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{
+                      layout: { type: "spring", stiffness: 350, damping: 30 },
+                      opacity: { duration: 0.2 },
+                    }}
+                    data-state={row.getIsSelected() && "selected"}
+                    className="border-b border-border/30 hover:bg-muted/40 data-[state=selected]:bg-muted"
+                  >
+                    {row.getVisibleCells().map((cell, index) => {
+                      const isFirstColumn = index === 0
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          className={cn(
+                            "border-r border-border/20",
+                            isFirstColumn && "bg-zinc-50 dark:bg-zinc-900 sticky left-0 z-10",
+                          )}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      )
+                    })}
+                  </motion.tr>
+                ))
+              ) : (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-[400px] text-center align-middle"
+                  >
+                    <div className="flex flex-col items-center justify-center text-muted-foreground">
+                      <p className="text-base font-medium">아직 발견된 고객이 없습니다</p>
+                      <p className="text-sm mt-2">채팅으로 새로운 잠재 고객을 찾아보세요</p>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={columns.length} className="h-[400px] text-center align-middle">
-                  <div className="flex flex-col items-center justify-center text-muted-foreground">
-                    <p className="text-base font-medium">아직 발견된 고객이 없습니다</p>
-                    <p className="text-sm mt-2">채팅으로 새로운 잠재 고객을 찾아보세요</p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
+              )}
+            </AnimatePresence>
           </TableBody>
         </Table>
       </div>

@@ -161,3 +161,65 @@ export const updateStreamingStateAtom = atom(null, (get, set, updates: Partial<S
 export const resetStreamingStateAtom = atom(null, (_get, set) => {
   set(streamingStateAtom, initialStreamingState)
 })
+
+// ============================================
+// Selected Recommendation (적합도 계산용 - 스트리밍 완료 후에도 유지)
+// ============================================
+
+export interface SelectedTarget {
+  country: string
+  industry: string
+  subIndustry?: string
+}
+
+export const selectedTargetAtom = atom<SelectedTarget | null>(null)
+
+// ============================================
+// Fit Score State (AI 기반 적합도 점수)
+// ============================================
+
+export interface FitScoreState {
+  scores: Record<string, number> // leadId -> score
+  isLoading: boolean
+  progress: number // 0-100
+  error?: string
+}
+
+export const initialFitScoreState: FitScoreState = {
+  scores: {},
+  isLoading: false,
+  progress: 0,
+}
+
+// 적합도 점수 상태 atom
+export const fitScoreStateAtom = atom<FitScoreState>(initialFitScoreState)
+
+// 적합도 점수 업데이트 (단일)
+export const updateFitScoreAtom = atom(
+  null,
+  (get, set, { leadId, score }: { leadId: string; score: number }) => {
+    const current = get(fitScoreStateAtom)
+    set(fitScoreStateAtom, {
+      ...current,
+      scores: { ...current.scores, [leadId]: score },
+    })
+  },
+)
+
+// 적합도 로딩 상태 설정
+export const setFitScoreLoadingAtom = atom(
+  null,
+  (get, set, { isLoading, progress }: { isLoading: boolean; progress?: number }) => {
+    const current = get(fitScoreStateAtom)
+    set(fitScoreStateAtom, {
+      ...current,
+      isLoading,
+      progress: progress ?? current.progress,
+    })
+  },
+)
+
+// 적합도 상태 리셋
+export const resetFitScoreStateAtom = atom(null, (_get, set) => {
+  set(fitScoreStateAtom, initialFitScoreState)
+})

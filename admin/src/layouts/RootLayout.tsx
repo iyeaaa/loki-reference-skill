@@ -17,7 +17,7 @@ function PageLoadingFallback() {
 export default function RootLayout() {
   React.useEffect(() => {
     document.documentElement.lang = "ko"
-    document.title = "Send Grinda AI Email Marketing"
+    document.title = "Rinda AI Email Marketing"
   }, [])
 
   return (

@@ -14,6 +14,11 @@ import { Command, GraphInterrupt } from "@langchain/langgraph"
 import { Elysia, t } from "elysia"
 import { v4 as uuidv4 } from "uuid"
 import { createNodeEmitter } from "../services/chatbot/sse-context"
+import {
+  calculateFitScores,
+  type LeadForScoring,
+  type WebsiteAnalysisContext,
+} from "../services/lead-discovery/fit-score-calculator"
 import { clearCheckpoints, createLeadDiscoveryGraph } from "../services/lead-discovery/graph"
 import { leadDiscoveryLogger } from "../services/lead-discovery/logger"
 import type { LeadDiscoveryState } from "../services/lead-discovery/state"
@@ -555,6 +560,106 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
         tags: ["lead-discovery"],
         summary: "Clear all sessions",
         description: "Admin endpoint to clear all lead discovery sessions.",
+      },
+    },
+  )
+
+  // Calculate fit scores for leads (SSE streaming)
+  .post(
+    "/score",
+    async ({ body }) => {
+      const { leads, websiteAnalysis, selectedTarget } = body
+
+      leadDiscoveryLogger.info(
+        `[적합도 계산] 시작 - ${leads.length}개 리드, 타겟: ${selectedTarget.country}/${selectedTarget.industry}`,
+      )
+
+      return createSSEResponse(async (session) => {
+        const startTime = Date.now()
+
+        try {
+          // 시작 이벤트
+          session.push({
+            event: "start",
+            data: { totalLeads: leads.length },
+          })
+
+          let processedCount = 0
+
+          // 적합도 계산 (스트리밍)
+          await calculateFitScores(
+            leads as LeadForScoring[],
+            websiteAnalysis as WebsiteAnalysisContext,
+            selectedTarget,
+            (result) => {
+              processedCount++
+              session.push({
+                event: "score",
+                data: {
+                  leadId: result.leadId,
+                  score: result.score,
+                  reason: result.reason,
+                  progress: Math.round((processedCount / leads.length) * 100),
+                },
+              })
+            },
+          )
+
+          const duration = Date.now() - startTime
+          leadDiscoveryLogger.info(`[적합도 계산] 완료 - ${leads.length}개, ${duration}ms`)
+
+          // 완료 이벤트
+          session.push({
+            event: "complete",
+            data: {
+              totalProcessed: processedCount,
+              duration,
+            },
+          })
+        } catch (error) {
+          leadDiscoveryLogger.error(`[적합도 계산] 오류: ${error}`)
+          session.push({
+            event: "error",
+            data: { error: "적합도 계산 중 오류가 발생했습니다." },
+          })
+        }
+      })
+    },
+    {
+      body: t.Object({
+        leads: t.Array(
+          t.Object({
+            id: t.String(),
+            company_name: t.Optional(t.String()),
+            email: t.Optional(t.String()),
+            phone: t.Optional(t.String()),
+            web_address: t.Optional(t.String()),
+            country: t.Optional(t.String()),
+            industry: t.Optional(t.String()),
+            sub_industry: t.Optional(t.String()),
+            employee: t.Optional(t.String()),
+            revenue: t.Optional(t.String()),
+            title: t.Optional(t.String()),
+          }),
+        ),
+        websiteAnalysis: t.Object({
+          companyName: t.Optional(t.String()),
+          description: t.Optional(t.String()),
+          industry: t.Optional(t.String()),
+          products: t.Optional(t.Array(t.String())),
+          targetMarkets: t.Optional(t.Array(t.String())),
+          businessModel: t.Optional(t.String()),
+        }),
+        selectedTarget: t.Object({
+          country: t.String(),
+          industry: t.String(),
+        }),
+      }),
+      detail: {
+        tags: ["lead-discovery"],
+        summary: "Calculate fit scores for leads",
+        description:
+          "AI-powered fit score calculation for leads based on website analysis. Returns scores via SSE streaming.",
       },
     },
   )

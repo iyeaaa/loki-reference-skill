@@ -5,7 +5,7 @@
  */
 
 import { motion } from "framer-motion"
-import { Check, ChevronRight, FileText, MapPin, Target } from "lucide-react"
+import { Check, ChevronRight, FileText, Loader2, MapPin, Target } from "lucide-react"
 import type React from "react"
 import ReactMarkdown from "react-markdown"
 import type { BuyerRecommendation } from "@/lib/api/types/lead-discovery"
@@ -87,6 +87,10 @@ interface BuyerRecommendationCardsProps {
   selectedId?: string
   analysisSummary?: string
   className?: string
+  /** 바이어 추천 로딩 중 여부 */
+  isLoadingRecommendations?: boolean
+  /** 바이어 선택 후 검색 중 여부 */
+  isSearchingAfterSelection?: boolean
 }
 
 export function BuyerRecommendationCards({
@@ -96,11 +100,14 @@ export function BuyerRecommendationCards({
   selectedId,
   analysisSummary,
   className,
+  isLoadingRecommendations = false,
+  isSearchingAfterSelection = false,
 }: BuyerRecommendationCardsProps) {
   // 코드 펜스 제거 처리
   const cleanAnalysisSummary = analysisSummary ? stripCodeFences(analysisSummary) : ""
 
-  if (recommendations.length === 0) return null
+  // 로딩 중이 아니고 추천이 없으면 null 반환
+  if (!isLoadingRecommendations && recommendations.length === 0) return null
 
   const hasSelection = !!selectedId
 
@@ -125,89 +132,122 @@ export function BuyerRecommendationCards({
         </motion.div>
       )}
 
-      {/* 헤더 */}
-      <div className="flex items-center gap-2">
-        <Target className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium text-foreground">
-          {hasSelection ? "선택한 바이어 타겟" : "이런 바이어를 추천해요"}
-        </span>
-      </div>
+      {/* 로딩 중일 때 로딩 UI 표시 */}
+      {isLoadingRecommendations && recommendations.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="flex items-center gap-3 py-4"
+        >
+          <Loader2 className="h-5 w-5 text-primary animate-spin" />
+          <span className="text-base text-muted-foreground">
+            웹사이트를 분석한 정보를 기반으로 최적의 바이어 타겟을 찾고 있어요
+          </span>
+        </motion.div>
+      ) : (
+        <>
+          {/* 헤더 */}
+          <div className="flex items-center gap-2">
+            <Target className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-foreground">
+              {hasSelection ? "선택한 바이어 타겟" : "이런 바이어를 추천해요"}
+            </span>
+          </div>
 
-      {/* 카드 목록 */}
-      <div className="space-y-2">
-        {recommendations.map((rec, index) => {
-          const isSelected = rec.id === selectedId
-          const isOther = hasSelection && !isSelected
+          {/* 카드 목록 */}
+          <div className="space-y-2">
+            {recommendations.map((rec, index) => {
+              const isSelected = rec.id === selectedId
+              const isOther = hasSelection && !isSelected
 
-          // 선택 후에는 선택된 카드만 표시
-          if (isOther) return null
+              // 선택 후에는 선택된 카드만 표시
+              if (isOther) return null
 
-          return (
-            <motion.button
-              key={rec.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, delay: index * 0.05 }}
-              type="button"
-              onClick={() => !hasSelection && onSelect(rec)}
-              disabled={disabled || hasSelection}
-              className={cn(
-                "group w-full text-left rounded-xl border bg-card p-4 transition-all",
-                !hasSelection && "hover:border-primary/50 hover:bg-muted/30 active:scale-[0.99]",
-                isSelected && "border-primary bg-primary/5",
-                disabled && !isSelected && "opacity-50 cursor-not-allowed",
-                hasSelection && !isSelected && "hidden",
-              )}
-            >
-              <div className="flex items-start justify-between gap-3">
-                {/* 왼쪽: 국가 & 산업 */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start gap-2 mb-1">
+              return (
+                <motion.button
+                  key={rec.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: index * 0.05 }}
+                  type="button"
+                  onClick={() => !hasSelection && onSelect(rec)}
+                  disabled={disabled || hasSelection}
+                  className={cn(
+                    "group w-full text-left rounded-xl border bg-card p-4 transition-all",
+                    !hasSelection &&
+                      "hover:border-primary/50 hover:bg-muted/30 active:scale-[0.99]",
+                    isSelected && "border-primary bg-primary/5",
+                    disabled && !isSelected && "opacity-50 cursor-not-allowed",
+                    hasSelection && !isSelected && "hidden",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    {/* 왼쪽: 국가 & 산업 */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start gap-2 mb-1">
+                        {isSelected ? (
+                          <Check className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                        )}
+                        <span
+                          className={cn(
+                            "text-base font-medium break-words",
+                            isSelected ? "text-primary" : "text-foreground",
+                          )}
+                        >
+                          {rec.country}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground break-words pl-6">
+                        {rec.industry}
+                        {rec.subIndustry && ` · ${rec.subIndustry}`}
+                      </p>
+                    </div>
+
+                    {/* 오른쪽: 체크 또는 화살표 */}
                     {isSelected ? (
-                      <Check className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-primary font-medium flex-shrink-0">선택됨</span>
                     ) : (
-                      <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                      <ChevronRight className="h-5 w-5 text-muted-foreground/50 group-hover:text-primary transition-colors flex-shrink-0 mt-0.5" />
                     )}
-                    <span
-                      className={cn(
-                        "text-base font-medium break-words",
-                        isSelected ? "text-primary" : "text-foreground",
-                      )}
-                    >
-                      {rec.country}
-                    </span>
                   </div>
-                  <p className="text-sm text-muted-foreground break-words pl-6">
-                    {rec.industry}
-                    {rec.subIndustry && ` · ${rec.subIndustry}`}
-                  </p>
-                </div>
 
-                {/* 오른쪽: 체크 또는 화살표 */}
-                {isSelected ? (
-                  <span className="text-sm text-primary font-medium flex-shrink-0">선택됨</span>
-                ) : (
-                  <ChevronRight className="h-5 w-5 text-muted-foreground/50 group-hover:text-primary transition-colors flex-shrink-0 mt-0.5" />
-                )}
-              </div>
+                  {/* 추천 이유 */}
+                  {rec.reasoning && (
+                    <p className="mt-2 text-sm text-muted-foreground/80 pl-6 break-words">
+                      {rec.reasoning}
+                    </p>
+                  )}
 
-              {/* 추천 이유 */}
-              {rec.reasoning && (
-                <p className="mt-2 text-sm text-muted-foreground/80 pl-6 break-words">
-                  {rec.reasoning}
-                </p>
-              )}
+                  {/* 예상 리드 수 */}
+                  {rec.estimatedLeadCount && (
+                    <p className="mt-2 text-sm text-muted-foreground/60 pl-6">
+                      약 {rec.estimatedLeadCount.toLocaleString()}명의 잠재 바이어
+                    </p>
+                  )}
+                </motion.button>
+              )
+            })}
+          </div>
 
-              {/* 예상 리드 수 */}
-              {rec.estimatedLeadCount && (
-                <p className="mt-2 text-sm text-muted-foreground/60 pl-6">
-                  약 {rec.estimatedLeadCount.toLocaleString()}명의 잠재 바이어
-                </p>
-              )}
-            </motion.button>
-          )
-        })}
-      </div>
+          {/* 선택 후 검색 중 로딩 UI */}
+          {isSearchingAfterSelection && hasSelection && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="flex items-center gap-3 py-4"
+            >
+              <Loader2 className="h-5 w-5 text-primary animate-spin" />
+              <span className="text-base text-muted-foreground">
+                선택하신 타겟에 맞는 바이어를 찾고 있어요
+              </span>
+            </motion.div>
+          )}
+        </>
+      )}
     </div>
   )
 }

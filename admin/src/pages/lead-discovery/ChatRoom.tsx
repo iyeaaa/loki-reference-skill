@@ -33,6 +33,7 @@ import {
   type Customer,
   chatMessagesAtom,
   initialStreamingState,
+  selectedTargetAtom,
   streamingStateAtom,
   updateChatMessageAtom,
 } from "./store"
@@ -75,6 +76,7 @@ export function ChatRoom() {
 
   // Jotai 스트리밍 상태 (리마운트 시에도 유지)
   const [streamingState, setStreamingState] = useAtom(streamingStateAtom)
+  const setSelectedTarget = useSetAtom(selectedTargetAtom)
   const [input, setInput] = useState("")
   const [searchMode, setSearchMode] = useState<SearchMode>("website")
   const [websiteTooltipOpen, setWebsiteTooltipOpen] = useState(false)
@@ -677,6 +679,13 @@ export function ChatRoom() {
         // recommendations, analysisSummary, analyzedPages 유지
       }))
 
+      // 적합도 계산용 선택된 타겟 저장 (스트리밍 완료 후에도 유지)
+      setSelectedTarget({
+        country: rec.country,
+        industry: rec.industry,
+        subIndustry: rec.subIndustry,
+      })
+
       // 선택 API 호출
       selectMutation.mutate({
         sessionId: streamingState.sessionId,
@@ -684,7 +693,14 @@ export function ChatRoom() {
         workspaceId: selectedWorkspace.id,
       })
     },
-    [selectedWorkspace, streamingState.sessionId, addMessage, selectMutation, setStreamingState],
+    [
+      selectedWorkspace,
+      streamingState.sessionId,
+      addMessage,
+      selectMutation,
+      setStreamingState,
+      setSelectedTarget,
+    ],
   )
 
   const handleSubmit = useCallback(
@@ -1159,10 +1175,12 @@ export function ChatRoom() {
                               />
                             )}
 
-                          {/* 바이어 추천 선택 UI - 선택 후에도 유지 */}
+                          {/* 바이어 추천 선택 UI - 선택 후에도 유지, 로딩 중에도 표시 */}
                           {message.id === streamingState.messageId &&
-                            streamingState.recommendations.length > 0 &&
-                            (isWaitingSelection || streamingState.selectedRecommendationId) && (
+                            (streamingState.status === "recommending" ||
+                              (streamingState.recommendations.length > 0 &&
+                                (isWaitingSelection ||
+                                  streamingState.selectedRecommendationId))) && (
                               <BuyerRecommendationCards
                                 recommendations={streamingState.recommendations}
                                 onSelect={handleRecommendationSelect}
@@ -1170,6 +1188,10 @@ export function ChatRoom() {
                                 selectedId={streamingState.selectedRecommendationId}
                                 analysisSummary={streamingState.analysisSummary}
                                 className="max-w-2xl"
+                                isLoadingRecommendations={streamingState.status === "recommending"}
+                                isSearchingAfterSelection={
+                                  isSearching && !!streamingState.selectedRecommendationId
+                                }
                               />
                             )}
 

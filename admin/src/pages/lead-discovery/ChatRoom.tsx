@@ -1159,10 +1159,12 @@ export function ChatRoom() {
                               />
                             )}
 
-                          {/* 바이어 추천 선택 UI - 선택 후에도 유지 */}
+                          {/* 바이어 추천 선택 UI - 선택 후에도 유지, 로딩 중에도 표시 */}
                           {message.id === streamingState.messageId &&
-                            streamingState.recommendations.length > 0 &&
-                            (isWaitingSelection || streamingState.selectedRecommendationId) && (
+                            (streamingState.status === "recommending" ||
+                              (streamingState.recommendations.length > 0 &&
+                                (isWaitingSelection ||
+                                  streamingState.selectedRecommendationId))) && (
                               <BuyerRecommendationCards
                                 recommendations={streamingState.recommendations}
                                 onSelect={handleRecommendationSelect}
@@ -1170,6 +1172,7 @@ export function ChatRoom() {
                                 selectedId={streamingState.selectedRecommendationId}
                                 analysisSummary={streamingState.analysisSummary}
                                 className="max-w-2xl"
+                                isLoadingRecommendations={streamingState.status === "recommending"}
                               />
                             )}
 

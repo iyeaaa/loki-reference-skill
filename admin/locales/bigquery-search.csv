@@ -17,7 +17,7 @@ examples.query4,매출 10억 달러 이상인 제조업체,Manufacturing compani
 loading.searching,검색 중...,Searching...
 error.searchFailed,검색 요청 실패,Search request failed
 result.default,검색 결과입니다.,Here are your search results.
-error.searchError,"죄송합니다. 검색 중 오류가 발생했습니다. 다시 시도해주세요.","Sorry, an error occurred during search. Please try again."
+error.searchError,죄송합니다. 검색 중 오류가 발생했습니다. 다시 시도해주세요.,"Sorry, an error occurred during search. Please try again."
 error.toast,검색 중 오류가 발생했습니다,Error occurred during search
 sql.viewQuery,SQL 쿼리 보기,View SQL query
 sql.copied,SQL이 클립보드에 복사되었습니다,SQL copied to clipboard
@@ -69,3 +69,4 @@ lead.industry,산업,Industry
 lead.employees,직원수,Employees
 tooltip.viewCompanyInfo,회사 정보 조회,View company info
 tooltip.noWebsite,웹사이트 주소 없음,No website address
+table.allEmails,[NO TRANSLATION] bigquery-search.table.allEmails,[NO TRANSLATION] bigquery-search.table.allEmails

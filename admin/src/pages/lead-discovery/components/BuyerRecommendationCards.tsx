@@ -142,7 +142,7 @@ export function BuyerRecommendationCards({
         >
           <Loader2 className="h-5 w-5 text-primary animate-spin" />
           <span className="text-base text-muted-foreground">
-            웹사이트를 분석한 정보를 기반으로 최적의 바이어를 찾고 있어요
+            웹사이트를 분석한 정보를 기반으로 최적의 바이어 타겟을 찾고 있어요
           </span>
         </motion.div>
       ) : (

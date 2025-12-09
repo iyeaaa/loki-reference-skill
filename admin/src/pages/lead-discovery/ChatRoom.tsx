@@ -1173,6 +1173,9 @@ export function ChatRoom() {
                                 analysisSummary={streamingState.analysisSummary}
                                 className="max-w-2xl"
                                 isLoadingRecommendations={streamingState.status === "recommending"}
+                                isSearchingAfterSelection={
+                                  isSearching && !!streamingState.selectedRecommendationId
+                                }
                               />
                             )}
 

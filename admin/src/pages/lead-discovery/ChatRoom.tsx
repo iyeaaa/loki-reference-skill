@@ -6,16 +6,28 @@
  */
 
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
-import { ArrowRight, Check, Globe, Lightbulb, Loader2, SlidersHorizontal } from "lucide-react"
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  Globe,
+  Lightbulb,
+  Loader2,
+  SlidersHorizontal,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
 import TextPlus from "@/assets/text-plus.svg"
 import TextRinda from "@/assets/text-rinda.svg"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   type LeadDiscoveryEventData,
   useLeadDiscoveryMutation,
@@ -79,8 +91,6 @@ export function ChatRoom() {
   const setSelectedTarget = useSetAtom(selectedTargetAtom)
   const [input, setInput] = useState("")
   const [searchMode, setSearchMode] = useState<SearchMode>("website")
-  const [websiteTooltipOpen, setWebsiteTooltipOpen] = useState(false)
-  const [detailedTooltipOpen, setDetailedTooltipOpen] = useState(false)
   const [animatingCard, setAnimatingCard] = useState<string | null>(null)
   const [cardAnimationDistance, setCardAnimationDistance] = useState<number>(0)
 
@@ -873,113 +883,59 @@ export function ChatRoom() {
 
                       {/* 2행: 버튼들 */}
                       <div className="flex items-center justify-between px-3 pb-3 pt-2">
-                        {/* 좌측: 2개의 모드 선택 버튼 */}
-                        <div className="flex items-center gap-0.5">
-                          <TooltipProvider delayDuration={200}>
-                            <Tooltip open={websiteTooltipOpen} onOpenChange={setWebsiteTooltipOpen}>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant={searchMode === "website" ? "default" : "ghost"}
-                                  size="icon"
-                                  onClick={() => {
-                                    if (searchMode !== "website") {
-                                      setSearchMode("website")
-                                    }
-                                    setWebsiteTooltipOpen(true)
-                                  }}
-                                  onMouseEnter={() => setWebsiteTooltipOpen(true)}
-                                  onMouseLeave={() => setWebsiteTooltipOpen(false)}
-                                  className={cn(
-                                    "h-8 w-8 rounded-lg",
-                                    searchMode !== "website" &&
-                                      "text-muted-foreground hover:text-foreground",
-                                  )}
-                                >
-                                  <Globe className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="bottom"
-                                className="px-4 py-3 max-w-[300px] bg-white dark:bg-gray-800 text-foreground border border-border shadow-lg"
-                                onMouseEnter={() => setWebsiteTooltipOpen(true)}
-                                onMouseLeave={() => setWebsiteTooltipOpen(false)}
-                              >
-                                <div className="font-semibold text-base">웹사이트로 시작하기</div>
-                                <div className="text-xs opacity-70 mt-1 mb-2">
-                                  우리 회사 웹사이트 주소만 있으면 돼요
-                                </div>
-                                <Separator className="my-2" />
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-1.5 text-sm font-medium">
-                                    기본 모드
-                                    {searchMode === "website" && <Check className="h-3.5 w-3.5" />}
-                                  </div>
-                                  <div className="text-xs opacity-70 leading-relaxed">
-                                    우리 비즈니스를 분석해서 최적의 바이어를 찾아요
-                                  </div>
-                                  <div className="text-xs opacity-70 leading-relaxed">
-                                    가장 빠르고 간편해요
-                                  </div>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-
-                          <TooltipProvider delayDuration={200}>
-                            <Tooltip
-                              open={detailedTooltipOpen}
-                              onOpenChange={setDetailedTooltipOpen}
+                        {/* 좌측: 검색 모드 선택 드롭다운 */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 gap-1.5 px-2.5 rounded-lg text-muted-foreground hover:text-foreground"
                             >
-                              <TooltipTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant={searchMode === "detailed" ? "default" : "ghost"}
-                                  size="icon"
-                                  onClick={() => {
-                                    if (searchMode !== "detailed") {
-                                      setSearchMode("detailed")
-                                    }
-                                    setDetailedTooltipOpen(true)
-                                  }}
-                                  onMouseEnter={() => setDetailedTooltipOpen(true)}
-                                  onMouseLeave={() => setDetailedTooltipOpen(false)}
-                                  className={cn(
-                                    "h-8 w-8 rounded-lg",
-                                    searchMode !== "detailed" &&
-                                      "text-muted-foreground hover:text-foreground",
-                                  )}
-                                >
-                                  <SlidersHorizontal className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="bottom"
-                                className="px-4 py-3 max-w-[300px] bg-white dark:bg-gray-800 text-foreground border border-border shadow-lg"
-                                onMouseEnter={() => setDetailedTooltipOpen(true)}
-                                onMouseLeave={() => setDetailedTooltipOpen(false)}
-                              >
-                                <div className="font-semibold text-base">원하는 조건으로 찾기</div>
-                                <div className="text-xs opacity-70 mt-1 mb-2">
-                                  업종, 지역, 규모 등을 직접 정해요
-                                </div>
-                                <Separator className="my-2" />
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-1.5 text-sm font-medium">
-                                    고급 모드
-                                    {searchMode === "detailed" && <Check className="h-3.5 w-3.5" />}
-                                  </div>
-                                  <div className="text-xs opacity-70 leading-relaxed">
-                                    필요한 조건을 하나씩 설정할 수 있어요
-                                  </div>
-                                  <div className="text-xs opacity-70 leading-relaxed">
-                                    더 정확한 타겟팅이 가능해요
-                                  </div>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
+                              {searchMode === "website" ? (
+                                <Globe className="h-4 w-4" />
+                              ) : (
+                                <SlidersHorizontal className="h-4 w-4" />
+                              )}
+                              <span className="text-xs font-medium">
+                                {searchMode === "website" ? "웹사이트" : "조건 검색"}
+                              </span>
+                              <ChevronDown className="h-3 w-3 opacity-50" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-[260px]">
+                            <DropdownMenuItem
+                              onClick={() => setSearchMode("website")}
+                              className="flex flex-col items-start gap-1 py-3 cursor-pointer"
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                <Globe className="h-4 w-4" />
+                                <span className="font-medium">웹사이트로 시작하기</span>
+                                {searchMode === "website" && (
+                                  <Check className="h-4 w-4 ml-auto text-primary" />
+                                )}
+                              </div>
+                              <span className="text-xs text-muted-foreground pl-6">
+                                우리 회사 웹사이트 주소만 있으면 돼요
+                              </span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setSearchMode("detailed")}
+                              className="flex flex-col items-start gap-1 py-3 cursor-pointer"
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                <SlidersHorizontal className="h-4 w-4" />
+                                <span className="font-medium">원하는 조건으로 찾기</span>
+                                {searchMode === "detailed" && (
+                                  <Check className="h-4 w-4 ml-auto text-primary" />
+                                )}
+                              </div>
+                              <span className="text-xs text-muted-foreground pl-6">
+                                업종, 지역, 규모 등을 직접 정해요
+                              </span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
 
                         {/* 우측: 제출 버튼 */}
                         <Button
@@ -1274,110 +1230,59 @@ export function ChatRoom() {
 
                 {/* 2행: 버튼들 */}
                 <div className="flex items-center justify-between px-3 pb-3 pt-2">
-                  {/* 좌측: 2개의 모드 선택 버튼 */}
-                  <div className="flex items-center gap-0.5">
-                    <TooltipProvider delayDuration={200}>
-                      <Tooltip open={websiteTooltipOpen} onOpenChange={setWebsiteTooltipOpen}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant={searchMode === "website" ? "default" : "ghost"}
-                            size="icon"
-                            onClick={() => {
-                              if (searchMode !== "website") {
-                                setSearchMode("website")
-                              }
-                              setWebsiteTooltipOpen(true)
-                            }}
-                            onMouseEnter={() => setWebsiteTooltipOpen(true)}
-                            onMouseLeave={() => setWebsiteTooltipOpen(false)}
-                            className={cn(
-                              "h-8 w-8 rounded-lg",
-                              searchMode !== "website" &&
-                                "text-muted-foreground hover:text-foreground",
-                            )}
-                          >
-                            <Globe className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent
-                          side="top"
-                          className="px-4 py-3 max-w-[300px] bg-white dark:bg-gray-800 text-foreground border border-border shadow-lg"
-                          onMouseEnter={() => setWebsiteTooltipOpen(true)}
-                          onMouseLeave={() => setWebsiteTooltipOpen(false)}
-                        >
-                          <div className="font-semibold text-base">웹사이트로 시작하기</div>
-                          <div className="text-xs opacity-70 mt-1 mb-2">
-                            우리 회사 웹사이트 주소만 있으면 돼요
-                          </div>
-                          <Separator className="my-2" />
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-1.5 text-sm font-medium">
-                              기본 모드
-                              {searchMode === "website" && <Check className="h-3.5 w-3.5" />}
-                            </div>
-                            <div className="text-xs opacity-70 leading-relaxed">
-                              우리 비즈니스를 분석해서 최적의 바이어를 찾아요
-                            </div>
-                            <div className="text-xs opacity-70 leading-relaxed">
-                              가장 빠르고 간편해요
-                            </div>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-
-                    <TooltipProvider delayDuration={200}>
-                      <Tooltip open={detailedTooltipOpen} onOpenChange={setDetailedTooltipOpen}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant={searchMode === "detailed" ? "default" : "ghost"}
-                            size="icon"
-                            onClick={() => {
-                              if (searchMode !== "detailed") {
-                                setSearchMode("detailed")
-                              }
-                              setDetailedTooltipOpen(true)
-                            }}
-                            onMouseEnter={() => setDetailedTooltipOpen(true)}
-                            onMouseLeave={() => setDetailedTooltipOpen(false)}
-                            className={cn(
-                              "h-8 w-8 rounded-lg",
-                              searchMode !== "detailed" &&
-                                "text-muted-foreground hover:text-foreground",
-                            )}
-                          >
-                            <SlidersHorizontal className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent
-                          side="top"
-                          className="px-4 py-3 max-w-[300px] bg-white dark:bg-gray-800 text-foreground border border-border shadow-lg"
-                          onMouseEnter={() => setDetailedTooltipOpen(true)}
-                          onMouseLeave={() => setDetailedTooltipOpen(false)}
-                        >
-                          <div className="font-semibold text-base">원하는 조건으로 찾기</div>
-                          <div className="text-xs opacity-70 mt-1 mb-2">
-                            업종, 지역, 규모 등을 직접 정해요
-                          </div>
-                          <Separator className="my-2" />
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-1.5 text-sm font-medium">
-                              고급 모드
-                              {searchMode === "detailed" && <Check className="h-3.5 w-3.5" />}
-                            </div>
-                            <div className="text-xs opacity-70 leading-relaxed">
-                              필요한 조건을 하나씩 설정할 수 있어요
-                            </div>
-                            <div className="text-xs opacity-70 leading-relaxed">
-                              더 정확한 타겟팅이 가능해요
-                            </div>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
+                  {/* 좌측: 검색 모드 선택 드롭다운 */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1.5 px-2.5 rounded-lg text-muted-foreground hover:text-foreground"
+                      >
+                        {searchMode === "website" ? (
+                          <Globe className="h-4 w-4" />
+                        ) : (
+                          <SlidersHorizontal className="h-4 w-4" />
+                        )}
+                        <span className="text-xs font-medium">
+                          {searchMode === "website" ? "웹사이트" : "조건 검색"}
+                        </span>
+                        <ChevronDown className="h-3 w-3 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-[260px]">
+                      <DropdownMenuItem
+                        onClick={() => setSearchMode("website")}
+                        className="flex flex-col items-start gap-1 py-3 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <Globe className="h-4 w-4" />
+                          <span className="font-medium">웹사이트로 시작하기</span>
+                          {searchMode === "website" && (
+                            <Check className="h-4 w-4 ml-auto text-primary" />
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground pl-6">
+                          우리 회사 웹사이트 주소만 있으면 돼요
+                        </span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setSearchMode("detailed")}
+                        className="flex flex-col items-start gap-1 py-3 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <SlidersHorizontal className="h-4 w-4" />
+                          <span className="font-medium">원하는 조건으로 찾기</span>
+                          {searchMode === "detailed" && (
+                            <Check className="h-4 w-4 ml-auto text-primary" />
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground pl-6">
+                          업종, 지역, 규모 등을 직접 정해요
+                        </span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
                   {/* 우측: 제출 버튼 */}
                   <Button

@@ -120,6 +120,7 @@ import type { AnalyzedPage, BuyerRecommendation } from "@/lib/api/types/lead-dis
 // 스트리밍 상태 인터페이스
 export interface StreamingState {
   messageId: string | null
+  analysisMessageId: string | null // 분석 결과가 표시될 메시지 ID (선택 후에도 유지)
   status: LeadDiscoveryStatus
   message: string
   progress: number
@@ -138,6 +139,7 @@ export interface StreamingState {
 
 export const initialStreamingState: StreamingState = {
   messageId: null,
+  analysisMessageId: null,
   status: "idle",
   message: "",
   progress: 0,

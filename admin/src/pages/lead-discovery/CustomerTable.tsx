@@ -28,6 +28,7 @@ import {
   MoreHorizontal,
   Plus,
   SortAsc,
+  Sparkles,
   Trash2,
   UserPlus,
 } from "lucide-react"
@@ -61,17 +62,21 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useCustomerGroupsByWorkspace } from "@/lib/api/hooks/customer-groups"
-import { calculateFitScores } from "@/lib/api/hooks/lead-discovery"
+import { calculateFitScores, enrichLeads } from "@/lib/api/hooks/lead-discovery"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 import {
   type Customer,
   customersAtom,
+  enrichmentStateAtom,
+  finishEnrichmentAtom,
   fitScoreStateAtom,
   removeCustomerAtom,
   selectedTargetAtom,
   setFitScoreLoadingAtom,
+  startEnrichmentAtom,
   streamingStateAtom,
+  updateCustomerAtom,
   updateFitScoreAtom,
 } from "./store"
 
@@ -174,6 +179,14 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
   )
   const [selectedGroupId, setSelectedGroupId] = useState<string>("")
   const [isAddingToGroup, setIsAddingToGroup] = useState(false)
+
+  // Enrichment 관련 상태
+  const enrichmentState = useAtomValue(enrichmentStateAtom)
+  const startEnrichment = useSetAtom(startEnrichmentAtom)
+  const finishEnrichment = useSetAtom(finishEnrichmentAtom)
+  const updateCustomer = useSetAtom(updateCustomerAtom)
+  const [isEnriching, setIsEnriching] = useState(false)
+  const [enrichProgress, setEnrichProgress] = useState({ current: 0, total: 0, name: "" })
 
   // API 호출 중 여부 추적
   const isCalculatingRef = useRef(false)
@@ -345,6 +358,62 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
       setIsAddingToGroup(false)
     }
   }, [selectedGroupId, rowSelection, customers])
+
+  // 선택된 리드 enrichment
+  const handleEnrichment = useCallback(async () => {
+    const selectedRowIds = Object.keys(rowSelection).filter(
+      (key) => rowSelection[key as keyof typeof rowSelection],
+    )
+
+    if (selectedRowIds.length === 0) {
+      toast.error("Enrichment할 리드를 선택해주세요")
+      return
+    }
+
+    // 선택된 고객 데이터 가져오기 (웹사이트가 있는 것만)
+    const selectedCustomers = customers
+      .filter((_, index) => selectedRowIds.includes(index.toString()))
+      .filter((c) => c.web_address)
+
+    if (selectedCustomers.length === 0) {
+      toast.error("웹사이트 정보가 있는 리드만 Enrichment 가능합니다")
+      return
+    }
+
+    setIsEnriching(true)
+    const customerIds = selectedCustomers.map((c) => c.id)
+    startEnrichment(customerIds)
+
+    await enrichLeads(
+      selectedCustomers.map((c) => ({
+        id: c.id,
+        webAddress: c.web_address || "",
+        companyName: c.company_name || "",
+      })),
+      {
+        onProgress: (completed, total, name) => {
+          setEnrichProgress({ current: completed + 1, total, name })
+        },
+        onResult: (leadId, result) => {
+          // 고객 정보 업데이트
+          updateCustomer(leadId, {
+            description: result.companyInfo.description,
+          })
+          finishEnrichment(leadId)
+        },
+        onError: (leadId, error) => {
+          console.error(`Enrichment failed for ${leadId}:`, error)
+          finishEnrichment(leadId, error)
+        },
+        onComplete: () => {
+          setIsEnriching(false)
+          setEnrichProgress({ current: 0, total: 0, name: "" })
+          toast.success(`${selectedCustomers.length}개 리드의 Enrichment가 완료되었습니다`)
+          setRowSelection({})
+        },
+      },
+    )
+  }, [rowSelection, customers, startEnrichment, finishEnrichment, updateCustomer])
 
   // 적합도 계산 완료 시 자동 정렬
   const hasSortedRef = useRef(false)
@@ -572,6 +641,34 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         ),
       },
       {
+        accessorKey: "description",
+        header: "Description",
+        cell: ({ row }) => {
+          const description = row.getValue("description") as string | undefined
+          const isLoading = enrichmentState.loadingIds.has(row.original.id)
+
+          if (isLoading) {
+            return (
+              <div className="flex items-center gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">분석 중...</span>
+              </div>
+            )
+          }
+
+          if (!description) {
+            return <span className="text-muted-foreground text-xs">-</span>
+          }
+
+          return (
+            <span className="text-xs line-clamp-2 max-w-[200px]" title={description}>
+              {description}
+            </span>
+          )
+        },
+        size: 200,
+      },
+      {
         id: "fitScore",
         accessorFn: (row) => fitScoreState.scores[row.id] ?? -1,
         header: ({ column }) => (
@@ -580,7 +677,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="h-8 px-2 -ml-2"
           >
-            적합도
+            Fit Score
             {column.getIsSorted() === "asc" ? (
               <ArrowUp className="ml-2 h-4 w-4" />
             ) : column.getIsSorted() === "desc" ? (
@@ -632,7 +729,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         },
       },
     ],
-    [removeCustomer, fitScoreState],
+    [removeCustomer, fitScoreState, enrichmentState],
   )
 
   const table = useReactTable({
@@ -876,6 +973,27 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
                   <UserPlus className="h-4 w-4" />
                 )}
                 추가
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1"
+                onClick={handleEnrichment}
+                disabled={isEnriching}
+              >
+                {isEnriching ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {enrichProgress.total > 0
+                      ? `${enrichProgress.current}/${enrichProgress.total}`
+                      : "..."}
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Enrich
+                  </>
+                )}
               </Button>
             </>
           )}

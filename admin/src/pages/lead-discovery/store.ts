@@ -28,6 +28,8 @@ export interface Customer {
   sub_industry?: string
   source: string
   createdAt: Date
+  // Enrichment fields
+  description?: string
 }
 
 // 채팅 메시지 인터페이스
@@ -224,4 +226,53 @@ export const setFitScoreLoadingAtom = atom(
 // 적합도 상태 리셋
 export const resetFitScoreStateAtom = atom(null, (_get, set) => {
   set(fitScoreStateAtom, initialFitScoreState)
+})
+
+// ============================================
+// Enrichment State (회사 description 등)
+// ============================================
+
+export interface EnrichmentState {
+  // customerId -> loading state
+  loadingIds: Set<string>
+  // customerId -> error message
+  errors: Record<string, string>
+}
+
+export const initialEnrichmentState: EnrichmentState = {
+  loadingIds: new Set(),
+  errors: {},
+}
+
+export const enrichmentStateAtom = atom<EnrichmentState>(initialEnrichmentState)
+
+// Enrichment 로딩 시작
+export const startEnrichmentAtom = atom(null, (get, set, customerIds: string[]) => {
+  const current = get(enrichmentStateAtom)
+  const newLoadingIds = new Set(current.loadingIds)
+  for (const id of customerIds) {
+    newLoadingIds.add(id)
+  }
+  set(enrichmentStateAtom, { ...current, loadingIds: newLoadingIds })
+})
+
+// Enrichment 완료 (로딩 해제)
+export const finishEnrichmentAtom = atom(null, (get, set, customerId: string, error?: string) => {
+  const current = get(enrichmentStateAtom)
+  const newLoadingIds = new Set(current.loadingIds)
+  newLoadingIds.delete(customerId)
+
+  const newErrors = { ...current.errors }
+  if (error) {
+    newErrors[customerId] = error
+  } else {
+    delete newErrors[customerId]
+  }
+
+  set(enrichmentStateAtom, { loadingIds: newLoadingIds, errors: newErrors })
+})
+
+// Enrichment 상태 리셋
+export const resetEnrichmentStateAtom = atom(null, (_get, set) => {
+  set(enrichmentStateAtom, initialEnrichmentState)
 })

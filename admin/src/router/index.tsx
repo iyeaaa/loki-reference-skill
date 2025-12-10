@@ -12,7 +12,7 @@ import NewTrialPage from "../pages/NewTrialPage"
 
 // 모든 페이지 - Lazy Loading (성능 최적화)
 const ChatbotPage = lazy(() => import("../pages/ChatbotPage"))
-const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"))
+const DashboardPage = lazy(() => import("../pages/dashboard/DashboardV2Page"))
 const RepliedEmailsPage = lazy(() => import("../pages/email-replies/EmailRepliesPage"))
 const LeadsPage = lazy(() => import("../pages/leads"))
 const LeadDiscoveryPage = lazy(() => import("../pages/lead-discovery"))

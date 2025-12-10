@@ -302,13 +302,17 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             aria-label="Select all"
           />
         ),
-        cell: ({ row }) => (
-          <RowIndexCell
-            rowIndex={row.index + 1}
-            isSelected={row.getIsSelected()}
-            onToggle={(value) => row.toggleSelected(!!value)}
-          />
-        ),
+        cell: ({ row, table }) => {
+          // 정렬된 순서의 인덱스 계산
+          const sortedIndex = table.getRowModel().rows.findIndex((r) => r.id === row.id) + 1
+          return (
+            <RowIndexCell
+              rowIndex={sortedIndex}
+              isSelected={row.getIsSelected()}
+              onToggle={(value) => row.toggleSelected(!!value)}
+            />
+          )
+        },
         enableSorting: false,
         enableHiding: false,
         size: 50,

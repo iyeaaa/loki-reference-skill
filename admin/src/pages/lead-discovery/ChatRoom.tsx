@@ -213,25 +213,41 @@ export function ChatRoom() {
         : ""
 
       setStreamingState((prev) => {
-        if (prev.messageId) {
-          // 분석 결과를 메시지에 포함 (코드 펜스 제거)
+        // 분석 결과를 첫 번째 메시지(analysisMessageId)에 포함
+        if (prev.analysisMessageId) {
           const cleanAnalysis = prev.analysisSummary ? stripCodeFences(prev.analysisSummary) : ""
           const cleanCustomerAnalysis = prev.customerAnalysisSummary
             ? stripCodeFences(prev.customerAnalysisSummary)
             : ""
 
           const analysisPart = cleanAnalysis
-            ? `---\n\n### 📊 웹사이트 분석 리포트\n\n${cleanAnalysis}\n\n`
+            ? `### 📊 웹사이트 분석 리포트\n\n${cleanAnalysis}\n\n`
             : ""
           const customerAnalysisPart = cleanCustomerAnalysis
-            ? `---\n\n### 👥 잠재 바이어 분석 리포트\n\n${cleanCustomerAnalysis}\n\n`
+            ? `### 👥 잠재 바이어 분석 리포트\n\n${cleanCustomerAnalysis}\n\n`
             : ""
 
+          if (analysisPart || customerAnalysisPart) {
+            updateMessage(prev.analysisMessageId, {
+              content: `${analysisPart}${customerAnalysisPart}`,
+            })
+          }
+        }
+
+        // 검색 결과를 두 번째 메시지(messageId)에 포함
+        if (prev.messageId) {
           updateMessage(prev.messageId, {
-            content: `${recInfo}**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.\n\n${analysisPart}${customerAnalysisPart}`,
+            content: `${recInfo}**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.`,
           })
         }
-        return initialStreamingState
+
+        // 웹사이트 분석 결과와 추천 카드는 유지하고, 상태만 완료로 변경
+        return {
+          ...prev,
+          status: "complete" as const,
+          message: "",
+          progress: 100,
+        }
       })
     },
     onError: (error) => {
@@ -759,6 +775,7 @@ export function ChatRoom() {
       // 스트리밍 상태 초기화
       setStreamingState({
         messageId: assistantMessageId,
+        analysisMessageId: assistantMessageId, // 분석 결과가 표시될 메시지 ID
         status: "connecting",
         message: "서버에 연결 중...",
         progress: 0,
@@ -1176,9 +1193,10 @@ export function ChatRoom() {
                               />
                             )}
 
-                          {/* 바이어 추천 선택 UI - 선택 후에도 유지, 로딩 중에도 표시 */}
-                          {message.id === streamingState.messageId &&
+                          {/* 바이어 추천 선택 UI - 첫 번째 응답 메시지에 표시 (선택 후에도 유지) */}
+                          {message.id === streamingState.analysisMessageId &&
                             (streamingState.status === "recommending" ||
+                              streamingState.status === "complete" ||
                               (streamingState.recommendations.length > 0 &&
                                 (isWaitingSelection ||
                                   streamingState.selectedRecommendationId))) && (

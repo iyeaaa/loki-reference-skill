@@ -31,11 +31,10 @@ export interface BigQuerySearchParams {
   limit?: number
 }
 
-// BigQuery result item
+// BigQuery result item (B2B Leads + Crunchbase 통합)
 export interface BigQueryResult {
   email?: string
   firstName?: string
-  middleName?: string
   lastName?: string
   title?: string
   companyName?: string
@@ -50,6 +49,7 @@ export interface BigQueryResult {
   webAddress?: string
   employee?: string
   revenue?: string
+  description?: string // Crunchbase only
 }
 
 // Analyzed page info

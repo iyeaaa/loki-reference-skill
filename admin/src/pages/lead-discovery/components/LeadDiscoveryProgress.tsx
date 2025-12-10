@@ -275,12 +275,7 @@ function CurrentPagePreview({
   const currentPage = pages[pages.length - 1]
 
   return (
-    <div className="space-y-3 mt-4">
-      <div className="flex items-center gap-2 ml-1">
-        <span className="text-sm text-muted-foreground">
-          {pages.length}번째 페이지를 읽고 있어요
-        </span>
-      </div>
+    <div className="mt-4">
       <AnimatePresence mode="wait">
         <WebsiteIframePreview key={currentPage.url} page={currentPage} />
       </AnimatePresence>

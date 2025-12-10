@@ -46,6 +46,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -661,9 +662,22 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           }
 
           return (
-            <span className="text-xs line-clamp-2 max-w-[200px]" title={description}>
-              {description}
-            </span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="text-xs line-clamp-2 max-w-[200px] text-left hover:text-primary cursor-pointer transition-colors"
+                >
+                  {description}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] max-h-[300px] overflow-y-auto" align="start">
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Company Description</h4>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+                </div>
+              </PopoverContent>
+            </Popover>
           )
         },
         size: 200,

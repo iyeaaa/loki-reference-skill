@@ -16,18 +16,12 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  ChevronDown,
   ExternalLink,
-  Filter,
   GripVertical,
-  LayoutGrid,
   Loader2,
   Maximize2,
-  Menu,
   Minimize2,
   MoreHorizontal,
-  Plus,
-  SortAsc,
   Sparkles,
   Trash2,
   UserPlus,
@@ -39,7 +33,6 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -813,141 +806,6 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           >
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
-
-          {/* Filter 메뉴 */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1 hover:bg-accent hover:text-accent-foreground"
-              >
-                <Filter className="h-4 w-4" />
-                Filter
-                <ChevronDown className="h-3 w-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[200px]">
-              <DropdownMenuLabel>Filter by industry</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem checked>All</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Software & Internet</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Business Services</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Manufacturing</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Financial Services</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Healthcare</DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Sort 메뉴 */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1 hover:bg-accent hover:text-accent-foreground"
-              >
-                <SortAsc className="h-4 w-4" />
-                Sort
-                <ChevronDown className="h-3 w-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[200px]">
-              <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSorting([{ id: "company_name", desc: false }])}>
-                Company (A-Z)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSorting([{ id: "company_name", desc: true }])}>
-                Company (Z-A)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSorting([{ id: "industry", desc: false }])}>
-                Industry (A-Z)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSorting([{ id: "industry", desc: true }])}>
-                Industry (Z-A)
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSorting([])}>Clear sort</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Layout 메뉴 */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1 hover:bg-accent hover:text-accent-foreground"
-              >
-                <LayoutGrid className="h-4 w-4" />
-                Layout
-                <ChevronDown className="h-3 w-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[180px]">
-              <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Hamburger 메뉴 */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1 hover:bg-accent hover:text-accent-foreground"
-              >
-                <Menu className="h-4 w-4" />
-                <ChevronDown className="h-3 w-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[180px]">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Export CSV</DropdownMenuItem>
-              <DropdownMenuItem>Export Excel</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Select all</DropdownMenuItem>
-              <DropdownMenuItem>Clear selection</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Insert 메뉴 */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1 hover:bg-accent hover:text-accent-foreground"
-              >
-                <Plus className="h-4 w-4" />
-                Insert
-                <ChevronDown className="h-3 w-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[180px]">
-              <DropdownMenuLabel>Add new</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Add customer</DropdownMenuItem>
-              <DropdownMenuItem>Import from CSV</DropdownMenuItem>
-              <DropdownMenuItem>Bulk import</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
 
         <div className="flex items-center gap-2">

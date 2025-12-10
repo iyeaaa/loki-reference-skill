@@ -726,7 +726,7 @@ export const enrichLead = async (
   return response.json()
 }
 
-// 여러 리드 enrichment (순차 처리)
+// 여러 리드 enrichment (병렬 처리)
 export const enrichLeads = async (
   leads: Array<{ id: string; webAddress: string; companyName: string }>,
   callbacks: {
@@ -737,22 +737,27 @@ export const enrichLeads = async (
   },
 ): Promise<void> => {
   const total = leads.length
+  let completed = 0
 
-  for (let i = 0; i < leads.length; i++) {
-    const lead = leads[i]
-    callbacks.onProgress?.(i, total, lead.companyName)
-
+  // 병렬로 모든 리드 처리
+  const promises = leads.map(async (lead) => {
     try {
       const response = await enrichLead(lead.webAddress, lead.companyName)
+      completed++
+      callbacks.onProgress?.(completed, total, lead.companyName)
+
       if (response.success && response.data) {
         callbacks.onResult?.(lead.id, response.data)
       } else {
         callbacks.onError?.(lead.id, response.error || "Unknown error")
       }
     } catch (error) {
+      completed++
+      callbacks.onProgress?.(completed, total, lead.companyName)
       callbacks.onError?.(lead.id, error instanceof Error ? error.message : "Failed to enrich")
     }
-  }
+  })
 
+  await Promise.all(promises)
   callbacks.onComplete?.()
 }

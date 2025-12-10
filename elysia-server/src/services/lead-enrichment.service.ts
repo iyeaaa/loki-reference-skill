@@ -77,7 +77,7 @@ export const findEmailsWithHunter = async (
   }
 }
 
-// Jina Reader로 웹사이트 콘텐츠 추출
+// Jina Reader로 웹사이트 콘텐츠 추출 (15초 타임아웃)
 export const extractWebsiteContent = async (
   url: string,
 ): Promise<{
@@ -85,35 +85,53 @@ export const extractWebsiteContent = async (
   title?: string
   description?: string
 }> => {
+  const TIMEOUT_MS = 15000 // 15초 타임아웃
+
   try {
     // URL 정규화
     const normalizedUrl = url.startsWith("http") ? url : `https://${url}`
 
-    const response = await fetch(`https://r.jina.ai/${normalizedUrl}`, {
-      headers: {
-        Accept: "text/plain",
-      },
-    })
+    // AbortController로 타임아웃 설정
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
-    if (!response.ok) {
-      logger.warn({ url, status: response.status }, "Jina Reader API error")
-      return { content: "" }
-    }
+    try {
+      const response = await fetch(`https://r.jina.ai/${normalizedUrl}`, {
+        headers: {
+          Accept: "text/plain",
+        },
+        signal: controller.signal,
+      })
 
-    const content = await response.text()
+      clearTimeout(timeoutId)
 
-    // 콘텐츠에서 제목과 설명 추출 시도
-    const titleMatch = content.match(/^#\s*(.+)$/m)
-    const title = titleMatch ? titleMatch[1] : undefined
+      if (!response.ok) {
+        logger.warn({ url, status: response.status }, "Jina Reader API error")
+        return { content: "" }
+      }
 
-    // 첫 몇 문장을 설명으로 사용
-    const paragraphs = content.split("\n\n").filter((p) => p.trim().length > 50)
-    const description = paragraphs.slice(0, 2).join(" ").slice(0, 500)
+      const content = await response.text()
 
-    return {
-      content: content.slice(0, 5000), // 최대 5000자
-      title,
-      description,
+      // 콘텐츠에서 제목과 설명 추출 시도
+      const titleMatch = content.match(/^#\s*(.+)$/m)
+      const title = titleMatch ? titleMatch[1] : undefined
+
+      // 첫 몇 문장을 설명으로 사용
+      const paragraphs = content.split("\n\n").filter((p) => p.trim().length > 50)
+      const description = paragraphs.slice(0, 2).join(" ").slice(0, 500)
+
+      return {
+        content: content.slice(0, 5000), // 최대 5000자
+        title,
+        description,
+      }
+    } catch (error) {
+      clearTimeout(timeoutId)
+      if (error instanceof Error && error.name === "AbortError") {
+        logger.warn({ url, timeout: TIMEOUT_MS }, "Jina Reader request timed out")
+        return { content: "" }
+      }
+      throw error
     }
   } catch (error) {
     logger.error({ error, url }, "Failed to extract content with Jina Reader")

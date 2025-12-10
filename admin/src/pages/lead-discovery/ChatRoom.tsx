@@ -1152,6 +1152,9 @@ export function ChatRoom() {
                   </div>
                 )}
                 {messages
+                  // 시간순 정렬 (로딩 중에도 올바른 순서 유지)
+                  .slice()
+                  .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
                   .filter((message) => {
                     // 빈 assistant 메시지는 스트리밍 메시지가 아닐 때만 필터링
                     if (

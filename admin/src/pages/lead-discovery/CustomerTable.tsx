@@ -29,8 +29,10 @@ import {
   Plus,
   SortAsc,
   Trash2,
+  UserPlus,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import toast from "react-hot-toast"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -44,6 +46,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Table,
   TableBody,
   TableCell,
@@ -51,7 +60,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useCustomerGroupsByWorkspace } from "@/lib/api/hooks/customer-groups"
 import { calculateFitScores } from "@/lib/api/hooks/lead-discovery"
+import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 import {
   type Customer,
@@ -153,6 +164,16 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
 
   // 선택된 바이어 타겟 (스트리밍 완료 후에도 유지)
   const selectedTarget = useAtomValue(selectedTargetAtom)
+
+  // 고객그룹 추가 관련 상태
+  const { selectedWorkspace } = useWorkspace()
+  const workspaceId = selectedWorkspace?.id || ""
+  const { data: customerGroups = [] } = useCustomerGroupsByWorkspace(
+    workspaceId,
+    !!workspaceId && workspaceId !== "all",
+  )
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("")
+  const [isAddingToGroup, setIsAddingToGroup] = useState(false)
 
   // API 호출 중 여부 추적
   const isCalculatingRef = useRef(false)
@@ -256,6 +277,74 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
 
   // 드래그 상태
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null)
+
+  // 고객그룹에 추가
+  const handleAddToGroup = useCallback(async () => {
+    if (!selectedGroupId) {
+      toast.error("고객그룹을 선택해주세요")
+      return
+    }
+
+    const selectedRowIds = Object.keys(rowSelection).filter(
+      (key) => rowSelection[key as keyof typeof rowSelection],
+    )
+
+    if (selectedRowIds.length === 0) {
+      toast.error("추가할 리드를 선택해주세요")
+      return
+    }
+
+    // 선택된 고객 데이터 가져오기
+    const selectedCustomers = customers.filter((_, index) =>
+      selectedRowIds.includes(index.toString()),
+    )
+
+    if (selectedCustomers.length === 0) {
+      toast.error("추가할 리드를 선택해주세요")
+      return
+    }
+
+    setIsAddingToGroup(true)
+
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || ""
+      const response = await fetch(`${API_BASE_URL}/api/v1/bigquery/add-to-group`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+        body: JSON.stringify({
+          groupId: selectedGroupId,
+          leads: selectedCustomers.map((customer) => ({
+            email: customer.email,
+            firstName: customer.first_name,
+            lastName: customer.last_name,
+            companyName: customer.company_name,
+            phone: customer.phone,
+            country: customer.country,
+            city: customer.primary_city,
+            industry: customer.industry,
+            webAddress: customer.web_address,
+          })),
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to add leads")
+      }
+
+      toast.success(`${result.addedCount}개의 리드가 고객그룹에 추가되었습니다`)
+      setRowSelection({})
+    } catch (error) {
+      console.error("Error adding to group:", error)
+      toast.error("고객그룹 추가에 실패했습니다")
+    } finally {
+      setIsAddingToGroup(false)
+    }
+  }, [selectedGroupId, rowSelection, customers])
 
   // 적합도 계산 완료 시 자동 정렬
   const hasSortedRef = useRef(false)
@@ -751,6 +840,46 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         </div>
 
         <div className="flex items-center gap-2">
+          {/* 고객그룹 선택 및 추가 - 리드 선택 시 표시 */}
+          {Object.keys(rowSelection).length > 0 && (
+            <>
+              <span className="text-sm font-medium text-primary">
+                {Object.keys(rowSelection).length}개 선택
+              </span>
+              <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                <SelectTrigger className="h-8 w-[160px] text-sm">
+                  <SelectValue placeholder="고객그룹 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customerGroups.length > 0 ? (
+                    customerGroups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      고객그룹이 없습니다
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                className="h-8 gap-1"
+                onClick={handleAddToGroup}
+                disabled={isAddingToGroup || !selectedGroupId || customerGroups.length === 0}
+              >
+                {isAddingToGroup ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UserPlus className="h-4 w-4" />
+                )}
+                추가
+              </Button>
+            </>
+          )}
+
           <span className="text-sm text-muted-foreground">
             {table.getFilteredRowModel().rows.length} results
           </span>

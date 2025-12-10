@@ -86,6 +86,7 @@ export function ChatRoom() {
 
   // Refs
   const scrollRef = useRef<HTMLDivElement>(null)
+  const scrollEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
 
@@ -558,15 +559,15 @@ export function ChatRoom() {
 
   // 스크롤 맨 아래로 - 메시지 추가시 자동 스크롤
   const scrollToBottom = useCallback(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    if (scrollEndRef.current) {
+      scrollEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" })
     }
   }, [])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on message change
   useEffect(() => {
     scrollToBottom()
-  }, [messages.length, streamingState.status, scrollToBottom])
+  }, [messages.length, messages, streamingState.status, streamingState.message, scrollToBottom])
 
   // 웹사이트 URL 유효성 검사
   const isValidWebsiteUrl = useCallback((url: string): boolean => {
@@ -1218,6 +1219,8 @@ export function ChatRoom() {
                       )}
                     </div>
                   ))}
+                {/* 스크롤 앵커 */}
+                <div ref={scrollEndRef} />
               </div>
             </ScrollArea>
           )}

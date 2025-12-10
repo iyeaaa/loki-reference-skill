@@ -196,7 +196,7 @@ function WebsiteIframePreview({ page }: { page: AnalyzedPage }) {
               src={page.url}
               title={page.title || hostname}
               className={cn(
-                "w-full h-full border-0 transition-opacity duration-300",
+                "w-full h-full border-0 transition-opacity duration-300 pointer-events-none",
                 isLoading ? "opacity-0" : "opacity-100",
               )}
               sandbox="allow-scripts allow-same-origin"

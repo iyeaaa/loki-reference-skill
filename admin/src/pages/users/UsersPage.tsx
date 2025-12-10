@@ -208,7 +208,7 @@ export default function UsersPage() {
             <div className="relative w-full md:w-[400px]">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="사용자명, 이메일, 사번으로 검색..."
+                placeholder="사용자명, 이메일로 검색..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
@@ -289,7 +289,6 @@ export default function UsersPage() {
               <UserForm
                 user={editingUser}
                 isEdit={true}
-                departments={departments}
                 onSave={handleUpdateUser}
                 onCancel={() => setEditingUser(null)}
               />

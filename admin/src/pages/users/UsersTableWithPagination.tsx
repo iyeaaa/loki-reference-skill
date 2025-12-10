@@ -165,18 +165,6 @@ export function UsersTableWithPagination({
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                  style={{ minWidth: "120px" }}
-                >
-                  부서
-                </th>
-                <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                  style={{ width: "1%", whiteSpace: "nowrap" }}
-                >
-                  사번
-                </th>
-                <th
-                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ width: "1%", whiteSpace: "nowrap" }}
                 >
                   상태
@@ -241,21 +229,6 @@ export function UsersTableWithPagination({
                     <Badge variant={getRoleBadgeVariant()} className="text-xs">
                       {getRoleText(user.userRole)}
                     </Badge>
-                  </td>
-                  <td
-                    className="p-2 text-sm text-gray-900 dark:text-gray-100"
-                    title={user.departmentName || "-"}
-                    style={{
-                      maxWidth: "200px",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {user.departmentName || "-"}
-                  </td>
-                  <td className="p-2 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                    {user.employeeId || "-"}
                   </td>
                   <td className="p-2 whitespace-nowrap text-sm">
                     <Badge variant="outline">{user.isActive ? "활성" : "비활성"}</Badge>

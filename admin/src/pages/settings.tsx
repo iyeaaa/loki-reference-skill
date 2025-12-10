@@ -19,7 +19,6 @@ export default function SettingsPage() {
   const { t } = useTranslation()
   const nameId = useId()
   const emailId = useId()
-  const employeeIdInput = useId()
 
   const { data: currentUser, isLoading } = useCurrentUser()
   const updateProfileMutation = useUpdateProfileMutation()
@@ -29,7 +28,6 @@ export default function SettingsPage() {
   const [formData, setFormData] = useState({
     username: "",
     email: "",
-    employeeId: "",
   })
 
   // Load current user data
@@ -38,7 +36,6 @@ export default function SettingsPage() {
       setFormData({
         username: currentUser.username || "",
         email: currentUser.email || "",
-        employeeId: currentUser.employeeId || "",
       })
     }
   }, [currentUser])
@@ -137,17 +134,6 @@ export default function SettingsPage() {
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="email@example.com"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={employeeIdInput}>{t("settings.profile.employeeId")}</Label>
-                  <Input
-                    id={employeeIdInput}
-                    name="employeeId"
-                    value={formData.employeeId}
-                    onChange={handleChange}
-                    placeholder="EMP001"
                     required
                   />
                 </div>

@@ -79,6 +79,7 @@ export async function updateUser(
     isActive: boolean
     departmentId: string | null
     employeeId: string | null
+    profilePicture?: string | null
   },
 ) {
   const [updatedUser] = await db
@@ -90,6 +91,7 @@ export async function updateUser(
       isActive: data.isActive,
       departmentId: data.departmentId,
       employeeId: data.employeeId,
+      profilePicture: data.profilePicture,
       updatedAt: new Date(),
     })
     .where(eq(users.id, id))
@@ -101,6 +103,7 @@ export async function updateUser(
       isActive: users.isActive,
       departmentId: users.departmentId,
       employeeId: users.employeeId,
+      profilePicture: users.profilePicture,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     })

@@ -5,6 +5,7 @@ import { Outlet, useLocation } from "react-router-dom"
 import { AppSidebar } from "@/components/AppSidebar"
 import { PageSkeleton, TableSkeleton } from "@/components/PageSkeleton"
 import { ProfileCard } from "@/components/ProfileCard"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -15,6 +16,7 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import type { WorkspaceOption } from "@/components/ui/workspace-selector"
 import { WorkspaceSelector } from "@/components/ui/workspace-selector"
+import { useCurrentUser } from "@/lib/api/hooks/auth"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 
 function DashboardContent() {
@@ -27,6 +29,9 @@ function DashboardContent() {
     return localStorage.getItem("selectedWorkspace") || "all"
   })
   const { state } = useSidebar()
+
+  // Use React Query to get current user (auto-updates when profile changes)
+  const { data: currentUserData } = useCurrentUser()
 
   // 경로별로 적절한 스켈레톤 반환
   const getSkeletonForRoute = (path: string) => {
@@ -46,8 +51,8 @@ function DashboardContent() {
     return <PageSkeleton />
   }
 
-  // 현재 로그인한 유저의 ID 가져오기
-  const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
+  // 현재 로그인한 유저의 ID 가져오기 (fallback to localStorage)
+  const currentUser = currentUserData || JSON.parse(localStorage.getItem("user") || "{}")
   const userId = currentUser?.id || ""
 
   // 유저의 trial 상태 확인
@@ -166,9 +171,18 @@ function DashboardContent() {
             <button
               type="button"
               onClick={() => setShowProfileCard(!showProfileCard)}
-              className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors overflow-hidden"
             >
-              <User className="h-4 w-4 text-gray-600" />
+              {currentUser?.profilePicture ? (
+                <Avatar className="h-full w-full">
+                  <AvatarImage src={currentUser.profilePicture} alt="Profile" />
+                  <AvatarFallback className="bg-gray-200 text-gray-600 text-sm">
+                    {currentUser?.username?.charAt(0)?.toUpperCase() || "U"}
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <User className="h-4 w-4 text-gray-600" />
+              )}
             </button>
           </div>
         </header>
@@ -186,15 +200,14 @@ function DashboardContent() {
         isOpen={showProfileCard}
         onClose={() => setShowProfileCard(false)}
         user={{
-          name: JSON.parse(localStorage.getItem("user") || "{}")?.username || "Admin",
-          email: JSON.parse(localStorage.getItem("user") || "{}")?.email || "",
-          image: null,
-          user_role: JSON.parse(localStorage.getItem("user") || "{}")?.user_role || "user",
-          department_name:
-            JSON.parse(localStorage.getItem("user") || "{}")?.department_name || null,
-          employee_id: JSON.parse(localStorage.getItem("user") || "{}")?.employee_id || null,
+          name: currentUser?.username || "Admin",
+          email: currentUser?.email || "",
+          image: currentUser?.profilePicture || null,
+          user_role: currentUser?.userRole || "user",
+          department_name: currentUser?.departmentName || null,
+          employee_id: currentUser?.employeeId || null,
         }}
-        isAdmin={JSON.parse(localStorage.getItem("user") || "{}")?.user_role === "admin"}
+        isAdmin={currentUser?.userRole === "admin"}
         onAdminClick={() => {
           setShowProfileCard(false)
           // Already in admin panel

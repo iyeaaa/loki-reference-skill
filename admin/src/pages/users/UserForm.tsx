@@ -19,12 +19,7 @@ interface UserFormProps {
   onCancel: () => void
 }
 
-export function UserForm({
-  user,
-  isEdit = false,
-  onSave,
-  onCancel,
-}: UserFormProps) {
+export function UserForm({ user, isEdit = false, onSave, onCancel }: UserFormProps) {
   const usernameId = useId()
   const emailId = useId()
   const passwordId = useId()
@@ -36,6 +31,9 @@ export function UserForm({
     password: "",
     userRole: user?.userRole || ("user" as const),
     isActive: user?.isActive ?? true,
+    // Keep existing values (Hidden in UI, prevents data loss during editing)
+    departmentId: user?.departmentId || null,
+    employeeId: user?.employeeId || null,
   })
 
   const handleSubmit = (e: React.FormEvent) => {

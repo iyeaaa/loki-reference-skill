@@ -176,19 +176,24 @@ DO NOT use any column that is not in the list above (e.g., if "sub_industry" is 
 Use LIKE '%keyword%' to find matches in the industry column.
 
 ### CRITICAL: AND vs OR logic
-- When user wants COMBINATION of multiple attributes, use AND:
-  - "뷰티 유통업체" → industry LIKE '%Beauty%' AND industry LIKE '%Retail%'
-  - "IT 컨설팅" → industry LIKE '%Information Technology%' AND industry LIKE '%Consulting%'
+- For PRODUCT/INDUSTRY type + BUSINESS type combinations, use OR with multiple related terms:
+  - "포장재 유통회사" → industry LIKE '%packaging%' OR industry LIKE '%wholesale%' OR industry LIKE '%distribution%'
+  - "뷰티 유통업체" → industry LIKE '%beauty%' OR industry LIKE '%cosmetics%' OR industry LIKE '%retail%'
+  - "IT 컨설팅" → industry LIKE '%Information Technology%' OR industry LIKE '%Consulting%' OR industry LIKE '%software%'
   - "헬스케어 스타트업" → industry LIKE '%Health%' (스타트업 is about company size, not industry)
   
+- "유통", "유통회사", "유통업체" should search for:
+  - '%wholesale%' OR '%distribution%' OR '%retail%' OR '%trading%' OR '%supply%'
+  
+- "제조사", "제조업체" should search for:
+  - '%manufacturing%' OR '%production%' OR '%industrial%'
+
 - When user wants ANY of multiple similar terms, use OR:
   - "IT 회사" → industry LIKE '%Software%' OR industry LIKE '%Information Technology%'
   - "채용 회사" → industry LIKE '%Human Resources%' OR industry LIKE '%Recruiting%' OR industry LIKE '%Staffing%'
   - "자동차 회사" → industry LIKE '%Automotive%' OR industry LIKE '%Automobile%'
 
-The key difference:
-- "A B업체" (A + B = specific type) → use AND
-- "A 회사" (synonyms of A) → use OR
+IMPORTANT: Use OR (not AND) for most industry searches to get more results!
 
 Only use NO_DATA when the requested region/country is NOT in the available countries list above.
 
@@ -213,14 +218,18 @@ ${dataDictionary.revenueRanges.map((r) => `- "${r}"`).join("\n")}
 ## Important Rules:
 1. ALWAYS use LIMIT clause (default 100, max 1000)
 2. Return ONLY the SQL query, no explanations (or INVALID_QUERY if not a valid search)
-3. For Korean location queries, match to the available countries/regions:
-   - "미국" → Look for regions containing "US" (e.g., "Southern US", "Western US", "Northeastern US", "Midwestern US", "Great Lakes")
-   - "유럽" → Look for "EMEA" or "Europe"
-   - "아시아" → Look for "APAC" or "Asia-Pacific" or "Southeast Asia"
-   - "중동" → Look for "MENA" or "Middle East"
-   - "호주" → Look for "Australasia"
-   - "남미" → Look for "Latin America"
-   If the country column has exact values like "USA", "Canada", use those instead.
+3. For Korean location queries, ALWAYS check the available countries list above first:
+   - If countries list has "United States", "United Kingdom", etc. → use exact country names
+   - If countries list has "Southern US", "Western US", "EMEA", etc. → use region names
+   
+   Examples based on available countries:
+   - "미국" → Use "United States" if available, otherwise look for regions containing "US"
+   - "영국" → Use "United Kingdom" if available
+   - "캐나다" → Use "Canada" if available
+   - "호주" → Use "Australia" if available
+   - "독일" → Use "Germany" if available
+   
+   CRITICAL: Always use the EXACT country values from the Countries list above!
 
 4. For Korean industry queries, use LIKE to match (industries may contain multiple values):
    - "소프트웨어", "IT" → industry LIKE '%Software%' OR industry LIKE '%Information Technology%'

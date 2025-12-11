@@ -31,25 +31,22 @@ export interface BigQuerySearchParams {
   limit?: number
 }
 
-// BigQuery result item (B2B Leads + Crunchbase 통합)
+// BigQuery result item (B2B Leads + Crunchbase + Apollo 통합)
+// 컬럼 순서: 회사명, 웹사이트, Description, Fit Score, Country, Category, Main Industry, Sub Industry, Company Email
 export interface BigQueryResult {
-  email?: string
-  firstName?: string
-  lastName?: string
-  title?: string
-  companyName?: string
+  companyName?: string // 회사명
+  webAddress?: string // 웹사이트
+  description?: string // Description
+  fitScore?: number // Fit Score (0-100)
+  country?: string // Country
+  category?: string // Category (industry_category)
+  mainIndustry?: string // Main Industry
+  subIndustry?: string // Sub Industry ('-' if empty)
+  email?: string // Company Email
+  // 추가 필드 (내부 사용)
   phone?: string
-  country?: string
-  primaryCity?: string
-  primaryState?: string
-  mailingAddress?: string
-  zipCode?: string
-  industry?: string
-  subIndustry?: string
-  webAddress?: string
   employee?: string
   revenue?: string
-  description?: string // Crunchbase only
 }
 
 // Analyzed page info

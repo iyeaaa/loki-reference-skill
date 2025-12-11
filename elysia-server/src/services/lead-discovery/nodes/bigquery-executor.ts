@@ -244,6 +244,326 @@ export const CRUNCHBASE_DATA_DICTIONARY = {
   revenueRanges: [], // Crunchbase에는 revenue 데이터 없음
 }
 
+// Apollo Leads 테이블 (고품질 데이터 291만개 - industry 자유형식 LIKE 검색)
+const APOLLO_LEADS_DATA_DICTIONARY = {
+  tableName: "gen-lang-client-0140658679.test_lead_01.apollo_leads_all",
+  columns: ["company", "website", "industry", "employees", "country", "industry_category"],
+  // Apollo industry는 자유형식 텍스트 (LIKE 검색용 주요 키워드, 빈도순 - 실제 데이터 분석 기반)
+  industries: [
+    // 핵심 비즈니스
+    "services",
+    "technology",
+    "management",
+    "information",
+    "software",
+    "marketing",
+    "health",
+    "development",
+    "care",
+    "design",
+    "internet",
+    "education",
+    "computer",
+    "media",
+    "finance",
+    "advertising",
+    "consumer",
+    "enterprise",
+    "business",
+    "consulting",
+    "energy",
+    "engineering",
+    "construction",
+    "real estate",
+    "hospital",
+    "training",
+    "medical",
+    "solutions",
+    "mobile",
+    "travel",
+    "web",
+    "insurance",
+    "food",
+    "industrial",
+    "digital",
+    "fitness",
+    "wellness",
+    "data",
+    "security",
+    "law",
+    "retail",
+    "manufacturing",
+    "tourism",
+    "leisure",
+    "goods",
+    "production",
+    "commercial",
+    "events",
+    "research",
+    "professional",
+    "environmental",
+    "financial",
+    "online",
+    "automotive",
+    "oil",
+    "logistics",
+    "clean",
+    "supply",
+    "staffing",
+    "mechanical",
+    "non-profit",
+    "entertainment",
+    "banking",
+    "building",
+    "equipment",
+    "cloud",
+    "hospitality",
+    "analytics",
+    "government",
+    "hardware",
+    "architecture",
+    "recruiting",
+    "fashion",
+    "products",
+    "property",
+    "telecommunications",
+    "transportation",
+    "video",
+    "investment",
+    "coaching",
+    "human resources",
+    "b2b",
+    "accounting",
+    "e-commerce",
+    "ecommerce",
+    "communications",
+    "sports",
+    "automation",
+    "recruitment",
+    "printing",
+    "arts",
+    "beverages",
+    "apparel",
+    "testing",
+    "maintenance",
+    "intelligence",
+    "materials",
+    "restaurants",
+    "healthcare",
+    "safety",
+    "brand",
+    "distribution",
+    "facilities",
+    "water",
+    "gas",
+    "publishing",
+    "packaging",
+    "electrical",
+    "machinery",
+    "furniture",
+    "chemicals",
+    "devices",
+    "electronics",
+    "mining",
+    "pharmaceuticals",
+    "metals",
+    "steel",
+    "plastics",
+    "textiles",
+    "cosmetics",
+    "fabrication",
+    "concrete",
+    "seo",
+    "games",
+    "learning",
+    "graphic",
+    "aviation",
+    "aerospace",
+    "wholesale",
+    "power",
+    "hotels",
+    "biotechnology",
+    "saas",
+    "computing",
+    "networking",
+    "crm",
+    "erp",
+    "android",
+    "ios",
+    "hosting",
+    "credit",
+    "loans",
+    "equity",
+    "mortgage",
+    "venture",
+    "trading",
+    "payments",
+    "lending",
+    "wealth",
+    "dental",
+    "therapy",
+    "treatment",
+    "clinical",
+    "surgery",
+    "medicine",
+    "shipping",
+    "delivery",
+    "freight",
+    "warehousing",
+    "transport",
+    "marine",
+    "solar",
+    "utilities",
+    "sustainability",
+    "waste",
+    "renewable",
+    "cleantech",
+    "beauty",
+    "luxury",
+    "accessories",
+    "clothing",
+    "jewelry",
+    "wine",
+    "film",
+    "photography",
+    "broadcast",
+    "audio",
+    "museums",
+    "schools",
+    "science",
+    "legal",
+    "compliance",
+    "litigation",
+    "audit",
+    "civic",
+    "defense",
+    "emergency",
+    "artificial intelligence",
+    "machine learning",
+    "cybersecurity",
+    "blockchain",
+    "fintech",
+    "edtech",
+    "healthtech",
+    "proptech",
+    "agtech",
+    "martech",
+    "iot",
+    "virtual",
+    "smart",
+    "cleaning",
+    "cleaning products",
+    "janitorial",
+    "sanitation",
+    "hygiene",
+    "eco-friendly",
+    "sustainable",
+    "green",
+    "organic",
+    "agriculture",
+    "innovation",
+    "optimization",
+    "integration",
+    "platform",
+    "agency",
+    "global",
+    "international",
+    "strategic",
+    "advisory",
+    "specialty",
+    "premium",
+    "quality",
+  ],
+  // industry_category 정형 데이터 (실제 값, 빈도순)
+  industryCategories: [
+    "Other",
+    "Technology",
+    "Healthcare",
+    "Education",
+    "Finance & Banking",
+    "Professional Services",
+    "Manufacturing",
+    "Marketing & Advertising",
+    "Construction",
+    "Real Estate",
+    "Retail & E-commerce",
+    "Media & Entertainment",
+    "Hospitality & Tourism",
+    "Non-Profit",
+    "Design & Creative",
+    "Energy & Utilities",
+    "Transportation & Logistics",
+    "Business Services",
+    "Government",
+    "Food & Beverage",
+    "Automotive",
+    "HR & Recruiting",
+    "Legal",
+    "Fashion & Apparel",
+    "Insurance",
+    "Telecommunications",
+    "Startups",
+    "Sports & Fitness",
+    "Publishing",
+    "Research",
+    "Events",
+    "Security",
+    "Sales",
+    "Trade",
+    "Furniture",
+    "Digital",
+    "Agriculture",
+    "Facilities",
+    "Museums & Culture",
+    "Translation",
+    "Customer Service",
+  ],
+  // 국가 (실제 데이터 빈도순)
+  countries: [
+    "United States",
+    "United Kingdom",
+    "Australia",
+    "Canada",
+    "Netherlands",
+    "India",
+    "Brazil",
+    "Germany",
+    "Spain",
+    "France",
+    "Italy",
+    "Mexico",
+    "South Africa",
+    "Singapore",
+    "Belgium",
+    "Ireland",
+    "Sweden",
+    "Switzerland",
+    "New Zealand",
+    "Poland",
+    "Japan",
+    "United Arab Emirates",
+    "Argentina",
+    "Portugal",
+    "Denmark",
+    "Norway",
+    "Austria",
+    "Philippines",
+    "Malaysia",
+    "Indonesia",
+  ],
+  employeeRanges: [
+    "1-10",
+    "11-50",
+    "51-200",
+    "201-500",
+    "501-1000",
+    "1001-5000",
+    "5001-10000",
+    "10000+",
+  ],
+  revenueRanges: [], // Apollo 데이터에 revenue 없음
+}
+
 // Build natural language query from parameters
 function buildNaturalLanguageQuery(params: {
   query: string
@@ -297,7 +617,24 @@ function buildNaturalLanguageQuery(params: {
   return parts.join(" ")
 }
 
+// Transform Apollo results to our format
+function transformApolloResults(results: Record<string, unknown>[]): BigQueryResult[] {
+  return results.map((row) => ({
+    companyName: row.company as string | undefined,
+    webAddress: row.website as string | undefined,
+    description: undefined, // Apollo에는 description 없음
+    fitScore: undefined, // 추후 계산 가능
+    country: row.country as string | undefined,
+    category: row.industry_category as string | undefined,
+    mainIndustry: row.industry as string | undefined,
+    subIndustry: "-", // Apollo에는 sub_industry 없음
+    email: undefined, // Apollo에는 email 없음
+    employee: row.employees?.toString() || undefined,
+  }))
+}
+
 // Transform BigQuery results to our format (B2B Leads + Crunchbase 통합 지원)
+// 컬럼 순서: 회사명, 웹사이트, Description, Fit Score, Country, Category, Main Industry, Sub Industry, Company Email
 function transformResults(
   results: Record<string, unknown>[],
   isCrunchbase: boolean,
@@ -306,37 +643,33 @@ function transformResults(
     if (isCrunchbase) {
       // Crunchbase 테이블 컬럼 매핑
       return {
-        email: row.email as string | undefined,
-        firstName: row.first_name as string | undefined,
-        lastName: row.last_name as string | undefined,
-        title: row.title as string | undefined,
-        companyName: row.company as string | undefined, // company (not company_name)
-        phone: row.phone as string | undefined,
-        country: row.country as string | undefined,
-        industry: row.industry as string | undefined,
-        webAddress: row.website as string | undefined, // website (not web_address)
-        employee: row.employees as string | undefined, // employees (not employee)
-        revenue: row.revenue as string | undefined,
+        companyName: row.company as string | undefined,
+        webAddress: row.website as string | undefined,
         description: row.description as string | undefined,
+        fitScore: undefined, // 추후 계산 가능
+        country: row.country as string | undefined,
+        category: undefined, // Crunchbase에는 category 없음
+        mainIndustry: row.industry as string | undefined,
+        subIndustry: "-", // Crunchbase에는 sub_industry 없음
+        email: row.email as string | undefined,
+        phone: row.phone as string | undefined,
+        employee: row.employees as string | undefined,
+        revenue: row.revenue as string | undefined,
       }
     }
-    // B2B Leads 테이블 컬럼 매핑 (b2b_leads_all 실제 스키마)
+    // B2B Leads 테이블 컬럼 매핑
     return {
-      email: row.email as string | undefined,
-      firstName: row.first_name as string | undefined,
-      lastName: row.last_name as string | undefined,
-      title: row.title as string | undefined,
-      companyName: row.company as string | undefined, // company (not company_name)
-      phone: row.phone as string | undefined,
+      companyName: row.company as string | undefined,
+      webAddress: row.website as string | undefined,
+      description: undefined, // B2B에는 description 없음
+      fitScore: undefined, // 추후 계산 가능
       country: row.country as string | undefined,
-      primaryCity: row.city as string | undefined, // city (not primary_city)
-      primaryState: row.state as string | undefined, // state (not primary_state)
-      mailingAddress: row.address as string | undefined, // address (not mailing_address)
-      zipCode: row.zip as string | undefined, // zip (not zip_code)
-      industry: row.industry as string | undefined,
-      subIndustry: row.sub_industry as string | undefined,
-      webAddress: row.website as string | undefined, // website (not web_address)
-      employee: row.employees as string | undefined, // employees (not employee)
+      category: undefined, // B2B에는 category 없음
+      mainIndustry: row.industry as string | undefined,
+      subIndustry: (row.sub_industry as string) || "-",
+      email: row.email as string | undefined,
+      phone: row.phone as string | undefined,
+      employee: row.employees as string | undefined,
       revenue: row.revenue as string | undefined,
     }
   })
@@ -379,19 +712,22 @@ export async function executeBigQuery(
     const nlQuery = buildNaturalLanguageQuery(params)
 
     leadDiscoveryLogger.info(`[리드 검색] 자연어 쿼리: "${nlQuery}"`)
-    leadDiscoveryLogger.info(`[리드 검색] 두 테이블(b2b_leads_all, crunchbase_all) 모두 검색`)
+    leadDiscoveryLogger.info(
+      `[리드 검색] 세 테이블(b2b_leads_all, crunchbase_all, apollo_leads_all) 모두 검색`,
+    )
     leadDiscoveryLogger.bigQueryExecutionStart(nlQuery)
 
     if (emitter) {
-      emitter.progress("executeBigQuery", "두 테이블에서 검색 중...", 20)
+      emitter.progress("executeBigQuery", "세 테이블에서 검색 중...", 20)
     }
 
-    // 두 테이블 병렬 검색
-    leadDiscoveryLogger.info(`[리드 검색] BigQuery 실행 중 (두 테이블 병렬)...`)
+    // 세 테이블 병렬 검색
+    leadDiscoveryLogger.info(`[리드 검색] BigQuery 실행 중 (세 테이블 병렬)...`)
 
-    const [b2bResult, crunchbaseResult] = await Promise.allSettled([
+    const [b2bResult, crunchbaseResult, apolloResult] = await Promise.allSettled([
       searchBigQuery(nlQuery, B2B_LEADS_DATA_DICTIONARY),
       searchBigQuery(nlQuery, CRUNCHBASE_DATA_DICTIONARY),
+      searchBigQuery(nlQuery, APOLLO_LEADS_DATA_DICTIONARY),
     ])
 
     // B2B Leads 결과 처리
@@ -420,10 +756,50 @@ export async function executeBigQuery(
       leadDiscoveryLogger.warn(`[리드 검색] crunchbase_all 검색 실패: ${crunchbaseResult.reason}`)
     }
 
-    // 결과 합치기
-    const combinedResults = [...b2bTransformed, ...crunchbaseTransformed]
-    const totalCount = b2bTotal + crunchbaseTotal
-    const combinedSql = `-- B2B Leads:\n${b2bSql}\n\n-- Crunchbase:\n${crunchbaseSql}`
+    // Apollo Leads 결과 처리
+    let apolloTransformed: ReturnType<typeof transformResults> = []
+    let apolloTotal = 0
+    let apolloSql = ""
+    leadDiscoveryLogger.info(`[Apollo] status: ${apolloResult.status}`)
+    if (apolloResult.status === "fulfilled") {
+      apolloTransformed = transformApolloResults(apolloResult.value.results)
+      apolloTotal = apolloResult.value.totalCount
+      apolloSql = apolloResult.value.sql
+      leadDiscoveryLogger.info(`[리드 검색] apollo_leads_all: ${apolloTotal.toLocaleString()}개`)
+      leadDiscoveryLogger.info(`[Apollo SQL] ${apolloSql}`)
+    } else {
+      const reason =
+        apolloResult.reason instanceof Error
+          ? apolloResult.reason.message
+          : String(apolloResult.reason)
+      leadDiscoveryLogger.error(`[리드 검색] apollo_leads_all 검색 실패: ${reason}`)
+    }
+
+    // 각 테이블 결과 수 로그
+    leadDiscoveryLogger.info(
+      `[셔플 전] B2B: ${b2bTransformed.length}, Crunchbase: ${crunchbaseTransformed.length}, Apollo: ${apolloTransformed.length}`,
+    )
+
+    // 결과 합치기 + Fisher-Yates 완전 셔플
+    const allResults = [...b2bTransformed, ...crunchbaseTransformed, ...apolloTransformed]
+
+    // Fisher-Yates 셔플 (완전 랜덤)
+    const combinedResults = [...allResults]
+    for (let i = combinedResults.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      const itemI = combinedResults[i]
+      const itemJ = combinedResults[j]
+      if (itemI && itemJ) {
+        combinedResults[i] = itemJ
+        combinedResults[j] = itemI
+      }
+    }
+
+    // 셔플 후 첫 5개 회사명 로그 (디버깅용)
+    const first5 = combinedResults.slice(0, 5).map((r) => r.companyName || "unknown")
+    leadDiscoveryLogger.info(`[셔플 후] 첫 5개: ${first5.join(", ")}`)
+    const totalCount = b2bTotal + crunchbaseTotal + apolloTotal
+    const combinedSql = `-- B2B Leads:\n${b2bSql}\n\n-- Crunchbase:\n${crunchbaseSql}\n\n-- Apollo:\n${apolloSql}`
 
     const duration = Date.now() - startTime
 
@@ -431,8 +807,9 @@ export async function executeBigQuery(
     leadDiscoveryLogger.info(`[리드 검색] 검색 완료:`)
     leadDiscoveryLogger.info(`  - B2B Leads: ${b2bTotal.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - Crunchbase: ${crunchbaseTotal.toLocaleString()}개`)
+    leadDiscoveryLogger.info(`  - Apollo: ${apolloTotal.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - 총 결과: ${totalCount.toLocaleString()}개`)
-    leadDiscoveryLogger.info(`  - 반환 결과: ${combinedResults.length}개`)
+    leadDiscoveryLogger.info(`  - 반환 결과: ${combinedResults.length}개 (랜덤 셔플됨)`)
     leadDiscoveryLogger.info(`  - 소요시간: ${(duration / 1000).toFixed(1)}초`)
     leadDiscoveryLogger.bigQueryExecutionComplete(duration, combinedResults.length, totalCount)
 
@@ -447,6 +824,7 @@ export async function executeBigQuery(
         totalCount: totalCount,
         b2bCount: b2bTotal,
         crunchbaseCount: crunchbaseTotal,
+        apolloCount: apolloTotal,
       })
     }
 
@@ -455,13 +833,14 @@ export async function executeBigQuery(
       totalCount: totalCount,
       b2bCount: b2bTotal,
       crunchbaseCount: crunchbaseTotal,
+      apolloCount: apolloTotal,
     })
 
     return {
       searchResults: combinedResults,
       totalResultCount: totalCount,
       bigQuerySQL: combinedSql,
-      bigQueryExplanation: `B2B Leads: ${b2bTotal}개, Crunchbase: ${crunchbaseTotal}개`,
+      bigQueryExplanation: `B2B: ${b2bTotal}개, Crunchbase: ${crunchbaseTotal}개, Apollo: ${apolloTotal}개`,
       executionTime: duration,
     }
   } catch (error) {

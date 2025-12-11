@@ -19,8 +19,17 @@ onboarding.step1.description,RINDA가 바이어에게 이메일을 보내고 답
 onboarding.step1.googleButton,Google 계정으로 연동하기,Link with Google account
 onboarding.step1.loading,연동 중...,Connecting...
 onboarding.step1.error,인증 URL을 가져오는데 실패했습니다. 다시 시도해주세요.,Failed to get auth URL. Please try again.
+onboarding.step1.linkedTitle,이메일 계정이 연동되었습니다,Email account connected
+onboarding.step1.linkedDescription,아래 계정으로 이메일을 발송합니다,Emails will be sent from the account below
+onboarding.step1.default,기본,Default
+onboarding.step1.statusActive,활성,Active
+onboarding.step1.addMore,다른 이메일 계정 추가,Add another email account
+onboarding.step1.nextButton,다음 단계로,Next step
+onboarding.step1.deleteAccount,계정 삭제,Delete account
+onboarding.step1.deleteConfirm,이 이메일 계정을 삭제하시겠습니까?,Are you sure you want to delete this email account?
+onboarding.step1.deleting,삭제 중...,Deleting...
 onboarding.step3.placeholder,전략 선택 - 준비 중,Strategy selection - Coming soon
-onboarding.back,이전,before
+onboarding.back,이전,Before
 onboarding.step2.title,회사 정보를 알려주세요,Please tell me your company information
 onboarding.step2.description,RINDA가 맞춤형 영업 메시지를 작성하는 데 사용합니다.,RINDA uses it to create customized sales messages.
 onboarding.step2.websiteLabel,웹사이트 주소,Website address
@@ -36,3 +45,20 @@ onboarding.step2.nextButton,다음 단계,Next step
 onboarding.step2.saving,저장 중...,Saving...
 redirect.connecting,이메일 계정을 연동하는 중...,Connecting your email account...
 redirect.error,이메일 연동에 실패했습니다. 다시 시도해주세요.,Failed to connect email. Please try again.
+onboarding.step1.deleteError,이메일 계정 삭제에 실패했습니다,Failed to delete email account
+onboarding.step1.deleteSuccess,이메일 계정이 삭제되었습니다,Email account deleted successfully
+onboarding.step2.analyzing,회사 분석 중...,Analyzing your company...
+onboarding.step2.analyzingDescription,회사 정보를 조사하고 영업 전략을 생성하고 있습니다.,We're researching your company and generating sales strategies.
+onboarding.step2.progress.starting,분석 시작,Starting analysis
+onboarding.step2.progress.researching,회사 조사 중,Researching company
+onboarding.step2.progress.extracting_company,회사 정보 추출 중,Extracting company info
+onboarding.step2.progress.extracting_market,시장 분석 중,Analyzing markets
+onboarding.step2.progress.merging,데이터 처리 중,Processing data
+onboarding.step2.progress.saving,결과 저장 중,Saving results
+onboarding.step2.progress.strategizing,전략 생성 중,Generating strategies
+onboarding.step2.analysisComplete,분석 완료!,Analysis complete!
+onboarding.step2.analysisCompleteDescription,회사 분석이 완료되었습니다. 다음 단계로 진행하세요.,Your company analysis is ready. Proceed to the next step.
+onboarding.step2.submitButton,제출,Submit
+onboarding.step2.backToForm,정보 수정,Edit Info
+onboarding.step2.viewProgress,진행 상황 보기,View Progress
+onboarding.step2.aiActivity,[NO TRANSLATION] app.onboarding.step2.aiActivity,[NO TRANSLATION] app.onboarding.step2.aiActivity

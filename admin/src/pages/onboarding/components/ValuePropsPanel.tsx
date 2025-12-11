@@ -1,6 +1,7 @@
 import { motion } from "framer-motion"
 import { Check, Circle } from "lucide-react"
 import { useTranslation } from "react-i18next"
+import type { OnboardingData } from "../types"
 
 interface ValuePropItem {
   titleKey: string
@@ -8,29 +9,35 @@ interface ValuePropItem {
   completed: boolean
 }
 
-export function ValuePropsPanel({ currentStep }: { currentStep: number }) {
+export function ValuePropsPanel({
+  currentStep,
+  data,
+}: {
+  currentStep: number
+  data: OnboardingData
+}) {
   const { t } = useTranslation()
 
   const valueProps: ValuePropItem[] = [
     {
       titleKey: "valueProps.buyerList",
       descKey: "valueProps.buyerListDesc",
-      completed: currentStep >= 1,
+      completed: data.industry !== null && currentStep >= 1,
     },
     {
       titleKey: "valueProps.strategy",
       descKey: "valueProps.strategyDesc",
-      completed: currentStep >= 2,
+      completed: currentStep > 2,
     },
     {
       titleKey: "valueProps.email",
       descKey: "valueProps.emailDesc",
-      completed: currentStep >= 3,
+      completed: currentStep > 3,
     },
     {
       titleKey: "valueProps.analytics",
       descKey: "valueProps.analyticsDesc",
-      completed: currentStep >= 4,
+      completed: currentStep > 4,
     },
   ]
 

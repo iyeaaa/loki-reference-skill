@@ -137,7 +137,7 @@ export default function OnboardingPage() {
 
           {/* Value Props Panel - Right side */}
           <div className="hidden lg:flex lg:flex-col lg:justify-between h-full">
-            <ValuePropsPanel currentStep={currentStep} />
+            <ValuePropsPanel currentStep={currentStep} data={data} />
 
             <div className="flex flex-col gap-3 mt-auto">
               {/* CTA */}

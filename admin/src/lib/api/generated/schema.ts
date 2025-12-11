@@ -740,6 +740,22 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/v1/workspaces/{id}/enrichAndStrategize": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiV1WorkspacesByIdEnrichAndStrategize"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/v1/workspaces/owner/{ownerId}": {
     parameters: {
       query?: never
@@ -3495,11 +3511,27 @@ export interface paths {
     get: operations["getApiV1NylasGrantByGrantId"]
     put?: never
     post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/nylas/grant/{accountId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
     /**
      * Disconnect Email Account
      * @description Disconnect/delete a connected email account
      */
-    delete: operations["deleteApiV1NylasGrantByGrantId"]
+    delete: operations["deleteApiV1NylasGrantByAccountId"]
     options?: never
     head?: never
     patch?: never
@@ -3637,6 +3669,26 @@ export interface paths {
      * @description Admin endpoint to clear all lead discovery sessions.
      */
     delete: operations["deleteApiV1Lead-discoverySessions"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/lead-discovery/score": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Calculate fit scores for leads
+     * @description AI-powered fit score calculation for leads based on website analysis. Returns scores via SSE streaming.
+     */
+    post: operations["postApiV1Lead-discoveryScore"]
+    delete?: never
     options?: never
     head?: never
     patch?: never
@@ -5227,6 +5279,37 @@ export interface operations {
     }
   }
   postApiV1WorkspacesByIdEnrich: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          websiteUrl: string
+        }
+        "multipart/form-data": {
+          websiteUrl: string
+        }
+        "text/plain": {
+          websiteUrl: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  postApiV1WorkspacesByIdEnrichAndStrategize: {
     parameters: {
       query?: never
       header?: never
@@ -14316,12 +14399,12 @@ export interface operations {
       }
     }
   }
-  deleteApiV1NylasGrantByGrantId: {
+  deleteApiV1NylasGrantByAccountId: {
     parameters: {
       query?: never
       header?: never
       path: {
-        grantId: string
+        accountId: string
       }
       cookie?: never
     }
@@ -14501,6 +14584,107 @@ export interface operations {
       cookie?: never
     }
     requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1Lead-discoveryScore": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          leads: {
+            id: string
+            company_name?: string
+            email?: string
+            phone?: string
+            web_address?: string
+            country?: string
+            industry?: string
+            sub_industry?: string
+            employee?: string
+            revenue?: string
+            title?: string
+          }[]
+          websiteAnalysis: {
+            companyName?: string
+            description?: string
+            industry?: string
+            products?: string[]
+            targetMarkets?: string[]
+            businessModel?: string
+          }
+          selectedTarget: {
+            country: string
+            industry: string
+          }
+        }
+        "multipart/form-data": {
+          leads: {
+            id: string
+            company_name?: string
+            email?: string
+            phone?: string
+            web_address?: string
+            country?: string
+            industry?: string
+            sub_industry?: string
+            employee?: string
+            revenue?: string
+            title?: string
+          }[]
+          websiteAnalysis: {
+            companyName?: string
+            description?: string
+            industry?: string
+            products?: string[]
+            targetMarkets?: string[]
+            businessModel?: string
+          }
+          selectedTarget: {
+            country: string
+            industry: string
+          }
+        }
+        "text/plain": {
+          leads: {
+            id: string
+            company_name?: string
+            email?: string
+            phone?: string
+            web_address?: string
+            country?: string
+            industry?: string
+            sub_industry?: string
+            employee?: string
+            revenue?: string
+            title?: string
+          }[]
+          websiteAnalysis: {
+            companyName?: string
+            description?: string
+            industry?: string
+            products?: string[]
+            targetMarkets?: string[]
+            businessModel?: string
+          }
+          selectedTarget: {
+            country: string
+            industry: string
+          }
+        }
+      }
+    }
     responses: {
       200: {
         headers: {

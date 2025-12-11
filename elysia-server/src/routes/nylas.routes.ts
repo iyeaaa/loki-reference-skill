@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia"
-import { createEmailAccount } from "../services/email-account.service"
+import { createEmailAccount, getEmailAccount } from "../services/email-account.service"
 import {
   createGoogleConnector,
   deleteGrant,
@@ -44,6 +44,10 @@ const callbackQuerySchema = t.Object({
 // Schema for grant operations
 const grantParamsSchema = t.Object({
   grantId: t.String(),
+})
+// Schema for db email account
+const emailAccountSchema = t.Object({
+  accountId: t.String(),
 })
 
 export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
@@ -231,15 +235,22 @@ export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
   )
 
   /**
-   * DELETE /api/v1/nylas/grant/:grantId
+   * DELETE /api/v1/nylas/grant/:accountId
    * Delete/disconnect a grant
    */
   .delete(
-    "/grant/:grantId",
+    "/grant/:accountId",
     async ({ params, set }) => {
       try {
-        const { grantId } = params
-        const success = await deleteGrant(grantId)
+        const { accountId } = params
+
+        const emailAccount = await getEmailAccount(accountId)
+
+        if (!emailAccount || !emailAccount.apiKey) {
+          set.status = 404
+          return errorResponse("Grant not found", ResponseCode.NOT_FOUND)
+        }
+        const success = await deleteGrant(emailAccount.apiKey)
 
         if (!success) {
           set.status = 500
@@ -257,7 +268,7 @@ export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
       }
     },
     {
-      params: grantParamsSchema,
+      params: emailAccountSchema,
       detail: {
         tags: ["Nylas"],
         summary: "Disconnect Email Account",

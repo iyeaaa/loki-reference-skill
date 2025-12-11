@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { OnboardingStepper } from "./components/OnboardingStepper"
 import { Step1EmailLink } from "./components/Step1EmailLink"
 import { Step2CompanyInfo } from "./components/Step2CompanyInfo"
+import { Step3StrategySelection } from "./components/Step3StrategySelection"
 
 const WELCOME_POPUP_KEY = "rinda_welcome_popup_seen"
 
@@ -120,7 +121,6 @@ function WelcomePopup({ open, onComplete }: { open: boolean; onComplete: () => v
 }
 
 export default function CompanyInformation() {
-  const { t } = useTranslation()
   const [searchParams, _setSearchParams] = useSearchParams()
   const [showWelcome, setShowWelcome] = useState(false)
 
@@ -150,12 +150,7 @@ export default function CompanyInformation() {
       case 2:
         return <Step2CompanyInfo />
       case 3:
-        // TODO: Step 3 - Strategy Selection
-        return (
-          <div className="text-center text-gray-500">
-            {t("app.onboarding.step3.placeholder", "Strategy selection - Coming soon")}
-          </div>
-        )
+        return <Step3StrategySelection />
       default:
         return <Step1EmailLink />
     }

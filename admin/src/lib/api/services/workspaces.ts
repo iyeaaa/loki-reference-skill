@@ -1,4 +1,4 @@
-import { apiFetch } from "../client"
+import { API_BASE_URL, apiFetch, getToken } from "../client"
 import type {
   CreateWorkspaceData,
   CreateWorkspaceProductData,
@@ -11,6 +11,46 @@ import type {
   WorkspacesResponse,
   WorkspaceWithProducts,
 } from "../types/workspace"
+
+// Types for SSE streaming enrichment
+export interface SalesStrategy {
+  id: string
+  countryCode: string
+  countryName: string
+  companiesTargeted: number
+  description: string
+  metrics: {
+    openRate: number
+    responseRate: number
+    meetingRate: number
+  }
+  isSuggested: boolean
+}
+
+export interface EnrichmentProgressEvent {
+  step: string
+  message: string
+}
+
+export interface EnrichmentStrategiesEvent {
+  strategies: SalesStrategy[]
+}
+
+export interface EnrichmentDoneEvent {
+  enrichment: unknown
+  strategies: SalesStrategy[]
+}
+
+export interface EnrichmentErrorEvent {
+  message: string
+}
+
+export type EnrichmentEventHandler = {
+  onProgress?: (event: EnrichmentProgressEvent) => void
+  onStrategies?: (event: EnrichmentStrategiesEvent) => void
+  onDone?: (event: EnrichmentDoneEvent) => void
+  onError?: (event: EnrichmentErrorEvent) => void
+}
 
 export const workspacesApi = {
   // List workspaces with pagination and filters
@@ -219,4 +259,107 @@ export const workspacesApi = {
       method: "DELETE",
     })
   },
+}
+
+/**
+ * Stream enrichment and strategy generation via SSE
+ * Returns a cleanup function to abort the stream
+ */
+export function streamEnrichAndStrategize(
+  workspaceId: string,
+  websiteUrl: string,
+  handlers: EnrichmentEventHandler,
+): () => void {
+  const controller = new AbortController()
+  const token = getToken()
+  const url = `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/enrichAndStrategize`
+
+  // Start the fetch request
+  fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ websiteUrl }),
+    signal: controller.signal,
+  })
+    .then(async (response) => {
+      if (!response.ok) {
+        const errorText = await response.text()
+        let message = `Request failed (${response.status})`
+        try {
+          const errorData = JSON.parse(errorText)
+          message = errorData.message || message
+        } catch {
+          // ignore parse error
+        }
+        handlers.onError?.({ message })
+        return
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        handlers.onError?.({ message: "No response body" })
+        return
+      }
+
+      const decoder = new TextDecoder()
+      let buffer = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+
+        // Process complete SSE messages
+        const lines = buffer.split("\n")
+        buffer = lines.pop() || "" // Keep incomplete line in buffer
+
+        let currentEvent = ""
+        let currentData = ""
+
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            currentEvent = line.slice(7).trim()
+          } else if (line.startsWith("data: ")) {
+            currentData = line.slice(6)
+          } else if (line === "" && currentData) {
+            // End of message, process it
+            try {
+              const data = JSON.parse(currentData)
+
+              switch (currentEvent) {
+                case "progress":
+                  handlers.onProgress?.(data as EnrichmentProgressEvent)
+                  break
+                case "strategies":
+                  handlers.onStrategies?.(data as EnrichmentStrategiesEvent)
+                  break
+                case "done":
+                  handlers.onDone?.(data as EnrichmentDoneEvent)
+                  break
+                case "error":
+                  handlers.onError?.(data as EnrichmentErrorEvent)
+                  break
+              }
+            } catch (e) {
+              console.error("Failed to parse SSE data:", e, currentData)
+            }
+
+            currentEvent = ""
+            currentData = ""
+          }
+        }
+      }
+    })
+    .catch((error) => {
+      if (error.name !== "AbortError") {
+        handlers.onError?.({ message: error.message || "Stream error" })
+      }
+    })
+
+  // Return cleanup function
+  return () => controller.abort()
 }

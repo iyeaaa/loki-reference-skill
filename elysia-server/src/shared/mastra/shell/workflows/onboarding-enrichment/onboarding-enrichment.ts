@@ -3,6 +3,38 @@ import { z } from "zod"
 import { onboardingResearchAgent } from "../../agents/onboarding-research-agent"
 import { structuredExtractionAgent } from "../../agents/structured-extraction-agent"
 
+// Event emitter for streaming workflow progress
+export type WorkflowProgressCallback = (step: string, message: string, data?: unknown) => void
+
+// Global streaming context - stores active streaming callbacks by runId
+const workflowProgressCallbacks = new Map<string, WorkflowProgressCallback>()
+
+// Current active streaming runId (for steps that can't access workflow input directly)
+let currentStreamingRunId: string | null = null
+
+export function registerWorkflowProgressCallback(
+  runId: string,
+  callback: WorkflowProgressCallback,
+) {
+  workflowProgressCallbacks.set(runId, callback)
+  currentStreamingRunId = runId
+}
+
+export function unregisterWorkflowProgressCallback(runId: string) {
+  workflowProgressCallbacks.delete(runId)
+  if (currentStreamingRunId === runId) {
+    currentStreamingRunId = null
+  }
+}
+
+function emitProgress(step: string, message: string, data?: unknown) {
+  if (!currentStreamingRunId) return
+  const callback = workflowProgressCallbacks.get(currentStreamingRunId)
+  if (callback) {
+    callback(step, message, data)
+  }
+}
+
 const CompanySchemaInternal = z
   .object({
     name: z.string().describe("Name of the company"),
@@ -69,21 +101,34 @@ const researchAgentStep = createStep({
   description: "Find company and product information",
   inputSchema: z.object({
     companyUrl: z.string(),
+    stream: z.boolean().default(false),
   }),
   outputSchema: z.string(),
   execute: async ({ inputData }) => {
     const { companyUrl } = inputData
 
-    const response = await onboardingResearchAgent.generate([
-      {
-        role: "user",
-        content: `Research company and product information for this company ${companyUrl}. 
+    emitProgress("researching", "Researching company information...")
+
+    try {
+      const response = await onboardingResearchAgent.generate([
+        {
+          role: "user",
+          content: `Research company and product information for this company ${companyUrl}. 
 Ensure accuracy, and investigate thoroughly.
+Language is 'en': English.
 Report should be in (ISO 639-1)`,
-      },
-    ])
-    console.log("enrichment response", response.text.substring(0, 100))
-    return response.text
+        },
+      ])
+
+      emitProgress("researching_complete", "Company research completed", {
+        length: response.text.length,
+      })
+
+      return response.text
+    } catch (error) {
+      console.error("[RESEARCH STEP ERROR]", error)
+      throw error
+    }
   },
 })
 
@@ -93,19 +138,32 @@ const companyAndProductExtractionStep = createStep({
   inputSchema: z.string(),
   outputSchema: CompanyAndProductSchema,
   execute: async ({ inputData }) => {
-    const res = await structuredExtractionAgent.generate(
-      [
-        {
-          role: "user",
-          content: `Here's the data: ${inputData}
+    emitProgress("extracting_company", "Extracting company and product information...")
+
+    try {
+      const res = await structuredExtractionAgent.generate(
+        [
+          {
+            role: "user",
+            content: `Here's the data: ${inputData}
 Extract company and product information from this data in (ISO 639-1), make sure to return all schema values as empty values if they are not in the data.`,
+          },
+        ],
+        {
+          output: CompanyAndProductSchema,
         },
-      ],
-      {
-        output: CompanyAndProductSchema,
-      },
-    )
-    return res.object
+      )
+
+      emitProgress("extracting_company_complete", "Company and product extraction completed", {
+        companyName: res.object.company.name,
+        productsCount: res.object.products.length,
+      })
+
+      return res.object
+    } catch (error) {
+      console.error("[COMPANY EXTRACTION STEP ERROR]", error)
+      throw error
+    }
   },
 })
 
@@ -115,19 +173,32 @@ const businessAndMarketExtractionStep = createStep({
   inputSchema: z.string(),
   outputSchema: BusinessAndMarketSchema,
   execute: async ({ inputData }) => {
-    const res = await structuredExtractionAgent.generate(
-      [
-        {
-          role: "user",
-          content: `Here's the data: ${inputData}
+    emitProgress("extracting_market", "Extracting business and market information...")
+
+    try {
+      const res = await structuredExtractionAgent.generate(
+        [
+          {
+            role: "user",
+            content: `Here's the data: ${inputData}
 Extract business and market information from this data in (ISO 639-1), make sure to return all schema values as empty values if they are not in the data.`,
+          },
+        ],
+        {
+          output: BusinessAndMarketSchema,
         },
-      ],
-      {
-        output: BusinessAndMarketSchema,
-      },
-    )
-    return res.object
+      )
+
+      emitProgress("extracting_market_complete", "Business and market extraction completed", {
+        targetMarketsCount: res.object.business.targetMarkets.length,
+        expansionGoalsCount: res.object.business.expansionGoals.length,
+      })
+
+      return res.object
+    } catch (error) {
+      console.error("[MARKET EXTRACTION STEP ERROR]", error)
+      throw error
+    }
   },
 })
 
@@ -140,9 +211,13 @@ const mergeDataStep = createStep({
   }),
   outputSchema: OnboardingEnrichmentOutputSchema,
   execute: async ({ inputData, getStepResult }) => {
+    emitProgress("merging", "Merging extracted data...")
+
     const companyAndProducts = inputData["company-and-product-extraction-step"]
     const businessAndMarket = inputData["business-and-market-extraction-step"]
     const rawOutput = getStepResult(researchAgentStep)
+
+    emitProgress("merging_complete", "Data merge completed")
 
     return {
       business: businessAndMarket,
@@ -156,6 +231,7 @@ export const onboardingEnrichmentWorkflow = createWorkflow({
   id: "onboarding-enrichment-workflow",
   inputSchema: z.object({
     companyUrl: z.string(),
+    stream: z.boolean().default(false),
   }),
   outputSchema: OnboardingEnrichmentOutputSchema,
 })

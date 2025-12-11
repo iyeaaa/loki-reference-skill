@@ -10,7 +10,7 @@
     "mastra:dev": "PORT=${MASTRA_PORT:-4000} mastra dev",
     "start": "bun src/index.ts",
     "build": "biome check ./src && bun type-check && bun build src/index.ts --target bun --outdir dist",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit", 
     "docker:db-up": "docker compose -f compose.db.yml up -d",
     "docker:db-down": "docker compose -f compose.db.yml down",
     "docker:db-logs": "docker compose -f compose.db.yml logs -f postgres",

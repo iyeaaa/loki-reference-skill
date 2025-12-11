@@ -6,7 +6,7 @@ import { cleanLoggerPlugin } from "./vite-plugins/clean-logger";
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), cleanLoggerPlugin()],
-  // Optimize dependency pre-bundling
+  // Optimize dependency pre-bundling 
   optimizeDeps: {
     // Exclude heavy packages from pre-bundling to allow dynamic imports
     exclude: ["shiki", "mermaid"],

@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogOverlay, DialogPortal } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { OnboardingStepper } from "./components/OnboardingStepper"
-import { Step1EmailLink } from "./components/Step1EmailLink"
-import { Step2CompanyInfo } from "./components/Step2CompanyInfo"
-import { Step3StrategySelection } from "./components/Step3StrategySelection"
+import { StepCompanyInfo } from "./components/StepCompanyInfo"
+import { StepConfirmation } from "./components/StepConfirmation"
+import { StepEmailGeneration } from "./components/StepEmailGeneration"
+import { StepEmailLink } from "./components/StepEmailLink"
+import { StepLeadSearch } from "./components/StepLeadSearch"
 
 const WELCOME_POPUP_KEY = "rinda_welcome_popup_seen"
 
@@ -42,7 +44,7 @@ function WelcomePopup({ open, onComplete }: { open: boolean; onComplete: () => v
       title: t("app.welcome.step3.title", "Let's start with 3 steps"),
       description: t(
         "app.welcome.step3.description",
-        "1. Link your email → 2. Enter your company information → 3. Select a sales strategy. Everything can be done in just 5 minutes.",
+        "1. Enter your company information → 2. Select a sales strategy → 3. Link your email. Everything can be done in just 5 minutes.",
       ),
     },
   ]
@@ -146,13 +148,17 @@ export default function CompanyInformation() {
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <Step1EmailLink />
+        return <StepCompanyInfo />
       case 2:
-        return <Step2CompanyInfo />
+        return <StepLeadSearch />
       case 3:
-        return <Step3StrategySelection />
+        return <StepEmailGeneration />
+      case 4:
+        return <StepEmailLink />
+      case 5:
+        return <StepConfirmation />
       default:
-        return <Step1EmailLink />
+        return <StepCompanyInfo />
     }
   }
 

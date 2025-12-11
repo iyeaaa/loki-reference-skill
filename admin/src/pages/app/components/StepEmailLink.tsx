@@ -1,4 +1,12 @@
-import { ArrowRight, CheckCircle2, Loader2, Mail, Plus, Trash2 } from "lucide-react"
+import {
+  ArrowRight,
+  CheckCircle2,
+  Loader2,
+  Mail,
+  Plus,
+  SkipForward,
+  Trash2,
+} from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
@@ -14,8 +22,8 @@ import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { deleteGrant, getNylasAuthUrl } from "@/lib/api/services/nylas"
 import type { UserEmailAccount } from "@/lib/api/types/email-account"
 
-export function Step1EmailLink() {
-  const { t } = useTranslation()
+export function StepEmailLink() {
+  const { t, i18n } = useTranslation()
   const [, setSearchParams] = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -23,6 +31,8 @@ export function Step1EmailLink() {
   // Get current user
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
   const userId = currentUser?.id || ""
+  const userEmail = currentUser?.email || ""
+  const isKorean = i18n.language === "ko"
 
   // Get user's workspace
   const { data: userWorkspaces, isLoading: isLoadingWorkspaces } = useUserWorkspaces(
@@ -41,7 +51,7 @@ export function Step1EmailLink() {
 
   console.log(isRefetchError, emailAccountError)
 
-  const handleGoogleClick = async () => {
+  const handleConnect = async () => {
     setIsLoading(true)
     setError(null)
 
@@ -61,7 +71,13 @@ export function Step1EmailLink() {
   }
 
   const handleNextStep = () => {
-    setSearchParams({ step: "2" })
+    // Go to step 5 (confirmation)
+    setSearchParams({ step: "5" })
+  }
+
+  const handleSkip = () => {
+    // Skip email linking and go to next step
+    setSearchParams({ step: "5" })
   }
 
   // Loading state
@@ -82,14 +98,14 @@ export function Step1EmailLink() {
         emailAccount={emailAccount}
         workspaceId={workspace.id}
         userId={userId}
-        onAddMore={handleGoogleClick}
+        onAddMore={handleConnect}
         onNext={handleNextStep}
         isAddingMore={isLoading}
       />
     )
   }
 
-  // No email accounts - show link email UI
+  // No email accounts - show confirmation dialog
   return (
     <Card className="max-w-2xl mx-auto">
       <CardContent className="pt-12 pb-10 px-8">
@@ -101,37 +117,62 @@ export function Step1EmailLink() {
 
           {/* Title */}
           <h2 className="text-2xl font-bold text-gray-900 mb-3">
-            {t("app.onboarding.step1.title", "이메일 계정을 연동해주세요")}
+            {t("app.onboarding.step4.connectTitle", "이메일 연동")}
           </h2>
 
           {/* Description */}
-          <p className="text-gray-500 mb-8 max-w-sm">
+          <p className="text-gray-500 mb-4 max-w-sm">
             {t(
-              "app.onboarding.step1.description",
-              "RINDA가 바이어에게 이메일을 보내고 답장을 관리할 수 있어요",
+              "app.onboarding.step4.connectDescription",
+              "이메일을 발송하기 위해 계정을 연동해주세요",
             )}
+          </p>
+
+          {/* Current user email info */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-6 w-full max-w-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <Mail className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-medium text-gray-900">{userEmail}</p>
+                <p className="text-sm text-gray-500">
+                  {isKorean ? "현재 로그인된 계정" : "Currently logged in account"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Confirmation message */}
+          <p className="text-lg font-medium text-gray-900 mb-6">
+            {t("app.onboarding.step4.confirmConnect", "연동하시겠습니까?")}
           </p>
 
           {/* Error Message */}
           {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
-          {/* Google Button */}
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={handleGoogleClick}
-            disabled={isLoading}
-            className="w-full max-w-xs h-12 text-base font-medium border-gray-300 hover:bg-gray-50"
-          >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 mr-3 animate-spin" />
-            ) : (
-              <GoogleIcon className="w-5 h-5 mr-3" />
-            )}
-            {isLoading
-              ? t("app.onboarding.step1.loading", "연동 중...")
-              : t("app.onboarding.step1.googleButton", "Google 계정으로 연동하기")}
-          </Button>
+          {/* Action Buttons */}
+          <div className="flex gap-3 w-full max-w-sm">
+            <Button variant="outline" size="lg" onClick={handleSkip} className="flex-1 h-12">
+              <SkipForward className="w-4 h-4 mr-2" />
+              {t("app.onboarding.step4.skipButton", "나중에")}
+            </Button>
+            <Button
+              size="lg"
+              onClick={handleConnect}
+              disabled={isLoading}
+              className="flex-1 h-12 bg-blue-600 hover:bg-blue-700"
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-5 h-5 mr-2" />
+              )}
+              {isLoading
+                ? t("app.onboarding.step1.loading", "연동 중...")
+                : t("app.onboarding.step4.connectButton", "연동하기")}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -272,29 +313,5 @@ function LinkedEmailAccountsView({
         </Button>
       </CardContent>
     </Card>
-  )
-}
-
-// Google Icon SVG Component
-function GoogleIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" role="img" aria-label="Google logo">
-      <path
-        fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-      />
-    </svg>
   )
 }

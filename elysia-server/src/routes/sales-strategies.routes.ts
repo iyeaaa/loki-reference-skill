@@ -135,12 +135,27 @@ export const salesStrategyRoutes = new Elysia({
 export const workspaceSalesStrategyRoutes = new Elysia({
   prefix: "/api/v1/workspace-sales-strategies",
 })
-  // Get all sales strategies for workspace
+  // Get all sales strategies for workspace (returns first/latest one)
   .get(
     "/:workspaceId",
-    async ({ params: { workspaceId } }) => {
+    async ({ params: { workspaceId }, set }) => {
       const strategies = await salesStrategyService.getWorkspaceSalesStrategies(workspaceId)
-      return strategies
+
+      // Return the first strategy (most recent) or 404 if none exist
+      if (strategies.length === 0) {
+        set.status = 404
+        return errorResponse("No sales strategy found for this workspace", ResponseCode.NOT_FOUND)
+      }
+
+      const firstStrategy = strategies[0]!
+      return {
+        data: {
+          industry: firstStrategy.salesStrategy.industry,
+          target: firstStrategy.salesStrategy.target,
+          country: firstStrategy.salesStrategy.country,
+          experience: firstStrategy.salesStrategy.experience,
+        },
+      }
     },
     {
       params: t.Object({
@@ -219,6 +234,42 @@ export const workspaceSalesStrategyRoutes = new Elysia({
         strategies: t.Optional(t.Any()),
         proofPoints: t.Optional(t.Any()),
         emailBenchmarks: t.Optional(t.Any()),
+      }),
+    },
+  )
+
+  // Update sales strategy for workspace (find or create new one)
+  .put(
+    "/:workspaceId",
+    async ({ params: { workspaceId }, body }) => {
+      // Find or create a new sales strategy with the updated values
+      const result = await salesStrategyService.findOrCreateAndLinkSalesStrategy(workspaceId, {
+        industry: body.industry,
+        target: body.target,
+        country: body.country,
+        experience: body.experience,
+      })
+
+      return {
+        success: true,
+        data: {
+          industry: result.salesStrategy.industry,
+          target: result.salesStrategy.target,
+          country: result.salesStrategy.country,
+          experience: result.salesStrategy.experience,
+        },
+      }
+    },
+    {
+      params: t.Object({
+        workspaceId: t.String({ format: "uuid" }),
+      }),
+      body: t.Object({
+        industry: t.Union(industryValues.map((v) => t.Literal(v))),
+        target: t.Union(targetValues.map((v) => t.Literal(v))),
+        country: t.Union(countryValues.map((v) => t.Literal(v))),
+        experience: t.Union(experienceValues.map((v) => t.Literal(v))),
+        websiteUrl: t.Optional(t.String()),
       }),
     },
   )

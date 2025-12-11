@@ -89,9 +89,6 @@ export default function NewTrialPage() {
           body: JSON.stringify(body),
         })
 
-        // Clear stored onboarding params after successful login
-        sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
-
         // Create proper AuthUser format
         const authUser = {
           id: response.user.id,
@@ -116,7 +113,27 @@ export default function NewTrialPage() {
           toast.info(`무료 체험 기간: ${response.user.trialStatus.daysRemaining}일 남음`)
         }
 
-        navigate("/app")
+        // If we have onboarding params, show result page first
+        if (
+          onboardingParams.industry &&
+          onboardingParams.target &&
+          onboardingParams.country &&
+          onboardingParams.experience
+        ) {
+          const params = new URLSearchParams({
+            industry: onboardingParams.industry,
+            target: onboardingParams.target,
+            country: onboardingParams.country,
+            experience: onboardingParams.experience,
+          })
+          // Clear stored onboarding params after successful login
+          sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
+          navigate(`/trial/result?${params.toString()}`)
+        } else {
+          // No onboarding params, go directly to app
+          sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
+          navigate("/app")
+        }
       } catch (error) {
         console.error("Google OAuth callback error:", error)
         toast.error("Google 로그인 처리 중 오류가 발생했습니다.")
@@ -197,9 +214,6 @@ export default function NewTrialPage() {
         body: JSON.stringify(body),
       })
 
-      // Clear stored onboarding params after successful registration
-      sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
-
       // Create proper AuthUser format
       const authUser = {
         id: response.user.id,
@@ -224,7 +238,27 @@ export default function NewTrialPage() {
         toast.info(`무료 체험 기간: ${response.user.trialStatus.daysRemaining}일 남음`)
       }
 
-      navigate("/dashboard")
+      // If we have onboarding params, show result page first
+      if (
+        onboardingParams.industry &&
+        onboardingParams.target &&
+        onboardingParams.country &&
+        onboardingParams.experience
+      ) {
+        const params = new URLSearchParams({
+          industry: onboardingParams.industry,
+          target: onboardingParams.target,
+          country: onboardingParams.country,
+          experience: onboardingParams.experience,
+        })
+        // Clear stored onboarding params after successful registration
+        sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
+        navigate(`/trial/result?${params.toString()}`)
+      } else {
+        // No onboarding params, go directly to app
+        sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
+        navigate("/app")
+      }
     } catch (error) {
       console.error("Email registration error:", error)
       toast.error("이메일 등록 중 오류가 발생했습니다.")

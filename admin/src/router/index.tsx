@@ -11,6 +11,7 @@ import RootLayout from "../layouts/RootLayout"
 import LoginPage from "../pages/LoginPage"
 import NewTrialPage from "../pages/NewTrialPage"
 import OnboardingPage from "../pages/onboarding"
+import TrialResultPage from "../pages/TrialResultPage"
 
 // App pages for trial users
 const CompanyInformation = lazy(() => import("../pages/app/CompanyInformation"))
@@ -71,6 +72,10 @@ export const router = createBrowserRouter([
       {
         path: "trial",
         element: <NewTrialPage />,
+      },
+      {
+        path: "trial/result",
+        element: <TrialResultPage />,
       },
       {
         path: "onboarding",

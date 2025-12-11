@@ -153,8 +153,8 @@ export function StepConfirmation() {
     navigate("/dashboard")
   }
 
-  // No data available - redirect to step 2
-  if (leads.length === 0 || !sequenceInfo) {
+  // No sequence info - redirect to step 1
+  if (!sequenceInfo) {
     return (
       <div className="max-w-2xl mx-auto">
         <Card>
@@ -168,8 +168,40 @@ export function StepConfirmation() {
                   ? "필요한 정보가 없습니다. 이전 단계를 완료해주세요."
                   : "Missing required information. Please complete previous steps."}
               </p>
-              <Button variant="outline" onClick={() => setSearchParams({ step: "2" })}>
-                {isKorean ? "이전 단계로" : "Go Back"}
+              <Button variant="outline" onClick={() => setSearchParams({ step: "1" })}>
+                {isKorean ? "처음으로" : "Start Over"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // No leads available - go directly to dashboard
+  if (leads.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Card>
+          <CardContent className="pt-12 pb-10 px-8">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                <CheckCircle2 className="w-10 h-10 text-green-500" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                {isKorean ? "설정이 완료되었습니다!" : "Setup Complete!"}
+              </h2>
+              <p className="text-gray-600 mb-6">
+                {isKorean
+                  ? "이메일 템플릿이 생성되었습니다. 대시보드에서 리드를 추가하여 시퀀스를 실행할 수 있습니다."
+                  : "Your email template has been created. You can add leads and run sequences from the dashboard."}
+              </p>
+              <Button
+                onClick={() => navigate("/dashboard")}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isKorean ? "대시보드로 이동" : "Go to Dashboard"}
+                <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
           </CardContent>

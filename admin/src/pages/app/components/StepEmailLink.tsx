@@ -63,8 +63,8 @@ export function StepEmailLink() {
   }
 
   const handleNextStep = () => {
-    // Go to step 5 (confirmation)
-    setSearchParams({ step: "5" })
+    // Go to step 4 (confirmation)
+    setSearchParams({ step: "4" })
   }
 
   // Loading state

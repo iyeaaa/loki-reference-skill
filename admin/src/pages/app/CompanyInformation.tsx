@@ -12,7 +12,6 @@ import { StepCompanyInfo } from "./components/StepCompanyInfo"
 import { StepConfirmation } from "./components/StepConfirmation"
 import { StepEmailGeneration } from "./components/StepEmailGeneration"
 import { StepEmailLink } from "./components/StepEmailLink"
-import { StepLeadSearch } from "./components/StepLeadSearch"
 
 const WELCOME_POPUP_KEY = "rinda_welcome_popup_seen"
 
@@ -41,10 +40,10 @@ function WelcomePopup({ open, onComplete }: { open: boolean; onComplete: () => v
       ),
     },
     {
-      title: t("app.welcome.step3.title", "Let's start with 3 steps"),
+      title: t("app.welcome.step3.title", "Let's start with 4 steps"),
       description: t(
         "app.welcome.step3.description",
-        "1. Enter your company information → 2. Select a sales strategy → 3. Link your email. Everything can be done in just 5 minutes.",
+        "1. Enter your company information → 2. Generate emails → 3. Link your email → 4. Execute. Everything can be done in just 5 minutes.",
       ),
     },
   ]
@@ -150,12 +149,10 @@ export default function CompanyInformation() {
       case 1:
         return <StepCompanyInfo />
       case 2:
-        return <StepLeadSearch />
-      case 3:
         return <StepEmailGeneration />
-      case 4:
+      case 3:
         return <StepEmailLink />
-      case 5:
+      case 4:
         return <StepConfirmation />
       default:
         return <StepCompanyInfo />

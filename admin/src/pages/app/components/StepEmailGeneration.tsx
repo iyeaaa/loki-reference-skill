@@ -59,7 +59,7 @@ export function StepEmailGeneration() {
   )
 
   const generateEmailSequence = useCallback(async () => {
-    if (!workspace?.id || leads.length === 0 || hasStartedGeneration.current) return
+    if (!workspace?.id || hasStartedGeneration.current) return
 
     hasStartedGeneration.current = true
     setIsGenerating(true)
@@ -80,7 +80,7 @@ export function StepEmailGeneration() {
           status: customerGroupId ? "ready" : "draft", // Use ready if we have a group
           customerGroupId: customerGroupId || undefined, // Link to customer group
           createdBy: userId,
-          selectedLeadIds: leads.map((l) => l.id),
+          selectedLeadIds: leads.length > 0 ? leads.map((l) => l.id) : [],
         }),
       })
 
@@ -127,14 +127,16 @@ export function StepEmailGeneration() {
 
       setProgress(90)
 
-      // Step 4: Generate email previews for leads
-      const generatedEmails: GeneratedEmail[] = leads.slice(0, 5).map((lead, index) => ({
-        id: `email-${index}`,
-        subject: templateResponse.emailSubject,
-        body: templateResponse.emailBodyText,
-        leadId: lead.id,
-        leadName: lead.companyName,
-      }))
+      // Step 4: Generate email preview (template-based, not lead-specific)
+      const generatedEmails: GeneratedEmail[] = [
+        {
+          id: "email-preview",
+          subject: templateResponse.emailSubject,
+          body: templateResponse.emailBodyText,
+          leadId: "",
+          leadName: isKorean ? "샘플 미리보기" : "Sample Preview",
+        },
+      ]
 
       setEmails(generatedEmails)
       setProgress(100)
@@ -167,13 +169,13 @@ export function StepEmailGeneration() {
 
   // Start generation on mount
   useEffect(() => {
-    if (workspace?.id && leads.length > 0 && !hasStartedGeneration.current) {
+    if (workspace?.id && !hasStartedGeneration.current) {
       generateEmailSequence()
     }
-  }, [workspace?.id, leads.length, generateEmailSequence])
+  }, [workspace?.id, generateEmailSequence])
 
   const handleNext = () => {
-    setSearchParams({ step: "4" })
+    setSearchParams({ step: "3" })
   }
 
   const handleRetry = () => {
@@ -183,31 +185,6 @@ export function StepEmailGeneration() {
     setProgress(0)
     setError(null)
     generateEmailSequence()
-  }
-
-  // No leads available
-  if (leads.length === 0) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <Card>
-          <CardContent className="pt-12 pb-10 px-8">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
-                <Mail className="w-8 h-8 text-yellow-600" />
-              </div>
-              <p className="text-gray-600 mb-4">
-                {isKorean
-                  ? "리드가 없습니다. 이전 단계로 돌아가세요."
-                  : "No leads available. Go back to the previous step."}
-              </p>
-              <Button variant="outline" onClick={() => setSearchParams({ step: "2" })}>
-                {isKorean ? "이전 단계로" : "Go Back"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
   }
 
   return (
@@ -260,8 +237,10 @@ export function StepEmailGeneration() {
                 <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
                 <div>
                   <p className="font-medium text-green-800">
-                    {leads.length}
-                    {t("app.onboarding.step3.emailsGenerated", "개의 이메일이 생성되었습니다")}
+                    {t(
+                      "app.onboarding.step3.emailTemplateGenerated",
+                      "이메일 템플릿이 생성되었습니다",
+                    )}
                   </p>
                 </div>
               </div>

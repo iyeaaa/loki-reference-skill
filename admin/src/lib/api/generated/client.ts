@@ -29,7 +29,7 @@ client.use({
     // Handle 401 unauthorized
     if (response.status === 401) {
       localStorage.removeItem("token")
-      window.location.href = "/login"
+      window.location.href = "/auth"
     }
     return response
   },

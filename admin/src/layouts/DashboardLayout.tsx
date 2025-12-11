@@ -221,8 +221,8 @@ function DashboardContent() {
           localStorage.removeItem("authToken")
           localStorage.removeItem("user")
 
-          // Redirect trial users to trial page, others to login page
-          window.location.href = isTrialUserLogout ? "/trial" : "/login"
+          // Redirect trial users to trial page, others to auth page
+          window.location.href = isTrialUserLogout ? "/trial" : "/auth"
         }}
       />
     </>

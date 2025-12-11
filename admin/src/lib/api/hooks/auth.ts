@@ -68,7 +68,7 @@ export function useSignupMutation() {
       toast.success(
         response.message || "회원가입이 완료되었습니다. 관리자 승인 후 이용 가능합니다.",
       )
-      navigate("/login")
+      navigate("/auth")
     },
     onError: (error: Error) => {
       toast.error(error.message || "회원가입에 실패했습니다.")
@@ -97,8 +97,8 @@ export function useLogoutMutation() {
 
       toast.success("로그아웃되었습니다.")
 
-      // Redirect trial users to trial page, others to login page
-      navigate(result.isTrialUser ? "/trial" : "/login")
+      // Redirect trial users to trial page, others to auth page
+      navigate(result.isTrialUser ? "/trial" : "/auth")
     },
   })
 }

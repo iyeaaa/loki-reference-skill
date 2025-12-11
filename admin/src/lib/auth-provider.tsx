@@ -69,8 +69,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("user")
     setUser(null)
 
-    // Redirect trial users to trial page, others to login page
-    window.location.href = isTrialUserLogout ? "/trial" : "/login"
+    // Redirect trial users to trial page, others to auth page
+    window.location.href = isTrialUserLogout ? "/trial" : "/auth"
   }
 
   return (

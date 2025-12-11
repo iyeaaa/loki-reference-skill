@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from "framer-motion"
 import { ArrowLeft } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { useNavigate } from "react-router"
+import { useNavigate, useParams } from "react-router"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { Progress } from "@/components/ui/progress"
 import { ValuePropsPanel } from "./components/ValuePropsPanel"
@@ -22,7 +22,8 @@ import {
 export default function OnboardingPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [currentStep, setCurrentStep] = useState(1)
+  const { step } = useParams<{ step: string }>()
+  const currentStep = Math.min(Math.max(Number(step) || 1, 1), TOTAL_STEPS)
   const [data, setData] = useState<OnboardingData>({
     industry: null,
     target: null,
@@ -30,27 +31,35 @@ export default function OnboardingPage() {
     experience: null,
   })
 
+  // Redirect to step 1 if invalid step
+  useEffect(() => {
+    const stepNum = Number(step)
+    if (!step || Number.isNaN(stepNum) || stepNum < 1 || stepNum > TOTAL_STEPS) {
+      navigate("/trial/survey/1", { replace: true })
+    }
+  }, [step, navigate])
+
   const progress = (currentStep / TOTAL_STEPS) * 100
 
   const handleBack = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
+      navigate(`/trial/survey/${currentStep - 1}`)
     }
   }
 
   const handleSelectIndustry = (industry: Industry) => {
     setData({ ...data, industry })
-    setCurrentStep(2)
+    navigate("/trial/survey/2")
   }
 
   const handleSelectTarget = (target: TargetCustomer) => {
     setData({ ...data, target })
-    setCurrentStep(3)
+    navigate("/trial/survey/3")
   }
 
   const handleSelectCountry = (country: TargetCountry) => {
     setData({ ...data, country })
-    setCurrentStep(4)
+    navigate("/trial/survey/4")
   }
 
   const handleSelectExperience = (experience: ExportExperience) => {

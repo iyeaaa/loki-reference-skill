@@ -463,7 +463,11 @@ export default function AdminLoginPage() {
             <div className="mt-6 pt-6 border-t border-gray-200">
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-3">처음 사용하시나요?</p>
-                <Button variant="outline" onClick={() => navigate("/trial")} className="w-full">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/trial/survey/1")}
+                  className="w-full"
+                >
                   7일 무료 체험 시작하기
                 </Button>
               </div>

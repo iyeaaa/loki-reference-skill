@@ -66,12 +66,24 @@ export const router = createBrowserRouter([
     ),
     children: [
       {
-        path: "login",
+        path: "auth",
         element: <LoginPage />,
+      },
+      {
+        path: "login",
+        element: <Navigate to="/auth" replace />,
       },
       {
         path: "trial",
         element: <NewTrialPage />,
+      },
+      {
+        path: "trial/survey",
+        element: <Navigate to="/trial/survey/1" replace />,
+      },
+      {
+        path: "trial/survey/:step",
+        element: <OnboardingPage />,
       },
       {
         path: "trial/result",
@@ -79,7 +91,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "onboarding",
-        element: <OnboardingPage />,
+        element: <Navigate to="/trial/survey/1" replace />,
       },
       {
         path: "app",

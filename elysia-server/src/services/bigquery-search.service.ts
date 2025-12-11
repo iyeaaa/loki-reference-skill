@@ -175,25 +175,17 @@ DO NOT use any column that is not in the list above (e.g., if "sub_industry" is 
 ## Smart Search with LIKE
 Use LIKE '%keyword%' to find matches in the industry column.
 
-### CRITICAL: AND vs OR logic
-- For PRODUCT/INDUSTRY type + BUSINESS type combinations, use OR with multiple related terms:
-  - "포장재 유통회사" → industry LIKE '%packaging%' OR industry LIKE '%wholesale%' OR industry LIKE '%distribution%'
-  - "뷰티 유통업체" → industry LIKE '%beauty%' OR industry LIKE '%cosmetics%' OR industry LIKE '%retail%'
-  - "IT 컨설팅" → industry LIKE '%Information Technology%' OR industry LIKE '%Consulting%' OR industry LIKE '%software%'
-  - "헬스케어 스타트업" → industry LIKE '%Health%' (스타트업 is about company size, not industry)
-  
-- "유통", "유통회사", "유통업체" should search for:
-  - '%wholesale%' OR '%distribution%' OR '%retail%' OR '%trading%' OR '%supply%'
-  
-- "제조사", "제조업체" should search for:
-  - '%manufacturing%' OR '%production%' OR '%industrial%'
+### CRITICAL: Use SPECIFIC categories to avoid false positives
 
-- When user wants ANY of multiple similar terms, use OR:
-  - "IT 회사" → industry LIKE '%Software%' OR industry LIKE '%Information Technology%'
-  - "채용 회사" → industry LIKE '%Human Resources%' OR industry LIKE '%Recruiting%' OR industry LIKE '%Staffing%'
-  - "자동차 회사" → industry LIKE '%Automotive%' OR industry LIKE '%Automobile%'
+"package" can mean "service bundle" (vacation packages). Use specific terms:
 
-IMPORTANT: Use OR (not AND) for most industry searches to get more results!
+- "포장재" → industry LIKE '%packaging & containers%' OR industry LIKE '%packaging services%'
+- "뷰티" → industry LIKE '%beauty%' OR industry LIKE '%cosmetics%'
+- "IT 컨설팅" → industry LIKE '%software%' AND industry LIKE '%consulting%'
+- "청소용품" → industry LIKE '%cleaning%' AND industry LIKE '%products%'
+
+ALWAYS add LIMIT 100 to prevent too many results.
+  
 
 Only use NO_DATA when the requested region/country is NOT in the available countries list above.
 
@@ -218,7 +210,11 @@ ${dataDictionary.revenueRanges.map((r) => `- "${r}"`).join("\n")}
 ## Important Rules:
 1. ALWAYS use LIMIT clause (default 100, max 1000)
 2. Return ONLY the SQL query, no explanations (or INVALID_QUERY if not a valid search)
-3. For Korean location queries, ALWAYS check the available countries list above first:
+3. CRITICAL: If the user searches for a specific product/industry (e.g., "포장재", "뷰티"):
+   - The SQL MUST include an industry condition
+   - If no matching industry keyword exists in this table, return: NO_INDUSTRY_MATCH
+   - Do NOT return results with only country filter (this causes unrelated results!)
+4. For Korean location queries, ALWAYS check the available countries list above first:
    - If countries list has "United States", "United Kingdom", etc. → use exact country names
    - If countries list has "Southern US", "Western US", "EMEA", etc. → use region names
    
@@ -306,6 +302,15 @@ export const convertNaturalLanguageToSql = async (
       throw new InvalidQueryError(`📋 데이터 안내\n\n${message}`)
     }
 
+    // Industry 매칭 없음 - 특별한 SQL 반환 (searchBigQuery에서 처리)
+    if (cleanedSql === "NO_INDUSTRY_MATCH" || cleanedSql.includes("NO_INDUSTRY_MATCH")) {
+      logger.info(`[${dataDictionary.tableName}] No matching industry, returning empty marker`)
+      return {
+        sql: "NO_INDUSTRY_MATCH",
+        explanation: "이 테이블에서 해당 산업을 찾을 수 없습니다.",
+      }
+    }
+
     // SQL 쿼리가 SELECT로 시작하는지 검증
     if (!cleanedSql.toUpperCase().startsWith("SELECT")) {
       throw new InvalidQueryError(
@@ -381,6 +386,17 @@ export const searchBigQuery = async (
   const { sql, explanation } = await convertNaturalLanguageToSql(query, dataDictionary)
 
   logger.info({ query, sql }, "Converted natural language to SQL")
+
+  // NO_INDUSTRY_MATCH: 빈 결과 반환 (에러 아님)
+  if (sql === "NO_INDUSTRY_MATCH") {
+    logger.info(`[${dataDictionary.tableName}] Returning empty results due to NO_INDUSTRY_MATCH`)
+    return {
+      sql: "-- NO_INDUSTRY_MATCH",
+      explanation,
+      results: [],
+      totalCount: 0,
+    }
+  }
 
   // 2. BigQuery 실행
   const result = await executeBigQuerySql(sql)

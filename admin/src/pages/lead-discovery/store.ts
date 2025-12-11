@@ -9,29 +9,24 @@ import { atom } from "jotai"
 import { atomWithStorage } from "jotai/utils"
 
 // BigQuery LeadResult 구조와 일치하는 Customer 인터페이스
+// 컬럼 순서: 회사명, 웹사이트, Description, Fit Score, Country, Category, Main Industry, Sub Industry, Company Email
 export interface Customer {
   id: string
-  first_name?: string
-  middle_name?: string
-  last_name?: string
-  title?: string
-  company_name?: string
-  mailing_address?: string
-  primary_city?: string
-  primary_state?: string
-  zip_code?: string
-  country?: string
+  company_name?: string // 회사명
+  web_address?: string // 웹사이트
+  description?: string // Description
+  fit_score?: number // Fit Score (0-100)
+  country?: string // Country
+  category?: string // Category
+  industry?: string // Main Industry
+  sub_industry?: string // Sub Industry
+  email?: string // Company Email
+  // 추가 필드
   phone?: string
-  web_address?: string
-  email?: string
-  revenue?: string
   employee?: string
-  industry?: string
-  sub_industry?: string
+  revenue?: string
   source: string
   createdAt: Date
-  // Enrichment fields
-  description?: string
 }
 
 // 채팅 메시지 인터페이스

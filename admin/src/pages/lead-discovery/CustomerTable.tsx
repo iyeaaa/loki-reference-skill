@@ -28,7 +28,6 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -237,7 +236,6 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         sub_industry: c.sub_industry,
         employee: c.employee,
         revenue: c.revenue,
-        title: c.title,
       })),
       {
         companyName: streamingState.analysisSummary ? "분석된 회사" : undefined,
@@ -325,14 +323,13 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           groupId: selectedGroupId,
           leads: selectedCustomers.map((customer) => ({
             email: customer.email,
-            firstName: customer.first_name,
-            lastName: customer.last_name,
             companyName: customer.company_name,
             phone: customer.phone,
             country: customer.country,
-            city: customer.primary_city,
             industry: customer.industry,
             webAddress: customer.web_address,
+            category: customer.category,
+            description: customer.description,
           })),
         }),
       })
@@ -515,93 +512,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           )
         },
       },
-      {
-        accessorKey: "email",
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-8 px-2 -ml-2"
-          >
-            Email
-            {column.getIsSorted() === "asc" ? (
-              <ArrowUp className="ml-2 h-4 w-4" />
-            ) : column.getIsSorted() === "desc" ? (
-              <ArrowDown className="ml-2 h-4 w-4" />
-            ) : (
-              <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />
-            )}
-          </Button>
-        ),
-        cell: ({ row }) => (
-          <span className="max-w-[200px] truncate font-mono text-xs block">
-            {row.getValue("email") || "-"}
-          </span>
-        ),
-      },
-      {
-        accessorKey: "industry",
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-8 px-2 -ml-2"
-          >
-            Industry
-            {column.getIsSorted() === "asc" ? (
-              <ArrowUp className="ml-2 h-4 w-4" />
-            ) : column.getIsSorted() === "desc" ? (
-              <ArrowDown className="ml-2 h-4 w-4" />
-            ) : (
-              <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />
-            )}
-          </Button>
-        ),
-        cell: ({ row }) => {
-          const industry = row.getValue("industry") as string | undefined
-          const subIndustry = row.original.sub_industry
-          return (
-            <div className="flex flex-col">
-              <span className="text-xs">{industry || "-"}</span>
-              {subIndustry && (
-                <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-                  {subIndustry}
-                </span>
-              )}
-            </div>
-          )
-        },
-      },
-      {
-        id: "location",
-        header: "Location",
-        cell: ({ row }) => {
-          const country = row.original.country
-          const city = row.original.primary_city
-          const state = row.original.primary_state
-          return (
-            <div className="flex flex-col text-xs">
-              <span>{country || "-"}</span>
-              <span className="text-muted-foreground">
-                {city}
-                {state && `, ${state}`}
-              </span>
-            </div>
-          )
-        },
-      },
-      {
-        accessorKey: "employee",
-        header: "Employees",
-        cell: ({ row }) => {
-          const employee = row.getValue("employee") as string | undefined
-          return (
-            <Badge variant="outline" className="text-xs font-normal">
-              {employee || "-"}
-            </Badge>
-          )
-        },
-      },
+      // Description
       {
         accessorKey: "description",
         header: "Description",
@@ -618,7 +529,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             )
           }
 
-          if (!description) {
+          if (!description || description === "-") {
             return <span className="text-muted-foreground text-xs">-</span>
           }
 
@@ -643,9 +554,10 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         },
         size: 200,
       },
+      // Fit Score
       {
         id: "fitScore",
-        accessorFn: (row) => fitScoreState.scores[row.id] ?? -1,
+        accessorFn: (row) => fitScoreState.scores[row.id] ?? row.fit_score ?? -1,
         header: ({ column }) => (
           <Button
             variant="ghost"
@@ -663,11 +575,95 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           </Button>
         ),
         cell: ({ row }) => {
-          const score = fitScoreState.scores[row.original.id]
+          const score = fitScoreState.scores[row.original.id] ?? row.original.fit_score
           const isLoading = fitScoreState.isLoading && score === undefined
           return <FitScoreBadge score={score} isLoading={isLoading} />
         },
         size: 70,
+      },
+      // Country
+      {
+        accessorKey: "country",
+        header: "Country",
+        cell: ({ row }) => <span className="text-xs">{row.getValue("country") || "-"}</span>,
+      },
+      // Category
+      {
+        accessorKey: "category",
+        header: "Category",
+        cell: ({ row }) => <span className="text-xs">{row.getValue("category") || "-"}</span>,
+      },
+      // Main Industry
+      {
+        accessorKey: "industry",
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-8 px-2 -ml-2"
+          >
+            Main Industry
+            {column.getIsSorted() === "asc" ? (
+              <ArrowUp className="ml-2 h-4 w-4" />
+            ) : column.getIsSorted() === "desc" ? (
+              <ArrowDown className="ml-2 h-4 w-4" />
+            ) : (
+              <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />
+            )}
+          </Button>
+        ),
+        cell: ({ row }) => {
+          const industry = row.getValue("industry") as string | undefined
+          return (
+            <Popover>
+              <PopoverTrigger asChild>
+                <span className="text-xs truncate max-w-[150px] block cursor-pointer hover:text-primary">
+                  {industry || "-"}
+                </span>
+              </PopoverTrigger>
+              {industry && (
+                <PopoverContent className="w-[300px] max-h-[200px] overflow-y-auto" align="start">
+                  <p className="text-sm">{industry}</p>
+                </PopoverContent>
+              )}
+            </Popover>
+          )
+        },
+      },
+      // Sub Industry
+      {
+        accessorKey: "sub_industry",
+        header: "Sub Industry",
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">
+            {row.getValue("sub_industry") || "-"}
+          </span>
+        ),
+      },
+      // Company Email
+      {
+        accessorKey: "email",
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-8 px-2 -ml-2"
+          >
+            Company Email
+            {column.getIsSorted() === "asc" ? (
+              <ArrowUp className="ml-2 h-4 w-4" />
+            ) : column.getIsSorted() === "desc" ? (
+              <ArrowDown className="ml-2 h-4 w-4" />
+            ) : (
+              <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />
+            )}
+          </Button>
+        ),
+        cell: ({ row }) => (
+          <span className="max-w-[200px] truncate font-mono text-xs block">
+            {row.getValue("email") || "-"}
+          </span>
+        ),
       },
       {
         id: "actions",

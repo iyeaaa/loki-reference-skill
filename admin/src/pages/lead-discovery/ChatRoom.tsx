@@ -129,24 +129,20 @@ export function ChatRoom() {
   }, [])
 
   // BigQuery 결과를 Customer 형식으로 변환
+  // 컬럼 순서: 회사명, 웹사이트, Description, Fit Score, Country, Category, Main Industry, Sub Industry, Company Email
   const convertResultsToCustomers = useCallback((results: BigQueryResult[]): Customer[] => {
     return results.map((r, idx) => ({
       id: `lead-${Date.now()}-${idx}`,
-      first_name: r.firstName,
-      middle_name: r.middleName,
-      last_name: r.lastName,
-      title: r.title,
       company_name: r.companyName,
+      web_address: r.webAddress,
+      description: r.description || "-",
+      fit_score: r.fitScore,
+      country: r.country,
+      category: r.category || "-",
+      industry: r.mainIndustry, // main industry
+      sub_industry: r.subIndustry || "-",
       email: r.email,
       phone: r.phone,
-      web_address: r.webAddress,
-      mailing_address: r.mailingAddress,
-      primary_city: r.primaryCity || r.city,
-      primary_state: r.primaryState,
-      zip_code: r.zipCode,
-      country: r.country,
-      industry: r.industry,
-      sub_industry: r.subIndustry,
       employee: r.employee,
       revenue: r.revenue,
       source: "Lead Discovery",
@@ -1220,7 +1216,7 @@ export function ChatRoom() {
                               <p className="text-sm opacity-70">
                                 새로 추가된 고객{" "}
                                 {message.customersAdded
-                                  .map((c) => c.company_name || `${c.first_name} ${c.last_name}`)
+                                  .map((c) => c.company_name || "-")
                                   .join(", ")}
                               </p>
                             </div>

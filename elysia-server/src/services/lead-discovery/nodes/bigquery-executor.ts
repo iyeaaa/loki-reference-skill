@@ -622,14 +622,19 @@ function transformApolloResults(results: Record<string, unknown>[]): BigQueryRes
   return results.map((row) => ({
     companyName: row.company as string | undefined,
     webAddress: row.website as string | undefined,
-    industry: row.industry as string | undefined,
-    subIndustry: row.industry_category as string | undefined, // industry_category를 subIndustry로 매핑
-    employee: row.employees?.toString() || undefined,
+    description: undefined, // Apollo에는 description 없음
+    fitScore: undefined, // 추후 계산 가능
     country: row.country as string | undefined,
+    category: row.industry_category as string | undefined,
+    mainIndustry: row.industry as string | undefined,
+    subIndustry: "-", // Apollo에는 sub_industry 없음
+    email: undefined, // Apollo에는 email 없음
+    employee: row.employees?.toString() || undefined,
   }))
 }
 
 // Transform BigQuery results to our format (B2B Leads + Crunchbase 통합 지원)
+// 컬럼 순서: 회사명, 웹사이트, Description, Fit Score, Country, Category, Main Industry, Sub Industry, Company Email
 function transformResults(
   results: Record<string, unknown>[],
   isCrunchbase: boolean,
@@ -638,37 +643,33 @@ function transformResults(
     if (isCrunchbase) {
       // Crunchbase 테이블 컬럼 매핑
       return {
-        email: row.email as string | undefined,
-        firstName: row.first_name as string | undefined,
-        lastName: row.last_name as string | undefined,
-        title: row.title as string | undefined,
-        companyName: row.company as string | undefined, // company (not company_name)
-        phone: row.phone as string | undefined,
-        country: row.country as string | undefined,
-        industry: row.industry as string | undefined,
-        webAddress: row.website as string | undefined, // website (not web_address)
-        employee: row.employees as string | undefined, // employees (not employee)
-        revenue: row.revenue as string | undefined,
+        companyName: row.company as string | undefined,
+        webAddress: row.website as string | undefined,
         description: row.description as string | undefined,
+        fitScore: undefined, // 추후 계산 가능
+        country: row.country as string | undefined,
+        category: undefined, // Crunchbase에는 category 없음
+        mainIndustry: row.industry as string | undefined,
+        subIndustry: "-", // Crunchbase에는 sub_industry 없음
+        email: row.email as string | undefined,
+        phone: row.phone as string | undefined,
+        employee: row.employees as string | undefined,
+        revenue: row.revenue as string | undefined,
       }
     }
-    // B2B Leads 테이블 컬럼 매핑 (b2b_leads_all 실제 스키마)
+    // B2B Leads 테이블 컬럼 매핑
     return {
-      email: row.email as string | undefined,
-      firstName: row.first_name as string | undefined,
-      lastName: row.last_name as string | undefined,
-      title: row.title as string | undefined,
-      companyName: row.company as string | undefined, // company (not company_name)
-      phone: row.phone as string | undefined,
+      companyName: row.company as string | undefined,
+      webAddress: row.website as string | undefined,
+      description: undefined, // B2B에는 description 없음
+      fitScore: undefined, // 추후 계산 가능
       country: row.country as string | undefined,
-      primaryCity: row.city as string | undefined, // city (not primary_city)
-      primaryState: row.state as string | undefined, // state (not primary_state)
-      mailingAddress: row.address as string | undefined, // address (not mailing_address)
-      zipCode: row.zip as string | undefined, // zip (not zip_code)
-      industry: row.industry as string | undefined,
-      subIndustry: row.sub_industry as string | undefined,
-      webAddress: row.website as string | undefined, // website (not web_address)
-      employee: row.employees as string | undefined, // employees (not employee)
+      category: undefined, // B2B에는 category 없음
+      mainIndustry: row.industry as string | undefined,
+      subIndustry: (row.sub_industry as string) || "-",
+      email: row.email as string | undefined,
+      phone: row.phone as string | undefined,
+      employee: row.employees as string | undefined,
       revenue: row.revenue as string | undefined,
     }
   })

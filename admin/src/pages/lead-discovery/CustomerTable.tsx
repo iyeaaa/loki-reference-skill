@@ -516,31 +516,6 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         },
       },
       {
-        id: "name",
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-8 px-2 -ml-2"
-          >
-            Name
-            {column.getIsSorted() === "asc" ? (
-              <ArrowUp className="ml-2 h-4 w-4" />
-            ) : column.getIsSorted() === "desc" ? (
-              <ArrowDown className="ml-2 h-4 w-4" />
-            ) : (
-              <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />
-            )}
-          </Button>
-        ),
-        cell: ({ row }) => {
-          const firstName = row.original.first_name
-          const lastName = row.original.last_name
-          const fullName = [firstName, lastName].filter(Boolean).join(" ")
-          return <span>{fullName || "-"}</span>
-        },
-      },
-      {
         accessorKey: "email",
         header: ({ column }) => (
           <Button
@@ -626,13 +601,6 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             </Badge>
           )
         },
-      },
-      {
-        accessorKey: "phone",
-        header: "Phone",
-        cell: ({ row }) => (
-          <span className="text-muted-foreground text-xs">{row.getValue("phone") || "-"}</span>
-        ),
       },
       {
         accessorKey: "description",

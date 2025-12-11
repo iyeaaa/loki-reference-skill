@@ -1,5 +1,4 @@
 import { OAuth2Client } from "google-auth-library"
-import { google } from "googleapis"
 import logger from "../utils/logger"
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
@@ -60,13 +59,16 @@ export async function getGoogleUserInfo(code: string): Promise<GoogleUserInfo> {
     const { tokens } = await oauth2Client.getToken(code)
     oauth2Client.setCredentials(tokens)
 
-    // Get user info from Google
-    const oauth2 = google.oauth2({
-      auth: oauth2Client,
-      version: "v2",
+    // Get user info from Google using direct API call
+    const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
     })
 
-    const { data } = await oauth2.userinfo.get()
+    if (!response.ok) {
+      throw new Error(`Failed to fetch user info: ${response.statusText}`)
+    }
+
+    const data = (await response.json()) as GoogleUserInfo
 
     if (!data.email || !data.verified_email) {
       throw new Error("Google account email is not verified")

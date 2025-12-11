@@ -119,7 +119,7 @@ dashboard.openRate,오픈율,Open Rate
 dashboard.responseRate,응답률,Response
 dashboard.suggested,추천,Suggested
 dashboard.viewDetails,상세 보기,View Details
-onboarding.step3.emailTemplateGenerated,[NO TRANSLATION] app.onboarding.step3.emailTemplateGenerated,[NO TRANSLATION] app.onboarding.step3.emailTemplateGenerated
+onboarding.step3.emailTemplateGenerated,이메일 템플릿이 생성되었습니다,Email template generated
 dashboard.companies,기업,companies
 dashboard.emailSchedule,이메일 일정,Email Schedule
 dashboard.metrics,성과 지표,Performance Metrics

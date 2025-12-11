@@ -20,7 +20,8 @@ const SAFE_LIMITS = true
 // Email sending limits based on account type and safe mode
 const EMAIL_LIMITS = {
   safe: {
-    personal: { dailyLimit: 100, monthlyLimit: 3000 },
+    // personal: { dailyLimit: 100, monthlyLimit: 3000 },
+    personal: { dailyLimit: 60, monthlyLimit: 1800 }, // early stages limits
     workspace: { dailyLimit: 500, monthlyLimit: 15000 },
   },
   aggressive: {
@@ -130,7 +131,9 @@ export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
         const isPersonalAccount = emailDomain === "gmail.com"
         const limitsMode = SAFE_LIMITS ? "safe" : "aggressive"
         const accountType = isPersonalAccount ? "personal" : "workspace"
-        const limits = EMAIL_LIMITS[limitsMode][accountType]
+        // const limits = EMAIL_LIMITS[limitsMode][accountType]
+        // Keep it low limits at early stages
+        const limits = EMAIL_LIMITS[limitsMode].personal
 
         logger.info(
           {
@@ -304,6 +307,19 @@ export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
       },
     },
   )
+
+  // GET: Webhook verification (Nylas sends this first)
+  .get("/api/v1/nylas/webhooks", ({ query }) => {
+    if (query.challenge) {
+      console.log("Received Nylas challenge:", query.challenge)
+      // Return ONLY the challenge string, nothing else
+      return new Response(query.challenge, {
+        status: 200,
+        headers: { "Content-Type": "text/plain" },
+      })
+    }
+    return "No challenge provided"
+  })
 
   /**
    * POST /api/v1/nylas/webhook

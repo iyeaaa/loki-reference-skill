@@ -27,12 +27,15 @@ export function NylasRedirect() {
     exchangeCodeForGrant(code, workspaceId)
       .then((grant) => {
         console.log("Nylas grant received:", grant)
-        navigate("/app?step=2", { replace: true })
+        toast.success(t("redirect.success", "이메일 계정이 연동되었습니다!"))
+        // Go to step 5 (confirmation) after successful email linking
+        navigate("/app?step=5", { replace: true })
       })
       .catch((error) => {
         console.error("Failed to exchange code:", error)
         toast.error(t("redirect.error", "이메일 연동에 실패했습니다. 다시 시도해주세요."))
-        navigate("/app?step=1", { replace: true })
+        // Go back to step 4 (email linking) on failure
+        navigate("/app?step=4", { replace: true })
       })
   }, [searchParams, navigate, hasProcessed, t, workspaceId])
 

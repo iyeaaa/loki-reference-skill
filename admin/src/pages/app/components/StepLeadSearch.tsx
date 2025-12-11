@@ -1,10 +1,12 @@
-import { ArrowRight, CheckCircle2, Loader2, RefreshCw, Search, Users } from "lucide-react"
+import { ArrowRight, CheckCircle2, Eye, Loader2, RefreshCw, Search, Users } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
 import { apiFetch } from "@/lib/api/client"
 import type { LeadDiscoveryEventData } from "@/lib/api/hooks/lead-discovery"
@@ -35,6 +37,7 @@ export function StepLeadSearch() {
   const [searchComplete, setSearchComplete] = useState(false)
   const [progress, setProgress] = useState(0)
   const [statusMessage, setStatusMessage] = useState("")
+  const [showAllLeads, setShowAllLeads] = useState(false)
 
   // Refs to prevent double execution
   const hasStartedSearch = useRef(false)
@@ -288,9 +291,16 @@ export function StepLeadSearch() {
                   </div>
                 ))}
                 {leads.length > 5 && (
-                  <p className="text-center text-sm text-gray-500 py-2">
-                    +{leads.length - 5} {isKorean ? "개의 추가 리드" : "more leads"}
-                  </p>
+                  <Button
+                    variant="ghost"
+                    className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    onClick={() => setShowAllLeads(true)}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    {isKorean
+                      ? `전체 ${leads.length}개 리드 보기`
+                      : `View all ${leads.length} leads`}
+                  </Button>
                 )}
               </div>
 
@@ -331,6 +341,46 @@ export function StepLeadSearch() {
           )}
         </CardContent>
       </Card>
+
+      {/* View All Leads Dialog */}
+      <Dialog open={showAllLeads} onOpenChange={setShowAllLeads}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              {isKorean ? `전체 리드 목록 (${leads.length}개)` : `All Leads (${leads.length})`}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+            {leads.map((lead, index) => (
+              <div
+                key={lead.id}
+                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+              >
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-medium text-sm flex-shrink-0">
+                  {index + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 truncate">{lead.companyName}</p>
+                  <p className="text-sm text-gray-500 truncate">{lead.email || "-"}</p>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  {lead.country && (
+                    <Badge variant="outline" className="text-xs">
+                      {lead.country}
+                    </Badge>
+                  )}
+                  {lead.industry && (
+                    <Badge variant="secondary" className="text-xs">
+                      {lead.industry}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

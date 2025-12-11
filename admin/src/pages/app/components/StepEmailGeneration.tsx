@@ -1,10 +1,11 @@
-import { ArrowRight, CheckCircle2, Loader2, Mail, RefreshCw, Sparkles } from "lucide-react"
+import { ArrowRight, CheckCircle2, Eye, Loader2, Mail, RefreshCw, Sparkles } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
 import { apiFetch } from "@/lib/api/client"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
@@ -31,6 +32,7 @@ export function StepEmailGeneration() {
   const [progress, setProgress] = useState(0)
   const [emails, setEmails] = useState<GeneratedEmail[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [showFullEmail, setShowFullEmail] = useState(false)
 
   // Ref to prevent double execution
   const hasStartedGeneration = useRef(false)
@@ -266,16 +268,55 @@ export function StepEmailGeneration() {
                   {t("app.onboarding.step5.previewEmail", "이메일 미리보기")}
                 </h3>
                 {emails.slice(0, 1).map((email) => (
-                  <div key={email.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <button
+                    type="button"
+                    key={email.id}
+                    className="w-full text-left p-4 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => setShowFullEmail(true)}
+                  >
                     <p className="font-medium text-gray-900 mb-2">
                       {isKorean ? "제목:" : "Subject:"} {email.subject}
                     </p>
                     <p className="text-sm text-gray-600 whitespace-pre-line line-clamp-4">
                       {email.body}
                     </p>
-                  </div>
+                    <div className="flex items-center justify-center mt-3 pt-3 border-t border-gray-200">
+                      <span className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700">
+                        <Eye className="w-4 h-4 mr-2" />
+                        {isKorean ? "전체 보기" : "View Full Email"}
+                      </span>
+                    </div>
+                  </button>
                 ))}
               </div>
+
+              {/* Full Email Dialog */}
+              <Dialog open={showFullEmail} onOpenChange={setShowFullEmail}>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Mail className="w-5 h-5 text-blue-600" />
+                      {isKorean ? "이메일 전체 보기" : "Full Email Preview"}
+                    </DialogTitle>
+                  </DialogHeader>
+                  {emails[0] && (
+                    <div className="space-y-4 pt-4">
+                      <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <p className="text-sm text-gray-500 mb-1">
+                          {isKorean ? "제목" : "Subject"}
+                        </p>
+                        <p className="font-medium text-gray-900">{emails[0].subject}</p>
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <p className="text-sm text-gray-500 mb-2">{isKorean ? "본문" : "Body"}</p>
+                        <p className="text-gray-800 whitespace-pre-line leading-relaxed">
+                          {emails[0].body}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
 
               {/* Next Button */}
               <div className="flex justify-end pt-4">

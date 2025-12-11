@@ -69,6 +69,7 @@ export function StepLeadSearch() {
           industry: result.mainIndustry,
         }))
         setLeads(mappedLeads)
+        setSearchComplete(true) // Set complete when results arrive
       }
     },
     onError: (error: string) => {
@@ -177,10 +178,12 @@ export function StepLeadSearch() {
         locale: i18n.language,
       })
 
-      setSearchComplete(true)
+      // Note: searchComplete is set in onStatusChange callback when results arrive
+      // Don't set it here to avoid timing issues
     } catch (error) {
       console.error("Lead search failed:", error)
       hasStartedSearch.current = false
+      setSearchComplete(true) // Set complete on error to show retry button
     } finally {
       setIsSearching(false)
     }

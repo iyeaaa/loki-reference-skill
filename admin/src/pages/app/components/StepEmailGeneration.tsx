@@ -71,7 +71,7 @@ export function StepEmailGeneration() {
           description: isKorean
             ? "온보딩에서 생성된 데모 시퀀스"
             : "Demo sequence created during onboarding",
-          status: "ready",
+          status: "draft", // Use draft to skip customerGroupId requirement
           createdBy: userId,
           selectedLeadIds: leads.map((l) => l.id),
         }),

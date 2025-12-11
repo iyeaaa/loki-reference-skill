@@ -156,7 +156,7 @@ export const resetChatMessagesAtom = atom(null, (_get, set) => {
 })
 
 // ============================================
-// Streaming State (ChatRoom 리마운트 시에도 유지)
+// Streaming State (로컬스토리지에 저장하여 새로고침 후에도 유지)
 // ============================================
 
 import type { LeadDiscoveryStatus } from "@/lib/api/hooks/lead-discovery"
@@ -195,8 +195,55 @@ export const initialStreamingState: StreamingState = {
   customerAnalysisSummary: "",
 }
 
-// 스트리밍 상태 atom
-export const streamingStateAtom = atom<StreamingState>(initialStreamingState)
+// 로컬스토리지에서 스트리밍 상태 로드 (로딩 중 상태면 완료로 변경)
+const loadStreamingState = (): StreamingState => {
+  try {
+    const stored = localStorage.getItem("lead-discovery-streaming-state")
+    if (!stored) return initialStreamingState
+
+    const parsed = JSON.parse(stored) as StreamingState
+
+    // 로딩 중 상태 (idle, complete, waiting_selection, error 제외)면 완료 상태로 변경
+    const loadingStatuses: LeadDiscoveryStatus[] = [
+      "connecting",
+      "routing",
+      "analyzing",
+      "recommending",
+      "searching",
+    ]
+    if (loadingStatuses.includes(parsed.status)) {
+      // 추천이 있으면 waiting_selection, 없으면 complete
+      return {
+        ...parsed,
+        status: parsed.recommendations.length > 0 ? "waiting_selection" : "complete",
+        message: "",
+        progress: 100,
+      }
+    }
+
+    return parsed
+  } catch {
+    return initialStreamingState
+  }
+}
+
+// 로컬스토리지 커스텀 스토리지
+const streamingStorage = {
+  getItem: (_key: string): StreamingState => loadStreamingState(),
+  setItem: (key: string, value: StreamingState): void => {
+    localStorage.setItem(key, JSON.stringify(value))
+  },
+  removeItem: (key: string): void => {
+    localStorage.removeItem(key)
+  },
+}
+
+// 스트리밍 상태 atom - 로컬스토리지에 저장
+export const streamingStateAtom = atomWithStorage<StreamingState>(
+  "lead-discovery-streaming-state",
+  initialStreamingState,
+  streamingStorage,
+)
 
 // 스트리밍 상태 업데이트
 export const updateStreamingStateAtom = atom(null, (get, set, updates: Partial<StreamingState>) => {
@@ -207,6 +254,7 @@ export const updateStreamingStateAtom = atom(null, (get, set, updates: Partial<S
 // 스트리밍 상태 리셋
 export const resetStreamingStateAtom = atom(null, (_get, set) => {
   set(streamingStateAtom, initialStreamingState)
+  localStorage.removeItem("lead-discovery-streaming-state")
 })
 
 // ============================================

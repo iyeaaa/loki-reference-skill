@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, Loader2, Mail, Plus, SkipForward, Trash2 } from "lucide-react"
+import { ArrowRight, CheckCircle2, Loader2, Mail, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
@@ -64,11 +64,6 @@ export function StepEmailLink() {
 
   const handleNextStep = () => {
     // Go to step 5 (confirmation)
-    setSearchParams({ step: "5" })
-  }
-
-  const handleSkip = () => {
-    // Skip email linking and go to next step
     setSearchParams({ step: "5" })
   }
 
@@ -143,17 +138,13 @@ export function StepEmailLink() {
           {/* Error Message */}
           {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 w-full max-w-sm">
-            <Button variant="outline" size="lg" onClick={handleSkip} className="flex-1 h-12">
-              <SkipForward className="w-4 h-4 mr-2" />
-              {t("app.onboarding.step4.skipButton", "나중에")}
-            </Button>
+          {/* Action Button */}
+          <div className="w-full max-w-sm">
             <Button
               size="lg"
               onClick={handleConnect}
               disabled={isLoading}
-              className="flex-1 h-12 bg-blue-600 hover:bg-blue-700"
+              className="w-full h-12 bg-blue-600 hover:bg-blue-700"
             >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />

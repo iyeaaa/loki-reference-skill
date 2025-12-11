@@ -99,3 +99,29 @@ onboarding.step5.executeButton,시퀀스 실행,Execute Sequence
 onboarding.step5.executing,실행 중...,Executing...
 onboarding.step5.success,시퀀스가 성공적으로 실행되었습니다,Sequence executed successfully
 onboarding.step5.previewEmail,이메일 미리보기,Preview Email
+dashboard.title,홈,Home
+sidebar.home,홈,Home
+dashboard.openedEmails,열린 이메일,Opened Emails
+dashboard.salesStrategy,영업 전략,Sales Strategy
+dashboard.sentEmails,발송된 이메일,Sent Emails
+dashboard.noOpenedEmails,열린 이메일이 없습니다,No opened emails yet
+dashboard.noOpenedEmailsDesc,수신자가 열어본 이메일이 여기에 표시됩니다,Emails that recipients have opened will appear here
+dashboard.noSubject,(제목 없음),(No subject)
+dashboard.opened,열림,Opened
+dashboard.noSentEmails,발송된 이메일이 없습니다,No sent emails yet
+dashboard.noSentEmailsDesc,발송된 이메일이 여기에 표시됩니다,Emails that have been sent will appear here
+dashboard.sent,발송됨,Sent
+dashboard.companiesTargeted,타겟 기업,companies targeted
+dashboard.meetingRate,미팅률,Meeting
+dashboard.noStrategies,영업 전략이 없습니다,No sales strategies available
+dashboard.noStrategiesDesc,온보딩을 완료하여 영업 전략을 생성하세요,Complete the onboarding process to generate sales strategies
+dashboard.openRate,오픈율,Open Rate
+dashboard.responseRate,응답률,Response
+dashboard.suggested,추천,Suggested
+dashboard.viewDetails,상세 보기,View Details
+onboarding.step3.emailTemplateGenerated,[NO TRANSLATION] app.onboarding.step3.emailTemplateGenerated,[NO TRANSLATION] app.onboarding.step3.emailTemplateGenerated
+dashboard.companies,기업,companies
+dashboard.emailSchedule,이메일 일정,Email Schedule
+dashboard.metrics,성과 지표,Performance Metrics
+dashboard.targetBuyers,타겟 바이어,Target Buyers
+dashboard.greeting,환영합니다! {{opened}}개의 열린 이메일과 {{sent}}개의 발송된 이메일이 있습니다.,"Welcome back! You have {{opened}} opened and {{sent}} sent emails."

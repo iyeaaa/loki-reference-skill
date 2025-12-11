@@ -15,6 +15,7 @@ import TrialResultPage from "../pages/TrialResultPage"
 
 // App pages for trial users
 const CompanyInformation = lazy(() => import("../pages/app/CompanyInformation"))
+const AppDashboardPage = lazy(() => import("../pages/app/AppDashboardPage"))
 const NylasRedirect = lazy(() =>
   import("../pages/app/NylasRedirect").then((m) => ({ default: m.NylasRedirect })),
 )
@@ -104,6 +105,10 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: <CompanyInformation />,
+          },
+          {
+            path: "dashboard",
+            element: <AppDashboardPage />,
           },
           {
             path: "redirect",

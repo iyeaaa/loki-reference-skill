@@ -129,7 +129,7 @@ export function StepConfirmation() {
 
       // Redirect to dashboard after a short delay
       setTimeout(() => {
-        navigate("/dashboard")
+        navigate("/app/dashboard")
       }, 2000)
     } catch (error) {
       console.error("Failed to execute sequence:", error)
@@ -150,7 +150,7 @@ export function StepConfirmation() {
   const handleSkipToDashboard = () => {
     // Clear session storage and go to dashboard
     clearSessionData()
-    navigate("/dashboard")
+    navigate("/app/dashboard")
   }
 
   // No sequence info - redirect to step 1
@@ -197,7 +197,7 @@ export function StepConfirmation() {
                   : "Your email template has been created. You can add leads and run sequences from the dashboard."}
               </p>
               <Button
-                onClick={() => navigate("/dashboard")}
+                onClick={() => navigate("/app/dashboard")}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {isKorean ? "대시보드로 이동" : "Go to Dashboard"}

@@ -142,19 +142,17 @@ send-grid-test/
 ```bash
 git clone git@github.com:CheolheeLee0/send-grid-test.git
 cd send-grid-test
-corepack enable  # Enable Yarn via Corepack
 ```
 
-##### 2. Quick Setup (Recommended)
+##### 2. Setup Git Hooks (Required)
 ```bash
-./scripts/dev.sh setup   # Setup DB, install deps, run migrations
-./scripts/dev.sh dev     # Start development servers
+./setup-husky-lint-ci.sh  # Auto-setup in 1 minute
 ```
+See [GIT_HOOKS_GUIDE.md](./GIT_HOOKS_GUIDE.md) for details.
 
-##### 3. Manual Environment Setup (Alternative)
+##### 3. Environment Setup
 ```bash
-cp elysia-server/.env.example elysia-server/.env
-cp admin/.env.example admin/.env
+cp .env.example .env
 ```
 
 Edit `.env` file:
@@ -196,15 +194,7 @@ docker-compose up -d postgres redis elysia-server admin
 
 ### Local Development
 
-#### Development Commands (Recommended)
-
-```bash
-./scripts/dev.sh setup    # Setup local DB, install deps, run migrations & seed
-./scripts/dev.sh dev      # Start frontend (5173) and backend (3001) servers
-./scripts/dev.sh cleanup  # Stop containers, kill servers, clean artifacts
-```
-
-#### Manual Development Setup
+#### Development Setup
 
 ```bash
 # Install from root (recommended)
@@ -228,10 +218,6 @@ bun run dev  # Start dev server (watch mode)
 cd admin
 yarn dev     # Start Vite dev server
 ```
-
-### Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for development guidelines, code style, and pull request process.
 
 #### Database Migrations
 ```bash
@@ -503,19 +489,11 @@ send-grid-test/
 ```bash
 git clone git@github.com:CheolheeLee0/send-grid-test.git
 cd send-grid-test
-corepack enable  # Corepack으로 Yarn 활성화
 ```
 
-#### 2. 빠른 설정 (권장)
+#### 2. 환경 변수 설정
 ```bash
-./scripts/dev.sh setup   # DB 설정, 의존성 설치, 마이그레이션 실행
-./scripts/dev.sh dev     # 개발 서버 시작
-```
-
-#### 3. 수동 환경 변수 설정 (대안)
-```bash
-cp elysia-server/.env.example elysia-server/.env
-cp admin/.env.example admin/.env
+cp .env.example .env
 ```
 
 `.env` 파일 편집:
@@ -557,15 +535,7 @@ docker-compose up -d postgres redis elysia-server admin
 
 ## 로컬 개발
 
-### 개발 명령어 (권장)
-
-```bash
-./scripts/dev.sh setup    # 로컬 DB 설정, 의존성 설치, 마이그레이션 & 시드
-./scripts/dev.sh dev      # 프론트엔드 (5173) 및 백엔드 (3001) 서버 시작
-./scripts/dev.sh cleanup  # 컨테이너 중지, 서버 종료, 빌드 결과물 정리
-```
-
-### 수동 개발 환경 설정
+### 개발 환경 설정
 
 ```bash
 # 루트에서 한 번에 설치 (권장)
@@ -589,10 +559,6 @@ bun run dev  # 개발 서버 시작 (watch 모드)
 cd admin
 yarn dev     # Vite 개발 서버 시작
 ```
-
-### 기여하기
-
-개발 가이드라인, 코드 스타일, PR 프로세스는 [CONTRIBUTING.md](./CONTRIBUTING.md)를 참조하세요.
 
 ### 데이터베이스 마이그레이션
 ```bash
@@ -726,5 +692,5 @@ yarn check         # 린트 + 타입 체크
 
 ---
 
-**Version**: 2.2.0
-**Last Updated**: 2025-12-11
+**Version**: 2.1.0
+**Last Updated**: 2025-09-30

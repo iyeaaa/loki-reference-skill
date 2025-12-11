@@ -1,4 +1,4 @@
-import { Building2, LogOut } from "lucide-react"
+import { Building2, Home, LogOut } from "lucide-react"
 import { Suspense } from "react"
 import { useTranslation } from "react-i18next"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
@@ -39,6 +39,8 @@ function AppContent() {
     switch (pathname) {
       case "/app":
         return t("app.companyInfo.title", "Company Information")
+      case "/app/dashboard":
+        return t("app.dashboard.title", "Home")
       default:
         return t("app.companyInfo.title", "Company Information")
     }
@@ -56,12 +58,30 @@ function AppContent() {
         <SidebarContent className="p-2">
           <SidebarMenu>
             <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip={t("app.sidebar.home", "Home")}>
+                <NavLink
+                  to="/app/dashboard"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                      isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+                    }`
+                  }
+                >
+                  <Home className="h-4 w-4 shrink-0" />
+                  <span className="group-data-[collapsible=icon]:hidden">
+                    {t("app.sidebar.home", "Home")}
+                  </span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
                 tooltip={t("app.sidebar.companyInfo", "Company Information")}
               >
                 <NavLink
                   to="/app"
+                  end
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                       isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"

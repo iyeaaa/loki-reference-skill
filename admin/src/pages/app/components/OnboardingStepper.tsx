@@ -13,7 +13,7 @@ export function OnboardingStepper({ currentStep, completedSteps = [] }: Onboardi
   const [, setSearchParams] = useSearchParams()
 
   const steps = [
-    { number: 1, label: t("app.onboarding.step1.label", "회사 정보") },
+    { number: 1, label: t("app.onboarding.step1.label", "정보 입력") },
     { number: 2, label: t("app.onboarding.step2.label", "이메일 생성") },
     { number: 3, label: t("app.onboarding.step3.label", "이메일 연동") },
     { number: 4, label: t("app.onboarding.step4.label", "실행") },

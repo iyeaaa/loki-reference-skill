@@ -194,7 +194,7 @@ export function StepCompanyInfo() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-2xl">
-              {t("app.onboarding.step1.title", "회사 정보를 알려주세요")}
+              {isKorean ? "정보 입력" : "Enter Information"}
             </CardTitle>
             <p className="text-sm text-gray-600 mt-1">
               {isKorean
@@ -219,6 +219,9 @@ export function StepCompanyInfo() {
                   <Label htmlFor={websiteUrlId} className="flex items-center gap-2">
                     <Globe className="w-4 h-4" />
                     {isKorean ? "회사 웹사이트 URL" : "Company Website URL"}
+                    <span className="text-gray-400 font-normal text-sm">
+                      {isKorean ? "(선택사항)" : "(Optional)"}
+                    </span>
                   </Label>
                   <Input
                     id={websiteUrlId}
@@ -231,8 +234,8 @@ export function StepCompanyInfo() {
                   />
                   <p className="text-xs text-gray-500">
                     {isKorean
-                      ? "회사 웹사이트를 입력하면 더 정확한 리드를 찾을 수 있습니다"
-                      : "Enter your website for more accurate lead discovery"}
+                      ? "회사 웹사이트를 입력하면 더 정확한 리드를 찾을 수 있습니다 (건너뛰기 가능)"
+                      : "Enter your website for more accurate lead discovery (can be skipped)"}
                   </p>
                 </div>
 
@@ -349,6 +352,9 @@ export function StepCompanyInfo() {
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-700">
                       {isKorean ? "회사 웹사이트" : "Company Website"}
+                      <span className="text-gray-400 font-normal ml-1">
+                        {isKorean ? "(선택사항)" : "(Optional)"}
+                      </span>
                     </div>
                     <div className="text-base font-semibold text-gray-900 mt-1">
                       {editedData.websiteUrl || (isKorean ? "미입력" : "Not entered")}

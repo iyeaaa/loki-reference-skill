@@ -553,6 +553,7 @@ export default function CreateCampaignPage() {
                 steps: campaignData.steps,
               }}
               onChange={(data) => setCampaignData((prev) => ({ ...prev, ...data }))}
+              onGenerationComplete={() => setCurrentStep(3)}
             />
           </div>
         )}

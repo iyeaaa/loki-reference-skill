@@ -6,15 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { useSequenceSteps } from "@/lib/api/hooks/sequences"
-// import { Label } from "@/components/ui/label"
-// import {
-//   Select,
-//   SelectContent,
-//   SelectItem,
-//   SelectTrigger,
-//   SelectValue,
-// } from "@/components/ui/select"
-import { AIModeGeneratedContent } from "./AIModeGeneratedContent"
 
 interface AIModeContentProps {
   sequenceId?: string | null
@@ -29,6 +20,8 @@ interface AIModeContentProps {
   // }>
   isGenerating: boolean
   onGenerateAI: () => void
+  // Callback when generation is complete - auto-advance to next step
+  onGenerationComplete?: () => void
   // Signature options
   includeSignature?: boolean
   onIncludeSignatureChange?: (include: boolean) => void
@@ -46,6 +39,7 @@ export function AIModeContent({
   // emailAccounts,
   isGenerating,
   onGenerateAI,
+  onGenerationComplete,
   includeSignature = false,
   onIncludeSignatureChange,
   signature,
@@ -55,29 +49,19 @@ export function AIModeContent({
 }: AIModeContentProps) {
   const { t } = useTranslation()
   // const emailAccountSelectId = useId()
-  const [showGeneratedContent, setShowGeneratedContent] = useState(false)
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false)
   const signatureCheckboxId = useId()
 
   // Check if we have generated steps
   const { data: steps } = useSequenceSteps(sequenceId || "", !!sequenceId)
 
-  // Check if generation is complete (we have steps)
+  // When generation is complete (we have steps), auto-advance to next step
   useEffect(() => {
-    if (steps && steps.length > 0) {
-      setShowGeneratedContent(true)
+    if (steps && steps.length > 0 && onGenerationComplete) {
+      // Call the callback to advance to Step 3 instead of showing result page here
+      onGenerationComplete()
     }
-  }, [steps])
-
-  // Show generated content if available
-  if (showGeneratedContent && sequenceId) {
-    return (
-      <AIModeGeneratedContent
-        sequenceId={sequenceId}
-        onBack={() => setShowGeneratedContent(false)}
-      />
-    )
-  }
+  }, [steps, onGenerationComplete])
 
   return (
     <div className="space-y-6">

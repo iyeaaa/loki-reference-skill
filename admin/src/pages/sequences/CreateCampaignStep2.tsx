@@ -35,9 +35,16 @@ interface CreateCampaignStep2Props {
     selectedEmailAccountId?: string
     steps?: EmailStep[]
   }) => void
+  // Callback when AI generation is complete - used to auto-advance to next step
+  onGenerationComplete?: () => void
 }
 
-export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampaignStep2Props) {
+export function CreateCampaignStep2({
+  sequenceId,
+  data,
+  onChange,
+  onGenerationComplete,
+}: CreateCampaignStep2Props) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const createSequenceStep = useCreateSequenceStep()
@@ -566,6 +573,7 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
           //   }))}
           isGenerating={isGenerating}
           onGenerateAI={handleGenerateAIMode}
+          onGenerationComplete={onGenerationComplete}
           includeSignature={aiIncludeSignature}
           onIncludeSignatureChange={setAiIncludeSignature}
           signature={aiSignature}

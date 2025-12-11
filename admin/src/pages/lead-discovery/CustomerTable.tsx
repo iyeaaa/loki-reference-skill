@@ -224,6 +224,8 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
     setFitScoreLoading({ isLoading: true, progress: 0 })
 
     // API 호출
+    // "원하는 조건으로 찾기" 모드에서는 selectedTarget 정보를 판매자 정보로 사용
+    const hasWebsiteAnalysis = !!streamingState.analysisSummary
     calculateFitScores(
       customersToScore.map((c) => ({
         id: c.id,
@@ -238,8 +240,12 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         revenue: c.revenue,
       })),
       {
-        companyName: streamingState.analysisSummary ? "분석된 회사" : undefined,
-        description: streamingState.analysisSummary,
+        companyName: hasWebsiteAnalysis ? "분석된 회사" : "타겟 조건 기반 검색",
+        description: hasWebsiteAnalysis
+          ? streamingState.analysisSummary
+          : `${selectedTarget.industry} 산업의 ${selectedTarget.country} 지역 바이어를 찾고 있습니다.`,
+        industry: selectedTarget.industry,
+        targetMarkets: [selectedTarget.country],
       },
       {
         country: selectedTarget.country,
@@ -263,12 +269,14 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           isCalculatingRef.current = false
         },
       },
+      streamingState.userQuery, // 사용자 검색 쿼리 전달
     )
   }, [
     customers,
     selectedTarget,
     fitScoreState.scores,
     streamingState.analysisSummary,
+    streamingState.userQuery,
     updateFitScore,
     setFitScoreLoading,
   ])

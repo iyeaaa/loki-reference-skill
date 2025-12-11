@@ -812,6 +812,7 @@ export function ChatRoom() {
         analyzedPages: [],
         analysisSummary: "",
         customerAnalysisSummary: "",
+        userQuery: userInput, // 검색 쿼리 저장 (FitScore 계산용)
       })
 
       // LangGraph API 호출

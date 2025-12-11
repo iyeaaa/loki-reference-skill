@@ -602,10 +602,11 @@ export async function calculateFitScores(
   },
   selectedTarget: { country: string; industry: string },
   callbacks: FitScoreCallbackOptions,
+  userQuery?: string, // 사용자 검색 쿼리 추가
 ): Promise<void> {
   const url = `${BASE_URL}/api/v1/lead-discovery/score`
 
-  log.request("FitScore", { leadCount: leads.length, target: selectedTarget })
+  log.request("FitScore", { leadCount: leads.length, target: selectedTarget, userQuery })
 
   try {
     const response = await fetch(url, {
@@ -618,6 +619,7 @@ export async function calculateFitScores(
         leads,
         websiteAnalysis,
         selectedTarget,
+        userQuery, // 검색 쿼리 전달
       }),
     })
 

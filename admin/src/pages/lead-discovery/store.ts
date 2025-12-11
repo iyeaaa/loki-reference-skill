@@ -175,6 +175,8 @@ export interface StreamingState {
   analysisSummary: string
   // 고객군 분석 요약 (BigQuery 결과 분석, 스트리밍 텍스트)
   customerAnalysisSummary: string
+  // 사용자 검색 쿼리 (FitScore 계산용)
+  userQuery?: string
 }
 
 export const initialStreamingState: StreamingState = {

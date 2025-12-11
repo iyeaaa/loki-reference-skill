@@ -568,10 +568,10 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
   .post(
     "/score",
     async ({ body }) => {
-      const { leads, websiteAnalysis, selectedTarget } = body
+      const { leads, websiteAnalysis, selectedTarget, userQuery } = body
 
       leadDiscoveryLogger.info(
-        `[적합도 계산] 시작 - ${leads.length}개 리드, 타겟: ${selectedTarget.country}/${selectedTarget.industry}`,
+        `[적합도 계산] 시작 - ${leads.length}개 리드, 타겟: ${selectedTarget.country}/${selectedTarget.industry}, 쿼리: ${userQuery || "없음"}`,
       )
 
       return createSSEResponse(async (session) => {
@@ -603,6 +603,7 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
                 },
               })
             },
+            userQuery, // 사용자 검색 쿼리 전달
           )
 
           const duration = Date.now() - startTime
@@ -654,6 +655,7 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
           country: t.String(),
           industry: t.String(),
         }),
+        userQuery: t.Optional(t.String()), // 사용자 검색 쿼리 (FitScore 계산용)
       }),
       detail: {
         tags: ["lead-discovery"],

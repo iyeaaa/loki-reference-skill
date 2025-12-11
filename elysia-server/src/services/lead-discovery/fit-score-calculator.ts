@@ -48,6 +48,7 @@ export async function calculateFitScores(
   websiteAnalysis: WebsiteAnalysisContext,
   selectedTarget: { country: string; industry: string },
   onScore: (result: FitScoreResult) => void,
+  userQuery?: string, // 사용자 검색 쿼리 추가
 ): Promise<void> {
   const BATCH_SIZE = 10
 
@@ -55,7 +56,7 @@ export async function calculateFitScores(
     const batch = leads.slice(i, i + BATCH_SIZE)
 
     try {
-      const scores = await calculateBatchScores(batch, websiteAnalysis, selectedTarget)
+      const scores = await calculateBatchScores(batch, websiteAnalysis, selectedTarget, userQuery)
 
       for (const score of scores) {
         onScore(score)
@@ -81,6 +82,7 @@ async function calculateBatchScores(
   leads: LeadForScoring[],
   websiteAnalysis: WebsiteAnalysisContext,
   selectedTarget: { country: string; industry: string },
+  userQuery?: string,
 ): Promise<FitScoreResult[]> {
   const leadsInfo = leads
     .map(
@@ -97,15 +99,23 @@ async function calculateBatchScores(
     )
     .join("\n\n")
 
-  const prompt = `You are evaluating potential buyer leads for a company.
+  // userQuery가 있으면 검색 쿼리 기반 평가, 없으면 판매자 정보 기반 평가
+  const searchCriteria = userQuery
+    ? `## User Search Query (MOST IMPORTANT):
+"${userQuery}"
 
-## Seller Company (Our Client):
+Evaluate each lead based on how well they match this search query.`
+    : `## Seller Company (Our Client):
 - Company Name: ${websiteAnalysis.companyName || "Unknown"}
 - Description: ${websiteAnalysis.description || "N/A"}
 - Industry: ${websiteAnalysis.industry || "N/A"}
 - Products/Services: ${websiteAnalysis.products?.join(", ") || "N/A"}
 - Target Markets: ${websiteAnalysis.targetMarkets?.join(", ") || "N/A"}
-- Business Model: ${websiteAnalysis.businessModel || "N/A"}
+- Business Model: ${websiteAnalysis.businessModel || "N/A"}`
+
+  const prompt = `You are evaluating potential buyer leads.
+
+${searchCriteria}
 
 ## Selected Target Criteria:
 - Target Country: ${selectedTarget.country}
@@ -116,10 +126,12 @@ ${leadsInfo}
 
 ## Task:
 For each lead, calculate a FIT SCORE (0-100) based on:
-1. Country match with target (30 points max)
-2. Industry relevance to seller's products (30 points max)
-3. Company data completeness - email, phone, website (20 points max)
-4. Potential as a buyer based on title, company size (20 points max)
+1. Match with search query/seller needs (40 points max) - MOST IMPORTANT
+2. Country match with target (25 points max)
+3. Industry relevance (25 points max)
+4. Company data completeness - email, phone, website (10 points max)
+
+${userQuery ? `IMPORTANT: Score high (80+) if the lead's industry/company closely matches "${userQuery}". Score low (below 50) if unrelated.` : ""}
 
 ## Response Format (JSON array only, no markdown):
 [

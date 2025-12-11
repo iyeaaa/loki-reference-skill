@@ -1,5 +1,5 @@
 import { ArrowRight, CheckCircle2, Edit3, Globe, Save, X } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -14,8 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { apiFetch } from "@/lib/api/client"
+import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 
 interface SalesStrategyData {
   industry: string
@@ -68,6 +68,9 @@ export function StepCompanyInfo() {
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+
+  // Generate unique IDs for form fields
+  const websiteUrlId = useId()
 
   // Form state for editing
   const [editedData, setEditedData] = useState<SalesStrategyData>({
@@ -213,12 +216,12 @@ export function StepCompanyInfo() {
               <div className="space-y-4">
                 {/* Website URL */}
                 <div className="space-y-2">
-                  <Label htmlFor="websiteUrl" className="flex items-center gap-2">
+                  <Label htmlFor={websiteUrlId} className="flex items-center gap-2">
                     <Globe className="w-4 h-4" />
                     {isKorean ? "회사 웹사이트 URL" : "Company Website URL"}
                   </Label>
                   <Input
-                    id="websiteUrl"
+                    id={websiteUrlId}
                     type="url"
                     placeholder="https://example.com"
                     value={editedData.websiteUrl}
@@ -260,9 +263,7 @@ export function StepCompanyInfo() {
                   <Label>{isKorean ? "타겟 고객" : "Target Customer"}</Label>
                   <Select
                     value={editedData.target}
-                    onValueChange={(value) =>
-                      setEditedData((prev) => ({ ...prev, target: value }))
-                    }
+                    onValueChange={(value) => setEditedData((prev) => ({ ...prev, target: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={isKorean ? "타겟 고객 선택" : "Select target"} />
@@ -418,19 +419,17 @@ export function StepCompanyInfo() {
             </>
           ) : (
             // No data found
-            <>
-              <div className="text-center py-8">
-                <p className="text-gray-600 mb-4">
-                  {isKorean
-                    ? "설문 정보를 찾을 수 없습니다. 계속 진행하시겠습니까?"
-                    : "Survey information not found. Would you like to continue?"}
-                </p>
-                <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">
-                  {t("app.onboarding.step1.nextButton", "다음 단계")}
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
-            </>
+            <div className="text-center py-8">
+              <p className="text-gray-600 mb-4">
+                {isKorean
+                  ? "설문 정보를 찾을 수 없습니다. 계속 진행하시겠습니까?"
+                  : "Survey information not found. Would you like to continue?"}
+              </p>
+              <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">
+                {t("app.onboarding.step1.nextButton", "다음 단계")}
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>

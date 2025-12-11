@@ -145,7 +145,9 @@ export function StepEmailGeneration() {
         }),
       )
 
-      toast.success(isKorean ? "이메일이 성공적으로 생성되었습니다" : "Emails generated successfully")
+      toast.success(
+        isKorean ? "이메일이 성공적으로 생성되었습니다" : "Emails generated successfully",
+      )
     } catch (err) {
       console.error("Email generation failed:", err)
       setError(err instanceof Error ? err.message : "Unknown error")

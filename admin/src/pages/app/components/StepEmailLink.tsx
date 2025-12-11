@@ -1,12 +1,4 @@
-import {
-  ArrowRight,
-  CheckCircle2,
-  Loader2,
-  Mail,
-  Plus,
-  SkipForward,
-  Trash2,
-} from "lucide-react"
+import { ArrowRight, CheckCircle2, Loader2, Mail, Plus, SkipForward, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router-dom"

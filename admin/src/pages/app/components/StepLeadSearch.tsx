@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { apiFetch } from "@/lib/api/client"
+import type { LeadDiscoveryEventData } from "@/lib/api/hooks/lead-discovery"
 import { useLeadDiscoveryMutation } from "@/lib/api/hooks/lead-discovery"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
-import type { LeadDiscoveryEventData } from "@/lib/api/hooks/lead-discovery"
 
 interface Lead {
   id: string
@@ -36,14 +36,12 @@ export function StepLeadSearch() {
   const [progress, setProgress] = useState(0)
   const [statusMessage, setStatusMessage] = useState("")
 
-  // Ref to prevent double execution
+  // Refs to prevent double execution
   const hasStartedSearch = useRef(false)
+  const hasStartedSaving = useRef(false)
 
   // Get user's workspace
-  const currentUser = useMemo(
-    () => JSON.parse(localStorage.getItem("user") || "{}"),
-    [],
-  )
+  const currentUser = useMemo(() => JSON.parse(localStorage.getItem("user") || "{}"), [])
   const userId = currentUser?.id || ""
   const { data: userWorkspaces } = useUserWorkspaces(userId, !!userId)
   const workspace = userWorkspaces?.[0]
@@ -68,7 +66,7 @@ export function StepLeadSearch() {
           companyName: result.companyName || "Unknown Company",
           email: result.email,
           country: result.country,
-          industry: result.industry,
+          industry: result.mainIndustry,
         }))
         setLeads(mappedLeads)
       }
@@ -122,39 +120,42 @@ export function StepLeadSearch() {
     return parts.join(" ") || "international business buyers"
   }, [companyInfo])
 
-  // Save leads to database
-  const saveLeadsToDatabase = async (leadsToSave: Lead[]) => {
-    if (!workspace?.id || leadsToSave.length === 0) return []
+  // Save leads to database (memoized to avoid useEffect dependency issues)
+  const saveLeadsToDatabase = useCallback(
+    async (leadsToSave: Lead[]) => {
+      if (!workspace?.id || leadsToSave.length === 0) return []
 
-    setIsSaving(true)
-    try {
-      const response = await apiFetch<BulkCreateLeadsResponse>("/api/v1/leads/bulk", {
-        method: "POST",
-        body: JSON.stringify({
-          workspaceId: workspace.id,
-          createdBy: userId,
-          leads: leadsToSave.map((lead) => ({
-            companyName: lead.companyName,
-            email: lead.email || undefined,
-            locationCountry: lead.country || undefined,
-            primaryIndustry: lead.industry || undefined,
-            leadStatus: "new",
-            leadSource: "lead_discovery",
-          })),
-        }),
-      })
+      setIsSaving(true)
+      try {
+        const response = await apiFetch<BulkCreateLeadsResponse>("/api/v1/leads/bulk", {
+          method: "POST",
+          body: JSON.stringify({
+            workspaceId: workspace.id,
+            createdBy: userId,
+            leads: leadsToSave.map((lead) => ({
+              companyName: lead.companyName,
+              email: lead.email || undefined,
+              locationCountry: lead.country || undefined,
+              primaryIndustry: lead.industry || undefined,
+              leadStatus: "new",
+              leadSource: "lead_discovery",
+            })),
+          }),
+        })
 
-      const createdIds = response.leads.map((l) => l.id)
-      setSavedLeadIds(createdIds)
-      return createdIds
-    } catch (error) {
-      console.error("Failed to save leads:", error)
-      toast.error(isKorean ? "리드 저장에 실패했습니다" : "Failed to save leads")
-      return []
-    } finally {
-      setIsSaving(false)
-    }
-  }
+        const createdIds = response.leads.map((l) => l.id)
+        setSavedLeadIds(createdIds)
+        return createdIds
+      } catch (error) {
+        console.error("Failed to save leads:", error)
+        toast.error(isKorean ? "리드 저장에 실패했습니다" : "Failed to save leads")
+        return []
+      } finally {
+        setIsSaving(false)
+      }
+    },
+    [workspace?.id, userId, isKorean],
+  )
 
   const startSearch = useCallback(async () => {
     if (!workspace?.id || hasStartedSearch.current) return
@@ -194,11 +195,11 @@ export function StepLeadSearch() {
 
   // Save leads when search completes
   useEffect(() => {
-    if (searchComplete && leads.length > 0 && savedLeadIds.length === 0 && !isSaving) {
+    if (searchComplete && leads.length > 0 && !hasStartedSaving.current) {
+      hasStartedSaving.current = true
       saveLeadsToDatabase(leads)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchComplete, leads.length])
+  }, [searchComplete, leads, saveLeadsToDatabase])
 
   const handleNext = () => {
     // Store leads with saved IDs in session storage for next step

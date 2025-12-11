@@ -142,12 +142,12 @@ export const workspaceSalesStrategyRoutes = new Elysia({
       const strategies = await salesStrategyService.getWorkspaceSalesStrategies(workspaceId)
 
       // Return the first strategy (most recent) or 404 if none exist
-      if (strategies.length === 0) {
+      const firstStrategy = strategies[0]
+      if (!firstStrategy) {
         set.status = 404
         return errorResponse("No sales strategy found for this workspace", ResponseCode.NOT_FOUND)
       }
 
-      const firstStrategy = strategies[0]!
       return {
         data: {
           industry: firstStrategy.salesStrategy.industry,

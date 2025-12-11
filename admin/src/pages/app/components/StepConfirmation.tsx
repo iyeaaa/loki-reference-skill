@@ -1,12 +1,4 @@
-import {
-  ArrowRight,
-  CheckCircle2,
-  Loader2,
-  Mail,
-  Play,
-  Rocket,
-  Users,
-} from "lucide-react"
+import { ArrowRight, CheckCircle2, Loader2, Mail, Play, Rocket, Users } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
@@ -14,6 +6,7 @@ import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
 import { apiFetch } from "@/lib/api/client"
 import { useEmailAccountByWorkspaceAndUser } from "@/lib/api/hooks/email-accounts"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
@@ -40,6 +33,8 @@ export function StepConfirmation() {
   const [, setSearchParams] = useSearchParams()
   const [isExecuting, setIsExecuting] = useState(false)
   const [executionComplete, setExecutionComplete] = useState(false)
+  const [executionProgress, setExecutionProgress] = useState(0)
+  const [executionStatus, setExecutionStatus] = useState("")
 
   // Get user's workspace (memoized)
   const currentUser = useMemo(() => JSON.parse(localStorage.getItem("user") || "{}"), [])
@@ -78,18 +73,43 @@ export function StepConfirmation() {
     }
 
     if (!emailAccount?.id) {
-      toast.error(
-        isKorean
-          ? "이메일 계정이 연동되지 않았습니다"
-          : "No email account connected",
-      )
+      toast.error(isKorean ? "이메일 계정이 연동되지 않았습니다" : "No email account connected")
+      return
+    }
+
+    if (leads.length === 0) {
+      toast.error(isKorean ? "리드가 없습니다" : "No leads available")
       return
     }
 
     setIsExecuting(true)
+    setExecutionProgress(0)
 
     try {
-      // Start the sequence by updating status to "active"
+      // Step 1: Enroll leads to sequence with scheduling (40%)
+      setExecutionStatus(isKorean ? "리드를 시퀀스에 등록 중..." : "Enrolling leads to sequence...")
+      setExecutionProgress(20)
+
+      const leadIds = leads.map((lead) => lead.id)
+      const enrollResult = await apiFetch<{
+        enrolledCount: number
+        totalSteps: number
+        scheduledExecutions: number
+      }>(`/api/v1/admin/sequences/${sequenceInfo.id}/enrollments/bulk-with-scheduling`, {
+        method: "POST",
+        body: JSON.stringify({
+          leadIds,
+          userEmailAccountId: emailAccount.id,
+          enrolledBy: userId,
+        }),
+      })
+
+      console.log("Enrollment result:", enrollResult)
+      setExecutionProgress(60)
+
+      // Step 2: Activate the sequence (80%)
+      setExecutionStatus(isKorean ? "시퀀스 활성화 중..." : "Activating sequence...")
+
       await apiFetch(`/api/v1/sequences/${sequenceInfo.id}`, {
         method: "PUT",
         body: JSON.stringify({
@@ -97,8 +117,14 @@ export function StepConfirmation() {
         }),
       })
 
+      setExecutionProgress(100)
       setExecutionComplete(true)
-      toast.success(t("app.onboarding.step5.success", "시퀀스가 성공적으로 실행되었습니다"))
+
+      toast.success(
+        isKorean
+          ? `${enrollResult.enrolledCount}명의 리드에게 이메일이 예약되었습니다`
+          : `Emails scheduled for ${enrollResult.enrolledCount} leads`,
+      )
 
       // Clear session storage
       clearSessionData()
@@ -111,6 +137,8 @@ export function StepConfirmation() {
       console.error("Failed to execute sequence:", error)
       toast.error(isKorean ? "시퀀스 실행에 실패했습니다" : "Failed to execute sequence")
       setIsExecuting(false)
+      setExecutionProgress(0)
+      setExecutionStatus("")
     }
   }
 
@@ -138,6 +166,32 @@ export function StepConfirmation() {
               <Button variant="outline" onClick={() => setSearchParams({ step: "2" })}>
                 {isKorean ? "이전 단계로" : "Go Back"}
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (isExecuting) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Card>
+          <CardContent className="pt-12 pb-10 px-8">
+            <div className="flex flex-col items-center text-center space-y-6">
+              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center">
+                <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">
+                  {t("app.onboarding.step5.executing", "실행 중...")}
+                </h2>
+                <p className="text-gray-500">{executionStatus}</p>
+              </div>
+              <div className="w-full max-w-xs">
+                <Progress value={executionProgress} className="h-2" />
+                <p className="text-center text-sm text-gray-500 mt-2">{executionProgress}%</p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -291,17 +345,8 @@ export function StepConfirmation() {
               disabled={isExecuting || !emailAccount}
               className="flex-1 bg-blue-600 hover:bg-blue-700"
             >
-              {isExecuting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {t("app.onboarding.step5.executing", "실행 중...")}
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4 mr-2" />
-                  {t("app.onboarding.step5.executeButton", "시퀀스 실행")}
-                </>
-              )}
+              <Play className="w-4 h-4 mr-2" />
+              {t("app.onboarding.step5.executeButton", "시퀀스 실행")}
             </Button>
           </div>
         </CardContent>

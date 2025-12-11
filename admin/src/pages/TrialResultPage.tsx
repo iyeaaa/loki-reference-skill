@@ -433,12 +433,14 @@ function generateMockResultData(
             {
               step: 1,
               text_kr: "잠재 고객 발굴 - AI가 타겟 기업의 의사결정권자를 자동으로 찾아요",
-              text_en: "Lead Discovery - AI automatically finds decision-makers at target companies",
+              text_en:
+                "Lead Discovery - AI automatically finds decision-makers at target companies",
             },
             {
               step: 2,
               text_kr: "맞춤 이메일 발송 - 각 기업에 개인화된 영업 메일을 자동 발송해요",
-              text_en: "Personalized Emails - Automatically send customized sales emails to each company",
+              text_en:
+                "Personalized Emails - Automatically send customized sales emails to each company",
             },
             {
               step: 3,
@@ -448,7 +450,8 @@ function generateMockResultData(
             {
               step: 4,
               text_kr: "미팅 조율 - 구매 의향이 높은 고객과 미팅을 자동 세팅해요",
-              text_en: "Meeting Coordination - Automatically set up meetings with high-intent customers",
+              text_en:
+                "Meeting Coordination - Automatically set up meetings with high-intent customers",
             },
           ]
         : [
@@ -586,10 +589,14 @@ export default function TrialResultPage() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                {isKorean ? "RINDA가 귀사만의 전략을 만들고 있어요" : "RINDA is creating your custom strategy"}
+                {isKorean
+                  ? "RINDA가 귀사만의 전략을 만들고 있어요"
+                  : "RINDA is creating your custom strategy"}
               </h2>
               <p className="text-sm text-gray-600">
-                {isKorean ? "곧 완성됩니다, 조금만 기다려주세요" : "Almost there, please wait a moment"}
+                {isKorean
+                  ? "곧 완성됩니다, 조금만 기다려주세요"
+                  : "Almost there, please wait a moment"}
               </p>
             </div>
           </div>
@@ -636,13 +643,21 @@ export default function TrialResultPage() {
                             : "bg-gray-300 text-gray-600"
                       }`}
                     >
-                      {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+                      {isCompleted ? (
+                        <CheckCircle2 className="w-5 h-5" />
+                      ) : (
+                        <Icon className="w-5 h-5" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <span
                           className={`text-sm font-semibold ${
-                            isActive ? "text-blue-600" : isCompleted ? "text-green-700" : "text-gray-500"
+                            isActive
+                              ? "text-blue-600"
+                              : isCompleted
+                                ? "text-green-700"
+                                : "text-gray-500"
                           }`}
                         >
                           {isKorean ? phase.labelKo : phase.labelEn}
@@ -713,7 +728,9 @@ export default function TrialResultPage() {
                 className="bg-yellow-400 text-blue-900 hover:bg-yellow-300 font-bold whitespace-nowrap px-3 sm:px-6 text-xs sm:text-sm h-8 sm:h-10 shadow-lg"
               >
                 <Zap className="w-3 sm:w-4 h-3 sm:h-4 mr-1" />
-                <span className="hidden sm:inline">{isKorean ? "지금 바로 시작하기" : "Start Now"}</span>
+                <span className="hidden sm:inline">
+                  {isKorean ? "지금 바로 시작하기" : "Start Now"}
+                </span>
                 <span className="sm:hidden">{isKorean ? "시작" : "Start"}</span>
                 <ArrowRight className="w-3 sm:w-4 h-3 sm:h-4 ml-1" />
               </Button>
@@ -740,7 +757,9 @@ export default function TrialResultPage() {
           </div>
           <h1 className="text-xl sm:text-3xl md:text-4xl font-bold text-gray-900">
             <span className="text-blue-600">
-              {isKorean ? `${resultData.userContext.industryLabel}에 딱 맞는` : "Perfect match for your"}
+              {isKorean
+                ? `${resultData.userContext.industryLabel}에 딱 맞는`
+                : "Perfect match for your"}
             </span>
             <br />
             <span className="whitespace-nowrap">
@@ -789,7 +808,10 @@ export default function TrialResultPage() {
                 <div>
                   <div className="flex justify-between text-[10px] sm:text-xs mb-1">
                     <span className="text-gray-600">{isKorean ? "적합도" : "Match Score"}</span>
-                    <span className="font-bold text-blue-600">{market.score}{isKorean ? "점" : ""}</span>
+                    <span className="font-bold text-blue-600">
+                      {market.score}
+                      {isKorean ? "점" : ""}
+                    </span>
                   </div>
                   <div className="h-1.5 sm:h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
@@ -856,14 +878,19 @@ export default function TrialResultPage() {
                 {isKorean ? (
                   <>
                     RINDA가 분석한 결과, 추천된 시장에서 큰 기회를 발견했어요. 총{" "}
-                    <span className="text-blue-600 font-bold">{resultData.totalLeadsCount} 잠재 고객</span>
+                    <span className="text-blue-600 font-bold">
+                      {resultData.totalLeadsCount} 잠재 고객
+                    </span>
                     에게 RINDA가 자동으로 맞춤 영업을 진행해드립니다.
                   </>
                 ) : (
                   <>
-                    Based on RINDA's analysis, we've found great opportunities in the recommended markets.
-                    RINDA will automatically conduct customized sales to a total of{" "}
-                    <span className="text-blue-600 font-bold">{resultData.totalLeadsCount} potential customers</span>.
+                    Based on RINDA's analysis, we've found great opportunities in the recommended
+                    markets. RINDA will automatically conduct customized sales to a total of{" "}
+                    <span className="text-blue-600 font-bold">
+                      {resultData.totalLeadsCount} potential customers
+                    </span>
+                    .
                   </>
                 )}
               </p>
@@ -887,7 +914,9 @@ export default function TrialResultPage() {
             </div>
             <div className="flex-1">
               <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3">
-                {isKorean ? "RINDA Agent가 자동으로 진행하는 일" : "What RINDA Agent Does Automatically"}
+                {isKorean
+                  ? "RINDA Agent가 자동으로 진행하는 일"
+                  : "What RINDA Agent Does Automatically"}
               </h2>
               <div className="space-y-1.5 sm:space-y-2">
                 {resultData.lindaSolution.actionSteps.map((step) => (
@@ -952,7 +981,13 @@ export default function TrialResultPage() {
       {/* Market Detail Sidebar */}
       {selectedMarket && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setSelectedMarket(null)} />
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/50 border-none cursor-default"
+            onClick={() => setSelectedMarket(null)}
+            onKeyDown={(e) => e.key === "Escape" && setSelectedMarket(null)}
+            aria-label="Close sidebar"
+          />
           <div className="relative w-full sm:max-w-lg bg-white shadow-2xl overflow-y-auto">
             <div className="sticky top-0 bg-white border-b p-3 sm:p-4 flex items-center justify-between z-10">
               <div className="flex items-center gap-2 sm:gap-3">
@@ -967,7 +1002,11 @@ export default function TrialResultPage() {
                   </p>
                 </div>
               </div>
-              <button onClick={() => setSelectedMarket(null)} className="p-2 hover:bg-gray-100 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setSelectedMarket(null)}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1008,7 +1047,9 @@ export default function TrialResultPage() {
                     <span className="text-xs font-semibold text-gray-600">
                       {isKorean ? "제목" : "Subject"}:
                     </span>
-                    <p className="text-xs text-gray-800 mt-1">{selectedMarket.emailStrategy.subjectLine}</p>
+                    <p className="text-xs text-gray-800 mt-1">
+                      {selectedMarket.emailStrategy.subjectLine}
+                    </p>
                   </div>
                   <div>
                     <span className="text-xs font-semibold text-gray-600">
@@ -1030,10 +1071,14 @@ export default function TrialResultPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="p-3 bg-blue-50 rounded-lg text-center">
                     <div className="text-xs text-gray-600">{isKorean ? "오픈율" : "Open Rate"}</div>
-                    <div className="text-xl font-bold text-blue-600">{selectedMarket.metrics.openRate}%</div>
+                    <div className="text-xl font-bold text-blue-600">
+                      {selectedMarket.metrics.openRate}%
+                    </div>
                   </div>
                   <div className="p-3 bg-green-50 rounded-lg text-center">
-                    <div className="text-xs text-gray-600">{isKorean ? "응답률" : "Response Rate"}</div>
+                    <div className="text-xs text-gray-600">
+                      {isKorean ? "응답률" : "Response Rate"}
+                    </div>
                     <div className="text-xl font-bold text-green-600">
                       {selectedMarket.metrics.responseRate}%
                     </div>
@@ -1045,7 +1090,9 @@ export default function TrialResultPage() {
                 onClick={handleGetStarted}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 sm:py-5 text-sm sm:text-base"
               >
-                {isKorean ? `${selectedMarket.countryName} 시장 캠페인 시작하기` : `Start ${selectedMarket.countryNameEn} Campaign`}
+                {isKorean
+                  ? `${selectedMarket.countryName} 시장 캠페인 시작하기`
+                  : `Start ${selectedMarket.countryNameEn} Campaign`}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>

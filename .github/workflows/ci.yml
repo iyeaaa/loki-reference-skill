@@ -1,0 +1,57 @@
+name: CI Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Enable Corepack (Yarn)
+        run: corepack enable
+
+      - name: Install Admin Dependencies
+        working-directory: ./admin
+        run: yarn install --immutable
+
+      - name: Install Server Dependencies
+        working-directory: ./elysia-server
+        run: bun install
+
+      - name: Build i18n Files
+        working-directory: ./admin
+        run: yarn i18n:build
+
+      - name: Lint Admin
+        working-directory: ./admin
+        run: yarn lint:check
+
+      - name: Type Check Admin
+        working-directory: ./admin
+        run: yarn type-check
+
+      - name: Lint Server
+        working-directory: ./elysia-server
+        run: bun lint:check
+
+      - name: Type Check Server
+        working-directory: ./elysia-server
+        run: bun type-check

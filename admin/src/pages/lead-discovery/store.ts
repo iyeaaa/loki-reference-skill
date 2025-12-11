@@ -2,9 +2,11 @@
  * Lead Discovery Store
  * - 크로스 컴포넌트 상태 및 레이아웃 전환 시 유지할 상태 관리
  * - 메시지 상태는 레이아웃 전환 시 리마운트되어도 유지되어야 함
+ * - 채팅 메시지는 로컬스토리지에 저장하여 새로고침 후에도 유지
  */
 
 import { atom } from "jotai"
+import { atomWithStorage } from "jotai/utils"
 
 // BigQuery LeadResult 구조와 일치하는 Customer 인터페이스
 export interface Customer {
@@ -81,11 +83,51 @@ export const resetCustomersAtom = atom(null, (_get, set) => {
 })
 
 // ============================================
-// Chat State (레이아웃 전환 시에도 유지)
+// Chat State (로컬스토리지에 저장하여 새로고침 후에도 유지)
 // ============================================
 
-// 채팅 메시지 목록 - 레이아웃 전환(리마운트) 시에도 유지
-export const chatMessagesAtom = atom<ChatMessage[]>([])
+// 로컬스토리지 저장용 인터페이스 (Date를 string으로 변환)
+interface StoredChatMessage {
+  id: string
+  role: "user" | "assistant"
+  content: string
+  timestamp: string // ISO string
+  customersAdded?: Customer[]
+}
+
+// 로컬스토리지 커스텀 스토리지 (Date 직렬화/역직렬화 처리)
+const chatStorage = {
+  getItem: (key: string): ChatMessage[] => {
+    const stored = localStorage.getItem(key)
+    if (!stored) return []
+    try {
+      const parsed: StoredChatMessage[] = JSON.parse(stored)
+      return parsed.map((msg) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp),
+      }))
+    } catch {
+      return []
+    }
+  },
+  setItem: (key: string, value: ChatMessage[]): void => {
+    const toStore: StoredChatMessage[] = value.map((msg) => ({
+      ...msg,
+      timestamp: msg.timestamp.toISOString(),
+    }))
+    localStorage.setItem(key, JSON.stringify(toStore))
+  },
+  removeItem: (key: string): void => {
+    localStorage.removeItem(key)
+  },
+}
+
+// 채팅 메시지 목록 - 로컬스토리지에 저장되어 새로고침 후에도 유지
+export const chatMessagesAtom = atomWithStorage<ChatMessage[]>(
+  "lead-discovery-chat-messages",
+  [],
+  chatStorage,
+)
 
 // 메시지 추가
 export const addChatMessageAtom = atom(null, (get, set, message: ChatMessage) => {
@@ -107,9 +149,10 @@ export const updateChatMessageAtom = atom(
   },
 )
 
-// 메시지 초기화
+// 메시지 초기화 (로컬스토리지도 함께 클리어)
 export const resetChatMessagesAtom = atom(null, (_get, set) => {
   set(chatMessagesAtom, [])
+  localStorage.removeItem("lead-discovery-chat-messages")
 })
 
 // ============================================

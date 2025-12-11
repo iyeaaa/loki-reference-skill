@@ -1,6 +1,7 @@
-import { createOpenAI } from "@ai-sdk/openai"
-import { generateObject } from "ai"
 import { desc, eq } from "drizzle-orm"
+import OpenAI from "openai"
+import { zodTextFormat } from "openai/helpers/zod"
+import pRetry from "p-retry"
 import { z } from "zod"
 import { config } from "../config"
 import { db } from "../db/index"
@@ -8,8 +9,8 @@ import { websetRows, websets } from "../db/schema/websets"
 import { workspaces } from "../db/schema/workspaces"
 import { mastra } from "../shared/mastra/shell/mastra"
 
-// Initialize OpenAI provider
-const openai = createOpenAI({ apiKey: config.openai.apiKey })
+// Initialize OpenAI client
+const openai = new OpenAI({ apiKey: config.openai.apiKey })
 
 // ====================================
 // WEBSET CRUD OPERATIONS
@@ -294,12 +295,18 @@ export async function createWebsetCriteria(query: string) {
       ),
   })
 
-  const criteriaResult = await generateObject({
-    model: openai(config.mastra.model),
-    schema: criteriaExtractionSchema,
-    schemaName: "CriteriaExtraction",
-    schemaDescription: "Extract validation criteria from the search query",
-    prompt: `Analyze this search query and extract 1-5 validation criteria: "${query}"
+  const criteriaResponse = await pRetry(
+    () =>
+      openai.responses.parse({
+        model: config.mastra.model,
+        input: [
+          {
+            role: "system",
+            content: "Extract validation criteria from the search query",
+          },
+          {
+            role: "user",
+            content: `Analyze this search query and extract 1-5 validation criteria: "${query}"
 
 CRITICAL RULES:
 - Only use information EXPLICITLY mentioned in the original query
@@ -337,9 +344,20 @@ For example:
   ✗ Is the company venture-backed? (assumes funding, not in query)
 
 Now extract criteria from: "${query}"`,
-    temperature: config.mastra.temperature,
-    maxRetries: 3,
-  })
+          },
+        ],
+        text: {
+          format: zodTextFormat(criteriaExtractionSchema, "CriteriaExtraction"),
+        },
+        temperature: config.mastra.temperature,
+      }),
+    { retries: 3 },
+  )
+
+  const criteriaResult = criteriaResponse.output_parsed
+  if (!criteriaResult) {
+    throw new Error("Failed to parse criteria extraction response")
+  }
 
   // Step 2: Rewrite query incorporating the extracted criteria
   const queryRewriteSchema = z.object({
@@ -350,15 +368,21 @@ Now extract criteria from: "${query}"`,
       ),
   })
 
-  const rewriteResult = await generateObject({
-    model: openai(config.mastra.model),
-    schema: queryRewriteSchema,
-    schemaName: "QueryRewrite",
-    schemaDescription: "Rewrite search query incorporating validation criteria",
-    prompt: `Original query: "${query}"
+  const rewriteResponse = await pRetry(
+    () =>
+      openai.responses.parse({
+        model: config.mastra.model,
+        input: [
+          {
+            role: "system",
+            content: "Rewrite search query incorporating validation criteria",
+          },
+          {
+            role: "user",
+            content: `Original query: "${query}"
 
 Validation criteria extracted (based ONLY on what was in the original query):
-${criteriaResult.object.validationCriteria.map((c, i) => `${i + 1}. ${c}`).join("\n")}
+${criteriaResult.validationCriteria.map((c, i) => `${i + 1}. ${c}`).join("\n")}
 
 Rewrite the query to be more effective for web search while:
 1. Preserving the EXACT original intent - do not add new concepts or requirements
@@ -377,13 +401,24 @@ For example:
 - Original: "B2B SaaS startups"
   Good rewrite: "B2B SaaS software startup companies"
   Bad rewrite: "enterprise B2B SaaS startups with funding" (adds "enterprise" and "funding")`,
-    temperature: config.mastra.temperature,
-    maxRetries: 3,
-  })
+          },
+        ],
+        text: {
+          format: zodTextFormat(queryRewriteSchema, "QueryRewrite"),
+        },
+        temperature: config.mastra.temperature,
+      }),
+    { retries: 3 },
+  )
+
+  const rewriteResult = rewriteResponse.output_parsed
+  if (!rewriteResult) {
+    throw new Error("Failed to parse query rewrite response")
+  }
 
   return {
-    validationCriteria: criteriaResult.object.validationCriteria,
-    rewrittenQuery: rewriteResult.object.rewrittenQuery,
+    validationCriteria: criteriaResult.validationCriteria,
+    rewrittenQuery: rewriteResult.rewrittenQuery,
   }
 }
 

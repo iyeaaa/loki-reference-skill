@@ -1,6 +1,7 @@
-import { createOpenAI } from "@ai-sdk/openai"
 import { createStep, createWorkflow } from "@mastra/core/workflows"
-import { generateObject } from "ai"
+import OpenAI from "openai"
+import { zodTextFormat } from "openai/helpers/zod"
+import pRetry from "p-retry"
 import { z } from "zod"
 import { jinaReader } from "./api-clients"
 import { CompanyInfoSchema, GoogleSearchResultSchema } from "./types"
@@ -34,7 +35,7 @@ const evaluatePagesStep = createStep({
     const { searchResults, alreadyExtractedUrls, openaiApiKey } = inputData
 
     try {
-      const openai = createOpenAI({ apiKey: openaiApiKey })
+      const openaiClient = new OpenAI({ apiKey: openaiApiKey })
 
       // Filter out already processed URLs
       const alreadyExtracted = new Set(alreadyExtractedUrls)
@@ -85,20 +86,38 @@ ASSIGN PRIORITY:
 
 Return results with priority >= 2, sorted by priority (highest first).`
 
-      const { object } = await generateObject({
-        model: openai("gpt-4o-mini"),
-        schema: z.object({
-          worthOpening: z.array(
-            z.object({
-              resultIndex: z.number(),
-              priority: z.number().min(0).max(3),
-              reason: z.string(),
-            }),
-          ),
-        }),
-        prompt,
-        temperature: 0.3,
+      const evalSchema = z.object({
+        worthOpening: z.array(
+          z.object({
+            resultIndex: z.number(),
+            priority: z.number().min(0).max(3),
+            reason: z.string(),
+          }),
+        ),
       })
+
+      const response = await pRetry(
+        () =>
+          openaiClient.responses.parse({
+            model: "gpt-4o-mini",
+            input: [
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
+            text: {
+              format: zodTextFormat(evalSchema, "PageEvaluation"),
+            },
+            temperature: 0.3,
+          }),
+        { retries: 3 },
+      )
+
+      const object = response.output_parsed
+      if (!object) {
+        throw new Error("Failed to parse page evaluation response")
+      }
 
       // Map back and sort by priority
       const pagesToOpen = object.worthOpening
@@ -148,7 +167,7 @@ const extractFromIndividualPageStep = createStep({
     const { url, title, openaiApiKey, jinaApiKey } = inputData
 
     try {
-      const openai = createOpenAI({ apiKey: openaiApiKey })
+      const openaiClient = new OpenAI({ apiKey: openaiApiKey })
 
       // Read the page
       let pageContent: string
@@ -188,22 +207,40 @@ RULES:
 - Skip if this isn't actually a company page
 - Return found=false if no single clear company information found`
 
-      const { object } = await generateObject({
-        model: openai("gpt-4o-mini"),
-        schema: z.object({
-          found: z.boolean(),
-          company: z
-            .object({
-              name: z.string(),
-              website: z.string().optional(),
-              location: z.string().optional(),
-            })
-            .nullable()
-            .optional(),
-        }),
-        prompt,
-        temperature: 0.2,
+      const companySchema = z.object({
+        found: z.boolean(),
+        company: z
+          .object({
+            name: z.string(),
+            website: z.string().optional(),
+            location: z.string().optional(),
+          })
+          .nullable()
+          .optional(),
       })
+
+      const response = await pRetry(
+        () =>
+          openaiClient.responses.parse({
+            model: "gpt-4o-mini",
+            input: [
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
+            text: {
+              format: zodTextFormat(companySchema, "CompanyExtraction"),
+            },
+            temperature: 0.2,
+          }),
+        { retries: 3 },
+      )
+
+      const object = response.output_parsed
+      if (!object) {
+        throw new Error("Failed to parse company extraction response")
+      }
 
       if (!(object.found && object.company)) {
         return {

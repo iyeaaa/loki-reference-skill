@@ -1,6 +1,7 @@
-import { createOpenAI } from "@ai-sdk/openai"
 import { createStep, createWorkflow } from "@mastra/core/workflows"
-import { generateObject } from "ai"
+import OpenAI from "openai"
+import { zodTextFormat } from "openai/helpers/zod"
+import pRetry from "p-retry"
 import { z } from "zod"
 import { SearchQuerySchema } from "./types"
 
@@ -30,7 +31,7 @@ const generateQueriesStep = createStep({
       inputData
 
     try {
-      const openai = createOpenAI({ apiKey: openaiApiKey })
+      const openaiClient = new OpenAI({ apiKey: openaiApiKey })
 
       const defaultLocationText = defaultLocation
         ? `\n\nDefault Location: "${defaultLocation}"`
@@ -56,18 +57,36 @@ For each query, specify:
 
 IMPORTANT: Vary locations if it makes sense for the query. Don't always use the default location - consider broader or narrower geographic scopes when appropriate.`
 
-      const { object } = await generateObject({
-        model: openai("gpt-4o-mini"),
-        schema: z.object({
-          queries: z
-            .array(SearchQuerySchema)
-            .describe(
-              `Array of exactly ${searchQueryCount} unique SERP queries with location and language parameters`,
-            ),
-        }),
-        prompt,
-        temperature: 0.8, // Higher temperature for more variety
+      const queriesSchema = z.object({
+        queries: z
+          .array(SearchQuerySchema)
+          .describe(
+            `Array of exactly ${searchQueryCount} unique SERP queries with location and language parameters`,
+          ),
       })
+
+      const response = await pRetry(
+        () =>
+          openaiClient.responses.parse({
+            model: "gpt-4o-mini",
+            input: [
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
+            text: {
+              format: zodTextFormat(queriesSchema, "SearchQueries"),
+            },
+            temperature: 0.8, // Higher temperature for more variety
+          }),
+        { retries: 3 },
+      )
+
+      const object = response.output_parsed
+      if (!object) {
+        throw new Error("Failed to parse search queries response")
+      }
 
       return {
         queries: object.queries,

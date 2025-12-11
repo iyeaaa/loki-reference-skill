@@ -1,6 +1,7 @@
-import { createOpenAI } from "@ai-sdk/openai"
 import { createStep, createWorkflow } from "@mastra/core/workflows"
-import { generateObject } from "ai"
+import OpenAI from "openai"
+import { zodTextFormat } from "openai/helpers/zod"
+import pRetry from "p-retry"
 import { z } from "zod"
 import { config } from "../../../../config"
 import { enrichDataWorkflow } from "./enrich-data.workflow"
@@ -45,7 +46,7 @@ const generateQueriesStep = createStep({
     const { query, targetCount } = inputData
     const searchQueryCount = 5 // Always generate 5 queries
 
-    const openai = createOpenAI({ apiKey: config.openai.apiKey })
+    const openaiClient = new OpenAI({ apiKey: config.openai.apiKey })
     const startTime = new Date().toISOString()
 
     console.log("🚀 Web Company Search V2")
@@ -53,16 +54,34 @@ const generateQueriesStep = createStep({
     console.log(`Target: ${targetCount} companies`)
     console.log(`📝 Generating ${searchQueryCount} search queries...\n`)
 
-    const { object } = await generateObject({
-      model: openai("gpt-4o-mini"),
-      schema: z.object({
-        queries: z.array(SearchQuerySchema),
-      }),
-      prompt: `Generate ${searchQueryCount} unique SERP search queries for: "${query}"
+    const queriesSchema = z.object({
+      queries: z.array(SearchQuerySchema),
+    })
+
+    const response = await pRetry(
+      () =>
+        openaiClient.responses.parse({
+          model: "gpt-4o-mini",
+          input: [
+            {
+              role: "user",
+              content: `Generate ${searchQueryCount} unique SERP search queries for: "${query}"
 
 Each query should approach from a different angle. Vary search terms and synonyms.`,
-      temperature: 0.8,
-    })
+            },
+          ],
+          text: {
+            format: zodTextFormat(queriesSchema, "SearchQueries"),
+          },
+          temperature: 0.8,
+        }),
+      { retries: 3 },
+    )
+
+    const object = response.output_parsed
+    if (!object) {
+      throw new Error("Failed to parse search queries response")
+    }
 
     console.log(`✅ Generated ${object.queries.length} queries\n`)
 
@@ -97,7 +116,7 @@ const searchAndExtractStep = createStep({
   execute: async ({ inputData }) => {
     const { queries, targetCount, startTime } = inputData
 
-    const openai = createOpenAI({ apiKey: config.openai.apiKey })
+    const openaiClient = new OpenAI({ apiKey: config.openai.apiKey })
 
     console.log("🔄 Processing queries concurrently...\n")
 
@@ -132,24 +151,42 @@ const searchAndExtractStep = createStep({
               .map((r, i) => `[${i + 1}] ${r.title}\n${r.link}\n${r.snippet || ""}`)
               .join("\n\n")
 
-            const { object: snippetRes } = await generateObject({
-              model: openai("gpt-4o-mini"),
-              schema: z.object({
-                contacts: z.array(
-                  z.object({
-                    name: z.string(),
-                    website: z.string().optional().nullable(),
-                    email: z.string().optional().nullable(),
-                    foundedYear: z.number().optional().nullable(),
-                    location: z.string().optional().nullable(),
-                    resultIndex: z.number(),
-                  }),
-                ),
-              }),
-              prompt: `Extract companies:\n\n${snippetsCtx}\n\nExtract: name, website, email, foundedYear, location, resultIndex. Set fields to null if not found.`,
-              temperature: 0.3,
+            const snippetSchema = z.object({
+              contacts: z.array(
+                z.object({
+                  name: z.string(),
+                  website: z.string().optional().nullable(),
+                  email: z.string().optional().nullable(),
+                  foundedYear: z.number().optional().nullable(),
+                  location: z.string().optional().nullable(),
+                  resultIndex: z.number(),
+                }),
+              ),
             })
+
+            const snippetResponse = await pRetry(
+              () =>
+                openaiClient.responses.parse({
+                  model: "gpt-4o-mini",
+                  input: [
+                    {
+                      role: "user",
+                      content: `Extract companies:\n\n${snippetsCtx}\n\nExtract: name, website, email, foundedYear, location, resultIndex. Set fields to null if not found.`,
+                    },
+                  ],
+                  text: {
+                    format: zodTextFormat(snippetSchema, "SnippetExtraction"),
+                  },
+                  temperature: 0.3,
+                }),
+              { retries: 3 },
+            )
             queryOpenaiCalls++
+
+            const snippetRes = snippetResponse.output_parsed
+            if (!snippetRes) {
+              throw new Error("Failed to parse snippet extraction response")
+            }
 
             const snippetCompanies: CompanyInfo[] = snippetRes.contacts.map((c) => ({
               name: c.name,
@@ -173,20 +210,38 @@ const searchAndExtractStep = createStep({
               .map((r, i) => `[${i + 1}] ${r.title}\n${r.link}`)
               .join("\n\n")
 
-            const { object: dirRes } = await generateObject({
-              model: openai("gpt-4o-mini"),
-              schema: z.object({
-                directories: z.array(
-                  z.object({
-                    resultIndex: z.number(),
-                    confidence: z.enum(["high", "medium", "low"]),
-                  }),
-                ),
-              }),
-              prompt: `Which are directory/list pages?\n\n${candidatesCtx}\n\nReturn MEDIUM or HIGH confidence only.`,
-              temperature: 0.2,
+            const directoryDetectSchema = z.object({
+              directories: z.array(
+                z.object({
+                  resultIndex: z.number(),
+                  confidence: z.enum(["high", "medium", "low"]),
+                }),
+              ),
             })
+
+            const dirDetectResponse = await pRetry(
+              () =>
+                openaiClient.responses.parse({
+                  model: "gpt-4o-mini",
+                  input: [
+                    {
+                      role: "user",
+                      content: `Which are directory/list pages?\n\n${candidatesCtx}\n\nReturn MEDIUM or HIGH confidence only.`,
+                    },
+                  ],
+                  text: {
+                    format: zodTextFormat(directoryDetectSchema, "DirectoryDetection"),
+                  },
+                  temperature: 0.2,
+                }),
+              { retries: 3 },
+            )
             queryOpenaiCalls++
+
+            const dirRes = dirDetectResponse.output_parsed
+            if (!dirRes) {
+              throw new Error("Failed to parse directory detection response")
+            }
 
             const directories = dirRes.directories
               .filter((d) => d.confidence !== "low")
@@ -206,23 +261,41 @@ const searchAndExtractStep = createStep({
                   })
                   const truncated = content.length > 15_000 ? content.slice(0, 15_000) : content
 
-                  const { object } = await generateObject({
-                    model: openai("gpt-4o"),
-                    schema: z.object({
-                      companies: z.array(
-                        z.object({
-                          name: z.string(),
-                          website: z.string().optional().nullable(),
-                          email: z.string().optional().nullable(),
-                          foundedYear: z.number().optional().nullable(),
-                          location: z.string().optional().nullable(),
-                        }),
-                      ),
-                    }),
-                    prompt: `Extract ALL companies:\n\n${dir.title}\n${dir.link}\n\n${truncated}\n\nExtract: name, website, email, foundedYear, location. Set fields to null if not found.`,
-                    temperature: 0.3,
+                  const dirCompaniesSchema = z.object({
+                    companies: z.array(
+                      z.object({
+                        name: z.string(),
+                        website: z.string().optional().nullable(),
+                        email: z.string().optional().nullable(),
+                        foundedYear: z.number().optional().nullable(),
+                        location: z.string().optional().nullable(),
+                      }),
+                    ),
                   })
+
+                  const dirExtractResponse = await pRetry(
+                    () =>
+                      openaiClient.responses.parse({
+                        model: "gpt-4o",
+                        input: [
+                          {
+                            role: "user",
+                            content: `Extract ALL companies:\n\n${dir.title}\n${dir.link}\n\n${truncated}\n\nExtract: name, website, email, foundedYear, location. Set fields to null if not found.`,
+                          },
+                        ],
+                        text: {
+                          format: zodTextFormat(dirCompaniesSchema, "DirectoryCompanies"),
+                        },
+                        temperature: 0.3,
+                      }),
+                    { retries: 3 },
+                  )
                   queryOpenaiCalls++
+
+                  const object = dirExtractResponse.output_parsed
+                  if (!object) {
+                    throw new Error("Failed to parse directory companies response")
+                  }
 
                   return object.companies.map(
                     (c): CompanyInfo => ({
@@ -259,20 +332,38 @@ const searchAndExtractStep = createStep({
           if (newResults.length > 0) {
             const newCtx = newResults.map((r, i) => `[${i + 1}] ${r.title}\n${r.link}`).join("\n\n")
 
-            const { object: evalRes } = await generateObject({
-              model: openai("gpt-4o-mini"),
-              schema: z.object({
-                worthOpening: z.array(
-                  z.object({
-                    resultIndex: z.number(),
-                    priority: z.number().min(0).max(3),
-                  }),
-                ),
-              }),
-              prompt: `Which pages worth opening?\n\n${newCtx}\n\nPriority: 3=High, 2=Medium. Return >= 2 only.`,
-              temperature: 0.3,
+            const evalSchema = z.object({
+              worthOpening: z.array(
+                z.object({
+                  resultIndex: z.number(),
+                  priority: z.number().min(0).max(3),
+                }),
+              ),
             })
+
+            const evalResponse = await pRetry(
+              () =>
+                openaiClient.responses.parse({
+                  model: "gpt-4o-mini",
+                  input: [
+                    {
+                      role: "user",
+                      content: `Which pages worth opening?\n\n${newCtx}\n\nPriority: 3=High, 2=Medium. Return >= 2 only.`,
+                    },
+                  ],
+                  text: {
+                    format: zodTextFormat(evalSchema, "PageEvaluation"),
+                  },
+                  temperature: 0.3,
+                }),
+              { retries: 3 },
+            )
             queryOpenaiCalls++
+
+            const evalRes = evalResponse.output_parsed
+            if (!evalRes) {
+              throw new Error("Failed to parse page evaluation response")
+            }
 
             const pagesToOpen = evalRes.worthOpening
               .filter((p) => p.priority >= 2)
@@ -290,25 +381,43 @@ const searchAndExtractStep = createStep({
                   })
                   const truncated = content.length > 8000 ? content.slice(0, 8000) : content
 
-                  const { object } = await generateObject({
-                    model: openai("gpt-4o-mini"),
-                    schema: z.object({
-                      found: z.boolean(),
-                      company: z
-                        .object({
-                          name: z.string(),
-                          website: z.string().optional().nullable(),
-                          email: z.string().optional().nullable(),
-                          foundedYear: z.number().optional().nullable(),
-                          location: z.string().optional().nullable(),
-                        })
-                        .nullable()
-                        .optional(),
-                    }),
-                    prompt: `Extract company:\n\n${page.title}\n${page.link}\n\n${truncated}\n\nExtract: name, website, email, foundedYear, location. Set fields to null if not found. Set found=false if not single company page.`,
-                    temperature: 0.2,
+                  const pageCompanySchema = z.object({
+                    found: z.boolean(),
+                    company: z
+                      .object({
+                        name: z.string(),
+                        website: z.string().optional().nullable(),
+                        email: z.string().optional().nullable(),
+                        foundedYear: z.number().optional().nullable(),
+                        location: z.string().optional().nullable(),
+                      })
+                      .nullable()
+                      .optional(),
                   })
+
+                  const pageResponse = await pRetry(
+                    () =>
+                      openaiClient.responses.parse({
+                        model: "gpt-4o-mini",
+                        input: [
+                          {
+                            role: "user",
+                            content: `Extract company:\n\n${page.title}\n${page.link}\n\n${truncated}\n\nExtract: name, website, email, foundedYear, location. Set fields to null if not found. Set found=false if not single company page.`,
+                          },
+                        ],
+                        text: {
+                          format: zodTextFormat(pageCompanySchema, "PageCompany"),
+                        },
+                        temperature: 0.2,
+                      }),
+                    { retries: 3 },
+                  )
                   queryOpenaiCalls++
+
+                  const object = pageResponse.output_parsed
+                  if (!object) {
+                    throw new Error("Failed to parse page company response")
+                  }
 
                   if (object.found && object.company) {
                     return {

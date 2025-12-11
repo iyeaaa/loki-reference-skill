@@ -1,10 +1,11 @@
-import { createOpenAI } from "@ai-sdk/openai"
 import { createStep, createWorkflow } from "@mastra/core/workflows"
-import { generateObject } from "ai"
+import OpenAI from "openai"
+import { zodTextFormat } from "openai/helpers/zod"
+import pRetry from "p-retry"
 import { z } from "zod"
 import { config } from "../../../../config"
 
-const openai = createOpenAI({ apiKey: config.openai.apiKey })
+const openai = new OpenAI({ apiKey: config.openai.apiKey })
 
 /**
  * Validate Criteria Workflow
@@ -68,14 +69,28 @@ Important:
 Provide your validation result:
 `
 
-      const response = await generateObject({
-        model: openai("gpt-4o-mini"),
-        schema: validationSchema,
-        prompt: validationPrompt,
-        temperature: 0.1, // Low temperature for consistent validation
-      })
+      const response = await pRetry(
+        () =>
+          openai.responses.parse({
+            model: "gpt-4o-mini",
+            input: [
+              {
+                role: "user",
+                content: validationPrompt,
+              },
+            ],
+            text: {
+              format: zodTextFormat(validationSchema, "ValidationResult"),
+            },
+            temperature: 0.1, // Low temperature for consistent validation
+          }),
+        { retries: 3 },
+      )
 
-      const validationResult = response.object
+      const validationResult = response.output_parsed
+      if (!validationResult) {
+        throw new Error("Failed to parse validation response")
+      }
 
       const researchResult = `
 Criteria: ${criteria}

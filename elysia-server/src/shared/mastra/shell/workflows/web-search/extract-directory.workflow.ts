@@ -1,6 +1,7 @@
-import { createOpenAI } from "@ai-sdk/openai"
 import { createStep, createWorkflow } from "@mastra/core/workflows"
-import { generateObject } from "ai"
+import OpenAI from "openai"
+import { zodTextFormat } from "openai/helpers/zod"
+import pRetry from "p-retry"
 import { z } from "zod"
 import { jinaReader } from "./api-clients"
 import { CompanyInfoSchema, GoogleSearchResultSchema } from "./types"
@@ -33,7 +34,7 @@ const detectDirectoriesStep = createStep({
     const { searchResults, openaiApiKey } = inputData
 
     try {
-      const openai = createOpenAI({ apiKey: openaiApiKey })
+      const openaiClient = new OpenAI({ apiKey: openaiApiKey })
 
       // Filter results that might be directories
       const candidates = searchResults.slice(0, 10) // Check top 10 results
@@ -66,20 +67,38 @@ CLASSIFY each result:
 
 Return only results with MEDIUM or HIGH confidence.`
 
-      const { object } = await generateObject({
-        model: openai("gpt-4o-mini"),
-        schema: z.object({
-          directories: z.array(
-            z.object({
-              resultIndex: z.number(),
-              confidence: z.enum(["high", "medium", "low"]),
-              reason: z.string(),
-            }),
-          ),
-        }),
-        prompt,
-        temperature: 0.2,
+      const directorySchema = z.object({
+        directories: z.array(
+          z.object({
+            resultIndex: z.number(),
+            confidence: z.enum(["high", "medium", "low"]),
+            reason: z.string(),
+          }),
+        ),
       })
+
+      const response = await pRetry(
+        () =>
+          openaiClient.responses.parse({
+            model: "gpt-4o-mini",
+            input: [
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
+            text: {
+              format: zodTextFormat(directorySchema, "DirectoryDetection"),
+            },
+            temperature: 0.2,
+          }),
+        { retries: 3 },
+      )
+
+      const object = response.output_parsed
+      if (!object) {
+        throw new Error("Failed to parse directory detection response")
+      }
 
       // Map back to URLs
       const directories = object.directories
@@ -128,7 +147,7 @@ const extractFromDirectoryStep = createStep({
     const { url, title, openaiApiKey, jinaApiKey } = inputData
 
     try {
-      const openai = createOpenAI({ apiKey: openaiApiKey })
+      const openaiClient = new OpenAI({ apiKey: openaiApiKey })
 
       // Read the directory page
       let pageContent: string
@@ -169,21 +188,39 @@ EXTRACTION RULES:
 PRIORITIZE VOLUME: It's better to capture all companies quickly than to be perfect.
 Aim to extract 10-50+ companies if they're present.`
 
-      const { object } = await generateObject({
-        model: openai("gpt-4o"),
-        schema: z.object({
-          companies: z.array(
-            z.object({
-              name: z.string(),
-              website: z.string().optional(),
-              location: z.string().optional(),
-            }),
-          ),
-          totalFound: z.number().describe("Total number of companies extracted"),
-        }),
-        prompt,
-        temperature: 0.3,
+      const companiesSchema = z.object({
+        companies: z.array(
+          z.object({
+            name: z.string(),
+            website: z.string().optional(),
+            location: z.string().optional(),
+          }),
+        ),
+        totalFound: z.number().describe("Total number of companies extracted"),
       })
+
+      const response = await pRetry(
+        () =>
+          openaiClient.responses.parse({
+            model: "gpt-4o",
+            input: [
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
+            text: {
+              format: zodTextFormat(companiesSchema, "DirectoryCompanies"),
+            },
+            temperature: 0.3,
+          }),
+        { retries: 3 },
+      )
+
+      const object = response.output_parsed
+      if (!object) {
+        throw new Error("Failed to parse directory companies response")
+      }
 
       // Transform to CompanyInfo format
       const companies = object.companies.map((company) => ({

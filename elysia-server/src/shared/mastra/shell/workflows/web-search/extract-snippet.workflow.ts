@@ -1,6 +1,7 @@
-import { createOpenAI } from "@ai-sdk/openai"
 import { createStep, createWorkflow } from "@mastra/core/workflows"
-import { generateObject } from "ai"
+import OpenAI from "openai"
+import { zodTextFormat } from "openai/helpers/zod"
+import pRetry from "p-retry"
 import { z } from "zod"
 import { CompanyInfoSchema, GoogleSearchResultSchema } from "./types"
 
@@ -27,7 +28,7 @@ const extractSnippetStep = createStep({
     const { searchResults, sourceQuery, openaiApiKey } = inputData
 
     try {
-      const openai = createOpenAI({ apiKey: openaiApiKey })
+      const openaiClient = new OpenAI({ apiKey: openaiApiKey })
 
       // Filter results that likely contain useful information
       const relevantResults = searchResults.filter(
@@ -79,21 +80,39 @@ For each valid contact found, extract:
 
 Extract as many valid contacts as possible from the snippets.`
 
-      const { object } = await generateObject({
-        model: openai("gpt-4o-mini"),
-        schema: z.object({
-          contacts: z.array(
-            z.object({
-              name: z.string(),
-              website: z.string().optional(),
-              location: z.string().optional(),
-              resultIndex: z.number(),
-            }),
-          ),
-        }),
-        prompt,
-        temperature: 0.3, // Lower temperature for accuracy
+      const contactsSchema = z.object({
+        contacts: z.array(
+          z.object({
+            name: z.string(),
+            website: z.string().optional(),
+            location: z.string().optional(),
+            resultIndex: z.number(),
+          }),
+        ),
       })
+
+      const response = await pRetry(
+        () =>
+          openaiClient.responses.parse({
+            model: "gpt-4o-mini",
+            input: [
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
+            text: {
+              format: zodTextFormat(contactsSchema, "ContactsExtraction"),
+            },
+            temperature: 0.3, // Lower temperature for accuracy
+          }),
+        { retries: 3 },
+      )
+
+      const object = response.output_parsed
+      if (!object) {
+        throw new Error("Failed to parse contacts extraction response")
+      }
 
       // Transform to CompanyInfo format
       const companies = object.contacts.map((contact) => {

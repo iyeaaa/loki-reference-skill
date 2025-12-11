@@ -1,6 +1,7 @@
-import { createOpenAI } from "@ai-sdk/openai"
 import { createStep, createWorkflow } from "@mastra/core/workflows"
-import { generateObject } from "ai"
+import OpenAI from "openai"
+import { zodTextFormat } from "openai/helpers/zod"
+import pRetry from "p-retry"
 import { z } from "zod"
 import { config } from "../../../../config"
 import { CompanyInfoSchema } from "./web-search/types"
@@ -193,19 +194,25 @@ const extractStructuredDataStep = createStep({
     console.log("📊 Extracting structured data...\n")
 
     try {
-      const openai = createOpenAI({ apiKey: config.openai.apiKey })
+      const openaiClient = new OpenAI({ apiKey: config.openai.apiKey })
+
+      const companyExtractionSchema = z.object({
+        name: z.string(),
+        website: z.string().optional().nullable(),
+        email: z.string().optional().nullable(),
+        foundedYear: z.number().optional().nullable(),
+        location: z.string().optional().nullable(),
+      })
 
       // Use AI to extract structured data from research results
-      const { object } = await generateObject({
-        model: openai("gpt-4o-mini"),
-        schema: z.object({
-          name: z.string(),
-          website: z.string().optional().nullable(),
-          email: z.string().optional().nullable(),
-          foundedYear: z.number().optional().nullable(),
-          location: z.string().optional().nullable(),
-        }),
-        prompt: `
+      const response = await pRetry(
+        () =>
+          openaiClient.responses.parse({
+            model: "gpt-4o-mini",
+            input: [
+              {
+                role: "user",
+                content: `
 Original Company Data:
 ${JSON.stringify(company, null, 2)}
 
@@ -223,8 +230,20 @@ Extract and return the company information in structured format.
 
 Return the complete company object with enriched data.
 `,
-        temperature: 0.2,
-      })
+              },
+            ],
+            text: {
+              format: zodTextFormat(companyExtractionSchema, "CompanyExtraction"),
+            },
+            temperature: 0.2,
+          }),
+        { retries: 3 },
+      )
+
+      const object = response.output_parsed
+      if (!object) {
+        throw new Error("Failed to parse company extraction response")
+      }
 
       // Helper to normalize website
       const normalizeWebsite = (url: string | null | undefined): string | null => {

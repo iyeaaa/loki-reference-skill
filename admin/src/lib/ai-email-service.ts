@@ -1,4 +1,7 @@
-import { OpenAI } from "openai"
+import OpenAI from "openai"
+import { zodTextFormat } from "openai/helpers/zod"
+import pRetry from "p-retry"
+import { z } from "zod"
 
 interface EmailContext {
   fromEmail: string
@@ -94,19 +97,23 @@ class AIEmailService {
       위 문의에 대해 5-7문장 이내로 간결하게 답변하세요.
       인사말 포함, 핵심 답변, 필요시 미팅 링크만 포함하세요.`
 
-      const completion = await this.openai.chat.completions.create({
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt,
-          },
-          {
-            role: "user",
-            content: userPrompt,
-          },
-        ],
-      })
+      const completion = await pRetry(
+        () =>
+          this.openai.chat.completions.create({
+            model: "gpt-4",
+            messages: [
+              {
+                role: "system",
+                content: systemPrompt,
+              },
+              {
+                role: "user",
+                content: userPrompt,
+              },
+            ],
+          }),
+        { retries: 3 },
+      )
 
       const replyContent = completion.choices[0]?.message?.content
 
@@ -274,19 +281,23 @@ ${context.additionalContext ? `추가 컨텍스트: ${context.additionalContext}
 
 위 정보를 바탕으로 이메일 답변을 작성하세요.`
 
-    const completion = await this.openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: customPrompt,
-        },
-        {
-          role: "user",
-          content: userPrompt,
-        },
-      ],
-    })
+    const completion = await pRetry(
+      () =>
+        this.openai.chat.completions.create({
+          model: "gpt-4",
+          messages: [
+            {
+              role: "system",
+              content: customPrompt,
+            },
+            {
+              role: "user",
+              content: userPrompt,
+            },
+          ],
+        }),
+      { retries: 3 },
+    )
 
     const draft = completion.choices[0]?.message?.content
     if (!draft) {
@@ -309,15 +320,6 @@ ${context.additionalContext ? `추가 컨텍스트: ${context.additionalContext}
 2. 정확성 (0-10점): 고객 질문에 올바르게 답변했는지
 3. 합격/불합격: 7점 미만이면 불합격
 
-평가 결과를 다음 JSON 형식으로 반환하세요:
-{
-  "pass": true/false,
-  "qualityScore": 0-10,
-  "accuracyScore": 0-10,
-  "feedback": "간단한 피드백",
-  "issues": ["문제점1", "문제점2"] (선택사항)
-}
-
 원본 고객 이메일:
 제목: ${originalContext.subject}
 내용: ${originalContext.content}
@@ -325,27 +327,41 @@ ${context.additionalContext ? `추가 컨텍스트: ${context.additionalContext}
 평가할 답변 이메일:
 ${emailContent}`
 
-    const completion = await this.openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: "당신은 이메일 품질 평가 전문가입니다. JSON 형식으로만 응답하세요.",
-        },
-        {
-          role: "user",
-          content: judgePrompt,
-        },
-      ],
-      response_format: { type: "json_object" },
+    const judgmentSchema = z.object({
+      pass: z.boolean(),
+      qualityScore: z.number().min(0).max(10),
+      accuracyScore: z.number().min(0).max(10),
+      feedback: z.string(),
+      issues: z.array(z.string()).optional(),
     })
 
-    const result = completion.choices[0]?.message?.content
+    const response = await pRetry(
+      () =>
+        this.openai.responses.parse({
+          model: "gpt-4",
+          input: [
+            {
+              role: "system",
+              content: "당신은 이메일 품질 평가 전문가입니다.",
+            },
+            {
+              role: "user",
+              content: judgePrompt,
+            },
+          ],
+          text: {
+            format: zodTextFormat(judgmentSchema, "JudgmentResult"),
+          },
+        }),
+      { retries: 3 },
+    )
+
+    const result = response.output_parsed
     if (!result) {
       throw new Error("이메일 평가 실패")
     }
 
-    return JSON.parse(result) as JudgmentResult
+    return result as JudgmentResult
   }
 
   /**
@@ -354,43 +370,50 @@ ${emailContent}`
   private async parseEmailContent(emailContent: string): Promise<ParsedEmailData> {
     const parsePrompt = `다음 이메일을 분석하여 구조화된 데이터로 추출하세요:
 
-${emailContent}
+${emailContent}`
 
-다음 JSON 형식으로 반환하세요:
-{
-  "subject": "이메일 제목 (없으면 '답변')",
-  "body": "본문 내용",
-  "greeting": "인사말 부분",
-  "signature": "서명 부분",
-  "metadata": {
-    "sentiment": "positive/neutral/negative",
-    "intent": ["의도1", "의도2"],
-    "topics": ["주제1", "주제2"],
-    "actionItems": ["액션 아이템1", "액션 아이템2"]
-  }
-}`
-
-    const completion = await this.openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: "당신은 이메일 파싱 전문가입니다. JSON 형식으로만 응답하세요.",
-        },
-        {
-          role: "user",
-          content: parsePrompt,
-        },
-      ],
-      response_format: { type: "json_object" },
+    const emailMetadataSchema = z.object({
+      sentiment: z.enum(["positive", "neutral", "negative"]),
+      intent: z.array(z.string()),
+      topics: z.array(z.string()),
+      actionItems: z.array(z.string()),
     })
 
-    const result = completion.choices[0]?.message?.content
+    const parsedEmailSchema = z.object({
+      subject: z.string(),
+      body: z.string(),
+      greeting: z.string(),
+      signature: z.string(),
+      metadata: emailMetadataSchema,
+    })
+
+    const response = await pRetry(
+      () =>
+        this.openai.responses.parse({
+          model: "gpt-4",
+          input: [
+            {
+              role: "system",
+              content: "당신은 이메일 파싱 전문가입니다.",
+            },
+            {
+              role: "user",
+              content: parsePrompt,
+            },
+          ],
+          text: {
+            format: zodTextFormat(parsedEmailSchema, "ParsedEmail"),
+          },
+        }),
+      { retries: 3 },
+    )
+
+    const result = response.output_parsed
     if (!result) {
       throw new Error("이메일 파싱 실패")
     }
 
-    return JSON.parse(result) as ParsedEmailData
+    return result as ParsedEmailData
   }
 
   /**

@@ -64,50 +64,6 @@ const presets = [
     },
   },
   {
-    id: "thisMonth",
-    getValue: () => {
-      const now = new Date()
-      const from = new Date(now.getFullYear(), now.getMonth(), 1)
-      return { from, to: new Date() }
-    },
-  },
-  {
-    id: "lastMonth",
-    getValue: () => {
-      const now = new Date()
-      const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      const to = new Date(now.getFullYear(), now.getMonth(), 0)
-      to.setHours(23, 59, 59, 999)
-      return { from, to }
-    },
-  },
-  {
-    id: "thisWeek",
-    getValue: () => {
-      const now = new Date()
-      const from = new Date(now)
-      // 일요일로 설정 (0 = 일요일)
-      from.setDate(from.getDate() - from.getDay())
-      from.setHours(0, 0, 0, 0)
-      return { from, to: new Date() }
-    },
-  },
-  {
-    id: "lastWeek",
-    getValue: () => {
-      const now = new Date()
-      // 지난주 일요일
-      const from = new Date(now)
-      from.setDate(from.getDate() - from.getDay() - 7)
-      from.setHours(0, 0, 0, 0)
-      // 지난주 토요일
-      const to = new Date(from)
-      to.setDate(to.getDate() + 6)
-      to.setHours(23, 59, 59, 999)
-      return { from, to }
-    },
-  },
-  {
     id: "last90days",
     getValue: () => {
       const to = new Date()
@@ -115,23 +71,6 @@ const presets = [
       from.setDate(from.getDate() - 89)
       from.setHours(0, 0, 0, 0)
       return { from, to }
-    },
-  },
-  {
-    id: "thisQuarter",
-    getValue: () => {
-      const now = new Date()
-      const currentQuarter = Math.floor(now.getMonth() / 3)
-      const from = new Date(now.getFullYear(), currentQuarter * 3, 1)
-      return { from, to: new Date() }
-    },
-  },
-  {
-    id: "thisYear",
-    getValue: () => {
-      const now = new Date()
-      const from = new Date(now.getFullYear(), 0, 1)
-      return { from, to: new Date() }
     },
   },
 ] as const
@@ -148,13 +87,7 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
     yesterday: t("dashboard.preset.yesterday"),
     last7days: t("dashboard.preset.last7days"),
     last30days: t("dashboard.preset.last30days"),
-    thisMonth: t("dashboard.preset.thisMonth"),
-    lastMonth: t("dashboard.preset.lastMonth"),
-    thisWeek: t("dashboard.preset.thisWeek"),
-    lastWeek: t("dashboard.preset.lastWeek"),
     last90days: t("dashboard.preset.last90days"),
-    thisQuarter: t("dashboard.preset.thisQuarter"),
-    thisYear: t("dashboard.preset.thisYear"),
   } as const
 
   const maxPeriodDay = 365

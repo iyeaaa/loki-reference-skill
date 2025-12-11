@@ -3,7 +3,7 @@ import { Download, Edit2, Plus, Send, Trash2, Users } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { AddLeadSheet } from "@/components/leads/AddLeadSheet"
 import { AdvancedSearchInput } from "@/components/search/AdvancedSearchInput"
 import { Button } from "@/components/ui/button"
@@ -63,13 +63,15 @@ import { SequenceLaunchModal } from "./SequenceLaunchModal"
 
 export default function LeadsPage() {
   const { t } = useTranslation()
+  const [searchParams] = useSearchParams()
+  const groupId = searchParams.get("groupId")
   const navigate = useNavigate()
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>(() => {
     return localStorage.getItem("selectedWorkspace") || "all"
   })
   const [searchTokens, setSearchTokens] = useState<SearchToken[]>([])
-  const [selectedCustomerGroup, setSelectedCustomerGroup] = useState<string>("")
+  const [selectedCustomerGroup, setSelectedCustomerGroup] = useState<string>(groupId || "")
 
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
@@ -160,6 +162,13 @@ export default function LeadsPage() {
   useEffect(() => {
     loadWorkspaces()
   }, [loadWorkspaces])
+
+  // URL의 groupId 파라미터가 변경되면 selectedCustomerGroup 업데이트
+  useEffect(() => {
+    if (groupId) {
+      setSelectedCustomerGroup(groupId)
+    }
+  }, [groupId])
 
   // localStorage의 selectedWorkspace 변경 감지
   useEffect(() => {

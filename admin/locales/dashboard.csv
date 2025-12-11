@@ -109,7 +109,7 @@ trends.emails.description,일별 발송된 이메일 수,Daily Sent Emails
 trends.openRate.title,오픈률 트렌드,Open Rate Trend
 trends.openRate.description,일별 오픈률 (%),Daily Open Rate (%)
 trends.noData,데이터가 없습니다,No data available
-notifications.leadDiscovery.title,리드 탐색 알림,Lead Discovery Notifications
+notifications.leadDiscovery.title,고객 현황 알림,Lead Discovery Notifications
 notifications.leadDiscovery.description,최근 발견된 리드 그룹,Recently Discovered Lead Groups
 notifications.leadDiscovery.noData,리드 탐색 기록이 없습니다,No lead discovery records
 notifications.leadDiscovery.viewMore,더보기,View More
@@ -137,3 +137,7 @@ notifications.reply.viewMore,더보기,View More
 notifications.reply.noContent,내용 없음,No Content
 notifications.reply.noSubject,제목 없음,No Subject
 stats.leads.title,[NO TRANSLATION] dashboard.stats.leads.title,[NO TRANSLATION] dashboard.stats.leads.title
+notifications.campaign.active,활성,Active
+notifications.campaign.archived,보관됨,Archived
+notifications.campaign.completed,완료,Completed
+notifications.campaign.paused,일시정지,Paused

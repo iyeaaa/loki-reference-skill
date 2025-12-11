@@ -59,11 +59,11 @@ export function StatsTrendCard({
 
   return (
     <Card className={className}>
-      <CardContent className="py-4">
-        <div className="flex flex-row items-center justify-between gap-4">
+      <CardContent className="pt-8">
+        <div className="flex flex-row justify-between gap-4">
           <div className="flex flex-col gap-2 w-[150px] flex-shrink-0">
             <div className="flex flex-row items-center mb-2 gap-2">
-              <CardTitle className="text-sm font-medium">{title}</CardTitle>
+              <CardTitle className="text-base font-medium">{title}</CardTitle>
               <Icon className="h-4 w-4" style={{ color }} />
             </div>
             {isLoading ? (
@@ -94,7 +94,11 @@ export function StatsTrendCard({
                     )}
                   >
                     {periodCount > 0 ? "+" : ""}
-                    <AnimatedNumber value={periodCount} decimals={0} />
+                    {periodCount > 0 ? (
+                      <AnimatedNumber value={periodCount} decimals={0} />
+                    ) : (
+                      <span></span>
+                    )}
                   </span>
                 </div>
               </div>

@@ -19,6 +19,7 @@ export interface DashboardStats {
     rate: number
     totalSent: number
     totalOpened: number
+    periodOpened: number
   }
 }
 
@@ -29,11 +30,10 @@ export interface TrendDataPoint {
 
 export interface LeadDiscoveryNotification {
   id: string
-  title: string | null
-  query: string
-  status: string
-  discoveredLeads: number
-  createdAt: string
+  customerGroupId: string
+  customerGroupName: string
+  leadCount: number
+  addedAt: string
 }
 
 export interface CampaignNotification {
@@ -41,9 +41,14 @@ export interface CampaignNotification {
   name: string
   status: string
   type: "created" | "sent" | "scheduled"
+  customerGroupId: string | null
+  customerGroupName: string | null
+  stepCount: number
   recipientCount: number
   sentCount: number
-  createdAt: string
+  openRate: number
+  replyRate: number
+  updatedAt: string
 }
 
 export interface ReplyNotification {
@@ -52,6 +57,7 @@ export interface ReplyNotification {
   subject: string | null
   bodyText: string | null
   sentiment: string | null
+  intent: string | null
   leadName: string | null
   createdAt: string
 }

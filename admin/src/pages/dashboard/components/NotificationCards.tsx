@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import { Link } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import type {
   CampaignNotification,
@@ -13,7 +13,7 @@ import type {
   ReplyNotification,
 } from "@/lib/api/services/dashboard"
 
-// Lead Discovery Notifications (Websets)
+// Lead Discovery Notifications (Customer Groups)
 interface LeadDiscoveryNotificationsProps {
   notifications: LeadDiscoveryNotification[]
   isLoading?: boolean
@@ -24,16 +24,6 @@ export function LeadDiscoveryNotifications({
   isLoading = false,
 }: LeadDiscoveryNotificationsProps) {
   const { t } = useTranslation()
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "completed":
-        return t("dashboard.notifications.leadDiscovery.completed")
-      case "pending":
-        return t("dashboard.notifications.leadDiscovery.pending")
-    }
-    return status
-  }
 
   return (
     <Card className="h-[500px] flex flex-col">
@@ -75,40 +65,28 @@ export function LeadDiscoveryNotifications({
               {notifications.map((notification) => (
                 <Link
                   key={notification.id}
-                  to={`/websets/${notification.id}`}
+                  to={`/leads?groupId=${notification.customerGroupId}`}
                   className="block p-3 border rounded-lg hover:bg-accent/50 transition-colors"
                 >
                   <div className="flex items-start justify-between mb-1">
-                    <h4 className="font-medium text-sm line-clamp-1">
-                      {notification.title || notification.query}
+                    <h4 className="text-base font-medium line-clamp-1">
+                      {notification.customerGroupName}
                     </h4>
                     <Badge variant="secondary" className="text-xs ml-2">
-                      {t("dashboard.notifications.leadDiscovery.status", {
-                        status: notification.discoveredLeads,
-                      })}
+                      +{notification.leadCount}명
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground line-clamp-1 mb-1">
-                    {notification.query}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(notification.createdAt), {
-                        addSuffix: true,
-                        locale: ko,
-                      })}
-                    </span>
-                    <Badge
-                      variant={notification.status === "completed" ? "default" : "outline"}
-                      className="text-xs"
-                    >
-                      {getStatusLabel(notification.status)}
-                    </Badge>
-                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(notification.addedAt), {
+                      addSuffix: true,
+                      locale: ko,
+                    })}
+                  </span>
                 </Link>
               ))}
             </div>
           )}
+          <ScrollBar orientation="vertical" />
         </ScrollArea>
       </CardContent>
     </Card>
@@ -136,6 +114,21 @@ export function CampaignNotifications({
         return t("dashboard.notifications.campaign.scheduled")
       default:
         return type
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "active":
+        return t("dashboard.notifications.campaign.active")
+      case "paused":
+        return t("dashboard.notifications.campaign.paused")
+      case "completed":
+        return t("dashboard.notifications.campaign.completed")
+      case "archived":
+        return t("dashboard.notifications.campaign.archived")
+      default:
+        return status
     }
   }
 
@@ -195,43 +188,56 @@ export function CampaignNotifications({
                   to={`/sequences/edit?id=${notification.id}`}
                   className="block p-3 border rounded-lg hover:bg-accent/50 transition-colors"
                 >
-                  <div className="flex items-start justify-between mb-1">
-                    <h4 className="font-medium text-sm line-clamp-1">{notification.name}</h4>
-                    <Badge variant={getTypeColor(notification.type)} className="text-xs ml-2">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-base font-medium line-clamp-1">{notification.name}</h4>
+                      {notification.customerGroupName && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {notification.customerGroupName}
+                        </p>
+                      )}
+                    </div>
+                    <Badge
+                      variant={getTypeColor(notification.type)}
+                      className="text-xs ml-2 flex-shrink-0"
+                    >
                       {getTypeLabel(notification.type)}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground mb-1">
-                    {notification.type === "sent" && (
-                      <span>
-                        {t("dashboard.notifications.campaign.sentCount", {
-                          count: notification.sentCount,
-                        })}
-                      </span>
-                    )}
-                    {notification.type === "scheduled" && (
-                      <span>
-                        {t("dashboard.notifications.campaign.scheduledCount", {
-                          count: notification.recipientCount,
-                        })}
-                      </span>
-                    )}
+                  <div className="grid grid-cols-4 gap-2 text-xs mb-2">
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground">스텝</span>
+                      <span className="font-medium">{notification.stepCount}개</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground">발송</span>
+                      <span className="font-medium">{notification.sentCount}명</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground">오픈율</span>
+                      <span className="font-medium">{notification.openRate}%</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground">답변율</span>
+                      <span className="font-medium">{notification.replyRate}%</span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(notification.createdAt), {
+                      {formatDistanceToNow(new Date(notification.updatedAt), {
                         addSuffix: true,
                         locale: ko,
                       })}
                     </span>
                     <Badge variant="outline" className="text-xs">
-                      {notification.status}
+                      {getStatusLabel(notification.status)}
                     </Badge>
                   </div>
                 </Link>
               ))}
             </div>
           )}
+          <ScrollBar orientation="vertical" />
         </ScrollArea>
       </CardContent>
     </Card>
@@ -247,21 +253,30 @@ interface ReplyNotificationsProps {
 export function ReplyNotifications({ notifications, isLoading = false }: ReplyNotificationsProps) {
   const { t } = useTranslation()
 
-  const getSentimentIcon = (sentiment: string | null) => {
-    switch (sentiment) {
+  // Intent를 우선 표시하고, 없으면 sentiment 사용
+  const getDisplayValue = (notification: ReplyNotification) => {
+    return notification.intent || notification.sentiment
+  }
+
+  const getIcon = (value: string | null) => {
+    switch (value) {
       case "positive":
       case "interested":
+      case "positive_interest":
+      case "meeting_request":
         return <ThumbsUp className="h-3 w-3 text-green-500" />
       case "negative":
       case "not_interested":
+      case "objection":
         return <ThumbsDown className="h-3 w-3 text-red-500" />
       default:
         return null
     }
   }
 
-  const getSentimentLabel = (sentiment: string | null) => {
-    switch (sentiment) {
+  const getLabel = (value: string | null) => {
+    switch (value) {
+      // Sentiment values
       case "positive":
         return t("dashboard.notifications.reply.positive")
       case "negative":
@@ -272,6 +287,17 @@ export function ReplyNotifications({ notifications, isLoading = false }: ReplyNo
         return t("dashboard.notifications.reply.notInterested")
       case "neutral":
         return t("dashboard.notifications.reply.neutral")
+      // Intent values
+      case "positive_interest":
+        return "긍정적 관심"
+      case "meeting_request":
+        return "미팅 요청"
+      case "question":
+        return "질문"
+      case "objection":
+        return "이의제기"
+      case "out_of_office":
+        return "부재중"
       default:
         return null
     }
@@ -322,21 +348,27 @@ export function ReplyNotifications({ notifications, isLoading = false }: ReplyNo
                 >
                   <div className="flex items-start justify-between mb-1">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="font-medium text-sm truncate">{notification.fromEmail}</span>
+                      <span className="text-base font-medium truncate">
+                        {notification.fromEmail}
+                      </span>
                       {notification.leadName && (
                         <Badge variant="secondary" className="text-xs">
                           {notification.leadName}
                         </Badge>
                       )}
                     </div>
-                    {notification.sentiment && (
-                      <div className="flex items-center gap-1 ml-2">
-                        {getSentimentIcon(notification.sentiment)}
-                        <span className="text-xs text-muted-foreground">
-                          {getSentimentLabel(notification.sentiment)}
-                        </span>
-                      </div>
-                    )}
+                    {(() => {
+                      const displayValue = getDisplayValue(notification)
+                      if (!displayValue) return null
+                      return (
+                        <div className="flex items-center gap-1 ml-2">
+                          {getIcon(displayValue)}
+                          <span className="text-xs text-muted-foreground">
+                            {getLabel(displayValue)}
+                          </span>
+                        </div>
+                      )
+                    })()}
                   </div>
                   <div className="text-xs font-medium mb-1 line-clamp-1">
                     {notification.subject || t("dashboard.notifications.reply.noSubject")}
@@ -355,6 +387,7 @@ export function ReplyNotifications({ notifications, isLoading = false }: ReplyNo
               ))}
             </div>
           )}
+          <ScrollBar orientation="vertical" />
         </ScrollArea>
       </CardContent>
     </Card>

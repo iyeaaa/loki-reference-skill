@@ -32,6 +32,8 @@ export function useDashboardStats(params?: DateRangeParams) {
     queryFn: () => dashboardApi.getStats(params),
     staleTime: 30 * 1000, // 30 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 60 * 1000, // Refetch every 60 seconds
+    refetchIntervalInBackground: false,
   })
 }
 
@@ -41,6 +43,8 @@ export function useLeadTrends(params?: DateRangeParams) {
     queryFn: () => dashboardApi.getLeadTrends(params),
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
+    refetchInterval: 60 * 1000, // Refetch every 60 seconds
+    refetchIntervalInBackground: false,
   })
 }
 
@@ -50,6 +54,8 @@ export function useEmailTrends(params?: DateRangeParams) {
     queryFn: () => dashboardApi.getEmailTrends(params),
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
+    refetchInterval: 60 * 1000, // Refetch every 60 seconds
+    refetchIntervalInBackground: false,
   })
 }
 
@@ -59,6 +65,8 @@ export function useOpenRateTrends(params?: DateRangeParams) {
     queryFn: () => dashboardApi.getOpenRateTrends(params),
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
+    refetchInterval: 60 * 1000, // Refetch every 60 seconds
+    refetchIntervalInBackground: false,
   })
 }
 
@@ -68,6 +76,8 @@ export function useLeadDiscoveryNotifications(params?: DateRangeParams & { limit
     queryFn: () => dashboardApi.getLeadDiscoveryNotifications(params),
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
+    refetchInterval: 30 * 1000, // Refetch every 30 seconds
+    refetchIntervalInBackground: false,
   })
 }
 
@@ -77,6 +87,8 @@ export function useCampaignNotifications(params?: DateRangeParams & { limit?: nu
     queryFn: () => dashboardApi.getCampaignNotifications(params),
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
+    refetchInterval: 30 * 1000, // Refetch every 30 seconds
+    refetchIntervalInBackground: false,
   })
 }
 
@@ -84,7 +96,9 @@ export function useReplyNotifications(params?: DateRangeParams & { limit?: numbe
   return useQuery({
     queryKey: dashboardKeys.replyNotifications(params),
     queryFn: () => dashboardApi.getReplyNotifications(params),
-    staleTime: 30 * 1000,
+    staleTime: 10 * 1000, // 10 seconds (shorter for reply notifications)
     gcTime: 5 * 60 * 1000,
+    refetchInterval: 15 * 1000, // Refetch every 15 seconds to get updated sentiment labels
+    refetchIntervalInBackground: false, // Stop polling when tab is not active
   })
 }

@@ -786,15 +786,25 @@ class WebhookService {
       accountWorkspaceId: account.workspaceId,
     })
 
+    // Try to find original email if In-Reply-To header exists
+    let originalEmail:
+      | {
+          id: string
+          workspaceId: string
+          messageId: string | null
+          threadId: string | null
+          subject: string | null
+          direction: string
+        }
+      | undefined
+
     if (headers.inReplyTo) {
       logger.info(
         { inReplyTo: headers.inReplyTo },
         "✅ Reply detected (In-Reply-To header present)",
       )
 
-      // 원본 이메일 ID 찾기 - 2-step process to support reply-to-reply
-      // Step 1: Try to find the email being replied to (could be outbound or inbound)
-      // Search WITHOUT workspace filter first to find the email
+      // Step 1: Try to find the email being replied to
       logger.info({
         msg: "🔍 [WEBHOOK] Searching for email being replied to",
         searchCriteria: {
@@ -816,7 +826,6 @@ class WebhookService {
         .limit(1)
 
       const repliedToEmail = repliedToEmailResults[0]
-      let originalEmail: typeof repliedToEmail | undefined
 
       if (repliedToEmail) {
         if (repliedToEmail.direction === "outbound") {
@@ -829,14 +838,12 @@ class WebhookService {
           })
         } else {
           // Case 2: Reply to an inbound email (reply-to-reply)
-          // Find the FIRST outbound email in this thread
           logger.info({
             msg: "🔄 [WEBHOOK] Reply-to-reply detected, finding first outbound email in thread",
             repliedToEmailId: repliedToEmail.id,
             threadId: repliedToEmail.threadId,
           })
 
-          // Only search if threadId exists
           if (repliedToEmail.threadId) {
             const firstOutboundResults = await db
               .select({
@@ -855,7 +862,7 @@ class WebhookService {
                   eq(emailsTable.workspaceId, repliedToEmail.workspaceId),
                 ),
               )
-              .orderBy(emailsTable.createdAt) // Get the FIRST outbound email
+              .orderBy(emailsTable.createdAt)
               .limit(1)
 
             originalEmail = firstOutboundResults[0]
@@ -867,134 +874,155 @@ class WebhookService {
                 threadId: originalEmail.threadId,
               })
             }
-          } else {
-            logger.warn({
-              msg: "⚠️  [WEBHOOK] Reply-to-reply email has no threadId",
-              repliedToEmailId: repliedToEmail.id,
-            })
           }
         }
       }
-      if (originalEmail) {
-        logger.info({
-          msg: "✅ [WEBHOOK] Original email found",
-          originalEmailId: originalEmail.id,
-          originalMessageId: originalEmail.messageId,
-          originalThreadId: originalEmail.threadId,
-          originalSubject: originalEmail.subject,
-          inReplyToHeader: headers.inReplyTo,
-          headersMatch: originalEmail.messageId === headers.inReplyTo,
-        })
+    }
 
-        // Check if email_replies record already exists for this thread
-        // One email_replies record per thread - update if exists, insert if new
-        const existingReplyResults = await db
-          .select({ id: emailReplies.id })
-          .from(emailReplies)
-          .where(eq(emailReplies.originalEmailId, originalEmail.id))
-          .limit(1)
+    // Create email_replies record ONLY when original email is found
+    if (originalEmail) {
+      logger.info({
+        msg: "✅ [WEBHOOK] Original email found",
+        originalEmailId: originalEmail.id,
+        originalMessageId: originalEmail.messageId,
+        originalThreadId: originalEmail.threadId,
+        originalSubject: originalEmail.subject,
+        inReplyToHeader: headers.inReplyTo,
+        headersMatch: originalEmail.messageId === headers.inReplyTo,
+      })
 
-        const existingReply = existingReplyResults[0]
-        let emailReply: { id: string } | undefined
+      // Check if email_replies record already exists for this thread
+      // One email_replies record per thread - update if exists, insert if new
+      const existingReplyResults = await db
+        .select({ id: emailReplies.id })
+        .from(emailReplies)
+        .where(eq(emailReplies.originalEmailId, originalEmail.id))
+        .limit(1)
 
-        if (existingReply) {
-          // Update existing reply with the LATEST reply email
-          const [updated] = await db
-            .update(emailReplies)
-            .set({
-              replyEmailId: inboundEmail.id, // Update to latest reply
-              // Reset classification - will be reclassified below
-              intent: null,
-              sentiment: null,
-            })
-            .where(eq(emailReplies.id, existingReply.id))
-            .returning({ id: emailReplies.id })
+      const existingReply = existingReplyResults[0]
+      let emailReply: { id: string } | undefined
 
-          emailReply = updated
-          logger.info({
-            msg: "✅ [WEBHOOK] email_replies record UPDATED with latest reply",
-            emailReplyId: emailReply?.id,
-            originalEmailId: originalEmail.id,
-            newReplyEmailId: inboundEmail.id,
-            threadId: inboundEmail.threadId,
+      if (existingReply) {
+        // Update existing reply with the LATEST reply email
+        const [updated] = await db
+          .update(emailReplies)
+          .set({
+            replyEmailId: inboundEmail.id, // Update to latest reply
+            // Reset classification - will be reclassified below
+            intent: null,
+            sentiment: null,
           })
-        } else {
-          // Create new email_replies record for this thread
-          const [inserted] = await db
-            .insert(emailReplies)
-            .values({
-              workspaceId: originalEmail.workspaceId,
-              originalEmailId: originalEmail.id,
-              replyEmailId: inboundEmail.id,
-              isRead: false,
-            })
-            .returning({ id: emailReplies.id })
+          .where(eq(emailReplies.id, existingReply.id))
+          .returning({ id: emailReplies.id })
 
-          emailReply = inserted
-          logger.info({
-            msg: "✅ [WEBHOOK] email_replies record CREATED for new thread",
-            emailReplyId: emailReply?.id,
+        emailReply = updated
+        logger.info({
+          msg: "✅ [WEBHOOK] email_replies record UPDATED with latest reply",
+          emailReplyId: emailReply?.id,
+          originalEmailId: originalEmail.id,
+          newReplyEmailId: inboundEmail.id,
+          threadId: inboundEmail.threadId,
+        })
+      } else {
+        // Create new email_replies record for this thread
+        const [inserted] = await db
+          .insert(emailReplies)
+          .values({
+            workspaceId: originalEmail.workspaceId,
             originalEmailId: originalEmail.id,
             replyEmailId: inboundEmail.id,
-            workspaceId: originalEmail.workspaceId,
-            threadId: inboundEmail.threadId,
+            isRead: false,
           })
-        }
+          .returning({ id: emailReplies.id })
 
-        // AI classification (enabled by default, non-blocking - errors won't fail email ingestion)
-        const classificationEnabled = process.env.AI_CLASSIFICATION_ENABLED !== "false"
+        emailReply = inserted
         logger.info({
-          msg: "🤖 [WEBHOOK] AI classification check",
-          hasEmailReply: !!emailReply,
-          classificationEnabled: classificationEnabled,
-          willRunClassification: !!(emailReply && classificationEnabled),
-        })
-
-        if (emailReply && classificationEnabled) {
-          logger.info({
-            msg: "🚀 [WEBHOOK] Starting AI classification (async)",
-            emailReplyId: emailReply.id,
-          })
-
-          this.classifyEmailReplyAsync(
-            emailReply.id,
-            inboundEmail.subject || "",
-            inboundEmail.bodyText || inboundEmail.bodyHtml || "",
-          ).catch((error) => {
-            logger.error({
-              err: error,
-              emailReplyId: emailReply.id,
-              msg: "❌ [WEBHOOK] AI classification failed, but email was still saved",
-            })
-          })
-        }
-
-        // 원본 이메일의 repliedAt 업데이트
-        await db
-          .update(emailsTable)
-          .set({
-            repliedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(emailsTable.id, originalEmail.id))
-
-        logger.info({
-          msg: "✅ [WEBHOOK] Original email repliedAt updated",
+          msg: "✅ [WEBHOOK] email_replies record CREATED for new thread",
+          emailReplyId: emailReply?.id,
           originalEmailId: originalEmail.id,
+          replyEmailId: inboundEmail.id,
+          workspaceId: originalEmail.workspaceId,
+          threadId: inboundEmail.threadId,
+        })
+      }
+
+      // AI classification (enabled by default, non-blocking - errors won't fail email ingestion)
+      const classificationEnabled = process.env.AI_CLASSIFICATION_ENABLED !== "false"
+      logger.info({
+        msg: "🤖 [WEBHOOK] AI classification check",
+        hasEmailReply: !!emailReply,
+        classificationEnabled: classificationEnabled,
+        willRunClassification: !!(emailReply && classificationEnabled),
+      })
+
+      if (emailReply && classificationEnabled) {
+        logger.info({
+          msg: "🚀 [WEBHOOK] Starting AI classification (async)",
+          emailReplyId: emailReply.id,
         })
 
-        // 답장을 받은 경우, 해당 리드의 모든 active 시퀀스 enrollment를 중단
-        if (inboundEmail.leadId) {
-          try {
-            const { sequenceEnrollments } = await import("../db/schema")
+        this.classifyEmailReplyAsync(
+          emailReply.id,
+          inboundEmail.subject || "",
+          inboundEmail.bodyText || inboundEmail.bodyHtml || "",
+        ).catch((error) => {
+          logger.error({
+            err: error,
+            emailReplyId: emailReply.id,
+            msg: "❌ [WEBHOOK] AI classification failed, but email was still saved",
+          })
+        })
+      }
 
-            // 1. 해당 리드의 모든 active enrollment 조회
-            const activeEnrollments = await db
-              .select({
-                id: sequenceEnrollments.id,
-                sequenceId: sequenceEnrollments.sequenceId,
+      // 원본 이메일의 repliedAt 업데이트
+      await db
+        .update(emailsTable)
+        .set({
+          repliedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(emailsTable.id, originalEmail.id))
+
+      logger.info({
+        msg: "✅ [WEBHOOK] Original email repliedAt updated",
+        originalEmailId: originalEmail.id,
+      })
+
+      // 답장을 받은 경우, 해당 리드의 모든 active 시퀀스 enrollment를 중단
+      if (inboundEmail.leadId) {
+        try {
+          const { sequenceEnrollments } = await import("../db/schema")
+
+          // 1. 해당 리드의 모든 active enrollment 조회
+          const activeEnrollments = await db
+            .select({
+              id: sequenceEnrollments.id,
+              sequenceId: sequenceEnrollments.sequenceId,
+            })
+            .from(sequenceEnrollments)
+            .where(
+              and(
+                eq(sequenceEnrollments.leadId, inboundEmail.leadId),
+                eq(sequenceEnrollments.status, "active"),
+              ),
+            )
+
+          if (activeEnrollments.length > 0) {
+            logger.info({
+              msg: "🛑 [WEBHOOK] Stopping all active enrollments for lead (reply received)",
+              leadId: inboundEmail.leadId,
+              leadName: inboundEmail.leadName,
+              activeEnrollmentsCount: activeEnrollments.length,
+              enrollmentIds: activeEnrollments.map((e) => e.id),
+            })
+
+            // 2. 모든 active enrollment를 stopped 상태로 변경
+            await db
+              .update(sequenceEnrollments)
+              .set({
+                status: "stopped",
+                stoppedAt: new Date(),
               })
-              .from(sequenceEnrollments)
               .where(
                 and(
                   eq(sequenceEnrollments.leadId, inboundEmail.leadId),
@@ -1002,83 +1030,61 @@ class WebhookService {
                 ),
               )
 
-            if (activeEnrollments.length > 0) {
-              logger.info({
-                msg: "🛑 [WEBHOOK] Stopping all active enrollments for lead (reply received)",
-                leadId: inboundEmail.leadId,
-                leadName: inboundEmail.leadName,
-                activeEnrollmentsCount: activeEnrollments.length,
-                enrollmentIds: activeEnrollments.map((e) => e.id),
-              })
+            logger.info({
+              msg: "✅ [WEBHOOK] All active enrollments stopped successfully",
+              leadId: inboundEmail.leadId,
+              stoppedCount: activeEnrollments.length,
+            })
 
-              // 2. 모든 active enrollment를 stopped 상태로 변경
+            // 3. 대기 중인 step executions도 스킵 처리
+            const { sequenceStepExecutions } = await import("../db/schema")
+            for (const enrollment of activeEnrollments) {
               await db
-                .update(sequenceEnrollments)
+                .update(sequenceStepExecutions)
                 .set({
-                  status: "stopped",
-                  stoppedAt: new Date(),
+                  status: "skipped",
+                  errorMessage: "Skipped due to reply received",
                 })
                 .where(
                   and(
-                    eq(sequenceEnrollments.leadId, inboundEmail.leadId),
-                    eq(sequenceEnrollments.status, "active"),
+                    eq(sequenceStepExecutions.enrollmentId, enrollment.id),
+                    eq(sequenceStepExecutions.status, "pending"),
                   ),
                 )
-
-              logger.info({
-                msg: "✅ [WEBHOOK] All active enrollments stopped successfully",
-                leadId: inboundEmail.leadId,
-                stoppedCount: activeEnrollments.length,
-              })
-
-              // 3. 대기 중인 step executions도 스킵 처리
-              const { sequenceStepExecutions } = await import("../db/schema")
-              for (const enrollment of activeEnrollments) {
-                await db
-                  .update(sequenceStepExecutions)
-                  .set({
-                    status: "skipped",
-                    errorMessage: "Skipped due to reply received",
-                  })
-                  .where(
-                    and(
-                      eq(sequenceStepExecutions.enrollmentId, enrollment.id),
-                      eq(sequenceStepExecutions.status, "pending"),
-                    ),
-                  )
-              }
-
-              logger.info({
-                msg: "✅ [WEBHOOK] Pending step executions skipped",
-                leadId: inboundEmail.leadId,
-              })
-            } else {
-              logger.debug({
-                msg: "ℹ️  [WEBHOOK] No active enrollments found for this lead",
-                leadId: inboundEmail.leadId,
-              })
             }
-          } catch (error) {
-            logger.error({
-              err: error,
+
+            logger.info({
+              msg: "✅ [WEBHOOK] Pending step executions skipped",
               leadId: inboundEmail.leadId,
-              msg: "❌ [WEBHOOK] Failed to stop active enrollments, but email was still processed",
+            })
+          } else {
+            logger.debug({
+              msg: "ℹ️  [WEBHOOK] No active enrollments found for this lead",
+              leadId: inboundEmail.leadId,
             })
           }
+        } catch (error) {
+          logger.error({
+            err: error,
+            leadId: inboundEmail.leadId,
+            msg: "❌ [WEBHOOK] Failed to stop active enrollments, but email was still processed",
+          })
         }
-      } else {
-        logger.warn({
-          msg: "❌ [WEBHOOK] Original email NOT found - email_replies record NOT created",
-          inReplyTo: headers.inReplyTo,
-          inboundEmailId: inboundEmail.id,
-          threadId: inboundEmail.threadId,
-          workspaceId: account.workspaceId,
-          searchedMessageId: headers.inReplyTo,
-          reason: "No matching outbound email with this messageId in this workspace",
-        })
       }
     } else {
-      // In-Reply-To 헤더가 없는 경우
+      logger.warn({
+        msg: "❌ [WEBHOOK] Original email NOT found - email_replies record NOT created",
+        inReplyTo: headers.inReplyTo,
+        inboundEmailId: inboundEmail.id,
+        threadId: inboundEmail.threadId,
+        workspaceId: account.workspaceId,
+        searchedMessageId: headers.inReplyTo,
+        reason: "No matching outbound email with this messageId in this workspace",
+      })
+    }
+
+    // Legacy fallback logic for leadId/sequenceId matching
+    if (!headers.inReplyTo && leadId && sequenceId) {
       logger.info({
         msg: "⚠️  [WEBHOOK] No In-Reply-To header - checking fallback options",
         inboundEmailId: inboundEmail.id,

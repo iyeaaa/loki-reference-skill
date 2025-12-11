@@ -1,9 +1,9 @@
 import { and, count, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm"
 import { db } from "../db/index"
-import { emails } from "../db/schema/emails"
+import { customerGroupMembers, customerGroups } from "../db/schema/customer-groups"
+import { emailReplies, emails } from "../db/schema/emails"
 import { leads } from "../db/schema/leads"
-import { sequenceEnrollments, sequences } from "../db/schema/sequences"
-import { websets } from "../db/schema/websets"
+import { sequenceEnrollments, sequenceSteps, sequences } from "../db/schema/sequences"
 
 export interface DateRangeParams {
   startDate?: string // ISO 8601 date string
@@ -24,6 +24,7 @@ export interface DashboardStats {
     rate: number // percentage
     totalSent: number
     totalOpened: number
+    periodOpened: number // opened count in the selected period
   }
 }
 
@@ -34,11 +35,10 @@ export interface TrendDataPoint {
 
 export interface LeadDiscoveryNotification {
   id: string
-  title: string | null
-  query: string
-  status: string
-  discoveredLeads: number
-  createdAt: Date
+  customerGroupId: string
+  customerGroupName: string
+  leadCount: number
+  addedAt: Date
 }
 
 export interface CampaignNotification {
@@ -46,9 +46,14 @@ export interface CampaignNotification {
   name: string
   status: string
   type: "created" | "sent" | "scheduled"
+  customerGroupId: string | null
+  customerGroupName: string | null
+  stepCount: number
   recipientCount: number
   sentCount: number
-  createdAt: Date
+  openRate: number
+  replyRate: number
+  updatedAt: Date
 }
 
 export interface ReplyNotification {
@@ -57,6 +62,7 @@ export interface ReplyNotification {
   subject: string | null
   bodyText: string | null
   sentiment: string | null
+  intent: string | null
   leadName: string | null
   createdAt: Date
 }
@@ -130,6 +136,28 @@ export async function getDashboardStats(params: DateRangeParams): Promise<Dashbo
   const totalOpened = openRateStatsResult[0]?.totalOpened ?? 0
   const openRate = totalSent > 0 ? (totalOpened / totalSent) * 100 : 0
 
+  // Open rate stats for the selected period
+  const periodOpenConditions = [
+    ...emailConditions,
+    eq(emails.direction, "outbound"),
+    isNotNull(emails.sentAt),
+  ]
+  if (startDate) {
+    periodOpenConditions.push(gte(emails.openedAt, new Date(startDate)))
+  }
+  if (endDate) {
+    periodOpenConditions.push(lte(emails.openedAt, new Date(endDate)))
+  }
+
+  const periodOpenedResult = await db
+    .select({
+      count: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.openedAt} IS NOT NULL THEN ${emails.id} END)::int`,
+    })
+    .from(emails)
+    .where(and(...periodOpenConditions, isNotNull(emails.openedAt)))
+
+  const periodOpened = periodOpenedResult[0]?.count ?? 0
+
   return {
     leads: {
       total: totalLeadsResult[0]?.count ?? 0,
@@ -143,6 +171,7 @@ export async function getDashboardStats(params: DateRangeParams): Promise<Dashbo
       rate: Math.round(openRate * 10) / 10,
       totalSent,
       totalOpened,
+      periodOpened,
     },
   }
 }
@@ -248,58 +277,69 @@ export async function getOpenRateTrends(params: DateRangeParams): Promise<TrendD
 }
 
 /**
- * Get lead discovery notifications (websets)
+ * Get lead discovery notifications (customer groups with recently added leads)
  */
 export async function getLeadDiscoveryNotifications(
   params: DateRangeParams & { limit?: number },
 ): Promise<LeadDiscoveryNotification[]> {
   const { startDate, endDate, workspaceId, limit = 10 } = params
 
-  const conditions = workspaceId ? [eq(websets.workspaceId, workspaceId)] : []
+  // Build conditions for customer_group_members.addedAt
+  const memberConditions = []
   if (startDate) {
-    conditions.push(gte(websets.createdAt, new Date(startDate)))
+    memberConditions.push(gte(customerGroupMembers.addedAt, new Date(startDate)))
   }
   if (endDate) {
-    conditions.push(lte(websets.createdAt, new Date(endDate)))
+    memberConditions.push(lte(customerGroupMembers.addedAt, new Date(endDate)))
   }
 
+  // Build conditions for customer_groups
+  const groupConditions = workspaceId ? [eq(customerGroups.workspaceId, workspaceId)] : []
+
+  // Query customer groups with lead counts in the date range
   const result = await db
     .select({
-      id: websets.id,
-      title: websets.title,
-      query: websets.query,
-      targetValidatedRows: websets.targetValidatedRows,
-      createdAt: websets.createdAt,
+      groupId: customerGroups.id,
+      groupName: customerGroups.name,
+      leadCount: count(customerGroupMembers.leadId),
+      latestAddedAt: sql<Date>`MAX(${customerGroupMembers.addedAt})`,
     })
-    .from(websets)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(websets.createdAt))
+    .from(customerGroups)
+    .innerJoin(customerGroupMembers, eq(customerGroups.id, customerGroupMembers.groupId))
+    .where(
+      and(
+        ...(groupConditions.length > 0 ? groupConditions : []),
+        ...(memberConditions.length > 0 ? [and(...memberConditions)] : []),
+      ),
+    )
+    .groupBy(customerGroups.id, customerGroups.name)
+    .orderBy(desc(sql`MAX(${customerGroupMembers.addedAt})`))
     .limit(limit)
 
   return result.map((row) => ({
-    id: row.id,
-    title: row.title,
-    query: row.query,
-    status: "completed",
-    discoveredLeads: row.targetValidatedRows ?? 0,
-    createdAt: row.createdAt,
+    id: row.groupId,
+    customerGroupId: row.groupId,
+    customerGroupName: row.groupName,
+    leadCount: row.leadCount,
+    addedAt: row.latestAddedAt,
   }))
 }
 
 /**
- * Get campaign notifications (sequences)
+ * Get campaign notifications (sequences with detailed metrics)
  */
 export async function getCampaignNotifications(
   params: DateRangeParams & { limit?: number },
 ): Promise<CampaignNotification[]> {
   const { startDate, endDate, workspaceId, limit = 10 } = params
 
+  // Query sequences with customer group info
   const conditions = workspaceId ? [eq(sequences.workspaceId, workspaceId)] : []
   if (startDate) {
-    conditions.push(gte(sequences.createdAt, new Date(startDate)))
+    conditions.push(gte(sequences.updatedAt, new Date(startDate)))
   }
   if (endDate) {
-    conditions.push(lte(sequences.createdAt, new Date(endDate)))
+    conditions.push(lte(sequences.updatedAt, new Date(endDate)))
   }
 
   const result = await db
@@ -307,41 +347,92 @@ export async function getCampaignNotifications(
       id: sequences.id,
       name: sequences.name,
       status: sequences.status,
-      createdAt: sequences.createdAt,
+      customerGroupId: sequences.customerGroupId,
+      updatedAt: sequences.updatedAt,
     })
     .from(sequences)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(sequences.createdAt))
+    .orderBy(desc(sequences.updatedAt))
     .limit(limit)
 
-  // For each sequence, count sent emails and enrollments
-  const sequencesWithCounts = await Promise.all(
+  // For each sequence, get detailed metrics
+  const sequencesWithMetrics = await Promise.all(
     result.map(async (seq) => {
-      // Count sent emails
-      const emailCountResult = await db
-        .select({ count: count() })
-        .from(emails)
-        .where(
-          and(
-            eq(emails.sequenceId, seq.id),
-            eq(emails.direction, "outbound"),
-            isNotNull(emails.sentAt),
-          ),
-        )
+      // Get customer group name
+      let customerGroupName: string | null = null
+      if (seq.customerGroupId) {
+        const groupResult = await db
+          .select({ name: customerGroups.name })
+          .from(customerGroups)
+          .where(eq(customerGroups.id, seq.customerGroupId))
+          .limit(1)
+        customerGroupName = groupResult[0]?.name ?? null
+      }
 
-      const sentCount = emailCountResult[0]?.count ?? 0
+      // Count steps
+      const stepCountResult = await db
+        .select({ count: count() })
+        .from(sequenceSteps)
+        .where(eq(sequenceSteps.sequenceId, seq.id))
+      const stepCount = stepCountResult[0]?.count ?? 0
 
       // Count enrollments (recipients)
       const enrollmentCountResult = await db
         .select({ count: count() })
         .from(sequenceEnrollments)
         .where(eq(sequenceEnrollments.sequenceId, seq.id))
-
       const recipientCount = enrollmentCountResult[0]?.count ?? 0
+
+      // Build email conditions for the selected period
+      const emailConditions = [
+        eq(emails.sequenceId, seq.id),
+        eq(emails.direction, "outbound"),
+        isNotNull(emails.sentAt),
+      ]
+      if (startDate) {
+        emailConditions.push(gte(emails.sentAt, new Date(startDate)))
+      }
+      if (endDate) {
+        emailConditions.push(lte(emails.sentAt, new Date(endDate)))
+      }
+
+      // Get email metrics in the selected period
+      const emailMetricsResult = await db
+        .select({
+          totalSent: sql<number>`COUNT(*)::int`,
+          totalDelivered: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.deliveredAt} IS NOT NULL THEN ${emails.id} END)::int`,
+          totalOpened: sql<number>`COUNT(DISTINCT CASE WHEN ${emails.openedAt} IS NOT NULL THEN ${emails.id} END)::int`,
+        })
+        .from(emails)
+        .where(and(...emailConditions))
+
+      const totalSent = emailMetricsResult[0]?.totalSent ?? 0
+      const totalDelivered = emailMetricsResult[0]?.totalDelivered ?? 0
+      const totalOpened = emailMetricsResult[0]?.totalOpened ?? 0
+      const openRate = totalSent > 0 ? (totalOpened / totalSent) * 100 : 0
+
+      // Get reply rate in the selected period (replies to delivered emails)
+      const replyCountResult = await db
+        .select({ count: sql<number>`COUNT(DISTINCT ${emailReplies.id})::int` })
+        .from(emailReplies)
+        .innerJoin(emails, eq(emailReplies.originalEmailId, emails.id))
+        .where(
+          and(
+            eq(emails.sequenceId, seq.id),
+            eq(emails.direction, "outbound"),
+            isNotNull(emails.sentAt),
+            isNotNull(emails.deliveredAt),
+            ...(startDate ? [gte(emails.sentAt, new Date(startDate))] : []),
+            ...(endDate ? [lte(emails.sentAt, new Date(endDate))] : []),
+          ),
+        )
+
+      const replyCount = replyCountResult[0]?.count ?? 0
+      const replyRate = totalDelivered > 0 ? (replyCount / totalDelivered) * 100 : 0
 
       // Determine type based on status and sent count
       let type: "created" | "sent" | "scheduled" = "created"
-      if (seq.status === "active" && sentCount > 0) {
+      if (seq.status === "active" && totalSent > 0) {
         type = "sent"
       } else if (seq.status === "active") {
         type = "scheduled"
@@ -352,14 +443,19 @@ export async function getCampaignNotifications(
         name: seq.name,
         status: seq.status,
         type,
+        customerGroupId: seq.customerGroupId,
+        customerGroupName,
+        stepCount,
         recipientCount,
-        sentCount,
-        createdAt: seq.createdAt,
+        sentCount: totalSent,
+        openRate: Math.round(openRate * 10) / 10,
+        replyRate: Math.round(replyRate * 10) / 10,
+        updatedAt: seq.updatedAt,
       }
     }),
   )
 
-  return sequencesWithCounts
+  return sequencesWithMetrics
 }
 
 /**
@@ -395,14 +491,15 @@ export async function getReplyNotifications(
     .orderBy(desc(emails.createdAt))
     .limit(limit)
 
-  // For each email, try to get sentiment from email_replies
+  // For each email, try to get sentiment and intent from email_replies
   const emailsWithSentiment = await Promise.all(
     result.map(async (email) => {
-      // Query email_replies to get sentiment
-      const sentimentResult = await db.query.emailReplies.findFirst({
+      // Query email_replies to get sentiment and intent
+      const replyData = await db.query.emailReplies.findFirst({
         where: (emailReplies, { eq }) => eq(emailReplies.replyEmailId, email.id),
         columns: {
           sentiment: true,
+          intent: true,
         },
       })
 
@@ -411,7 +508,8 @@ export async function getReplyNotifications(
         fromEmail: email.fromEmail,
         subject: email.subject,
         bodyText: email.bodyText,
-        sentiment: sentimentResult?.sentiment ?? null,
+        sentiment: replyData?.sentiment ?? null,
+        intent: replyData?.intent ?? null,
         leadName: email.leadName,
         createdAt: email.createdAt,
       }

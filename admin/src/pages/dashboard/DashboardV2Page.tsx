@@ -131,7 +131,8 @@ export default function DashboardV2Page() {
           title={t("dashboard.stats.openRate")}
           icon={TrendingUp}
           totalCount={stats?.openRate.rate ?? 0}
-          periodCount={0}
+          periodCount={stats?.openRate.periodOpened ?? 0}
+          suffix="%"
           trendData={filledOpenRateTrends}
           isLoading={statsLoading && openRateTrendsLoading}
           color="#f59e0b"

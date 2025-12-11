@@ -381,14 +381,15 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
         return errorResponse("사용자를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
       }
 
-      // Only allow updating username, email, and employeeId
+      // Only allow updating username, email, employeeId, and profilePicture
       const updateData = {
         username: body.username,
         email: body.email,
-        employeeId: body.employeeId,
+        employeeId: body.employeeId ?? currentUser.employeeId,
         userRole: currentUser.userRole,
         isActive: currentUser.isActive,
         departmentId: currentUser.departmentId,
+        profilePicture: body.profilePicture,
       }
 
       const user = await userService.updateUser(payload.userId, updateData)
@@ -407,6 +408,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
           isActive: user.isActive,
           departmentId: user.departmentId,
           employeeId: user.employeeId,
+          profilePicture: user.profilePicture,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         },
@@ -416,7 +418,8 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
       body: t.Object({
         username: t.String({ minLength: 1, maxLength: 50 }),
         email: t.String({ format: "email", maxLength: 100 }),
-        employeeId: t.String({ maxLength: 20 }),
+        employeeId: t.Optional(t.String({ maxLength: 20 })),
+        profilePicture: t.Optional(t.Nullable(t.String())),
       }),
     },
   )

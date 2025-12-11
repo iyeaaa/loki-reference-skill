@@ -2,9 +2,11 @@
  * Lead Discovery Store
  * - 크로스 컴포넌트 상태 및 레이아웃 전환 시 유지할 상태 관리
  * - 메시지 상태는 레이아웃 전환 시 리마운트되어도 유지되어야 함
+ * - 채팅 메시지는 로컬스토리지에 저장하여 새로고침 후에도 유지
  */
 
 import { atom } from "jotai"
+import { atomWithStorage } from "jotai/utils"
 
 // BigQuery LeadResult 구조와 일치하는 Customer 인터페이스
 export interface Customer {
@@ -28,6 +30,8 @@ export interface Customer {
   sub_industry?: string
   source: string
   createdAt: Date
+  // Enrichment fields
+  description?: string
 }
 
 // 채팅 메시지 인터페이스
@@ -79,11 +83,51 @@ export const resetCustomersAtom = atom(null, (_get, set) => {
 })
 
 // ============================================
-// Chat State (레이아웃 전환 시에도 유지)
+// Chat State (로컬스토리지에 저장하여 새로고침 후에도 유지)
 // ============================================
 
-// 채팅 메시지 목록 - 레이아웃 전환(리마운트) 시에도 유지
-export const chatMessagesAtom = atom<ChatMessage[]>([])
+// 로컬스토리지 저장용 인터페이스 (Date를 string으로 변환)
+interface StoredChatMessage {
+  id: string
+  role: "user" | "assistant"
+  content: string
+  timestamp: string // ISO string
+  customersAdded?: Customer[]
+}
+
+// 로컬스토리지 커스텀 스토리지 (Date 직렬화/역직렬화 처리)
+const chatStorage = {
+  getItem: (key: string): ChatMessage[] => {
+    const stored = localStorage.getItem(key)
+    if (!stored) return []
+    try {
+      const parsed: StoredChatMessage[] = JSON.parse(stored)
+      return parsed.map((msg) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp),
+      }))
+    } catch {
+      return []
+    }
+  },
+  setItem: (key: string, value: ChatMessage[]): void => {
+    const toStore: StoredChatMessage[] = value.map((msg) => ({
+      ...msg,
+      timestamp: msg.timestamp.toISOString(),
+    }))
+    localStorage.setItem(key, JSON.stringify(toStore))
+  },
+  removeItem: (key: string): void => {
+    localStorage.removeItem(key)
+  },
+}
+
+// 채팅 메시지 목록 - 로컬스토리지에 저장되어 새로고침 후에도 유지
+export const chatMessagesAtom = atomWithStorage<ChatMessage[]>(
+  "lead-discovery-chat-messages",
+  [],
+  chatStorage,
+)
 
 // 메시지 추가
 export const addChatMessageAtom = atom(null, (get, set, message: ChatMessage) => {
@@ -105,13 +149,14 @@ export const updateChatMessageAtom = atom(
   },
 )
 
-// 메시지 초기화
+// 메시지 초기화 (로컬스토리지도 함께 클리어)
 export const resetChatMessagesAtom = atom(null, (_get, set) => {
   set(chatMessagesAtom, [])
+  localStorage.removeItem("lead-discovery-chat-messages")
 })
 
 // ============================================
-// Streaming State (ChatRoom 리마운트 시에도 유지)
+// Streaming State (로컬스토리지에 저장하여 새로고침 후에도 유지)
 // ============================================
 
 import type { LeadDiscoveryStatus } from "@/lib/api/hooks/lead-discovery"
@@ -120,6 +165,7 @@ import type { AnalyzedPage, BuyerRecommendation } from "@/lib/api/types/lead-dis
 // 스트리밍 상태 인터페이스
 export interface StreamingState {
   messageId: string | null
+  analysisMessageId: string | null // 분석 결과가 표시될 메시지 ID (선택 후에도 유지)
   status: LeadDiscoveryStatus
   message: string
   progress: number
@@ -138,6 +184,7 @@ export interface StreamingState {
 
 export const initialStreamingState: StreamingState = {
   messageId: null,
+  analysisMessageId: null,
   status: "idle",
   message: "",
   progress: 0,
@@ -148,8 +195,55 @@ export const initialStreamingState: StreamingState = {
   customerAnalysisSummary: "",
 }
 
-// 스트리밍 상태 atom
-export const streamingStateAtom = atom<StreamingState>(initialStreamingState)
+// 로컬스토리지에서 스트리밍 상태 로드 (로딩 중 상태면 완료로 변경)
+const loadStreamingState = (): StreamingState => {
+  try {
+    const stored = localStorage.getItem("lead-discovery-streaming-state")
+    if (!stored) return initialStreamingState
+
+    const parsed = JSON.parse(stored) as StreamingState
+
+    // 로딩 중 상태 (idle, complete, waiting_selection, error 제외)면 완료 상태로 변경
+    const loadingStatuses: LeadDiscoveryStatus[] = [
+      "connecting",
+      "routing",
+      "analyzing",
+      "recommending",
+      "searching",
+    ]
+    if (loadingStatuses.includes(parsed.status)) {
+      // 추천이 있으면 waiting_selection, 없으면 complete
+      return {
+        ...parsed,
+        status: parsed.recommendations.length > 0 ? "waiting_selection" : "complete",
+        message: "",
+        progress: 100,
+      }
+    }
+
+    return parsed
+  } catch {
+    return initialStreamingState
+  }
+}
+
+// 로컬스토리지 커스텀 스토리지
+const streamingStorage = {
+  getItem: (_key: string): StreamingState => loadStreamingState(),
+  setItem: (key: string, value: StreamingState): void => {
+    localStorage.setItem(key, JSON.stringify(value))
+  },
+  removeItem: (key: string): void => {
+    localStorage.removeItem(key)
+  },
+}
+
+// 스트리밍 상태 atom - 로컬스토리지에 저장
+export const streamingStateAtom = atomWithStorage<StreamingState>(
+  "lead-discovery-streaming-state",
+  initialStreamingState,
+  streamingStorage,
+)
 
 // 스트리밍 상태 업데이트
 export const updateStreamingStateAtom = atom(null, (get, set, updates: Partial<StreamingState>) => {
@@ -160,6 +254,7 @@ export const updateStreamingStateAtom = atom(null, (get, set, updates: Partial<S
 // 스트리밍 상태 리셋
 export const resetStreamingStateAtom = atom(null, (_get, set) => {
   set(streamingStateAtom, initialStreamingState)
+  localStorage.removeItem("lead-discovery-streaming-state")
 })
 
 // ============================================
@@ -222,4 +317,53 @@ export const setFitScoreLoadingAtom = atom(
 // 적합도 상태 리셋
 export const resetFitScoreStateAtom = atom(null, (_get, set) => {
   set(fitScoreStateAtom, initialFitScoreState)
+})
+
+// ============================================
+// Enrichment State (회사 description 등)
+// ============================================
+
+export interface EnrichmentState {
+  // customerId -> loading state
+  loadingIds: Set<string>
+  // customerId -> error message
+  errors: Record<string, string>
+}
+
+export const initialEnrichmentState: EnrichmentState = {
+  loadingIds: new Set(),
+  errors: {},
+}
+
+export const enrichmentStateAtom = atom<EnrichmentState>(initialEnrichmentState)
+
+// Enrichment 로딩 시작
+export const startEnrichmentAtom = atom(null, (get, set, customerIds: string[]) => {
+  const current = get(enrichmentStateAtom)
+  const newLoadingIds = new Set(current.loadingIds)
+  for (const id of customerIds) {
+    newLoadingIds.add(id)
+  }
+  set(enrichmentStateAtom, { ...current, loadingIds: newLoadingIds })
+})
+
+// Enrichment 완료 (로딩 해제)
+export const finishEnrichmentAtom = atom(null, (get, set, customerId: string, error?: string) => {
+  const current = get(enrichmentStateAtom)
+  const newLoadingIds = new Set(current.loadingIds)
+  newLoadingIds.delete(customerId)
+
+  const newErrors = { ...current.errors }
+  if (error) {
+    newErrors[customerId] = error
+  } else {
+    delete newErrors[customerId]
+  }
+
+  set(enrichmentStateAtom, { loadingIds: newLoadingIds, errors: newErrors })
+})
+
+// Enrichment 상태 리셋
+export const resetEnrichmentStateAtom = atom(null, (_get, set) => {
+  set(enrichmentStateAtom, initialEnrichmentState)
 })

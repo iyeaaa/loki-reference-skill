@@ -338,29 +338,99 @@ export async function fetchWithDepth(
     const links: string[] = []
     if (depth > 0) {
       const baseHostname = new URL(normalizedUrl).hostname
+
+      // 제외할 페이지 패턴 (불필요한 페이지)
+      const EXCLUDE_PATTERNS = [
+        /privacy/i,
+        /terms/i,
+        /legal/i,
+        /cookie/i,
+        /policy/i,
+        /disclaimer/i,
+        /login/i,
+        /signup/i,
+        /sign-up/i,
+        /register/i,
+        /cart/i,
+        /checkout/i,
+        /sitemap/i,
+        /feed/i,
+        /rss/i,
+        /cdn/i,
+        /static/i,
+        /faq/i,
+        /support/i,
+        /help/i,
+        /blog\/\d/i, // 개별 블로그 포스트
+        /news\/\d/i, // 개별 뉴스 기사
+        /\.(pdf|jpg|jpeg|png|gif|svg|css|js|xml|json)$/i,
+      ]
+
+      // 우선 수집할 페이지 패턴 (중요한 페이지)
+      const PRIORITY_PATTERNS = [
+        /about/i,
+        /company/i,
+        /contact/i,
+        /products?/i,
+        /services?/i,
+        /solutions?/i,
+        /team/i,
+        /who-we-are/i,
+        /what-we-do/i,
+        /our-story/i,
+      ]
+
+      // 최대 페이지 수
+      const MAX_PAGES = 4
+
+      // 모든 링크 수집 (필터링 전)
+      const allLinks: string[] = []
       $("a[href]").each((_: number, element: Element) => {
-        if (links.length >= 10) return // 최대 10개
-
         const href = $(element).attr("href")
-
         if (href) {
           try {
             const absoluteUrl = new URL(href, normalizedUrl).href
             const linkHostname = new URL(absoluteUrl).hostname
+            const pathname = new URL(absoluteUrl).pathname
 
             // 같은 도메인이고, 중복이 아니고, 메인 페이지가 아닌 경우
             if (
               linkHostname === baseHostname &&
-              !links.includes(absoluteUrl) &&
-              absoluteUrl !== normalizedUrl
+              !allLinks.includes(absoluteUrl) &&
+              absoluteUrl !== normalizedUrl &&
+              pathname !== "/" &&
+              // 제외 패턴에 해당하지 않는 경우
+              !EXCLUDE_PATTERNS.some((pattern) => pattern.test(pathname))
             ) {
-              links.push(absoluteUrl)
+              allLinks.push(absoluteUrl)
             }
           } catch (_e) {
             // Invalid URL, skip
           }
         }
       })
+
+      // 우선순위 페이지 먼저 추가
+      for (const url of allLinks) {
+        if (links.length >= MAX_PAGES) break
+        const pathname = new URL(url).pathname
+        if (PRIORITY_PATTERNS.some((pattern) => pattern.test(pathname))) {
+          links.push(url)
+        }
+      }
+
+      // 남은 슬롯에 다른 페이지 추가
+      for (const url of allLinks) {
+        if (links.length >= MAX_PAGES) break
+        if (!links.includes(url)) {
+          links.push(url)
+        }
+      }
+
+      logger.info(
+        { totalFound: allLinks.length, selected: links.length, links },
+        "[fetchWithDepth] Filtered links",
+      )
     }
 
     // 스크립트, 스타일, 주석 제거

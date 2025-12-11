@@ -5,17 +5,30 @@
  * - 스트리밍 메시지 분리
  */
 
+import { motion } from "framer-motion"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
-import { ArrowRight, Check, Globe, Lightbulb, Loader2, SlidersHorizontal } from "lucide-react"
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  Globe,
+  Lightbulb,
+  Loader2,
+  SlidersHorizontal,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
 import TextPlus from "@/assets/text-plus.svg"
 import TextRinda from "@/assets/text-rinda.svg"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   type LeadDiscoveryEventData,
   useLeadDiscoveryMutation,
@@ -79,18 +92,41 @@ export function ChatRoom() {
   const setSelectedTarget = useSetAtom(selectedTargetAtom)
   const [input, setInput] = useState("")
   const [searchMode, setSearchMode] = useState<SearchMode>("website")
-  const [websiteTooltipOpen, setWebsiteTooltipOpen] = useState(false)
-  const [detailedTooltipOpen, setDetailedTooltipOpen] = useState(false)
   const [animatingCard, setAnimatingCard] = useState<string | null>(null)
   const [cardAnimationDistance, setCardAnimationDistance] = useState<number>(0)
 
   // Refs
   const scrollRef = useRef<HTMLDivElement>(null)
+  const scrollEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
 
   // 워크스페이스
   const { selectedWorkspace } = useWorkspace()
+
+  // 페이지 로드 시 미완성된 빈 assistant 메시지 정리 (마운트 시 한 번만 실행)
+  const cleanupIncompleteMessagesRef = useRef(false)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally run only on mount
+  useEffect(() => {
+    if (cleanupIncompleteMessagesRef.current) return
+    cleanupIncompleteMessagesRef.current = true
+
+    // 스트리밍이 진행 중이 아닌데 빈 assistant 메시지가 있으면 제거
+    const incompleteMessages = messages.filter(
+      (m) => m.role === "assistant" && !m.content && m.id !== streamingState.messageId,
+    )
+    if (incompleteMessages.length > 0 && streamingState.status === "idle") {
+      const validMessages = messages.filter((m) => !(m.role === "assistant" && !m.content))
+      if (validMessages.length !== messages.length) {
+        // 로컬스토리지 직접 업데이트
+        const toStore = validMessages.map((msg) => ({
+          ...msg,
+          timestamp: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : msg.timestamp,
+        }))
+        localStorage.setItem("lead-discovery-chat-messages", JSON.stringify(toStore))
+      }
+    }
+  }, [])
 
   // BigQuery 결과를 Customer 형식으로 변환
   const convertResultsToCustomers = useCallback((results: BigQueryResult[]): Customer[] => {
@@ -212,25 +248,20 @@ export function ChatRoom() {
         : ""
 
       setStreamingState((prev) => {
+        // 검색 결과를 응답 메시지(messageId)에 포함
         if (prev.messageId) {
-          // 분석 결과를 메시지에 포함 (코드 펜스 제거)
-          const cleanAnalysis = prev.analysisSummary ? stripCodeFences(prev.analysisSummary) : ""
-          const cleanCustomerAnalysis = prev.customerAnalysisSummary
-            ? stripCodeFences(prev.customerAnalysisSummary)
-            : ""
-
-          const analysisPart = cleanAnalysis
-            ? `---\n\n### 📊 웹사이트 분석 리포트\n\n${cleanAnalysis}\n\n`
-            : ""
-          const customerAnalysisPart = cleanCustomerAnalysis
-            ? `---\n\n### 👥 잠재 바이어 분석 리포트\n\n${cleanCustomerAnalysis}\n\n`
-            : ""
-
           updateMessage(prev.messageId, {
-            content: `${recInfo}**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.\n\n${analysisPart}${customerAnalysisPart}`,
+            content: `${recInfo}**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.`,
           })
         }
-        return initialStreamingState
+
+        // 웹사이트 분석 결과와 추천 카드는 유지하고, 상태만 완료로 변경
+        return {
+          ...prev,
+          status: "complete" as const,
+          message: "",
+          progress: 100,
+        }
       })
     },
     onError: (error) => {
@@ -558,15 +589,15 @@ export function ChatRoom() {
 
   // 스크롤 맨 아래로 - 메시지 추가시 자동 스크롤
   const scrollToBottom = useCallback(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    if (scrollEndRef.current) {
+      scrollEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" })
     }
   }, [])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on message change
   useEffect(() => {
     scrollToBottom()
-  }, [messages.length, streamingState.status, scrollToBottom])
+  }, [messages.length, messages, streamingState.status, streamingState.message, scrollToBottom])
 
   // 웹사이트 URL 유효성 검사
   const isValidWebsiteUrl = useCallback((url: string): boolean => {
@@ -649,22 +680,24 @@ export function ChatRoom() {
         return
       }
 
+      const now = Date.now()
+
       // 선택 메시지 추가
       const selectMessage: ChatMessage = {
-        id: `msg-${Date.now()}-select`,
+        id: `msg-${now}-select`,
         role: "user",
         content: `${rec.country} / ${rec.industry} 선택`,
-        timestamp: new Date(),
+        timestamp: new Date(now),
       }
       addMessage(selectMessage)
 
-      // 새 응답 메시지 추가
-      const responseId = `msg-${Date.now()}-response`
+      // 새 응답 메시지 추가 (1ms 후의 timestamp로 순서 보장)
+      const responseId = `msg-${now + 1}-response`
       const responseMessage: ChatMessage = {
         id: responseId,
         role: "assistant",
         content: "",
-        timestamp: new Date(),
+        timestamp: new Date(now + 1),
       }
       addMessage(responseMessage)
 
@@ -673,7 +706,7 @@ export function ChatRoom() {
         ...prev,
         messageId: responseId,
         status: "searching",
-        message: "선택한 타겟으로 검색 중...",
+        message: "검색 쿼리를 준비하고 있어요",
         progress: 65,
         selectedRecommendationId: rec.id, // 선택된 추천 ID 저장 (카드 유지)
         // recommendations, analysisSummary, analyzedPages 유지
@@ -713,12 +746,13 @@ export function ChatRoom() {
         return
       }
 
+      const now = Date.now()
       const userInput = input.trim()
       const userMessage: ChatMessage = {
-        id: `msg-${Date.now()}`,
+        id: `msg-${now}`,
         role: "user",
         content: userInput,
-        timestamp: new Date(),
+        timestamp: new Date(now),
       }
 
       console.log("[ChatRoom] Adding user message:", userMessage.id)
@@ -730,11 +764,11 @@ export function ChatRoom() {
       if (!selectedWorkspace?.id || selectedWorkspace.id === "all") {
         console.log("[ChatRoom] No workspace selected")
         const errorMessage: ChatMessage = {
-          id: `msg-${Date.now()}-error`,
+          id: `msg-${now + 1}-error`,
           role: "assistant",
           content:
             "워크스페이스를 먼저 선택해주세요.\n\n상단에서 워크스페이스를 선택하면 바로 시작할 수 있어요.",
-          timestamp: new Date(),
+          timestamp: new Date(now + 1),
         }
         addMessage(errorMessage)
         return
@@ -745,19 +779,20 @@ export function ChatRoom() {
         workspaceId: selectedWorkspace.id,
       })
 
-      // 빈 assistant 메시지 먼저 추가 (스트리밍용)
-      const assistantMessageId = `msg-${Date.now()}-response`
+      // 빈 assistant 메시지 먼저 추가 (스트리밍용) - 1ms 후의 timestamp로 순서 보장
+      const assistantMessageId = `msg-${now + 1}-response`
       const assistantMessage: ChatMessage = {
         id: assistantMessageId,
         role: "assistant",
         content: "",
-        timestamp: new Date(),
+        timestamp: new Date(now + 1),
       }
       addMessage(assistantMessage)
 
       // 스트리밍 상태 초기화
       setStreamingState({
         messageId: assistantMessageId,
+        analysisMessageId: assistantMessageId, // 분석 결과가 표시될 메시지 ID
         status: "connecting",
         message: "서버에 연결 중...",
         progress: 0,
@@ -855,113 +890,59 @@ export function ChatRoom() {
 
                       {/* 2행: 버튼들 */}
                       <div className="flex items-center justify-between px-3 pb-3 pt-2">
-                        {/* 좌측: 2개의 모드 선택 버튼 */}
-                        <div className="flex items-center gap-0.5">
-                          <TooltipProvider delayDuration={200}>
-                            <Tooltip open={websiteTooltipOpen} onOpenChange={setWebsiteTooltipOpen}>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant={searchMode === "website" ? "default" : "ghost"}
-                                  size="icon"
-                                  onClick={() => {
-                                    if (searchMode !== "website") {
-                                      setSearchMode("website")
-                                    }
-                                    setWebsiteTooltipOpen(true)
-                                  }}
-                                  onMouseEnter={() => setWebsiteTooltipOpen(true)}
-                                  onMouseLeave={() => setWebsiteTooltipOpen(false)}
-                                  className={cn(
-                                    "h-8 w-8 rounded-lg",
-                                    searchMode !== "website" &&
-                                      "text-muted-foreground hover:text-foreground",
-                                  )}
-                                >
-                                  <Globe className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="bottom"
-                                className="px-4 py-3 max-w-[300px] bg-white dark:bg-gray-800 text-foreground border border-border shadow-lg"
-                                onMouseEnter={() => setWebsiteTooltipOpen(true)}
-                                onMouseLeave={() => setWebsiteTooltipOpen(false)}
-                              >
-                                <div className="font-semibold text-base">웹사이트로 시작하기</div>
-                                <div className="text-xs opacity-70 mt-1 mb-2">
-                                  우리 회사 웹사이트 주소만 있으면 돼요
-                                </div>
-                                <Separator className="my-2" />
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-1.5 text-sm font-medium">
-                                    기본 모드
-                                    {searchMode === "website" && <Check className="h-3.5 w-3.5" />}
-                                  </div>
-                                  <div className="text-xs opacity-70 leading-relaxed">
-                                    우리 비즈니스를 분석해서 최적의 바이어를 찾아요
-                                  </div>
-                                  <div className="text-xs opacity-70 leading-relaxed">
-                                    가장 빠르고 간편해요
-                                  </div>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-
-                          <TooltipProvider delayDuration={200}>
-                            <Tooltip
-                              open={detailedTooltipOpen}
-                              onOpenChange={setDetailedTooltipOpen}
+                        {/* 좌측: 검색 모드 선택 드롭다운 */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 gap-1.5 px-2.5 rounded-lg text-muted-foreground hover:text-foreground"
                             >
-                              <TooltipTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant={searchMode === "detailed" ? "default" : "ghost"}
-                                  size="icon"
-                                  onClick={() => {
-                                    if (searchMode !== "detailed") {
-                                      setSearchMode("detailed")
-                                    }
-                                    setDetailedTooltipOpen(true)
-                                  }}
-                                  onMouseEnter={() => setDetailedTooltipOpen(true)}
-                                  onMouseLeave={() => setDetailedTooltipOpen(false)}
-                                  className={cn(
-                                    "h-8 w-8 rounded-lg",
-                                    searchMode !== "detailed" &&
-                                      "text-muted-foreground hover:text-foreground",
-                                  )}
-                                >
-                                  <SlidersHorizontal className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="bottom"
-                                className="px-4 py-3 max-w-[300px] bg-white dark:bg-gray-800 text-foreground border border-border shadow-lg"
-                                onMouseEnter={() => setDetailedTooltipOpen(true)}
-                                onMouseLeave={() => setDetailedTooltipOpen(false)}
-                              >
-                                <div className="font-semibold text-base">원하는 조건으로 찾기</div>
-                                <div className="text-xs opacity-70 mt-1 mb-2">
-                                  업종, 지역, 규모 등을 직접 정해요
-                                </div>
-                                <Separator className="my-2" />
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-1.5 text-sm font-medium">
-                                    고급 모드
-                                    {searchMode === "detailed" && <Check className="h-3.5 w-3.5" />}
-                                  </div>
-                                  <div className="text-xs opacity-70 leading-relaxed">
-                                    필요한 조건을 하나씩 설정할 수 있어요
-                                  </div>
-                                  <div className="text-xs opacity-70 leading-relaxed">
-                                    더 정확한 타겟팅이 가능해요
-                                  </div>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
+                              {searchMode === "website" ? (
+                                <Globe className="h-4 w-4" />
+                              ) : (
+                                <SlidersHorizontal className="h-4 w-4" />
+                              )}
+                              <span className="text-xs font-medium">
+                                {searchMode === "website" ? "웹사이트" : "조건 검색"}
+                              </span>
+                              <ChevronDown className="h-3 w-3 opacity-50" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-[260px]">
+                            <DropdownMenuItem
+                              onClick={() => setSearchMode("website")}
+                              className="flex flex-col items-start gap-1 py-3 cursor-pointer"
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                <Globe className="h-4 w-4" />
+                                <span className="font-medium">웹사이트로 시작하기</span>
+                                {searchMode === "website" && (
+                                  <Check className="h-4 w-4 ml-auto text-primary" />
+                                )}
+                              </div>
+                              <span className="text-xs text-muted-foreground pl-6">
+                                우리 회사 웹사이트 주소만 있으면 돼요
+                              </span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setSearchMode("detailed")}
+                              className="flex flex-col items-start gap-1 py-3 cursor-pointer"
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                <SlidersHorizontal className="h-4 w-4" />
+                                <span className="font-medium">원하는 조건으로 찾기</span>
+                                {searchMode === "detailed" && (
+                                  <Check className="h-4 w-4 ml-auto text-primary" />
+                                )}
+                              </div>
+                              <span className="text-xs text-muted-foreground pl-6">
+                                업종, 지역, 규모 등을 직접 정해요
+                              </span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
 
                         {/* 우측: 제출 버튼 */}
                         <Button
@@ -1126,7 +1107,6 @@ export function ChatRoom() {
                         message={streamingState.message}
                         mode={streamingState.mode}
                         analyzedPages={streamingState.analyzedPages}
-                        analysisSummary={streamingState.analysisSummary}
                         customerAnalysisSummary={streamingState.customerAnalysisSummary}
                         className="max-w-2xl"
                       />
@@ -1134,12 +1114,16 @@ export function ChatRoom() {
                   </div>
                 )}
                 {messages
+                  // 시간순 정렬 (로딩 중에도 올바른 순서 유지)
+                  .slice()
+                  .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
                   .filter((message) => {
-                    // 빈 assistant 메시지는 스트리밍 메시지가 아닐 때만 필터링
+                    // 빈 assistant 메시지는 스트리밍 메시지 또는 분석 메시지가 아닐 때만 필터링
                     if (
                       message.role === "assistant" &&
                       !message.content &&
-                      message.id !== streamingState.messageId
+                      message.id !== streamingState.messageId &&
+                      message.id !== streamingState.analysisMessageId
                     ) {
                       return false
                     }
@@ -1159,25 +1143,55 @@ export function ChatRoom() {
                         </div>
                       ) : (
                         <div className="w-full space-y-4">
-                          {/* LangGraph 진행 상태 표시 - 스트리밍 중일 때만 */}
-                          {message.id === streamingState.messageId &&
-                            streamingState.status !== "idle" &&
-                            streamingState.status !== "complete" &&
-                            streamingState.status !== "waiting_selection" && (
-                              <LeadDiscoveryProgress
-                                status={streamingState.status}
-                                message={streamingState.message}
-                                mode={streamingState.mode}
-                                analyzedPages={streamingState.analyzedPages}
-                                analysisSummary={streamingState.analysisSummary}
-                                customerAnalysisSummary={streamingState.customerAnalysisSummary}
-                                className="max-w-2xl"
-                              />
-                            )}
+                          {/* LangGraph 진행 상태 표시 */}
+                          {message.id === streamingState.messageId && (
+                            <>
+                              {/* 웹사이트 분석 중일 때 (선택 후에는 표시 안 함) */}
+                              {streamingState.status !== "idle" &&
+                                streamingState.status !== "complete" &&
+                                streamingState.status !== "waiting_selection" &&
+                                !streamingState.selectedRecommendationId && (
+                                  <LeadDiscoveryProgress
+                                    status={streamingState.status}
+                                    message={streamingState.message}
+                                    mode={streamingState.mode}
+                                    analyzedPages={streamingState.analyzedPages}
+                                    customerAnalysisSummary={streamingState.customerAnalysisSummary}
+                                    className="max-w-2xl"
+                                  />
+                                )}
 
-                          {/* 바이어 추천 선택 UI - 선택 후에도 유지, 로딩 중에도 표시 */}
-                          {message.id === streamingState.messageId &&
-                            (streamingState.status === "recommending" ||
+                              {/* 선택 후 검색 중 로딩 UI */}
+                              {isSearching && streamingState.selectedRecommendationId && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.3 }}
+                                  className="flex items-center gap-3 py-4"
+                                >
+                                  <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                                  <span className="text-base text-muted-foreground">
+                                    선택하신 타겟에 맞는 바이어를 찾고 있어요
+                                  </span>
+                                </motion.div>
+                              )}
+                            </>
+                          )}
+
+                          {/* 메시지 콘텐츠 (검색 결과 등 - 분석 리포트는 BuyerRecommendationCards 내부에서 표시) */}
+                          {message.content && (
+                            <div className="prose prose-sm max-w-none dark:prose-invert text-base">
+                              <ReactMarkdown components={markdownComponents}>
+                                {message.content}
+                              </ReactMarkdown>
+                            </div>
+                          )}
+
+                          {/* 바이어 추천 선택 UI - 첫 번째 응답 메시지에 표시 (분석 중, 추천 중, 선택 후 모두 유지) */}
+                          {message.id === streamingState.analysisMessageId &&
+                            (streamingState.status === "analyzing" ||
+                              streamingState.status === "recommending" ||
+                              streamingState.status === "complete" ||
                               (streamingState.recommendations.length > 0 &&
                                 (isWaitingSelection ||
                                   streamingState.selectedRecommendationId))) && (
@@ -1189,20 +1203,17 @@ export function ChatRoom() {
                                 analysisSummary={streamingState.analysisSummary}
                                 className="max-w-2xl"
                                 isLoadingRecommendations={streamingState.status === "recommending"}
-                                isSearchingAfterSelection={
-                                  isSearching && !!streamingState.selectedRecommendationId
+                                isAnalysisComplete={
+                                  isWaitingSelection ||
+                                  streamingState.status === "complete" ||
+                                  !!streamingState.selectedRecommendationId
+                                }
+                                isAnalyzing={
+                                  streamingState.status === "analyzing" ||
+                                  streamingState.status === "recommending"
                                 }
                               />
                             )}
-
-                          {/* 메시지 콘텐츠 */}
-                          {message.content && (
-                            <div className="prose prose-sm max-w-none dark:prose-invert text-base">
-                              <ReactMarkdown components={markdownComponents}>
-                                {message.content}
-                              </ReactMarkdown>
-                            </div>
-                          )}
 
                           {message.customersAdded && message.customersAdded.length > 0 && (
                             <div className="mt-2 pt-2 border-t border-border/50">
@@ -1218,6 +1229,8 @@ export function ChatRoom() {
                       )}
                     </div>
                   ))}
+                {/* 스크롤 앵커 */}
+                <div ref={scrollEndRef} />
               </div>
             </ScrollArea>
           )}
@@ -1250,110 +1263,59 @@ export function ChatRoom() {
 
                 {/* 2행: 버튼들 */}
                 <div className="flex items-center justify-between px-3 pb-3 pt-2">
-                  {/* 좌측: 2개의 모드 선택 버튼 */}
-                  <div className="flex items-center gap-0.5">
-                    <TooltipProvider delayDuration={200}>
-                      <Tooltip open={websiteTooltipOpen} onOpenChange={setWebsiteTooltipOpen}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant={searchMode === "website" ? "default" : "ghost"}
-                            size="icon"
-                            onClick={() => {
-                              if (searchMode !== "website") {
-                                setSearchMode("website")
-                              }
-                              setWebsiteTooltipOpen(true)
-                            }}
-                            onMouseEnter={() => setWebsiteTooltipOpen(true)}
-                            onMouseLeave={() => setWebsiteTooltipOpen(false)}
-                            className={cn(
-                              "h-8 w-8 rounded-lg",
-                              searchMode !== "website" &&
-                                "text-muted-foreground hover:text-foreground",
-                            )}
-                          >
-                            <Globe className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent
-                          side="top"
-                          className="px-4 py-3 max-w-[300px] bg-white dark:bg-gray-800 text-foreground border border-border shadow-lg"
-                          onMouseEnter={() => setWebsiteTooltipOpen(true)}
-                          onMouseLeave={() => setWebsiteTooltipOpen(false)}
-                        >
-                          <div className="font-semibold text-base">웹사이트로 시작하기</div>
-                          <div className="text-xs opacity-70 mt-1 mb-2">
-                            우리 회사 웹사이트 주소만 있으면 돼요
-                          </div>
-                          <Separator className="my-2" />
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-1.5 text-sm font-medium">
-                              기본 모드
-                              {searchMode === "website" && <Check className="h-3.5 w-3.5" />}
-                            </div>
-                            <div className="text-xs opacity-70 leading-relaxed">
-                              우리 비즈니스를 분석해서 최적의 바이어를 찾아요
-                            </div>
-                            <div className="text-xs opacity-70 leading-relaxed">
-                              가장 빠르고 간편해요
-                            </div>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-
-                    <TooltipProvider delayDuration={200}>
-                      <Tooltip open={detailedTooltipOpen} onOpenChange={setDetailedTooltipOpen}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant={searchMode === "detailed" ? "default" : "ghost"}
-                            size="icon"
-                            onClick={() => {
-                              if (searchMode !== "detailed") {
-                                setSearchMode("detailed")
-                              }
-                              setDetailedTooltipOpen(true)
-                            }}
-                            onMouseEnter={() => setDetailedTooltipOpen(true)}
-                            onMouseLeave={() => setDetailedTooltipOpen(false)}
-                            className={cn(
-                              "h-8 w-8 rounded-lg",
-                              searchMode !== "detailed" &&
-                                "text-muted-foreground hover:text-foreground",
-                            )}
-                          >
-                            <SlidersHorizontal className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent
-                          side="top"
-                          className="px-4 py-3 max-w-[300px] bg-white dark:bg-gray-800 text-foreground border border-border shadow-lg"
-                          onMouseEnter={() => setDetailedTooltipOpen(true)}
-                          onMouseLeave={() => setDetailedTooltipOpen(false)}
-                        >
-                          <div className="font-semibold text-base">원하는 조건으로 찾기</div>
-                          <div className="text-xs opacity-70 mt-1 mb-2">
-                            업종, 지역, 규모 등을 직접 정해요
-                          </div>
-                          <Separator className="my-2" />
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-1.5 text-sm font-medium">
-                              고급 모드
-                              {searchMode === "detailed" && <Check className="h-3.5 w-3.5" />}
-                            </div>
-                            <div className="text-xs opacity-70 leading-relaxed">
-                              필요한 조건을 하나씩 설정할 수 있어요
-                            </div>
-                            <div className="text-xs opacity-70 leading-relaxed">
-                              더 정확한 타겟팅이 가능해요
-                            </div>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
+                  {/* 좌측: 검색 모드 선택 드롭다운 */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1.5 px-2.5 rounded-lg text-muted-foreground hover:text-foreground"
+                      >
+                        {searchMode === "website" ? (
+                          <Globe className="h-4 w-4" />
+                        ) : (
+                          <SlidersHorizontal className="h-4 w-4" />
+                        )}
+                        <span className="text-xs font-medium">
+                          {searchMode === "website" ? "웹사이트" : "조건 검색"}
+                        </span>
+                        <ChevronDown className="h-3 w-3 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-[260px]">
+                      <DropdownMenuItem
+                        onClick={() => setSearchMode("website")}
+                        className="flex flex-col items-start gap-1 py-3 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <Globe className="h-4 w-4" />
+                          <span className="font-medium">웹사이트로 시작하기</span>
+                          {searchMode === "website" && (
+                            <Check className="h-4 w-4 ml-auto text-primary" />
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground pl-6">
+                          우리 회사 웹사이트 주소만 있으면 돼요
+                        </span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setSearchMode("detailed")}
+                        className="flex flex-col items-start gap-1 py-3 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <SlidersHorizontal className="h-4 w-4" />
+                          <span className="font-medium">원하는 조건으로 찾기</span>
+                          {searchMode === "detailed" && (
+                            <Check className="h-4 w-4 ml-auto text-primary" />
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground pl-6">
+                          업종, 지역, 규모 등을 직접 정해요
+                        </span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
                   {/* 우측: 제출 버튼 */}
                   <Button

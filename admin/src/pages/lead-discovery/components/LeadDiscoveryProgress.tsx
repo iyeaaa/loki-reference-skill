@@ -196,7 +196,7 @@ function WebsiteIframePreview({ page }: { page: AnalyzedPage }) {
               src={page.url}
               title={page.title || hostname}
               className={cn(
-                "w-full h-full border-0 transition-opacity duration-300",
+                "w-full h-full border-0 transition-opacity duration-300 pointer-events-none",
                 isLoading ? "opacity-0" : "opacity-100",
               )}
               sandbox="allow-scripts allow-same-origin"
@@ -275,12 +275,7 @@ function CurrentPagePreview({
   const currentPage = pages[pages.length - 1]
 
   return (
-    <div className="space-y-3 mt-4">
-      <div className="flex items-center gap-2 ml-1">
-        <span className="text-sm text-muted-foreground">
-          {pages.length}번째 페이지를 읽고 있어요
-        </span>
-      </div>
+    <div className="mt-4">
       <AnimatePresence mode="wait">
         <WebsiteIframePreview key={currentPage.url} page={currentPage} />
       </AnimatePresence>
@@ -461,7 +456,6 @@ interface LeadDiscoveryProgressProps {
   message: string
   mode?: "basic" | "advanced"
   analyzedPages?: AnalyzedPage[]
-  analysisSummary?: string
   customerAnalysisSummary?: string
   className?: string
 }
@@ -471,7 +465,6 @@ export function LeadDiscoveryProgress({
   message,
   mode,
   analyzedPages = [],
-  analysisSummary = "",
   customerAnalysisSummary = "",
   className,
 }: LeadDiscoveryProgressProps) {
@@ -580,13 +573,6 @@ export function LeadDiscoveryProgress({
 
       {/* iframe 프리뷰 - analyzing 상태에서만 현재 페이지 하나만 표시 */}
       <CurrentPagePreview pages={analyzedPages} isAnalyzing={isAnalyzing} />
-
-      {/* AI 분석 요약 스트리밍 텍스트 - 항상 표시 */}
-      <StreamingAnalysisSummary
-        text={analysisSummary}
-        isStreaming={isAnalyzing}
-        title="웹사이트 분석 리포트"
-      />
 
       {/* 분석 완료된 페이지 목록 - analyzing 이후에 표시 */}
       <AnalyzedPagesSummary pages={analyzedPages} isAnalyzing={isAnalyzing} />

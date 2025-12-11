@@ -1,7 +1,19 @@
-import { Building2, FileText, Globe, Mail, Menu, Upload, User, Users, X } from "lucide-react"
-import { useEffect, useId, useState } from "react"
+import {
+  Building2,
+  Camera,
+  FileText,
+  Globe,
+  Mail,
+  Menu,
+  Upload,
+  User,
+  Users,
+  X,
+} from "lucide-react"
+import { useEffect, useId, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -19,17 +31,18 @@ export default function SettingsPage() {
   const { t } = useTranslation()
   const nameId = useId()
   const emailId = useId()
-  const employeeIdInput = useId()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: currentUser, isLoading } = useCurrentUser()
   const updateProfileMutation = useUpdateProfileMutation()
   const [activeTab, setActiveTab] = useState("profile")
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     username: "",
     email: "",
-    employeeId: "",
+    profilePicture: null as string | null,
   })
 
   // Load current user data
@@ -38,10 +51,43 @@ export default function SettingsPage() {
       setFormData({
         username: currentUser.username || "",
         email: currentUser.email || "",
-        employeeId: currentUser.employeeId || "",
+        profilePicture: currentUser.profilePicture || null,
       })
+      setPreviewImage(currentUser.profilePicture || null)
     }
   }, [currentUser])
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      return
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      return
+    }
+
+    // Convert to base64
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string
+      setPreviewImage(base64)
+      setFormData((prev) => ({ ...prev, profilePicture: base64 }))
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleRemoveImage = () => {
+    setPreviewImage(null)
+    setFormData((prev) => ({ ...prev, profilePicture: null }))
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -116,7 +162,62 @@ export default function SettingsPage() {
               <CardDescription>{t("settings.profile.description")}</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4 max-w-2xl">
+              <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
+                {/* Profile Picture Upload */}
+                <div className="space-y-3">
+                  <Label>{t("settings.profile.profilePicture")}</Label>
+                  <div className="flex items-center gap-6">
+                    <div className="relative group">
+                      <Avatar className="h-24 w-24 border-2 border-muted">
+                        <AvatarImage src={previewImage || undefined} alt="Profile" />
+                        <AvatarFallback className="text-2xl bg-muted">
+                          {formData.username?.charAt(0)?.toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      >
+                        <Camera className="h-6 w-6 text-white" />
+                      </button>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        {t("settings.profile.uploadPhoto")}
+                      </Button>
+                      {previewImage && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRemoveImage}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          {t("settings.profile.removePhoto")}
+                        </Button>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {t("settings.profile.photoHint")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor={nameId}>{t("settings.profile.name")}</Label>
                   <Input
@@ -137,17 +238,6 @@ export default function SettingsPage() {
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="email@example.com"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor={employeeIdInput}>{t("settings.profile.employeeId")}</Label>
-                  <Input
-                    id={employeeIdInput}
-                    name="employeeId"
-                    value={formData.employeeId}
-                    onChange={handleChange}
-                    placeholder="EMP001"
                     required
                   />
                 </div>

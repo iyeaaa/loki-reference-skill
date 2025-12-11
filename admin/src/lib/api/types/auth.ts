@@ -21,6 +21,7 @@ export interface AuthUser {
   isActive: boolean
   departmentId?: string
   employeeId?: string
+  profilePicture?: string | null
   createdAt: string
   updatedAt: string
   lastLoginAt?: string
@@ -51,6 +52,7 @@ export interface UpdateProfileRequest {
   username: string
   email: string
   employeeId?: string
+  profilePicture?: string | null
 }
 
 export interface UpdateProfileResponse {

@@ -14,38 +14,136 @@ const llm = new ChatOpenAI({
   temperature: 0.5, // Some creativity for diverse recommendations
 })
 
-// Available industries in BigQuery
+// Available industries in BigQuery (B2B Leads + Crunchbase 통합, BigQuery 실제 데이터 기준)
 const AVAILABLE_INDUSTRIES = [
-  "Business Services",
-  "Manufacturing",
-  "Retail",
-  "Financial Services",
-  "Healthcare",
-  "Real Estate & Construction",
-  "Computers & Electronics",
-  "Software & Internet",
-  "Education",
-  "Media & Entertainment",
-  "Consumer Services",
-  "Travel, Recreation, and Leisure",
-  "Telecommunications",
-  "Non-Profit",
-  "Transportation & Storage",
-  "Other",
-  "Energy & Utilities",
-  "Wholesale & Distribution",
-  "Government",
-  "Agriculture & Mining",
+  // B2B Leads industries (count 순)
+  "Business Services", // 330,623
+  "Manufacturing", // 111,192
+  "Real Estate & Construction", // 109,151
+  "Retail", // 96,171
+  "Healthcare", // 78,237
+  "Financial Services", // 63,080
+  "Other", // 51,883
+  "Consumer Services", // 50,699
+  "Computers & Electronics", // 44,545
+  "Education", // 40,977
+  "Non-Profit", // 39,752
+  "Media & Entertainment", // 34,238
+  "Software & Internet", // 34,231
+  "Travel, Recreation, and Leisure", // 30,105
+  "Government", // 28,198
+  "Transportation & Storage", // 19,112
+  "Agriculture & Mining", // 16,870
+  "Energy & Utilities", // 15,763
+  "Telecommunications", // 13,931
+  "Wholesale & Distribution", // 12,506
   "Retail & Wholesale",
   "Services (Miscellaneous)",
   "Food & Beverage",
   "Travel & Accommodation",
   "Recreation & Leisure",
   "Conglomerates",
+  // Crunchbase industries (복합 형태에서 추출한 주요 키워드)
+  "Software",
+  "Information Technology",
+  "Health Care",
+  "Real Estate",
+  "E-Commerce",
+  "Consulting",
+  "Advertising",
+  "Marketing",
+  "Construction",
+  "Internet",
+  "Banking",
+  "Finance",
+  "Logistics",
+  "Transportation",
+  "Dental",
+  "Medical",
+  "Hospital",
+  "Human Resources",
+  "Recruiting",
+  "Staffing Agency",
+  "Property Management",
+  "Accounting",
+  "Freight Service",
+  "Wholesale",
+  "Mechanical Engineering",
+  "Wellness",
+  "Biotechnology",
+  "Non Profit",
+  "Food and Beverage",
+  "Insurance",
+  "Legal",
+  "Architecture",
+  "Travel",
+  "Tourism",
+  "Automotive",
+  "Energy",
+  "Professional Services",
+  "SaaS",
+  "Cyber Security",
+  "Artificial Intelligence (AI)",
 ]
 
-// Available countries
-const AVAILABLE_COUNTRIES = ["USA", "Canada"]
+// Available sub-industries (B2B Leads, BigQuery 실제 데이터 기준, 상위 30개)
+const AVAILABLE_SUB_INDUSTRIES = [
+  "Business Services Other",
+  "Retail Other",
+  "Construction and Remodeling",
+  "Consumer Services Other",
+  "Manufacturing Other",
+  "Advertising, Marketing and PR",
+  "Legal Services",
+  "Insurance and Risk Management",
+  "Architecture,Engineering and Design",
+  "Elementary and Secondary Schools",
+  "Local Government",
+  "Doctors and Health Care Practitioners",
+  "Hospitals",
+  "Software",
+  "Real Estate Agents and Appraisers",
+  "Tools, Hardware and Light Machinery",
+  "Restaurants and Bars",
+  "Management Consulting",
+  "HR and Recruiting Services",
+  "IT and Network Services and Support",
+  "Banks",
+  "Accounting and Tax Preparation",
+  "Hotels, Motels and Lodging",
+  "Colleges and Universities",
+  "Investment Banking and Venture Capital",
+  "E-commerce and Internet Businesses",
+  "Automobile Dealers",
+  "Medical Supplies and Equipment",
+  "Pharmaceuticals",
+  "Biotechnology",
+]
+
+// Available countries/regions (B2B Leads + Crunchbase 통합, BigQuery 실제 데이터 기준)
+const AVAILABLE_COUNTRIES = [
+  // B2B Leads countries (b2b_leads_all 테이블)
+  "USA", // 1,235,614
+  "Canada", // 13,474
+  // Crunchbase regions (crunchbase_all 테이블, count 순)
+  "and Africa (EMEA)", // 655,975
+  "Southern US", // 259,411
+  "Western US", // 243,326
+  "Asia-Pacific (APAC)", // 192,957
+  "Northeastern US", // 167,189
+  "Midwestern US", // 138,186
+  "Latin America", // 89,887
+  "Australasia", // 63,613
+  "Middle East and North Africa (MENA)", // 37,600
+  "Southeast Asia", // 36,847
+  "Great Lakes", // 31,215
+  "Middle East", // 4,781
+  "Central America",
+  "Nordic Countries",
+]
+
+// Export for use in other modules
+export { AVAILABLE_INDUSTRIES, AVAILABLE_SUB_INDUSTRIES, AVAILABLE_COUNTRIES }
 
 // Generate buyer recommendations based on website analysis
 async function generateRecommendations(
@@ -77,6 +175,7 @@ async function generateRecommendations(
 ## Available Options:
 Countries: ${AVAILABLE_COUNTRIES.join(", ")}
 Industries: ${AVAILABLE_INDUSTRIES.join(", ")}
+Sub-Industries (for more specific targeting): ${AVAILABLE_SUB_INDUSTRIES.join(", ")}
 
 ## Task:
 Generate exactly 3 diverse buyer recommendations. Each should target different market segments.
@@ -86,7 +185,7 @@ Generate exactly 3 diverse buyer recommendations. Each should target different m
   {
     "country": "USA or Canada",
     "industry": "One of the available industries",
-    "subIndustry": "Specific sub-industry if applicable (optional)",
+    "subIndustry": "One of the available sub-industries (MUST use from the list above)",
     "reasoning": "Why this segment would be interested (2-3 sentences in Korean)",
     "estimatedLeadCount": "Estimated number of potential leads (rough number)",
     "keywords": ["relevant", "search", "keywords"]
@@ -96,7 +195,8 @@ Generate exactly 3 diverse buyer recommendations. Each should target different m
 Rules:
 - Provide exactly 3 recommendations
 - Each recommendation should target a different industry or market angle
-- Use only available countries and industries
+- Use only available countries, industries, and sub-industries from the lists above
+- subIndustry MUST be one of the available sub-industries listed above
 - Write reasoning in Korean
 - Be specific about why each segment would be interested
 - Respond with JSON array only, no markdown

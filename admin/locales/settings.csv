@@ -42,7 +42,7 @@ workspace.phoneNumber,전화번호,Phone Number
 workspace.address,주소,Address
 workspace.companyNamePlaceholder,회사명을 입력하세요,Enter company name
 workspace.companyWebsitePlaceholder,https://example.com,https://example.com
-workspace.companyPhonePlaceholder,"+1 (555) 123-4567","+1 (555) 123-4567"
+workspace.companyPhonePlaceholder,+1 (555) 123-4567,+1 (555) 123-4567
 workspace.industryPlaceholder,"예: IT, 제조, 금융","e.g., IT, Manufacturing, Finance"
 workspace.companyAddressPlaceholder,회사 주소를 입력하세요,Enter company address
 workspace.companyDescriptionPlaceholder,회사에 대한 간단한 설명을 입력하세요,Enter a brief description of the company
@@ -99,3 +99,7 @@ signature.namePlaceholder,[NO TRANSLATION] settings.signature.namePlaceholder,[N
 signature.noSignatures,[NO TRANSLATION] settings.signature.noSignatures,[NO TRANSLATION] settings.signature.noSignatures
 signature.setDefault,[NO TRANSLATION] settings.signature.setDefault,[NO TRANSLATION] settings.signature.setDefault
 signature.updatedAt,[NO TRANSLATION] settings.signature.updatedAt,[NO TRANSLATION] settings.signature.updatedAt
+profile.photoHint,JPG 또는 PNG 형식 (최대 2MB),JPG or PNG format (max 2MB)
+profile.profilePicture,프로필 사진,Profile Picture
+profile.removePhoto,사진 삭제,Remove Photo
+profile.uploadPhoto,사진 업로드,Upload Photo

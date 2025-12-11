@@ -593,7 +593,7 @@ export const leadsColumns: ColumnDef<Lead>[] = [
       if (!url) return "-"
       return (
         <a
-          href={url}
+          href={url.startsWith("http") ? url : `https://${url}`}
           target="_blank"
           rel="noopener noreferrer"
           className="text-blue-600 hover:underline dark:text-blue-400"

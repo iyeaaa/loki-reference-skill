@@ -669,3 +669,95 @@ export async function calculateFitScores(
     callbacks.onError?.(error instanceof Error ? error.message : "적합도 계산 실패")
   }
 }
+
+// ============================================
+// Lead Enrichment API (Jina Reader + Gemini)
+// ============================================
+
+export interface EnrichmentResult {
+  domain: string
+  emails: Array<{
+    value: string
+    type: string
+    confidence?: number
+  }>
+  companyInfo: {
+    name?: string
+    description?: string
+    industry?: string
+    size?: string
+    founded?: string
+    location?: string
+  }
+  socialLinks: {
+    linkedin?: string
+    twitter?: string
+    facebook?: string
+  }
+  rawContent?: string
+}
+
+export interface EnrichLeadRequest {
+  webAddress: string
+  companyName: string
+}
+
+export interface EnrichLeadResponse {
+  success: boolean
+  data: EnrichmentResult | null
+  error?: string
+}
+
+// 단일 리드 enrichment
+export const enrichLead = async (
+  webAddress: string,
+  companyName: string,
+): Promise<EnrichLeadResponse> => {
+  const response = await fetch(`${BASE_URL}/api/v1/lead-enrichment/enrich`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ webAddress, companyName }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Enrichment failed: ${response.status}`)
+  }
+
+  return response.json()
+}
+
+// 여러 리드 enrichment (병렬 처리)
+export const enrichLeads = async (
+  leads: Array<{ id: string; webAddress: string; companyName: string }>,
+  callbacks: {
+    onProgress?: (completed: number, total: number, current: string) => void
+    onResult?: (leadId: string, result: EnrichmentResult) => void
+    onError?: (leadId: string, error: string) => void
+    onComplete?: () => void
+  },
+): Promise<void> => {
+  const total = leads.length
+  let completed = 0
+
+  // 병렬로 모든 리드 처리
+  const promises = leads.map(async (lead) => {
+    try {
+      const response = await enrichLead(lead.webAddress, lead.companyName)
+      completed++
+      callbacks.onProgress?.(completed, total, lead.companyName)
+
+      if (response.success && response.data) {
+        callbacks.onResult?.(lead.id, response.data)
+      } else {
+        callbacks.onError?.(lead.id, response.error || "Unknown error")
+      }
+    } catch (error) {
+      completed++
+      callbacks.onProgress?.(completed, total, lead.companyName)
+      callbacks.onError?.(lead.id, error instanceof Error ? error.message : "Failed to enrich")
+    }
+  })
+
+  await Promise.all(promises)
+  callbacks.onComplete?.()
+}

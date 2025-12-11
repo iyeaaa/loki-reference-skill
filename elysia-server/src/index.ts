@@ -14,6 +14,7 @@ import { bigquerySearchRoutes } from "./routes/bigquery-search.routes"
 import { bulkEmailRoutes } from "./routes/bulk-email.routes"
 import { chatbotRoutes } from "./routes/chatbot.routes"
 import { adminCustomerGroupRoutes, customerGroupRoutes } from "./routes/customer-groups.routes"
+import { dashboardRoutes } from "./routes/dashboard.routes"
 import { departmentsRoutes } from "./routes/departments.routes"
 import { adminEmailAccountRoutes, emailAccountRoutes } from "./routes/email-accounts.routes"
 import { emailRepliesRoutes } from "./routes/email-replies.routes"
@@ -148,6 +149,7 @@ const app = new Elysia()
   .use(adminWorkspaceRoutes)
   .use(customerGroupRoutes)
   .use(adminCustomerGroupRoutes)
+  .use(dashboardRoutes)
   .use(emailAccountRoutes)
   .use(adminEmailAccountRoutes)
   .use(emailSignatureRoutes)

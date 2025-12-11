@@ -16,33 +16,37 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  ChevronDown,
   ExternalLink,
-  Filter,
   GripVertical,
-  LayoutGrid,
   Loader2,
   Maximize2,
-  Menu,
   Minimize2,
   MoreHorizontal,
-  Plus,
-  SortAsc,
+  Sparkles,
   Trash2,
+  UserPlus,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import toast from "react-hot-toast"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -51,16 +55,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { calculateFitScores } from "@/lib/api/hooks/lead-discovery"
+import { useCustomerGroupsByWorkspace } from "@/lib/api/hooks/customer-groups"
+import { calculateFitScores, enrichLeads } from "@/lib/api/hooks/lead-discovery"
+import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 import {
   type Customer,
   customersAtom,
+  enrichmentStateAtom,
+  finishEnrichmentAtom,
   fitScoreStateAtom,
   removeCustomerAtom,
   selectedTargetAtom,
   setFitScoreLoadingAtom,
+  startEnrichmentAtom,
   streamingStateAtom,
+  updateCustomerAtom,
   updateFitScoreAtom,
 } from "./store"
 
@@ -153,6 +163,24 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
 
   // 선택된 바이어 타겟 (스트리밍 완료 후에도 유지)
   const selectedTarget = useAtomValue(selectedTargetAtom)
+
+  // 고객그룹 추가 관련 상태
+  const { selectedWorkspace } = useWorkspace()
+  const workspaceId = selectedWorkspace?.id || ""
+  const { data: customerGroups = [] } = useCustomerGroupsByWorkspace(
+    workspaceId,
+    !!workspaceId && workspaceId !== "all",
+  )
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("")
+  const [isAddingToGroup, setIsAddingToGroup] = useState(false)
+
+  // Enrichment 관련 상태
+  const enrichmentState = useAtomValue(enrichmentStateAtom)
+  const startEnrichment = useSetAtom(startEnrichmentAtom)
+  const finishEnrichment = useSetAtom(finishEnrichmentAtom)
+  const updateCustomer = useSetAtom(updateCustomerAtom)
+  const [isEnriching, setIsEnriching] = useState(false)
+  const [enrichProgress, setEnrichProgress] = useState({ current: 0, total: 0, name: "" })
 
   // API 호출 중 여부 추적
   const isCalculatingRef = useRef(false)
@@ -257,6 +285,130 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
   // 드래그 상태
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null)
 
+  // 고객그룹에 추가
+  const handleAddToGroup = useCallback(async () => {
+    if (!selectedGroupId) {
+      toast.error("고객그룹을 선택해주세요")
+      return
+    }
+
+    const selectedRowIds = Object.keys(rowSelection).filter(
+      (key) => rowSelection[key as keyof typeof rowSelection],
+    )
+
+    if (selectedRowIds.length === 0) {
+      toast.error("추가할 리드를 선택해주세요")
+      return
+    }
+
+    // 선택된 고객 데이터 가져오기
+    const selectedCustomers = customers.filter((_, index) =>
+      selectedRowIds.includes(index.toString()),
+    )
+
+    if (selectedCustomers.length === 0) {
+      toast.error("추가할 리드를 선택해주세요")
+      return
+    }
+
+    setIsAddingToGroup(true)
+
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || ""
+      const response = await fetch(`${API_BASE_URL}/api/v1/bigquery/add-to-group`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+        body: JSON.stringify({
+          groupId: selectedGroupId,
+          leads: selectedCustomers.map((customer) => ({
+            email: customer.email,
+            firstName: customer.first_name,
+            lastName: customer.last_name,
+            companyName: customer.company_name,
+            phone: customer.phone,
+            country: customer.country,
+            city: customer.primary_city,
+            industry: customer.industry,
+            webAddress: customer.web_address,
+          })),
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to add leads")
+      }
+
+      toast.success(`${result.addedCount}개의 리드가 고객그룹에 추가되었습니다`)
+      setRowSelection({})
+    } catch (error) {
+      console.error("Error adding to group:", error)
+      toast.error("고객그룹 추가에 실패했습니다")
+    } finally {
+      setIsAddingToGroup(false)
+    }
+  }, [selectedGroupId, rowSelection, customers])
+
+  // 선택된 리드 enrichment
+  const handleEnrichment = useCallback(async () => {
+    const selectedRowIds = Object.keys(rowSelection).filter(
+      (key) => rowSelection[key as keyof typeof rowSelection],
+    )
+
+    if (selectedRowIds.length === 0) {
+      toast.error("Enrichment할 리드를 선택해주세요")
+      return
+    }
+
+    // 선택된 고객 데이터 가져오기 (웹사이트가 있는 것만)
+    const selectedCustomers = customers
+      .filter((_, index) => selectedRowIds.includes(index.toString()))
+      .filter((c) => c.web_address)
+
+    if (selectedCustomers.length === 0) {
+      toast.error("웹사이트 정보가 있는 리드만 Enrichment 가능합니다")
+      return
+    }
+
+    setIsEnriching(true)
+    const customerIds = selectedCustomers.map((c) => c.id)
+    startEnrichment(customerIds)
+
+    await enrichLeads(
+      selectedCustomers.map((c) => ({
+        id: c.id,
+        webAddress: c.web_address || "",
+        companyName: c.company_name || "",
+      })),
+      {
+        onProgress: (completed, total, name) => {
+          setEnrichProgress({ current: completed + 1, total, name })
+        },
+        onResult: (leadId, result) => {
+          // 고객 정보 업데이트
+          updateCustomer(leadId, {
+            description: result.companyInfo.description,
+          })
+          finishEnrichment(leadId)
+        },
+        onError: (leadId, error) => {
+          console.error(`Enrichment failed for ${leadId}:`, error)
+          finishEnrichment(leadId, error)
+        },
+        onComplete: () => {
+          setIsEnriching(false)
+          setEnrichProgress({ current: 0, total: 0, name: "" })
+          toast.success(`${selectedCustomers.length}개 리드의 Enrichment가 완료되었습니다`)
+          setRowSelection({})
+        },
+      },
+    )
+  }, [rowSelection, customers, startEnrichment, finishEnrichment, updateCustomer])
+
   // 적합도 계산 완료 시 자동 정렬
   const hasSortedRef = useRef(false)
   const prevScoresCountRef = useRef(0)
@@ -302,13 +454,17 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             aria-label="Select all"
           />
         ),
-        cell: ({ row }) => (
-          <RowIndexCell
-            rowIndex={row.index + 1}
-            isSelected={row.getIsSelected()}
-            onToggle={(value) => row.toggleSelected(!!value)}
-          />
-        ),
+        cell: ({ row, table }) => {
+          // 정렬된 순서의 인덱스 계산
+          const sortedIndex = table.getRowModel().rows.findIndex((r) => r.id === row.id) + 1
+          return (
+            <RowIndexCell
+              rowIndex={sortedIndex}
+              isSelected={row.getIsSelected()}
+              onToggle={(value) => row.toggleSelected(!!value)}
+            />
+          )
+        },
         enableSorting: false,
         enableHiding: false,
         size: 50,
@@ -357,31 +513,6 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
               <ExternalLink className="h-3 w-3 flex-shrink-0" />
             </a>
           )
-        },
-      },
-      {
-        id: "name",
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-8 px-2 -ml-2"
-          >
-            Name
-            {column.getIsSorted() === "asc" ? (
-              <ArrowUp className="ml-2 h-4 w-4" />
-            ) : column.getIsSorted() === "desc" ? (
-              <ArrowDown className="ml-2 h-4 w-4" />
-            ) : (
-              <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />
-            )}
-          </Button>
-        ),
-        cell: ({ row }) => {
-          const firstName = row.original.first_name
-          const lastName = row.original.last_name
-          const fullName = [firstName, lastName].filter(Boolean).join(" ")
-          return <span>{fullName || "-"}</span>
         },
       },
       {
@@ -472,11 +603,45 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         },
       },
       {
-        accessorKey: "phone",
-        header: "Phone",
-        cell: ({ row }) => (
-          <span className="text-muted-foreground text-xs">{row.getValue("phone") || "-"}</span>
-        ),
+        accessorKey: "description",
+        header: "Description",
+        cell: ({ row }) => {
+          const description = row.getValue("description") as string | undefined
+          const isLoading = enrichmentState.loadingIds.has(row.original.id)
+
+          if (isLoading) {
+            return (
+              <div className="flex items-center gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">분석 중...</span>
+              </div>
+            )
+          }
+
+          if (!description) {
+            return <span className="text-muted-foreground text-xs">-</span>
+          }
+
+          return (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="text-xs line-clamp-2 max-w-[200px] text-left hover:text-primary cursor-pointer transition-colors"
+                >
+                  {description}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] max-h-[300px] overflow-y-auto" align="start">
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Company Description</h4>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )
+        },
+        size: 200,
       },
       {
         id: "fitScore",
@@ -487,7 +652,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="h-8 px-2 -ml-2"
           >
-            적합도
+            Fit Score
             {column.getIsSorted() === "asc" ? (
               <ArrowUp className="ml-2 h-4 w-4" />
             ) : column.getIsSorted() === "desc" ? (
@@ -539,7 +704,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         },
       },
     ],
-    [removeCustomer, fitScoreState],
+    [removeCustomer, fitScoreState, enrichmentState],
   )
 
   const table = useReactTable({
@@ -609,144 +774,70 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           >
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
-
-          {/* Filter 메뉴 */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1 hover:bg-accent hover:text-accent-foreground"
-              >
-                <Filter className="h-4 w-4" />
-                Filter
-                <ChevronDown className="h-3 w-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[200px]">
-              <DropdownMenuLabel>Filter by industry</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem checked>All</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Software & Internet</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Business Services</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Manufacturing</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Financial Services</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Healthcare</DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Sort 메뉴 */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1 hover:bg-accent hover:text-accent-foreground"
-              >
-                <SortAsc className="h-4 w-4" />
-                Sort
-                <ChevronDown className="h-3 w-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[200px]">
-              <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSorting([{ id: "company_name", desc: false }])}>
-                Company (A-Z)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSorting([{ id: "company_name", desc: true }])}>
-                Company (Z-A)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSorting([{ id: "industry", desc: false }])}>
-                Industry (A-Z)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSorting([{ id: "industry", desc: true }])}>
-                Industry (Z-A)
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSorting([])}>Clear sort</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Layout 메뉴 */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1 hover:bg-accent hover:text-accent-foreground"
-              >
-                <LayoutGrid className="h-4 w-4" />
-                Layout
-                <ChevronDown className="h-3 w-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[180px]">
-              <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Hamburger 메뉴 */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1 hover:bg-accent hover:text-accent-foreground"
-              >
-                <Menu className="h-4 w-4" />
-                <ChevronDown className="h-3 w-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[180px]">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Export CSV</DropdownMenuItem>
-              <DropdownMenuItem>Export Excel</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Select all</DropdownMenuItem>
-              <DropdownMenuItem>Clear selection</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Insert 메뉴 */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1 hover:bg-accent hover:text-accent-foreground"
-              >
-                <Plus className="h-4 w-4" />
-                Insert
-                <ChevronDown className="h-3 w-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[180px]">
-              <DropdownMenuLabel>Add new</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Add customer</DropdownMenuItem>
-              <DropdownMenuItem>Import from CSV</DropdownMenuItem>
-              <DropdownMenuItem>Bulk import</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
 
         <div className="flex items-center gap-2">
+          {/* 고객그룹 선택 및 추가 - 리드 선택 시 표시 */}
+          {Object.keys(rowSelection).length > 0 && (
+            <>
+              <span className="text-sm font-medium text-primary">
+                {Object.keys(rowSelection).length}개 선택
+              </span>
+              <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                <SelectTrigger className="h-8 w-[160px] text-sm">
+                  <SelectValue placeholder="고객그룹 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customerGroups.length > 0 ? (
+                    customerGroups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      고객그룹이 없습니다
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                className="h-8 gap-1"
+                onClick={handleAddToGroup}
+                disabled={isAddingToGroup || !selectedGroupId || customerGroups.length === 0}
+              >
+                {isAddingToGroup ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UserPlus className="h-4 w-4" />
+                )}
+                추가
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1"
+                onClick={handleEnrichment}
+                disabled={isEnriching}
+              >
+                {isEnriching ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {enrichProgress.total > 0
+                      ? `${enrichProgress.current}/${enrichProgress.total}`
+                      : "..."}
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Enrich
+                  </>
+                )}
+              </Button>
+            </>
+          )}
+
           <span className="text-sm text-muted-foreground">
             {table.getFilteredRowModel().rows.length} results
           </span>

@@ -1,4 +1,7 @@
+import { and, eq, sql } from "drizzle-orm"
 import Nylas from "nylas"
+import { db } from "../db"
+import { emailEvents, emails } from "../db/schema/emails"
 import logger from "../utils/logger"
 
 // Nylas configuration
@@ -27,7 +30,13 @@ export interface NylasGrantResponse {
 // Webhook Types
 // ============================================
 
-export type NylasWebhookEventType = "message.opened" | "message.link_clicked" | "thread.replied"
+export type NylasWebhookEventType =
+  | "message.send_success"
+  | "message.send_failed"
+  | "message.bounce_detected"
+  | "message.opened"
+  | "message.link_clicked"
+  | "thread.replied"
 
 export interface NylasWebhookPayload {
   specversion: string
@@ -38,7 +47,39 @@ export interface NylasWebhookPayload {
   data: {
     application_id: string
     grant_id: string
-    object: NylasOpenedData | NylasClickedData | NylasRepliedData
+    object:
+      | NylasSendSuccessData
+      | NylasSendFailedData
+      | NylasBounceDetectedData
+      | NylasOpenedData
+      | NylasClickedData
+      | NylasRepliedData
+  }
+}
+
+export interface NylasSendSuccessData {
+  message_id: string
+  schedule_id?: string
+  send_at?: number
+}
+
+export interface NylasSendFailedData {
+  message_id: string
+  error?: string
+  schedule_id?: string
+}
+
+export interface NylasBounceDetectedData {
+  bounce_reason: string
+  bounce_date: number
+  bounced_addresses: string
+  type: string
+  code: number
+  origin: {
+    to: string
+    from: string
+    subject: string
+    mime_id: string
   }
 }
 
@@ -192,6 +233,7 @@ export interface SendEmailOptions {
     contentDisposition?: string
   }>
   trackingLabel?: string // Optional label for tracking context (e.g., "workspace:123:lead:456")
+  disableTracking?: boolean // Set to true to disable tracking (required for trial accounts)
 }
 
 export interface SendEmailResult {
@@ -205,8 +247,18 @@ export interface SendEmailResult {
  * Supports CC, BCC, and attachments
  */
 export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
-  const { grantId, to, subject, body, cc, bcc, replyToMessageId, attachments, trackingLabel } =
-    options
+  const {
+    grantId,
+    to,
+    subject,
+    body,
+    cc,
+    bcc,
+    replyToMessageId,
+    attachments,
+    trackingLabel,
+    disableTracking,
+  } = options
 
   try {
     // Build request body
@@ -218,12 +270,16 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       subject,
       body,
       replyToMessageId,
-      trackingOptions: {
+    }
+
+    // Add tracking options unless disabled (trial accounts don't support tracking)
+    if (!disableTracking) {
+      requestBody.trackingOptions = {
         opens: true,
         links: true,
         threadReplies: true,
         label: trackingLabel,
-      },
+      }
     }
 
     // Add CC if provided
@@ -260,8 +316,8 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
     })
 
     logger.info(
-      { grantId, messageId: message.data?.id, trackingEnabled: true },
-      "Email sent via Nylas with tracking",
+      { grantId, messageId: message.data?.id, trackingEnabled: !disableTracking },
+      `Email sent via Nylas${disableTracking ? "" : " with tracking"}`,
     )
 
     return {
@@ -313,151 +369,406 @@ export async function createGoogleConnector(): Promise<void> {
 }
 
 // ============================================
+// Webhook Helper Functions
+// ============================================
+
+/**
+ * Find email by message ID (stored in sendgridMessageId field)
+ */
+async function findEmailByMessageId(messageId: string) {
+  const results = await db
+    .select({
+      id: emails.id,
+      status: emails.status,
+      sentAt: emails.sentAt,
+      leadId: emails.leadId,
+    })
+    .from(emails)
+    .where(eq(emails.sendgridMessageId, messageId))
+    .limit(1)
+  return results[0] || null
+}
+
+/**
+ * Detect automated opens (bots, security scanners)
+ */
+function isAutomatedOpen(recent?: { ip?: string; user_agent?: string }): boolean {
+  if (!recent) return false
+  const ip = recent.ip || ""
+  const microsoftATPIpPatterns = [
+    /^4\.182\./, // Azure ATP / Safe Links
+    /^57\.155\./, // Microsoft ATP
+    /^72\.145\./, // Defender for Office 365
+    /^48\.209\./, // Azure security services
+    /^4\.204\./, // Azure
+  ]
+  return microsoftATPIpPatterns.some((pattern) => pattern.test(ip))
+}
+
+/**
+ * Detect security scanner clicks
+ */
+function isSecurityScannerClick(recent?: { ip?: string; user_agent?: string }): boolean {
+  if (!recent) return false
+  const userAgent = recent.user_agent || ""
+  const ip = recent.ip || ""
+
+  const scannerPatterns = [
+    /Chrome\/130\.0\.0\.0/, // Microsoft ATP / Safe Links
+    /Chrome\/113\.0\.0\.0/, // Microsoft ATP (older)
+    /python-requests/i, // Python-based bots
+    /aiohttp/i, // Python async HTTP
+    /SCMGUARD/i, // Security scanners
+  ]
+  if (scannerPatterns.some((pattern) => pattern.test(userAgent))) return true
+
+  const ipPatterns = [/^57\.155\./, /^4\.182\./, /^72\.145\./, /^74\.240\./]
+  return ipPatterns.some((pattern) => pattern.test(ip))
+}
+
+/**
+ * Update sequence step execution status
+ */
+async function updateSequenceStepExecutionStatus(
+  emailId: string,
+  status: "delivered" | "failed",
+  errorMessage?: string,
+) {
+  try {
+    const { sequenceStepExecutions } = await import("../db/schema/sequences")
+
+    const executionResults = await db
+      .select({ id: sequenceStepExecutions.id })
+      .from(sequenceStepExecutions)
+      .where(eq(sequenceStepExecutions.emailId, emailId))
+      .limit(1)
+
+    if (executionResults.length > 0 && executionResults[0]) {
+      const { updateStepExecutionStatus } = await import("./sequence.service")
+      await updateStepExecutionStatus(executionResults[0].id, status, errorMessage)
+      logger.info({ emailId, status }, "Sequence step execution status updated")
+    }
+  } catch (error) {
+    logger.error({ error, emailId, status }, "Failed to update sequence step execution status")
+  }
+}
+
+/**
+ * Stop active sequence enrollments for a lead (when reply is received)
+ */
+async function stopActiveEnrollmentsForLead(leadId: string, webhookId: string) {
+  try {
+    const { sequenceEnrollments, sequenceStepExecutions } = await import("../db/schema/sequences")
+
+    // Find all active enrollments
+    const activeEnrollments = await db
+      .select({ id: sequenceEnrollments.id, sequenceId: sequenceEnrollments.sequenceId })
+      .from(sequenceEnrollments)
+      .where(and(eq(sequenceEnrollments.leadId, leadId), eq(sequenceEnrollments.status, "active")))
+
+    if (activeEnrollments.length === 0) return
+
+    logger.info(
+      { leadId, webhookId, count: activeEnrollments.length },
+      "Stopping active enrollments due to reply",
+    )
+
+    // Stop all active enrollments
+    await db
+      .update(sequenceEnrollments)
+      .set({
+        status: "stopped",
+        stoppedAt: new Date(),
+      })
+      .where(and(eq(sequenceEnrollments.leadId, leadId), eq(sequenceEnrollments.status, "active")))
+
+    // Skip pending step executions
+    for (const enrollment of activeEnrollments) {
+      await db
+        .update(sequenceStepExecutions)
+        .set({
+          status: "skipped",
+          errorMessage: "Skipped due to reply received",
+        })
+        .where(
+          and(
+            eq(sequenceStepExecutions.enrollmentId, enrollment.id),
+            eq(sequenceStepExecutions.status, "pending"),
+          ),
+        )
+    }
+
+    logger.info({ leadId, webhookId }, "Active enrollments stopped successfully")
+  } catch (error) {
+    logger.error({ error, leadId, webhookId }, "Failed to stop active enrollments")
+  }
+}
+
+// ============================================
 // Webhook Handlers
 // ============================================
 
 /**
- * Handle message.opened webhook event
+ * Handle message.send_success webhook event
  */
-function handleMessageOpened(data: NylasOpenedData, grantId: string, webhookId: string): void {
-  const latestOpen = data.recents[0]
+async function handleMessageSendSuccess(
+  data: NylasSendSuccessData,
+  _grantId: string,
+  webhookId: string,
+): Promise<void> {
+  const email = await findEmailByMessageId(data.message_id)
+  if (!email) {
+    logger.warn({ messageId: data.message_id, webhookId }, "Email not found for send_success")
+    return
+  }
+
+  await db
+    .update(emails)
+    .set({
+      status: "delivered",
+      deliveredAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(emails.id, email.id))
+
+  await db.insert(emailEvents).values({
+    emailId: email.id,
+    eventType: "delivered",
+    timestamp: new Date(),
+    rawEventData: data as unknown as Record<string, unknown>,
+  })
+
+  await updateSequenceStepExecutionStatus(email.id, "delivered")
+
+  logger.info({ emailId: email.id, webhookId }, "Nylas message.send_success processed")
+}
+
+/**
+ * Handle message.send_failed webhook event
+ */
+async function handleMessageSendFailed(
+  data: NylasSendFailedData,
+  _grantId: string,
+  webhookId: string,
+): Promise<void> {
+  const email = await findEmailByMessageId(data.message_id)
+  if (!email) {
+    logger.warn({ messageId: data.message_id, webhookId }, "Email not found for send_failed")
+    return
+  }
+
+  const errorMessage = data.error || "Send failed"
+
+  await db
+    .update(emails)
+    .set({
+      status: "failed",
+      errorMessage,
+      updatedAt: new Date(),
+    })
+    .where(eq(emails.id, email.id))
+
+  await db.insert(emailEvents).values({
+    emailId: email.id,
+    eventType: "dropped",
+    timestamp: new Date(),
+    rawEventData: data as unknown as Record<string, unknown>,
+  })
+
+  await updateSequenceStepExecutionStatus(email.id, "failed", errorMessage)
 
   logger.info(
-    {
-      webhookId,
-      grantId,
-      messageId: data.message_id,
-      openCount: data.message_data.count,
-      timestamp: new Date(data.message_data.timestamp * 1000).toISOString(),
-      recentOpensCount: data.recents.length,
-      latestOpenIp: latestOpen?.ip,
-      latestOpenUserAgent: latestOpen?.user_agent,
-      label: data.label,
-    },
-    "Nylas webhook: Email opened",
+    { emailId: email.id, webhookId, error: errorMessage },
+    "Nylas message.send_failed processed",
   )
+}
 
-  // TODO: Implement DB operations when integrating with main system
-  // const email = await db.query.emails.findFirst({
-  //   where: eq(emails.nylasMessageId, data.message_id)
-  // })
-  // if (email) {
-  //   await db.update(emails)
-  //     .set({
-  //       openCount: data.message_data.count,
-  //       openedAt: new Date(data.message_data.timestamp * 1000),
-  //       status: "opened"
-  //     })
-  //     .where(eq(emails.id, email.id))
-  //
-  //   // Store individual open events
-  //   await db.insert(emailEvents).values({
-  //     emailId: email.id,
-  //     eventType: "open",
-  //     timestamp: new Date(data.message_data.timestamp * 1000),
-  //     ipAddress: latestOpen?.ip,
-  //     userAgent: latestOpen?.user_agent,
-  //     rawEventData: data,
-  //   })
-  // }
+/**
+ * Handle message.bounce_detected webhook event
+ */
+async function handleMessageBounceDetected(
+  data: NylasBounceDetectedData,
+  _grantId: string,
+  webhookId: string,
+): Promise<void> {
+  // Find email by origin.mime_id (the original message ID)
+  const email = await findEmailByMessageId(data.origin?.mime_id || "")
+  if (!email) {
+    logger.warn({ mimeId: data.origin?.mime_id, webhookId }, "Email not found for bounce_detected")
+    return
+  }
+
+  const isHardBounce = data.code >= 500 && data.code < 600
+
+  await db
+    .update(emails)
+    .set({
+      status: "bounced",
+      bounceType: isHardBounce ? "hard" : "soft",
+      bounceReason: data.bounce_reason,
+      updatedAt: new Date(),
+    })
+    .where(eq(emails.id, email.id))
+
+  await db.insert(emailEvents).values({
+    emailId: email.id,
+    eventType: "bounce",
+    timestamp: new Date(data.bounce_date * 1000),
+    bounceType: isHardBounce ? "hard" : "soft",
+    bounceReason: data.bounce_reason,
+    rawEventData: data as unknown as Record<string, unknown>,
+  })
+
+  await updateSequenceStepExecutionStatus(email.id, "failed", `Bounced: ${data.bounce_reason}`)
+
+  logger.info(
+    { emailId: email.id, webhookId, bounceType: isHardBounce ? "hard" : "soft" },
+    "Nylas bounce processed",
+  )
+}
+
+/**
+ * Handle message.opened webhook event
+ */
+async function handleMessageOpened(
+  data: NylasOpenedData,
+  _grantId: string,
+  webhookId: string,
+): Promise<void> {
+  const email = await findEmailByMessageId(data.message_id)
+  if (!email) {
+    logger.warn({ messageId: data.message_id, webhookId }, "Email not found for message.opened")
+    return
+  }
+
+  const recentOpen = data.recents?.[0]
+  const possiblyBot = isAutomatedOpen(recentOpen)
+
+  // Always record the event
+  await db.insert(emailEvents).values({
+    emailId: email.id,
+    eventType: "open",
+    timestamp: new Date(data.message_data.timestamp * 1000),
+    ipAddress: recentOpen?.ip,
+    userAgent: recentOpen?.user_agent,
+    rawEventData: data as unknown as Record<string, unknown>,
+    possiblyBot,
+  })
+
+  // Update email status only if not bot
+  if (!possiblyBot) {
+    await db
+      .update(emails)
+      .set({
+        status: "opened",
+        openedAt: new Date(data.message_data.timestamp * 1000),
+        openCount: sql`${emails.openCount} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(emails.id, email.id))
+
+    logger.info(
+      { emailId: email.id, webhookId, openCount: data.message_data.count },
+      "Nylas open processed",
+    )
+  } else {
+    logger.info({ emailId: email.id, webhookId }, "Nylas open skipped (bot detected)")
+  }
 }
 
 /**
  * Handle message.link_clicked webhook event
  */
-function handleLinkClicked(data: NylasClickedData, grantId: string, webhookId: string): void {
-  const latestClick = data.recents[0]
-  const totalClicks = data.link_data.reduce((sum, link) => sum + link.count, 0)
+async function handleLinkClicked(
+  data: NylasClickedData,
+  _grantId: string,
+  webhookId: string,
+): Promise<void> {
+  const email = await findEmailByMessageId(data.message_id)
+  if (!email) {
+    logger.warn({ messageId: data.message_id, webhookId }, "Email not found for link_clicked")
+    return
+  }
 
-  logger.info(
-    {
-      webhookId,
-      grantId,
-      messageId: data.message_id,
-      totalClicks,
-      linksClicked: data.link_data.map((l) => ({ url: l.url, count: l.count })),
-      recentClicksCount: data.recents.length,
-      latestClickIp: latestClick?.ip,
-      latestClickUserAgent: latestClick?.user_agent,
-      latestClickUrl: data.link_data[Number(latestClick?.link_index)]?.url,
-      label: data.label,
-    },
-    "Nylas webhook: Link clicked",
-  )
+  const recentClick = data.recents?.[0]
+  const possiblyBot = isSecurityScannerClick(recentClick)
 
-  // TODO: Implement DB operations when integrating with main system
-  // const email = await db.query.emails.findFirst({
-  //   where: eq(emails.nylasMessageId, data.message_id)
-  // })
-  // if (email) {
-  //   await db.update(emails)
-  //     .set({
-  //       clickCount: sql`click_count + 1`,
-  //       clickedAt: coalesce(emails.clickedAt, new Date(latestClick.timestamp * 1000)),
-  //       status: "clicked"
-  //     })
-  //     .where(eq(emails.id, email.id))
-  //
-  //   // Store click event
-  //   await db.insert(emailEvents).values({
-  //     emailId: email.id,
-  //     eventType: "click",
-  //     timestamp: new Date(latestClick.timestamp * 1000),
-  //     ipAddress: latestClick?.ip,
-  //     userAgent: latestClick?.user_agent,
-  //     url: data.link_data[Number(latestClick?.link_index)]?.url,
-  //     rawEventData: data,
-  //   })
-  // }
+  // Record event for each link clicked
+  for (const link of data.link_data || []) {
+    await db.insert(emailEvents).values({
+      emailId: email.id,
+      eventType: "click",
+      timestamp: new Date(data.timestamp * 1000),
+      url: link.url,
+      ipAddress: recentClick?.ip,
+      userAgent: recentClick?.user_agent,
+      rawEventData: data as unknown as Record<string, unknown>,
+      possiblyBot,
+    })
+  }
+
+  // Update email status only if not bot
+  if (!possiblyBot) {
+    await db
+      .update(emails)
+      .set({
+        status: "clicked",
+        clickedAt: new Date(data.timestamp * 1000),
+        clickCount: sql`${emails.clickCount} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(emails.id, email.id))
+
+    logger.info(
+      { emailId: email.id, webhookId, urls: data.link_data?.map((l) => l.url) },
+      "Nylas click processed",
+    )
+  } else {
+    logger.info({ emailId: email.id, webhookId }, "Nylas click skipped (bot detected)")
+  }
 }
 
 /**
  * Handle thread.replied webhook event
  */
-function handleThreadReplied(data: NylasRepliedData, grantId: string, webhookId: string): void {
-  logger.info(
-    {
-      webhookId,
-      grantId,
-      messageId: data.message_id,
-      rootMessageId: data.root_message_id,
-      threadId: data.thread_id,
-      replyCount: data.reply_data.count,
-      timestamp: new Date(data.timestamp * 1000).toISOString(),
-      label: data.label,
-    },
-    "Nylas webhook: Thread replied",
-  )
+async function handleThreadReplied(
+  data: NylasRepliedData,
+  _grantId: string,
+  webhookId: string,
+): Promise<void> {
+  const email = await findEmailByMessageId(data.root_message_id)
+  if (!email) {
+    logger.warn(
+      { rootMessageId: data.root_message_id, webhookId },
+      "Email not found for thread.replied",
+    )
+    return
+  }
 
-  // TODO: Implement DB operations when integrating with main system
-  // const originalEmail = await db.query.emails.findFirst({
-  //   where: eq(emails.nylasMessageId, data.root_message_id)
-  // })
-  // if (originalEmail) {
-  //   await db.update(emails)
-  //     .set({
-  //       repliedAt: new Date(data.timestamp * 1000),
-  //       status: "replied"
-  //     })
-  //     .where(eq(emails.id, originalEmail.id))
-  //
-  //   // Create email_replies record
-  //   await db.insert(emailReplies).values({
-  //     workspaceId: originalEmail.workspaceId,
-  //     originalEmailId: originalEmail.id,
-  //     // replyEmailId will be set when we fetch the actual reply message
-  //   })
-  //
-  //   // Stop any active sequences for this lead
-  //   // await sequenceService.stopEnrollmentOnReply(originalEmail.leadId, originalEmail.sequenceId)
-  // }
+  // Update email repliedAt
+  await db
+    .update(emails)
+    .set({
+      repliedAt: new Date(data.timestamp * 1000),
+      updatedAt: new Date(),
+    })
+    .where(eq(emails.id, email.id))
+
+  logger.info({ emailId: email.id, webhookId, threadId: data.thread_id }, "Nylas reply detected")
+
+  // CRITICAL: Stop active sequence enrollments for this lead
+  if (email.leadId) {
+    await stopActiveEnrollmentsForLead(email.leadId, webhookId)
+  }
 }
 
 /**
  * Process incoming Nylas webhook event
  * Routes to appropriate handler based on event type
  */
-export function processNylasWebhook(payload: NylasWebhookPayload): { success: boolean } {
+export async function processNylasWebhook(
+  payload: NylasWebhookPayload,
+): Promise<{ success: boolean }> {
   const { type, id: webhookId, data } = payload
   const { grant_id: grantId, object } = data
 
@@ -473,16 +784,28 @@ export function processNylasWebhook(payload: NylasWebhookPayload): { success: bo
 
   try {
     switch (type) {
+      case "message.send_success":
+        await handleMessageSendSuccess(object as NylasSendSuccessData, grantId, webhookId)
+        break
+
+      case "message.send_failed":
+        await handleMessageSendFailed(object as NylasSendFailedData, grantId, webhookId)
+        break
+
+      case "message.bounce_detected":
+        await handleMessageBounceDetected(object as NylasBounceDetectedData, grantId, webhookId)
+        break
+
       case "message.opened":
-        handleMessageOpened(object as NylasOpenedData, grantId, webhookId)
+        await handleMessageOpened(object as NylasOpenedData, grantId, webhookId)
         break
 
       case "message.link_clicked":
-        handleLinkClicked(object as NylasClickedData, grantId, webhookId)
+        await handleLinkClicked(object as NylasClickedData, grantId, webhookId)
         break
 
       case "thread.replied":
-        handleThreadReplied(object as NylasRepliedData, grantId, webhookId)
+        await handleThreadReplied(object as NylasRepliedData, grantId, webhookId)
         break
 
       default:

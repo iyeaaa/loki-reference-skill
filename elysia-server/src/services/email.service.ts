@@ -435,6 +435,7 @@ This email contains confidential information that is protected by law or under t
   ): Promise<{
     success: boolean
     messageId?: string
+    sendgridMessageId?: string
     nylasMessageId?: string
     error?: string
   }> {
@@ -501,6 +502,9 @@ This email contains confidential information that is protected by law or under t
         replyToMessageId: data.inReplyTo,
         attachments: nylasAttachments,
         trackingLabel: data.workspaceId,
+
+        // Disable tracking for now ( until google oauth application satisfied inproduction rules )
+        disableTracking: true,
       })
 
       if (!result.success) {
@@ -518,6 +522,7 @@ This email contains confidential information that is protected by law or under t
       return {
         success: true,
         messageId: generatedMessageId,
+        sendgridMessageId: result.messageId, // Store Nylas messageId in sendgridMessageId for webhook matching
         nylasMessageId: result.messageId,
       }
     } catch (error) {

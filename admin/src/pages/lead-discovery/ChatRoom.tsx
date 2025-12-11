@@ -5,6 +5,7 @@
  * - 스트리밍 메시지 분리
  */
 
+import { motion } from "framer-motion"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import {
   ArrowRight,
@@ -1142,21 +1143,40 @@ export function ChatRoom() {
                         </div>
                       ) : (
                         <div className="w-full space-y-4">
-                          {/* LangGraph 진행 상태 표시 - 웹사이트 분석 중일 때만 (선택 후에는 표시 안 함) */}
-                          {message.id === streamingState.messageId &&
-                            streamingState.status !== "idle" &&
-                            streamingState.status !== "complete" &&
-                            streamingState.status !== "waiting_selection" &&
-                            !streamingState.selectedRecommendationId && (
-                              <LeadDiscoveryProgress
-                                status={streamingState.status}
-                                message={streamingState.message}
-                                mode={streamingState.mode}
-                                analyzedPages={streamingState.analyzedPages}
-                                customerAnalysisSummary={streamingState.customerAnalysisSummary}
-                                className="max-w-2xl"
-                              />
-                            )}
+                          {/* LangGraph 진행 상태 표시 */}
+                          {message.id === streamingState.messageId && (
+                            <>
+                              {/* 웹사이트 분석 중일 때 (선택 후에는 표시 안 함) */}
+                              {streamingState.status !== "idle" &&
+                                streamingState.status !== "complete" &&
+                                streamingState.status !== "waiting_selection" &&
+                                !streamingState.selectedRecommendationId && (
+                                  <LeadDiscoveryProgress
+                                    status={streamingState.status}
+                                    message={streamingState.message}
+                                    mode={streamingState.mode}
+                                    analyzedPages={streamingState.analyzedPages}
+                                    customerAnalysisSummary={streamingState.customerAnalysisSummary}
+                                    className="max-w-2xl"
+                                  />
+                                )}
+
+                              {/* 선택 후 검색 중 로딩 UI */}
+                              {isSearching && streamingState.selectedRecommendationId && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.3 }}
+                                  className="flex items-center gap-3 py-4"
+                                >
+                                  <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                                  <span className="text-base text-muted-foreground">
+                                    선택하신 타겟에 맞는 바이어를 찾고 있어요
+                                  </span>
+                                </motion.div>
+                              )}
+                            </>
+                          )}
 
                           {/* 메시지 콘텐츠 (검색 결과 등 - 분석 리포트는 BuyerRecommendationCards 내부에서 표시) */}
                           {message.content && (
@@ -1183,9 +1203,6 @@ export function ChatRoom() {
                                 analysisSummary={streamingState.analysisSummary}
                                 className="max-w-2xl"
                                 isLoadingRecommendations={streamingState.status === "recommending"}
-                                isSearchingAfterSelection={
-                                  isSearching && !!streamingState.selectedRecommendationId
-                                }
                                 isAnalysisComplete={
                                   isWaitingSelection ||
                                   streamingState.status === "complete" ||

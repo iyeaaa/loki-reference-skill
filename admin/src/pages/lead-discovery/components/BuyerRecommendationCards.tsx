@@ -90,8 +90,6 @@ interface BuyerRecommendationCardsProps {
   className?: string
   /** 바이어 추천 로딩 중 여부 */
   isLoadingRecommendations?: boolean
-  /** 바이어 선택 후 검색 중 여부 */
-  isSearchingAfterSelection?: boolean
   /** 분석 완료 여부 */
   isAnalysisComplete?: boolean
   /** 분석 중 여부 (스트리밍 중) */
@@ -106,7 +104,6 @@ export function BuyerRecommendationCards({
   analysisSummary,
   className,
   isLoadingRecommendations = false,
-  isSearchingAfterSelection = false,
   isAnalysisComplete = false,
   isAnalyzing = false,
 }: BuyerRecommendationCardsProps) {
@@ -296,21 +293,6 @@ export function BuyerRecommendationCards({
               )
             })}
           </div>
-
-          {/* 선택 후 검색 중 로딩 UI */}
-          {isSearchingAfterSelection && hasSelection && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="flex items-center gap-3 py-4"
-            >
-              <Loader2 className="h-5 w-5 text-primary animate-spin" />
-              <span className="text-base text-muted-foreground">
-                선택하신 타겟에 맞는 바이어를 찾고 있어요
-              </span>
-            </motion.div>
-          )}
         </>
       )}
     </div>

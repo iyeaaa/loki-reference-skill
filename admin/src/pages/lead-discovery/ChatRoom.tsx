@@ -180,6 +180,22 @@ export function ChatRoom() {
       console.log("[ChatRoom] Lead discovery results:", totalCount)
       const customers = convertResultsToCustomers(results)
       addCustomers(customers)
+
+      // "원하는 조건으로 찾기" 모드에서 FitScore 계산을 위해 selectedTarget 자동 설정
+      if (results.length > 0) {
+        const firstResult = results[0]
+        if (firstResult?.country || firstResult?.mainIndustry) {
+          setSelectedTarget({
+            country: firstResult.country || "All",
+            industry: firstResult.mainIndustry || "All",
+            subIndustry: firstResult.subIndustry || undefined,
+          })
+          console.log("[ChatRoom] Auto-set selectedTarget from results:", {
+            country: firstResult.country,
+            industry: firstResult.mainIndustry,
+          })
+        }
+      }
     },
     onComplete: (data) => {
       // 스트리밍 메시지를 완료된 메시지로 변환

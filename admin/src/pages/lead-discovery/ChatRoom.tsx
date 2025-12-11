@@ -103,6 +103,30 @@ export function ChatRoom() {
   // 워크스페이스
   const { selectedWorkspace } = useWorkspace()
 
+  // 페이지 로드 시 미완성된 빈 assistant 메시지 정리 (마운트 시 한 번만 실행)
+  const cleanupIncompleteMessagesRef = useRef(false)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally run only on mount
+  useEffect(() => {
+    if (cleanupIncompleteMessagesRef.current) return
+    cleanupIncompleteMessagesRef.current = true
+
+    // 스트리밍이 진행 중이 아닌데 빈 assistant 메시지가 있으면 제거
+    const incompleteMessages = messages.filter(
+      (m) => m.role === "assistant" && !m.content && m.id !== streamingState.messageId,
+    )
+    if (incompleteMessages.length > 0 && streamingState.status === "idle") {
+      const validMessages = messages.filter((m) => !(m.role === "assistant" && !m.content))
+      if (validMessages.length !== messages.length) {
+        // 로컬스토리지 직접 업데이트
+        const toStore = validMessages.map((msg) => ({
+          ...msg,
+          timestamp: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : msg.timestamp,
+        }))
+        localStorage.setItem("lead-discovery-chat-messages", JSON.stringify(toStore))
+      }
+    }
+  }, [])
+
   // BigQuery 결과를 Customer 형식으로 변환
   const convertResultsToCustomers = useCallback((results: BigQueryResult[]): Customer[] => {
     return results.map((r, idx) => ({
@@ -223,28 +247,7 @@ export function ChatRoom() {
         : ""
 
       setStreamingState((prev) => {
-        // 분석 결과를 첫 번째 메시지(analysisMessageId)에 포함
-        if (prev.analysisMessageId) {
-          const cleanAnalysis = prev.analysisSummary ? stripCodeFences(prev.analysisSummary) : ""
-          const cleanCustomerAnalysis = prev.customerAnalysisSummary
-            ? stripCodeFences(prev.customerAnalysisSummary)
-            : ""
-
-          const analysisPart = cleanAnalysis
-            ? `### 📊 웹사이트 분석 리포트\n\n${cleanAnalysis}\n\n`
-            : ""
-          const customerAnalysisPart = cleanCustomerAnalysis
-            ? `### 👥 잠재 바이어 분석 리포트\n\n${cleanCustomerAnalysis}\n\n`
-            : ""
-
-          if (analysisPart || customerAnalysisPart) {
-            updateMessage(prev.analysisMessageId, {
-              content: `${analysisPart}${customerAnalysisPart}`,
-            })
-          }
-        }
-
-        // 검색 결과를 두 번째 메시지(messageId)에 포함
+        // 검색 결과를 응답 메시지(messageId)에 포함
         if (prev.messageId) {
           updateMessage(prev.messageId, {
             content: `${recInfo}**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.`,
@@ -676,22 +679,24 @@ export function ChatRoom() {
         return
       }
 
+      const now = Date.now()
+
       // 선택 메시지 추가
       const selectMessage: ChatMessage = {
-        id: `msg-${Date.now()}-select`,
+        id: `msg-${now}-select`,
         role: "user",
         content: `${rec.country} / ${rec.industry} 선택`,
-        timestamp: new Date(),
+        timestamp: new Date(now),
       }
       addMessage(selectMessage)
 
-      // 새 응답 메시지 추가
-      const responseId = `msg-${Date.now()}-response`
+      // 새 응답 메시지 추가 (1ms 후의 timestamp로 순서 보장)
+      const responseId = `msg-${now + 1}-response`
       const responseMessage: ChatMessage = {
         id: responseId,
         role: "assistant",
         content: "",
-        timestamp: new Date(),
+        timestamp: new Date(now + 1),
       }
       addMessage(responseMessage)
 
@@ -700,7 +705,7 @@ export function ChatRoom() {
         ...prev,
         messageId: responseId,
         status: "searching",
-        message: "선택한 타겟으로 검색 중...",
+        message: "검색 쿼리를 준비하고 있어요",
         progress: 65,
         selectedRecommendationId: rec.id, // 선택된 추천 ID 저장 (카드 유지)
         // recommendations, analysisSummary, analyzedPages 유지
@@ -740,12 +745,13 @@ export function ChatRoom() {
         return
       }
 
+      const now = Date.now()
       const userInput = input.trim()
       const userMessage: ChatMessage = {
-        id: `msg-${Date.now()}`,
+        id: `msg-${now}`,
         role: "user",
         content: userInput,
-        timestamp: new Date(),
+        timestamp: new Date(now),
       }
 
       console.log("[ChatRoom] Adding user message:", userMessage.id)
@@ -757,11 +763,11 @@ export function ChatRoom() {
       if (!selectedWorkspace?.id || selectedWorkspace.id === "all") {
         console.log("[ChatRoom] No workspace selected")
         const errorMessage: ChatMessage = {
-          id: `msg-${Date.now()}-error`,
+          id: `msg-${now + 1}-error`,
           role: "assistant",
           content:
             "워크스페이스를 먼저 선택해주세요.\n\n상단에서 워크스페이스를 선택하면 바로 시작할 수 있어요.",
-          timestamp: new Date(),
+          timestamp: new Date(now + 1),
         }
         addMessage(errorMessage)
         return
@@ -772,13 +778,13 @@ export function ChatRoom() {
         workspaceId: selectedWorkspace.id,
       })
 
-      // 빈 assistant 메시지 먼저 추가 (스트리밍용)
-      const assistantMessageId = `msg-${Date.now()}-response`
+      // 빈 assistant 메시지 먼저 추가 (스트리밍용) - 1ms 후의 timestamp로 순서 보장
+      const assistantMessageId = `msg-${now + 1}-response`
       const assistantMessage: ChatMessage = {
         id: assistantMessageId,
         role: "assistant",
         content: "",
-        timestamp: new Date(),
+        timestamp: new Date(now + 1),
       }
       addMessage(assistantMessage)
 
@@ -1112,11 +1118,12 @@ export function ChatRoom() {
                   .slice()
                   .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
                   .filter((message) => {
-                    // 빈 assistant 메시지는 스트리밍 메시지가 아닐 때만 필터링
+                    // 빈 assistant 메시지는 스트리밍 메시지 또는 분석 메시지가 아닐 때만 필터링
                     if (
                       message.role === "assistant" &&
                       !message.content &&
-                      message.id !== streamingState.messageId
+                      message.id !== streamingState.messageId &&
+                      message.id !== streamingState.analysisMessageId
                     ) {
                       return false
                     }
@@ -1136,11 +1143,12 @@ export function ChatRoom() {
                         </div>
                       ) : (
                         <div className="w-full space-y-4">
-                          {/* LangGraph 진행 상태 표시 - 스트리밍 중일 때만 */}
+                          {/* LangGraph 진행 상태 표시 - 웹사이트 분석 중일 때만 (선택 후에는 표시 안 함) */}
                           {message.id === streamingState.messageId &&
                             streamingState.status !== "idle" &&
                             streamingState.status !== "complete" &&
-                            streamingState.status !== "waiting_selection" && (
+                            streamingState.status !== "waiting_selection" &&
+                            !streamingState.selectedRecommendationId && (
                               <LeadDiscoveryProgress
                                 status={streamingState.status}
                                 message={streamingState.message}
@@ -1151,6 +1159,15 @@ export function ChatRoom() {
                                 className="max-w-2xl"
                               />
                             )}
+
+                          {/* 메시지 콘텐츠 (검색 결과 등 - 분석 리포트는 BuyerRecommendationCards 내부에서 표시) */}
+                          {message.content && (
+                            <div className="prose prose-sm max-w-none dark:prose-invert text-base">
+                              <ReactMarkdown components={markdownComponents}>
+                                {message.content}
+                              </ReactMarkdown>
+                            </div>
+                          )}
 
                           {/* 바이어 추천 선택 UI - 첫 번째 응답 메시지에 표시 (선택 후에도 유지) */}
                           {message.id === streamingState.analysisMessageId &&
@@ -1172,15 +1189,6 @@ export function ChatRoom() {
                                 }
                               />
                             )}
-
-                          {/* 메시지 콘텐츠 */}
-                          {message.content && (
-                            <div className="prose prose-sm max-w-none dark:prose-invert text-base">
-                              <ReactMarkdown components={markdownComponents}>
-                                {message.content}
-                              </ReactMarkdown>
-                            </div>
-                          )}
 
                           {message.customersAdded && message.customersAdded.length > 0 && (
                             <div className="mt-2 pt-2 border-t border-border/50">

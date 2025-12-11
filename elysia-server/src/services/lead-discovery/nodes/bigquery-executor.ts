@@ -795,8 +795,9 @@ export async function executeBigQuery(
       }
     }
 
-    // 셔플 후 첫 5개 회사명 로그 (디버깅용)
-    const first5 = combinedResults.slice(0, 5).map((r) => r.companyName || "unknown")
+    // 셔플 후 100개로 제한
+    const limitedResults = combinedResults.slice(0, 100)
+    const first5 = limitedResults.slice(0, 5).map((r) => r.companyName || "unknown")
     leadDiscoveryLogger.info(`[셔플 후] 첫 5개: ${first5.join(", ")}`)
     const totalCount = b2bTotal + crunchbaseTotal + apolloTotal
     const combinedSql = `-- B2B Leads:\n${b2bSql}\n\n-- Crunchbase:\n${crunchbaseSql}\n\n-- Apollo:\n${apolloSql}`
@@ -809,9 +810,9 @@ export async function executeBigQuery(
     leadDiscoveryLogger.info(`  - Crunchbase: ${crunchbaseTotal.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - Apollo: ${apolloTotal.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - 총 결과: ${totalCount.toLocaleString()}개`)
-    leadDiscoveryLogger.info(`  - 반환 결과: ${combinedResults.length}개 (랜덤 셔플됨)`)
+    leadDiscoveryLogger.info(`  - 반환 결과: ${limitedResults.length}개 (랜덤 셔플, 100개 제한)`)
     leadDiscoveryLogger.info(`  - 소요시간: ${(duration / 1000).toFixed(1)}초`)
-    leadDiscoveryLogger.bigQueryExecutionComplete(duration, combinedResults.length, totalCount)
+    leadDiscoveryLogger.bigQueryExecutionComplete(duration, limitedResults.length, totalCount)
 
     if (emitter) {
       emitter.progress("executeBigQuery", `${totalCount.toLocaleString()}개 리드를 찾았어요`, 80)
@@ -820,7 +821,7 @@ export async function executeBigQuery(
     // 고객군 분석 없이 바로 결과 반환
     if (emitter) {
       emitter.nodeComplete("executeBigQuery", `${totalCount.toLocaleString()}개 리드 검색 완료`, {
-        resultCount: combinedResults.length,
+        resultCount: limitedResults.length,
         totalCount: totalCount,
         b2bCount: b2bTotal,
         crunchbaseCount: crunchbaseTotal,
@@ -829,7 +830,7 @@ export async function executeBigQuery(
     }
 
     leadDiscoveryLogger.nodeSuccess("executeBigQuery", duration, {
-      resultCount: combinedResults.length,
+      resultCount: limitedResults.length,
       totalCount: totalCount,
       b2bCount: b2bTotal,
       crunchbaseCount: crunchbaseTotal,
@@ -837,7 +838,7 @@ export async function executeBigQuery(
     })
 
     return {
-      searchResults: combinedResults,
+      searchResults: limitedResults,
       totalResultCount: totalCount,
       bigQuerySQL: combinedSql,
       bigQueryExplanation: `B2B: ${b2bTotal}개, Crunchbase: ${crunchbaseTotal}개, Apollo: ${apolloTotal}개`,

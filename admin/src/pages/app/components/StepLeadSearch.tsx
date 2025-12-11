@@ -34,6 +34,7 @@ export function StepLeadSearch() {
   const [savedLeadIds, setSavedLeadIds] = useState<string[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [savingComplete, setSavingComplete] = useState(false)
   const [searchComplete, setSearchComplete] = useState(false)
   const [progress, setProgress] = useState(0)
   const [statusMessage, setStatusMessage] = useState("")
@@ -124,23 +125,45 @@ export function StepLeadSearch() {
     return parts.join(" ") || "international business buyers"
   }, [companyInfo])
 
-  // Save leads to database (memoized to avoid useEffect dependency issues)
+  // Save leads to database with customer group (memoized to avoid useEffect dependency issues)
   const saveLeadsToDatabase = useCallback(
     async (leadsToSave: Lead[]) => {
       if (!workspace?.id || leadsToSave.length === 0) return []
 
       setIsSaving(true)
       try {
+        // Step 1: Create a customer group for demo leads
+        const groupName = isKorean
+          ? `데모 리드 그룹 (${new Date().toLocaleDateString("ko-KR")})`
+          : `Demo Leads Group (${new Date().toLocaleDateString("en-US")})`
+
+        const groupResponse = await apiFetch<{ id: string }>("/api/v1/customer-groups", {
+          method: "POST",
+          body: JSON.stringify({
+            workspaceId: workspace.id,
+            name: groupName,
+            description: isKorean
+              ? "온보딩 과정에서 발견한 데모 리드"
+              : "Demo leads discovered during onboarding",
+            createdBy: userId,
+          }),
+        })
+
+        const customerGroupId = groupResponse.id
+        console.log("Created customer group:", customerGroupId)
+
+        // Step 2: Create leads with customerGroupId so they get added to the group
         const response = await apiFetch<BulkCreateLeadsResponse>("/api/v1/leads/bulk", {
           method: "POST",
           body: JSON.stringify({
             workspaceId: workspace.id,
             createdBy: userId,
+            customerGroupId, // This links leads to the group
             leads: leadsToSave.map((lead) => ({
               companyName: lead.companyName,
-              email: lead.email || undefined,
-              locationCountry: lead.country || undefined,
-              primaryIndustry: lead.industry || undefined,
+              primaryEmail: lead.email || undefined, // Must be primaryEmail for leadContacts
+              country: lead.country || undefined,
+              businessType: lead.industry || undefined,
               leadStatus: "new",
               leadSource: "lead_discovery",
             })),
@@ -149,10 +172,17 @@ export function StepLeadSearch() {
 
         const createdIds = response.leads.map((l) => l.id)
         setSavedLeadIds(createdIds)
+        setSavingComplete(true)
+
+        // Save customerGroupId to sessionStorage for later steps
+        sessionStorage.setItem("onboarding_customer_group_id", customerGroupId)
+
         return createdIds
       } catch (error) {
         console.error("Failed to save leads:", error)
         toast.error(isKorean ? "리드 저장에 실패했습니다" : "Failed to save leads")
+        // Even on failure, allow proceeding with local IDs
+        setSavingComplete(true)
         return []
       } finally {
         setIsSaving(false)
@@ -309,7 +339,7 @@ export function StepLeadSearch() {
                 <Button
                   onClick={handleNext}
                   className="bg-blue-600 hover:bg-blue-700"
-                  disabled={savedLeadIds.length === 0}
+                  disabled={!savingComplete || isSaving}
                 >
                   {t("app.onboarding.step1.nextButton", "다음 단계")}
                   <ArrowRight className="w-4 h-4 ml-2" />

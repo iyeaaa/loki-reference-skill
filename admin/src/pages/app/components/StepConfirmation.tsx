@@ -33,6 +33,7 @@ export function StepConfirmation() {
   const [, setSearchParams] = useSearchParams()
   const [isExecuting, setIsExecuting] = useState(false)
   const [executionComplete, setExecutionComplete] = useState(false)
+  const [executionError, setExecutionError] = useState<string | null>(null)
   const [executionProgress, setExecutionProgress] = useState(0)
   const [executionStatus, setExecutionStatus] = useState("")
 
@@ -107,14 +108,11 @@ export function StepConfirmation() {
       console.log("Enrollment result:", enrollResult)
       setExecutionProgress(60)
 
-      // Step 2: Activate the sequence (80%)
+      // Step 2: Activate the step-based sequence (80%)
       setExecutionStatus(isKorean ? "시퀀스 활성화 중..." : "Activating sequence...")
 
-      await apiFetch(`/api/v1/sequences/${sequenceInfo.id}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          status: "active",
-        }),
+      await apiFetch(`/api/v1/sequences/${sequenceInfo.id}/activate-step-based`, {
+        method: "POST",
       })
 
       setExecutionProgress(100)
@@ -135,7 +133,14 @@ export function StepConfirmation() {
       }, 2000)
     } catch (error) {
       console.error("Failed to execute sequence:", error)
-      toast.error(isKorean ? "시퀀스 실행에 실패했습니다" : "Failed to execute sequence")
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : isKorean
+            ? "시퀀스 실행에 실패했습니다"
+            : "Failed to execute sequence"
+      toast.error(errorMessage)
+      setExecutionError(errorMessage)
       setIsExecuting(false)
       setExecutionProgress(0)
       setExecutionStatus("")
@@ -215,6 +220,35 @@ export function StepConfirmation() {
                 {isKorean ? "대시보드로 이동합니다..." : "Redirecting to dashboard..."}
               </p>
               <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (executionError) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Card>
+          <CardContent className="pt-12 pb-10 px-8">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-6">
+                <Rocket className="w-10 h-10 text-red-500" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                {isKorean ? "시퀀스 실행 실패" : "Sequence Execution Failed"}
+              </h2>
+              <p className="text-gray-500 mb-6">{executionError}</p>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setExecutionError(null)}>
+                  {isKorean ? "다시 시도" : "Try Again"}
+                </Button>
+                <Button onClick={handleSkipToDashboard} className="bg-blue-600 hover:bg-blue-700">
+                  {isKorean ? "대시보드로 이동" : "Go to Dashboard"}
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

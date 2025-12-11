@@ -44,13 +44,17 @@ export function StepEmailGeneration() {
   const workspace = userWorkspaces?.[0]
   const isKorean = i18n.language === "ko"
 
-  // Get leads and company info from session storage (memoized)
+  // Get leads, company info, and customer group ID from session storage (memoized)
   const leads = useMemo<Lead[]>(
     () => JSON.parse(sessionStorage.getItem("onboarding_leads") || "[]"),
     [],
   )
   const companyInfo = useMemo(
     () => JSON.parse(sessionStorage.getItem("onboarding_company_info") || "{}"),
+    [],
+  )
+  const customerGroupId = useMemo(
+    () => sessionStorage.getItem("onboarding_customer_group_id") || "",
     [],
   )
 
@@ -63,7 +67,7 @@ export function StepEmailGeneration() {
     setError(null)
 
     try {
-      // Step 1: Create a demo sequence (20%)
+      // Step 1: Create a demo sequence with customerGroupId (20%)
       setProgress(20)
       const sequenceResponse = await apiFetch<Sequence>("/api/v1/sequences", {
         method: "POST",
@@ -73,7 +77,8 @@ export function StepEmailGeneration() {
           description: isKorean
             ? "온보딩에서 생성된 데모 시퀀스"
             : "Demo sequence created during onboarding",
-          status: "draft", // Use draft to skip customerGroupId requirement
+          status: customerGroupId ? "ready" : "draft", // Use ready if we have a group
+          customerGroupId: customerGroupId || undefined, // Link to customer group
           createdBy: userId,
           selectedLeadIds: leads.map((l) => l.id),
         }),
@@ -158,7 +163,7 @@ export function StepEmailGeneration() {
     } finally {
       setIsGenerating(false)
     }
-  }, [workspace?.id, leads, companyInfo, isKorean, userId])
+  }, [workspace?.id, leads, companyInfo, isKorean, userId, customerGroupId])
 
   // Start generation on mount
   useEffect(() => {

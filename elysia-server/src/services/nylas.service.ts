@@ -5,7 +5,7 @@ import logger from "../utils/logger"
 const NYLAS_CLIENT_ID = process.env.NYLAS_CLIENT_ID || ""
 const NYLAS_API_URI = process.env.NYLAS_API_URI || "https://api.us.nylas.com"
 const NYLAS_API_KEY = process.env.NYLAS_API_KEY || ""
-const NYLAS_REDIRECT_URI = process.env.NYLAS_REDIRECT_URI || "http://localhost:5173/app?step=5"
+const NYLAS_REDIRECT_URI = process.env.NYLAS_REDIRECT_URI || "http://localhost:5173/app/redirect"
 
 // Initialize Nylas client
 const nylas = new Nylas({

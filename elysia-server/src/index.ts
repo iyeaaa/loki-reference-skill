@@ -30,6 +30,7 @@ import { leadImportRoutes } from "./routes/lead-import.routes"
 import { adminLeadRoutes, leadRoutes } from "./routes/leads.routes"
 import { nylasRoutes } from "./routes/nylas.routes"
 import { openaiApiKeysRoutes } from "./routes/openai-api-keys.routes"
+import { salesStrategyRoutes, workspaceSalesStrategyRoutes } from "./routes/sales-strategies.routes"
 import { adminSequenceRoutes, sequenceRoutes } from "./routes/sequences.routes"
 import { sseTestRoutes } from "./routes/sse-test.routes"
 import { adminUserRoutes, userRoutes } from "./routes/users.routes"
@@ -175,6 +176,8 @@ const app = new Elysia()
   .use(leadEnrichmentRoutes)
   .use(nylasRoutes)
   .use(leadDiscoveryRoutes)
+  .use(salesStrategyRoutes)
+  .use(workspaceSalesStrategyRoutes)
 
   .listen(config.port)
 

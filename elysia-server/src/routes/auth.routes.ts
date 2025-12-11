@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia"
 import * as authService from "../services/auth.service"
 import * as oauthService from "../services/oauth.service"
+import * as salesStrategyService from "../services/sales-strategy.service"
 import * as userService from "../services/user.service"
 import * as workspaceService from "../services/workspace.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
@@ -233,13 +234,34 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 
         // Create workspace with onboarding params for trial users
         try {
-          await workspaceService.createWorkspace({
+          const workspace = await workspaceService.createWorkspace({
             name: `${newUser.username}의 워크스페이스`,
             description: "기본 워크스페이스",
             ownerId: newUser.id,
             isActive: true,
-            rawResearchOutput: { industry, target, country, experience, lang },
           })
+
+          // Link sales strategy if all 4 fields are provided
+          if (workspace && industry && target && country && experience) {
+            try {
+              await salesStrategyService.findOrCreateAndLinkSalesStrategy(workspace.id, {
+                industry: industry as
+                  | "manufacturing"
+                  | "it_saas"
+                  | "beauty"
+                  | "food"
+                  | "fashion"
+                  | "electronics"
+                  | "healthcare"
+                  | "guitar",
+                target: target as "b2b" | "b2c" | "both",
+                country: country as "jp" | "us" | "sea" | "eu" | "cn" | "ae",
+                experience: experience as "none" | "some" | "experienced",
+              })
+            } catch (strategyError) {
+              console.error("Failed to link sales strategy for email user:", strategyError)
+            }
+          }
         } catch (wsError) {
           console.error("Failed to create default workspace for email user:", wsError)
           // Don't throw error here to avoid breaking user registration

@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { and, count, desc, eq, ilike, isNotNull, ne, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emailReplies, emails } from "../db/schema/emails"
@@ -13,6 +13,7 @@ import {
   unregisterWorkflowProgressCallback,
 } from "../shared/mastra/shell/workflows/onboarding-enrichment/onboarding-enrichment"
 import logger from "../utils/logger"
+import * as salesStrategyService from "./sales-strategy.service"
 
 // ====================================
 // WORKSPACE CRUD OPERATIONS
@@ -157,6 +158,174 @@ export async function createWorkspace(data: {
   return newWorkspace
 }
 
+// ====================================
+// ENRICHMENT CACHING HELPERS
+// ====================================
+
+// Normalize URL for consistent comparison
+function normalizeWebsiteUrl(url: string): string {
+  let normalized = url.trim().toLowerCase()
+  if (!normalized.startsWith("http://") && !normalized.startsWith("https://")) {
+    normalized = `https://${normalized}`
+  }
+  // Remove trailing slash
+  normalized = normalized.replace(/\/+$/, "")
+  return normalized
+}
+
+// Find workspace by website URL (for caching enrichment data)
+export async function findWorkspaceByWebsite(websiteUrl: string, excludeWorkspaceId?: string) {
+  const normalizedUrl = normalizeWebsiteUrl(websiteUrl)
+  // Extract domain without protocol for flexible matching
+  const domainOnly = normalizedUrl.replace(/^https?:\/\//, "")
+
+  const conditions = []
+
+  // Build conditions based on whether we have an excludeWorkspaceId
+  if (excludeWorkspaceId) {
+    conditions.push(
+      and(
+        or(
+          eq(workspaces.companyWebsite, normalizedUrl),
+          sql`LOWER(${workspaces.companyWebsite}) LIKE ${`%${domainOnly}%`}`,
+        ),
+        isNotNull(workspaces.websiteAnalysis),
+        ne(workspaces.id, excludeWorkspaceId),
+      ),
+    )
+  } else {
+    conditions.push(
+      and(
+        or(
+          eq(workspaces.companyWebsite, normalizedUrl),
+          sql`LOWER(${workspaces.companyWebsite}) LIKE ${`%${domainOnly}%`}`,
+        ),
+        isNotNull(workspaces.websiteAnalysis),
+      ),
+    )
+  }
+
+  const result = await db.select().from(workspaces).where(conditions[0]).limit(1)
+
+  return result[0] || null
+}
+
+// Copy enrichment data and products from source workspace to target workspace
+async function copyEnrichmentFromWorkspace(
+  sourceWorkspaceId: string,
+  targetWorkspaceId: string,
+): Promise<void> {
+  // Get source workspace
+  const sourceWorkspace = await getWorkspaceOnlyById(sourceWorkspaceId)
+  if (!sourceWorkspace) {
+    throw new Error("Source workspace not found")
+  }
+
+  // Get target workspace to preserve some fields
+  const targetWorkspace = await getWorkspaceOnlyById(targetWorkspaceId)
+  if (!targetWorkspace) {
+    throw new Error("Target workspace not found")
+  }
+
+  // Copy enrichment fields
+  await updateWorkspace(targetWorkspaceId, {
+    name: targetWorkspace.name,
+    isActive: targetWorkspace.isActive,
+    companyName: sourceWorkspace.companyName ?? undefined,
+    industry: sourceWorkspace.industry ?? undefined,
+    companySize: sourceWorkspace.companySize ?? undefined,
+    companyDescription: sourceWorkspace.companyDescription ?? undefined,
+    websiteAnalysis: sourceWorkspace.websiteAnalysis ?? undefined,
+    targetAudiences: (sourceWorkspace.targetAudiences as string[] | null) ?? undefined,
+    expansionGoals: (sourceWorkspace.expansionGoals as string[] | null) ?? undefined,
+    competitiveAdvantages: (sourceWorkspace.competitiveAdvantages as string[] | null) ?? undefined,
+    rawResearchOutput: sourceWorkspace.rawResearchOutput ?? undefined,
+  })
+
+  // Delete existing products from target
+  await deleteWorkspaceProducts(targetWorkspaceId)
+
+  // Get source products
+  const sourceProducts = await listWorkspaceProducts(sourceWorkspaceId)
+
+  // Copy products to target
+  await Promise.all(
+    sourceProducts.map((product) =>
+      createWorkspaceProduct({
+        workspaceId: targetWorkspaceId,
+        name: product.name ?? undefined,
+        description: product.description ?? undefined,
+        category: product.category ?? undefined,
+        features: (product.features as string[] | null) ?? undefined,
+        priceRange: product.priceRange ?? undefined,
+        targetAudience: product.targetAudience ?? undefined,
+        imageUrl: product.imageUrl ?? undefined,
+      }),
+    ),
+  )
+
+  logger.info(
+    {
+      sourceWorkspaceId,
+      targetWorkspaceId,
+      productsCopied: sourceProducts.length,
+    },
+    "✅ [ENRICHMENT-CACHE] Copied enrichment data and products from cached workspace",
+  )
+}
+
+// Build OnboardingEnrichmentOutput from workspace data (for cached enrichment)
+function buildEnrichmentOutputFromWorkspace(
+  workspace: NonNullable<Awaited<ReturnType<typeof getWorkspaceOnlyById>>>,
+): OnboardingEnrichmentOutput {
+  const websiteAnalysis = workspace.websiteAnalysis as {
+    company: {
+      name: string
+      description: string
+      industries: string[]
+      size: string
+      location: string
+      foundedYear: string
+      website: string
+      logo: string
+    }
+    products: Array<{
+      name: string
+      description: string
+      category: string
+      features: string[]
+      priceRange: string
+      targetAudience: string
+      image: string
+    }>
+  } | null
+
+  return {
+    companyAndProducts: websiteAnalysis || {
+      company: {
+        name: workspace.companyName || "",
+        description: workspace.companyDescription || "",
+        industries: workspace.industry ? [workspace.industry] : [],
+        size: workspace.companySize || "",
+        location: "",
+        foundedYear: "",
+        website: workspace.companyWebsite || "",
+        logo: "",
+      },
+      products: [],
+    },
+    business: {
+      business: {
+        targetMarkets: (workspace.targetAudiences as string[]) || [],
+        expansionGoals: (workspace.expansionGoals as string[]) || [],
+        keywords: [],
+        competitiveAdvantages: (workspace.competitiveAdvantages as string[]) || [],
+      },
+    },
+    rawOutput: (workspace.rawResearchOutput as string) || "",
+  }
+}
+
 export async function onboardingEnrichment({
   workspaceId,
   websiteUrl,
@@ -164,6 +333,28 @@ export async function onboardingEnrichment({
   workspaceId: string
   websiteUrl: string
 }) {
+  // Normalize the URL
+  const normalizedUrl = normalizeWebsiteUrl(websiteUrl)
+
+  // Check for cached enrichment from another workspace
+  const cachedWorkspace = await findWorkspaceByWebsite(normalizedUrl, workspaceId)
+
+  if (cachedWorkspace) {
+    logger.info(
+      { workspaceId, cachedWorkspaceId: cachedWorkspace.id, websiteUrl: normalizedUrl },
+      "🔄 [ONBOARDING-ENRICHMENT] Found cached enrichment, copying data",
+    )
+
+    await copyEnrichmentFromWorkspace(cachedWorkspace.id, workspaceId)
+
+    logger.info(
+      { workspaceId, cachedWorkspaceId: cachedWorkspace.id },
+      "✅ [ONBOARDING-ENRICHMENT] Copied enrichment data from cached workspace",
+    )
+    return
+  }
+
+  // No cache found, proceed with normal workflow
   const workflow = mastra.getWorkflow("onboardingEnrichmentWorkflow")
 
   if (!workflow) {
@@ -256,7 +447,7 @@ export async function onboardingEnrichment({
     targetAudiences: result.business.business.targetMarkets,
     expansionGoals: result.business.business.expansionGoals,
     competitiveAdvantages: result.business.business.competitiveAdvantages,
-    rawResearchOutput: result.rawOutput,
+    rawResearchOutput: { content: result.rawOutput },
   })
 
   // populate company description if empty or doesn't exist
@@ -268,7 +459,7 @@ export async function onboardingEnrichment({
       targetAudiences: result.business.business.targetMarkets,
       expansionGoals: result.business.business.expansionGoals,
       competitiveAdvantages: result.business.business.competitiveAdvantages,
-      rawResearchOutput: result.rawOutput,
+      rawResearchOutput: { content: result.rawOutput },
       companyDescription: result.companyAndProducts.company.description,
     })
   }
@@ -375,6 +566,45 @@ export async function onboardingEnrichmentStreaming({
     logger.info("[ENRICH-STREAM] Sending progress: starting")
     onProgress("starting", "Starting company analysis...")
 
+    // Normalize the URL
+    const normalizedUrl = normalizeWebsiteUrl(websiteUrl)
+
+    // Check for cached enrichment from another workspace
+    const cachedWorkspace = await findWorkspaceByWebsite(normalizedUrl, workspaceId)
+
+    if (cachedWorkspace) {
+      logger.info(
+        { workspaceId, cachedWorkspaceId: cachedWorkspace.id },
+        "🔄 [ENRICH-STREAM] Found cached enrichment",
+      )
+
+      // Emit progress events for cached path
+      onProgress("researching", "Loading cached company research...")
+      onProgress("extracting_company", "Loading cached company data...")
+      onProgress("extracting_market", "Loading cached market analysis...")
+      onProgress("saving", "Copying enrichment data...")
+
+      await copyEnrichmentFromWorkspace(cachedWorkspace.id, workspaceId)
+
+      // Generate strategies
+      onProgress("strategizing", "Generating sales strategies...")
+
+      // Build enrichment output from cached workspace
+      const enrichmentOutput = buildEnrichmentOutputFromWorkspace(cachedWorkspace)
+      const strategies = await generateStrategiesFromEnrichment(workspaceId, enrichmentOutput)
+
+      onStrategies(strategies)
+
+      logger.info(
+        { workspaceId, cachedWorkspaceId: cachedWorkspace.id, strategiesCount: strategies.length },
+        "✅ [ENRICH-STREAM] Completed with cached enrichment data",
+      )
+
+      onDone({ enrichment: enrichmentOutput, strategies })
+      return
+    }
+
+    // No cache found, proceed with normal workflow
     const workflow = mastra.getWorkflow("onboardingEnrichmentWorkflow")
 
     if (!workflow) {
@@ -449,7 +679,7 @@ export async function onboardingEnrichmentStreaming({
       targetAudiences: result.business.business.targetMarkets,
       expansionGoals: result.business.business.expansionGoals,
       competitiveAdvantages: result.business.business.competitiveAdvantages,
-      rawResearchOutput: result.rawOutput,
+      rawResearchOutput: { content: result.rawOutput },
     })
 
     const [deletedProducts] = await Promise.all([
@@ -481,8 +711,8 @@ export async function onboardingEnrichmentStreaming({
     logger.info("[ENRICH-STREAM] Sending progress: strategizing")
     onProgress("strategizing", "Generating sales strategies...")
 
-    // Generate strategies from enrichment data
-    const strategies = generateStrategiesFromEnrichment(result)
+    // Generate strategies from enrichment data or fetch from linked sales strategy
+    const strategies = await generateStrategiesFromEnrichment(workspaceId, result)
 
     onStrategies(strategies)
 
@@ -509,8 +739,44 @@ export async function onboardingEnrichmentStreaming({
   }
 }
 
-// Generate sales strategies from enrichment data
-function generateStrategiesFromEnrichment(enrichment: OnboardingEnrichmentOutput): SalesStrategy[] {
+// Generate sales strategies from enrichment data or fetch from linked sales strategy
+async function generateStrategiesFromEnrichment(
+  workspaceId: string,
+  enrichment: OnboardingEnrichmentOutput,
+): Promise<SalesStrategy[]> {
+  // First, check if there's a linked sales strategy with strategies data
+  try {
+    const linkedStrategies = await salesStrategyService.getWorkspaceSalesStrategies(workspaceId)
+
+    if (linkedStrategies.length > 0) {
+      // Check the first linked strategy for strategies field
+      const linkedSalesStrategy = linkedStrategies[0]?.salesStrategy
+      if (
+        linkedSalesStrategy?.strategies &&
+        Array.isArray(linkedSalesStrategy.strategies) &&
+        linkedSalesStrategy.strategies.length > 0
+      ) {
+        // TODO: Return linked sales strategy data when DB field mapping is ready
+        // The strategies field structure needs to match SalesStrategy[] interface
+        logger.info(
+          { workspaceId, strategiesCount: linkedSalesStrategy.strategies.length },
+          "Found linked sales strategy with data, but returning dummy data for now (DB field mapping not ready)",
+        )
+      }
+    }
+  } catch (error) {
+    logger.error(
+      { error, workspaceId },
+      "Error fetching linked sales strategies, falling back to generated data",
+    )
+  }
+
+  // No linked strategy with data found, generate dummy data
+  logger.info(
+    { workspaceId },
+    "No linked sales strategy with data found, generating strategies from enrichment",
+  )
+
   const targetMarkets = enrichment.business.business.targetMarkets
   const company = enrichment.companyAndProducts.company
 

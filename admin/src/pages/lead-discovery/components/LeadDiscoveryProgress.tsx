@@ -456,7 +456,6 @@ interface LeadDiscoveryProgressProps {
   message: string
   mode?: "basic" | "advanced"
   analyzedPages?: AnalyzedPage[]
-  analysisSummary?: string
   customerAnalysisSummary?: string
   className?: string
 }
@@ -466,7 +465,6 @@ export function LeadDiscoveryProgress({
   message,
   mode,
   analyzedPages = [],
-  analysisSummary = "",
   customerAnalysisSummary = "",
   className,
 }: LeadDiscoveryProgressProps) {
@@ -575,13 +573,6 @@ export function LeadDiscoveryProgress({
 
       {/* iframe 프리뷰 - analyzing 상태에서만 현재 페이지 하나만 표시 */}
       <CurrentPagePreview pages={analyzedPages} isAnalyzing={isAnalyzing} />
-
-      {/* AI 분석 요약 스트리밍 텍스트 - 항상 표시 */}
-      <StreamingAnalysisSummary
-        text={analysisSummary}
-        isStreaming={isAnalyzing}
-        title="웹사이트 분석 리포트"
-      />
 
       {/* 분석 완료된 페이지 목록 - analyzing 이후에 표시 */}
       <AnalyzedPagesSummary pages={analyzedPages} isAnalyzing={isAnalyzing} />

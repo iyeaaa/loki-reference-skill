@@ -92,6 +92,10 @@ interface BuyerRecommendationCardsProps {
   isLoadingRecommendations?: boolean
   /** 바이어 선택 후 검색 중 여부 */
   isSearchingAfterSelection?: boolean
+  /** 분석 완료 여부 */
+  isAnalysisComplete?: boolean
+  /** 분석 중 여부 (스트리밍 중) */
+  isAnalyzing?: boolean
 }
 
 export function BuyerRecommendationCards({
@@ -103,22 +107,27 @@ export function BuyerRecommendationCards({
   className,
   isLoadingRecommendations = false,
   isSearchingAfterSelection = false,
+  isAnalysisComplete = false,
+  isAnalyzing = false,
 }: BuyerRecommendationCardsProps) {
   // 코드 펜스 제거 처리
   const cleanAnalysisSummary = analysisSummary ? stripCodeFences(analysisSummary) : ""
 
-  // 분석 리포트 접기/펼치기 상태
-  const [isReportExpanded, setIsReportExpanded] = useState(true)
+  // 분석 리포트 접기/펼치기 상태 (기본: 접힌 상태)
+  const [isReportExpanded, setIsReportExpanded] = useState(false)
 
-  // 로딩 중이 아니고 추천이 없으면 null 반환
-  if (!isLoadingRecommendations && recommendations.length === 0) return null
+  // 분석 중이 아니고, 로딩 중이 아니고, 추천도 없으면 null 반환
+  if (!isAnalyzing && !isLoadingRecommendations && recommendations.length === 0) return null
 
   const hasSelection = !!selectedId
 
+  // 분석 리포트 표시 여부 (스트리밍 중이거나 완료 후)
+  const showAnalysisReport = cleanAnalysisSummary && (isAnalyzing || isAnalysisComplete)
+
   return (
     <div className={cn("space-y-4", className)}>
-      {/* AI 분석 요약 - 접기/펼치기 가능 */}
-      {cleanAnalysisSummary && (
+      {/* AI 분석 요약 - 스트리밍 중이거나 완료 후 표시, 접기/펼치기 가능 */}
+      {showAnalysisReport && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -133,6 +142,28 @@ export function BuyerRecommendationCards({
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium text-foreground">웹사이트 분석 리포트</span>
+              {!isReportExpanded && (
+                <span
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
+                    isAnalyzing
+                      ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                      : "bg-primary/10 text-primary",
+                  )}
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      분석 중
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3 h-3" />
+                      분석 완료
+                    </>
+                  )}
+                </span>
+              )}
             </div>
             <ChevronDown
               className={cn(
@@ -163,8 +194,8 @@ export function BuyerRecommendationCards({
         </motion.div>
       )}
 
-      {/* 로딩 중일 때 로딩 UI 표시 */}
-      {isLoadingRecommendations && recommendations.length === 0 ? (
+      {/* 추천 로딩 중일 때 로딩 UI 표시 */}
+      {isLoadingRecommendations && recommendations.length === 0 && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -176,7 +207,10 @@ export function BuyerRecommendationCards({
             웹사이트를 분석한 정보를 기반으로 최적의 바이어 타겟을 찾고 있어요
           </span>
         </motion.div>
-      ) : (
+      )}
+
+      {/* 추천이 있을 때만 헤더와 카드 표시 (분석 중일 때는 표시 안 함) */}
+      {recommendations.length > 0 && (
         <>
           {/* 헤더 */}
           <div className="flex items-center gap-2">

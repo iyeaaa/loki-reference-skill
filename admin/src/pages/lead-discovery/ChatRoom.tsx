@@ -1106,7 +1106,6 @@ export function ChatRoom() {
                         message={streamingState.message}
                         mode={streamingState.mode}
                         analyzedPages={streamingState.analyzedPages}
-                        analysisSummary={streamingState.analysisSummary}
                         customerAnalysisSummary={streamingState.customerAnalysisSummary}
                         className="max-w-2xl"
                       />
@@ -1154,7 +1153,6 @@ export function ChatRoom() {
                                 message={streamingState.message}
                                 mode={streamingState.mode}
                                 analyzedPages={streamingState.analyzedPages}
-                                analysisSummary={streamingState.analysisSummary}
                                 customerAnalysisSummary={streamingState.customerAnalysisSummary}
                                 className="max-w-2xl"
                               />
@@ -1169,9 +1167,10 @@ export function ChatRoom() {
                             </div>
                           )}
 
-                          {/* 바이어 추천 선택 UI - 첫 번째 응답 메시지에 표시 (선택 후에도 유지) */}
+                          {/* 바이어 추천 선택 UI - 첫 번째 응답 메시지에 표시 (분석 중, 추천 중, 선택 후 모두 유지) */}
                           {message.id === streamingState.analysisMessageId &&
-                            (streamingState.status === "recommending" ||
+                            (streamingState.status === "analyzing" ||
+                              streamingState.status === "recommending" ||
                               streamingState.status === "complete" ||
                               (streamingState.recommendations.length > 0 &&
                                 (isWaitingSelection ||
@@ -1186,6 +1185,15 @@ export function ChatRoom() {
                                 isLoadingRecommendations={streamingState.status === "recommending"}
                                 isSearchingAfterSelection={
                                   isSearching && !!streamingState.selectedRecommendationId
+                                }
+                                isAnalysisComplete={
+                                  isWaitingSelection ||
+                                  streamingState.status === "complete" ||
+                                  !!streamingState.selectedRecommendationId
+                                }
+                                isAnalyzing={
+                                  streamingState.status === "analyzing" ||
+                                  streamingState.status === "recommending"
                                 }
                               />
                             )}

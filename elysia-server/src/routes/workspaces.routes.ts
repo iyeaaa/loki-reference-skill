@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia"
 import * as workspaceService from "../services/workspace.service"
-import { errorResponse, ResponseCode } from "../types/response.types"
+import { errorResponse, ResponseCode, successResponse } from "../types/response.types"
+import { createSSEResponse } from "../utils/sse-helper"
 
 const workspaceSchema = t.Object({
   name: t.String({ minLength: 1, maxLength: 255 }),
@@ -131,6 +132,113 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
         id: t.String({ format: "uuid" }),
       }),
       body: updateWorkspaceSchema,
+    },
+  )
+
+  // Trigger onboarding enrichment for a workspace
+  .post(
+    "/:id/enrich",
+    async ({ params: { id }, body, set }) => {
+      const { websiteUrl } = body
+
+      // Validate workspace exists
+      const workspace = await workspaceService.getWorkspaceOnlyById(id)
+      if (!workspace) {
+        set.status = 404
+        return errorResponse("워크스페이스를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      }
+
+      // Ensure URL has protocol
+      const normalizedUrl = websiteUrl.startsWith("http") ? websiteUrl : `https://${websiteUrl}`
+
+      // Start enrichment (fire-and-forget)
+      workspaceService.onboardingEnrichment({
+        workspaceId: id,
+        websiteUrl: normalizedUrl,
+      })
+
+      return successResponse({ started: true }, "Enrichment started")
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      body: t.Object({
+        websiteUrl: t.String(),
+      }),
+    },
+  )
+
+  // Trigger onboarding enrichment with streaming progress and strategy generation
+  .post(
+    "/:id/enrichAndStrategize",
+    async ({ params: { id }, body, set }) => {
+      const { websiteUrl } = body
+
+      // Validate workspace exists
+      const workspace = await workspaceService.getWorkspaceOnlyById(id)
+      if (!workspace) {
+        set.status = 404
+        return errorResponse("워크스페이스를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      }
+
+      // Ensure URL has protocol
+      const normalizedUrl = websiteUrl.startsWith("http") ? websiteUrl : `https://${websiteUrl}`
+
+      // Return SSE stream with progress updates
+      return createSSEResponse(
+        async (session) => {
+          try {
+            await workspaceService.onboardingEnrichmentStreaming({
+              workspaceId: id,
+              websiteUrl: normalizedUrl,
+              onProgress: (step, message) => {
+                session.push({
+                  event: "progress",
+                  data: { step, message },
+                })
+              },
+              onStrategies: (strategies) => {
+                session.push({
+                  event: "strategies",
+                  data: { strategies },
+                })
+              },
+              onDone: (result) => {
+                session.push({
+                  event: "done",
+                  data: result,
+                })
+              },
+              onError: (error) => {
+                session.push({
+                  event: "error",
+                  data: { message: error },
+                })
+              },
+            })
+          } catch (error) {
+            session.push({
+              event: "error",
+              data: {
+                message: error instanceof Error ? error.message : "Unknown error occurred",
+              },
+            })
+          }
+        },
+        {
+          keepAlive: true,
+          keepAliveInterval: 15000,
+        },
+      )
+    },
+    {
+      params: t.Object({
+        id: t.String({ format: "uuid" }),
+      }),
+      body: t.Object({
+        websiteUrl: t.String(),
+      }),
     },
   )
 

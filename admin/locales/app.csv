@@ -1,0 +1,64 @@
+key,ko,en
+sidebar.companyInfo,회사 정보,Company Information
+sidebar.logout,로그아웃,Logout
+companyInfo.title,회사 정보,Company Information
+companyInfo.placeholder,회사 정보가 여기에 표시됩니다.,Company information will be displayed here.
+welcome.next,다음,Next
+welcome.finish,완료,Finish
+welcome.step1.title,RINDA에 오신 것을 환영합니다!,Welcome to RINDA!
+welcome.step1.description,AI가 자동으로 해외 바이어를 찾아 판매합니다. 해외 영업의 복잡함은 RINDA에게 맡기세요.,AI automatically finds overseas buyers and sells to them. Leave the complexities of overseas sales to RINDA.
+welcome.step2.title,스마트 리드 발굴,Smart Lead Discovery
+welcome.step2.description,AI가 수백만 명의 잠재 바이어를 분석하여 귀사에 가장 적합한 바이어를 찾아드립니다.,Our AI analyzes millions of potential buyers to find the perfect match for your business.
+welcome.step3.title,3단계로 시작해 볼까요,Let's start with 3 steps
+welcome.step3.description,1. 이메일 연동 → 2. 회사 정보 입력 → 3. 영업 전략 선택. 단 5분이면 모든 것을 완료할 수 있습니다.,1. Link your email → 2. Enter your company information → 3. Select a sales strategy. Everything can be done in just 5 minutes.
+onboarding.step1.label,이메일 연동,Email Integration
+onboarding.step2.label,회사 정보,Company Info
+onboarding.step3.label,전략 선택,Strategy Selection
+onboarding.step1.title,이메일 계정을 연동해주세요,Please link your email account
+onboarding.step1.description,RINDA가 바이어에게 이메일을 보내고 답장을 관리할 수 있어요,RINDA can send emails to buyers and manage replies
+onboarding.step1.googleButton,Google 계정으로 연동하기,Link with Google account
+onboarding.step1.loading,연동 중...,Connecting...
+onboarding.step1.error,인증 URL을 가져오는데 실패했습니다. 다시 시도해주세요.,Failed to get auth URL. Please try again.
+onboarding.step1.linkedTitle,이메일 계정이 연동되었습니다,Email account connected
+onboarding.step1.linkedDescription,아래 계정으로 이메일을 발송합니다,Emails will be sent from the account below
+onboarding.step1.default,기본,Default
+onboarding.step1.statusActive,활성,Active
+onboarding.step1.addMore,다른 이메일 계정 추가,Add another email account
+onboarding.step1.nextButton,다음 단계로,Next step
+onboarding.step1.deleteAccount,계정 삭제,Delete account
+onboarding.step1.deleteConfirm,이 이메일 계정을 삭제하시겠습니까?,Are you sure you want to delete this email account?
+onboarding.step1.deleting,삭제 중...,Deleting...
+onboarding.step3.placeholder,전략 선택 - 준비 중,Strategy selection - Coming soon
+onboarding.back,이전,Before
+onboarding.step2.title,회사 정보를 알려주세요,Please tell me your company information
+onboarding.step2.description,RINDA가 맞춤형 영업 메시지를 작성하는 데 사용합니다.,RINDA uses it to create customized sales messages.
+onboarding.step2.websiteLabel,웹사이트 주소,Website address
+onboarding.step2.websiteHint,웹사이트를 분석하여 정보를 자동으로 입력합니다.,We analyze your website and automatically fill in the information.
+onboarding.step2.autofill,자동 입력,Autofill
+onboarding.step2.companyNameLabel,회사명,Company name
+onboarding.step2.companyNamePlaceholder,예: 테크솔루션 주식회사,Example: Tech Solution Co. Ltd.
+onboarding.step2.productsLabel,판매 제품/서비스,Products/Services for Sale
+onboarding.step2.productsPlaceholder,예: 산업용 IoT 센서,Example: Industrial IoT sensors
+onboarding.step2.aboutLabel,회사 소개,About the company
+onboarding.step2.aboutPlaceholder,해외 바이어에게 소개하고 싶은 내용을 자유롭게 작성해 주세요.,Please feel free to write about what you would like to introduce to overseas buyers.
+onboarding.step2.nextButton,다음 단계,Next step
+onboarding.step2.saving,저장 중...,Saving...
+redirect.connecting,이메일 계정을 연동하는 중...,Connecting your email account...
+redirect.error,이메일 연동에 실패했습니다. 다시 시도해주세요.,Failed to connect email. Please try again.
+onboarding.step1.deleteError,이메일 계정 삭제에 실패했습니다,Failed to delete email account
+onboarding.step1.deleteSuccess,이메일 계정이 삭제되었습니다,Email account deleted successfully
+onboarding.step2.analyzing,회사 분석 중...,Analyzing your company...
+onboarding.step2.analyzingDescription,회사 정보를 조사하고 영업 전략을 생성하고 있습니다.,We're researching your company and generating sales strategies.
+onboarding.step2.progress.starting,분석 시작,Starting analysis
+onboarding.step2.progress.researching,회사 조사 중,Researching company
+onboarding.step2.progress.extracting_company,회사 정보 추출 중,Extracting company info
+onboarding.step2.progress.extracting_market,시장 분석 중,Analyzing markets
+onboarding.step2.progress.merging,데이터 처리 중,Processing data
+onboarding.step2.progress.saving,결과 저장 중,Saving results
+onboarding.step2.progress.strategizing,전략 생성 중,Generating strategies
+onboarding.step2.analysisComplete,분석 완료!,Analysis complete!
+onboarding.step2.analysisCompleteDescription,회사 분석이 완료되었습니다. 다음 단계로 진행하세요.,Your company analysis is ready. Proceed to the next step.
+onboarding.step2.submitButton,제출,Submit
+onboarding.step2.backToForm,정보 수정,Edit Info
+onboarding.step2.viewProgress,진행 상황 보기,View Progress
+onboarding.step2.aiActivity,[NO TRANSLATION] app.onboarding.step2.aiActivity,[NO TRANSLATION] app.onboarding.step2.aiActivity

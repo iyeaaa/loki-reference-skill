@@ -35,10 +35,10 @@ export const userEmailAccounts = pgTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
 
-    // SendGrid email configuration
+    // SendGrid Or Nylas Email configuration
     emailAddress: varchar("email_address", { length: 255 }).notNull(),
     displayName: varchar("display_name", { length: 255 }),
-    apiKey: text("api_key").notNull(),
+    apiKey: text("api_key").notNull(), // SendGrid API key (starts with "SG") OR Nylas grantId
     sendgridVerifiedSenderId: varchar("sendgrid_verified_sender_id", { length: 255 }),
 
     // Status and verification

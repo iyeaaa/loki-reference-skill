@@ -129,6 +129,20 @@ export function useUpdateWorkspace() {
   })
 }
 
+export function useEnrichWorkspace() {
+  return useMutation({
+    mutationFn: ({ workspaceId, websiteUrl }: { workspaceId: string; websiteUrl: string }) =>
+      workspacesApi.enrichWorkspace(workspaceId, websiteUrl),
+    onSuccess: () => {
+      toast.success("회사 정보 분석이 시작되었습니다")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "회사 정보 분석 시작에 실패했습니다")
+    },
+    mutationKey: ["enrich"],
+  })
+}
+
 export function useDeleteWorkspace() {
   const queryClient = useQueryClient()
 

@@ -48,6 +48,7 @@ export class SSESession {
    */
   push(event: SSEEvent): boolean {
     if (this.isClosed) {
+      console.warn("[SSE] Attempted to push to closed session:", event.event)
       return false
     }
 
@@ -70,8 +71,10 @@ export class SSESession {
       message += `data: ${dataStr}\n\n`
 
       this.controller.enqueue(this.encoder.encode(message))
+      console.log("[SSE] Push success:", event.event)
       return true
-    } catch (_error) {
+    } catch (error) {
+      console.error("[SSE] Push failed:", error, "Event:", event.event)
       this.isClosed = true
       return false
     }
@@ -152,6 +155,13 @@ export function createSSEResponse(
         await handler(session)
       } catch (error) {
         console.error("[SSE] Handler error:", error)
+        // Send error event before closing
+        session.push({
+          event: "error",
+          data: {
+            message: error instanceof Error ? error.message : "Unknown error occurred",
+          },
+        })
       } finally {
         session.close()
       }

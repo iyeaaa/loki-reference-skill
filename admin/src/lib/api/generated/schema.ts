@@ -324,6 +324,22 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/v1/auth/register-email": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiV1AuthRegister-email"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/v1/auth/verify": {
     parameters: {
       query?: never
@@ -708,6 +724,38 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/v1/workspaces/{id}/enrich": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiV1WorkspacesByIdEnrich"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/workspaces/{id}/enrichAndStrategize": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiV1WorkspacesByIdEnrichAndStrategize"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/v1/workspaces/owner/{ownerId}": {
     parameters: {
       query?: never
@@ -1039,6 +1087,146 @@ export interface paths {
     put?: never
     post: operations["postApiV1AdminCustomer-groupsByIdMembersBulk"]
     delete: operations["deleteApiV1AdminCustomer-groupsByIdMembersBulk"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/dashboard/stats": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get dashboard statistics
+     * @description Returns statistics for all 3 dashboard columns: leads, emails, and open rate
+     */
+    get: operations["getApiV1DashboardStats"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/dashboard/trends/leads": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get lead trends
+     * @description Returns daily lead counts for the specified date range
+     */
+    get: operations["getApiV1DashboardTrendsLeads"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/dashboard/trends/emails": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get email trends
+     * @description Returns daily email counts for the specified date range
+     */
+    get: operations["getApiV1DashboardTrendsEmails"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/dashboard/trends/opens": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get open rate trends
+     * @description Returns daily open rates for the specified date range
+     */
+    get: operations["getApiV1DashboardTrendsOpens"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/dashboard/notifications/lead-discovery": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get lead discovery notifications
+     * @description Returns recent lead discovery (webset) activities
+     */
+    get: operations["getApiV1DashboardNotificationsLead-discovery"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/dashboard/notifications/campaigns": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get campaign notifications
+     * @description Returns recent campaign (sequence) activities
+     */
+    get: operations["getApiV1DashboardNotificationsCampaigns"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/dashboard/notifications/replies": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get reply notifications
+     * @description Returns recent email replies with sentiment analysis
+     */
+    get: operations["getApiV1DashboardNotificationsReplies"]
+    put?: never
+    post?: never
+    delete?: never
     options?: never
     head?: never
     patch?: never
@@ -3002,6 +3190,46 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/v1/admin/web-extraction/lead-discovery/analyze": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * 단일 웹사이트 URL 분석 (SSE 스트리밍)
+     * @description 단일 웹사이트 URL을 분석하여 AI가 생성한 상세 분석 결과를 스트리밍으로 전송합니다.
+     */
+    post: operations["postApiV1AdminWeb-extractionLead-discoveryAnalyze"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/admin/web-extraction/analyze": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * 웹데추용 단일 웹사이트 URL 분석
+     * @description 단일 웹사이트 URL을 분석하여 정형화된 회사 정보 및 연락처를 JSON으로 반환합니다.
+     */
+    post: operations["postApiV1AdminWeb-extractionAnalyze"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/v1/admin/web-extraction/upload": {
     parameters: {
       query?: never
@@ -3364,6 +3592,339 @@ export interface paths {
     put?: never
     post?: never
     delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/nylas/auth": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Nylas OAuth URL
+     * @description Generate OAuth authorization URL for Google email integration via Nylas
+     */
+    get: operations["getApiV1NylasAuth"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/nylas/callback": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Nylas OAuth Callback
+     * @description OAuth redirect handler - exchange authorization code for Nylas grant
+     */
+    get: operations["getApiV1NylasCallback"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/nylas/grant/{grantId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get Grant Info
+     * @description Get information about a connected email account
+     */
+    get: operations["getApiV1NylasGrantByGrantId"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/nylas/grant/{accountId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Disconnect Email Account
+     * @description Disconnect/delete a connected email account
+     */
+    delete: operations["deleteApiV1NylasGrantByAccountId"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/nylas/setup-connector": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Setup Google Connector
+     * @description One-time setup to create Google OAuth connector in Nylas
+     */
+    post: operations["postApiV1NylasSetup-connector"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/nylas/webhook": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Nylas Webhook
+     * @description Receive webhook events for email tracking (opens, clicks, thread replies)
+     */
+    post: operations["postApiV1NylasWebhook"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/lead-discovery/health": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Health check for Lead Discovery service */
+    get: operations["getApiV1Lead-discoveryHealth"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/lead-discovery/search": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Search for leads using natural language or website URL
+     * @description Streams search progress via SSE. Automatically detects basic (website) or advanced (direct search) mode.
+     */
+    post: operations["postApiV1Lead-discoverySearch"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/lead-discovery/select": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Resume search with user's buyer selection
+     * @description Called after user selects a buyer recommendation from the interrupt.
+     */
+    post: operations["postApiV1Lead-discoverySelect"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/lead-discovery/session/{sessionId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get session state
+     * @description Retrieve the current state of a lead discovery session.
+     */
+    get: operations["getApiV1Lead-discoverySessionBySessionId"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/lead-discovery/sessions": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Clear all sessions
+     * @description Admin endpoint to clear all lead discovery sessions.
+     */
+    delete: operations["deleteApiV1Lead-discoverySessions"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/lead-discovery/score": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Calculate fit scores for leads
+     * @description AI-powered fit score calculation for leads based on website analysis. Returns scores via SSE streaming.
+     */
+    post: operations["postApiV1Lead-discoveryScore"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/sales-strategies/{id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiV1Sales-strategiesById"]
+    put: operations["putApiV1Sales-strategiesById"]
+    post?: never
+    delete: operations["deleteApiV1Sales-strategiesById"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/sales-strategies/": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiV1Sales-strategies"]
+    put?: never
+    post: operations["postApiV1Sales-strategies"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/workspace-sales-strategies/{workspaceId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations["getApiV1Workspace-sales-strategiesByWorkspaceId"]
+    put?: never
+    post: operations["postApiV1Workspace-sales-strategiesByWorkspaceId"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/workspace-sales-strategies/{workspaceId}/link/{salesStrategyId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiV1Workspace-sales-strategiesByWorkspaceIdLinkBySalesStrategyId"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/workspace-sales-strategies/{workspaceId}/find-and-link": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations["postApiV1Workspace-sales-strategiesByWorkspaceIdFind-and-link"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/v1/workspace-sales-strategies/{workspaceId}/link/{linkId}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete: operations["deleteApiV1Workspace-sales-strategiesByWorkspaceIdLinkByLinkId"]
     options?: never
     head?: never
     patch?: never
@@ -3976,6 +4537,56 @@ export interface operations {
       }
     }
   }
+  "postApiV1AuthRegister-email": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          /** Format: email */
+          email: string
+          username?: string
+          industry?: string
+          target?: string
+          country?: string
+          experience?: string
+          lang?: string
+        }
+        "multipart/form-data": {
+          /** Format: email */
+          email: string
+          username?: string
+          industry?: string
+          target?: string
+          country?: string
+          experience?: string
+          lang?: string
+        }
+        "text/plain": {
+          /** Format: email */
+          email: string
+          username?: string
+          industry?: string
+          target?: string
+          country?: string
+          experience?: string
+          lang?: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   postApiV1AuthVerify: {
     parameters: {
       query?: never
@@ -4040,19 +4651,22 @@ export interface operations {
           username: string
           /** Format: email */
           email: string
-          employeeId: string
+          employeeId?: string
+          profilePicture?: (string | null) | null
         }
         "multipart/form-data": {
           username: string
           /** Format: email */
           email: string
-          employeeId: string
+          employeeId?: string
+          profilePicture?: (string | null) | null
         }
         "text/plain": {
           username: string
           /** Format: email */
           email: string
-          employeeId: string
+          employeeId?: string
+          profilePicture?: (string | null) | null
         }
       }
     }
@@ -4094,14 +4708,29 @@ export interface operations {
         "application/json": {
           code: string
           state?: string
+          industry?: string
+          target?: string
+          country?: string
+          experience?: string
+          lang?: string
         }
         "multipart/form-data": {
           code: string
           state?: string
+          industry?: string
+          target?: string
+          country?: string
+          experience?: string
+          lang?: string
         }
         "text/plain": {
           code: string
           state?: string
+          industry?: string
+          target?: string
+          country?: string
+          experience?: string
+          lang?: string
         }
       }
     }
@@ -4876,6 +5505,68 @@ export interface operations {
           companySize?: string
           companyAddress?: string
           companyDescription?: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  postApiV1WorkspacesByIdEnrich: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          websiteUrl: string
+        }
+        "multipart/form-data": {
+          websiteUrl: string
+        }
+        "text/plain": {
+          websiteUrl: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  postApiV1WorkspacesByIdEnrichAndStrategize: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          websiteUrl: string
+        }
+        "multipart/form-data": {
+          websiteUrl: string
+        }
+        "text/plain": {
+          websiteUrl: string
         }
       }
     }
@@ -5780,6 +6471,156 @@ export interface operations {
         }
       }
     }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getApiV1DashboardStats: {
+    parameters: {
+      query?: {
+        startDate?: string
+        endDate?: string
+        workspaceId?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getApiV1DashboardTrendsLeads: {
+    parameters: {
+      query?: {
+        startDate?: string
+        endDate?: string
+        workspaceId?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getApiV1DashboardTrendsEmails: {
+    parameters: {
+      query?: {
+        startDate?: string
+        endDate?: string
+        workspaceId?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getApiV1DashboardTrendsOpens: {
+    parameters: {
+      query?: {
+        startDate?: string
+        endDate?: string
+        workspaceId?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "getApiV1DashboardNotificationsLead-discovery": {
+    parameters: {
+      query?: {
+        startDate?: string
+        endDate?: string
+        workspaceId?: string
+        limit?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getApiV1DashboardNotificationsCampaigns: {
+    parameters: {
+      query?: {
+        startDate?: string
+        endDate?: string
+        workspaceId?: string
+        limit?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getApiV1DashboardNotificationsReplies: {
+    parameters: {
+      query?: {
+        startDate?: string
+        endDate?: string
+        workspaceId?: string
+        limit?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
     responses: {
       200: {
         headers: {
@@ -11185,6 +12026,73 @@ export interface operations {
       }
     }
   }
+  "postApiV1AdminWeb-extractionLead-discoveryAnalyze": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          websiteUrl: string
+          workspaceId: string
+        }
+        "multipart/form-data": {
+          websiteUrl: string
+          workspaceId: string
+        }
+        "text/plain": {
+          websiteUrl: string
+          workspaceId: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1AdminWeb-extractionAnalyze": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          websiteUrl: string
+          workspaceId: string
+          searchCriteria?: string[]
+        }
+        "multipart/form-data": {
+          websiteUrl: string
+          workspaceId: string
+          searchCriteria?: string[]
+        }
+        "text/plain": {
+          websiteUrl: string
+          workspaceId: string
+          searchCriteria?: string[]
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   "postApiV1AdminWeb-extractionUpload": {
     parameters: {
       query?: never
@@ -13697,45 +14605,45 @@ export interface operations {
           /** Format: uuid */
           groupId: string
           leads: {
-            email?: string
-            firstName?: string
-            lastName?: string
-            companyName?: string
-            phone?: string
-            country?: string
-            city?: string
-            industry?: string
-            webAddress?: string
+            email?: (string | null) | null
+            firstName?: (string | null) | null
+            lastName?: (string | null) | null
+            companyName?: (string | null) | null
+            phone?: (string | null) | null
+            country?: (string | null) | null
+            city?: (string | null) | null
+            industry?: (string | null) | null
+            webAddress?: (string | null) | null
           }[]
         }
         "multipart/form-data": {
           /** Format: uuid */
           groupId: string
           leads: {
-            email?: string
-            firstName?: string
-            lastName?: string
-            companyName?: string
-            phone?: string
-            country?: string
-            city?: string
-            industry?: string
-            webAddress?: string
+            email?: (string | null) | null
+            firstName?: (string | null) | null
+            lastName?: (string | null) | null
+            companyName?: (string | null) | null
+            phone?: (string | null) | null
+            country?: (string | null) | null
+            city?: (string | null) | null
+            industry?: (string | null) | null
+            webAddress?: (string | null) | null
           }[]
         }
         "text/plain": {
           /** Format: uuid */
           groupId: string
           leads: {
-            email?: string
-            firstName?: string
-            lastName?: string
-            companyName?: string
-            phone?: string
-            country?: string
-            city?: string
-            industry?: string
-            webAddress?: string
+            email?: (string | null) | null
+            firstName?: (string | null) | null
+            lastName?: (string | null) | null
+            companyName?: (string | null) | null
+            phone?: (string | null) | null
+            country?: (string | null) | null
+            city?: (string | null) | null
+            industry?: (string | null) | null
+            webAddress?: (string | null) | null
           }[]
         }
       }
@@ -13809,6 +14717,767 @@ export interface operations {
       query?: never
       header?: never
       path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getApiV1NylasAuth: {
+    parameters: {
+      query?: {
+        state?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getApiV1NylasCallback: {
+    parameters: {
+      query: {
+        code: string
+        workspaceId?: string
+        state?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  getApiV1NylasGrantByGrantId: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        grantId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  deleteApiV1NylasGrantByAccountId: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        accountId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1NylasSetup-connector": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  postApiV1NylasWebhook: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "getApiV1Lead-discoveryHealth": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1Lead-discoverySearch": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          /** @description Search query or website URL */
+          query: string
+          /** Format: uuid */
+          workspaceId: string
+          sessionId?: string
+          locale?: string
+        }
+        "multipart/form-data": {
+          /** @description Search query or website URL */
+          query: string
+          /** Format: uuid */
+          workspaceId: string
+          sessionId?: string
+          locale?: string
+        }
+        "text/plain": {
+          /** @description Search query or website URL */
+          query: string
+          /** Format: uuid */
+          workspaceId: string
+          sessionId?: string
+          locale?: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1Lead-discoverySelect": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          /** @description Session ID from the search request */
+          sessionId: string
+          /** @description ID of the selected recommendation */
+          selectedRecommendationId: string
+          /** Format: uuid */
+          workspaceId: string
+        }
+        "multipart/form-data": {
+          /** @description Session ID from the search request */
+          sessionId: string
+          /** @description ID of the selected recommendation */
+          selectedRecommendationId: string
+          /** Format: uuid */
+          workspaceId: string
+        }
+        "text/plain": {
+          /** @description Session ID from the search request */
+          sessionId: string
+          /** @description ID of the selected recommendation */
+          selectedRecommendationId: string
+          /** Format: uuid */
+          workspaceId: string
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "getApiV1Lead-discoverySessionBySessionId": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        sessionId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "deleteApiV1Lead-discoverySessions": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1Lead-discoveryScore": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          leads: {
+            id: string
+            company_name?: (string | null) | null
+            email?: (string | null) | null
+            phone?: (string | null) | null
+            web_address?: (string | null) | null
+            country?: (string | null) | null
+            industry?: (string | null) | null
+            sub_industry?: (string | null) | null
+            employee?: (string | null) | null
+            revenue?: (string | null) | null
+            title?: (string | null) | null
+          }[]
+          websiteAnalysis: {
+            companyName?: string
+            description?: string
+            industry?: string
+            products?: string[]
+            targetMarkets?: string[]
+            businessModel?: string
+          }
+          selectedTarget: {
+            country: string
+            industry: string
+          }
+        }
+        "multipart/form-data": {
+          leads: {
+            id: string
+            company_name?: (string | null) | null
+            email?: (string | null) | null
+            phone?: (string | null) | null
+            web_address?: (string | null) | null
+            country?: (string | null) | null
+            industry?: (string | null) | null
+            sub_industry?: (string | null) | null
+            employee?: (string | null) | null
+            revenue?: (string | null) | null
+            title?: (string | null) | null
+          }[]
+          websiteAnalysis: {
+            companyName?: string
+            description?: string
+            industry?: string
+            products?: string[]
+            targetMarkets?: string[]
+            businessModel?: string
+          }
+          selectedTarget: {
+            country: string
+            industry: string
+          }
+        }
+        "text/plain": {
+          leads: {
+            id: string
+            company_name?: (string | null) | null
+            email?: (string | null) | null
+            phone?: (string | null) | null
+            web_address?: (string | null) | null
+            country?: (string | null) | null
+            industry?: (string | null) | null
+            sub_industry?: (string | null) | null
+            employee?: (string | null) | null
+            revenue?: (string | null) | null
+            title?: (string | null) | null
+          }[]
+          websiteAnalysis: {
+            companyName?: string
+            description?: string
+            industry?: string
+            products?: string[]
+            targetMarkets?: string[]
+            businessModel?: string
+          }
+          selectedTarget: {
+            country: string
+            industry: string
+          }
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "getApiV1Sales-strategiesById": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "putApiV1Sales-strategiesById": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          industry?:
+            | "manufacturing"
+            | "it_saas"
+            | "beauty"
+            | "food"
+            | "fashion"
+            | "electronics"
+            | "healthcare"
+            | "guitar"
+          target?: "b2b" | "b2c" | "both"
+          country?: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
+          experience?: "none" | "some" | "experienced"
+          rindaSolution?: unknown
+          strategies?: unknown
+          proofPoints?: unknown
+          emailBenchmarks?: unknown
+        }
+        "multipart/form-data": {
+          industry?:
+            | "manufacturing"
+            | "it_saas"
+            | "beauty"
+            | "food"
+            | "fashion"
+            | "electronics"
+            | "healthcare"
+            | "guitar"
+          target?: "b2b" | "b2c" | "both"
+          country?: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
+          experience?: "none" | "some" | "experienced"
+          rindaSolution?: unknown
+          strategies?: unknown
+          proofPoints?: unknown
+          emailBenchmarks?: unknown
+        }
+        "text/plain": {
+          industry?:
+            | "manufacturing"
+            | "it_saas"
+            | "beauty"
+            | "food"
+            | "fashion"
+            | "electronics"
+            | "healthcare"
+            | "guitar"
+          target?: "b2b" | "b2c" | "both"
+          country?: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
+          experience?: "none" | "some" | "experienced"
+          rindaSolution?: unknown
+          strategies?: unknown
+          proofPoints?: unknown
+          emailBenchmarks?: unknown
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "deleteApiV1Sales-strategiesById": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "getApiV1Sales-strategies": {
+    parameters: {
+      query?: {
+        limit?: string
+        offset?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1Sales-strategies": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          industry:
+            | "manufacturing"
+            | "it_saas"
+            | "beauty"
+            | "food"
+            | "fashion"
+            | "electronics"
+            | "healthcare"
+            | "guitar"
+          target: "b2b" | "b2c" | "both"
+          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
+          experience: "none" | "some" | "experienced"
+          rindaSolution?: unknown
+          strategies?: unknown
+          proofPoints?: unknown
+          emailBenchmarks?: unknown
+        }
+        "multipart/form-data": {
+          industry:
+            | "manufacturing"
+            | "it_saas"
+            | "beauty"
+            | "food"
+            | "fashion"
+            | "electronics"
+            | "healthcare"
+            | "guitar"
+          target: "b2b" | "b2c" | "both"
+          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
+          experience: "none" | "some" | "experienced"
+          rindaSolution?: unknown
+          strategies?: unknown
+          proofPoints?: unknown
+          emailBenchmarks?: unknown
+        }
+        "text/plain": {
+          industry:
+            | "manufacturing"
+            | "it_saas"
+            | "beauty"
+            | "food"
+            | "fashion"
+            | "electronics"
+            | "healthcare"
+            | "guitar"
+          target: "b2b" | "b2c" | "both"
+          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
+          experience: "none" | "some" | "experienced"
+          rindaSolution?: unknown
+          strategies?: unknown
+          proofPoints?: unknown
+          emailBenchmarks?: unknown
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "getApiV1Workspace-sales-strategiesByWorkspaceId": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        workspaceId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1Workspace-sales-strategiesByWorkspaceId": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        workspaceId: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          industry:
+            | "manufacturing"
+            | "it_saas"
+            | "beauty"
+            | "food"
+            | "fashion"
+            | "electronics"
+            | "healthcare"
+            | "guitar"
+          target: "b2b" | "b2c" | "both"
+          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
+          experience: "none" | "some" | "experienced"
+          rindaSolution?: unknown
+          strategies?: unknown
+          proofPoints?: unknown
+          emailBenchmarks?: unknown
+        }
+        "multipart/form-data": {
+          industry:
+            | "manufacturing"
+            | "it_saas"
+            | "beauty"
+            | "food"
+            | "fashion"
+            | "electronics"
+            | "healthcare"
+            | "guitar"
+          target: "b2b" | "b2c" | "both"
+          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
+          experience: "none" | "some" | "experienced"
+          rindaSolution?: unknown
+          strategies?: unknown
+          proofPoints?: unknown
+          emailBenchmarks?: unknown
+        }
+        "text/plain": {
+          industry:
+            | "manufacturing"
+            | "it_saas"
+            | "beauty"
+            | "food"
+            | "fashion"
+            | "electronics"
+            | "healthcare"
+            | "guitar"
+          target: "b2b" | "b2c" | "both"
+          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
+          experience: "none" | "some" | "experienced"
+          rindaSolution?: unknown
+          strategies?: unknown
+          proofPoints?: unknown
+          emailBenchmarks?: unknown
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1Workspace-sales-strategiesByWorkspaceIdLinkBySalesStrategyId": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        workspaceId: string
+        salesStrategyId: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "postApiV1Workspace-sales-strategiesByWorkspaceIdFind-and-link": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        workspaceId: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": {
+          industry:
+            | "manufacturing"
+            | "it_saas"
+            | "beauty"
+            | "food"
+            | "fashion"
+            | "electronics"
+            | "healthcare"
+            | "guitar"
+          target: "b2b" | "b2c" | "both"
+          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
+          experience: "none" | "some" | "experienced"
+        }
+        "multipart/form-data": {
+          industry:
+            | "manufacturing"
+            | "it_saas"
+            | "beauty"
+            | "food"
+            | "fashion"
+            | "electronics"
+            | "healthcare"
+            | "guitar"
+          target: "b2b" | "b2c" | "both"
+          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
+          experience: "none" | "some" | "experienced"
+        }
+        "text/plain": {
+          industry:
+            | "manufacturing"
+            | "it_saas"
+            | "beauty"
+            | "food"
+            | "fashion"
+            | "electronics"
+            | "healthcare"
+            | "guitar"
+          target: "b2b" | "b2c" | "both"
+          country: "jp" | "us" | "sea" | "eu" | "cn" | "ae"
+          experience: "none" | "some" | "experienced"
+        }
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  "deleteApiV1Workspace-sales-strategiesByWorkspaceIdLinkByLinkId": {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        workspaceId: string
+        linkId: string
+      }
       cookie?: never
     }
     requestBody?: never

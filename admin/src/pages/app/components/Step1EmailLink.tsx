@@ -1,0 +1,300 @@
+import { ArrowRight, CheckCircle2, Loader2, Mail, Plus, Trash2 } from "lucide-react"
+import { useState } from "react"
+import { useTranslation } from "react-i18next"
+import { useSearchParams } from "react-router-dom"
+import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import {
+  useDeleteEmailAccount,
+  useEmailAccountByWorkspaceAndUser,
+} from "@/lib/api/hooks/email-accounts"
+import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
+import { deleteGrant, getNylasAuthUrl } from "@/lib/api/services/nylas"
+import type { UserEmailAccount } from "@/lib/api/types/email-account"
+
+export function Step1EmailLink() {
+  const { t } = useTranslation()
+  const [, setSearchParams] = useSearchParams()
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Get current user
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
+  const userId = currentUser?.id || ""
+
+  // Get user's workspace
+  const { data: userWorkspaces, isLoading: isLoadingWorkspaces } = useUserWorkspaces(
+    userId,
+    !!userId,
+  )
+  const workspace = userWorkspaces?.[0]
+
+  // Get email accounts for this workspace and user
+  const {
+    data: emailAccount,
+    isLoading: isLoadingEmailAccounts,
+    isRefetchError,
+    error: emailAccountError,
+  } = useEmailAccountByWorkspaceAndUser(workspace?.id || "", userId, !!workspace?.id && !!userId)
+
+  console.log(isRefetchError, emailAccountError)
+
+  const handleGoogleClick = async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      // Get OAuth URL from backend
+      const response = await getNylasAuthUrl()
+
+      // Redirect to Google OAuth
+      window.location.href = response.url
+    } catch (err) {
+      console.error("Failed to get auth URL:", err)
+      setError(
+        t("app.onboarding.step1.error", "인증 URL을 가져오는데 실패했습니다. 다시 시도해주세요."),
+      )
+      setIsLoading(false)
+    }
+  }
+
+  const handleNextStep = () => {
+    setSearchParams({ step: "2" })
+  }
+
+  // Loading state
+  if (isLoadingWorkspaces || isLoadingEmailAccounts) {
+    return (
+      <Card className="max-w-2xl mx-auto">
+        <CardContent className="pt-12 pb-10 px-8 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // If email account exists, show the linked accounts view
+  if (emailAccount && workspace && !isRefetchError && !emailAccountError) {
+    return (
+      <LinkedEmailAccountsView
+        emailAccount={emailAccount}
+        workspaceId={workspace.id}
+        userId={userId}
+        onAddMore={handleGoogleClick}
+        onNext={handleNextStep}
+        isAddingMore={isLoading}
+      />
+    )
+  }
+
+  // No email accounts - show link email UI
+  return (
+    <Card className="max-w-2xl mx-auto">
+      <CardContent className="pt-12 pb-10 px-8">
+        <div className="flex flex-col items-center text-center">
+          {/* Email Icon */}
+          <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mb-8">
+            <Mail className="w-10 h-10 text-blue-500" />
+          </div>
+
+          {/* Title */}
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">
+            {t("app.onboarding.step1.title", "이메일 계정을 연동해주세요")}
+          </h2>
+
+          {/* Description */}
+          <p className="text-gray-500 mb-8 max-w-sm">
+            {t(
+              "app.onboarding.step1.description",
+              "RINDA가 바이어에게 이메일을 보내고 답장을 관리할 수 있어요",
+            )}
+          </p>
+
+          {/* Error Message */}
+          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+
+          {/* Google Button */}
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={handleGoogleClick}
+            disabled={isLoading}
+            className="w-full max-w-xs h-12 text-base font-medium border-gray-300 hover:bg-gray-50"
+          >
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+            ) : (
+              <GoogleIcon className="w-5 h-5 mr-3" />
+            )}
+            {isLoading
+              ? t("app.onboarding.step1.loading", "연동 중...")
+              : t("app.onboarding.step1.googleButton", "Google 계정으로 연동하기")}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// Linked email accounts view component
+interface LinkedEmailAccountsViewProps {
+  emailAccount: UserEmailAccount
+  workspaceId: string
+  userId: string
+  onAddMore: () => void
+  onNext: () => void
+  isAddingMore: boolean
+}
+
+function LinkedEmailAccountsView({
+  emailAccount,
+  workspaceId,
+  userId,
+  onAddMore,
+  onNext,
+  isAddingMore,
+}: LinkedEmailAccountsViewProps) {
+  const { t } = useTranslation()
+  const deleteEmailAccountMutation = useDeleteEmailAccount()
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const { refetch } = useEmailAccountByWorkspaceAndUser(workspaceId, userId, true)
+
+  const handleDelete = async () => {
+    // Confirm deletion
+    const confirmed = window.confirm(
+      t("app.onboarding.step1.deleteConfirm", "이 이메일 계정을 삭제하시겠습니까?"),
+    )
+    if (!confirmed) return
+
+    setIsDeleting(true)
+    try {
+      // The apiKey field stores the Nylas grantId
+      await deleteGrant(emailAccount.id)
+      // Then delete the email account from database
+      await deleteEmailAccountMutation.mutateAsync(emailAccount.id)
+
+      // Refetch to refresh the list
+      await refetch()
+
+      toast.success(t("app.onboarding.step1.deleteSuccess", "이메일 계정이 삭제되었습니다"))
+    } catch (error) {
+      console.error("Failed to delete email account:", error)
+      toast.error(t("app.onboarding.step1.deleteError", "이메일 계정 삭제에 실패했습니다"))
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  return (
+    <Card className="max-w-2xl mx-auto">
+      <CardContent className="pt-8 pb-8 px-8">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
+            <CheckCircle2 className="w-6 h-6 text-green-500" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">
+              {t("app.onboarding.step1.linkedTitle", "이메일 계정이 연동되었습니다")}
+            </h2>
+            <p className="text-gray-500 text-sm">
+              {t("app.onboarding.step1.linkedDescription", "아래 계정으로 이메일을 발송합니다")}
+            </p>
+          </div>
+        </div>
+
+        {/* Email Account Card */}
+        <div className="border rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <Mail className="w-5 h-5 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-900">{emailAccount.emailAddress}</span>
+                {emailAccount.isDefault && (
+                  <Badge variant="secondary" className="text-xs">
+                    {t("app.onboarding.step1.default", "기본")}
+                  </Badge>
+                )}
+              </div>
+              {emailAccount.displayName && (
+                <span className="text-sm text-gray-500">{emailAccount.displayName}</span>
+              )}
+            </div>
+            <Badge
+              variant={emailAccount.status === "active" ? "default" : "secondary"}
+              className={emailAccount.status === "active" ? "bg-green-100 text-green-700" : ""}
+            >
+              {emailAccount.status === "active"
+                ? t("app.onboarding.step1.statusActive", "활성")
+                : emailAccount.status}
+            </Badge>
+            {/* Delete Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="text-gray-400 hover:text-red-500 hover:bg-red-50"
+            >
+              {isDeleting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Add More Button */}
+        <Button
+          variant="outline"
+          onClick={onAddMore}
+          disabled={isAddingMore}
+          className="w-full mb-4 h-11 border-dashed"
+        >
+          {isAddingMore ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Plus className="w-4 h-4 mr-2" />
+          )}
+          {t("app.onboarding.step1.addMore", "다른 이메일 계정 추가")}
+        </Button>
+
+        {/* Next Step Button */}
+        <Button onClick={onNext} className="w-full bg-blue-500 hover:bg-blue-600 text-white h-11">
+          {t("app.onboarding.step1.nextButton", "다음 단계로")}
+          <ArrowRight className="w-4 h-4 ml-2" />
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+// Google Icon SVG Component
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" role="img" aria-label="Google logo">
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+      />
+    </svg>
+  )
+}

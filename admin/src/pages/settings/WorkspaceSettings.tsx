@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useUpdateWorkspace, useWorkspace } from "@/lib/api/hooks/workspaces"
+import { useEnrichWorkspace, useUpdateWorkspace, useWorkspace } from "@/lib/api/hooks/workspaces"
 
 interface WorkspaceSettingsProps {
   workspaceId: string
@@ -24,6 +24,7 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
 
   const { data: workspace, isLoading } = useWorkspace(workspaceId)
   const updateWorkspaceMutation = useUpdateWorkspace()
+  const enrichWorkspace = useEnrichWorkspace()
 
   const [formData, setFormData] = useState({
     companyName: "",
@@ -50,11 +51,13 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
     }
   }, [workspace])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!workspace) return
 
-    updateWorkspaceMutation.mutate({
+    const websiteChanged = formData.companyWebsite !== (workspace.companyWebsite || "")
+
+    await updateWorkspaceMutation.mutateAsync({
       workspaceId: workspace.id,
       data: {
         name: workspace.name,
@@ -69,6 +72,18 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
         companyDescription: formData.companyDescription || undefined,
       },
     })
+
+    // Trigger enrichment if website changed
+    if (websiteChanged && formData.companyWebsite) {
+      const websiteUrl = formData.companyWebsite.startsWith("http")
+        ? formData.companyWebsite
+        : `https://${formData.companyWebsite}`
+
+      enrichWorkspace.mutate({
+        workspaceId: workspace.id,
+        websiteUrl,
+      })
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

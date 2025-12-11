@@ -1,6 +1,7 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
 import { departments, users } from "../db/schema/users"
+import * as salesStrategyService from "./sales-strategy.service"
 import * as workspaceService from "./workspace.service"
 
 // ====================================
@@ -43,6 +44,11 @@ export async function createUser(data: {
   departmentId?: string
   employeeId?: string
 }) {
+  // Calculate trial period (7 days from now)
+  const trialStartDate = new Date()
+  const trialEndDate = new Date()
+  trialEndDate.setDate(trialEndDate.getDate() + 7)
+
   const [newUser] = await db
     .insert(users)
     .values({
@@ -53,6 +59,9 @@ export async function createUser(data: {
       isActive: data.isActive !== undefined ? data.isActive : true,
       departmentId: data.departmentId || null,
       employeeId: data.employeeId || null,
+      trialStartDate,
+      trialEndDate,
+      isTrialActive: true,
     })
     .returning({
       id: users.id,
@@ -62,6 +71,9 @@ export async function createUser(data: {
       isActive: users.isActive,
       departmentId: users.departmentId,
       employeeId: users.employeeId,
+      trialStartDate: users.trialStartDate,
+      trialEndDate: users.trialEndDate,
+      isTrialActive: users.isTrialActive,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     })
@@ -386,6 +398,13 @@ export async function createOrUpdateGoogleUser(data: {
   isActive?: boolean
   departmentId?: string
   employeeId?: string
+  onboardingParams?: {
+    industry?: string | null
+    target?: string | null
+    country?: string | null
+    experience?: string | null
+    lang?: string | null
+  }
 }) {
   // Check if user already exists
   const existingUser = await getUserByEmail(data.email)
@@ -442,12 +461,35 @@ export async function createOrUpdateGoogleUser(data: {
   // Create default workspace for new trial users
   if (!existingUser && upsertedUser?.isTrialActive) {
     try {
-      await workspaceService.createWorkspace({
+      const workspace = await workspaceService.createWorkspace({
         name: `${upsertedUser.username}의 워크스페이스`,
         description: "기본 워크스페이스",
         ownerId: upsertedUser.id,
         isActive: true,
       })
+
+      // Link sales strategy if all 4 onboarding fields are provided
+      const { industry, target, country, experience } = data.onboardingParams || {}
+      if (workspace && industry && target && country && experience) {
+        try {
+          await salesStrategyService.findOrCreateAndLinkSalesStrategy(workspace.id, {
+            industry: industry as
+              | "manufacturing"
+              | "it_saas"
+              | "beauty"
+              | "food"
+              | "fashion"
+              | "electronics"
+              | "healthcare"
+              | "guitar",
+            target: target as "b2b" | "b2c" | "both",
+            country: country as "jp" | "us" | "sea" | "eu" | "cn" | "ae",
+            experience: experience as "none" | "some" | "experienced",
+          })
+        } catch (strategyError) {
+          console.error("Failed to link sales strategy for trial user:", strategyError)
+        }
+      }
     } catch (error) {
       console.error("Failed to create default workspace for trial user:", error)
       // Don't throw error here to avoid breaking user registration

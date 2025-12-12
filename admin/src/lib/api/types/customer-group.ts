@@ -32,6 +32,27 @@ export interface CreateCustomerGroupRequest {
   criteria?: Record<string, unknown>
   isDynamic?: boolean
   createdBy?: string
+  csvData?: Array<{
+    companyName: string
+    foundCompanyName?: string
+    businessType?: string
+    websiteUrl?: string
+    description?: string
+    employeeCount?: string
+    foundedYear?: number
+    country?: string
+    city?: string
+    state?: string
+    address?: string
+    leadSource?: string
+    leadStatus?: string
+    leadScore?: number
+    notes?: string
+    primaryEmail?: string
+    primaryPhone?: string
+    secondaryEmail?: string
+    secondaryPhone?: string
+  }>
 }
 
 export interface UpdateCustomerGroupRequest {

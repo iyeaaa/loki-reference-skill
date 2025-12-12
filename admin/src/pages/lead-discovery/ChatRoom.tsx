@@ -11,6 +11,7 @@ import {
   ArrowRight,
   Check,
   ChevronDown,
+  FolderPlus,
   Globe,
   Lightbulb,
   Loader2,
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useCreateCustomerGroup } from "@/lib/api/hooks/customer-groups"
 import {
   enrichLeads,
   type LeadDiscoveryEventData,
@@ -48,13 +50,16 @@ import {
   type ChatMessage,
   type Customer,
   chatMessagesAtom,
+  createGroupStateAtom,
   customersAtom,
   finishBulkEnrichmentAtom,
+  finishCreateGroupAtom,
   finishEnrichmentAtom,
   initialStreamingState,
   resetAllAtom,
   selectedTargetAtom,
   startBulkEnrichmentAtom,
+  startCreateGroupAtom,
   startEnrichmentAtom,
   streamingStateAtom,
   updateBulkEnrichmentProgressAtom,
@@ -110,6 +115,11 @@ export function ChatRoom() {
   const startEnrichment = useSetAtom(startEnrichmentAtom)
   const finishEnrichment = useSetAtom(finishEnrichmentAtom)
 
+  // Create Group 상태 (새 고객그룹으로 추가하기)
+  const createGroupState = useAtomValue(createGroupStateAtom)
+  const startCreateGroup = useSetAtom(startCreateGroupAtom)
+  const finishCreateGroup = useSetAtom(finishCreateGroupAtom)
+
   // Jotai 스트리밍 상태 (리마운트 시에도 유지)
   const [streamingState, setStreamingState] = useAtom(streamingStateAtom)
   const setSelectedTarget = useSetAtom(selectedTargetAtom)
@@ -133,6 +143,9 @@ export function ChatRoom() {
 
   // 워크스페이스
   const { selectedWorkspace } = useWorkspace()
+
+  // 고객 그룹 생성 mutation
+  const createGroupMutation = useCreateCustomerGroup()
 
   // 프로필 고도화 핸들러 (100개 리드 Enrichment)
   const handleBulkEnrichment = useCallback(async () => {
@@ -198,6 +211,54 @@ export function ChatRoom() {
     finishEnrichment,
     finishBulkEnrichment,
   ])
+
+  // 새 고객그룹으로 추가하기 핸들러
+  const handleCreateGroup = useCallback(async () => {
+    if (!selectedWorkspace?.id || selectedWorkspace.id === "all") return
+    if (customers.length === 0) return
+
+    // 그룹 이름 생성: 리드탐색_YYYYMMDDHHMMSS
+    const now = new Date()
+    const timestamp = now.toISOString().replace(/[-:T]/g, "").slice(0, 14)
+    const groupName = `리드탐색_${timestamp}`
+
+    startCreateGroup(groupName, customers.length)
+
+    try {
+      // Customer를 csvData 형식으로 변환
+      const csvData = customers.map((c) => ({
+        companyName: c.company_name || "",
+        websiteUrl: c.web_address || "",
+        description: c.description || "",
+        country: c.country || "",
+        businessType: c.companyType || c.category || "",
+        employeeCount: c.employee || "",
+        foundedYear: c.foundedYear ? parseInt(c.foundedYear, 10) : undefined,
+        city: c.city || "",
+        state: c.state || "",
+        address: c.address || "",
+        leadSource: "Lead Discovery",
+        leadScore: c.fit_score || 0,
+        primaryEmail: c.email || "",
+        primaryPhone: c.phone || "",
+      }))
+
+      const result = await createGroupMutation.mutateAsync({
+        workspaceId: selectedWorkspace.id,
+        name: groupName,
+        description: `Lead Discovery에서 탐색한 ${customers.length}개의 리드`,
+        isDynamic: false,
+        csvData,
+      })
+
+      finishCreateGroup({ groupId: result.id })
+    } catch (error) {
+      console.error("Failed to create group:", error)
+      finishCreateGroup({
+        error: error instanceof Error ? error.message : "그룹 생성에 실패했습니다",
+      })
+    }
+  }, [customers, selectedWorkspace?.id, startCreateGroup, finishCreateGroup, createGroupMutation])
 
   // 페이지 로드 시 미완성된 빈 assistant 메시지 정리 (마운트 시 한 번만 실행)
   const cleanupIncompleteMessagesRef = useRef(false)
@@ -1430,6 +1491,105 @@ export function ChatRoom() {
                                           {bulkEnrichmentState.total} 완료
                                         </p>
                                       </div>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+
+                            {/* 새 고객그룹으로 추가하기 퀵액션 - 검색 완료 후 표시 */}
+                            {message.id === streamingState.messageId &&
+                              streamingState.status === "complete" &&
+                              customers.length > 0 &&
+                              !bulkEnrichmentState.isRunning &&
+                              !createGroupState.isCreating &&
+                              !createGroupState.groupId && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.3, delay: 0.7 }}
+                                  className="mt-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5"
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                                      <FolderPlus className="h-5 w-5 text-emerald-500" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-foreground">
+                                        새 고객그룹으로 추가하기
+                                      </p>
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {customers.length}개 리드를 새 고객그룹으로 저장합니다
+                                      </p>
+                                      <Button
+                                        onClick={handleCreateGroup}
+                                        className="mt-3 gap-2 bg-emerald-600 hover:bg-emerald-700"
+                                        size="sm"
+                                      >
+                                        <FolderPlus className="h-4 w-4" />
+                                        고객그룹 만들기
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+
+                            {/* 그룹 생성 진행 상태 */}
+                            {message.id === streamingState.messageId &&
+                              createGroupState.isCreating && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  className="mt-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5"
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                                      <Loader2 className="h-5 w-5 text-emerald-500 animate-spin" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-foreground">
+                                        고객그룹 생성 중...
+                                      </p>
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {createGroupState.leadsCount}개 리드를 저장하고 있습니다
+                                      </p>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+
+                            {/* 그룹 생성 완료 */}
+                            {message.id === streamingState.messageId &&
+                              createGroupState.groupId && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  className="mt-4 p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10"
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                      <Check className="h-5 w-5 text-emerald-500" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-foreground">
+                                        고객그룹이 생성되었습니다!
+                                      </p>
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {customers.length}개 리드가 새 고객그룹에 추가되었습니다
+                                      </p>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="mt-3 gap-2"
+                                        onClick={() =>
+                                          window.open(
+                                            `/customer-groups/${createGroupState.groupId}`,
+                                            "_blank",
+                                          )
+                                        }
+                                      >
+                                        고객그룹 보기
+                                        <ArrowRight className="h-3 w-3" />
+                                      </Button>
                                     </div>
                                   </div>
                                 </motion.div>

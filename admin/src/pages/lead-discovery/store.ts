@@ -438,3 +438,54 @@ export const updateBulkEnrichmentProgressAtom = atom(
 export const finishBulkEnrichmentAtom = atom(null, (_get, set) => {
   set(bulkEnrichmentStateAtom, initialBulkEnrichmentState)
 })
+
+// ============================================
+// Customer Group Creation State (새 고객그룹으로 추가하기)
+// ============================================
+
+export interface CreateGroupState {
+  isCreating: boolean
+  groupName: string
+  groupId?: string
+  leadsCount: number
+  error?: string
+}
+
+export const initialCreateGroupState: CreateGroupState = {
+  isCreating: false,
+  groupName: "",
+  leadsCount: 0,
+}
+
+export const createGroupStateAtom = atom<CreateGroupState>(initialCreateGroupState)
+
+// 그룹 생성 시작
+export const startCreateGroupAtom = atom(
+  null,
+  (_get, set, groupName: string, leadsCount: number) => {
+    set(createGroupStateAtom, {
+      isCreating: true,
+      groupName,
+      leadsCount,
+      groupId: undefined,
+      error: undefined,
+    })
+  },
+)
+
+// 그룹 생성 완료
+export const finishCreateGroupAtom = atom(
+  null,
+  (_get, set, result: { groupId?: string; error?: string }) => {
+    set(createGroupStateAtom, {
+      ...initialCreateGroupState,
+      groupId: result.groupId,
+      error: result.error,
+    })
+  },
+)
+
+// 그룹 생성 상태 초기화
+export const resetCreateGroupStateAtom = atom(null, (_get, set) => {
+  set(createGroupStateAtom, initialCreateGroupState)
+})

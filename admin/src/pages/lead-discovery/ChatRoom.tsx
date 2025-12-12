@@ -30,7 +30,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useCreateCustomerGroup } from "@/lib/api/hooks/customer-groups"
 import {
   enrichLeads,
@@ -42,6 +41,7 @@ import type { BigQueryResult, BuyerRecommendation } from "@/lib/api/types/lead-d
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 import { BuyerRecommendationCards } from "./components/BuyerRecommendationCards"
+import { FilterSearchForm } from "./components/FilterSearchForm"
 import { LeadDiscoveryProgress } from "./components/LeadDiscoveryProgress"
 import {
   addChatMessageAtom,
@@ -516,20 +516,6 @@ export function ChatRoom() {
   )
 
   // 산업별 카드 데이터 (2025년 12월 기준 바이어 탐색 수요가 많은 순서)
-  const industryTemplates = useMemo(
-    () => ({
-      all: "전체 템플릿",
-      "ev-battery": "전기차/배터리",
-      semiconductor: "반도체/전자",
-      "bio-healthcare": "바이오/헬스케어",
-      "eco-energy": "친환경/에너지",
-      "food-consumer": "식품/소비재",
-      manufacturing: "제조/기계",
-      beauty: "뷰티/화장품",
-    }),
-    [],
-  )
-
   const cardExamples = useMemo(
     () => ({
       "ev-battery": [
@@ -909,6 +895,67 @@ export function ChatRoom() {
     ],
   )
 
+  // 필터 검색 핸들러 (드롭다운 폼에서 호출)
+  const handleFilterSearch = useCallback(
+    (query: string) => {
+      if (!query || isSearching) return
+
+      const now = Date.now()
+      const userMessage: ChatMessage = {
+        id: `msg-${now}`,
+        role: "user",
+        content: query,
+        timestamp: new Date(now),
+      }
+
+      addMessage(userMessage)
+
+      // 워크스페이스 확인
+      if (!selectedWorkspace?.id || selectedWorkspace.id === "all") {
+        const errorMessage: ChatMessage = {
+          id: `msg-${now + 1}-error`,
+          role: "assistant",
+          content:
+            "워크스페이스를 먼저 선택해주세요.\n\n상단에서 워크스페이스를 선택하면 바로 시작할 수 있어요.",
+          timestamp: new Date(now + 1),
+        }
+        addMessage(errorMessage)
+        return
+      }
+
+      // 빈 assistant 메시지 추가 (스트리밍용)
+      const assistantMessageId = `msg-${now + 1}-response`
+      const assistantMessage: ChatMessage = {
+        id: assistantMessageId,
+        role: "assistant",
+        content: "",
+        timestamp: new Date(now + 1),
+      }
+      addMessage(assistantMessage)
+
+      // 스트리밍 상태 초기화
+      setStreamingState({
+        messageId: assistantMessageId,
+        analysisMessageId: assistantMessageId,
+        status: "connecting",
+        message: "서버에 연결 중...",
+        progress: 0,
+        recommendations: [],
+        analyzedPages: [],
+        analysisSummary: "",
+        customerAnalysisSummary: "",
+        userQuery: query,
+      })
+
+      // LangGraph API 호출
+      searchMutation.mutate({
+        query,
+        workspaceId: selectedWorkspace.id,
+      })
+    },
+    [isSearching, selectedWorkspace, addMessage, searchMutation, setStreamingState],
+  )
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
@@ -1015,255 +1062,187 @@ export function ChatRoom() {
       </style>
       <div className="flex flex-col h-full min-h-0 bg-background border-r border-border">
         {/* 메시지 영역 - flex-1 + min-h-0으로 스크롤 영역 확보 */}
-        <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
           {/* 메시지가 없고 검색 중이 아닐 때 → 템플릿 카드 표시 */}
           {messages.length === 0 && !isSearching ? (
-            <div className="h-full flex items-center justify-center px-4 py-8">
+            <div className="min-h-full flex items-center justify-center px-4 py-8">
               {/* 전체 콘텐츠를 하나로 묶어서 중앙 정렬 */}
-              <div className="w-full space-y-8" style={{ maxWidth: "670px" }}>
+              <div className="w-full space-y-6" style={{ maxWidth: "670px" }}>
                 {/* 로고 */}
                 <div className="flex justify-center items-center gap-2">
                   <img src={TextRinda} alt="RINDA" className="h-10 w-auto" />
                   <img src={TextPlus} alt="Plus" className="h-10 w-auto" />
                 </div>
 
-                {/* 카피라이팅 */}
+                {/* 카피라이팅 - 모드에 따라 다른 문구 */}
                 <div className="text-center space-y-2">
-                  <p className="text-lg font-medium text-foreground/90">
-                    우리 회사 웹사이트 주소만 입력하세요
-                  </p>
-                  <p className="text-base text-muted-foreground leading-relaxed">
-                    AI가 우리 제품에 관심 있을 바이어를 찾아드려요
-                  </p>
+                  {searchMode === "website" ? (
+                    <>
+                      <p className="text-lg font-medium text-foreground/90">
+                        우리 회사 웹사이트 주소만 입력하세요
+                      </p>
+                      <p className="text-base text-muted-foreground leading-relaxed">
+                        AI가 우리 제품에 관심 있을 바이어를 찾아드려요
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-lg font-medium text-foreground/90">
+                        원하는 조건을 선택하세요
+                      </p>
+                      <p className="text-base text-muted-foreground leading-relaxed">
+                        국가, 산업군을 선택하면 맞춤 바이어를 찾아드려요
+                      </p>
+                    </>
+                  )}
                 </div>
 
-                {/* 입력 영역 */}
+                {/* 모드 전환 탭 */}
+                <div className="flex justify-center">
+                  <div className="inline-flex rounded-lg border border-border p-1 bg-muted/30">
+                    <button
+                      type="button"
+                      onClick={() => setSearchMode("website")}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                        searchMode === "website"
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Globe className="h-4 w-4" />
+                      웹사이트로 시작
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSearchMode("detailed")}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                        searchMode === "detailed"
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <SlidersHorizontal className="h-4 w-4" />
+                      조건으로 찾기
+                    </button>
+                  </div>
+                </div>
+
+                {/* 입력 영역 - 모드에 따라 다른 UI */}
                 <div className="w-full">
-                  <form onSubmit={handleSubmit} className="space-y-2">
-                    <div className="rounded-2xl bg-background border overflow-hidden">
-                      {/* 1행: Textarea */}
-                      <textarea
-                        ref={inputRef}
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault()
-                            handleSubmit(e)
-                          }
-                        }}
-                        placeholder={
-                          searchMode === "website"
-                            ? "https://www.example.com"
-                            : "예: 친환경 화장품 제조, 미국 캘리포니아 진출 희망"
-                        }
-                        disabled={isSearching}
-                        rows={3}
-                        className="w-full min-h-[72px] resize-none bg-transparent text-base px-3 pt-3 pb-0 border-0 outline-none focus:outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                      />
-
-                      {/* 2행: 버튼들 */}
-                      <div className="flex items-center justify-between px-3 pb-3 pt-2">
-                        {/* 좌측: 검색 모드 선택 드롭다운 */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 gap-1.5 px-2.5 rounded-lg text-muted-foreground hover:text-foreground"
-                            >
-                              {searchMode === "website" ? (
-                                <Globe className="h-4 w-4" />
-                              ) : (
-                                <SlidersHorizontal className="h-4 w-4" />
-                              )}
-                              <span className="text-xs font-medium">
-                                {searchMode === "website" ? "웹사이트" : "조건 검색"}
-                              </span>
-                              <ChevronDown className="h-3 w-3 opacity-50" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="w-[260px]">
-                            <DropdownMenuItem
-                              onClick={() => setSearchMode("website")}
-                              className="flex flex-col items-start gap-1 py-3 cursor-pointer"
-                            >
-                              <div className="flex items-center gap-2 w-full">
-                                <Globe className="h-4 w-4" />
-                                <span className="font-medium">웹사이트로 시작하기</span>
-                                {searchMode === "website" && (
-                                  <Check className="h-4 w-4 ml-auto text-primary" />
-                                )}
-                              </div>
-                              <span className="text-xs text-muted-foreground pl-6">
-                                우리 회사 웹사이트 주소만 있으면 돼요
-                              </span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => setSearchMode("detailed")}
-                              className="flex flex-col items-start gap-1 py-3 cursor-pointer"
-                            >
-                              <div className="flex items-center gap-2 w-full">
-                                <SlidersHorizontal className="h-4 w-4" />
-                                <span className="font-medium">원하는 조건으로 찾기</span>
-                                {searchMode === "detailed" && (
-                                  <Check className="h-4 w-4 ml-auto text-primary" />
-                                )}
-                              </div>
-                              <span className="text-xs text-muted-foreground pl-6">
-                                업종, 지역, 규모 등을 직접 정해요
-                              </span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-
-                        {/* 우측: 제출 버튼 */}
-                        <Button
-                          type="submit"
-                          size="icon"
-                          disabled={isSearching || !isInputValid()}
-                          className="h-8 w-8 rounded-full"
-                        >
-                          {isSearching ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <ArrowRight className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* 유효성 에러 메시지 - 공간 항상 확보 */}
-                    <div className="min-h-[22px] mt-1.5 px-1">
-                      {searchMode === "website" && input.trim() && !isValidWebsiteUrl(input) && (
-                        <div className="text-sm text-red-500 dark:text-red-400">
-                          웹사이트 주소를 확인해주세요 (예: https://www.example.com)
+                  {searchMode === "website" ? (
+                    // 웹사이트 모드: 기존 텍스트 입력
+                    <form onSubmit={handleSubmit} className="space-y-2">
+                      <div className="rounded-2xl bg-background border overflow-hidden">
+                        <textarea
+                          ref={inputRef}
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault()
+                              handleSubmit(e)
+                            }
+                          }}
+                          placeholder="https://www.example.com"
+                          disabled={isSearching}
+                          rows={3}
+                          className="w-full min-h-[72px] resize-none bg-transparent text-base px-4 pt-4 pb-2 border-0 outline-none focus:outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+                        <div className="flex items-center justify-end px-4 pb-3">
+                          <Button
+                            type="submit"
+                            size="sm"
+                            disabled={isSearching || !isInputValid()}
+                            className="gap-2"
+                          >
+                            {isSearching ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <>
+                                분석 시작
+                                <ArrowRight className="h-4 w-4" />
+                              </>
+                            )}
+                          </Button>
                         </div>
-                      )}
+                      </div>
+                      {/* 유효성 에러 메시지 */}
+                      <div className="min-h-[22px] mt-1.5 px-1">
+                        {input.trim() && !isValidWebsiteUrl(input) && (
+                          <div className="text-sm text-red-500 dark:text-red-400">
+                            웹사이트 주소를 확인해주세요 (예: https://www.example.com)
+                          </div>
+                        )}
+                      </div>
+                    </form>
+                  ) : (
+                    // 조건 검색 모드: 드롭다운 폼
+                    <div className="rounded-2xl bg-background border p-5">
+                      <FilterSearchForm
+                        onSubmit={handleFilterSearch}
+                        isLoading={isSearching}
+                        disabled={isSearching}
+                      />
                     </div>
-                  </form>
+                  )}
                 </div>
 
-                {/* 카드 섹션 */}
-                <div className="w-full space-y-4">
-                  {/* 빠른 시작 예시 제목 */}
-                  <div className="space-y-2">
+                {/* 카드 섹션 - 웹사이트 모드에서만 표시, 한 줄 수평 스크롤 */}
+                {searchMode === "website" && (
+                  <div className="w-full space-y-3">
+                    {/* 제목 */}
                     <div className="flex items-center gap-2 justify-center">
-                      <Lightbulb className="h-5 w-5 text-amber-500" />
-                      <p className="text-base font-semibold text-foreground">
-                        웹사이트가 없으신가요?
+                      <Lightbulb className="h-4 w-4 text-amber-500" />
+                      <p className="text-sm text-muted-foreground">
+                        웹사이트가 없으신가요? 템플릿을 클릭하세요
                       </p>
                     </div>
-                    <p className="text-sm text-muted-foreground text-center">
-                      아래 템플릿을 클릭하면 상세 조건으로 바로 검색할 수 있어요
-                    </p>
-                  </div>
 
-                  {/* 산업별 탭 - 여러 줄로 표시 가능 */}
-                  <Tabs defaultValue="all" className="w-full">
-                    <TabsList className="w-full justify-center flex-wrap h-auto p-1 bg-muted/50 gap-1">
-                      {Object.entries(industryTemplates).map(([key, label]) => (
-                        <TabsTrigger
-                          key={key}
-                          value={key}
-                          className="whitespace-nowrap px-4 py-2 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                        >
-                          {label}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-
-                    {/* 카드 영역 - 스크롤 가능 */}
-                    <div className="mt-4 overflow-y-auto" style={{ maxHeight: "280px" }}>
-                      {/* 전체 템플릿 탭 */}
-                      <TabsContent value="all" className="mt-0">
-                        <div className="grid grid-cols-3 gap-3 pb-6">
-                          {Object.values(cardExamples)
-                            .flat()
-                            .map((example, index) => (
-                              <button
-                                key={example.query}
-                                ref={(el) => {
-                                  if (el) {
-                                    cardRefs.current.set(example.query, el)
-                                  }
-                                }}
-                                type="button"
-                                onClick={() => handleCardClick(example.query, index)}
-                                className={cn(
-                                  "group p-4 rounded-lg border border-border bg-background hover:border-primary hover:shadow-md transition-all text-left",
-                                  animatingCard === example.query && "pointer-events-none",
-                                  animatingCard === example.query &&
-                                    input === example.query &&
-                                    "!opacity-0",
-                                )}
-                                style={
-                                  animatingCard === example.query && input !== example.query
-                                    ? {
-                                        animation: "fly-to-input 0.4s ease-in-out forwards",
-                                        // @ts-expect-error
-                                        "--distance": `${cardAnimationDistance}px`,
-                                      }
-                                    : undefined
+                    {/* 수평 스크롤 카드 */}
+                    <div className="overflow-x-auto pb-2 -mx-4 px-4">
+                      <div className="flex gap-3" style={{ width: "max-content" }}>
+                        {Object.values(cardExamples)
+                          .flat()
+                          .slice(0, 12) // 대표 12개만 표시
+                          .map((example, index) => (
+                            <button
+                              key={example.query}
+                              ref={(el) => {
+                                if (el) {
+                                  cardRefs.current.set(example.query, el)
                                 }
-                              >
-                                <div className="font-semibold text-sm text-foreground mb-2 group-hover:text-primary transition-colors leading-snug">
-                                  {example.title}
-                                </div>
-                                <div className="text-xs text-muted-foreground leading-relaxed">
-                                  {example.description}
-                                </div>
-                              </button>
-                            ))}
-                        </div>
-                      </TabsContent>
-
-                      {/* 산업별 탭 컨텐츠 */}
-                      {Object.entries(cardExamples).map(([industry, examples]) => (
-                        <TabsContent key={industry} value={industry} className="mt-0">
-                          <div className="grid grid-cols-3 gap-3 pb-6">
-                            {examples.map((example, index) => (
-                              <button
-                                key={example.query}
-                                ref={(el) => {
-                                  if (el) {
-                                    cardRefs.current.set(example.query, el)
-                                  }
-                                }}
-                                type="button"
-                                onClick={() => handleCardClick(example.query, index)}
-                                className={cn(
-                                  "group p-4 rounded-lg border border-border bg-background hover:border-primary hover:shadow-md transition-all text-left",
-                                  animatingCard === example.query && "pointer-events-none",
-                                  animatingCard === example.query &&
-                                    input === example.query &&
-                                    "!opacity-0",
-                                )}
-                                style={
-                                  animatingCard === example.query && input !== example.query
-                                    ? {
-                                        animation: "fly-to-input 0.4s ease-in-out forwards",
-                                        // @ts-expect-error
-                                        "--distance": `${cardAnimationDistance}px`,
-                                      }
-                                    : undefined
-                                }
-                              >
-                                <div className="font-semibold text-sm text-foreground mb-2 group-hover:text-primary transition-colors leading-snug">
-                                  {example.title}
-                                </div>
-                                <div className="text-xs text-muted-foreground leading-relaxed">
-                                  {example.description}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </TabsContent>
-                      ))}
+                              }}
+                              type="button"
+                              onClick={() => handleCardClick(example.query, index)}
+                              className={cn(
+                                "group flex-shrink-0 w-[180px] p-3 rounded-lg border border-border bg-background hover:border-primary hover:shadow-md transition-all text-left",
+                                animatingCard === example.query && "pointer-events-none",
+                                animatingCard === example.query &&
+                                  input === example.query &&
+                                  "!opacity-0",
+                              )}
+                              style={
+                                animatingCard === example.query && input !== example.query
+                                  ? {
+                                      animation: "fly-to-input 0.4s ease-in-out forwards",
+                                      // @ts-expect-error
+                                      "--distance": `${cardAnimationDistance}px`,
+                                    }
+                                  : undefined
+                              }
+                            >
+                              <div className="font-medium text-sm text-foreground mb-1 group-hover:text-primary transition-colors leading-snug line-clamp-1">
+                                {example.title}
+                              </div>
+                              <div className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                                {example.description}
+                              </div>
+                            </button>
+                          ))}
+                      </div>
                     </div>
-                  </Tabs>
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (

@@ -186,17 +186,61 @@ When the user searches for a compound term like "포장재 유통회사":
 4. Combine with AND: packaging AND (wholesale OR distribution)
 
 ### Examples of CORRECT SQL:
+- "한국 제조업체" → WHERE country = 'South Korea' AND LOWER(industry) LIKE '%manufacturing%' LIMIT 100
+- "한국에 위치한 제조관련 업체" → WHERE country = 'South Korea' AND LOWER(industry) LIKE '%manufacturing%' LIMIT 100
+- "인도네시아 뷰티 유통업체" → WHERE country = 'Indonesia' AND (LOWER(industry) LIKE '%beauty%' OR LOWER(industry) LIKE '%cosmetics%') AND (LOWER(industry) LIKE '%wholesale%' OR LOWER(industry) LIKE '%distribution%' OR LOWER(industry) LIKE '%retail%') LIMIT 100
 - "미국 포장재 유통회사" → WHERE country = 'United States' AND LOWER(industry) LIKE '%packaging%' AND (LOWER(industry) LIKE '%wholesale%' OR LOWER(industry) LIKE '%distribution%') LIMIT 100
 - "미국 포장재 회사" → WHERE country = 'United States' AND LOWER(industry) LIKE '%packaging%' LIMIT 100
 - "미국 뷰티 회사" → WHERE country = 'United States' AND (LOWER(industry) LIKE '%beauty%' OR LOWER(industry) LIKE '%cosmetics%') LIMIT 100
 - "미국 유통 회사" → WHERE country = 'United States' AND (LOWER(industry) LIKE '%wholesale%' OR LOWER(industry) LIKE '%distribution%') LIMIT 100
 - "미국 IT 컨설팅" → WHERE country = 'United States' AND LOWER(industry) LIKE '%software%' AND LOWER(industry) LIKE '%consulting%' LIMIT 100
+- "일본 IT 회사" → WHERE country = 'Japan' AND (LOWER(industry) LIKE '%software%' OR LOWER(industry) LIKE '%technology%') LIMIT 100
 
 ### Examples of WRONG SQL (DO NOT DO THIS):
 ❌ WHERE country = 'United States' LIMIT 100  -- Missing industry filter! Returns 600K+ unrelated results!
-❌ WHERE country = 'United States' OR LOWER(industry) LIKE '%packaging%'  -- OR with country is WRONG!
+❌ WHERE country = 'United States' OR LOWER(industry) LIKE '%packaging%'  -- OR with country is WRONG! Must use AND!
 ❌ WHERE LOWER(industry) LIKE '%wholesale%' -- Missing "packaging" for "포장재 유통"!
 ❌ WHERE LOWER(industry) LIKE '%manufacturing%' OR LOWER(industry) LIKE '%wholesale%' -- Generic "manufacturing" is NOT "packaging"!
+❌ WHERE LOWER(industry) LIKE '%manufacturing%' LIMIT 100 -- Missing country filter for "한국에 위치한 제조업체"!
+❌ WHERE country LIKE '%Korea%' -- Use EXACT value 'South Korea', not partial match!
+❌ WHERE country = 'Korea' -- Use 'South Korea' not 'Korea'!
+
+## ⚠️ CRITICAL: Korean to English COUNTRY Mapping (MUST MATCH EXACTLY):
+
+| Korean | EXACT English Value to Use in SQL |
+|--------|-----------------------------------|
+| 한국, 대한민국 | South Korea (NOT "Korea" alone!) |
+| 미국 | United States |
+| 중국 | China |
+| 일본 | Japan |
+| 인도 | India |
+| 인도네시아 | Indonesia |
+| 베트남 | Vietnam |
+| 태국 | Thailand |
+| 말레이시아 | Malaysia |
+| 싱가포르 | Singapore |
+| 필리핀 | Philippines |
+| 호주 | Australia |
+| 캐나다 | Canada |
+| 영국 | United Kingdom |
+| 독일 | Germany |
+| 프랑스 | France |
+| 이탈리아 | Italy |
+| 스페인 | Spain |
+| 브라질 | Brazil |
+| 멕시코 | Mexico |
+| 러시아 | Russia |
+| 터키 | Turkey |
+| 사우디 | Saudi Arabia |
+| UAE | United Arab Emirates |
+| 아시아 | Asia-Pacific (APAC) |
+| 동남아 | Southeast Asia |
+| 유럽 | Europe |
+
+### ⚠️ COUNTRY FILTER IS MANDATORY when user specifies a location!
+- "한국에 위치한 제조업체" → WHERE country = 'South Korea' AND ...
+- "미국 포장재 회사" → WHERE country = 'United States' AND ...
+- NEVER omit country filter if user specifies a country!
 
 ## Korean to English Industry Keyword Mapping (MANDATORY - USE THESE EXACT KEYWORDS):
 
@@ -208,7 +252,7 @@ When the user searches for a compound term like "포장재 유통회사":
 | 뷰티, 화장품 | beauty, cosmetics |
 | IT, 소프트웨어, 기술 | software, technology |
 | 헬스케어, 의료, 병원 | health, medical, healthcare, hospital |
-| 제조업 | manufacturing (but NOT for "포장재"!) |
+| 제조업, 제조 | manufacturing |
 | 금융, 은행 | financial, banking, finance |
 | 부동산 | real estate, property |
 | 교육 | education, training |
@@ -251,17 +295,23 @@ ${dataDictionary.revenueRanges.map((r) => `- "${r}"`).join("\n")}
 ## Important Rules:
 1. ALWAYS use LIMIT clause (default 100, max 1000)
 2. Return ONLY the SQL query, no explanations (or INVALID_QUERY if not a valid search)
-3. **CRITICAL: Industry Filter is MANDATORY when user mentions a product/industry!**
+3. **CRITICAL: Country Filter is MANDATORY when user mentions a location!**
+   - "한국" → country = 'South Korea'
+   - "미국" → country = 'United States'
+   - ALWAYS check the Korean to English Country Mapping table above
+   - **NEVER omit country filter if user specifies a location!**
+4. **CRITICAL: Industry Filter is MANDATORY when user mentions a product/industry!**
    - The SQL MUST include an industry condition using LIKE
    - Check the Industries list above and find the BEST matching keyword
    - If NO keyword matches at all, return: NO_INDUSTRY_MATCH
    - **NEVER return results with only country filter** (this causes 600K+ unrelated results!)
-4. For Korean location queries, use the EXACT country values from the Countries list above
 5. For employee range queries:
    - Check the available employee ranges format (e.g., "0 - 25", "c_00001_00010")
    - "대기업" = larger employee ranges
    - "중소기업", "스타트업" = smaller employee ranges
 6. Use LOWER(industry) LIKE '%keyword%' for case-insensitive matching
+7. **BOTH country AND industry filters must be applied when user specifies BOTH!**
+   - "한국에 위치한 제조업체" → WHERE country = 'South Korea' AND LOWER(industry) LIKE '%manufacturing%'
 
 ## User Query:
 "${query}"

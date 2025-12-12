@@ -772,6 +772,254 @@ function buildNaturalLanguageQuery(params: {
   return parts.join(" ")
 }
 
+// 지역(Region) 값 - 특정 국가 검색 시 제외해야 함
+const REGION_VALUES = [
+  "asia-pacific",
+  "apac",
+  "asia pacific",
+  "southeast asia",
+  "asean",
+  "europe",
+  "emea",
+  "middle east",
+  "latin america",
+  "latam",
+  "north america",
+  "africa",
+  "oceania",
+]
+
+// 국가 키워드 매핑 (한국어 → 영어)
+// isSpecificCountry: true면 특정 국가 검색 (Region 결과 제외)
+const COUNTRY_KEYWORD_MAP: Record<string, { keywords: string[]; isSpecificCountry: boolean }> = {
+  한국: { keywords: ["korea", "south korea"], isSpecificCountry: true },
+  미국: { keywords: ["usa", "united states", "america"], isSpecificCountry: true },
+  중국: { keywords: ["china"], isSpecificCountry: true },
+  일본: { keywords: ["japan"], isSpecificCountry: true },
+  인도: { keywords: ["india"], isSpecificCountry: true },
+  인도네시아: { keywords: ["indonesia"], isSpecificCountry: true },
+  베트남: { keywords: ["vietnam"], isSpecificCountry: true },
+  태국: { keywords: ["thailand"], isSpecificCountry: true },
+  말레이시아: { keywords: ["malaysia"], isSpecificCountry: true },
+  싱가포르: { keywords: ["singapore"], isSpecificCountry: true },
+  필리핀: { keywords: ["philippines"], isSpecificCountry: true },
+  호주: { keywords: ["australia"], isSpecificCountry: true },
+  캐나다: { keywords: ["canada"], isSpecificCountry: true },
+  영국: { keywords: ["uk", "united kingdom", "britain"], isSpecificCountry: true },
+  독일: { keywords: ["germany"], isSpecificCountry: true },
+  프랑스: { keywords: ["france"], isSpecificCountry: true },
+  이탈리아: { keywords: ["italy"], isSpecificCountry: true },
+  스페인: { keywords: ["spain"], isSpecificCountry: true },
+  네덜란드: { keywords: ["netherlands"], isSpecificCountry: true },
+  브라질: { keywords: ["brazil"], isSpecificCountry: true },
+  멕시코: { keywords: ["mexico"], isSpecificCountry: true },
+  러시아: { keywords: ["russia"], isSpecificCountry: true },
+  터키: { keywords: ["turkey"], isSpecificCountry: true },
+  사우디: { keywords: ["saudi", "saudi arabia"], isSpecificCountry: true },
+  uae: { keywords: ["uae", "united arab emirates", "dubai"], isSpecificCountry: true },
+  이집트: { keywords: ["egypt"], isSpecificCountry: true },
+  남아공: { keywords: ["south africa"], isSpecificCountry: true },
+  나이지리아: { keywords: ["nigeria"], isSpecificCountry: true },
+  // 지역 검색 (Region 결과 포함)
+  아시아: { keywords: ["asia", "asia-pacific", "apac"], isSpecificCountry: false },
+  유럽: { keywords: ["europe", "european", "eu"], isSpecificCountry: false },
+  동남아: { keywords: ["southeast asia", "asean"], isSpecificCountry: false },
+}
+
+// 검색 쿼리에서 산업 키워드 추출
+const INDUSTRY_KEYWORD_MAP: Record<string, string[]> = {
+  // 한국어 → 영어 키워드 매핑
+  포장재: ["packaging", "package", "container"],
+  유통: ["wholesale", "distribution", "retail", "distributor"],
+  뷰티: ["beauty", "cosmetics", "cosmetic", "skincare", "makeup"],
+  화장품: ["cosmetics", "cosmetic", "beauty", "skincare"],
+  IT: ["software", "technology", "tech", "it", "computer"],
+  소프트웨어: ["software", "saas", "tech"],
+  헬스케어: ["health", "healthcare", "medical", "hospital"],
+  의료: ["medical", "health", "hospital", "clinic"],
+  제조: ["manufacturing", "manufacturer", "production"],
+  금융: ["financial", "finance", "banking", "bank"],
+  부동산: ["real estate", "property", "realty"],
+  교육: ["education", "training", "school", "academy"],
+  물류: ["logistics", "freight", "shipping", "transport"],
+  운송: ["transportation", "transport", "shipping", "freight"],
+  식품: ["food", "beverage", "f&b"],
+  건설: ["construction", "building", "contractor"],
+  에너지: ["energy", "power", "utility"],
+  자동차: ["automotive", "auto", "vehicle", "car"],
+  농업: ["agriculture", "farming", "agricultural"],
+  컨설팅: ["consulting", "consultant", "advisory"],
+  광고: ["advertising", "marketing", "agency"],
+  마케팅: ["marketing", "advertising", "digital"],
+  보험: ["insurance"],
+  청소: ["cleaning", "janitorial", "sanitation"],
+  // 영어 키워드 직접 매핑
+  packaging: ["packaging", "package", "container"],
+  wholesale: ["wholesale", "distribution", "distributor"],
+  beauty: ["beauty", "cosmetics", "skincare"],
+  software: ["software", "saas", "tech"],
+  healthcare: ["health", "healthcare", "medical"],
+  manufacturing: ["manufacturing", "manufacturer"],
+}
+
+// 쿼리에서 국가 키워드 추출 (특정 국가 검색 여부도 반환)
+function extractCountryKeywords(query: string): { keywords: string[]; isSpecificCountry: boolean } {
+  const lowerQuery = query.toLowerCase()
+  const keywords: string[] = []
+  let isSpecificCountry = false
+
+  for (const [term, config] of Object.entries(COUNTRY_KEYWORD_MAP)) {
+    if (lowerQuery.includes(term.toLowerCase())) {
+      keywords.push(...config.keywords)
+      if (config.isSpecificCountry) {
+        isSpecificCountry = true
+      }
+    }
+  }
+
+  return { keywords: [...new Set(keywords)], isSpecificCountry }
+}
+
+// 쿼리에서 산업 키워드 추출
+function extractIndustryKeywords(query: string): string[] {
+  const lowerQuery = query.toLowerCase()
+  const keywords: string[] = []
+
+  for (const [term, englishKeywords] of Object.entries(INDUSTRY_KEYWORD_MAP)) {
+    if (lowerQuery.includes(term.toLowerCase())) {
+      keywords.push(...englishKeywords)
+    }
+  }
+
+  return [...new Set(keywords)]
+}
+
+// 국가 매칭 점수 계산 (정확 매칭 우선, 특정 국가 검색 시 Region 제외)
+function calculateCountryMatchScore(
+  lead: BigQueryResult,
+  countryKeywords: string[],
+  isSpecificCountry: boolean,
+): number {
+  if (countryKeywords.length === 0) return 0
+
+  const country = (lead.country || "").toLowerCase()
+
+  // 특정 국가 검색인데 country가 Region 값이면 제외 (점수 0)
+  if (isSpecificCountry) {
+    const isRegion = REGION_VALUES.some((region) => country.includes(region.toLowerCase()))
+    if (isRegion) {
+      return -10 // 특정 국가 검색에서 Region은 오히려 감점
+    }
+  }
+
+  for (const keyword of countryKeywords) {
+    const kw = keyword.toLowerCase()
+    // 정확히 국가명이 포함되면 높은 점수
+    if (country.includes(kw)) return 20
+    // 'korea'를 검색했는데 'south korea'가 있으면 매칭
+    if (kw === "korea" && country.includes("korea")) return 20
+  }
+
+  return 0
+}
+
+// 리드의 산업과 검색 키워드 매칭 점수 계산
+function calculateIndustryMatchScore(lead: BigQueryResult, searchKeywords: string[]): number {
+  if (searchKeywords.length === 0) return 0
+
+  const industry = (lead.mainIndustry || "").toLowerCase()
+  const category = (lead.category || "").toLowerCase()
+  const subIndustry = (lead.subIndustry || "").toLowerCase()
+
+  let score = 0
+  for (const keyword of searchKeywords) {
+    const kw = keyword.toLowerCase()
+    if (industry.includes(kw)) score += 10
+    if (category.includes(kw)) score += 8
+    if (subIndustry.includes(kw)) score += 6
+  }
+
+  return score
+}
+
+// 그룹 내 랜덤 셔플 헬퍼
+function shuffleArray<T>(arr: T[]): T[] {
+  const shuffled = [...arr]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const itemI = shuffled[i]
+    const itemJ = shuffled[j]
+    if (itemI && itemJ) {
+      shuffled[i] = itemJ
+      shuffled[j] = itemI
+    }
+  }
+  return shuffled
+}
+
+// 스마트 셔플: 국가 + 산업 매칭 우선 정렬 (특정 국가 검색 시 Region 제외)
+function smartShuffle(results: BigQueryResult[], searchQuery: string): BigQueryResult[] {
+  const { keywords: countryKeywords, isSpecificCountry } = extractCountryKeywords(searchQuery)
+  const industryKeywords = extractIndustryKeywords(searchQuery)
+
+  leadDiscoveryLogger.info(
+    `[스마트 정렬] 국가 키워드: ${countryKeywords.length > 0 ? countryKeywords.join(", ") : "(없음)"} (특정국가: ${isSpecificCountry})`,
+  )
+  leadDiscoveryLogger.info(
+    `[스마트 정렬] 산업 키워드: ${industryKeywords.length > 0 ? industryKeywords.join(", ") : "(없음)"}`,
+  )
+
+  // 키워드가 없으면 기존 랜덤 셔플
+  if (countryKeywords.length === 0 && industryKeywords.length === 0) {
+    return shuffleArray(results)
+  }
+
+  // 각 리드에 매칭 점수 계산 (국가 + 산업)
+  const scored = results.map((lead) => ({
+    lead,
+    countryScore: calculateCountryMatchScore(lead, countryKeywords, isSpecificCountry),
+    industryScore: calculateIndustryMatchScore(lead, industryKeywords),
+  }))
+
+  // 그룹 분류 (국가 매칭 우선, Region은 제외)
+  // 1. 국가 O + 산업 O: 최우선
+  const bothMatch = scored.filter((s) => s.countryScore > 0 && s.industryScore >= 10)
+  // 2. 국가 O + 산업 부분매칭
+  const countryWithPartialIndustry = scored.filter(
+    (s) => s.countryScore > 0 && s.industryScore > 0 && s.industryScore < 10,
+  )
+  // 3. 국가 O + 산업 X
+  const countryOnly = scored.filter((s) => s.countryScore > 0 && s.industryScore === 0)
+  // 4. 국가 X + 산업 O (Region 제외)
+  const industryOnly = scored.filter((s) => s.countryScore === 0 && s.industryScore >= 10)
+  // 5. Region 결과 (특정 국가 검색 시 최하단으로)
+  const regionResults = scored.filter((s) => s.countryScore < 0)
+  // 6. 나머지
+  const noMatch = scored.filter((s) => s.countryScore === 0 && s.industryScore < 10)
+
+  leadDiscoveryLogger.info(
+    `[스마트 정렬] 매칭 결과: ` +
+      `국가+산업=${bothMatch.length}, ` +
+      `국가+부분산업=${countryWithPartialIndustry.length}, ` +
+      `국가만=${countryOnly.length}, ` +
+      `산업만=${industryOnly.length}, ` +
+      `Region(제외)=${regionResults.length}, ` +
+      `없음=${noMatch.length}`,
+  )
+
+  // 우선순위대로 결합 (각 그룹 내에서는 랜덤, Region은 최하단)
+  const sortedResults = [
+    ...shuffleArray(bothMatch).map((s) => s.lead),
+    ...shuffleArray(countryWithPartialIndustry).map((s) => s.lead),
+    ...shuffleArray(countryOnly).map((s) => s.lead),
+    ...shuffleArray(industryOnly).map((s) => s.lead),
+    ...shuffleArray(noMatch).map((s) => s.lead),
+    ...shuffleArray(regionResults).map((s) => s.lead), // Region은 최하단
+  ]
+
+  return sortedResults
+}
+
 // Transform Apollo results to our format
 function transformApolloResults(results: Record<string, unknown>[]): BigQueryResult[] {
   return results.map((row) => ({
@@ -868,12 +1116,12 @@ export async function executeBigQuery(
 
     leadDiscoveryLogger.info(`[리드 검색] 자연어 쿼리: "${nlQuery}"`)
     leadDiscoveryLogger.info(
-      `[리드 검색] 세 테이블(b2b_leads_all, crunchbase_all, apollo_leads_all) 모두 검색`,
+      `[리드 검색] 네 테이블(b2b_leads_all, crunchbase_all, apollo_leads_all, fresh_leads) 모두 검색`,
     )
     leadDiscoveryLogger.bigQueryExecutionStart(nlQuery)
 
     if (emitter) {
-      emitter.progress("executeBigQuery", "세 테이블에서 검색 중...", 20)
+      emitter.progress("executeBigQuery", "네 테이블에서 검색 중...", 20)
     }
 
     // 네 테이블 병렬 검색
@@ -955,7 +1203,7 @@ export async function executeBigQuery(
       `[셔플 전] B2B: ${b2bTransformed.length}, Crunchbase: ${crunchbaseTransformed.length}, Apollo: ${apolloTransformed.length}, Fresh: ${freshTransformed.length}`,
     )
 
-    // 결과 합치기 + Fisher-Yates 완전 셔플
+    // 결과 합치기
     const allResults = [
       ...b2bTransformed,
       ...crunchbaseTransformed,
@@ -963,22 +1211,15 @@ export async function executeBigQuery(
       ...freshTransformed,
     ]
 
-    // Fisher-Yates 셔플 (완전 랜덤)
-    const combinedResults = [...allResults]
-    for (let i = combinedResults.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      const itemI = combinedResults[i]
-      const itemJ = combinedResults[j]
-      if (itemI && itemJ) {
-        combinedResults[i] = itemJ
-        combinedResults[j] = itemI
-      }
-    }
+    // 스마트 셔플: 검색 쿼리와 관련 있는 산업군을 앞에 배치
+    const combinedResults = smartShuffle(allResults, params.query)
 
-    // 셔플 후 100개로 제한
+    // 100개로 제한
     const limitedResults = combinedResults.slice(0, 100)
-    const first5 = limitedResults.slice(0, 5).map((r) => r.companyName || "unknown")
-    leadDiscoveryLogger.info(`[셔플 후] 첫 5개: ${first5.join(", ")}`)
+    const first5 = limitedResults
+      .slice(0, 5)
+      .map((r) => `${r.companyName || "unknown"}[${r.country || "-"}/${r.mainIndustry || "-"}]`)
+    leadDiscoveryLogger.info(`[스마트 셔플 후] 첫 5개: ${first5.join(", ")}`)
     const totalCount = b2bTotal + crunchbaseTotal + apolloTotal + freshTotal
     const combinedSql = `-- B2B Leads:\n${b2bSql}\n\n-- Crunchbase:\n${crunchbaseSql}\n\n-- Apollo:\n${apolloSql}\n\n-- Fresh:\n${freshSql}`
 
@@ -991,7 +1232,7 @@ export async function executeBigQuery(
     leadDiscoveryLogger.info(`  - Apollo: ${apolloTotal.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - Fresh: ${freshTotal.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - 총 결과: ${totalCount.toLocaleString()}개`)
-    leadDiscoveryLogger.info(`  - 반환 결과: ${limitedResults.length}개 (랜덤 셔플, 100개 제한)`)
+    leadDiscoveryLogger.info(`  - 반환 결과: ${limitedResults.length}개 (스마트 셔플, 100개 제한)`)
     leadDiscoveryLogger.info(`  - 소요시간: ${(duration / 1000).toFixed(1)}초`)
     leadDiscoveryLogger.bigQueryExecutionComplete(duration, limitedResults.length, totalCount)
 

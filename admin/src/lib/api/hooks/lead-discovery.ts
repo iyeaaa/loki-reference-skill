@@ -673,35 +673,40 @@ export async function calculateFitScores(
 }
 
 // ============================================
-// Lead Enrichment API (Jina Reader + Gemini)
+// Lead Enrichment API (Web Extraction 기반)
 // ============================================
 
 export interface EnrichmentResult {
-  domain: string
-  emails: Array<{
-    value: string
-    type: string
-    confidence?: number
-  }>
-  companyInfo: {
-    name?: string
-    description?: string
-    industry?: string
-    size?: string
-    founded?: string
-    location?: string
-  }
-  socialLinks: {
-    linkedin?: string
-    twitter?: string
-    facebook?: string
-  }
-  rawContent?: string
+  // 기본 정보
+  foundCompanyName?: string
+  description?: string
+  // 연락처
+  email?: string
+  phoneNumber?: string
+  // 위치 정보
+  address?: string
+  country?: string
+  city?: string
+  state?: string
+  // 회사 정보
+  foundedYear?: string
+  employeeCount?: string
+  // 소셜 미디어
+  linkedinUrl?: string
+  facebookUrl?: string
+  instagramUrl?: string
+  twitterUrl?: string
+  // 비즈니스 정보
+  products?: string
+  businessSectors?: string
+  productCategories?: string
+  industryTypes?: string
 }
 
 export interface EnrichLeadRequest {
   webAddress: string
   companyName: string
+  workspaceId: string
 }
 
 export interface EnrichLeadResponse {
@@ -710,27 +715,76 @@ export interface EnrichLeadResponse {
   error?: string
 }
 
-// 단일 리드 enrichment
+// 단일 리드 enrichment (web-extraction API 사용)
 export const enrichLead = async (
   webAddress: string,
-  companyName: string,
+  _companyName: string,
+  workspaceId: string,
 ): Promise<EnrichLeadResponse> => {
-  const response = await fetch(`${BASE_URL}/api/v1/lead-enrichment/enrich`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ webAddress, companyName }),
-  })
+  try {
+    const response = await fetch(`${BASE_URL}/api/v1/admin/web-extraction/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        websiteUrl: webAddress,
+        workspaceId,
+      }),
+    })
 
-  if (!response.ok) {
-    throw new Error(`Enrichment failed: ${response.status}`)
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `HTTP ${response.status}`)
+    }
+
+    const result = await response.json()
+
+    if (!result.success) {
+      return {
+        success: false,
+        data: null,
+        error: result.error || "분석 실패",
+      }
+    }
+
+    // web-extraction 응답을 EnrichmentResult로 변환
+    const data = result.data
+    return {
+      success: true,
+      data: {
+        foundCompanyName: data.found_company_name,
+        description: data.description,
+        email: data.email,
+        phoneNumber: data.phone_number,
+        address: data.address,
+        country: data.country,
+        city: data.city,
+        state: data.state,
+        foundedYear: data.founded_year,
+        employeeCount: data.employee_count,
+        linkedinUrl: data.linkedin_url,
+        facebookUrl: data.facebook_url,
+        instagramUrl: data.instagram_url,
+        twitterUrl: data.twitter_url,
+        products: data.products,
+        businessSectors: data.business_sectors,
+        productCategories: data.product_categories,
+        industryTypes: data.industry_types,
+      },
+    }
+  } catch (error) {
+    log.error("Enrichment failed", error)
+    return {
+      success: false,
+      data: null,
+      error: error instanceof Error ? error.message : "Enrichment 실패",
+    }
   }
-
-  return response.json()
 }
 
-// 여러 리드 enrichment (병렬 처리)
+// 여러 리드 enrichment (순차 처리 - API 부하 방지)
 export const enrichLeads = async (
   leads: Array<{ id: string; webAddress: string; companyName: string }>,
+  workspaceId: string,
   callbacks: {
     onProgress?: (completed: number, total: number, current: string) => void
     onResult?: (leadId: string, result: EnrichmentResult) => void
@@ -741,25 +795,29 @@ export const enrichLeads = async (
   const total = leads.length
   let completed = 0
 
-  // 병렬로 모든 리드 처리
-  const promises = leads.map(async (lead) => {
+  log.info("Starting enrichment", { total, workspaceId })
+
+  // 순차 처리 (웹 크롤링은 시간이 걸리므로 병렬로 하면 부하가 큼)
+  for (const lead of leads) {
     try {
-      const response = await enrichLead(lead.webAddress, lead.companyName)
-      completed++
       callbacks.onProgress?.(completed, total, lead.companyName)
+
+      const response = await enrichLead(lead.webAddress, lead.companyName, workspaceId)
 
       if (response.success && response.data) {
         callbacks.onResult?.(lead.id, response.data)
+        log.info("Enrichment success", { leadId: lead.id, hasEmail: !!response.data.email })
       } else {
         callbacks.onError?.(lead.id, response.error || "Unknown error")
       }
     } catch (error) {
-      completed++
-      callbacks.onProgress?.(completed, total, lead.companyName)
       callbacks.onError?.(lead.id, error instanceof Error ? error.message : "Failed to enrich")
     }
-  })
 
-  await Promise.all(promises)
+    completed++
+  }
+
+  callbacks.onProgress?.(completed, total, "")
   callbacks.onComplete?.()
+  log.info("Enrichment complete", { total, completed })
 }

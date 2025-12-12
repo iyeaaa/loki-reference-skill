@@ -389,14 +389,38 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         webAddress: c.web_address || "",
         companyName: c.company_name || "",
       })),
+      workspaceId,
       {
         onProgress: (completed, total, name) => {
           setEnrichProgress({ current: completed + 1, total, name })
         },
         onResult: (leadId, result) => {
-          // 고객 정보 업데이트
+          // 웹데추에서 추출한 모든 필드로 고객 정보 업데이트
           updateCustomer(leadId, {
-            description: result.companyInfo.description,
+            // 기본 정보
+            description: result.description,
+            // 연락처 (기존 값이 없을 때만 업데이트)
+            ...(result.email && { email: result.email }),
+            ...(result.phoneNumber && { phone: result.phoneNumber }),
+            // 위치 정보
+            ...(result.address && { address: result.address }),
+            ...(result.city && { city: result.city }),
+            ...(result.state && { state: result.state }),
+            ...(result.country &&
+              !customers.find((c) => c.id === leadId)?.country && {
+                country: result.country,
+              }),
+            // 회사 정보
+            ...(result.foundedYear && { foundedYear: result.foundedYear }),
+            ...(result.employeeCount && { employee: result.employeeCount }),
+            // 소셜 미디어
+            ...(result.linkedinUrl && { linkedinUrl: result.linkedinUrl }),
+            ...(result.facebookUrl && { facebookUrl: result.facebookUrl }),
+            ...(result.instagramUrl && { instagramUrl: result.instagramUrl }),
+            ...(result.twitterUrl && { twitterUrl: result.twitterUrl }),
+            // 비즈니스 정보
+            ...(result.products && { products: result.products }),
+            ...(result.businessSectors && { businessSectors: result.businessSectors }),
           })
           finishEnrichment(leadId)
         },
@@ -412,7 +436,7 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         },
       },
     )
-  }, [rowSelection, customers, startEnrichment, finishEnrichment, updateCustomer])
+  }, [rowSelection, customers, startEnrichment, finishEnrichment, updateCustomer, workspaceId])
 
   // 적합도 계산 완료 시 자동 정렬
   const hasSortedRef = useRef(false)

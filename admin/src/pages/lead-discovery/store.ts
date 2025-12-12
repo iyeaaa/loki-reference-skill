@@ -27,6 +27,17 @@ export interface Customer {
   revenue?: string
   source: string
   createdAt: Date
+  // 웹데추 Enrichment 추가 필드
+  address?: string // 주소
+  city?: string // 도시
+  state?: string // 주/도
+  foundedYear?: string // 설립년도
+  linkedinUrl?: string // 링크드인 URL
+  facebookUrl?: string // 페이스북 URL
+  instagramUrl?: string // 인스타그램 URL
+  twitterUrl?: string // 트위터/X URL
+  products?: string // 주요 제품/서비스
+  businessSectors?: string // 비즈니스 섹터
 }
 
 // 채팅 메시지 인터페이스

@@ -45,51 +45,45 @@ function CustomMenuItem({ title, url, icon: Icon, isActive }: CustomMenuItemProp
 
   return (
     <SidebarMenuItem>
-      <motion.div
-        initial={{ opacity: 0, x: -10 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.3 }}
+      <SidebarMenuButton
+        asChild
+        tooltip={title}
+        isActive={isActive}
+        className={cn(
+          "relative h-11 px-3 py-2.5 transition-all duration-200 rounded-lg group",
+          isActive
+            ? "bg-[#2563EB] text-white shadow-sm hover:bg-[#2563EB]/95"
+            : "bg-transparent text-sidebar-foreground hover:bg-accent/50",
+        )}
       >
-        <SidebarMenuButton
-          asChild
-          tooltip={title}
-          isActive={isActive}
-          className={cn(
-            "relative h-11 px-3 py-2.5 transition-all duration-200 rounded-lg group",
-            isActive
-              ? "bg-[#2563EB] text-white shadow-sm hover:bg-[#2563EB]/95"
-              : "bg-transparent text-sidebar-foreground hover:bg-accent/50",
-          )}
-        >
-          <Link to={url} className="flex items-center gap-3 w-full">
-            {reducedMotion ? (
+        <Link to={url} className="flex items-center gap-3 w-full">
+          {reducedMotion ? (
+            <Icon
+              className={cn(
+                "h-5 w-5 shrink-0 transition-transform group-hover:scale-105",
+                isActive ? "text-white" : "text-muted-foreground",
+              )}
+            />
+          ) : (
+            <motion.div variants={iconRotateVariants} initial="rest" whileHover="hover">
               <Icon
                 className={cn(
-                  "h-5 w-5 shrink-0 transition-transform group-hover:scale-105",
+                  "h-5 w-5 shrink-0",
                   isActive ? "text-white" : "text-muted-foreground",
                 )}
               />
-            ) : (
-              <motion.div variants={iconRotateVariants} initial="rest" whileHover="hover">
-                <Icon
-                  className={cn(
-                    "h-5 w-5 shrink-0",
-                    isActive ? "text-white" : "text-muted-foreground",
-                  )}
-                />
-              </motion.div>
+            </motion.div>
+          )}
+          <span
+            className={cn(
+              "truncate text-sm group-data-[collapsible=icon]:hidden",
+              isActive ? "font-medium text-white" : "font-normal",
             )}
-            <span
-              className={cn(
-                "truncate text-sm group-data-[collapsible=icon]:hidden",
-                isActive ? "font-medium text-white" : "font-normal",
-              )}
-            >
-              {title}
-            </span>
-          </Link>
-        </SidebarMenuButton>
-      </motion.div>
+          >
+            {title}
+          </span>
+        </Link>
+      </SidebarMenuButton>
     </SidebarMenuItem>
   )
 }

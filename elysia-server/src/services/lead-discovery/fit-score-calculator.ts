@@ -40,6 +40,53 @@ export interface FitScoreResult {
   reason?: string
 }
 
+// 한국어 쿼리에서 국가명 추출
+function extractCountryFromQuery(query: string): string | null {
+  const countryMap: Record<string, string> = {
+    미국: "United States",
+    "미 ": "United States",
+    인도네시아: "Indonesia",
+    캐나다: "Canada",
+    영국: "United Kingdom",
+    호주: "Australia",
+    독일: "Germany",
+    프랑스: "France",
+    일본: "Japan",
+    중국: "China",
+    싱가포르: "Singapore",
+    말레이시아: "Malaysia",
+    태국: "Thailand",
+    베트남: "Vietnam",
+    필리핀: "Philippines",
+    인도: "India",
+    브라질: "Brazil",
+    멕시코: "Mexico",
+    스페인: "Spain",
+    이탈리아: "Italy",
+    네덜란드: "Netherlands",
+    스위스: "Switzerland",
+    스웨덴: "Sweden",
+    노르웨이: "Norway",
+    덴마크: "Denmark",
+    벨기에: "Belgium",
+    폴란드: "Poland",
+    아일랜드: "Ireland",
+    뉴질랜드: "New Zealand",
+    남아프리카: "South Africa",
+    아랍에미리트: "United Arab Emirates",
+    사우디: "Saudi Arabia",
+    터키: "Turkey",
+  }
+
+  for (const [korean, english] of Object.entries(countryMap)) {
+    if (query.includes(korean)) {
+      return english
+    }
+  }
+
+  return null
+}
+
 /**
  * 배치로 리드 적합도 계산 (10개씩)
  */
@@ -113,6 +160,9 @@ Evaluate each lead based on how well they match this search query.`
 - Target Markets: ${websiteAnalysis.targetMarkets?.join(", ") || "N/A"}
 - Business Model: ${websiteAnalysis.businessModel || "N/A"}`
 
+  // 사용자 쿼리에서 국가 추출
+  const extractedCountry = userQuery ? extractCountryFromQuery(userQuery) : null
+
   const prompt = `You are evaluating potential buyer leads.
 
 ${searchCriteria}
@@ -120,18 +170,35 @@ ${searchCriteria}
 ## Selected Target Criteria:
 - Target Country: ${selectedTarget.country}
 - Target Industry: ${selectedTarget.industry}
+${extractedCountry ? `- User Requested Country (from query): ${extractedCountry}` : ""}
 
 ## Leads to Evaluate:
 ${leadsInfo}
 
 ## Task:
 For each lead, calculate a FIT SCORE (0-100) based on:
-1. Match with search query/seller needs (40 points max) - MOST IMPORTANT
-2. Country match with target (25 points max)
-3. Industry relevance (25 points max)
-4. Company data completeness - email, phone, website (10 points max)
+1. **COUNTRY MATCH (30 points max) - CRITICAL!**
+   - EXACT country match = 30 points
+   - Related region (e.g., "Indonesia" in "Southeast Asia") = 15 points
+   - Different country/region = 0 points
+   ${extractedCountry ? `- User specifically requested "${extractedCountry}". If lead's country does NOT contain or match "${extractedCountry}", score MUST be below 40!` : ""}
+   
+2. **INDUSTRY MATCH (40 points max) - MOST IMPORTANT**
+   - Industry exactly matches search query = 40 points
+   - Related industry = 20 points
+   - Unrelated industry = 0 points
+   
+3. **Data Completeness (30 points max)**
+   - Has email = 10 points
+   - Has phone = 10 points
+   - Has website = 10 points
 
-${userQuery ? `IMPORTANT: Score high (80+) if the lead's industry/company closely matches "${userQuery}". Score low (below 50) if unrelated.` : ""}
+## ⚠️ CRITICAL SCORING RULES:
+- If user searched for "인도네시아" (Indonesia) but lead's country is "Southeast Asia" without "Indonesia", score MUST be below 50!
+- If user searched for specific industry (e.g., "뷰티", "포장재") but lead's industry doesn't match, score MUST be below 40!
+- Only leads matching BOTH country AND industry criteria should score 70+
+
+${userQuery ? `IMPORTANT: User searched for "${userQuery}". Only leads that match ALL criteria (country + industry) should score high (80+). Mismatched country = max 40 points!` : ""}
 
 ## Response Format (JSON array only, no markdown):
 [

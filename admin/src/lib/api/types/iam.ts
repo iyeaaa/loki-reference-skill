@@ -156,6 +156,7 @@ export interface IamPoliciesParams {
   isManaged?: boolean
   isActive?: boolean
   search?: string
+  filterForWorkspace?: boolean // true이면 워크스페이스에서 사용 가능한 정책만 반환
 }
 
 export interface IamRolesParams {

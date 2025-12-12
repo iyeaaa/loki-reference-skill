@@ -45,6 +45,7 @@ export const iamPoliciesApi = {
     if (params?.workspaceId) searchParams.append("workspaceId", params.workspaceId)
     if (params?.isManaged !== undefined) searchParams.append("isManaged", String(params.isManaged))
     if (params?.isActive !== undefined) searchParams.append("isActive", String(params.isActive))
+    if (params?.filterForWorkspace) searchParams.append("filterForWorkspace", "true")
 
     const query = searchParams.toString()
     const response = await apiFetch<{

@@ -41,7 +41,23 @@ export const iamPoliciesRoutes = new Elysia({ prefix: "/api/v1/iam/policies" })
         search: query.search,
       }
 
-      const data = await iamService.listPolicies(limit, offset, filters)
+      let data = await iamService.listPolicies(limit, offset, filters)
+
+      // filterForWorkspace가 true이면 워크스페이스에서 사용 가능한 정책만 필터링
+      if (query.filterForWorkspace === "true" && query.workspaceId) {
+        const availablePolicies = []
+        for (const policy of data) {
+          const isAvailable = await iamService.isPolicyAvailableForWorkspace(
+            policy.name,
+            query.workspaceId,
+          )
+          if (isAvailable) {
+            availablePolicies.push(policy)
+          }
+        }
+        data = availablePolicies
+      }
+
       const total = await iamService.countPolicies(filters)
 
       return { data, total, limit, offset }
@@ -54,6 +70,7 @@ export const iamPoliciesRoutes = new Elysia({ prefix: "/api/v1/iam/policies" })
         isManaged: t.Optional(t.String()),
         isActive: t.Optional(t.String()),
         search: t.Optional(t.String()),
+        filterForWorkspace: t.Optional(t.String()), // "true"면 워크스페이스별 필터링 적용
       }),
     },
   )
@@ -523,7 +540,35 @@ export const iamMembersRoutes = new Elysia({ prefix: "/api/v1/iam/members" })
   // Attach policy to member
   .post(
     "/:memberId/policies",
-    async ({ params: { memberId }, body }) => {
+    async ({ params: { memberId }, body, set }) => {
+      // 정책 정보 조회
+      const policy = await iamService.getPolicy(body.policyId)
+      if (!policy) {
+        set.status = 404
+        return errorResponse("정책을 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      }
+
+      // 멤버 정보 조회하여 워크스페이스 ID 가져오기
+      const memberInfo = await iamService.getMemberWorkspaceId(memberId)
+      if (!memberInfo) {
+        set.status = 404
+        return errorResponse("멤버를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+      }
+
+      // 정책이 해당 워크스페이스에서 사용 가능한지 확인
+      const isAvailable = await iamService.isPolicyAvailableForWorkspace(
+        policy.name,
+        memberInfo.workspaceId,
+      )
+
+      if (!isAvailable) {
+        set.status = 403
+        return errorResponse(
+          "이 정책은 현재 워크스페이스에서 사용할 수 없습니다.",
+          ResponseCode.FORBIDDEN,
+        )
+      }
+
       const memberPolicy = await iamService.attachPolicyToMember({
         memberId,
         policyId: body.policyId,

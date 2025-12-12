@@ -1,4 +1,4 @@
-import { AlertCircle, FileKey, Plus, Shield, X } from "lucide-react"
+import { AlertCircle, Plus, Shield, X } from "lucide-react"
 import { useState } from "react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -13,13 +13,13 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import {
-  useAttachPolicyToMember,
-  useDetachPolicyFromMember,
+  // useAttachPolicyToMember,
+  // useDetachPolicyFromMember,
   useGrantRoleToMember,
-  useIamPolicies,
+  // useIamPolicies,
   useIamRolePolicies,
   useIamRoles,
-  useMemberPolicies,
+  // useMemberPolicies,
   useMemberRoles,
   useRevokeRoleFromMember,
 } from "@/lib/api/hooks/iam"
@@ -51,29 +51,35 @@ function RolePoliciesBadges({ roleId }: { roleId: string }) {
 
 export function MemberIamSection({ memberId, workspaceId }: MemberIamSectionProps) {
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false)
-  const [isPolicyDialogOpen, setIsPolicyDialogOpen] = useState(false)
+  // const [isPolicyDialogOpen, setIsPolicyDialogOpen] = useState(false)
   const [selectedRoleId, setSelectedRoleId] = useState("")
-  const [selectedPolicyId, setSelectedPolicyId] = useState("")
+  // const [selectedPolicyId, setSelectedPolicyId] = useState("")
 
   const { data: memberRoles = [], isLoading: rolesLoading } = useMemberRoles(memberId)
-  const { data: memberPolicies = [], isLoading: policiesLoading } = useMemberPolicies(memberId)
+  // const { data: memberPolicies = [], isLoading: policiesLoading } = useMemberPolicies(memberId)
   const { data: availableRolesData } = useIamRoles({ workspaceId, limit: 100 })
-  const { data: availablePoliciesData } = useIamPolicies({ limit: 100, isActive: true })
+  // 백엔드에서 워크스페이스에 사용 가능한 정책만 필터링하여 반환
+  // const { data: availablePoliciesData } = useIamPolicies({
+  //   limit: 100,
+  //   isActive: true,
+  //   workspaceId,
+  //   filterForWorkspace: true,
+  // })
 
   const availableRoles = availableRolesData?.data || []
-  const availablePolicies = availablePoliciesData?.data || []
+  // const availablePolicies = availablePoliciesData?.data || []
 
   const unassignedRoles = availableRoles.filter(
     (role) => !memberRoles.some((mr) => mr.roleId === role.id),
   )
-  const unassignedPolicies = availablePolicies.filter(
-    (policy) => !memberPolicies.some((mp) => mp.policyId === policy.id),
-  )
+  // const unassignedPolicies = availablePolicies.filter(
+  //   (policy) => !memberPolicies.some((mp) => mp.policyId === policy.id),
+  // )
 
   const grantRole = useGrantRoleToMember()
   const revokeRole = useRevokeRoleFromMember()
-  const attachPolicy = useAttachPolicyToMember()
-  const detachPolicy = useDetachPolicyFromMember()
+  // const attachPolicy = useAttachPolicyToMember()
+  // const detachPolicy = useDetachPolicyFromMember()
 
   const handleGrantRole = async () => {
     if (!selectedRoleId) return
@@ -87,17 +93,17 @@ export function MemberIamSection({ memberId, workspaceId }: MemberIamSectionProp
     await revokeRole.mutateAsync({ memberId, roleId })
   }
 
-  const handleAttachPolicy = async () => {
-    if (!selectedPolicyId) return
-    await attachPolicy.mutateAsync({ memberId, policyId: selectedPolicyId })
-    setSelectedPolicyId("")
-    setIsPolicyDialogOpen(false)
-  }
+  // const handleAttachPolicy = async () => {
+  //   if (!selectedPolicyId) return
+  //   await attachPolicy.mutateAsync({ memberId, policyId: selectedPolicyId })
+  //   setSelectedPolicyId("")
+  //   setIsPolicyDialogOpen(false)
+  // }
 
-  const handleDetachPolicy = async (policyId: string, policyName: string) => {
-    if (!confirm(`"${policyName}" 정책을 해제하시겠습니까?`)) return
-    await detachPolicy.mutateAsync({ memberId, policyId })
-  }
+  // const handleDetachPolicy = async (policyId: string, policyName: string) => {
+  //   if (!confirm(`"${policyName}" 정책을 해제하시겠습니까?`)) return
+  //   await detachPolicy.mutateAsync({ memberId, policyId })
+  // }
 
   const showNoRoleWarning = !rolesLoading && memberRoles.length === 0
 
@@ -113,8 +119,8 @@ export function MemberIamSection({ memberId, workspaceId }: MemberIamSectionProp
         </Alert>
       )}
 
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Single Column Layout - 직접 정책 부분 임시 주석처리 */}
+      <div className="grid grid-cols-1 gap-3">
         {/* Roles */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -175,8 +181,8 @@ export function MemberIamSection({ memberId, workspaceId }: MemberIamSectionProp
           )}
         </div>
 
-        {/* Policies */}
-        <div className="space-y-2">
+        {/* Policies - 임시 주석처리 */}
+        {/* <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-gray-600 flex items-center gap-1">
               <FileKey className="h-3 w-3" /> 직접 정책
@@ -228,7 +234,7 @@ export function MemberIamSection({ memberId, workspaceId }: MemberIamSectionProp
               })}
             </div>
           )}
-        </div>
+        </div> */}
       </div>
 
       {/* Add Role Dialog */}
@@ -289,8 +295,8 @@ export function MemberIamSection({ memberId, workspaceId }: MemberIamSectionProp
         </DialogContent>
       </Dialog>
 
-      {/* Add Policy Dialog */}
-      <Dialog open={isPolicyDialogOpen} onOpenChange={setIsPolicyDialogOpen}>
+      {/* Add Policy Dialog - 임시 주석처리 */}
+      {/* <Dialog open={isPolicyDialogOpen} onOpenChange={setIsPolicyDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-base">정책 연결</DialogTitle>
@@ -346,7 +352,7 @@ export function MemberIamSection({ memberId, workspaceId }: MemberIamSectionProp
             </div>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
     </div>
   )
 }

@@ -1,0 +1,231 @@
+@startuml Billing Schema
+
+!define TABLE(name) entity name << (T,#FFAAAA) >>
+!define PK(x) <b><u>x</u></b>
+!define FK(x) <i>x</i>
+!define NN(x) x [NOT NULL]
+!define UK(x) x [UNIQUE]
+
+skinparam linetype ortho
+skinparam roundcorner 5
+skinparam class {
+    BackgroundColor White
+    BorderColor #333333
+}
+
+title Billing DB Schema
+footer Subscription-based SaaS Billing System (Stripe, Toss Compatible)
+
+' ===== EXTERNAL REFERENCES =====
+package "External References" #E0E0E0 {
+    TABLE(users) {
+        PK(id) : UUID
+        --
+        email : VARCHAR [UNIQUE]
+        name : VARCHAR
+    }
+
+    TABLE(workspaces) {
+        PK(id) : UUID
+        --
+        name : VARCHAR
+    }
+}
+
+' ===== CUSTOMER =====
+package "Customer" #E3F2FD {
+    TABLE(billing_customers) {
+        PK(id) : UUID [DEFAULT random()]
+        --
+        FK(user_id) : UUID [NOT NULL, UNIQUE, CASCADE]
+        UK(external_customer_id) : VARCHAR(255) [NOT NULL]
+        email : VARCHAR(255)
+        name : VARCHAR(255)
+        metadata : JSONB [DEFAULT {}]
+        NN(created_at) : TIMESTAMPTZ
+        NN(updated_at) : TIMESTAMPTZ
+        --
+        <i>idx: user_id, external_customer_id</i>
+    }
+}
+
+' ===== PRODUCT & PLAN =====
+package "Product & Plan" #E8F5E9 {
+    TABLE(billing_products) {
+        PK(id) : UUID [DEFAULT random()]
+        --
+        UK(external_product_id) : VARCHAR(255)
+        NN(name) : VARCHAR(255)
+        description : TEXT
+        NN(tier) : ENUM(trial, basic, pro, enterprise)
+        features : JSONB [DEFAULT []]
+        NN(is_active) : BOOLEAN [DEFAULT true]
+        display_order : INTEGER [DEFAULT 0]
+        metadata : JSONB [DEFAULT {}]
+        NN(created_at) : TIMESTAMPTZ
+        NN(updated_at) : TIMESTAMPTZ
+        --
+        <i>idx: tier, is_active</i>
+    }
+
+    TABLE(billing_plans) {
+        PK(id) : UUID [DEFAULT random()]
+        --
+        FK(product_id) : UUID [NOT NULL, CASCADE]
+        UK(external_plan_id) : VARCHAR(255)
+        NN(name) : VARCHAR(100)
+        description : TEXT
+        NN(is_active) : BOOLEAN [DEFAULT true]
+        is_default : BOOLEAN [DEFAULT false]
+        NN(currency) : VARCHAR(3) [DEFAULT 'KRW']
+        NN(amount) : BIGINT
+        NN(plan_type) : ENUM(one_time, recurring) [DEFAULT recurring]
+        billing_interval : ENUM(day, week, month, year) [DEFAULT month]
+        interval_count : INTEGER [DEFAULT 1]
+        trial_days : INTEGER [DEFAULT 0]
+        features_override : JSONB
+        metadata : JSONB [DEFAULT {}]
+        NN(created_at) : TIMESTAMPTZ
+        NN(updated_at) : TIMESTAMPTZ
+        --
+        <i>idx: product_id, is_active</i>
+    }
+}
+
+' ===== SUBSCRIPTION =====
+package "Subscription" #FFF3E0 {
+    TABLE(subscriptions) {
+        PK(id) : UUID [DEFAULT random()]
+        --
+        FK(workspace_id) : UUID [NOT NULL, CASCADE]
+        FK(customer_id) : UUID [NOT NULL]
+        FK(plan_id) : UUID [NOT NULL]
+        UK(external_subscription_id) : VARCHAR(255)
+        NN(status) : ENUM [DEFAULT trialing]
+        NN(is_primary) : BOOLEAN [DEFAULT true]
+        NN(quantity) : INTEGER [DEFAULT 1]
+        NN(cancel_at_period_end) : BOOLEAN [DEFAULT false]
+        current_period_start : TIMESTAMPTZ
+        current_period_end : TIMESTAMPTZ
+        trial_start : TIMESTAMPTZ
+        trial_end : TIMESTAMPTZ
+        canceled_at : TIMESTAMPTZ
+        cancel_reason : TEXT
+        ended_at : TIMESTAMPTZ
+        metadata : JSONB [DEFAULT {}]
+        NN(created_at) : TIMESTAMPTZ
+        NN(updated_at) : TIMESTAMPTZ
+        --
+        <i>idx: workspace_id, customer_id</i>
+        <i>idx: status, current_period_end</i>
+    }
+
+    note right of subscriptions
+      <b>status ENUM</b>
+      - trialing: Trial period
+      - active: Active subscription
+      - canceled: Canceled
+      - incomplete: Payment incomplete
+      - past_due: Overdue
+      - unpaid: Unpaid
+      - paused: Paused
+    end note
+}
+
+' ===== SUBSCRIPTION HISTORY =====
+package "History" #FCE4EC {
+    TABLE(subscription_history) {
+        PK(id) : UUID [DEFAULT random()]
+        --
+        FK(subscription_id) : UUID [NOT NULL, CASCADE]
+        FK(previous_plan_id) : UUID
+        FK(new_plan_id) : UUID
+        previous_status : ENUM
+        new_status : ENUM
+        NN(change_type) : VARCHAR(50)
+        change_reason : TEXT
+        FK(changed_by) : UUID
+        NN(created_at) : TIMESTAMPTZ
+        --
+        <i>idx: subscription_id</i>
+        <i>idx: change_type, created_at</i>
+    }
+
+    note right of subscription_history
+      <b>change_type</b>
+      - created
+      - upgraded
+      - downgraded
+      - canceled
+      - renewed
+      - reactivated
+    end note
+}
+
+' ===== RELATIONSHIPS =====
+
+' Customer
+billing_customers ||--|| users : "user_id\n(1:1, CASCADE)"
+
+' Product -> Plan
+billing_plans }|--|| billing_products : "product_id\n(CASCADE)"
+
+' Subscription
+subscriptions }|--|| workspaces : "workspace_id\n(CASCADE)"
+subscriptions }|--|| billing_customers : "customer_id"
+subscriptions }|--|| billing_plans : "plan_id"
+
+' Subscription History
+subscription_history }|--|| subscriptions : "subscription_id\n(CASCADE)"
+subscription_history }o--o| billing_plans : "previous_plan_id"
+subscription_history }o--o| billing_plans : "new_plan_id"
+subscription_history }o--o| users : "changed_by"
+
+legend right
+  |= Symbol |= Description |
+  | PK | Primary Key |
+  | FK | Foreign Key |
+  | NN | NOT NULL |
+  | UK | UNIQUE |
+  | CASCADE | Delete child on parent deletion |
+  | \|\|--\|\| | 1:1 Relationship |
+  | }\|--\|\| | N:1 Relationship |
+  | }o--o\| | Optional Relationship |
+endlegend
+
+note as N1
+  <b>Product/Plan Structure</b>
+  Product
+    └─ Plan (Pricing)
+         ├─ Monthly Subscription
+         └─ Annual Subscription
+
+  <b>Pricing Example:</b>
+
+  Trial (tier: trial)
+    └─ 7-Day Free Trial: 0 KRW (one_time)
+
+  Basic (tier: basic)
+    ├─ Monthly: 300,000 KRW/month
+    └─ Annual: 3,000,000 KRW/year (250,000/month, 17% off)
+
+  Pro (tier: pro)
+    ├─ Monthly: 2,000,000 KRW/month
+    └─ Annual: 20,000,000 KRW/year (~1,660,000/month, 17% off)
+
+  <b>Tier & IAM Integration</b>
+  billing_products.tier
+    ↓
+  iam_tier_boundaries.tier
+    ↓
+  Apply Max Permission Boundary
+end note
+
+note as N2
+  <b>Workspace Subscription Structure</b>
+  1 Workspace : N Subscriptions
+  - is_primary = true: Main subscription
+  - is_primary = false: Add-on subscription
+end note
+
+@enduml

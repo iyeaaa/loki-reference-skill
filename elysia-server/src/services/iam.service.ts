@@ -49,6 +49,35 @@ export interface PolicyFilters {
   search?: string
 }
 
+/**
+ * 정책이 특정 워크스페이스에서 사용 가능한지 확인
+ *
+ * 제외 대상:
+ * 1. TierBoundary 정책: 구독 등급의 최대 권한 정의 (멤버에게 직접 할당 불가)
+ * 2. SystemAdmin 정책: 전체 시스템 관리자 전용 (워크스페이스 수준에서 할당 불가)
+ *
+ * @param policyName - 정책 이름
+ * @param workspaceId - 워크스페이스 ID (선택적, tier 확인용)
+ * @returns boolean - 사용 가능 여부
+ */
+export async function isPolicyAvailableForWorkspace(
+  policyName: string,
+  workspaceId?: string,
+): Promise<boolean> {
+  // TierBoundary 정책은 항상 제외
+  if (policyName.startsWith("TierBoundary:")) return false
+
+  // SystemAdmin 정책은 워크스페이스 수준에서 할당 불가
+  if (policyName === "SystemAdmin") return false
+
+  // 워크스페이스가 지정되지 않았으면 기본적으로 허용
+  if (!workspaceId) return true
+
+  // 추가 tier 기반 제한은 향후 확장 가능
+  // 현재는 TierBoundary와 SystemAdmin만 제외
+  return true
+}
+
 export async function listPolicies(
   limit: number,
   offset: number,
@@ -808,6 +837,21 @@ export async function getMemberIdByUserAndWorkspace(
     .limit(1)
 
   return result[0]?.id || null
+}
+
+/**
+ * 멤버 ID로 워크스페이스 ID 조회
+ */
+export async function getMemberWorkspaceId(
+  memberId: string,
+): Promise<{ workspaceId: string } | null> {
+  const result = await db
+    .select({ workspaceId: workspaceMembers.workspaceId })
+    .from(workspaceMembers)
+    .where(eq(workspaceMembers.id, memberId))
+    .limit(1)
+
+  return result[0] || null
 }
 
 /**

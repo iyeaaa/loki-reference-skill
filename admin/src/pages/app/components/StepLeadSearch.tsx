@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress"
 import { apiFetch } from "@/lib/api/client"
 import type { LeadDiscoveryEventData } from "@/lib/api/hooks/lead-discovery"
 import { useLeadDiscoveryMutation } from "@/lib/api/hooks/lead-discovery"
+import { useCompleteStep2, useOnboardingProgress } from "@/lib/api/hooks/onboarding"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 
 interface Lead {
@@ -31,7 +32,6 @@ export function StepLeadSearch() {
   const { t, i18n } = useTranslation()
   const [, setSearchParams] = useSearchParams()
   const [leads, setLeads] = useState<Lead[]>([])
-  const [savedLeadIds, setSavedLeadIds] = useState<string[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [savingComplete, setSavingComplete] = useState(false)
@@ -51,11 +51,17 @@ export function StepLeadSearch() {
   const workspace = userWorkspaces?.[0]
   const isKorean = i18n.language === "ko"
 
-  // Get company info from session storage (memoized)
-  const companyInfo = useMemo(
-    () => JSON.parse(sessionStorage.getItem("onboarding_company_info") || "{}"),
-    [],
-  )
+  // Onboarding hooks
+  const { data: onboardingProgress } = useOnboardingProgress(workspace?.id || "", !!workspace?.id)
+  const completeStep2Mutation = useCompleteStep2()
+
+  // Get company info from DB onboarding progress
+  const companyInfo = useMemo(() => {
+    if (onboardingProgress?.surveyData) {
+      return onboardingProgress.surveyData
+    }
+    return {}
+  }, [onboardingProgress])
 
   // Lead discovery mutation
   const leadDiscoveryMutation = useLeadDiscoveryMutation({
@@ -87,10 +93,6 @@ export function StepLeadSearch() {
   // Build search query from company info
   const buildSearchQuery = useCallback(() => {
     const parts: string[] = []
-
-    if (companyInfo.websiteUrl) {
-      parts.push(companyInfo.websiteUrl)
-    }
 
     if (companyInfo.industry) {
       const industryMap: Record<string, string> = {
@@ -171,11 +173,21 @@ export function StepLeadSearch() {
         })
 
         const createdIds = response.leads.map((l) => l.id)
-        setSavedLeadIds(createdIds)
         setSavingComplete(true)
 
-        // Save customerGroupId to sessionStorage for later steps
-        sessionStorage.setItem("onboarding_customer_group_id", customerGroupId)
+        // DB에 Step 2 완료 기록 (customerGroupId 포함)
+        if (workspace?.id) {
+          try {
+            await completeStep2Mutation.mutateAsync({
+              workspaceId: workspace.id,
+              selectedLeadIds: createdIds,
+              customerGroupId,
+              userId,
+            })
+          } catch (error) {
+            console.error("Failed to complete step 2:", error)
+          }
+        }
 
         return createdIds
       } catch (error) {
@@ -188,7 +200,7 @@ export function StepLeadSearch() {
         setIsSaving(false)
       }
     },
-    [workspace?.id, userId, isKorean],
+    [workspace?.id, userId, isKorean, completeStep2Mutation],
   )
 
   const startSearch = useCallback(async () => {
@@ -198,7 +210,6 @@ export function StepLeadSearch() {
     setIsSearching(true)
     setProgress(0)
     setLeads([])
-    setSavedLeadIds([])
     setSearchComplete(false)
 
     try {
@@ -238,12 +249,7 @@ export function StepLeadSearch() {
   }, [searchComplete, leads, saveLeadsToDatabase])
 
   const handleNext = () => {
-    // Store leads with saved IDs in session storage for next step
-    const leadsWithIds = leads.map((lead, index) => ({
-      ...lead,
-      id: savedLeadIds[index] || lead.id,
-    }))
-    sessionStorage.setItem("onboarding_leads", JSON.stringify(leadsWithIds))
+    // DB에 이미 저장되어 있으므로 sessionStorage 사용 안함
     setSearchParams({ step: "3" })
   }
 

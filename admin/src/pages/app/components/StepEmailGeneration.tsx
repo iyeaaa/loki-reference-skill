@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
 import { apiFetch } from "@/lib/api/client"
+import { useCompleteStep3, useOnboardingProgress } from "@/lib/api/hooks/onboarding"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import type { Sequence, SequenceStep } from "@/lib/api/types/sequence"
 
@@ -44,36 +45,39 @@ export function StepEmailGeneration() {
   const workspace = userWorkspaces?.[0]
   const isKorean = i18n.language === "ko"
 
-  // Get leads, company info, and customer group ID from session storage (memoized)
-  const leads = useMemo<Lead[]>(
-    () => JSON.parse(sessionStorage.getItem("onboarding_leads") || "[]"),
-    [],
-  )
-  const companyInfo = useMemo(
-    () => JSON.parse(sessionStorage.getItem("onboarding_company_info") || "{}"),
-    [],
-  )
+  // Onboarding hooks
+  const { data: onboardingProgress } = useOnboardingProgress(workspace?.id || "", !!workspace?.id)
+  const completeStep3Mutation = useCompleteStep3()
+
+  // Get leads, company info, and customer group ID from DB onboarding progress
+  const leads = useMemo<Lead[]>(() => {
+    if (onboardingProgress?.selectedLeadIds) {
+      // Lead IDs만 있으므로 기본 구조로 반환
+      return onboardingProgress.selectedLeadIds.map((id) => ({
+        id,
+        companyName: "",
+      }))
+    }
+    return []
+  }, [onboardingProgress])
+
+  const companyInfo = useMemo(() => {
+    if (onboardingProgress?.surveyData) {
+      return onboardingProgress.surveyData
+    }
+    return {}
+  }, [onboardingProgress])
+
   const customerGroupId = useMemo(
-    () => sessionStorage.getItem("onboarding_customer_group_id") || "",
-    [],
+    () => onboardingProgress?.customerGroupId || "",
+    [onboardingProgress],
   )
 
-  // Check for existing generated sequence from session storage
-  const existingSequence = useMemo(() => {
-    try {
-      const stored = sessionStorage.getItem("onboarding_sequence")
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        // Validate that it has the required email data
-        if (parsed.id && parsed.emailSubject && parsed.emailBodyText) {
-          return parsed
-        }
-      }
-    } catch {
-      // Invalid JSON, ignore
-    }
-    return null
-  }, [])
+  // Check for existing generated sequence from DB
+  const existingSequenceId = useMemo(
+    () => onboardingProgress?.generatedSequenceId || null,
+    [onboardingProgress],
+  )
 
   const generateEmailSequence = useCallback(async () => {
     if (!workspace?.id || hasStartedGeneration.current) return
@@ -159,17 +163,18 @@ export function StepEmailGeneration() {
       setProgress(100)
       setGenerationComplete(true)
 
-      // Store sequence info for next step
-      sessionStorage.setItem(
-        "onboarding_sequence",
-        JSON.stringify({
-          id: newSequence.id,
-          name: newSequence.name,
-          emailSubject: templateResponse.emailSubject,
-          emailBodyText: templateResponse.emailBodyText,
-          leadsCount: leads.length,
-        }),
-      )
+      // DB에 Step 3 완료 기록
+      if (workspace?.id) {
+        try {
+          await completeStep3Mutation.mutateAsync({
+            workspaceId: workspace.id,
+            sequenceId: newSequence.id,
+            userId,
+          })
+        } catch (error) {
+          console.error("Failed to complete step 3:", error)
+        }
+      }
 
       toast.success(
         isKorean ? "이메일이 성공적으로 생성되었습니다" : "Emails generated successfully",
@@ -182,39 +187,55 @@ export function StepEmailGeneration() {
     } finally {
       setIsGenerating(false)
     }
-  }, [workspace?.id, leads, companyInfo, isKorean, userId, customerGroupId])
+  }, [workspace?.id, leads, companyInfo, isKorean, userId, customerGroupId, completeStep3Mutation])
 
-  // Start generation on mount (or use existing sequence if available)
+  // Start generation on mount (or skip if already completed)
   useEffect(() => {
-    if (hasStartedGeneration.current) return
+    console.log("[StepEmailGeneration] State check:", {
+      hasStartedGeneration: hasStartedGeneration.current,
+      existingSequenceId,
+      workspaceId: workspace?.id,
+      userId,
+      onboardingProgress: onboardingProgress
+        ? {
+            status: onboardingProgress.status,
+            currentStep: onboardingProgress.currentStep,
+            generatedSequenceId: onboardingProgress.generatedSequenceId,
+          }
+        : null,
+    })
 
-    // Check if we already have a generated sequence
-    if (existingSequence) {
+    if (hasStartedGeneration.current) {
+      console.log("[StepEmailGeneration] Already started, skipping")
+      return
+    }
+
+    // Check if we already have a generated sequence from DB
+    if (existingSequenceId) {
+      console.log("[StepEmailGeneration] Found existing sequence:", existingSequenceId)
       hasStartedGeneration.current = true
-      // Use existing email data
-      const generatedEmails: GeneratedEmail[] = [
-        {
-          id: "email-preview",
-          subject: existingSequence.emailSubject,
-          body: existingSequence.emailBodyText,
-          leadId: "",
-          leadName: isKorean ? "샘플 미리보기" : "Sample Preview",
-        },
-      ]
-      setEmails(generatedEmails)
+      // 이미 시퀀스가 생성되어 있으므로 완료 상태로 표시
       setProgress(100)
       setGenerationComplete(true)
       return
     }
 
     // Generate new sequence if workspace is ready
-    if (workspace?.id) {
+    if (workspace?.id && onboardingProgress) {
+      console.log("[StepEmailGeneration] Starting generation with workspace:", workspace.id)
       generateEmailSequence()
+    } else {
+      console.log(
+        "[StepEmailGeneration] Waiting - workspace:",
+        !!workspace?.id,
+        "onboardingProgress:",
+        !!onboardingProgress,
+      )
     }
-  }, [workspace?.id, generateEmailSequence, existingSequence, isKorean])
+  }, [workspace?.id, generateEmailSequence, existingSequenceId, onboardingProgress, userId])
 
   const handleNext = () => {
-    setSearchParams({ step: "3" })
+    setSearchParams({ step: "4" })
   }
 
   const handleRetry = () => {
@@ -269,8 +290,8 @@ export function StepEmailGeneration() {
               <Progress value={progress} className="h-2" />
               <p className="text-center text-sm text-gray-500">{progress}%</p>
             </div>
-          ) : generationComplete && emails.length > 0 ? (
-            // Generation complete
+          ) : generationComplete ? (
+            // Generation complete (with or without email preview)
             <div className="space-y-6">
               <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
                 <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
@@ -284,62 +305,66 @@ export function StepEmailGeneration() {
                 </div>
               </div>
 
-              {/* Email preview */}
-              <div className="space-y-4">
-                <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  {t("app.onboarding.step5.previewEmail", "이메일 미리보기")}
-                </h3>
-                {emails.slice(0, 1).map((email) => (
-                  <button
-                    type="button"
-                    key={email.id}
-                    className="w-full text-left p-4 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
-                    onClick={() => setShowFullEmail(true)}
-                  >
-                    <p className="font-medium text-gray-900 mb-2">
-                      {isKorean ? "제목:" : "Subject:"} {email.subject}
-                    </p>
-                    <p className="text-sm text-gray-600 whitespace-pre-line line-clamp-4">
-                      {email.body}
-                    </p>
-                    <div className="flex items-center justify-center mt-3 pt-3 border-t border-gray-200">
-                      <span className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700">
-                        <Eye className="w-4 h-4 mr-2" />
-                        {isKorean ? "전체 보기" : "View Full Email"}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              {/* Email preview - only show if emails exist */}
+              {emails.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                    <Mail className="w-4 h-4" />
+                    {t("app.onboarding.step5.previewEmail", "이메일 미리보기")}
+                  </h3>
+                  {emails.slice(0, 1).map((email) => (
+                    <button
+                      type="button"
+                      key={email.id}
+                      className="w-full text-left p-4 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => setShowFullEmail(true)}
+                    >
+                      <p className="font-medium text-gray-900 mb-2">
+                        {isKorean ? "제목:" : "Subject:"} {email.subject}
+                      </p>
+                      <p className="text-sm text-gray-600 whitespace-pre-line line-clamp-4">
+                        {email.body}
+                      </p>
+                      <div className="flex items-center justify-center mt-3 pt-3 border-t border-gray-200">
+                        <span className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700">
+                          <Eye className="w-4 h-4 mr-2" />
+                          {isKorean ? "전체 보기" : "View Full Email"}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
 
-              {/* Full Email Dialog */}
-              <Dialog open={showFullEmail} onOpenChange={setShowFullEmail}>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <Mail className="w-5 h-5 text-blue-600" />
-                      {isKorean ? "이메일 전체 보기" : "Full Email Preview"}
-                    </DialogTitle>
-                  </DialogHeader>
-                  {emails[0] && (
-                    <div className="space-y-4 pt-4">
-                      <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <p className="text-sm text-gray-500 mb-1">
-                          {isKorean ? "제목" : "Subject"}
-                        </p>
-                        <p className="font-medium text-gray-900">{emails[0].subject}</p>
-                      </div>
-                      <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <p className="text-sm text-gray-500 mb-2">{isKorean ? "본문" : "Body"}</p>
-                        <p className="text-gray-800 whitespace-pre-line leading-relaxed">
-                          {emails[0].body}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </DialogContent>
-              </Dialog>
+                  {/* Full Email Dialog */}
+                  <Dialog open={showFullEmail} onOpenChange={setShowFullEmail}>
+                    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <Mail className="w-5 h-5 text-blue-600" />
+                          {isKorean ? "이메일 전체 보기" : "Full Email Preview"}
+                        </DialogTitle>
+                      </DialogHeader>
+                      {emails[0] && (
+                        <div className="space-y-4 pt-4">
+                          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <p className="text-sm text-gray-500 mb-1">
+                              {isKorean ? "제목" : "Subject"}
+                            </p>
+                            <p className="font-medium text-gray-900">{emails[0].subject}</p>
+                          </div>
+                          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <p className="text-sm text-gray-500 mb-2">
+                              {isKorean ? "본문" : "Body"}
+                            </p>
+                            <p className="text-gray-800 whitespace-pre-line leading-relaxed">
+                              {emails[0].body}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              )}
 
               {/* Next Button */}
               <div className="flex justify-end pt-4">

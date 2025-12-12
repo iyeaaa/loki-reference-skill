@@ -184,10 +184,24 @@ export function WorkspaceForm({
             <Textarea
               id={descriptionId}
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, description: e.target.value })
+                // Auto-expand textarea
+                const target = e.target as HTMLTextAreaElement
+                target.style.height = "auto"
+                target.style.height = `${Math.max(72, target.scrollHeight)}px`
+              }}
               required
               placeholder={t("settings.workspaces.form.descriptionPlaceholder")}
-              rows={15}
+              rows={3}
+              className="min-h-[72px] resize-none overflow-hidden"
+              style={{ height: "auto" }}
+              ref={(el) => {
+                if (el && formData.description) {
+                  el.style.height = "auto"
+                  el.style.height = `${Math.max(72, el.scrollHeight)}px`
+                }
+              }}
             />
           </div>
 
@@ -201,13 +215,19 @@ export function WorkspaceForm({
                   variant="outline"
                   role="combobox"
                   aria-expanded={ownerOpen}
-                  className="w-full justify-between font-normal"
+                  className="w-full justify-between font-normal h-auto py-2"
                   type="button"
                 >
-                  {formData.ownerId
-                    ? users.find((user) => user.id === formData.ownerId)?.username ||
-                      users.find((user) => user.id === formData.ownerId)?.email
-                    : t("settings.workspaces.form.selectOwner")}
+                  {formData.ownerId ? (
+                    <div className="flex flex-col items-start">
+                      <span>{users.find((user) => user.id === formData.ownerId)?.username}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {users.find((user) => user.id === formData.ownerId)?.email}
+                      </span>
+                    </div>
+                  ) : (
+                    t("settings.workspaces.form.selectOwner")
+                  )}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>

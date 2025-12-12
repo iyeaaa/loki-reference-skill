@@ -8,6 +8,8 @@ import type {
   UpdateWorkspaceProductData,
   WorkspacesParams,
 } from "../types/workspace"
+import { billingKeys } from "./billing"
+import { iamKeys } from "./iam"
 
 // 1. Query Keys
 export const workspaceKeys = {
@@ -29,7 +31,7 @@ export function useWorkspaces(params?: WorkspacesParams) {
   return useQuery({
     queryKey: workspaceKeys.list(params),
     queryFn: () => workspacesApi.list(params),
-    staleTime: 30 * 1000,
+    staleTime: 0, // 즉시 반영
     gcTime: 5 * 60 * 1000,
   })
 }
@@ -38,7 +40,7 @@ export function useSuspenseWorkspaces(params?: WorkspacesParams) {
   return useSuspenseQuery({
     queryKey: workspaceKeys.list(params),
     queryFn: () => workspacesApi.list(params),
-    staleTime: 30 * 1000,
+    staleTime: 0, // 즉시 반영
     gcTime: 5 * 60 * 1000,
   })
 }
@@ -48,7 +50,7 @@ export function useWorkspace(workspaceId: string, enabled = true) {
     queryKey: workspaceKeys.detail(workspaceId),
     queryFn: () => workspacesApi.get(workspaceId),
     enabled,
-    staleTime: 60 * 1000,
+    staleTime: 0, // 즉시 반영
     gcTime: 10 * 60 * 1000,
   })
 }
@@ -58,7 +60,7 @@ export function useWorkspacesByOwner(ownerId: string, enabled = true) {
     queryKey: workspaceKeys.byOwner(ownerId),
     queryFn: () => workspacesApi.getByOwner(ownerId),
     enabled,
-    staleTime: 60 * 1000,
+    staleTime: 0, // 즉시 반영
     gcTime: 10 * 60 * 1000,
   })
 }
@@ -68,7 +70,7 @@ export function useUserWorkspaces(userId: string, enabled = true) {
     queryKey: workspaceKeys.byUser(userId),
     queryFn: () => workspacesApi.getUserWorkspaces(userId),
     enabled,
-    staleTime: 60 * 1000,
+    staleTime: 0, // 즉시 반영
     gcTime: 10 * 60 * 1000,
   })
 }
@@ -77,7 +79,7 @@ export function useSuspenseUserWorkspaces(userId: string) {
   return useSuspenseQuery({
     queryKey: workspaceKeys.byUser(userId),
     queryFn: () => workspacesApi.getUserWorkspaces(userId),
-    staleTime: 60 * 1000,
+    staleTime: 0, // 즉시 반영
     gcTime: 10 * 60 * 1000,
   })
 }
@@ -87,7 +89,7 @@ export function useWorkspaceMembers(workspaceId: string, enabled = true) {
     queryKey: workspaceKeys.members(workspaceId),
     queryFn: () => workspacesApi.getMembers(workspaceId),
     enabled,
-    staleTime: 30 * 1000,
+    staleTime: 0, // 즉시 반영
     gcTime: 5 * 60 * 1000,
   })
 }
@@ -101,6 +103,11 @@ export function useCreateWorkspace() {
     onSuccess: () => {
       // Invalidate all workspace queries to update sidebar
       queryClient.invalidateQueries({ queryKey: workspaceKeys.all })
+      // 워크스페이스 생성 시 구독도 생성되므로 billing 캐시도 갱신
+      queryClient.invalidateQueries({ queryKey: billingKeys.subscriptions() })
+      queryClient.invalidateQueries({ queryKey: billingKeys.customers() })
+      // IAM 역할도 생성되므로 IAM 캐시도 갱신
+      queryClient.invalidateQueries({ queryKey: iamKeys.roles() })
       toast.success("워크스페이스가 생성되었습니다")
     },
     onError: (error: Error) => {
@@ -151,6 +158,9 @@ export function useDeleteWorkspace() {
     onSuccess: () => {
       // Invalidate all workspace queries to update sidebar
       queryClient.invalidateQueries({ queryKey: workspaceKeys.all })
+      // 워크스페이스 삭제 시 연관된 구독, IAM 역할도 삭제되므로 캐시 갱신
+      queryClient.invalidateQueries({ queryKey: billingKeys.subscriptions() })
+      queryClient.invalidateQueries({ queryKey: iamKeys.all })
       toast.success("워크스페이스가 삭제되었습니다")
     },
     onError: (error: Error) => {
@@ -186,8 +196,13 @@ export function useTransferOwnership() {
       queryClient.invalidateQueries({
         queryKey: workspaceKeys.detail(variables.workspaceId),
       })
+      queryClient.invalidateQueries({
+        queryKey: workspaceKeys.members(variables.workspaceId),
+      })
       // Invalidate all workspace queries to update sidebar
       queryClient.invalidateQueries({ queryKey: workspaceKeys.all })
+      // 소유권 이전 시 IAM 역할도 변경되므로 캐시 갱신
+      queryClient.invalidateQueries({ queryKey: iamKeys.all })
       toast.success("워크스페이스 소유권이 이전되었습니다")
     },
     onError: (error: Error) => {
@@ -220,6 +235,8 @@ export function useAddWorkspaceMember() {
       queryClient.invalidateQueries({
         queryKey: workspaceKeys.all,
       })
+      // 멤버 추가 시 IAM 역할도 할당되므로 캐시 갱신
+      queryClient.invalidateQueries({ queryKey: iamKeys.all })
       toast.success("멤버가 추가되었습니다")
     },
     onError: (error: Error) => {
@@ -249,6 +266,8 @@ export function useUpdateMemberRole() {
       queryClient.invalidateQueries({
         queryKey: workspaceKeys.all,
       })
+      // 역할 변경 시 IAM 역할도 동기화되므로 캐시 갱신
+      queryClient.invalidateQueries({ queryKey: iamKeys.all })
       toast.success("멤버 역할이 업데이트되었습니다")
     },
     onError: (error: Error) => {
@@ -300,6 +319,8 @@ export function useRemoveWorkspaceMember() {
       queryClient.invalidateQueries({
         queryKey: workspaceKeys.all,
       })
+      // 멤버 제거 시 IAM 역할도 해제되므로 캐시 갱신
+      queryClient.invalidateQueries({ queryKey: iamKeys.all })
       toast.success("멤버가 제거되었습니다")
     },
     onError: (error: Error) => {
@@ -318,7 +339,7 @@ export function useWorkspaceWithProducts(workspaceId: string, enabled = true) {
     queryKey: workspaceKeys.withProducts(workspaceId),
     queryFn: () => workspacesApi.getWithProducts(workspaceId),
     enabled,
-    staleTime: 60 * 1000,
+    staleTime: 0, // 즉시 반영
     gcTime: 10 * 60 * 1000,
   })
 }
@@ -328,7 +349,7 @@ export function useWorkspaceProducts(workspaceId: string, enabled = true) {
     queryKey: workspaceKeys.products(workspaceId),
     queryFn: () => workspacesApi.listProducts(workspaceId),
     enabled,
-    staleTime: 30 * 1000,
+    staleTime: 0, // 즉시 반영
     gcTime: 5 * 60 * 1000,
   })
 }
@@ -338,7 +359,7 @@ export function useWorkspaceProduct(workspaceId: string, productId: string, enab
     queryKey: workspaceKeys.product(workspaceId, productId),
     queryFn: () => workspacesApi.getProduct(workspaceId, productId),
     enabled,
-    staleTime: 60 * 1000,
+    staleTime: 0, // 즉시 반영
     gcTime: 10 * 60 * 1000,
   })
 }

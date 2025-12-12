@@ -76,7 +76,7 @@ export function UserForm({ user, isEdit = false, onSave, onCancel }: UserFormPro
           onValueChange={(value) =>
             setFormData({
               ...formData,
-              userRole: value as "super_admin" | "admin" | "paying_user" | "user",
+              userRole: value as "user" | "admin",
             })
           }
         >

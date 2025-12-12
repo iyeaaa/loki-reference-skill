@@ -1,11 +1,19 @@
 import { and, count, desc, eq, ilike, isNotNull, ne, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
+import {
+  billingCustomers,
+  billingPlans,
+  billingProducts,
+  subscriptionHistory,
+  subscriptions,
+} from "../db/schema/billing"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emailReplies, emails } from "../db/schema/emails"
 import { sequenceEnrollments } from "../db/schema/sequences"
 import { users } from "../db/schema/users"
 import { workspaceProducts } from "../db/schema/workspace-products"
 import { workspaceMembers, workspaces } from "../db/schema/workspaces"
+import { createDefaultRolesForWorkspace, syncMemberRoleToIamRole } from "../db/seed-iam"
 import { mastra } from "../shared/mastra"
 import {
   type OnboardingEnrichmentOutput,
@@ -14,6 +22,176 @@ import {
 } from "../shared/mastra/shell/workflows/onboarding-enrichment/onboarding-enrichment"
 import logger from "../utils/logger"
 import * as salesStrategyService from "./sales-strategy.service"
+
+// ====================================
+// BILLING HELPERS (워크스페이스 생성 시 사용)
+// ====================================
+
+/**
+ * Trial 등급의 기본 요금제 조회
+ * 데이터베이스에서 동적으로 조회하여 하드코딩 방지
+ */
+async function getDefaultTrialPlan(): Promise<{
+  id: string
+  trialDays: number | null
+  productName: string
+} | null> {
+  // billing_products에서 tier='trial'인 상품과 연결된 기본 요금제 조회
+  const [trialPlan] = await db
+    .select({
+      id: billingPlans.id,
+      trialDays: billingPlans.trialDays,
+      productName: billingProducts.name,
+    })
+    .from(billingPlans)
+    .innerJoin(billingProducts, eq(billingPlans.productId, billingProducts.id))
+    .where(
+      and(
+        eq(billingProducts.tier, "trial"),
+        eq(billingProducts.isActive, true),
+        eq(billingPlans.isActive, true),
+        eq(billingPlans.isDefault, true),
+      ),
+    )
+    .limit(1)
+
+  if (trialPlan) {
+    return trialPlan
+  }
+
+  // is_default가 없으면 trial tier의 첫 번째 활성 요금제 반환
+  const [fallbackPlan] = await db
+    .select({
+      id: billingPlans.id,
+      trialDays: billingPlans.trialDays,
+      productName: billingProducts.name,
+    })
+    .from(billingPlans)
+    .innerJoin(billingProducts, eq(billingPlans.productId, billingProducts.id))
+    .where(
+      and(
+        eq(billingProducts.tier, "trial"),
+        eq(billingProducts.isActive, true),
+        eq(billingPlans.isActive, true),
+      ),
+    )
+    .orderBy(billingProducts.displayOrder, billingPlans.createdAt)
+    .limit(1)
+
+  return fallbackPlan || null
+}
+
+/**
+ * 사용자의 Billing Customer를 조회하거나 생성
+ * 워크스페이스 생성 시 구독을 위해 필요
+ */
+async function getOrCreateBillingCustomer(userId: string): Promise<{ id: string }> {
+  // 기존 고객 조회
+  const [existingCustomer] = await db
+    .select({ id: billingCustomers.id })
+    .from(billingCustomers)
+    .where(eq(billingCustomers.userId, userId))
+    .limit(1)
+
+  if (existingCustomer) {
+    return existingCustomer
+  }
+
+  // 사용자 정보 조회
+  const [user] = await db
+    .select({ email: users.email, username: users.username })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+
+  if (!user) {
+    throw new Error(`User not found: ${userId}`)
+  }
+
+  // 새 고객 생성 (외부 결제 시스템 연동 전이므로 internal ID 사용)
+  const [newCustomer] = await db
+    .insert(billingCustomers)
+    .values({
+      userId,
+      externalCustomerId: `internal_${userId}`,
+      email: user.email,
+      name: user.username,
+    })
+    .returning({ id: billingCustomers.id })
+
+  if (!newCustomer) {
+    throw new Error(`Failed to create billing customer for user: ${userId}`)
+  }
+  logger.info({ userId, customerId: newCustomer.id }, "Created billing customer for user")
+  return newCustomer
+}
+
+/**
+ * 워크스페이스에 Trial 구독 생성
+ * 새 워크스페이스는 기본적으로 Trial(체험판) 등급으로 시작
+ * 데이터베이스에서 동적으로 Trial 요금제 조회
+ */
+async function createTrialSubscription(
+  workspaceId: string,
+  customerId: string,
+): Promise<{ id: string }> {
+  // 데이터베이스에서 Trial 요금제 동적 조회
+  const trialPlan = await getDefaultTrialPlan()
+
+  if (!trialPlan) {
+    logger.warn("No trial plan found in database, skipping subscription creation")
+    throw new Error(
+      "Trial plan not found. Please run seed-permission-system.sql to create billing products and plans.",
+    )
+  }
+
+  const now = new Date()
+  const trialEnd = new Date(now)
+  trialEnd.setDate(trialEnd.getDate() + (trialPlan.trialDays || 7))
+
+  // 구독 생성
+  const [subscription] = await db
+    .insert(subscriptions)
+    .values({
+      workspaceId,
+      customerId,
+      planId: trialPlan.id,
+      status: "trialing",
+      isPrimary: true,
+      quantity: 1,
+      trialStart: now,
+      trialEnd: trialEnd,
+      currentPeriodStart: now,
+      currentPeriodEnd: trialEnd,
+    })
+    .returning({ id: subscriptions.id })
+
+  if (!subscription) {
+    throw new Error(`Failed to create trial subscription for workspace: ${workspaceId}`)
+  }
+
+  // 구독 이력 생성
+  await db.insert(subscriptionHistory).values({
+    subscriptionId: subscription.id,
+    newPlanId: trialPlan.id,
+    newStatus: "trialing",
+    changeType: "created",
+    changeReason: "워크스페이스 생성 시 자동 Trial 구독",
+  })
+
+  logger.info(
+    {
+      workspaceId,
+      subscriptionId: subscription.id,
+      planId: trialPlan.id,
+      planName: trialPlan.productName,
+      trialEnd: trialEnd.toISOString(),
+    },
+    "Created trial subscription for workspace",
+  )
+
+  return subscription
+}
 
 // ====================================
 // WORKSPACE CRUD OPERATIONS
@@ -145,14 +323,35 @@ export async function createWorkspace(data: {
       updatedAt: workspaces.updatedAt,
     })
 
-  // Create workspace member with owner role
+  // Create workspace member with owner role and IAM roles
   if (newWorkspace) {
+    // Create default IAM roles for the workspace
+    await createDefaultRolesForWorkspace(newWorkspace.id)
+
+    // Add owner as workspace member (IAM sync will be handled automatically by addWorkspaceMember)
     await addWorkspaceMember({
       workspaceId: newWorkspace.id,
       userId: data.ownerId,
       role: "owner",
       status: "active",
     })
+
+    // Create trial subscription for the workspace (default lowest permission)
+    try {
+      const billingCustomer = await getOrCreateBillingCustomer(data.ownerId)
+      await createTrialSubscription(newWorkspace.id, billingCustomer.id)
+      logger.info(
+        { workspaceId: newWorkspace.id, ownerId: data.ownerId },
+        "Workspace created with trial subscription (Level 1)",
+      )
+    } catch (error) {
+      // Trial 구독 생성 실패해도 워크스페이스 생성은 계속 진행
+      // 나중에 수동으로 구독을 추가할 수 있음
+      logger.warn(
+        { error, workspaceId: newWorkspace.id },
+        "Failed to create trial subscription for workspace, continuing without subscription",
+      )
+    }
   }
 
   return newWorkspace
@@ -1167,6 +1366,7 @@ export async function listWorkspacesWithFilters(
     isActive?: boolean
     search?: string
     ownerIds?: string[]
+    workspaceIds?: string[] // 특정 워크스페이스 ID만 조회 (권한 기반 필터링용)
   },
 ) {
   const conditions = []
@@ -1189,6 +1389,18 @@ export async function listWorkspacesWithFilters(
     const ownerCondition = or(...filters.ownerIds.map((id) => eq(workspaces.ownerId, id)))
     if (ownerCondition) {
       conditions.push(ownerCondition)
+    }
+  }
+
+  // 특정 워크스페이스 ID만 조회 (권한 기반 필터링)
+  if (filters?.workspaceIds !== undefined) {
+    if (filters.workspaceIds.length === 0) {
+      // 빈 배열이면 결과 없음 반환
+      return []
+    }
+    const workspaceCondition = or(...filters.workspaceIds.map((id) => eq(workspaces.id, id)))
+    if (workspaceCondition) {
+      conditions.push(workspaceCondition)
     }
   }
 
@@ -1275,6 +1487,7 @@ export async function countWorkspacesWithFilters(filters?: {
   isActive?: boolean
   search?: string
   ownerIds?: string[]
+  workspaceIds?: string[] // 특정 워크스페이스 ID만 조회 (권한 기반 필터링용)
 }) {
   const conditions = []
 
@@ -1296,6 +1509,18 @@ export async function countWorkspacesWithFilters(filters?: {
     const ownerCondition = or(...filters.ownerIds.map((id) => eq(workspaces.ownerId, id)))
     if (ownerCondition) {
       conditions.push(ownerCondition)
+    }
+  }
+
+  // 특정 워크스페이스 ID만 조회 (권한 기반 필터링)
+  if (filters?.workspaceIds !== undefined) {
+    if (filters.workspaceIds.length === 0) {
+      // 빈 배열이면 0 반환
+      return 0
+    }
+    const workspaceCondition = or(...filters.workspaceIds.map((id) => eq(workspaces.id, id)))
+    if (workspaceCondition) {
+      conditions.push(workspaceCondition)
     }
   }
 
@@ -1385,6 +1610,7 @@ export async function addWorkspaceMember(data: {
   role?: "owner" | "admin" | "member" | "viewer"
   invitedBy?: string
   status?: "active" | "inactive" | "removed"
+  skipIamSync?: boolean // Skip IAM sync when called from createWorkspace (already handled)
 }) {
   const [newMember] = await db
     .insert(workspaceMembers)
@@ -1404,6 +1630,15 @@ export async function addWorkspaceMember(data: {
       invitedAt: workspaceMembers.invitedAt,
       joinedAt: workspaceMembers.joinedAt,
     })
+
+  // Sync IAM role for the new member (unless skipped)
+  if (newMember && !data.skipIamSync) {
+    try {
+      await syncMemberRoleToIamRole(newMember.id, data.workspaceId, newMember.role)
+    } catch (error) {
+      logger.warn({ error, memberId: newMember.id }, "Failed to sync IAM role for new member")
+    }
+  }
 
   return newMember
 }
@@ -1426,6 +1661,15 @@ export async function updateWorkspaceMemberRole(
       role: workspaceMembers.role,
       status: workspaceMembers.status,
     })
+
+  // Sync IAM role when member role changes
+  if (updatedMember) {
+    try {
+      await syncMemberRoleToIamRole(updatedMember.id, updatedMember.workspaceId, role)
+    } catch (error) {
+      logger.warn({ error, memberId }, "Failed to sync IAM role after member role update")
+    }
+  }
 
   return updatedMember
 }
@@ -1679,4 +1923,59 @@ export async function deleteWorkspaceProducts(workspaceId: string) {
     .returning()
 
   return result
+}
+
+// ====================================
+// USER PERMISSION HELPERS
+// ====================================
+
+/**
+ * 사용자가 관리자(admin)인지 확인
+ * users 테이블의 userRole이 'admin'이거나 isSuperAdmin이 true인 경우 관리자로 판단
+ */
+export async function isUserAdmin(userId: string): Promise<boolean> {
+  const [user] = await db
+    .select({
+      userRole: users.userRole,
+      isSuperAdmin: users.isSuperAdmin,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+
+  if (!user) {
+    return false
+  }
+
+  return user.userRole === "admin" || user.isSuperAdmin === true
+}
+
+/**
+ * 사용자가 소유하거나 멤버로 속한 워크스페이스 ID 목록 반환
+ */
+export async function getUserWorkspaceIds(userId: string): Promise<string[]> {
+  // 소유한 워크스페이스 ID
+  const ownedWorkspaces = await db
+    .select({ id: workspaces.id })
+    .from(workspaces)
+    .where(eq(workspaces.ownerId, userId))
+
+  // 멤버로 속한 워크스페이스 ID (active 상태만)
+  const memberWorkspaces = await db
+    .select({ id: workspaceMembers.workspaceId })
+    .from(workspaceMembers)
+    .where(and(eq(workspaceMembers.userId, userId), eq(workspaceMembers.status, "active")))
+
+  // 중복 제거하여 ID 목록 반환
+  const workspaceIds = new Set<string>()
+
+  for (const ws of ownedWorkspaces) {
+    workspaceIds.add(ws.id)
+  }
+
+  for (const ws of memberWorkspaces) {
+    workspaceIds.add(ws.id)
+  }
+
+  return Array.from(workspaceIds)
 }

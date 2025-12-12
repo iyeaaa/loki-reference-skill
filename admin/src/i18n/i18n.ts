@@ -43,7 +43,7 @@ i18n
     pluralSeparator: "_",
 
     // 디버그 모드 (개발 환경에서만 활성화)
-    debug: import.meta.env.DEV,
+    debug: false,
 
     // 네임스페이스 설정
     defaultNS: "translation",

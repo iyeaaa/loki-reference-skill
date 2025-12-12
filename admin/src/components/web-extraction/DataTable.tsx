@@ -66,42 +66,47 @@ export function DataTable({ data }: DataTableProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[200px] border-r p-1 sticky left-0 bg-background z-10">
+                <TableHead className="w-[160px] max-w-[160px] border-r p-1 sticky left-0 bg-background z-10">
                   Website URL
                 </TableHead>
-                <TableHead className="min-w-[150px] border-r p-1">Found Company</TableHead>
-                <TableHead className="min-w-[200px] max-w-[200px] border-r p-1">Email</TableHead>
-                <TableHead className="min-w-[250px] border-r p-1">Description</TableHead>
-                <TableHead className="min-w-[200px] border-r p-1">Address</TableHead>
-                <TableHead className="min-w-[100px] border-r p-1">Country</TableHead>
-                <TableHead className="min-w-[120px] border-r p-1">City</TableHead>
-                <TableHead className="min-w-[80px] border-r p-1">State</TableHead>
-                <TableHead className="min-w-[100px] border-r p-1">Founded</TableHead>
-                <TableHead className="min-w-[130px] border-r p-1">Phone</TableHead>
-                <TableHead className="min-w-[150px] border-r p-1">Facebook</TableHead>
-                <TableHead className="min-w-[150px] border-r p-1">Instagram</TableHead>
-                <TableHead className="min-w-[150px] border-r p-1">Twitter</TableHead>
-                <TableHead className="min-w-[150px] border-r p-1">LinkedIn</TableHead>
-                <TableHead className="min-w-[100px] border-r p-1">Employees</TableHead>
-                <TableHead className="min-w-[200px] border-r p-1">Products</TableHead>
-                <TableHead className="min-w-[180px] border-r p-1">Sectors</TableHead>
-                <TableHead className="min-w-[180px] border-r p-1">Categories</TableHead>
-                <TableHead className="min-w-[150px] border-r p-1">Industries</TableHead>
+                <TableHead className="w-[120px] max-w-[120px] border-r p-1">
+                  Found Company
+                </TableHead>
+                <TableHead className="w-[160px] max-w-[160px] border-r p-1">Email</TableHead>
+                <TableHead className="w-[200px] max-w-[200px] border-r p-1">Description</TableHead>
+                <TableHead className="w-[150px] max-w-[150px] border-r p-1">Address</TableHead>
+                <TableHead className="w-[70px] max-w-[70px] border-r p-1">Country</TableHead>
+                <TableHead className="w-[80px] max-w-[80px] border-r p-1">City</TableHead>
+                <TableHead className="w-[60px] max-w-[60px] border-r p-1">State</TableHead>
+                <TableHead className="w-[70px] max-w-[70px] border-r p-1">Founded</TableHead>
+                <TableHead className="w-[110px] max-w-[110px] border-r p-1">Phone</TableHead>
+                <TableHead className="w-[120px] max-w-[120px] border-r p-1">Facebook</TableHead>
+                <TableHead className="w-[120px] max-w-[120px] border-r p-1">Instagram</TableHead>
+                <TableHead className="w-[120px] max-w-[120px] border-r p-1">Twitter</TableHead>
+                <TableHead className="w-[120px] max-w-[120px] border-r p-1">LinkedIn</TableHead>
+                <TableHead className="w-[70px] max-w-[70px] border-r p-1">Employees</TableHead>
+                <TableHead className="w-[150px] max-w-[150px] border-r p-1">Products</TableHead>
+                <TableHead className="w-[130px] max-w-[130px] border-r p-1">Sectors</TableHead>
+                <TableHead className="w-[130px] max-w-[130px] border-r p-1">Categories</TableHead>
+                <TableHead className="w-[120px] max-w-[120px] border-r p-1">Industries</TableHead>
                 {/* Dynamic custom search criteria columns */}
                 {customCriteriaKeys.map((key) => (
                   <>
-                    <TableHead key={`${key}-result`} className="min-w-[120px] border-r p-1">
+                    <TableHead key={`${key}-result`} className="w-[80px] max-w-[80px] border-r p-1">
                       {key}
                     </TableHead>
-                    <TableHead key={`${key}-reasons`} className="min-w-[300px] border-r p-1">
+                    <TableHead
+                      key={`${key}-reasons`}
+                      className="w-[200px] max-w-[200px] border-r p-1"
+                    >
                       {key} (근거)
                     </TableHead>
                   </>
                 ))}
-                <TableHead className="min-w-[100px] border-r p-1">Crawl Time</TableHead>
-                <TableHead className="min-w-[100px] border-r p-1">GPT Time</TableHead>
-                <TableHead className="min-w-[150px] border-r p-1">Collected At</TableHead>
-                <TableHead className="min-w-[200px] border-r p-1">Error</TableHead>
+                <TableHead className="w-[70px] max-w-[70px] border-r p-1">Crawl Time</TableHead>
+                <TableHead className="w-[70px] max-w-[70px] border-r p-1">GPT Time</TableHead>
+                <TableHead className="w-[110px] max-w-[110px] border-r p-1">Collected At</TableHead>
+                <TableHead className="w-[150px] max-w-[150px] border-r p-1">Error</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -115,7 +120,7 @@ export function DataTable({ data }: DataTableProps) {
                           onClick={(e) => handleWebsiteClick(e, item.website_url)}
                           className="flex items-center gap-1 text-primary hover:underline cursor-pointer"
                         >
-                          <span className="line-clamp-2 break-all max-w-[180px]">
+                          <span className="line-clamp-3 break-all max-w-[140px]">
                             {item.website_url}
                           </span>
                           <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -127,53 +132,53 @@ export function DataTable({ data }: DataTableProps) {
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.found_company_name}>
-                      <div className="line-clamp-2 break-words">
+                      <div className="line-clamp-3 break-words">
                         {item.found_company_name || "-"}
                       </div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.email}>
-                      <div className="line-clamp-2 break-all max-w-[200px]">
+                      <div className="line-clamp-3 break-all max-w-[140px]">
                         {item.email || "-"}
                       </div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.description}>
-                      <div className="line-clamp-2 break-words max-w-[230px]">
+                      <div className="line-clamp-3 break-words max-w-[180px]">
                         {item.description || "-"}
                       </div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.address}>
-                      <div className="line-clamp-2 break-words">{item.address || "-"}</div>
+                      <div className="line-clamp-3 break-words">{item.address || "-"}</div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.country}>
-                      <div className="line-clamp-2 break-words">{item.country || "-"}</div>
+                      <div className="line-clamp-3 break-words">{item.country || "-"}</div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.city}>
-                      <div className="line-clamp-2 break-words">{item.city || "-"}</div>
+                      <div className="line-clamp-3 break-words">{item.city || "-"}</div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.state}>
-                      <div className="line-clamp-2 break-words">{item.state || "-"}</div>
+                      <div className="line-clamp-3 break-words">{item.state || "-"}</div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.founded_year}>
-                      <div className="line-clamp-2 break-words">{item.founded_year || "-"}</div>
+                      <div className="line-clamp-3 break-words">{item.founded_year || "-"}</div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.phone_number}>
-                      <div className="line-clamp-2 break-words">{item.phone_number || "-"}</div>
+                      <div className="line-clamp-3 break-words">{item.phone_number || "-"}</div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
@@ -184,7 +189,7 @@ export function DataTable({ data }: DataTableProps) {
                           onClick={(e) => handleWebsiteClick(e, item.facebook_url)}
                           className="text-primary hover:underline flex items-center gap-1 cursor-pointer"
                         >
-                          <span className="line-clamp-2 break-all max-w-[140px]">
+                          <span className="line-clamp-3 break-all max-w-[100px]">
                             {item.facebook_url}
                           </span>
                           <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -202,7 +207,7 @@ export function DataTable({ data }: DataTableProps) {
                           onClick={(e) => handleWebsiteClick(e, item.instagram_url)}
                           className="text-primary hover:underline flex items-center gap-1 cursor-pointer"
                         >
-                          <span className="line-clamp-2 break-all max-w-[140px]">
+                          <span className="line-clamp-3 break-all max-w-[100px]">
                             {item.instagram_url}
                           </span>
                           <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -220,7 +225,7 @@ export function DataTable({ data }: DataTableProps) {
                           onClick={(e) => handleWebsiteClick(e, item.twitter_url)}
                           className="text-primary hover:underline flex items-center gap-1 cursor-pointer"
                         >
-                          <span className="line-clamp-2 break-all max-w-[140px]">
+                          <span className="line-clamp-3 break-all max-w-[100px]">
                             {item.twitter_url}
                           </span>
                           <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -238,7 +243,7 @@ export function DataTable({ data }: DataTableProps) {
                           onClick={(e) => handleWebsiteClick(e, item.linkedin_url)}
                           className="text-primary hover:underline flex items-center gap-1 cursor-pointer"
                         >
-                          <span className="line-clamp-2 break-all max-w-[140px]">
+                          <span className="line-clamp-3 break-all max-w-[100px]">
                             {item.linkedin_url}
                           </span>
                           <ExternalLink className="h-3 w-3 flex-shrink-0" />
@@ -250,33 +255,33 @@ export function DataTable({ data }: DataTableProps) {
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.employee_count?.toString()}>
-                      <div className="line-clamp-2 break-words">{item.employee_count || "-"}</div>
+                      <div className="line-clamp-3 break-words">{item.employee_count || "-"}</div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.products}>
-                      <div className="line-clamp-2 break-words max-w-[180px]">
+                      <div className="line-clamp-3 break-words max-w-[130px]">
                         {item.products || "-"}
                       </div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.business_sectors}>
-                      <div className="line-clamp-2 break-words max-w-[160px]">
+                      <div className="line-clamp-3 break-words max-w-[110px]">
                         {item.business_sectors || "-"}
                       </div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.product_categories}>
-                      <div className="line-clamp-2 break-words max-w-[160px]">
+                      <div className="line-clamp-3 break-words max-w-[110px]">
                         {item.product_categories || "-"}
                       </div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.industry_types}>
-                      <div className="line-clamp-2 break-words max-w-[130px]">
+                      <div className="line-clamp-3 break-words max-w-[100px]">
                         {item.industry_types || "-"}
                       </div>
                     </TooltipCell>
@@ -326,7 +331,7 @@ export function DataTable({ data }: DataTableProps) {
                     <TooltipCell
                       content={item.crawl_time_seconds ? `${item.crawl_time_seconds}s` : null}
                     >
-                      <div className="line-clamp-2 break-words">
+                      <div className="line-clamp-3 break-words">
                         {item.crawl_time_seconds ? `${item.crawl_time_seconds}s` : "-"}
                       </div>
                     </TooltipCell>
@@ -335,14 +340,14 @@ export function DataTable({ data }: DataTableProps) {
                     <TooltipCell
                       content={item.gpt_time_seconds ? `${item.gpt_time_seconds}s` : null}
                     >
-                      <div className="line-clamp-2 break-words">
+                      <div className="line-clamp-3 break-words">
                         {item.gpt_time_seconds ? `${item.gpt_time_seconds}s` : "-"}
                       </div>
                     </TooltipCell>
                   </TableCell>
                   <TableCell className="border-r p-1 text-muted-foreground text-xs">
                     <TooltipCell content={formatCollectedAt(item.collected_at)}>
-                      <div className="line-clamp-2 break-words">
+                      <div className="line-clamp-3 break-words">
                         {formatCollectedAt(item.collected_at)}
                       </div>
                     </TooltipCell>
@@ -350,7 +355,7 @@ export function DataTable({ data }: DataTableProps) {
                   <TableCell className="border-r p-1">
                     <TooltipCell content={item.error_message}>
                       {item.error_message ? (
-                        <span className="text-red-600 text-xs line-clamp-2 break-words block">
+                        <span className="text-red-600 text-xs line-clamp-3 break-words block">
                           {item.error_message}
                         </span>
                       ) : (

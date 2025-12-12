@@ -67,6 +67,7 @@ export const workspacesApi = {
     if (params?.isActive !== undefined) searchParams.append("isActive", params.isActive.toString())
     if (params?.search) searchParams.append("search", params.search)
     if (params?.ownerIds?.length) searchParams.append("ownerIds", params.ownerIds.join(","))
+    if (params?.userId) searchParams.append("userId", params.userId)
 
     const query = searchParams.toString()
     const response = await apiFetch<{

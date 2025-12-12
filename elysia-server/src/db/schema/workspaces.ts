@@ -10,6 +10,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core"
+import { subscriptionStatusEnum, subscriptionTierEnum } from "./enums"
 import { users } from "./users"
 
 // Enums
@@ -56,10 +57,33 @@ export const workspaces = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     isActive: boolean("is_active").notNull().default(true),
+
+    // =========================================================================
+    // 구독 관련 필드 (Subscription Fields)
+    // =========================================================================
+
+    // 현재 구독 등급 (캐시용, subscriptions 테이블과 동기화 필요)
+    // IAM 권한 체크 시 빠른 조회를 위해 비정규화
+    subscriptionTier: subscriptionTierEnum("subscription_tier").notNull().default("trial"),
+
+    // 현재 구독 상태 (캐시용)
+    subscriptionStatus: subscriptionStatusEnum("subscription_status").notNull().default("trialing"),
+
+    // 구독 만료 시간 (빠른 만료 체크용)
+    subscriptionValidUntil: timestamp("subscription_valid_until", {
+      withTimezone: true,
+    }),
+
+    // 등급 변경 시간 (권한 캐시 무효화 판단용)
+    tierChangedAt: timestamp("tier_changed_at", { withTimezone: true }),
   },
   (table) => ({
     ownerIdx: index("workspaces_owner_id_idx").on(table.ownerId),
     isActiveIdx: index("workspaces_is_active_idx").on(table.isActive),
+    // 구독 등급별 조회
+    tierIdx: index("workspaces_subscription_tier_idx").on(table.subscriptionTier),
+    // 구독 만료 체크용 인덱스
+    subValidIdx: index("workspaces_subscription_valid_idx").on(table.subscriptionValidUntil),
   }),
 )
 
@@ -88,6 +112,7 @@ export const workspaceMembers = pgTable(
 )
 
 // Relations
+// 주의: subscriptions 관계는 billing.ts에서 정의 (순환 참조 방지)
 export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
   owner: one(users, {
     fields: [workspaces.ownerId],

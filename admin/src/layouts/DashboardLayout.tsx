@@ -95,17 +95,6 @@ function DashboardContent({ children }: DashboardContentProps) {
     return baseOptions
   }, [workspaces, t, isTrialUser])
 
-  // 디버깅: 워크스페이스 정보 확인
-  useEffect(() => {
-    console.log("Workspace Debug:", {
-      workspaces,
-      workspaceOptions,
-      hideWorkspaceSelector,
-      pathname,
-      selectedWorkspace,
-    })
-  }, [workspaces, workspaceOptions, pathname, selectedWorkspace])
-
   // 선택된 워크스페이스를 localStorage에 저장
   useEffect(() => {
     localStorage.setItem("selectedWorkspace", selectedWorkspace)
@@ -191,7 +180,7 @@ function DashboardContent({ children }: DashboardContentProps) {
           </div>
         </header>
         <main className="flex-1 overflow-y-auto">
-          <div className="p-4">
+          <div className="p-4 h-full">
             <Suspense fallback={getSkeletonForRoute(pathname)}>{children || <Outlet />}</Suspense>
           </div>
         </main>
@@ -259,6 +248,18 @@ const getPageName = (pathname: string, t: (key: string) => string) => {
       return t("sidebar.menu.bigquerySearch")
     case "/lead-discovery":
       return t("layout.page.leadDiscovery")
+    // IAM routes
+    case "/iam/policies":
+      return "정책 관리"
+    case "/iam/roles":
+      return "역할 관리"
+    // Billing routes
+    case "/billing/products":
+      return "상품 관리"
+    case "/billing/plans":
+      return "요금제 관리"
+    case "/billing/subscriptions":
+      return "구독 관리"
     default:
       // Handle webset routes
       if (pathname.startsWith("/websets")) {

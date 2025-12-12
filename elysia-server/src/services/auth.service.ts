@@ -7,7 +7,7 @@ const SALT_ROUNDS = 10
 export interface TokenPayload {
   userId: string
   email: string
-  userRole: "super_admin" | "admin" | "paying_user" | "user"
+  userRole: "user" | "admin"
 }
 
 // Hash password

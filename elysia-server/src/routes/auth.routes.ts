@@ -12,7 +12,7 @@ type AuthUser = {
   id: string
   username: string
   email: string
-  userRole: "super_admin" | "admin" | "paying_user" | "user"
+  userRole: "user" | "admin"
   isActive: boolean
   departmentId: string | null
   employeeId: string | null
@@ -156,6 +156,19 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
         if (!newUser) {
           set.status = 400
           return errorResponse("사용자 생성에 실패했습니다.", ResponseCode.BAD_REQUEST)
+        }
+
+        // Create default workspace for new users (same as trial signup)
+        try {
+          await workspaceService.createWorkspace({
+            name: `${newUser.username}의 워크스페이스`,
+            description: "기본 워크스페이스",
+            ownerId: newUser.id,
+            isActive: true,
+          })
+        } catch (wsError) {
+          console.error("Failed to create default workspace for signup user:", wsError)
+          // Don't throw error here to avoid breaking user registration
         }
 
         return {

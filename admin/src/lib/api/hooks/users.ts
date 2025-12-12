@@ -86,6 +86,17 @@ export function useUpdateUser() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: userKeys.detail(variables.userId) })
       queryClient.invalidateQueries({ queryKey: userKeys.lists() })
+
+      // 현재 로그인 사용자의 역할이 변경된 경우 → 페이지 새로고침으로 전체 상태 초기화
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
+      if (currentUser?.id === variables.userId && variables.data.userRole !== undefined) {
+        const updatedUserData = { ...currentUser, userRole: variables.data.userRole }
+        localStorage.setItem("user", JSON.stringify(updatedUserData))
+        toast.success("권한이 변경되어 페이지를 새로고침합니다")
+        setTimeout(() => window.location.reload(), 500)
+        return
+      }
+
       toast.success("사용자 정보가 업데이트되었습니다")
     },
     onError: (error: Error) => {
@@ -133,9 +144,20 @@ export function useBulkUpdateRole() {
   return useMutation({
     mutationFn: (data: { userIds: string[]; role: string }) =>
       usersApi.bulkUpdateRole(data.userIds, data.role),
-    onSuccess: (response) => {
+    onSuccess: (response, variables) => {
       queryClient.invalidateQueries({ queryKey: userKeys.lists() })
       queryClient.invalidateQueries({ queryKey: userKeys.stats() })
+
+      // 현재 로그인 사용자가 변경 대상에 포함된 경우 → 페이지 새로고침
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
+      if (currentUser?.id && variables.userIds.includes(currentUser.id)) {
+        const updatedUserData = { ...currentUser, userRole: variables.role }
+        localStorage.setItem("user", JSON.stringify(updatedUserData))
+        toast.success("권한이 변경되어 페이지를 새로고침합니다")
+        setTimeout(() => window.location.reload(), 500)
+        return
+      }
+
       toast.success(`${response.updatedCount || 0}명의 사용자 역할이 업데이트되었습니다`)
     },
     onError: (error: Error) => {
@@ -170,6 +192,85 @@ export function useChangePassword() {
     },
     onError: (error: Error) => {
       toast.error(error.message || "비밀번호 변경에 실패했습니다")
+    },
+  })
+}
+
+// ====================================
+// ONBOARDING HOOKS
+// ====================================
+
+export const onboardingKeys = {
+  all: ["onboarding"] as const,
+  status: (userId: string) => [...onboardingKeys.all, "status", userId] as const,
+}
+
+/** 온보딩 상태 조회 훅 */
+export function useOnboardingStatus(userId: string, enabled = true) {
+  return useQuery({
+    queryKey: onboardingKeys.status(userId),
+    queryFn: () => usersApi.getOnboardingStatus(userId),
+    enabled: enabled && !!userId,
+    staleTime: 0, // 항상 최신 데이터
+    gcTime: 0,
+  })
+}
+
+/** 온보딩 단계 업데이트 mutation */
+export function useUpdateOnboardingStep() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ userId, step }: { userId: string; step: number }) =>
+      usersApi.updateOnboardingStep(userId, step),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: onboardingKeys.status(variables.userId) })
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "온보딩 진행 상태 업데이트에 실패했습니다")
+    },
+  })
+}
+
+/** 온보딩 완료 mutation */
+export function useCompleteOnboarding() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (userId: string) => usersApi.completeOnboarding(userId),
+    onSuccess: (_, userId) => {
+      queryClient.invalidateQueries({ queryKey: onboardingKeys.status(userId) })
+      toast.success("온보딩이 완료되었습니다!")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "온보딩 완료 처리에 실패했습니다")
+    },
+  })
+}
+
+/** 온보딩 설문 업데이트 mutation */
+export function useUpdateOnboardingSurvey() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      userId,
+      survey,
+    }: {
+      userId: string
+      survey: {
+        industry?: string
+        target?: string
+        country?: string
+        experience?: string
+        lang?: string
+      }
+    }) => usersApi.updateOnboardingSurvey(userId, survey),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: onboardingKeys.status(variables.userId) })
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "온보딩 설문 업데이트에 실패했습니다")
     },
   })
 }

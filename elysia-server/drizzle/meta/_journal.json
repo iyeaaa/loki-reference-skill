@@ -232,6 +232,20 @@
       "when": 1765436844926,
       "tag": "0032_silent_saracen",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1765507052976,
+      "tag": "0033_lively_warbound",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1765523337134,
+      "tag": "0034_gorgeous_karma",
+      "breakpoints": true
     }
   ]
 }

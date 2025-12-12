@@ -7,11 +7,10 @@ export interface SettingsSidebarItem {
   label: string
   icon: React.ReactNode
   onClick?: () => void
+  type?: "item" | "separator" | "header"
 }
 
 export interface SettingsSidebarProps {
-  title?: string
-  subtitle?: string
   items?: SettingsSidebarItem[]
   activeItemId?: string
   onItemClick?: (itemId: string) => void
@@ -57,8 +56,6 @@ const defaultItems: SettingsSidebarItem[] = [
 ]
 
 export function SettingsSidebar({
-  title = "Settings & System Management",
-  subtitle = "Manage your account and system",
   items = defaultItems,
   activeItemId,
   onItemClick,
@@ -77,24 +74,36 @@ export function SettingsSidebar({
   return (
     <div
       className={cn(
-        "w-full max-w-sm bg-background border-r border-border h-full flex flex-col",
+        "w-full max-w-[200px] bg-background border-r border-border h-full flex flex-col",
         "lg:shadow-none shadow-2xl", // Add shadow on mobile
         className,
       )}
     >
-      {/* Header */}
-      <div className="p-6 border-b border-border">
-        <div className="flex items-start gap-2 mb-2">
-          <Settings className="h-5 w-5 mt-0.5 text-muted-foreground" />
-          <h2 className="text-lg font-semibold leading-tight">{title}</h2>
-        </div>
-        <p className="text-sm text-muted-foreground">{subtitle}</p>
-      </div>
-
       {/* Menu Items */}
-      <nav className="flex-1 p-4">
-        <ul className="space-y-1">
+      <nav className="flex-1 px-2 py-2">
+        <ul className="space-y-0.5">
           {items.map((item) => {
+            // Render separator
+            if (item.type === "separator") {
+              return (
+                <li key={item.id} className="my-2 px-2">
+                  <div className="border-t border-border" />
+                </li>
+              )
+            }
+
+            // Render header
+            if (item.type === "header") {
+              return (
+                <li key={item.id} className="mt-4 mb-2 px-2 first:mt-0">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    {item.label}
+                  </div>
+                </li>
+              )
+            }
+
+            // Render normal menu item
             const isActive = currentActiveId === item.id
             return (
               <li key={item.id}>
@@ -102,7 +111,7 @@ export function SettingsSidebar({
                   type="button"
                   onClick={() => handleItemClick(item.id)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium transition-colors",
+                    "w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-sm font-medium transition-colors",
                     "hover:bg-accent hover:text-accent-foreground",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                     isActive && "bg-accent text-accent-foreground",

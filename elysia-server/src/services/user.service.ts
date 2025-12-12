@@ -1,6 +1,9 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
+import { iamMemberRoles } from "../db/schema/iam"
 import { departments, users } from "../db/schema/users"
+import { workspaceMembers } from "../db/schema/workspaces"
+import { createDefaultRolesForWorkspace, syncMemberRoleToIamRole } from "../db/seed-iam"
 import * as salesStrategyService from "./sales-strategy.service"
 import * as workspaceService from "./workspace.service"
 
@@ -18,6 +21,7 @@ export async function getUser(id: string) {
       passwordHash: users.passwordHash,
       userRole: users.userRole,
       isActive: users.isActive,
+      isSuperAdmin: users.isSuperAdmin,
       departmentId: users.departmentId,
       employeeId: users.employeeId,
       createdAt: users.createdAt,
@@ -39,7 +43,7 @@ export async function createUser(data: {
   username: string
   email: string
   passwordHash?: string
-  userRole?: "super_admin" | "admin" | "paying_user" | "user"
+  userRole?: "user" | "admin"
   isActive?: boolean
   departmentId?: string
   employeeId?: string
@@ -87,13 +91,17 @@ export async function updateUser(
   data: {
     username: string
     email: string
-    userRole: "super_admin" | "admin" | "paying_user" | "user"
+    userRole: "user" | "admin"
     isActive: boolean
     departmentId: string | null
     employeeId: string | null
     profilePicture?: string | null
   },
 ) {
+  // 기존 사용자 정보 조회 (역할 변경 감지용)
+  const existingUser = await getUser(id)
+  const previousRole = existingUser?.userRole
+
   const [updatedUser] = await db
     .update(users)
     .set({
@@ -119,6 +127,20 @@ export async function updateUser(
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     })
+
+  // 역할이 변경된 경우 IAM 역할 자동 동기화
+  if (updatedUser && previousRole !== data.userRole) {
+    const isPromotedToAdmin = data.userRole === "admin" && previousRole !== "admin"
+    const isDemotedFromAdmin = previousRole === "admin" && data.userRole !== "admin"
+
+    if (isPromotedToAdmin) {
+      // 관리자로 승격: 모든 워크스페이스에서 Admin 역할 부여
+      await syncUserIamRolesOnPromotion(id)
+    } else if (isDemotedFromAdmin) {
+      // 관리자에서 강등: 모든 워크스페이스에서 Member 역할로 변경
+      await syncUserIamRolesOnDemotion(id)
+    }
+  }
 
   return updatedUser
 }
@@ -187,7 +209,7 @@ export async function listUsersWithFilters(
   limit: number,
   offset: number,
   filters?: {
-    role?: "super_admin" | "admin" | "paying_user" | "user"
+    role?: "user" | "admin"
     isActive?: boolean
     search?: string
     departmentIds?: string[]
@@ -309,7 +331,7 @@ export async function countUsers() {
 
 // CountUsersWithFilters :one
 export async function countUsersWithFilters(filters?: {
-  role?: "super_admin" | "admin" | "paying_user" | "user"
+  role?: "user" | "admin"
   isActive?: boolean
   search?: string
   departmentIds?: string[]
@@ -388,13 +410,23 @@ export async function updateUserPassword(id: string, passwordHash: string) {
   return updatedUser
 }
 
+// Onboarding survey type
+export interface OnboardingSurvey {
+  industry?: string
+  target?: string
+  country?: string
+  experience?: string
+  lang?: string
+  completedAt?: string
+}
+
 // CreateOrUpdateGoogleUser :one
 export async function createOrUpdateGoogleUser(data: {
   username: string
   email: string
   oauthId: string
   profilePicture?: string
-  userRole?: "super_admin" | "admin" | "paying_user" | "user"
+  userRole?: "user" | "admin"
   isActive?: boolean
   departmentId?: string
   employeeId?: string
@@ -414,6 +446,20 @@ export async function createOrUpdateGoogleUser(data: {
   const trialEndDate = new Date()
   trialEndDate.setDate(trialEndDate.getDate() + 7)
 
+  // Prepare onboarding survey data
+  const { industry, target, country, experience, lang } = data.onboardingParams || {}
+  const hasOnboardingSurvey = industry || target || country || experience
+  const onboardingSurvey: OnboardingSurvey | null = hasOnboardingSurvey
+    ? {
+        industry: industry || undefined,
+        target: target || undefined,
+        country: country || undefined,
+        experience: experience || undefined,
+        lang: lang || undefined,
+        completedAt: new Date().toISOString(),
+      }
+    : null
+
   const [upsertedUser] = await db
     .insert(users)
     .values({
@@ -430,6 +476,9 @@ export async function createOrUpdateGoogleUser(data: {
       trialEndDate,
       isTrialActive: true,
       lastLoginAt: new Date(),
+      // 온보딩 데이터 저장
+      onboardingSurvey,
+      onboardingStep: hasOnboardingSurvey ? 1 : 0, // 설문 완료 시 step 1부터 시작
     })
     .onConflictDoUpdate({
       target: users.email,
@@ -437,6 +486,8 @@ export async function createOrUpdateGoogleUser(data: {
         lastLoginAt: new Date(),
         updatedAt: new Date(),
         profilePicture: data.profilePicture,
+        // 기존 사용자도 온보딩 설문이 있으면 업데이트
+        ...(onboardingSurvey && { onboardingSurvey }),
       },
     })
     .returning({
@@ -453,6 +504,9 @@ export async function createOrUpdateGoogleUser(data: {
       trialStartDate: users.trialStartDate,
       trialEndDate: users.trialEndDate,
       isTrialActive: users.isTrialActive,
+      onboardingSurvey: users.onboardingSurvey,
+      onboardingStep: users.onboardingStep,
+      onboardingCompletedAt: users.onboardingCompletedAt,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
       lastLoginAt: users.lastLoginAt,
@@ -469,7 +523,6 @@ export async function createOrUpdateGoogleUser(data: {
       })
 
       // Link sales strategy if all 4 onboarding fields are provided
-      const { industry, target, country, experience } = data.onboardingParams || {}
       if (workspace && industry && target && country && experience) {
         try {
           await salesStrategyService.findOrCreateAndLinkSalesStrategy(workspace.id, {
@@ -534,14 +587,17 @@ export async function bulkUpdateStatus(userIds: string[], isActive: boolean) {
 }
 
 // BulkUpdateRole :exec
-export async function bulkUpdateRole(
-  userIds: string[],
-  userRole: "super_admin" | "admin" | "paying_user" | "user",
-) {
+export async function bulkUpdateRole(userIds: string[], userRole: "user" | "admin") {
   const userCondition = or(...userIds.map((id) => eq(users.id, id)))
   if (!userCondition) {
     return 0
   }
+
+  // 기존 역할 조회 (각 사용자별)
+  const existingUsers = await db
+    .select({ id: users.id, userRole: users.userRole })
+    .from(users)
+    .where(userCondition)
 
   const result = await db
     .update(users)
@@ -551,6 +607,21 @@ export async function bulkUpdateRole(
     })
     .where(userCondition)
     .returning({ id: users.id })
+
+  // 각 사용자에 대해 IAM 역할 동기화
+  const isTargetAdmin = userRole === "admin"
+
+  for (const user of existingUsers) {
+    const wasAdmin = user.userRole === "admin"
+
+    if (isTargetAdmin && !wasAdmin) {
+      // 관리자로 승격
+      await syncUserIamRolesOnPromotion(user.id)
+    } else if (!isTargetAdmin && wasAdmin) {
+      // 관리자에서 강등
+      await syncUserIamRolesOnDemotion(user.id)
+    }
+  }
 
   return result.length
 }
@@ -691,4 +762,256 @@ export async function extendTrial(userId: string, additionalDays: number) {
     })
 
   return updatedUser
+}
+
+// ====================================
+// ONBOARDING OPERATIONS
+// ====================================
+
+/**
+ * 사용자의 온보딩 상태 조회
+ */
+export async function getOnboardingStatus(userId: string) {
+  const [user] = await db
+    .select({
+      id: users.id,
+      onboardingSurvey: users.onboardingSurvey,
+      onboardingStep: users.onboardingStep,
+      onboardingCompletedAt: users.onboardingCompletedAt,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+
+  if (!user) {
+    return null
+  }
+
+  return {
+    userId: user.id,
+    survey: user.onboardingSurvey,
+    currentStep: user.onboardingStep || 0,
+    isCompleted: user.onboardingCompletedAt !== null,
+    completedAt: user.onboardingCompletedAt,
+  }
+}
+
+/**
+ * 온보딩 진행 단계 업데이트
+ * @param userId - 사용자 ID
+ * @param step - 현재 진행 단계 (1-4)
+ */
+export async function updateOnboardingStep(userId: string, step: number) {
+  const [updatedUser] = await db
+    .update(users)
+    .set({
+      onboardingStep: step,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId))
+    .returning({
+      id: users.id,
+      onboardingStep: users.onboardingStep,
+    })
+
+  return updatedUser
+}
+
+/**
+ * 온보딩 완료 처리
+ * @param userId - 사용자 ID
+ */
+export async function completeOnboarding(userId: string) {
+  const [updatedUser] = await db
+    .update(users)
+    .set({
+      onboardingStep: 5, // 완료 상태
+      onboardingCompletedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId))
+    .returning({
+      id: users.id,
+      onboardingStep: users.onboardingStep,
+      onboardingCompletedAt: users.onboardingCompletedAt,
+    })
+
+  return updatedUser
+}
+
+/**
+ * 온보딩 설문 데이터 업데이트
+ */
+export async function updateOnboardingSurvey(userId: string, survey: OnboardingSurvey) {
+  const [updatedUser] = await db
+    .update(users)
+    .set({
+      onboardingSurvey: {
+        ...survey,
+        completedAt: new Date().toISOString(),
+      },
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId))
+    .returning({
+      id: users.id,
+      onboardingSurvey: users.onboardingSurvey,
+    })
+
+  return updatedUser
+}
+
+/**
+ * 온보딩 미완료 사용자 조회 (분석용)
+ */
+export async function getIncompleteOnboardingUsers(limit = 100) {
+  const result = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      username: users.username,
+      onboardingStep: users.onboardingStep,
+      onboardingSurvey: users.onboardingSurvey,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .where(
+      and(
+        sql`${users.onboardingCompletedAt} IS NULL`,
+        sql`${users.onboardingStep} IS NOT NULL`,
+        sql`${users.onboardingStep} > 0`,
+      ),
+    )
+    .orderBy(desc(users.createdAt))
+    .limit(limit)
+
+  return result
+}
+
+// ====================================
+// IAM ROLE SYNC FOR ADMIN PROMOTION
+// ====================================
+
+/**
+ * 사용자가 관리자로 승격될 때 모든 워크스페이스의 IAM 역할을 Admin으로 동기화
+ * @param userId - 사용자 ID
+ */
+export async function syncUserIamRolesOnPromotion(
+  userId: string,
+): Promise<{ workspaceId: string; roleName: string }[]> {
+  // 사용자가 속한 모든 워크스페이스 멤버십 조회
+  const memberships = await db
+    .select({
+      memberId: workspaceMembers.id,
+      workspaceId: workspaceMembers.workspaceId,
+      currentRole: workspaceMembers.role,
+    })
+    .from(workspaceMembers)
+    .where(eq(workspaceMembers.userId, userId))
+
+  const results: { workspaceId: string; roleName: string }[] = []
+
+  for (const membership of memberships) {
+    // 워크스페이스에 기본 역할이 없으면 생성
+    await createDefaultRolesForWorkspace(membership.workspaceId)
+
+    // IAM 역할 동기화 (Admin)
+    await syncMemberRoleToIamRole(membership.memberId, membership.workspaceId, "admin")
+
+    // workspace_members 테이블의 role 필드도 업데이트
+    await db
+      .update(workspaceMembers)
+      .set({ role: "admin" })
+      .where(eq(workspaceMembers.id, membership.memberId))
+
+    results.push({
+      workspaceId: membership.workspaceId,
+      roleName: "Admin",
+    })
+  }
+
+  return results
+}
+
+/**
+ * 사용자가 관리자에서 일반 사용자로 강등될 때 IAM 역할을 Member로 동기화
+ * @param userId - 사용자 ID
+ */
+export async function syncUserIamRolesOnDemotion(
+  userId: string,
+): Promise<{ workspaceId: string; roleName: string }[]> {
+  // 사용자가 속한 모든 워크스페이스 멤버십 조회
+  const memberships = await db
+    .select({
+      memberId: workspaceMembers.id,
+      workspaceId: workspaceMembers.workspaceId,
+    })
+    .from(workspaceMembers)
+    .where(eq(workspaceMembers.userId, userId))
+
+  const results: { workspaceId: string; roleName: string }[] = []
+
+  for (const membership of memberships) {
+    // IAM 역할을 Member로 동기화
+    await syncMemberRoleToIamRole(membership.memberId, membership.workspaceId, "member")
+
+    // workspace_members 테이블의 role 필드도 업데이트
+    await db
+      .update(workspaceMembers)
+      .set({ role: "member" })
+      .where(eq(workspaceMembers.id, membership.memberId))
+
+    results.push({
+      workspaceId: membership.workspaceId,
+      roleName: "Member",
+    })
+  }
+
+  return results
+}
+
+/**
+ * 사용자의 현재 IAM 역할 정보 조회
+ * @param userId - 사용자 ID
+ */
+export async function getUserIamRoles(userId: string): Promise<
+  {
+    workspaceId: string
+    workspaceName: string
+    iamRoles: string[]
+  }[]
+> {
+  const memberships = await db
+    .select({
+      memberId: workspaceMembers.id,
+      workspaceId: workspaceMembers.workspaceId,
+    })
+    .from(workspaceMembers)
+    .where(eq(workspaceMembers.userId, userId))
+
+  const results: { workspaceId: string; workspaceName: string; iamRoles: string[] }[] = []
+
+  for (const membership of memberships) {
+    // 워크스페이스 정보 조회
+    const [workspace] = await db
+      .select({ name: sql<string>`name` })
+      .from(sql`workspaces`)
+      .where(sql`id = ${membership.workspaceId}`)
+      .limit(1)
+
+    // 멤버의 IAM 역할 조회
+    const memberRoles = await db
+      .select({ roleName: sql<string>`r.name` })
+      .from(iamMemberRoles)
+      .innerJoin(sql`iam_workspace_roles r`, sql`${iamMemberRoles.roleId} = r.id`)
+      .where(eq(iamMemberRoles.memberId, membership.memberId))
+
+    results.push({
+      workspaceId: membership.workspaceId,
+      workspaceName: workspace?.name || "Unknown",
+      iamRoles: memberRoles.map((r) => r.roleName),
+    })
+  }
+
+  return results
 }

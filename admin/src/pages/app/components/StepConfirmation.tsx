@@ -1,5 +1,5 @@
 import { ArrowRight, CheckCircle2, Loader2, Mail, Play, Rocket, Users } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { apiFetch } from "@/lib/api/client"
 import { useEmailAccountByWorkspaceAndUser } from "@/lib/api/hooks/email-accounts"
+import { useCompleteOnboarding, useOnboardingProgress } from "@/lib/api/hooks/onboarding"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 
 interface Lead {
@@ -51,20 +52,70 @@ export function StepConfirmation() {
     !!workspace?.id && !!userId,
   )
 
-  // Get data from session storage (memoized)
-  const leads = useMemo<Lead[]>(
-    () => JSON.parse(sessionStorage.getItem("onboarding_leads") || "[]"),
-    [],
-  )
-  const sequenceInfo = useMemo<SequenceInfo | null>(
-    () => JSON.parse(sessionStorage.getItem("onboarding_sequence") || "null"),
-    [],
+  // Onboarding hooks
+  const { data: onboardingProgress } = useOnboardingProgress(workspace?.id || "", !!workspace?.id)
+  const completeOnboardingMutation = useCompleteOnboarding()
+
+  // Get leads from DB using onboarding progress lead IDs
+  const selectedLeadIds = useMemo(
+    () => onboardingProgress?.selectedLeadIds || [],
+    [onboardingProgress],
   )
 
-  const clearSessionData = () => {
-    sessionStorage.removeItem("onboarding_company_info")
-    sessionStorage.removeItem("onboarding_leads")
-    sessionStorage.removeItem("onboarding_sequence")
+  // Local state for leads data
+  const [leads, setLeads] = useState<Lead[]>([])
+
+  // Fetch leads data based on selectedLeadIds
+  useEffect(() => {
+    if (selectedLeadIds.length === 0) return
+
+    const fetchLeads = async () => {
+      try {
+        // 리드 데이터 조회 (bulk로 가져오기)
+        const response = await apiFetch<{ data: Lead[] }>(
+          `/api/v1/leads?ids=${selectedLeadIds.join(",")}`,
+        )
+        if (response.data) {
+          setLeads(response.data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch leads:", error)
+        // Fallback: ID만 있는 기본 구조
+        setLeads(
+          selectedLeadIds.map((id) => ({
+            id,
+            companyName: `Lead ${id.slice(0, 8)}...`,
+          })),
+        )
+      }
+    }
+
+    fetchLeads()
+  }, [selectedLeadIds])
+
+  // Get sequence info from onboarding progress
+  const sequenceInfo = useMemo<SequenceInfo | null>(() => {
+    if (onboardingProgress?.generatedSequenceId) {
+      return {
+        id: onboardingProgress.generatedSequenceId,
+        name: "Demo Sequence",
+        emailSubject: "",
+        emailBodyText: "",
+        leadsCount: selectedLeadIds.length,
+      }
+    }
+    return null
+  }, [onboardingProgress, selectedLeadIds])
+
+  const completeOnboardingAndClearData = async () => {
+    // DB에 온보딩 완료 기록
+    if (workspace?.id) {
+      try {
+        await completeOnboardingMutation.mutateAsync({ workspaceId: workspace.id, userId })
+      } catch (error) {
+        console.error("Failed to complete onboarding:", error)
+      }
+    }
   }
 
   const handleExecute = async () => {
@@ -124,8 +175,8 @@ export function StepConfirmation() {
           : `Emails scheduled for ${enrollResult.enrolledCount} leads`,
       )
 
-      // Clear session storage
-      clearSessionData()
+      // DB에 온보딩 완료 기록
+      await completeOnboardingAndClearData()
 
       // Redirect to dashboard after a short delay
       setTimeout(() => {
@@ -147,9 +198,9 @@ export function StepConfirmation() {
     }
   }
 
-  const handleSkipToDashboard = () => {
-    // Clear session storage and go to dashboard
-    clearSessionData()
+  const handleSkipToDashboard = async () => {
+    // DB에 온보딩 완료 기록 후 대시보드로 이동
+    await completeOnboardingAndClearData()
     navigate("/dashboard")
   }
 
@@ -196,10 +247,7 @@ export function StepConfirmation() {
                   ? "이메일 템플릿이 생성되었습니다. 대시보드에서 리드를 추가하여 시퀀스를 실행할 수 있습니다."
                   : "Your email template has been created. You can add leads and run sequences from the dashboard."}
               </p>
-              <Button
-                onClick={() => navigate("/dashboard")}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
+              <Button onClick={handleSkipToDashboard} className="bg-blue-600 hover:bg-blue-700">
                 {isKorean ? "대시보드로 이동" : "Go to Dashboard"}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>

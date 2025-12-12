@@ -50,6 +50,8 @@ const _workspaceMemberSchema = t.Object({
 
 export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
   // Search workspaces with filters (must be before /:id route)
+  // userId 파라미터가 있으면 해당 사용자가 관리자인지 확인 후
+  // 관리자가 아니면 해당 사용자가 속한 워크스페이스만 반환
   .get(
     "/search",
     async ({ query }) => {
@@ -59,10 +61,21 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
       // Parse ownerIds from comma-separated string
       const ownerIds = query.ownerIds ? query.ownerIds.split(",").filter(Boolean) : undefined
 
+      // 사용자 권한 체크: userId가 있으면 관리자 여부 확인
+      let userWorkspaceIds: string[] | undefined
+      if (query.userId) {
+        const isAdmin = await workspaceService.isUserAdmin(query.userId)
+        if (!isAdmin) {
+          // 관리자가 아니면 사용자가 속한 워크스페이스 ID만 조회
+          userWorkspaceIds = await workspaceService.getUserWorkspaceIds(query.userId)
+        }
+      }
+
       const filters = {
         isActive: query.isActive ? query.isActive === "true" : undefined,
         search: query.search,
         ownerIds,
+        workspaceIds: userWorkspaceIds, // 관리자가 아니면 제한된 워크스페이스만
       }
 
       const workspaces = await workspaceService.listWorkspacesWithFilters(limit, offset, filters)
@@ -82,6 +95,7 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
         isActive: t.Optional(t.String()),
         search: t.Optional(t.String()),
         ownerIds: t.Optional(t.String()),
+        userId: t.Optional(t.String({ format: "uuid" })),
       }),
     },
   )
@@ -417,7 +431,12 @@ export const workspaceRoutes = new Elysia({ prefix: "/api/v1/workspaces" })
   .get(
     "/user/:userId",
     async ({ params: { userId } }) => {
+      console.log("[Workspaces API] GET /user/:userId called:", { userId })
       const workspaces = await workspaceService.getAllUserRelatedWorkspaces(userId)
+      console.log("[Workspaces API] Found workspaces:", {
+        count: workspaces.length,
+        workspaceIds: workspaces.map((w) => w.id),
+      })
       return workspaces
     },
     {

@@ -28,14 +28,6 @@ const meta = {
   },
   tags: ["autodocs"],
   argTypes: {
-    title: {
-      control: "text",
-      description: "The main title of the sidebar",
-    },
-    subtitle: {
-      control: "text",
-      description: "The subtitle/description text",
-    },
     activeItemId: {
       control: "text",
       description: "The ID of the currently active menu item",
@@ -85,14 +77,12 @@ export const WithActiveItem: Story = {
 
 export const CustomTitle: Story = {
   args: {
-    title: "Account Settings",
-    subtitle: "Configure your preferences",
     activeItemId: "profile",
   },
   parameters: {
     docs: {
       description: {
-        story: "Sidebar with custom title and subtitle text.",
+        story: "Sidebar with pre-selected profile item.",
       },
     },
   },
@@ -101,8 +91,6 @@ export const CustomTitle: Story = {
 // Custom Items Example
 export const CustomItems: Story = {
   args: {
-    title: "Application Settings",
-    subtitle: "Manage app configuration",
     activeItemId: "notifications",
     items: [
       {
@@ -139,8 +127,6 @@ export const CustomItems: Story = {
 // Minimal Items
 export const MinimalItems: Story = {
   args: {
-    title: "Quick Settings",
-    subtitle: "Essential options",
     items: [
       {
         id: "profile",
@@ -167,8 +153,6 @@ export const MinimalItems: Story = {
 // Many Items
 export const ManyItems: Story = {
   args: {
-    title: "Complete Settings",
-    subtitle: "All available options",
     items: [
       {
         id: "profile",
@@ -234,10 +218,7 @@ export const ManyItems: Story = {
 
 // Interactive Example
 export const Interactive: Story = {
-  args: {
-    title: "Settings & System Management",
-    subtitle: "Manage your account and system",
-  },
+  args: {},
   parameters: {
     docs: {
       description: {

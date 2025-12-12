@@ -5,6 +5,7 @@ import {
   Compass,
   // Database, // TODO: BigQuery Search 기능 완성 후 주석 해제
   GitBranch,
+  Home,
   Mail,
   MessageSquare,
   // Search, // TODO: Webset 기능 완성 후 주석 해제
@@ -12,7 +13,7 @@ import {
   // Sparkles, // TODO: Gemini Search 기능 완성 후 주석 해제
   UserCheck,
 } from "lucide-react"
-import { Fragment } from "react"
+import { Fragment, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useLocation } from "react-router-dom"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
@@ -30,6 +31,13 @@ import {
 import type { WorkspaceOption } from "@/components/ui/workspace-selector"
 import { WorkspaceSelector } from "@/components/ui/workspace-selector"
 import { iconRotateVariants, shouldReduceMotion } from "@/lib/animations"
+import {
+  IAM_ACTIONS,
+  IAM_RESOURCES,
+  type IamAction,
+  type IamResource,
+} from "@/lib/constants/iam-resources"
+import { usePermissions } from "@/lib/permission"
 import { cn } from "@/lib/utils"
 
 // Custom Menu Item Component
@@ -88,53 +96,97 @@ function CustomMenuItem({ title, url, icon: Icon, isActive }: CustomMenuItemProp
   )
 }
 
-// 메인 메뉴 아이템 - Natural sales workflow order
-const getMainMenuItems = (t: (key: string) => string) => [
+// 메뉴 아이템 인터페이스 (권한 정보 포함)
+interface MenuItem {
+  title: string
+  url: string
+  icon: LucideIcon
+  /**
+   * 권한 설정:
+   * - { resource, action }: 해당 권한 보유자만 접근 가능
+   * - "public": 모든 인증된 사용자 접근 가능
+   * - 미설정(undefined): Admin만 접근 가능 (기본값 = 보안 우선)
+   */
+  permission?: { resource: IamResource; action: IamAction } | "public"
+}
+
+/**
+ * 메인 메뉴 아이템 - Natural sales workflow order
+ *
+ * 권한 매핑 (AWS IAM 스타일):
+ * - "public": 모든 인증된 사용자 접근 가능
+ * - { resource, action }: 해당 권한 보유자만 접근 가능
+ *
+ * Resource/Action 매핑:
+ * - 홈: public
+ * - 분석: analytics:read
+ * - 고객 탐색: leads:discovery:read
+ * - 고객 관리: leads:list
+ * - 캠페인: sequences:list
+ * - 인박스: emails:list
+ * - Rinda GPT: ai:chatbot:execute
+ */
+const getMainMenuItems = (t: (key: string) => string): MenuItem[] => [
   {
-    title: t("sidebar.menu.dashboard"),
+    title: t("sidebar.menu.home"),
     url: "/dashboard",
+    icon: Home,
+    permission: "public",
+  },
+  {
+    title: t("sidebar.menu.analytics"),
+    url: "/analytics",
     icon: BarChart3,
+    permission: { resource: IAM_RESOURCES.ANALYTICS, action: IAM_ACTIONS.READ },
   },
   {
     title: t("sidebar.menu.leadDiscovery"),
     url: "/lead-discovery",
     icon: Compass,
+    permission: { resource: IAM_RESOURCES.LEADS_DISCOVERY, action: IAM_ACTIONS.READ },
   },
   {
     title: t("sidebar.menu.customerManagement"),
     url: "/leads",
     icon: UserCheck,
+    permission: { resource: IAM_RESOURCES.LEADS, action: IAM_ACTIONS.LIST },
   },
   {
     title: t("sidebar.menu.campaign"),
     url: "/sequences",
     icon: GitBranch,
+    permission: { resource: IAM_RESOURCES.SEQUENCES, action: IAM_ACTIONS.LIST },
   },
   {
     title: t("sidebar.menu.reply"),
     url: "/replied-emails",
     icon: Mail,
+    permission: { resource: IAM_RESOURCES.EMAILS, action: IAM_ACTIONS.LIST },
   },
   // {
   //   title: t("sidebar.menu.geminiSearch"),
   //   url: "/gemini-search",
   //   icon: Sparkles,
+  //   permission: "public", // 모든 인증된 사용자
   // },
   // {
   //   title: t("sidebar.menu.webset"),
   //   url: "/websets",
   //   icon: Search,
+  //   permission: "public",
   // },
   // TODO: BigQuery Search 기능 완성 후 주석 해제
   // {
   //   title: t("sidebar.menu.bigquerySearch"),
   //   url: "/bigquery-search",
   //   icon: Database,
+  //   permission: "public",
   // },
   {
     title: t("sidebar.menu.aiSalesAutomation"),
     url: "/chatbot",
     icon: MessageSquare,
+    permission: { resource: IAM_RESOURCES.AI_CHATBOT, action: IAM_ACTIONS.EXECUTE },
   },
 ]
 
@@ -155,11 +207,39 @@ export function AppSidebar({
   const location = useLocation()
   const pathname = location.pathname
 
-  // 메뉴 아이템들 가져오기
-  const mainMenuItems = getMainMenuItems(t)
+  // 권한 컨텍스트
+  const { isAdmin, hasPermission, isLoading: permissionLoading } = usePermissions()
 
-  // 현재 로그인한 유저의 trial 상태 확인
+  // 현재 로그인한 유저 정보
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
+
+  // 메뉴 아이템들 가져오기
+  const allMenuItems = getMainMenuItems(t)
+
+  // 권한에 따라 메뉴 필터링
+  const mainMenuItems = useMemo(() => {
+    // 권한 로딩 중이면 빈 배열 (깜박임 방지)
+    if (permissionLoading) return []
+
+    // Admin은 모든 메뉴 표시
+    if (isAdmin) {
+      return allMenuItems
+    }
+
+    // 권한에 따라 필터링
+    const filteredItems = allMenuItems.filter((item) => {
+      // "public"이면 모든 인증된 사용자 접근 가능
+      if (item.permission === "public") return true
+
+      // permission이 없으면(undefined) Admin만 접근 가능 → 일반 사용자는 숨김
+      if (!item.permission) return false
+
+      // 권한 체크
+      return hasPermission(item.permission.resource, item.permission.action)
+    })
+
+    return filteredItems
+  }, [allMenuItems, isAdmin, hasPermission, permissionLoading])
   const isTrialUser = currentUser?.trialStatus?.isTrialActive || false
 
   // "전체" 옵션을 포함한 워크스페이스 목록 생성
@@ -253,7 +333,7 @@ export function AppSidebar({
             title={t("sidebar.menu.settings")}
             url="/settings"
             icon={Settings}
-            isActive={pathname === "/settings"}
+            isActive={pathname === "/settings" || pathname === "/company"}
           />
         </SidebarMenu>
       </SidebarFooter>

@@ -32,7 +32,7 @@ async function smartSeed() {
     }
 
     // User has no trial data - promote to admin
-    if (user.userRole !== "admin" && user.userRole !== "super_admin") {
+    if (user.userRole !== "admin") {
       await db
         .update(users)
         .set({ userRole: "admin", updatedAt: new Date() })

@@ -1,14 +1,10 @@
 import { lazy } from "react"
 import { createBrowserRouter, Navigate, useSearchParams } from "react-router-dom"
-import {
-  AdminProtectedRoute,
-  ProtectedRoute,
-  UserProtectedRoute,
-} from "@/components/ProtectedRoute"
+import { ProtectedRoute, UserProtectedRoute } from "@/components/ProtectedRoute"
 import { AuthProvider } from "@/lib/auth-provider"
+import { PermissionProvider, RouteGuard } from "@/lib/permission"
 
 // Layouts - 즉시 로드 (모든 페이지에서 필요)
-import AppLayout from "../layouts/AppLayout"
 import DashboardLayout from "../layouts/DashboardLayout"
 import RootLayout from "../layouts/RootLayout"
 // 로그인 페이지만 즉시 로드 (첫 진입점)
@@ -45,6 +41,26 @@ const TailwindTestPage = lazy(() => import("../pages/tailwind-test/TailwindTestP
 const LeadImportPage = lazy(() => import("../pages/lead-import"))
 const BulkEmailCSVPage = lazy(() => import("../pages/bulk-email-csv"))
 const FilterComponentsTest = lazy(() => import("../pages/test/FilterComponentsTest"))
+
+// IAM Pages
+const PoliciesPage = lazy(() =>
+  import("../pages/iam/PoliciesPage").then((m) => ({ default: m.default })),
+)
+const RolesPage = lazy(() => import("../pages/iam/RolesPage").then((m) => ({ default: m.default })))
+
+// Activity Logs
+const ActivityLogsPage = lazy(() => import("../pages/activity-logs"))
+
+// Billing Pages
+const ProductsPage = lazy(() =>
+  import("../pages/billing/ProductsPage").then((m) => ({ default: m.default })),
+)
+const PlansPage = lazy(() =>
+  import("../pages/billing/PlansPage").then((m) => ({ default: m.default })),
+)
+const SubscriptionsPage = lazy(() =>
+  import("../pages/billing/SubscriptionsPage").then((m) => ({ default: m.default })),
+)
 const SSETestPage = lazy(() =>
   import("../pages/settings/SSETestPage").then((m) => ({ default: m.SSETestPage })),
 )
@@ -55,9 +71,14 @@ const WebsetCriteriaPage = lazy(() => import("../pages/webset/criteria"))
 const WebsetDetailPage = lazy(() => import("../pages/websets/[id]"))
 const GeminiSearchPage = lazy(() => import("../pages/gemini-search/GeminiSearchPage"))
 const BigQuerySearchPage = lazy(() => import("../pages/bigquery-search/BigQuerySearchPage"))
+const AnalyticsDashboardPage = lazy(() => import("../pages/dashboard/DashboardV2Page"))
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>
+  return (
+    <AuthProvider>
+      <PermissionProvider>{children}</PermissionProvider>
+    </AuthProvider>
+  )
 }
 
 // Redirect /login to /auth preserving search params
@@ -73,7 +94,7 @@ function TrialRedirect() {
   const isFromLogout = searchParams.get("from") === "logout"
   const hasParams = searchParams.toString().length > 0
 
-  // If user logged out from AppLayout, stay on /trial (show login page)
+  // If user logged out, stay on /trial (show login page)
   if (isFromLogout) {
     return <NewTrialPage />
   }
@@ -132,14 +153,14 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      // AppLayout routes (for trial users - UserProtectedRoute)
+      // Trial user routes (UserProtectedRoute with DashboardLayout)
       {
         path: "company",
         element: (
           <UserProtectedRoute>
-            <AppLayout>
+            <DashboardLayout>
               <CompanyInformation />
-            </AppLayout>
+            </DashboardLayout>
           </UserProtectedRoute>
         ),
       },
@@ -147,9 +168,9 @@ export const router = createBrowserRouter([
         path: "app/redirect",
         element: (
           <UserProtectedRoute>
-            <AppLayout>
+            <DashboardLayout>
               <NylasRedirect />
-            </AppLayout>
+            </DashboardLayout>
           </UserProtectedRoute>
         ),
       },
@@ -162,13 +183,14 @@ export const router = createBrowserRouter([
         path: "app/dashboard",
         element: <Navigate to="/dashboard" replace />,
       },
-      // DashboardLayout routes (for admin users - AdminProtectedRoute)
+      // DashboardLayout routes - RouteGuard가 ROUTE_PERMISSIONS 기반으로 자동 권한 체크
+      // 등록되지 않은 라우트는 Admin만 접근 가능 (보안 우선)
       {
         path: "/",
         element: (
-          <AdminProtectedRoute>
+          <RouteGuard>
             <DashboardLayout />
-          </AdminProtectedRoute>
+          </RouteGuard>
         ),
         children: [
           {
@@ -176,112 +198,278 @@ export const router = createBrowserRouter([
             element: <Navigate to="/dashboard" replace />,
           },
           {
+            path: "analytics",
+            element: (
+              <RouteGuard>
+                <AnalyticsDashboardPage />
+              </RouteGuard>
+            ),
+          },
+          {
             path: "leads",
-            element: <LeadsPage />,
+            element: (
+              <RouteGuard>
+                <LeadsPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "lead-discovery",
-            element: <LeadDiscoveryPage />,
+            element: (
+              <RouteGuard>
+                <LeadDiscoveryPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "customer-groups",
-            element: <CustomerGroupsPage />,
+            element: (
+              <RouteGuard>
+                <CustomerGroupsPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "sequences",
-            element: <SequencesPage />,
+            element: (
+              <RouteGuard>
+                <SequencesPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "sequences/create",
-            element: <CreateSequencePage />,
+            element: (
+              <RouteGuard>
+                <CreateSequencePage />
+              </RouteGuard>
+            ),
           },
           {
             path: "sequences/edit",
-            element: <SequenceEditPage />,
+            element: (
+              <RouteGuard>
+                <SequenceEditPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "sequences/:id/designer",
-            element: <SequenceDesigner />,
+            element: (
+              <RouteGuard>
+                <SequenceDesigner />
+              </RouteGuard>
+            ),
           },
           {
             path: "email-templates",
-            element: <EmailTemplatesPage />,
+            element: (
+              <RouteGuard>
+                <EmailTemplatesPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "replied-emails",
-            element: <RepliedEmailsPage />,
+            element: (
+              <RouteGuard>
+                <RepliedEmailsPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "replied-emails/:emailId",
-            element: <RepliedEmailsPage />,
+            element: (
+              <RouteGuard>
+                <RepliedEmailsPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "workspaces",
-            element: <WorkspacesPage />,
+            element: (
+              <RouteGuard>
+                <WorkspacesPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "users",
-            element: <UsersPage />,
+            element: (
+              <RouteGuard>
+                <UsersPage />
+              </RouteGuard>
+            ),
+          },
+          {
+            path: "activity-logs",
+            element: (
+              <RouteGuard>
+                <ActivityLogsPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "email-send-test",
-            element: <EmailSendTestPage />,
+            element: (
+              <RouteGuard>
+                <EmailSendTestPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "settings",
-            element: <SettingsPage />,
+            element: (
+              <RouteGuard>
+                <SettingsPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "lead-import",
-            element: <LeadImportPage />,
+            element: (
+              <RouteGuard>
+                <LeadImportPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "bulk-email-csv",
-            element: <BulkEmailCSVPage />,
+            element: (
+              <RouteGuard>
+                <BulkEmailCSVPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "chatbot",
-            element: <ChatbotPage />,
+            element: (
+              <RouteGuard>
+                <ChatbotPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "tailwind-test",
-            element: <TailwindTestPage />,
+            element: (
+              <RouteGuard>
+                <TailwindTestPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "test/filters",
-            element: <FilterComponentsTest />,
+            element: (
+              <RouteGuard>
+                <FilterComponentsTest />
+              </RouteGuard>
+            ),
           },
           {
             path: "test/sse",
-            element: <SSETestPage />,
+            element: (
+              <RouteGuard>
+                <SSETestPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "settings/spinner-test",
-            element: <SpinnerTestPage />,
+            element: (
+              <RouteGuard>
+                <SpinnerTestPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "settings/web-extraction",
-            element: <WebDataExtraction />,
+            element: (
+              <RouteGuard>
+                <WebDataExtraction />
+              </RouteGuard>
+            ),
           },
           {
             path: "websets",
-            element: <WebsetPage />,
+            element: (
+              <RouteGuard>
+                <WebsetPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "websets/criteria",
-            element: <WebsetCriteriaPage />,
+            element: (
+              <RouteGuard>
+                <WebsetCriteriaPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "websets/:id",
-            element: <WebsetDetailPage />,
+            element: (
+              <RouteGuard>
+                <WebsetDetailPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "gemini-search",
-            element: <GeminiSearchPage />,
+            element: (
+              <RouteGuard>
+                <GeminiSearchPage />
+              </RouteGuard>
+            ),
           },
           {
             path: "bigquery-search",
-            element: <BigQuerySearchPage />,
+            element: (
+              <RouteGuard>
+                <BigQuerySearchPage />
+              </RouteGuard>
+            ),
+          },
+          // IAM Routes
+          {
+            path: "iam/policies",
+            element: (
+              <RouteGuard>
+                <PoliciesPage />
+              </RouteGuard>
+            ),
+          },
+          {
+            path: "iam/roles",
+            element: (
+              <RouteGuard>
+                <RolesPage />
+              </RouteGuard>
+            ),
+          },
+          // Billing Routes
+          {
+            path: "billing/products",
+            element: (
+              <RouteGuard>
+                <ProductsPage />
+              </RouteGuard>
+            ),
+          },
+          {
+            path: "billing/plans",
+            element: (
+              <RouteGuard>
+                <PlansPage />
+              </RouteGuard>
+            ),
+          },
+          {
+            path: "billing/subscriptions",
+            element: (
+              <RouteGuard>
+                <SubscriptionsPage />
+              </RouteGuard>
+            ),
           },
         ],
       },

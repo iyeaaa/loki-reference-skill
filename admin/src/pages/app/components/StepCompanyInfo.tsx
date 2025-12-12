@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { apiFetch } from "@/lib/api/client"
+import { useCompleteStep1, useOnboardingProgress } from "@/lib/api/hooks/onboarding"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 
 interface SalesStrategyData {
@@ -93,6 +94,10 @@ export function StepCompanyInfo() {
   const workspace = userWorkspaces?.[0]
   const isKorean = i18n.language === "ko"
 
+  // Onboarding hooks
+  useOnboardingProgress(workspace?.id || "", !!workspace?.id)
+  const completeStep1Mutation = useCompleteStep1()
+
   // Fetch sales strategy data
   useEffect(() => {
     async function fetchSalesStrategy() {
@@ -157,10 +162,14 @@ export function StepCompanyInfo() {
     }
   }
 
-  const handleNext = () => {
-    // Store data in sessionStorage for lead discovery
-    if (editedData) {
-      sessionStorage.setItem("onboarding_company_info", JSON.stringify(editedData))
+  const handleNext = async () => {
+    // DB에 Step 1 완료 기록
+    if (workspace?.id) {
+      try {
+        await completeStep1Mutation.mutateAsync({ workspaceId: workspace.id, userId })
+      } catch (error) {
+        console.error("Failed to complete step 1:", error)
+      }
     }
     setSearchParams({ step: "2" })
   }

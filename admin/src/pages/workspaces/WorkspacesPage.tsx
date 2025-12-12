@@ -18,7 +18,6 @@ import type { User } from "@/lib/api/types/user"
 import type { Workspace } from "@/lib/api/types/workspace"
 import { AddMemberDialog } from "./AddMemberDialog"
 import { BulkActionModal } from "./BulkActionModal"
-import { WorkspaceCompanyInfo } from "./WorkspaceCompanyInfo"
 import { WorkspaceFilters } from "./WorkspaceFilters"
 import { WorkspaceForm } from "./WorkspaceForm"
 import { WorkspacesTableWithPagination } from "./WorkspacesTableWithPagination"
@@ -167,9 +166,6 @@ export default function WorkspacesPage() {
         onOwnerChange={setSelectedOwners}
         onClearFilters={clearFilters}
       />
-
-      {/* Workspace Company Info - only shown when a specific workspace is selected */}
-      <WorkspaceCompanyInfo />
 
       {/* Workspaces Table */}
       <Card>

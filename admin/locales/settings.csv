@@ -103,6 +103,8 @@ profile.photoHint,JPG 또는 PNG 형식 (최대 2MB),JPG or PNG format (max 2MB)
 profile.profilePicture,프로필 사진,Profile Picture
 profile.removePhoto,사진 삭제,Remove Photo
 profile.uploadPhoto,사진 업로드,Upload Photo
+workspace.websiteTooltip,[NO TRANSLATION] settings.workspace.websiteTooltip,[NO TRANSLATION] settings.workspace.websiteTooltip
+companySetup.title,회사 설정,Company Setup
 nylasTest.title,Nylas 이메일 테스트,Nylas Email Test
 nylasTest.description,grantId를 1회성으로 입력해 테스트 이메일을 발송합니다.,Send a test email by entering a one-off grantId.
 nylasTest.toEmail,수신자(To),Recipient (To)

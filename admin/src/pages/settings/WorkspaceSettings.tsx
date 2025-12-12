@@ -109,12 +109,12 @@ export function WorkspaceSettings({ workspaceId }: WorkspaceSettingsProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <Building2 className="h-5 w-5" />
-          <CardTitle>{t("settings.workspace.title")}</CardTitle>
+      <CardHeader className="pb-4">
+        <div className="flex items-center gap-1.5">
+          <Building2 className="h-4 w-4" />
+          <CardTitle className="text-base">{t("settings.workspace.title")}</CardTitle>
         </div>
-        <CardDescription>{t("settings.workspace.description")}</CardDescription>
+        <CardDescription className="text-xs">{t("settings.workspace.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">

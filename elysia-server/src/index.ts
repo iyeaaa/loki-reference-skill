@@ -2,8 +2,10 @@ import { cors } from "@elysiajs/cors"
 import { swagger } from "@elysiajs/swagger"
 import { Elysia } from "elysia"
 import { config, isDevelopment } from "./config"
+import { activityLogger, autoActivityLogger } from "./plugins/activity-logger.plugin"
 import { errorHandler } from "./plugins/error-handler.plugin"
 import { httpLogger } from "./plugins/http-logger.plugin"
+import { permissionGuard } from "./plugins/permission-guard.plugin"
 import { rateLimit } from "./plugins/rate-limit.plugin"
 import { requestId } from "./plugins/request-id.plugin"
 import { responseTransformer } from "./plugins/response-transformer.plugin"
@@ -11,6 +13,12 @@ import { activityLogRoutes } from "./routes/activity-logs.routes"
 import { aiRoutes } from "./routes/ai.routes"
 import { authRoutes } from "./routes/auth.routes"
 import { bigquerySearchRoutes } from "./routes/bigquery-search.routes"
+import {
+  billingCustomersRoutes,
+  billingPlansRoutes,
+  billingProductsRoutes,
+  subscriptionsRoutes,
+} from "./routes/billing.routes"
 import { bulkEmailRoutes } from "./routes/bulk-email.routes"
 import { chatbotRoutes } from "./routes/chatbot.routes"
 import { adminCustomerGroupRoutes, customerGroupRoutes } from "./routes/customer-groups.routes"
@@ -24,11 +32,20 @@ import { adminEmailRoutes, emailRoutes } from "./routes/emails.routes"
 import { geminiFileSearchRoutes } from "./routes/gemini-file-search.routes"
 // Import routes
 import { apiHealthRoute, healthRoutes } from "./routes/health.routes"
+import {
+  iamAuditLogsRoutes,
+  iamMembersRoutes,
+  iamMyPermissionsRoutes,
+  iamPoliciesRoutes,
+  iamRolesRoutes,
+  iamTierBoundariesRoutes,
+} from "./routes/iam.routes"
 import { leadDiscoveryRoutes } from "./routes/lead-discovery.routes"
 import { leadEnrichmentRoutes } from "./routes/lead-enrichment.routes"
 import { leadImportRoutes } from "./routes/lead-import.routes"
 import { adminLeadRoutes, leadRoutes } from "./routes/leads.routes"
 import { nylasRoutes } from "./routes/nylas.routes"
+import { onboardingRoutes } from "./routes/onboarding.routes"
 import { openaiApiKeysRoutes } from "./routes/openai-api-keys.routes"
 import { salesStrategyRoutes, workspaceSalesStrategyRoutes } from "./routes/sales-strategies.routes"
 import { adminSequenceRoutes, sequenceRoutes } from "./routes/sequences.routes"
@@ -111,6 +128,9 @@ const app = new Elysia()
 
   // Security plugins
   .use(rateLimit) // Apply rate limiting to all routes
+  .use(permissionGuard) // Apply centralized permission check (2025 best practice)
+  .use(activityLogger) // Activity logging context (depends on permissionGuard)
+  .use(autoActivityLogger) // Auto activity logging for CUD operations
   .onBeforeHandle(({ set }) => {
     // Security headers
     set.headers["x-content-type-options"] = "nosniff"
@@ -178,6 +198,20 @@ const app = new Elysia()
   .use(leadDiscoveryRoutes)
   .use(salesStrategyRoutes)
   .use(workspaceSalesStrategyRoutes)
+  // Billing routes
+  .use(billingProductsRoutes)
+  .use(billingPlansRoutes)
+  .use(subscriptionsRoutes)
+  .use(billingCustomersRoutes)
+  // IAM routes
+  .use(iamPoliciesRoutes)
+  .use(iamRolesRoutes)
+  .use(iamMembersRoutes)
+  .use(iamTierBoundariesRoutes)
+  .use(iamAuditLogsRoutes)
+  .use(iamMyPermissionsRoutes)
+  // Onboarding routes
+  .use(onboardingRoutes)
 
   .listen(config.port)
 

@@ -1,4 +1,5 @@
-import { Trash2, UserPlus } from "lucide-react"
+import { ChevronDown, ChevronRight, Trash2, UserPlus } from "lucide-react"
+import React, { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -23,6 +24,7 @@ import {
   useUpdateMemberStatus,
   useWorkspaceMembers,
 } from "@/lib/api/hooks/workspaces"
+import { MemberIamSection } from "./MemberIamSection"
 
 interface WorkspaceMembersSectionProps {
   workspaceId: string
@@ -35,6 +37,7 @@ export function WorkspaceMembersSection({
   isEdit,
   onAddMemberClick,
 }: WorkspaceMembersSectionProps) {
+  const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null)
   const { data: members = [], isLoading } = useWorkspaceMembers(workspaceId, isEdit)
   const updateMemberRole = useUpdateMemberRole()
   const updateMemberStatus = useUpdateMemberStatus()
@@ -65,16 +68,20 @@ export function WorkspaceMembersSection({
     })
   }
 
+  const toggleExpand = (memberId: string) => {
+    setExpandedMemberId((prev) => (prev === memberId ? null : memberId))
+  }
+
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case "active":
         return "default"
       case "inactive":
-        return "outline"
+        return "secondary"
       case "removed":
         return "destructive"
       default:
-        return "outline"
+        return "secondary"
     }
   }
 
@@ -115,101 +122,122 @@ export function WorkspaceMembersSection({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">워크스페이스 멤버</h3>
-        <Button type="button" size="sm" onClick={onAddMemberClick}>
-          <UserPlus className="h-4 w-4 mr-1" />
-          멤버 추가
+        <h3 className="text-sm font-medium text-gray-700">멤버 ({members.length})</h3>
+        <Button type="button" size="sm" variant="outline" onClick={onAddMemberClick}>
+          <UserPlus className="h-3.5 w-3.5 mr-1" />
+          추가
         </Button>
       </div>
 
       {isLoading ? (
-        <Card className="p-4">
-          <p className="text-sm text-gray-600">로딩 중...</p>
-        </Card>
+        <div className="text-sm text-gray-500 py-4 text-center">로딩 중...</div>
       ) : members.length === 0 ? (
-        <Card className="p-4 bg-gray-50">
-          <p className="text-sm text-gray-600">등록된 멤버가 없습니다.</p>
+        <Card className="p-4 bg-gray-50 border-dashed">
+          <p className="text-sm text-gray-500 text-center">등록된 멤버가 없습니다.</p>
         </Card>
       ) : (
-        <Card>
+        <Card className="overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>사용자</TableHead>
-                <TableHead>이메일</TableHead>
-                <TableHead>역할</TableHead>
-                <TableHead>상태</TableHead>
-                <TableHead>초대 날짜</TableHead>
-                <TableHead>가입 날짜</TableHead>
-                <TableHead className="w-[80px]">작업</TableHead>
+              <TableRow className="bg-gray-50 hover:bg-gray-50">
+                <TableHead className="w-8 py-2 px-2"></TableHead>
+                <TableHead className="py-2 px-2 text-xs font-medium">사용자</TableHead>
+                <TableHead className="py-2 px-2 text-xs font-medium w-[100px]">역할</TableHead>
+                <TableHead className="py-2 px-2 text-xs font-medium w-[80px]">상태</TableHead>
+                <TableHead className="py-2 px-2 text-xs font-medium w-[80px]">초대일</TableHead>
+                <TableHead className="py-2 px-2 text-xs font-medium w-[40px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {members.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="font-medium">{member.username}</TableCell>
-                  <TableCell>{member.email}</TableCell>
-                  <TableCell>
-                    <Select
-                      value={member.role}
-                      onValueChange={(value) => handleRoleChange(member.id, value)}
-                    >
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="owner">{getRoleLabel("owner")}</SelectItem>
-                        <SelectItem value="admin">{getRoleLabel("admin")}</SelectItem>
-                        <SelectItem value="member">{getRoleLabel("member")}</SelectItem>
-                        <SelectItem value="viewer">{getRoleLabel("viewer")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={member.status}
-                      onValueChange={(value) => handleStatusChange(member.id, value)}
-                    >
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">
-                          <Badge variant={getStatusBadgeVariant("active")}>
-                            {getStatusLabel("active")}
+                <React.Fragment key={member.id}>
+                  <TableRow
+                    className={`cursor-pointer hover:bg-gray-50 ${expandedMemberId === member.id ? "bg-gray-50" : ""}`}
+                    onClick={() => toggleExpand(member.id)}
+                  >
+                    <TableCell className="py-2 px-2">
+                      {expandedMemberId === member.id ? (
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                      )}
+                    </TableCell>
+                    <TableCell className="py-2 px-2">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{member.username}</span>
+                        <span className="text-xs text-gray-500">{member.email}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={member.role}
+                        onValueChange={(value) => handleRoleChange(member.id, value)}
+                      >
+                        <SelectTrigger className="h-7 text-xs w-[90px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="owner">{getRoleLabel("owner")}</SelectItem>
+                          <SelectItem value="admin">{getRoleLabel("admin")}</SelectItem>
+                          <SelectItem value="member">{getRoleLabel("member")}</SelectItem>
+                          <SelectItem value="viewer">{getRoleLabel("viewer")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={member.status}
+                        onValueChange={(value) => handleStatusChange(member.id, value)}
+                      >
+                        <SelectTrigger className="h-7 text-xs w-[70px] p-1">
+                          <Badge
+                            variant={getStatusBadgeVariant(member.status)}
+                            className="text-[10px] px-1.5 py-0"
+                          >
+                            {getStatusLabel(member.status)}
                           </Badge>
-                        </SelectItem>
-                        <SelectItem value="inactive">
-                          <Badge variant={getStatusBadgeVariant("inactive")}>
-                            {getStatusLabel("inactive")}
-                          </Badge>
-                        </SelectItem>
-                        <SelectItem value="removed">
-                          <Badge variant={getStatusBadgeVariant("removed")}>
-                            {getStatusLabel("removed")}
-                          </Badge>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>{new Date(member.invitedAt).toLocaleDateString("ko-KR")}</TableCell>
-                  <TableCell>
-                    {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString("ko-KR") : "-"}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleRemoveMember(member.id, member.username || "")}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">{getStatusLabel("active")}</SelectItem>
+                          <SelectItem value="inactive">{getStatusLabel("inactive")}</SelectItem>
+                          <SelectItem value="removed">{getStatusLabel("removed")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="py-2 px-2 text-xs text-gray-500">
+                      {new Date(member.invitedAt).toLocaleDateString("ko-KR", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </TableCell>
+                    <TableCell className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleRemoveMember(member.id, member.username || "")}
+                        className="h-7 w-7 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                  {expandedMemberId === member.id && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="p-0 bg-gray-50/50">
+                        <MemberIamSection
+                          memberId={member.id}
+                          memberName={member.username || "Unknown"}
+                          memberEmail={member.email}
+                          workspaceId={workspaceId}
+                          memberRole={member.role}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
               ))}
             </TableBody>
           </Table>

@@ -15,7 +15,9 @@ import type { SendGridAttachment } from "../models/email.model"
 import { emailService } from "../services/email.service"
 import * as emailRepliesService from "../services/email-replies.service"
 import * as leadService from "../services/lead.service"
+import { getGrantInfo } from "../services/nylas.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
+import { getUserIdFromToken } from "../utils/auth.util"
 import { fixUtf8Encoding, parseEmailBody } from "../utils/email.util"
 import { convertFilesToAttachments, getTotalFileSize, validateFileSize } from "../utils/file.util"
 import logger from "../utils/logger"
@@ -79,7 +81,90 @@ const sendEmailSchema = t.Object({
   userId: t.String({ format: "uuid" }),
 })
 
+// Nylas Test Send Email Schema (one-off grantId based, no DB email-account required)
+const nylasTestSendEmailSchema = t.Object({
+  toEmail: t.String({ format: "email", maxLength: 255 }),
+  subject: t.String({ minLength: 1, maxLength: 500 }),
+  content: t.String({ minLength: 1 }),
+  grantId: t.String({ minLength: 1 }),
+})
+
 export const emailRoutes = new Elysia({ prefix: "/api/v1/emails" })
+  // Send test email via Nylas using one-off grantId (no email account required)
+  .post(
+    "/send-nylas-test",
+    async ({ body, headers, set }) => {
+      try {
+        // Require authentication to prevent open relay
+        const userId = await getUserIdFromToken(headers.authorization)
+        if (!userId) {
+          set.status = 401
+          return errorResponse("Authentication required", ResponseCode.UNAUTHORIZED)
+        }
+
+        const grant = await getGrantInfo(body.grantId)
+        if (!grant?.email) {
+          set.status = 400
+          return errorResponse("유효하지 않은 grantId 입니다.", ResponseCode.VALIDATION_ERROR)
+        }
+
+        const fromEmail = grant.email
+
+        // Minimal HTML render (escape + newline to <br>)
+        const escaped = body.content
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;")
+        const html = `<p>${escaped.replaceAll("\n", "<br>")}</p>`
+
+        logger.info(
+          {
+            userId,
+            grantId: body.grantId,
+            fromEmail,
+            toEmail: body.toEmail,
+            subject: body.subject,
+          },
+          "Sending Nylas test email",
+        )
+
+        const sendResult = await emailService.sendEmail({
+          fromEmail,
+          fromName: fromEmail,
+          toEmail: body.toEmail,
+          subject: body.subject,
+          bodyText: body.content,
+          bodyHtml: html,
+          apiKey: body.grantId, // Not starting with "SG" => Nylas grantId route
+          includeSignature: false,
+        })
+
+        if (!sendResult.success) {
+          set.status = 500
+          return errorResponse(
+            sendResult.error || "이메일 발송에 실패했습니다.",
+            ResponseCode.INTERNAL_ERROR,
+          )
+        }
+
+        return {
+          success: true,
+          message: "Nylas 테스트 이메일이 발송되었습니다.",
+          messageId: sendResult.messageId,
+          nylasMessageId: sendResult.nylasMessageId,
+        }
+      } catch (error: unknown) {
+        logger.error({ err: error }, "Failed to send Nylas test email")
+        set.status = 500
+        return errorResponse("이메일 발송 중 오류가 발생했습니다.", ResponseCode.INTERNAL_ERROR)
+      }
+    },
+    {
+      body: nylasTestSendEmailSchema,
+    },
+  )
   // Get today's sent email count
   .get(
     "/stats/today-sent",

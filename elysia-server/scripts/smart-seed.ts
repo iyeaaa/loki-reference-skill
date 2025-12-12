@@ -2,9 +2,9 @@
 // Users with any trial field set are skipped (they're trial users)
 // Users without trial data are promoted to admin (legacy users)
 
+import { eq } from "drizzle-orm"
 import { db } from "../src/db"
 import { users } from "../src/db/schema"
-import { eq } from "drizzle-orm"
 import logger from "../src/utils/logger"
 
 async function smartSeed() {
@@ -20,12 +20,13 @@ async function smartSeed() {
   for (const user of allUsers) {
     // Check if user has any trial data
     const hasTrialData =
-      user.trialStartDate !== null ||
-      user.trialEndDate !== null ||
-      user.isTrialActive === true
+      user.trialStartDate !== null || user.trialEndDate !== null || user.isTrialActive === true
 
     if (hasTrialData) {
-      logger.debug({ userId: user.id, email: user.email }, "[SMART-SEED] Skipping user with trial data")
+      logger.debug(
+        { userId: user.id, email: user.email },
+        "[SMART-SEED] Skipping user with trial data",
+      )
       skipped++
       continue
     }

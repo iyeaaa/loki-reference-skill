@@ -215,6 +215,23 @@ export const emailsApi = {
     })
   },
 
+  sendNylasTestEmail: (data: {
+    toEmail: string
+    subject: string
+    content: string
+    grantId: string
+  }) => {
+    return apiFetch<{
+      success: boolean
+      message: string
+      messageId?: string
+      nylasMessageId?: string
+    }>("/api/v1/emails/send-nylas-test", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  },
+
   create: (data: CreateEmailRequest) => {
     return apiFetch<Email>("/api/v1/emails", {
       method: "POST",

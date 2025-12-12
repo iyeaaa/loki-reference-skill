@@ -23,6 +23,7 @@ import { useCurrentUser, useUpdateProfileMutation } from "@/lib/api/hooks/auth"
 import EmailTemplatesPage from "./email-templates/EmailTemplatesPage"
 import LeadImportPage from "./lead-import/index"
 import { EmailSignatureManagement } from "./settings/EmailSignatureManagement"
+import { NylasEmailTest } from "./settings/NylasEmailTest"
 import { WebDataExtraction } from "./settings/WebDataExtraction"
 import UsersPage from "./users/UsersPage"
 import WorkspacesPage from "./workspaces/WorkspacesPage"
@@ -136,6 +137,11 @@ export default function SettingsPage() {
       id: "web-extraction",
       label: t("settings.system.webExtraction.title"),
       icon: <Globe className="h-4 w-4" />,
+    },
+    {
+      id: "nylas-email-test",
+      label: t("settings.nylasTest.title"),
+      icon: <Mail className="h-4 w-4" />,
     },
   ]
 
@@ -262,6 +268,8 @@ export default function SettingsPage() {
         return <LeadImportPage />
       case "web-extraction":
         return <WebDataExtraction />
+      case "nylas-email-test":
+        return <NylasEmailTest />
       default:
         return null
     }

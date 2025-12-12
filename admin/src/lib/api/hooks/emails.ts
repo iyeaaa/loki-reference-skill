@@ -139,6 +139,19 @@ export function useSendEmail() {
   })
 }
 
+export function useSendNylasTestEmail() {
+  return useMutation({
+    mutationFn: (data: { toEmail: string; subject: string; content: string; grantId: string }) =>
+      emailsApi.sendNylasTestEmail(data),
+    onSuccess: () => {
+      toast.success("Nylas 테스트 이메일이 전송되었습니다")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Nylas 테스트 이메일 전송에 실패했습니다")
+    },
+  })
+}
+
 export function useCreateEmail() {
   const queryClient = useQueryClient()
 

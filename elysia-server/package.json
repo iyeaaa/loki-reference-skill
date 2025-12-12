@@ -27,7 +27,6 @@
     "db:backup": "./scripts/docker-backup-db.sh",
     "db:backup:local": "./scripts/backup-db.sh",
     "db:restore": "./scripts/restore-db.sh",
-    "db:smart-seed": "bun run ./scripts/smart-seed.ts",
     "lint": "biome check --write ./src",
     "lint:check": "biome check ./src",
     "format": "biome format --write ./src",

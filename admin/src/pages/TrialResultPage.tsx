@@ -1,23 +1,26 @@
 import {
   ArrowRight,
-  Bot,
   Brain,
+  Building2,
+  Calendar,
   CheckCircle2,
   Globe,
+  Landmark,
   Loader2,
-  Rocket,
+  Mail,
+  MessageSquare,
+  Search,
   Sparkles,
+  Target,
   TrendingUp,
   Users,
   X,
-  Zap,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -351,27 +354,27 @@ function generateMockResultData(
             { kr: "장기 계약 선호", en: "Long-term contract preference" },
           ],
           reasonTitle: {
-            kr: "인프라 투자가 활발한 신흥 시장",
-            en: "Emerging market with active infrastructure investment",
+            kr: "인프라 중심의 정부 프로젝트 시장",
+            en: "Infrastructure-focused market",
           },
           marketTrend: {
-            kr: "장기 파트너십과 현지화 전략이 중요합니다.",
-            en: "Long-term partnerships and localization strategies are important.",
+            kr: "정부 프로젝트와 대규모 인프라 사업이 활발하게 진행 중입니다.",
+            en: "Government projects and large-scale infrastructure developments are actively underway.",
           },
           salesStrategy: {
-            kr: "글로벌 레퍼런스와 맞춤형 솔루션을 제시하세요.",
-            en: "Present global references and customized solutions.",
+            kr: "정부 관계와 현지 파트너십에 집중하세요.",
+            en: "Focus on government relations and local partnerships.",
           },
           emailStrategy: {
-            subjectLine: "Strategic Partnership: Proven Solutions for MENA",
+            subjectLine: "Strategic Partnership: Infrastructure Solutions for MENA",
             keyFocus: {
-              kr: "글로벌 레퍼런스 + 커스터마이징",
-              en: "Global References + Customization",
+              kr: "현지 진출 + 장기 파트너십",
+              en: "Local presence + Long-term partnerships",
             },
           },
           metrics: {
-            openRate: 31,
-            responseRate: 5.9,
+            openRate: 25,
+            responseRate: 6.2,
           },
         },
       ]
@@ -508,7 +511,6 @@ export default function TrialResultPage() {
   const [currentPhase, setCurrentPhase] = useState(0)
   const [progress, setProgress] = useState(0)
   const [completedPhases, setCompletedPhases] = useState<string[]>([])
-  const [showCTA, setShowCTA] = useState(true)
   const [selectedMarket, setSelectedMarket] = useState<MarketRecommendation | null>(null)
 
   // Analysis animation effect
@@ -693,311 +695,229 @@ export default function TrialResultPage() {
     )
   }
 
+  // RINDA actions for the 2x2 grid
+  const rindaActions = [
+    {
+      icon: Search,
+      textKr: "타겟 기업의 의사결정권자 찾기",
+      textEn: "Find decision-makers at target companies",
+    },
+    {
+      icon: Mail,
+      textKr: "맞춤형 영업 이메일 발송",
+      textEn: "Send personalized sales emails",
+    },
+    {
+      icon: MessageSquare,
+      textKr: "응답 분석 및 후속 조치",
+      textEn: "Analyze responses and follow up",
+    },
+    {
+      icon: Calendar,
+      textKr: "관심 고객과 미팅 설정",
+      textEn: "Set up meetings with high-intent leads",
+    },
+  ]
+
   // Result view
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50 relative overflow-hidden">
-      {/* Language Switcher */}
-      <div className="absolute top-4 right-4 z-10">
-        <LanguageSwitcher />
-      </div>
-
-      {/* Sticky CTA Banner */}
-      {showCTA && (
-        <div className="sticky top-0 z-40 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg">
-          <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between gap-2 sm:gap-4">
-            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-              <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg flex-shrink-0">
-                <Rocket className="w-4 sm:w-5 h-4 sm:h-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-base font-bold truncate">
-                  <span className="text-yellow-300">{resultData.totalLeadsCount} 잠재 고객</span>{" "}
-                  {isKorean ? "준비 완료!" : "Ready!"}
-                </p>
-                <p className="text-[10px] sm:text-xs text-blue-100 hidden sm:block">
-                  {isKorean
-                    ? "지금 활성화하면 48시간 내 첫 리드를 받아보실 수 있어요"
-                    : "Activate now to receive your first lead within 48 hours"}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-              <Button
-                onClick={handleGetStarted}
-                size="sm"
-                className="bg-yellow-400 text-blue-900 hover:bg-yellow-300 font-bold whitespace-nowrap px-3 sm:px-6 text-xs sm:text-sm h-8 sm:h-10 shadow-lg"
-              >
-                <Zap className="w-3 sm:w-4 h-3 sm:h-4 mr-1" />
-                <span className="hidden sm:inline">
-                  {isKorean ? "지금 바로 시작하기" : "Start Now"}
-                </span>
-                <span className="sm:hidden">{isKorean ? "시작" : "Start"}</span>
-                <ArrowRight className="w-3 sm:w-4 h-3 sm:h-4 ml-1" />
-              </Button>
-              <Button
-                onClick={() => setShowCTA(false)}
-                size="sm"
-                variant="ghost"
-                className="hover:bg-white/10 h-8 w-8 sm:h-10 sm:w-10 p-0 text-white"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
+    <div className="min-h-screen bg-slate-50">
+      {/* Sticky Top Bar */}
+      <div className="sticky top-0 z-40 bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <span className="font-medium text-gray-900">
+            {resultData.totalLeadsCount}{" "}
+            {isKorean ? "잠재 고객 준비 완료!" : "Potential Customers Ready!"}
+          </span>
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
+            <Button onClick={handleGetStarted} className="bg-blue-600 hover:bg-blue-700 rounded-xl">
+              {isKorean ? "지금 시작" : "Start Now"}
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
           </div>
         </div>
-      )}
+      </div>
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8 space-y-4 sm:space-y-6 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="text-center space-y-2 sm:space-y-3">
-          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded-full text-xs sm:text-sm font-bold shadow-md">
-            <Bot className="w-3 sm:w-4 h-3 sm:h-4" />
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium mb-4">
+            <CheckCircle2 className="w-4 h-4" />
             {isKorean ? "AI 분석 완료" : "AI Analysis Complete"}
-            <CheckCircle2 className="w-3 sm:w-4 h-3 sm:h-4" />
           </div>
-          <h1 className="text-xl sm:text-3xl md:text-4xl font-bold text-gray-900">
-            <span className="text-blue-600">
-              {isKorean
-                ? `${resultData.userContext.industryLabel}에 딱 맞는`
-                : "Perfect match for your"}
-            </span>
-            <br />
-            <span className="whitespace-nowrap">
-              {isKorean ? "3개 시장을 찾았어요!" : "3 markets found!"}
-            </span>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+            {isKorean ? "3개 시장을 찾았어요" : "3 markets found for you"}
           </h1>
-          <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto">
+          <p className="text-gray-600 max-w-2xl mx-auto">
             {isKorean
               ? "RINDA가 전 세계 데이터를 분석하여 귀사에게 가장 적합한 시장을 선정했습니다"
-              : "RINDA analyzed global data to select the most suitable markets for your company"}
+              : "RINDA analyzed global data to find the best markets for your company"}
           </p>
         </div>
 
-        {/* Market Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-          {resultData.recommendedMarkets.map((market) => (
-            <Card
-              key={market.countryCode}
-              className="p-4 sm:p-5 hover:shadow-xl transition-all border-2 border-gray-200 hover:border-blue-500 bg-white relative overflow-hidden cursor-pointer"
-              onClick={() => setSelectedMarket(market)}
-            >
-              {market.isBestMatch && (
-                <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 px-2 sm:px-3 py-0.5 sm:py-1 rounded-bl-lg font-bold text-[10px] sm:text-xs">
-                  BEST
-                </div>
-              )}
-
-              <div className="space-y-3 sm:space-y-4">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="text-3xl sm:text-4xl">{market.flag}</div>
-                  <div>
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-900">
+        {/* 2-Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+          {/* Left Column */}
+          <div className="space-y-6">
+            {/* Market Cards Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {resultData.recommendedMarkets.map((market) => (
+                <Card key={market.countryCode} className="p-4 bg-white border border-gray-200">
+                  <div className="flex items-center gap-3 mb-4">
+                    {market.countryCode === "ME" ? (
+                      <Landmark className="w-8 h-8 text-gray-600" />
+                    ) : (
+                      <span className="text-2xl font-bold text-gray-700">{market.countryCode}</span>
+                    )}
+                    <div>
+                      <div className="font-semibold text-gray-900">
                         {isKorean ? market.countryName : market.countryNameEn}
-                      </h3>
-                      <Badge className="bg-blue-600 text-white text-[10px] sm:text-xs">
-                        #{market.rank}
-                      </Badge>
-                    </div>
-                    <div className="text-xs sm:text-sm font-bold text-blue-600">
-                      {isKorean ? market.marketSize.kr : market.marketSize.en}
+                      </div>
+                      <div className="text-sm text-blue-600 font-medium">
+                        {isKorean ? market.marketSize.kr : market.marketSize.en}
+                      </div>
                     </div>
                   </div>
-                </div>
 
+                  <div className="mb-4">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-500">{isKorean ? "매칭" : "Match"}</span>
+                      <span className="font-bold text-blue-600">{market.score}%</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-600 rounded-full"
+                        style={{ width: `${market.score}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMarket(market)}
+                    className="text-blue-600 text-sm font-medium hover:text-blue-700 flex items-center gap-1"
+                  >
+                    {isKorean ? "왜 추천?" : "Why recommend?"}
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </Card>
+              ))}
+            </div>
+
+            {/* Strategy Card */}
+            <Card className="p-4 bg-white border border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Sparkles className="w-5 h-5 text-blue-600" />
+                </div>
                 <div>
-                  <div className="flex justify-between text-[10px] sm:text-xs mb-1">
-                    <span className="text-gray-600">{isKorean ? "적합도" : "Match Score"}</span>
-                    <span className="font-bold text-blue-600">
-                      {market.score}
-                      {isKorean ? "점" : ""}
-                    </span>
+                  <div className="font-semibold text-gray-900">
+                    {isKorean ? "귀사 맞춤 글로벌 진출 전략" : "Your Global Expansion Strategy"}
                   </div>
-                  <div className="h-1.5 sm:h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-600 rounded-full"
-                      style={{ width: `${market.score}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-                  <div className="p-1.5 sm:p-2 bg-blue-50 rounded-lg text-center">
-                    <div className="text-[10px] sm:text-xs text-gray-600">
-                      {isKorean ? "잠재 고객" : "Companies"}
-                    </div>
-                    <div className="text-[10px] sm:text-xs font-bold text-blue-600">
-                      {isKorean ? market.companyCount.kr : market.companyCount.en}
-                    </div>
-                  </div>
-                  <div className="p-1.5 sm:p-2 bg-blue-50 rounded-lg text-center">
-                    <div className="text-[10px] sm:text-xs text-gray-600">
-                      {isKorean ? "진입 기간" : "Entry Time"}
-                    </div>
-                    <div className="text-[10px] sm:text-xs font-bold text-blue-600">
-                      {isKorean ? market.entryTime.kr : market.entryTime.en}
-                    </div>
+                  <div className="text-sm text-gray-600">
+                    {isKorean ? (
+                      <>
+                        RINDA가{" "}
+                        <span className="text-blue-600 font-semibold">
+                          {resultData.totalLeadsCount} 잠재 고객
+                        </span>
+                        에게 맞춤 영업을 진행합니다
+                      </>
+                    ) : (
+                      <>
+                        RINDA will conduct customized sales to{" "}
+                        <span className="text-blue-600 font-semibold">
+                          {resultData.totalLeadsCount} potential customers
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
-
-                <div className="space-y-1 sm:space-y-1.5">
-                  {market.highlights.map((h, idx) => (
-                    <div key={idx} className="flex items-start gap-1.5 sm:gap-2">
-                      <CheckCircle2 className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-blue-600 flex-shrink-0 mt-0.5" />
-                      <span className="text-[10px] sm:text-xs text-gray-700">
-                        {isKorean ? h.kr : h.en}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-blue-600 border-blue-300 hover:bg-blue-50 text-[10px] sm:text-xs bg-transparent h-8 sm:h-9"
-                >
-                  {isKorean ? "상세 보기" : "View Details"}
-                  <ArrowRight className="w-3 h-3 ml-1" />
-                </Button>
               </div>
             </Card>
-          ))}
-        </div>
 
-        {/* Strategy Summary */}
-        <Card className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200">
-          <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
-            <div className="p-2 sm:p-3 bg-blue-600 rounded-xl flex-shrink-0 shadow-md">
-              <Globe className="w-5 sm:w-6 h-5 sm:h-6 text-white" />
-            </div>
-            <div className="flex-1 space-y-2 sm:space-y-3">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                {isKorean ? "귀사 맞춤 글로벌 진출 전략" : "Your Custom Global Expansion Strategy"}
-              </h2>
-              <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
-                {isKorean ? (
-                  <>
-                    RINDA가 분석한 결과, 추천된 시장에서 큰 기회를 발견했어요. 총{" "}
-                    <span className="text-blue-600 font-bold">
-                      {resultData.totalLeadsCount} 잠재 고객
-                    </span>
-                    에게 RINDA가 자동으로 맞춤 영업을 진행해드립니다.
-                  </>
-                ) : (
-                  <>
-                    Based on RINDA's analysis, we've found great opportunities in the recommended
-                    markets. RINDA will automatically conduct customized sales to a total of{" "}
-                    <span className="text-blue-600 font-bold">
-                      {resultData.totalLeadsCount} potential customers
-                    </span>
-                    .
-                  </>
-                )}
-              </p>
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-blue-700 bg-white px-3 sm:px-4 py-2 rounded-lg border border-blue-200">
-                <Sparkles className="w-3 sm:w-4 h-3 sm:h-4" />
-                <span className="font-medium">
-                  {isKorean
-                    ? "48시간 내 첫 검증된 리드를 받아보실 수 있어요"
-                    : "Receive your first qualified lead within 48 hours"}
-                </span>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* RINDA Agent Steps */}
-        <Card className="p-4 sm:p-5 bg-white border-2 border-blue-200">
-          <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 bg-blue-600 rounded-lg flex-shrink-0">
-              <Users className="w-4 sm:w-5 h-4 sm:h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3">
-                {isKorean
-                  ? "RINDA Agent가 자동으로 진행하는 일"
-                  : "What RINDA Agent Does Automatically"}
-              </h2>
-              <div className="space-y-1.5 sm:space-y-2">
-                {resultData.lindaSolution.actionSteps.map((step) => (
-                  <div
-                    key={step.step}
-                    className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div className="w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-blue-600 text-white text-[10px] sm:text-xs font-bold flex items-center justify-center flex-shrink-0">
-                      {step.step}
+            {/* What RINDA Does Automatically */}
+            <Card className="p-4 bg-white border border-gray-200">
+              <h3 className="font-semibold text-gray-900 mb-4">
+                {isKorean ? "RINDA가 자동으로 하는 일" : "What RINDA Does Automatically"}
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {rindaActions.map((action, idx) => {
+                  const Icon = action.icon
+                  return (
+                    <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                        <Icon className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <span className="text-sm text-gray-700">
+                        {isKorean ? action.textKr : action.textEn}
+                      </span>
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-700">
-                      {isKorean ? step.text_kr : step.text_en}
-                    </p>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
-            </div>
+            </Card>
           </div>
-        </Card>
 
-        {/* Checklist */}
-        <Card className="p-4 sm:p-5 bg-white border-2 border-blue-200">
-          <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 bg-blue-600 rounded-lg flex-shrink-0">
-              <Zap className="w-4 sm:w-5 h-4 sm:h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-2 sm:mb-3">
-                {isKorean ? "해외진출 준비 체크리스트" : "Export Readiness Checklist"}
-              </h2>
-              <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+          {/* Right Column - Sidebar */}
+          <div className="lg:sticky lg:top-20 lg:self-start">
+            <Card className="p-4 bg-white border border-gray-200">
+              <h3 className="font-semibold text-gray-900 mb-4">
+                {isKorean ? "수출 준비 완료" : "Export Ready"}
+              </h3>
+              <div className="grid grid-cols-2 gap-2 mb-4">
                 {resultData.lindaSolution.checklist.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 bg-white rounded-lg border border-gray-200"
-                  >
-                    <CheckCircle2 className="w-3 sm:w-4 h-3 sm:h-4 text-blue-600 flex-shrink-0" />
-                    <span className="text-[10px] sm:text-xs font-medium text-gray-800">
+                  <div key={idx} className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <span className="text-sm text-gray-700">
                       {isKorean ? item.item_kr : item.item_en}
                     </span>
                   </div>
                 ))}
               </div>
-            </div>
+              <Button
+                onClick={handleGetStarted}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                {isKorean ? "캠페인 활성화" : "Activate Campaign"}
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Card>
           </div>
-        </Card>
-
-        {/* CTA Button */}
-        <div className="flex justify-center pt-2 sm:pt-4">
-          <Button
-            onClick={handleGetStarted}
-            size="lg"
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold px-6 sm:px-10 py-5 sm:py-7 text-sm sm:text-lg shadow-xl hover:shadow-2xl transition-all"
-          >
-            <Zap className="w-4 sm:w-5 h-4 sm:h-5 mr-2" />
-            {isKorean ? "지금 바로 캠페인 활성화하기" : "Activate Campaign Now"}
-            <ArrowRight className="w-4 sm:w-5 h-4 sm:h-5 ml-2" />
-          </Button>
         </div>
       </div>
 
       {/* Market Detail Sidebar */}
       {selectedMarket && (
         <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Overlay */}
           <button
             type="button"
-            className="absolute inset-0 bg-black/50 border-none cursor-default"
+            className="absolute inset-0 bg-black/30 border-none cursor-default"
             onClick={() => setSelectedMarket(null)}
             onKeyDown={(e) => e.key === "Escape" && setSelectedMarket(null)}
             aria-label="Close sidebar"
           />
-          <div className="relative w-full sm:max-w-lg bg-white shadow-2xl overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b p-3 sm:p-4 flex items-center justify-between z-10">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <span className="text-2xl sm:text-3xl">{selectedMarket.flag}</span>
+
+          {/* Sidebar */}
+          <div className="relative w-full max-w-md bg-white shadow-2xl overflow-y-auto">
+            {/* Header */}
+            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
+              <div className="flex items-center gap-3">
+                {selectedMarket.countryCode === "ME" ? (
+                  <Landmark className="w-8 h-8 text-gray-600" />
+                ) : (
+                  <span className="text-2xl font-bold text-gray-600">
+                    {selectedMarket.countryCode}
+                  </span>
+                )}
                 <div>
-                  <h2 className="text-lg sm:text-xl font-bold">
-                    {isKorean ? selectedMarket.countryName : selectedMarket.countryNameEn}{" "}
-                    {isKorean ? "시장" : "Market"}
+                  <h2 className="text-lg font-bold text-gray-900">
+                    {isKorean ? selectedMarket.countryName : selectedMarket.countryNameEn}
                   </h2>
-                  <p className="text-xs sm:text-sm text-gray-600">
+                  <p className="text-sm text-gray-500">
                     {isKorean ? selectedMarket.marketSize.kr : selectedMarket.marketSize.en}
                   </p>
                 </div>
@@ -1007,55 +927,63 @@ export default function TrialResultPage() {
                 onClick={() => setSelectedMarket(null)}
                 className="p-2 hover:bg-gray-100 rounded-lg"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
 
-            <div className="p-4 sm:p-5 space-y-4 sm:space-y-5">
-              <Card className="p-3 sm:p-4 bg-blue-50 border-blue-200">
-                <div className="flex items-start gap-2 sm:gap-3">
-                  <Bot className="w-4 sm:w-5 h-4 sm:h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            {/* Content */}
+            <div className="p-4 space-y-5">
+              {/* Market Analysis */}
+              <Card className="p-4 bg-blue-50 border-blue-200">
+                <div className="flex items-start gap-3">
+                  <Building2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[10px] sm:text-xs font-bold text-blue-600 mb-1">
+                    <p className="text-xs font-bold text-blue-600 mb-1">
                       {isKorean ? "시장 분석" : "Market Analysis"}
                     </p>
-                    <p className="text-xs sm:text-sm text-gray-700 mb-2">
+                    <p className="text-sm font-semibold text-gray-900 mb-1">
                       {isKorean ? selectedMarket.reasonTitle.kr : selectedMarket.reasonTitle.en}
                     </p>
-                    <p className="text-xs sm:text-sm text-gray-600">
+                    <p className="text-sm text-gray-600">
                       {isKorean ? selectedMarket.marketTrend.kr : selectedMarket.marketTrend.en}
                     </p>
                   </div>
                 </div>
               </Card>
 
+              {/* Sales Strategy */}
               <div>
-                <h3 className="font-bold text-gray-900 mb-2 sm:mb-3 text-sm sm:text-base">
-                  {isKorean ? "영업 전략" : "Sales Strategy"}
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-700 p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="w-4 h-4 text-gray-500" />
+                  <h3 className="font-semibold text-gray-900">
+                    {isKorean ? "영업 전략" : "Sales Strategy"}
+                  </h3>
+                </div>
+                <p className="text-sm text-gray-700 p-3 bg-gray-50 rounded-lg">
                   {isKorean ? selectedMarket.salesStrategy.kr : selectedMarket.salesStrategy.en}
                 </p>
               </div>
 
+              {/* Email Strategy */}
               <div>
-                <h3 className="font-bold text-gray-900 mb-2 sm:mb-3 text-sm sm:text-base">
-                  {isKorean ? "이메일 전략" : "Email Strategy"}
-                </h3>
-                <div className="space-y-2 p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Mail className="w-4 h-4 text-gray-500" />
+                  <h3 className="font-semibold text-gray-900">
+                    {isKorean ? "이메일 전략" : "Email Strategy"}
+                  </h3>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-lg space-y-2">
                   <div>
-                    <span className="text-xs font-semibold text-gray-600">
-                      {isKorean ? "제목" : "Subject"}:
-                    </span>
-                    <p className="text-xs text-gray-800 mt-1">
+                    <span className="text-xs text-gray-500">{isKorean ? "제목:" : "Subject:"}</span>
+                    <p className="text-sm text-gray-800">
                       {selectedMarket.emailStrategy.subjectLine}
                     </p>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-gray-600">
-                      {isKorean ? "핵심 포인트" : "Key Focus"}:
+                    <span className="text-xs text-gray-500">
+                      {isKorean ? "핵심 포인트:" : "Key Focus:"}
                     </span>
-                    <p className="text-xs text-gray-800 mt-1">
+                    <p className="text-sm text-gray-800">
                       {isKorean
                         ? selectedMarket.emailStrategy.keyFocus.kr
                         : selectedMarket.emailStrategy.keyFocus.en}
@@ -1064,35 +992,56 @@ export default function TrialResultPage() {
                 </div>
               </div>
 
+              {/* Expected Performance */}
               <div>
-                <h3 className="font-bold text-gray-900 mb-2 sm:mb-3 text-sm sm:text-base">
+                <h3 className="font-semibold text-gray-900 mb-2">
                   {isKorean ? "예상 성과" : "Expected Performance"}
                 </h3>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 bg-blue-50 rounded-lg text-center">
-                    <div className="text-xs text-gray-600">{isKorean ? "오픈율" : "Open Rate"}</div>
-                    <div className="text-xl font-bold text-blue-600">
+                    <div className="text-xs text-gray-500 mb-1">
+                      {isKorean ? "오픈율" : "Open Rate"}
+                    </div>
+                    <div className="text-2xl font-bold text-blue-600">
                       {selectedMarket.metrics.openRate}%
                     </div>
                   </div>
                   <div className="p-3 bg-green-50 rounded-lg text-center">
-                    <div className="text-xs text-gray-600">
+                    <div className="text-xs text-gray-500 mb-1">
                       {isKorean ? "응답률" : "Response Rate"}
                     </div>
-                    <div className="text-xl font-bold text-green-600">
+                    <div className="text-2xl font-bold text-green-600">
                       {selectedMarket.metrics.responseRate}%
                     </div>
                   </div>
                 </div>
               </div>
 
+              {/* Key Insights */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  {isKorean ? "핵심 인사이트" : "Key Insights"}
+                </h3>
+                <div className="space-y-2">
+                  {selectedMarket.highlights.map((highlight, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                      <span className="text-sm text-gray-700">
+                        {isKorean ? highlight.kr : highlight.en}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* CTA Button */}
               <Button
                 onClick={handleGetStarted}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 sm:py-5 text-sm sm:text-base"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-4"
               >
                 {isKorean
-                  ? `${selectedMarket.countryName} 시장 캠페인 시작하기`
-                  : `Start ${selectedMarket.countryNameEn} Campaign`}
+                  ? `${selectedMarket.countryName} 캠페인 시작`
+                  : `Start Campaign - ${selectedMarket.countryNameEn}`}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>

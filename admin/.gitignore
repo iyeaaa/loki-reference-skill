@@ -36,3 +36,6 @@ dist-ssr
 # i18n generated files
 src/i18n/generated/
 locales/.scanned/
+
+webset:page.csv
+webset:search.csv

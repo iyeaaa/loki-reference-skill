@@ -162,6 +162,7 @@ export function ChatRoom() {
           updateCustomer(leadId, {
             verified: true,
             description: result.description,
+            ...(result.companyType && { companyType: result.companyType }),
             ...(result.email && { email: result.email }),
             ...(result.phoneNumber && { phone: result.phoneNumber }),
             ...(result.address && { address: result.address }),

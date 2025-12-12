@@ -29,6 +29,7 @@ export interface Customer {
   createdAt: Date
   // Enrichment 상태
   verified?: boolean // Enrichment 완료 여부 (인스타그램 스타일 체크)
+  companyType?: string // 업체 유형 (제조업체, 브랜드사, 유통업체, 수입업체, 대리점, 소매업체 등)
   // 웹데추 Enrichment 추가 필드
   address?: string // 주소
   city?: string // 도시

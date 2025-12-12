@@ -402,6 +402,8 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             verified: true,
             // 기본 정보
             description: result.description,
+            // 업체 유형 (제조업체, 브랜드사, 유통업체 등)
+            ...(result.companyType && { companyType: result.companyType }),
             // 연락처 (기존 값이 없을 때만 업데이트)
             ...(result.email && { email: result.email }),
             ...(result.phoneNumber && { phone: result.phoneNumber }),
@@ -646,11 +648,41 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
         header: "Country",
         cell: ({ row }) => <span className="text-xs">{row.getValue("country") || "-"}</span>,
       },
-      // Category
+      // Category (BigQuery 원본)
       {
         accessorKey: "category",
         header: "Category",
         cell: ({ row }) => <span className="text-xs">{row.getValue("category") || "-"}</span>,
+      },
+      // 업체 유형 (Enrichment로 추출)
+      {
+        accessorKey: "companyType",
+        header: "Business Type",
+        cell: ({ row }) => {
+          const companyType = row.getValue("companyType") as string | undefined
+          if (!companyType) return <span className="text-xs text-muted-foreground">-</span>
+
+          // 업체 유형별 배지 색상
+          const typeColors: Record<string, string> = {
+            제조업체: "bg-blue-100 text-blue-800",
+            브랜드사: "bg-purple-100 text-purple-800",
+            유통업체: "bg-green-100 text-green-800",
+            도매업체: "bg-teal-100 text-teal-800",
+            소매업체: "bg-orange-100 text-orange-800",
+            수입업체: "bg-cyan-100 text-cyan-800",
+            대리점: "bg-amber-100 text-amber-800",
+            서비스업체: "bg-pink-100 text-pink-800",
+            플랫폼: "bg-indigo-100 text-indigo-800",
+          }
+
+          const colorClass = typeColors[companyType] || "bg-gray-100 text-gray-800"
+
+          return (
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colorClass}`}>
+              {companyType}
+            </span>
+          )
+        },
       },
       // Main Industry
       {

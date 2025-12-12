@@ -680,6 +680,7 @@ export interface EnrichmentResult {
   // 기본 정보
   foundCompanyName?: string
   description?: string
+  companyType?: string // 업체 유형 (제조업체, 브랜드사, 유통업체, 수입업체, 대리점, 소매업체 등)
   // 연락처
   email?: string
   phoneNumber?: string
@@ -719,6 +720,7 @@ export interface EnrichLeadResponse {
 const transformWebExtractionData = (data: Record<string, unknown>): EnrichmentResult => ({
   foundCompanyName: data.found_company_name as string | undefined,
   description: data.description as string | undefined,
+  companyType: data.company_type as string | undefined,
   email: data.email as string | undefined,
   phoneNumber: data.phone_number as string | undefined,
   address: data.address as string | undefined,

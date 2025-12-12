@@ -564,6 +564,161 @@ const APOLLO_LEADS_DATA_DICTIONARY = {
   revenueRanges: [], // Apollo 데이터에 revenue 없음
 }
 
+// Fresh Leads 테이블 (Apollo + Phone + Pitchbook 통합 데이터 24만개)
+const FRESH_LEADS_DATA_DICTIONARY = {
+  tableName: "gen-lang-client-0140658679.test_lead_01.fresh_leads",
+  columns: ["company", "website", "industry", "employees", "country", "industry_category"],
+  // industry는 자유형식 텍스트 (LIKE 검색용 주요 키워드 - 실제 데이터 분석 기반)
+  industries: [
+    // 음식/외식 (30,703+)
+    "restaurants",
+    "food & beverages",
+    "food production",
+    "catering",
+    // 의료/헬스케어 (29,000+)
+    "chiropractors",
+    "health, wellness & fitness",
+    "hospital & health care",
+    "mental health care",
+    "medical practice",
+    "medical devices",
+    "pharmaceuticals",
+    "veterinary",
+    // 자동차 (25,000+)
+    "auto detailing",
+    "auto wheel repair",
+    "automotive",
+    "transportation/trucking/railroad",
+    // 금융/보험 (17,000+)
+    "financial services",
+    "insurance",
+    "investment management",
+    "banking",
+    "investment banking",
+    "venture capital & private equity",
+    "accounting",
+    // 전문 서비스 (18,000+)
+    "staffing & recruiting",
+    "marketing & advertising",
+    "management consulting",
+    "legal services",
+    "law practice",
+    "professional training & coaching",
+    "human resources",
+    "public relations & communications",
+    // 기술/IT (15,000+)
+    "information technology & services",
+    "electronics",
+    "computer & network security",
+    "electrical/electronic manufacturing",
+    "semiconductors",
+    "e-learning",
+    "online media",
+    // 건설/부동산 (8,000+)
+    "construction",
+    "real estate",
+    "architecture & planning",
+    "building materials",
+    "civil engineering",
+    // 소매/도매 (10,000+)
+    "retail",
+    "wholesale",
+    "consumer services",
+    "apparel & fashion",
+    "furniture",
+    // 제조 (6,000+)
+    "machinery",
+    "mechanical or industrial engineering",
+    "packaging & containers",
+    // 에너지/환경 (5,000+)
+    "oil & energy",
+    "environmental services",
+    "utilities",
+    // 교육 (2,000+)
+    "higher education",
+    "education management",
+    // 엔터테인먼트/미디어 (3,000+)
+    "entertainment",
+    "media production",
+    "sports",
+    "events services",
+    // 물류/운송 (2,000+)
+    "logistics & supply chain",
+    "airlines/aviation",
+    "aviation & aerospace",
+    // 기타
+    "nonprofit organization management",
+    "research",
+    "design",
+    "coach",
+    "hospitality",
+    "leisure, travel & tourism",
+    "security & investigations",
+    "government administration",
+    "biotechnology",
+    "publishing",
+    "defense & space",
+    "printing",
+    "facilities services",
+    "individual & family services",
+    "civic & social organization",
+  ],
+  // industry_category (표준화된 카테고리)
+  industryCategories: [
+    "Food & Beverage - Restaurant",
+    "Healthcare - Chiropractic",
+    "Finance - Insurance",
+    "Automotive - Detailing",
+    "Professional Services - HR",
+    "Retail - General",
+    "Professional Services - Marketing",
+    "Automotive - Trucking",
+    "Automotive - Repair",
+    "Technology - Hardware",
+    "Healthcare - Hospital",
+    "Construction",
+    "Healthcare - Wellness",
+    "Healthcare - Other",
+    "Healthcare - Mental Health",
+    "Real Estate - Brokerage",
+    "Professional Services - Consulting",
+    "Finance - Investment",
+    "Finance - Banking",
+    "Nonprofit",
+    "Food & Beverage - Cafe",
+    "Manufacturing - General",
+    "Entertainment - Events",
+    "Legal Services",
+    "Food & Beverage - General",
+    "Finance - Accounting",
+    "Technology - Cybersecurity",
+    "Education - Higher Ed",
+    "Energy - Oil & Gas",
+    "Logistics & Transportation",
+    "Beauty - Spa",
+    "Education - Training",
+    "Healthcare - Pharmacy",
+    "Healthcare - Physical Therapy",
+    "Retail - Wholesale",
+    "Automotive - Dealership",
+    "Food & Beverage - Bar",
+    "Entertainment - Media",
+    "Hospitality - Travel",
+    "Technology - IT Services",
+    "Healthcare - Veterinary",
+    "Food & Beverage - Food Production",
+    "Automotive - Parts",
+    "Hospitality - Hotel",
+    "Manufacturing - Packaging",
+    "Agriculture",
+    "Technology - Software",
+  ],
+  // 국가 (대부분 미국)
+  countries: ["United States", "Canada", "United Kingdom", "Australia", "Brazil"],
+  employeeRanges: [], // employees는 정수값
+  revenueRanges: [], // revenue 데이터 없음
+}
+
 // Build natural language query from parameters
 function buildNaturalLanguageQuery(params: {
   query: string
@@ -721,13 +876,14 @@ export async function executeBigQuery(
       emitter.progress("executeBigQuery", "세 테이블에서 검색 중...", 20)
     }
 
-    // 세 테이블 병렬 검색
-    leadDiscoveryLogger.info(`[리드 검색] BigQuery 실행 중 (세 테이블 병렬)...`)
+    // 네 테이블 병렬 검색
+    leadDiscoveryLogger.info(`[리드 검색] BigQuery 실행 중 (네 테이블 병렬)...`)
 
-    const [b2bResult, crunchbaseResult, apolloResult] = await Promise.allSettled([
+    const [b2bResult, crunchbaseResult, apolloResult, freshResult] = await Promise.allSettled([
       searchBigQuery(nlQuery, B2B_LEADS_DATA_DICTIONARY),
       searchBigQuery(nlQuery, CRUNCHBASE_DATA_DICTIONARY),
       searchBigQuery(nlQuery, APOLLO_LEADS_DATA_DICTIONARY),
+      searchBigQuery(nlQuery, FRESH_LEADS_DATA_DICTIONARY),
     ])
 
     // B2B Leads 결과 처리
@@ -775,13 +931,37 @@ export async function executeBigQuery(
       leadDiscoveryLogger.error(`[리드 검색] apollo_leads_all 검색 실패: ${reason}`)
     }
 
+    // Fresh Leads 결과 처리
+    let freshTransformed: ReturnType<typeof transformApolloResults> = []
+    let freshTotal = 0
+    let freshSql = ""
+    leadDiscoveryLogger.info(`[Fresh] status: ${freshResult.status}`)
+    if (freshResult.status === "fulfilled") {
+      freshTransformed = transformApolloResults(freshResult.value.results) // Apollo와 같은 구조
+      freshTotal = freshResult.value.totalCount
+      freshSql = freshResult.value.sql
+      leadDiscoveryLogger.info(`[리드 검색] fresh_leads: ${freshTotal.toLocaleString()}개`)
+      leadDiscoveryLogger.info(`[Fresh SQL] ${freshSql}`)
+    } else {
+      const reason =
+        freshResult.reason instanceof Error
+          ? freshResult.reason.message
+          : String(freshResult.reason)
+      leadDiscoveryLogger.error(`[리드 검색] fresh_leads 검색 실패: ${reason}`)
+    }
+
     // 각 테이블 결과 수 로그
     leadDiscoveryLogger.info(
-      `[셔플 전] B2B: ${b2bTransformed.length}, Crunchbase: ${crunchbaseTransformed.length}, Apollo: ${apolloTransformed.length}`,
+      `[셔플 전] B2B: ${b2bTransformed.length}, Crunchbase: ${crunchbaseTransformed.length}, Apollo: ${apolloTransformed.length}, Fresh: ${freshTransformed.length}`,
     )
 
     // 결과 합치기 + Fisher-Yates 완전 셔플
-    const allResults = [...b2bTransformed, ...crunchbaseTransformed, ...apolloTransformed]
+    const allResults = [
+      ...b2bTransformed,
+      ...crunchbaseTransformed,
+      ...apolloTransformed,
+      ...freshTransformed,
+    ]
 
     // Fisher-Yates 셔플 (완전 랜덤)
     const combinedResults = [...allResults]
@@ -799,8 +979,8 @@ export async function executeBigQuery(
     const limitedResults = combinedResults.slice(0, 100)
     const first5 = limitedResults.slice(0, 5).map((r) => r.companyName || "unknown")
     leadDiscoveryLogger.info(`[셔플 후] 첫 5개: ${first5.join(", ")}`)
-    const totalCount = b2bTotal + crunchbaseTotal + apolloTotal
-    const combinedSql = `-- B2B Leads:\n${b2bSql}\n\n-- Crunchbase:\n${crunchbaseSql}\n\n-- Apollo:\n${apolloSql}`
+    const totalCount = b2bTotal + crunchbaseTotal + apolloTotal + freshTotal
+    const combinedSql = `-- B2B Leads:\n${b2bSql}\n\n-- Crunchbase:\n${crunchbaseSql}\n\n-- Apollo:\n${apolloSql}\n\n-- Fresh:\n${freshSql}`
 
     const duration = Date.now() - startTime
 
@@ -809,6 +989,7 @@ export async function executeBigQuery(
     leadDiscoveryLogger.info(`  - B2B Leads: ${b2bTotal.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - Crunchbase: ${crunchbaseTotal.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - Apollo: ${apolloTotal.toLocaleString()}개`)
+    leadDiscoveryLogger.info(`  - Fresh: ${freshTotal.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - 총 결과: ${totalCount.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - 반환 결과: ${limitedResults.length}개 (랜덤 셔플, 100개 제한)`)
     leadDiscoveryLogger.info(`  - 소요시간: ${(duration / 1000).toFixed(1)}초`)
@@ -826,6 +1007,7 @@ export async function executeBigQuery(
         b2bCount: b2bTotal,
         crunchbaseCount: crunchbaseTotal,
         apolloCount: apolloTotal,
+        freshCount: freshTotal,
       })
     }
 
@@ -835,13 +1017,14 @@ export async function executeBigQuery(
       b2bCount: b2bTotal,
       crunchbaseCount: crunchbaseTotal,
       apolloCount: apolloTotal,
+      freshCount: freshTotal,
     })
 
     return {
       searchResults: limitedResults,
       totalResultCount: totalCount,
       bigQuerySQL: combinedSql,
-      bigQueryExplanation: `B2B: ${b2bTotal}개, Crunchbase: ${crunchbaseTotal}개, Apollo: ${apolloTotal}개`,
+      bigQueryExplanation: `B2B: ${b2bTotal}개, Crunchbase: ${crunchbaseTotal}개, Apollo: ${apolloTotal}개, Fresh: ${freshTotal}개`,
       executionTime: duration,
     }
   } catch (error) {

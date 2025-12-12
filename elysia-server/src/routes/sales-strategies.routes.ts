@@ -1,4 +1,7 @@
+import { eq } from "drizzle-orm"
 import { Elysia, t } from "elysia"
+import { db } from "../db/index"
+import { workspaces } from "../db/schema/workspaces"
 import * as salesStrategyService from "../services/sales-strategy.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
 
@@ -139,7 +142,20 @@ export const workspaceSalesStrategyRoutes = new Elysia({
   .get(
     "/:workspaceId",
     async ({ params: { workspaceId }, set }) => {
-      const strategies = await salesStrategyService.getWorkspaceSalesStrategies(workspaceId)
+      const [strategies, workspaceRows] = await Promise.all([
+        salesStrategyService.getWorkspaceSalesStrategies(workspaceId),
+        db
+          .select({ companyWebsite: workspaces.companyWebsite })
+          .from(workspaces)
+          .where(eq(workspaces.id, workspaceId))
+          .limit(1),
+      ])
+
+      const workspace = workspaceRows[0]
+      if (!workspace) {
+        set.status = 404
+        return errorResponse("Workspace not found", ResponseCode.NOT_FOUND)
+      }
 
       // Return the first strategy (most recent) or 404 if none exist
       const firstStrategy = strategies[0]
@@ -154,6 +170,7 @@ export const workspaceSalesStrategyRoutes = new Elysia({
           target: firstStrategy.salesStrategy.target,
           country: firstStrategy.salesStrategy.country,
           experience: firstStrategy.salesStrategy.experience,
+          websiteUrl: workspace.companyWebsite ?? undefined,
         },
       }
     },
@@ -241,7 +258,19 @@ export const workspaceSalesStrategyRoutes = new Elysia({
   // Update sales strategy for workspace (find or create new one)
   .put(
     "/:workspaceId",
-    async ({ params: { workspaceId }, body }) => {
+    async ({ params: { workspaceId }, body, set }) => {
+      const workspaceRows = await db
+        .select({ companyWebsite: workspaces.companyWebsite })
+        .from(workspaces)
+        .where(eq(workspaces.id, workspaceId))
+        .limit(1)
+
+      const workspace = workspaceRows[0]
+      if (!workspace) {
+        set.status = 404
+        return errorResponse("Workspace not found", ResponseCode.NOT_FOUND)
+      }
+
       // Find or create a new sales strategy with the updated values
       const result = await salesStrategyService.findOrCreateAndLinkSalesStrategy(workspaceId, {
         industry: body.industry,
@@ -250,6 +279,19 @@ export const workspaceSalesStrategyRoutes = new Elysia({
         experience: body.experience,
       })
 
+      let websiteUrl = workspace.companyWebsite ?? undefined
+      if (body.websiteUrl !== undefined) {
+        const trimmed = body.websiteUrl.trim()
+        const companyWebsite = trimmed === "" ? null : trimmed
+
+        await db
+          .update(workspaces)
+          .set({ companyWebsite, updatedAt: new Date() })
+          .where(eq(workspaces.id, workspaceId))
+
+        websiteUrl = companyWebsite ?? undefined
+      }
+
       return {
         success: true,
         data: {
@@ -257,6 +299,7 @@ export const workspaceSalesStrategyRoutes = new Elysia({
           target: result.salesStrategy.target,
           country: result.salesStrategy.country,
           experience: result.salesStrategy.experience,
+          websiteUrl,
         },
       }
     },

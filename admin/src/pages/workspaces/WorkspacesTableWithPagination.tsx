@@ -140,6 +140,12 @@ export function WorkspacesTableWithPagination({
                 </th>
                 <th
                   className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  style={{ minWidth: "220px" }}
+                >
+                  홈페이지
+                </th>
+                <th
+                  className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   style={{ width: "30%", minWidth: "250px" }}
                 >
                   설명
@@ -211,6 +217,33 @@ export function WorkspacesTableWithPagination({
                     }}
                   >
                     {workspace.companyName || "-"}
+                  </td>
+                  <td
+                    className="p-2 text-sm text-gray-900 dark:text-gray-100"
+                    title={workspace.companyWebsite || "-"}
+                    style={{
+                      maxWidth: "280px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {workspace.companyWebsite ? (
+                      <a
+                        className="text-blue-600 hover:underline"
+                        href={
+                          workspace.companyWebsite.startsWith("http")
+                            ? workspace.companyWebsite
+                            : `https://${workspace.companyWebsite}`
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {workspace.companyWebsite}
+                      </a>
+                    ) : (
+                      "-"
+                    )}
                   </td>
                   <td
                     className="p-2 text-sm text-gray-900 dark:text-gray-100"

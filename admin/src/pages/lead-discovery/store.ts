@@ -27,6 +27,8 @@ export interface Customer {
   revenue?: string
   source: string
   createdAt: Date
+  // Enrichment 상태
+  verified?: boolean // Enrichment 완료 여부 (인스타그램 스타일 체크)
   // 웹데추 Enrichment 추가 필드
   address?: string // 주소
   city?: string // 도시

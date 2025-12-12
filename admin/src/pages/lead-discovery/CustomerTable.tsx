@@ -392,11 +392,14 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
       workspaceId,
       {
         onProgress: (completed, total, name) => {
-          setEnrichProgress({ current: completed + 1, total, name })
+          // completed는 현재까지 완료된 수, 처리 중인 항목은 completed + 1번째
+          setEnrichProgress({ current: completed, total, name })
         },
         onResult: (leadId, result) => {
           // 웹데추에서 추출한 모든 필드로 고객 정보 업데이트
           updateCustomer(leadId, {
+            // Enrichment 완료 표시
+            verified: true,
             // 기본 정보
             description: result.description,
             // 연락처 (기존 값이 없을 때만 업데이트)
@@ -516,11 +519,35 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
             )}
           </Button>
         ),
-        cell: ({ row }) => (
-          <span className="font-medium max-w-[200px] truncate block">
-            {row.getValue("company_name") || "-"}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const isVerified = row.original.verified
+          return (
+            <div className="flex items-center gap-1.5 max-w-[200px]">
+              <span className="font-medium truncate">{row.getValue("company_name") || "-"}</span>
+              {isVerified && (
+                <div
+                  className="flex-shrink-0 w-4 h-4 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-sm"
+                  title="Enrichment 완료"
+                >
+                  <svg
+                    className="w-2.5 h-2.5 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                    aria-label="Verified"
+                    role="img"
+                  >
+                    <title>Verified</title>
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              )}
+            </div>
+          )
+        },
       },
       {
         accessorKey: "web_address",

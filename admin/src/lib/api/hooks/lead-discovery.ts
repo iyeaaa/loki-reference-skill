@@ -715,6 +715,40 @@ export interface EnrichLeadResponse {
   error?: string
 }
 
+// web-extraction 응답 데이터를 EnrichmentResult로 변환
+const transformWebExtractionData = (data: Record<string, unknown>): EnrichmentResult => ({
+  foundCompanyName: data.found_company_name as string | undefined,
+  description: data.description as string | undefined,
+  email: data.email as string | undefined,
+  phoneNumber: data.phone_number as string | undefined,
+  address: data.address as string | undefined,
+  country: data.country as string | undefined,
+  city: data.city as string | undefined,
+  state: data.state as string | undefined,
+  foundedYear: data.founded_year as string | undefined,
+  employeeCount: data.employee_count as string | undefined,
+  linkedinUrl: data.linkedin_url as string | undefined,
+  facebookUrl: data.facebook_url as string | undefined,
+  instagramUrl: data.instagram_url as string | undefined,
+  twitterUrl: data.twitter_url as string | undefined,
+  products: data.products as string | undefined,
+  businessSectors: data.business_sectors as string | undefined,
+  productCategories: data.product_categories as string | undefined,
+  industryTypes: data.industry_types as string | undefined,
+})
+
+// 데이터에 유효한 값이 있는지 확인
+const hasValidData = (data: EnrichmentResult): boolean => {
+  return !!(
+    data.description ||
+    data.email ||
+    data.phoneNumber ||
+    data.address ||
+    data.products ||
+    data.businessSectors
+  )
+}
+
 // 단일 리드 enrichment (web-extraction API 사용)
 export const enrichLead = async (
   webAddress: string,
@@ -738,38 +772,40 @@ export const enrichLead = async (
 
     const result = await response.json()
 
-    if (!result.success) {
-      return {
-        success: false,
-        data: null,
-        error: result.error || "분석 실패",
+    // API 응답 구조 처리 (response transformer로 인한 이중 래핑 처리)
+    // 구조: { success, data: { success, data: { 실제 데이터 } } }
+    const innerResult = result.data || result
+    const actualData = innerResult.data || innerResult
+
+    log.info("Enrichment API response", {
+      hasOuterData: !!result.data,
+      hasInnerData: !!innerResult.data,
+      actualDataKeys: actualData ? Object.keys(actualData).slice(0, 5) : [],
+    })
+
+    // 실제 데이터가 있으면 사용
+    if (actualData && typeof actualData === "object" && "website_url" in actualData) {
+      const enrichmentData = transformWebExtractionData(actualData)
+
+      // 유효한 데이터가 있으면 성공으로 처리
+      if (hasValidData(enrichmentData)) {
+        log.info("Enrichment data extracted", {
+          hasDescription: !!enrichmentData.description,
+          hasEmail: !!enrichmentData.email,
+        })
+        return {
+          success: true,
+          data: enrichmentData,
+        }
       }
     }
 
-    // web-extraction 응답을 EnrichmentResult로 변환
-    const data = result.data
+    // 데이터가 없거나 유효하지 않으면 실패
+    const errorMessage = result.error || innerResult.error || "분석 실패"
     return {
-      success: true,
-      data: {
-        foundCompanyName: data.found_company_name,
-        description: data.description,
-        email: data.email,
-        phoneNumber: data.phone_number,
-        address: data.address,
-        country: data.country,
-        city: data.city,
-        state: data.state,
-        foundedYear: data.founded_year,
-        employeeCount: data.employee_count,
-        linkedinUrl: data.linkedin_url,
-        facebookUrl: data.facebook_url,
-        instagramUrl: data.instagram_url,
-        twitterUrl: data.twitter_url,
-        products: data.products,
-        businessSectors: data.business_sectors,
-        productCategories: data.product_categories,
-        industryTypes: data.industry_types,
-      },
+      success: false,
+      data: null,
+      error: errorMessage,
     }
   } catch (error) {
     log.error("Enrichment failed", error)

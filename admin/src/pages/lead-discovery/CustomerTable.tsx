@@ -762,8 +762,22 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
     [removeCustomer, fitScoreState, enrichmentState],
   )
 
+  // 정렬된 데이터: 1순위 verified (체크 표시), 2순위 fit_score
+  const sortedCustomers = useMemo(() => {
+    return [...customers].sort((a, b) => {
+      // 1순위: verified (체크 표시된 것이 위로)
+      if (a.verified && !b.verified) return -1
+      if (!a.verified && b.verified) return 1
+
+      // 2순위: fit_score (높은 것이 위로) - fitScoreState.scores에서 가져옴
+      const scoreA = fitScoreState.scores[a.id] ?? a.fit_score ?? 0
+      const scoreB = fitScoreState.scores[b.id] ?? b.fit_score ?? 0
+      return scoreB - scoreA
+    })
+  }, [customers, fitScoreState.scores])
+
   const table = useReactTable({
-    data: customers,
+    data: sortedCustomers,
     columns,
     state: {
       sorting,

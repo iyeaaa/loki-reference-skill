@@ -172,22 +172,59 @@ Then respond with ONLY: INVALID_QUERY
 Available columns: ${dataDictionary.columns.join(", ")}
 DO NOT use any column that is not in the list above (e.g., if "sub_industry" is not listed, don't use it!)
 
-## Smart Search with LIKE
-Use LIKE '%keyword%' to find matches in the industry column.
+## ⚠️ CRITICAL RULE: ALL Keywords Must Be Matched with AND!
 
-### CRITICAL: Use SPECIFIC categories to avoid false positives
+When the user searches for a compound term like "포장재 유통회사":
+1. **MUST use ALL keywords with AND** - "포장재 유통" means BOTH "packaging" AND "wholesale"
+2. Extract ALL industry keywords from the query and combine them with AND
+3. Only use OR for synonyms of the SAME concept (e.g., "wholesale" OR "distribution" for "유통")
 
-"package" can mean "service bundle" (vacation packages). Use specific terms:
+### STEP-BY-STEP for "미국에 위치한 포장재 유통회사":
+1. Extract country: "미국" → "United States"
+2. Extract industry #1: "포장재" → "packaging"
+3. Extract industry #2: "유통" → "wholesale" OR "distribution"
+4. Combine with AND: packaging AND (wholesale OR distribution)
 
-- "포장재" → industry LIKE '%packaging & containers%' OR industry LIKE '%packaging services%'
-- "뷰티" → industry LIKE '%beauty%' OR industry LIKE '%cosmetics%'
-- "IT 컨설팅" → industry LIKE '%software%' AND industry LIKE '%consulting%'
-- "청소용품" → industry LIKE '%cleaning%' AND industry LIKE '%products%'
+### Examples of CORRECT SQL:
+- "미국 포장재 유통회사" → WHERE country = 'United States' AND LOWER(industry) LIKE '%packaging%' AND (LOWER(industry) LIKE '%wholesale%' OR LOWER(industry) LIKE '%distribution%') LIMIT 100
+- "미국 포장재 회사" → WHERE country = 'United States' AND LOWER(industry) LIKE '%packaging%' LIMIT 100
+- "미국 뷰티 회사" → WHERE country = 'United States' AND (LOWER(industry) LIKE '%beauty%' OR LOWER(industry) LIKE '%cosmetics%') LIMIT 100
+- "미국 유통 회사" → WHERE country = 'United States' AND (LOWER(industry) LIKE '%wholesale%' OR LOWER(industry) LIKE '%distribution%') LIMIT 100
+- "미국 IT 컨설팅" → WHERE country = 'United States' AND LOWER(industry) LIKE '%software%' AND LOWER(industry) LIKE '%consulting%' LIMIT 100
 
-ALWAYS add LIMIT 100 to prevent too many results.
-  
+### Examples of WRONG SQL (DO NOT DO THIS):
+❌ WHERE country = 'United States' LIMIT 100  -- Missing industry filter! Returns 600K+ unrelated results!
+❌ WHERE country = 'United States' OR LOWER(industry) LIKE '%packaging%'  -- OR with country is WRONG!
+❌ WHERE LOWER(industry) LIKE '%wholesale%' -- Missing "packaging" for "포장재 유통"!
+❌ WHERE LOWER(industry) LIKE '%manufacturing%' OR LOWER(industry) LIKE '%wholesale%' -- Generic "manufacturing" is NOT "packaging"!
 
-Only use NO_DATA when the requested region/country is NOT in the available countries list above.
+## Korean to English Industry Keyword Mapping (MANDATORY - USE THESE EXACT KEYWORDS):
+
+| Korean Query | REQUIRED English Keywords for LIKE |
+|--------------|-----------------------------------|
+| 포장재, 패키징 | packaging (NEVER use just "manufacturing"!) |
+| 유통 | wholesale, distribution |
+| 포장재 유통 | packaging AND (wholesale OR distribution) |
+| 뷰티, 화장품 | beauty, cosmetics |
+| IT, 소프트웨어, 기술 | software, technology |
+| 헬스케어, 의료, 병원 | health, medical, healthcare, hospital |
+| 제조업 | manufacturing (but NOT for "포장재"!) |
+| 금융, 은행 | financial, banking, finance |
+| 부동산 | real estate, property |
+| 교육 | education, training |
+| 물류, 운송 | logistics, transportation, freight |
+| 청소, 청소용품 | cleaning |
+| 식품, 음료 | food, beverage |
+| 건설 | construction, building |
+| 에너지 | energy, power |
+| 자동차 | automotive |
+| 농업 | agriculture, farming |
+| 컨설팅 | consulting |
+| 광고, 마케팅 | advertising, marketing |
+| 보험 | insurance |
+
+⚠️ CRITICAL: "포장재" = "packaging", NOT "manufacturing"! 
+Many industries have "manufacturing" in their name. Only use "packaging" for packaging companies!
 
 ## Table Information
 - Table Name: \`${dataDictionary.tableName}\`
@@ -195,8 +232,12 @@ Only use NO_DATA when the requested region/country is NOT in the available count
 
 ## Available Values
 
-### Industries (산업군):
-${dataDictionary.industries.map((i) => `- "${i}"`).join("\n")}
+### Industries (산업군) - ONLY use keywords from this list:
+${dataDictionary.industries
+  .slice(0, 50)
+  .map((i) => `- "${i}"`)
+  .join("\n")}
+${dataDictionary.industries.length > 50 ? `... and ${dataDictionary.industries.length - 50} more` : ""}
 
 ### Countries (국가):
 ${dataDictionary.countries.map((c) => `- "${c}"`).join("\n")}
@@ -210,41 +251,17 @@ ${dataDictionary.revenueRanges.map((r) => `- "${r}"`).join("\n")}
 ## Important Rules:
 1. ALWAYS use LIMIT clause (default 100, max 1000)
 2. Return ONLY the SQL query, no explanations (or INVALID_QUERY if not a valid search)
-3. CRITICAL: If the user searches for a specific product/industry (e.g., "포장재", "뷰티"):
-   - The SQL MUST include an industry condition
-   - If no matching industry keyword exists in this table, return: NO_INDUSTRY_MATCH
-   - Do NOT return results with only country filter (this causes unrelated results!)
-4. For Korean location queries, ALWAYS check the available countries list above first:
-   - If countries list has "United States", "United Kingdom", etc. → use exact country names
-   - If countries list has "Southern US", "Western US", "EMEA", etc. → use region names
-   
-   Examples based on available countries:
-   - "미국" → Use "United States" if available, otherwise look for regions containing "US"
-   - "영국" → Use "United Kingdom" if available
-   - "캐나다" → Use "Canada" if available
-   - "호주" → Use "Australia" if available
-   - "독일" → Use "Germany" if available
-   
-   CRITICAL: Always use the EXACT country values from the Countries list above!
-
-4. For Korean industry queries, use LIKE to match (industries may contain multiple values):
-   - "소프트웨어", "IT" → industry LIKE '%Software%' OR industry LIKE '%Information Technology%'
-   - "헬스케어", "의료" → industry LIKE '%Health%' OR industry LIKE '%Medical%'
-   - "제조업" → industry LIKE '%Manufacturing%'
-   - "금융" → industry LIKE '%Financial%' OR industry LIKE '%Banking%'
-   - "부동산" → industry LIKE '%Real Estate%'
-   - "교육" → industry LIKE '%Education%'
-   - "광고", "마케팅" → industry LIKE '%Advertising%' OR industry LIKE '%Marketing%'
-   - "컨설팅" → industry LIKE '%Consulting%'
-   - "이커머스", "전자상거래" → industry LIKE '%E-Commerce%'
-   - "물류", "운송" → industry LIKE '%Logistics%' OR industry LIKE '%Transportation%'
-
+3. **CRITICAL: Industry Filter is MANDATORY when user mentions a product/industry!**
+   - The SQL MUST include an industry condition using LIKE
+   - Check the Industries list above and find the BEST matching keyword
+   - If NO keyword matches at all, return: NO_INDUSTRY_MATCH
+   - **NEVER return results with only country filter** (this causes 600K+ unrelated results!)
+4. For Korean location queries, use the EXACT country values from the Countries list above
 5. For employee range queries:
    - Check the available employee ranges format (e.g., "0 - 25", "c_00001_00010")
    - "대기업" = larger employee ranges
    - "중소기업", "스타트업" = smaller employee ranges
-
-6. When in doubt, use LIKE with wildcards to find matches
+6. Use LOWER(industry) LIKE '%keyword%' for case-insensitive matching
 
 ## User Query:
 "${query}"

@@ -58,6 +58,23 @@ export function StepEmailGeneration() {
     [],
   )
 
+  // Check for existing generated sequence from session storage
+  const existingSequence = useMemo(() => {
+    try {
+      const stored = sessionStorage.getItem("onboarding_sequence")
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        // Validate that it has the required email data
+        if (parsed.id && parsed.emailSubject && parsed.emailBodyText) {
+          return parsed
+        }
+      }
+    } catch {
+      // Invalid JSON, ignore
+    }
+    return null
+  }, [])
+
   const generateEmailSequence = useCallback(async () => {
     if (!workspace?.id || hasStartedGeneration.current) return
 
@@ -116,12 +133,12 @@ export function StepEmailGeneration() {
         body: JSON.stringify({
           stepOrder: 1,
           delayDays: 0,
-          scheduledHour: 9,
+          scheduledHour: 0,
           scheduledMinute: 0,
           emailSubject: templateResponse.emailSubject,
           emailBodyText: templateResponse.emailBodyText,
           emailBodyHtml: templateResponse.emailBodyHtml,
-          generationSource: "ai",
+          generationSource: "template",
         }),
       })
 
@@ -167,12 +184,34 @@ export function StepEmailGeneration() {
     }
   }, [workspace?.id, leads, companyInfo, isKorean, userId, customerGroupId])
 
-  // Start generation on mount
+  // Start generation on mount (or use existing sequence if available)
   useEffect(() => {
-    if (workspace?.id && !hasStartedGeneration.current) {
+    if (hasStartedGeneration.current) return
+
+    // Check if we already have a generated sequence
+    if (existingSequence) {
+      hasStartedGeneration.current = true
+      // Use existing email data
+      const generatedEmails: GeneratedEmail[] = [
+        {
+          id: "email-preview",
+          subject: existingSequence.emailSubject,
+          body: existingSequence.emailBodyText,
+          leadId: "",
+          leadName: isKorean ? "샘플 미리보기" : "Sample Preview",
+        },
+      ]
+      setEmails(generatedEmails)
+      setProgress(100)
+      setGenerationComplete(true)
+      return
+    }
+
+    // Generate new sequence if workspace is ready
+    if (workspace?.id) {
       generateEmailSequence()
     }
-  }, [workspace?.id, generateEmailSequence])
+  }, [workspace?.id, generateEmailSequence, existingSequence, isKorean])
 
   const handleNext = () => {
     setSearchParams({ step: "3" })

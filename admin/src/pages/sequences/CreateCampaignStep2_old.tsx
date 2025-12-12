@@ -106,8 +106,9 @@ export function CreateCampaignStep2({ sequenceId, data, onChange }: CreateCampai
     }
     // 없으면 하드코딩된 기본 서명 사용 (폴백)
     if (user) {
-      const name = user.name || user.username || "사용자"
-      const title = user.department_name || "직원"
+      const name = user.username || "사용자"
+      // const title = user.department_name || "직원"
+      const title = "직원"
       return generateSignatureHtml({ name, title })
     }
     return generateSignatureHtml()

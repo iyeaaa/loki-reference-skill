@@ -38,8 +38,8 @@ export function EmailSignatureManagement() {
   // 기본 서명 템플릿 생성 (HTML 형식)
   const getDefaultSignature = () => {
     if (user) {
-      const name = user.name || user.username || "사용자"
-      const title = user.department_name || "직원"
+      const name = user.username || "사용자"
+      const title = user.userRole || "직원"
       const html = generateSignatureHtml({ name, title })
       // HTML을 텍스트로 변환 (줄바꿈과 공백 처리)
       const text = htmlToMarkdown(html)

@@ -19,7 +19,11 @@ import { WorkspaceSelector } from "@/components/ui/workspace-selector"
 import { useCurrentUser } from "@/lib/api/hooks/auth"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 
-function DashboardContent() {
+interface DashboardContentProps {
+  children?: React.ReactNode
+}
+
+function DashboardContent({ children }: DashboardContentProps) {
   const { t } = useTranslation()
   const location = useLocation()
   const pathname = location.pathname
@@ -188,9 +192,7 @@ function DashboardContent() {
         </header>
         <main className="flex-1 overflow-y-auto">
           <div className="p-4">
-            <Suspense fallback={getSkeletonForRoute(pathname)}>
-              <Outlet />
-            </Suspense>
+            <Suspense fallback={getSkeletonForRoute(pathname)}>{children || <Outlet />}</Suspense>
           </div>
         </main>
       </div>
@@ -200,12 +202,10 @@ function DashboardContent() {
         isOpen={showProfileCard}
         onClose={() => setShowProfileCard(false)}
         user={{
-          name: currentUser?.username || "Admin",
+          username: currentUser?.username || "Admin",
           email: currentUser?.email || "",
           image: currentUser?.profilePicture || null,
-          user_role: currentUser?.userRole || "user",
-          department_name: currentUser?.departmentName || null,
-          employee_id: currentUser?.employeeId || null,
+          userRole: currentUser?.userRole || "user",
         }}
         isAdmin={currentUser?.userRole === "admin"}
         onAdminClick={() => {
@@ -268,11 +268,15 @@ const getPageName = (pathname: string, t: (key: string) => string) => {
   }
 }
 
-export default function DashboardLayout() {
+interface DashboardLayoutProps {
+  children?: React.ReactNode
+}
+
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="h-screen flex overflow-hidden bg-background">
       <SidebarProvider defaultOpen={false}>
-        <DashboardContent />
+        <DashboardContent>{children}</DashboardContent>
       </SidebarProvider>
     </div>
   )

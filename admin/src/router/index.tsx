@@ -1,6 +1,10 @@
 import { lazy } from "react"
-import { createBrowserRouter, Navigate } from "react-router-dom"
-import { ProtectedRoute } from "@/components/ProtectedRoute"
+import { createBrowserRouter, Navigate, useSearchParams } from "react-router-dom"
+import {
+  AdminProtectedRoute,
+  ProtectedRoute,
+  UserProtectedRoute,
+} from "@/components/ProtectedRoute"
 import { AuthProvider } from "@/lib/auth-provider"
 
 // Layouts - 즉시 로드 (모든 페이지에서 필요)
@@ -15,14 +19,13 @@ import TrialResultPage from "../pages/TrialResultPage"
 
 // App pages for trial users
 const CompanyInformation = lazy(() => import("../pages/app/CompanyInformation"))
-const AppDashboardPage = lazy(() => import("../pages/app/AppDashboardPage"))
+const UnifiedDashboardPage = lazy(() => import("../pages/UnifiedDashboardPage"))
 const NylasRedirect = lazy(() =>
   import("../pages/app/NylasRedirect").then((m) => ({ default: m.NylasRedirect })),
 )
 
 // 모든 페이지 - Lazy Loading (성능 최적화)
 const ChatbotPage = lazy(() => import("../pages/ChatbotPage"))
-const DashboardPage = lazy(() => import("../pages/dashboard/DashboardV2Page"))
 const RepliedEmailsPage = lazy(() => import("../pages/email-replies/EmailRepliesPage"))
 const LeadsPage = lazy(() => import("../pages/leads"))
 const LeadDiscoveryPage = lazy(() => import("../pages/lead-discovery"))
@@ -57,6 +60,32 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>
 }
 
+// Redirect /login to /auth preserving search params
+function LoginRedirect() {
+  const [searchParams] = useSearchParams()
+  const search = searchParams.toString()
+  return <Navigate to={`/auth${search ? `?${search}` : ""}`} replace />
+}
+
+// Redirect /trial to /trial/survey/1 if no params (except if from=logout)
+function TrialRedirect() {
+  const [searchParams] = useSearchParams()
+  const isFromLogout = searchParams.get("from") === "logout"
+  const hasParams = searchParams.toString().length > 0
+
+  // If user logged out from AppLayout, stay on /trial (show login page)
+  if (isFromLogout) {
+    return <NewTrialPage />
+  }
+
+  // If no params, redirect to onboarding survey
+  if (!hasParams) {
+    return <Navigate to="/trial/survey/1" replace />
+  }
+
+  return <NewTrialPage />
+}
+
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -72,11 +101,11 @@ export const router = createBrowserRouter([
       },
       {
         path: "login",
-        element: <Navigate to="/auth" replace />,
+        element: <LoginRedirect />,
       },
       {
         path: "trial",
-        element: <NewTrialPage />,
+        element: <TrialRedirect />,
       },
       {
         path: "trial/survey",
@@ -94,43 +123,57 @@ export const router = createBrowserRouter([
         path: "onboarding",
         element: <Navigate to="/trial/survey/1" replace />,
       },
+      // Standalone dashboard route - layout is inside UnifiedDashboardPage based on user role
       {
-        path: "app",
+        path: "dashboard",
         element: (
           <ProtectedRoute>
-            <AppLayout />
+            <UnifiedDashboardPage />
           </ProtectedRoute>
         ),
-        children: [
-          {
-            index: true,
-            element: <CompanyInformation />,
-          },
-          {
-            path: "dashboard",
-            element: <AppDashboardPage />,
-          },
-          {
-            path: "redirect",
-            element: <NylasRedirect />,
-          },
-        ],
       },
+      // AppLayout routes (for trial users - UserProtectedRoute)
+      {
+        path: "company",
+        element: (
+          <UserProtectedRoute>
+            <AppLayout>
+              <CompanyInformation />
+            </AppLayout>
+          </UserProtectedRoute>
+        ),
+      },
+      {
+        path: "app/redirect",
+        element: (
+          <UserProtectedRoute>
+            <AppLayout>
+              <NylasRedirect />
+            </AppLayout>
+          </UserProtectedRoute>
+        ),
+      },
+      // Backward compatibility redirects
+      {
+        path: "app",
+        element: <Navigate to="/company" replace />,
+      },
+      {
+        path: "app/dashboard",
+        element: <Navigate to="/dashboard" replace />,
+      },
+      // DashboardLayout routes (for admin users - AdminProtectedRoute)
       {
         path: "/",
         element: (
-          <ProtectedRoute>
+          <AdminProtectedRoute>
             <DashboardLayout />
-          </ProtectedRoute>
+          </AdminProtectedRoute>
         ),
         children: [
           {
             index: true,
             element: <Navigate to="/dashboard" replace />,
-          },
-          {
-            path: "dashboard",
-            element: <DashboardPage />,
           },
           {
             path: "leads",

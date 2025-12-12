@@ -3,11 +3,11 @@ import { createContext, type ReactNode, useContext, useEffect, useState } from "
 interface User {
   id: string
   email: string
-  name?: string
   username?: string
-  user_role?: string
-  department_name?: string | null
-  employee_id?: string | null
+  userRole?: string
+  isActive?: boolean
+  updatedAt?: string
+  createdAt?: string
   trialStatus?: {
     isTrialActive: boolean
     daysRemaining: number
@@ -37,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const parsedUser = JSON.parse(userData)
         setUser(parsedUser)
+        console.log(parsedUser)
       } catch (error) {
         console.error("Failed to parse user data:", error)
         localStorage.removeItem("authToken")
@@ -67,10 +68,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     localStorage.removeItem("authToken")
     localStorage.removeItem("user")
+
+    // Clear onboarding-related session storage
+    sessionStorage.removeItem("onboarding_sequence")
+    sessionStorage.removeItem("onboarding_leads")
+    sessionStorage.removeItem("onboarding_company_info")
+    sessionStorage.removeItem("onboarding_customer_group_id")
+
     setUser(null)
 
     // Redirect trial users to trial page, others to auth page
-    window.location.href = isTrialUserLogout ? "/trial" : "/auth"
+    window.location.href = isTrialUserLogout ? "/trial?from=logout" : "/auth"
   }
 
   return (

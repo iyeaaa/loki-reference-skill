@@ -1,7 +1,7 @@
 import { Building2, Home, LogOut } from "lucide-react"
 import { Suspense } from "react"
 import { useTranslation } from "react-i18next"
-import { NavLink, Outlet, useLocation } from "react-router-dom"
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { PageSkeleton } from "@/components/PageSkeleton"
 import {
@@ -25,21 +25,48 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useEmailAccountByWorkspaceAndUser } from "@/lib/api/hooks/email-accounts"
+import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import { useAuth } from "@/lib/auth-provider"
 
-function AppContent() {
+interface AppContentProps {
+  children?: React.ReactNode
+}
+
+function AppContent({ children }: AppContentProps) {
   const { t } = useTranslation()
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const { state } = useSidebar()
   const location = useLocation()
+  const navigate = useNavigate()
 
   const isCollapsed = state === "collapsed"
 
+  // Get user's workspaces to find the workspace ID
+  const { data: userWorkspaces } = useUserWorkspaces(user?.id || "", !!user?.id)
+  const workspaceId = userWorkspaces?.[0]?.id || ""
+
+  // Check if user has an email account connected
+  const { data: emailAccount } = useEmailAccountByWorkspaceAndUser(
+    workspaceId,
+    user?.id || "",
+    !!workspaceId && !!user?.id,
+  )
+
+  // Show Home tab only if user has an email account connected
+  const hasEmailAccount = !!emailAccount
+
+  // Custom logout handler - clears auth and navigates to trial page
+  const handleLogout = () => {
+    logout()
+    navigate("/trial?from=logout")
+  }
+
   const getPageName = (pathname: string) => {
     switch (pathname) {
-      case "/app":
+      case "/company":
         return t("app.companyInfo.title", "Company Information")
-      case "/app/dashboard":
+      case "/dashboard":
         return t("app.dashboard.title", "Home")
       default:
         return t("app.companyInfo.title", "Company Information")
@@ -57,30 +84,32 @@ function AppContent() {
 
         <SidebarContent className="p-2">
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip={t("app.sidebar.home", "Home")}>
-                <NavLink
-                  to="/app/dashboard"
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                      isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
-                    }`
-                  }
-                >
-                  <Home className="h-4 w-4 shrink-0" />
-                  <span className="group-data-[collapsible=icon]:hidden">
-                    {t("app.sidebar.home", "Home")}
-                  </span>
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {hasEmailAccount && (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip={t("app.sidebar.home", "Home")}>
+                  <NavLink
+                    to="/dashboard"
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                        isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+                      }`
+                    }
+                  >
+                    <Home className="h-4 w-4 shrink-0" />
+                    <span className="group-data-[collapsible=icon]:hidden">
+                      {t("app.sidebar.home", "Home")}
+                    </span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
                 tooltip={t("app.sidebar.companyInfo", "Company Information")}
               >
                 <NavLink
-                  to="/app"
+                  to="/company"
                   end
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
@@ -106,7 +135,7 @@ function AppContent() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="w-full justify-center h-10 px-2 hover:bg-accent"
                 >
                   <LogOut className="h-4 w-4 text-muted-foreground" />
@@ -120,7 +149,7 @@ function AppContent() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={logout}
+              onClick={handleLogout}
               className="w-full justify-start h-10 px-3 py-2 hover:bg-accent"
             >
               <LogOut className="h-4 w-4 text-muted-foreground mr-3 shrink-0" />
@@ -146,9 +175,7 @@ function AppContent() {
         </header>
         <main className="flex-1 overflow-y-auto">
           <div className="p-4">
-            <Suspense fallback={<PageSkeleton />}>
-              <Outlet />
-            </Suspense>
+            <Suspense fallback={<PageSkeleton />}>{children || <Outlet />}</Suspense>
           </div>
         </main>
       </div>
@@ -156,12 +183,16 @@ function AppContent() {
   )
 }
 
-export default function AppLayout() {
+interface AppLayoutProps {
+  children?: React.ReactNode
+}
+
+export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="h-screen flex overflow-hidden bg-background">
       <TooltipProvider>
         <SidebarProvider defaultOpen={false}>
-          <AppContent />
+          <AppContent>{children}</AppContent>
         </SidebarProvider>
       </TooltipProvider>
     </div>

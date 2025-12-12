@@ -563,7 +563,7 @@ export default function TrialResultPage() {
   }, [searchParams, navigate, i18n.language, isAnalyzing, resultData])
 
   const handleGetStarted = () => {
-    navigate("/app")
+    navigate("/company")
   }
 
   const isKorean = i18n.language === "ko"

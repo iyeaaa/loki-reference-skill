@@ -9,12 +9,13 @@ interface ProfileCardProps {
   isOpen: boolean
   onClose: () => void
   user?: {
-    name?: string | null
-    email?: string | null
+    username?: string | null
+    email?: string
     image?: string | null
-    user_role?: string | null
-    department_name?: string | null
-    employee_id?: string | null
+    userRole: string
+    // user_role?: string | null
+    // department_name?: string | null
+    // employee_id?: string | null
   }
   isAdmin?: boolean
   onAdminClick?: () => void
@@ -30,7 +31,7 @@ export function ProfileCard({ isOpen, onClose, user, onLogout }: ProfileCardProp
 
   if (!isOpen || !mounted) return null
 
-  const displayName = user?.name || "김하나"
+  const displayName = user?.username || "김하나"
   const displayEmail = user?.email || "hana@hana.com"
   const userInitial = displayName.charAt(0).toUpperCase()
 
@@ -48,7 +49,7 @@ export function ProfileCard({ isOpen, onClose, user, onLogout }: ProfileCardProp
     }
   }
 
-  const roleLabel = getRoleDisplay(user?.user_role)
+  const roleLabel = getRoleDisplay(user?.userRole)
 
   const cardContent = (
     <>
@@ -105,7 +106,7 @@ export function ProfileCard({ isOpen, onClose, user, onLogout }: ProfileCardProp
             </span>
 
             {/* Department and Employee ID */}
-            {(user?.department_name || user?.employee_id) && (
+            {/* {(user?.department_name || user?.employee_id) && (
               <div className="mt-3">
                 <p className="text-sm text-gray-600 dark:text-gray-300">
                   {user?.department_name && `부서: ${user.department_name}`}
@@ -113,7 +114,7 @@ export function ProfileCard({ isOpen, onClose, user, onLogout }: ProfileCardProp
                   {user?.employee_id && `사번: ${user.employee_id}`}
                 </p>
               </div>
-            )}
+            )} */}
           </div>
 
           <div className="px-4 pt-4">

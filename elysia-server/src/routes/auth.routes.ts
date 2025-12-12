@@ -129,7 +129,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
     },
   )
 
-  // Signup endpoint
+  // Signup endpoint for admin
   .post(
     "/signup",
     async ({ body, set }) => {
@@ -149,7 +149,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
           username: body.username,
           email: body.email,
           passwordHash,
-          userRole: "user",
+          userRole: "admin",
           isActive: true, // Active by default
         })
 

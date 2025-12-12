@@ -130,9 +130,9 @@ export default function NewTrialPage() {
           sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
           navigate(`/trial/result?${params.toString()}`)
         } else {
-          // No onboarding params, go directly to app
+          // No onboarding params, go directly to company page
           sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
-          navigate("/app")
+          navigate("/company")
         }
       } catch (error) {
         console.error("Google OAuth callback error:", error)
@@ -255,9 +255,9 @@ export default function NewTrialPage() {
         sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
         navigate(`/trial/result?${params.toString()}`)
       } else {
-        // No onboarding params, go directly to app
+        // No onboarding params, go directly to company page
         sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
-        navigate("/app")
+        navigate("/company")
       }
     } catch (error) {
       console.error("Email registration error:", error)

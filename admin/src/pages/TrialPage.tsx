@@ -79,7 +79,7 @@ export default function TrialPage() {
           toast.info(`무료 체험 기간: ${response.user.trialStatus.daysRemaining}일 남음`)
         }
 
-        navigate("/app")
+        navigate("/company")
       } catch (error) {
         console.error("Google OAuth callback error:", error)
         toast.error("Google 로그인 처리 중 오류가 발생했습니다.")

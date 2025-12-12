@@ -18,6 +18,9 @@ echo "[+] PostgreSQL is ready!"
 echo "[+] Running smart migration check..."
 sh ./scripts/smart-migrate.sh
 
+echo "[+] Running smart seed..."
+bun run ./scripts/smart-seed.ts
+
 echo "[+] Database is ready!"
 
 # Start the application

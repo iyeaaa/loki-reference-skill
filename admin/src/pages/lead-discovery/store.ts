@@ -387,3 +387,53 @@ export const finishEnrichmentAtom = atom(null, (get, set, customerId: string, er
 export const resetEnrichmentStateAtom = atom(null, (_get, set) => {
   set(enrichmentStateAtom, initialEnrichmentState)
 })
+
+// ============================================
+// Bulk Enrichment State (프로필 고도화 퀵액션)
+// ============================================
+
+export interface BulkEnrichmentState {
+  isRunning: boolean
+  total: number
+  completed: number
+  currentCompany: string
+  startedAt?: Date
+}
+
+export const initialBulkEnrichmentState: BulkEnrichmentState = {
+  isRunning: false,
+  total: 0,
+  completed: 0,
+  currentCompany: "",
+}
+
+export const bulkEnrichmentStateAtom = atom<BulkEnrichmentState>(initialBulkEnrichmentState)
+
+// Bulk Enrichment 시작
+export const startBulkEnrichmentAtom = atom(null, (_get, set, total: number) => {
+  set(bulkEnrichmentStateAtom, {
+    isRunning: true,
+    total,
+    completed: 0,
+    currentCompany: "",
+    startedAt: new Date(),
+  })
+})
+
+// Bulk Enrichment 진행 업데이트
+export const updateBulkEnrichmentProgressAtom = atom(
+  null,
+  (get, set, completed: number, currentCompany: string) => {
+    const current = get(bulkEnrichmentStateAtom)
+    set(bulkEnrichmentStateAtom, {
+      ...current,
+      completed,
+      currentCompany,
+    })
+  },
+)
+
+// Bulk Enrichment 완료
+export const finishBulkEnrichmentAtom = atom(null, (_get, set) => {
+  set(bulkEnrichmentStateAtom, initialBulkEnrichmentState)
+})

@@ -15,6 +15,7 @@ import {
   Lightbulb,
   Loader2,
   SlidersHorizontal,
+  Sparkles,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
@@ -30,6 +31,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
+  enrichLeads,
   type LeadDiscoveryEventData,
   useLeadDiscoveryMutation,
   useLeadDiscoverySelectMutation,
@@ -42,14 +44,22 @@ import { LeadDiscoveryProgress } from "./components/LeadDiscoveryProgress"
 import {
   addChatMessageAtom,
   addCustomersAtom,
+  bulkEnrichmentStateAtom,
   type ChatMessage,
   type Customer,
   chatMessagesAtom,
+  customersAtom,
+  finishBulkEnrichmentAtom,
+  finishEnrichmentAtom,
   initialStreamingState,
   resetAllAtom,
   selectedTargetAtom,
+  startBulkEnrichmentAtom,
+  startEnrichmentAtom,
   streamingStateAtom,
+  updateBulkEnrichmentProgressAtom,
   updateChatMessageAtom,
+  updateCustomerAtom,
 } from "./store"
 
 // 코드 펜스 제거 유틸리티 (GPT가 ```markdown 으로 감싸는 경우 대비)
@@ -89,6 +99,16 @@ export function ChatRoom() {
 
   // Jotai 고객 상태
   const addCustomers = useSetAtom(addCustomersAtom)
+  const customers = useAtomValue(customersAtom)
+  const updateCustomer = useSetAtom(updateCustomerAtom)
+
+  // Bulk Enrichment 상태 (프로필 고도화)
+  const bulkEnrichmentState = useAtomValue(bulkEnrichmentStateAtom)
+  const startBulkEnrichment = useSetAtom(startBulkEnrichmentAtom)
+  const updateBulkEnrichmentProgress = useSetAtom(updateBulkEnrichmentProgressAtom)
+  const finishBulkEnrichment = useSetAtom(finishBulkEnrichmentAtom)
+  const startEnrichment = useSetAtom(startEnrichmentAtom)
+  const finishEnrichment = useSetAtom(finishEnrichmentAtom)
 
   // Jotai 스트리밍 상태 (리마운트 시에도 유지)
   const [streamingState, setStreamingState] = useAtom(streamingStateAtom)
@@ -113,6 +133,70 @@ export function ChatRoom() {
 
   // 워크스페이스
   const { selectedWorkspace } = useWorkspace()
+
+  // 프로필 고도화 핸들러 (100개 리드 Enrichment)
+  const handleBulkEnrichment = useCallback(async () => {
+    // 웹사이트가 있고 아직 enrichment 되지 않은 리드만
+    const leadsToEnrich = customers.filter((c) => c.web_address && !c.verified).slice(0, 100)
+
+    if (leadsToEnrich.length === 0) {
+      return
+    }
+
+    const workspaceId = selectedWorkspace?.id || ""
+    startBulkEnrichment(leadsToEnrich.length)
+    startEnrichment(leadsToEnrich.map((c) => c.id))
+
+    await enrichLeads(
+      leadsToEnrich.map((c) => ({
+        id: c.id,
+        webAddress: c.web_address || "",
+        companyName: c.company_name || "",
+      })),
+      workspaceId,
+      {
+        onProgress: (completed, _total, name) => {
+          updateBulkEnrichmentProgress(completed, name)
+        },
+        onResult: (leadId, result) => {
+          updateCustomer(leadId, {
+            verified: true,
+            description: result.description,
+            ...(result.email && { email: result.email }),
+            ...(result.phoneNumber && { phone: result.phoneNumber }),
+            ...(result.address && { address: result.address }),
+            ...(result.city && { city: result.city }),
+            ...(result.state && { state: result.state }),
+            ...(result.foundedYear && { foundedYear: result.foundedYear }),
+            ...(result.employeeCount && { employee: result.employeeCount }),
+            ...(result.linkedinUrl && { linkedinUrl: result.linkedinUrl }),
+            ...(result.facebookUrl && { facebookUrl: result.facebookUrl }),
+            ...(result.instagramUrl && { instagramUrl: result.instagramUrl }),
+            ...(result.twitterUrl && { twitterUrl: result.twitterUrl }),
+            ...(result.products && { products: result.products }),
+            ...(result.businessSectors && { businessSectors: result.businessSectors }),
+          })
+          finishEnrichment(leadId)
+        },
+        onError: (leadId, error) => {
+          console.error(`Enrichment failed for ${leadId}:`, error)
+          finishEnrichment(leadId, error)
+        },
+        onComplete: () => {
+          finishBulkEnrichment()
+        },
+      },
+    )
+  }, [
+    customers,
+    selectedWorkspace?.id,
+    startBulkEnrichment,
+    startEnrichment,
+    updateBulkEnrichmentProgress,
+    updateCustomer,
+    finishEnrichment,
+    finishBulkEnrichment,
+  ])
 
   // 페이지 로드 시 미완성된 빈 assistant 메시지 정리 (마운트 시 한 번만 실행)
   const cleanupIncompleteMessagesRef = useRef(false)
@@ -232,7 +316,12 @@ export function ChatRoom() {
             content: `${recInfo}**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.\n\n${analysisPart}${customerAnalysisPart}`,
           })
         }
-        return initialStreamingState
+        // status와 messageId를 유지하여 퀵액션 UI가 표시되도록 함
+        return {
+          ...initialStreamingState,
+          status: "complete" as const,
+          messageId: prev.messageId,
+        }
       })
     },
     onError: (error) => {
@@ -1256,6 +1345,93 @@ export function ChatRoom() {
                                     streamingState.status === "recommending"
                                   }
                                 />
+                              )}
+
+                            {/* 프로필 고도화 퀵액션 - 검색 완료 후 마지막 응답 메시지에 표시 */}
+                            {message.id === streamingState.messageId &&
+                              streamingState.status === "complete" &&
+                              customers.length > 0 &&
+                              !bulkEnrichmentState.isRunning && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.3, delay: 0.5 }}
+                                  className="mt-4 p-4 rounded-xl border border-primary/20 bg-primary/5"
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                      <Sparkles className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-foreground">프로필 고도화</p>
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {
+                                          customers.filter((c) => c.web_address && !c.verified)
+                                            .length
+                                        }
+                                        개 리드의 상세 정보를 AI로 추출합니다
+                                      </p>
+                                      <Button
+                                        onClick={handleBulkEnrichment}
+                                        className="mt-3 gap-2"
+                                        size="sm"
+                                      >
+                                        <Sparkles className="h-4 w-4" />
+                                        프로필 고도화 시작
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+
+                            {/* 프로필 고도화 진행 상태 */}
+                            {message.id === streamingState.messageId &&
+                              bulkEnrichmentState.isRunning && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  className="mt-4 p-4 rounded-xl border border-primary/20 bg-primary/5"
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                      <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-foreground">
+                                        프로필 고도화 진행 중
+                                      </p>
+                                      <div className="mt-2">
+                                        <div className="flex items-center justify-between text-sm mb-1">
+                                          <span className="text-muted-foreground truncate max-w-[200px]">
+                                            {bulkEnrichmentState.currentCompany || "준비 중..."}
+                                          </span>
+                                          <span className="font-medium text-primary">
+                                            {Math.round(
+                                              (bulkEnrichmentState.completed /
+                                                bulkEnrichmentState.total) *
+                                                100,
+                                            )}
+                                            %
+                                          </span>
+                                        </div>
+                                        <div className="w-full h-2 bg-primary/10 rounded-full overflow-hidden">
+                                          <motion.div
+                                            className="h-full bg-primary rounded-full"
+                                            initial={{ width: 0 }}
+                                            animate={{
+                                              width: `${(bulkEnrichmentState.completed / bulkEnrichmentState.total) * 100}%`,
+                                            }}
+                                            transition={{ duration: 0.3 }}
+                                          />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          {bulkEnrichmentState.completed} /{" "}
+                                          {bulkEnrichmentState.total} 완료
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </motion.div>
                               )}
 
                             {message.customersAdded && message.customersAdded.length > 0 && (

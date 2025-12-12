@@ -163,6 +163,16 @@ export const resetChatMessagesAtom = atom(null, (_get, set) => {
   localStorage.removeItem("lead-discovery-chat-messages")
 })
 
+// 전체 초기화 (새 검색) - 모든 상태를 초기화
+export const resetAllAtom = atom(null, (_get, set) => {
+  // 채팅 메시지 초기화
+  set(chatMessagesAtom, [])
+  localStorage.removeItem("lead-discovery-chat-messages")
+  // 고객 목록 초기화
+  set(customersAtom, [])
+  // 스트리밍 상태는 streamingStateAtom에서 별도로 초기화 (아래에 정의)
+})
+
 // ============================================
 // Streaming State (로컬스토리지에 저장하여 새로고침 후에도 유지)
 // ============================================

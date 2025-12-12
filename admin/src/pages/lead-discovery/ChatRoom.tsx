@@ -46,6 +46,7 @@ import {
   type Customer,
   chatMessagesAtom,
   initialStreamingState,
+  resetAllAtom,
   selectedTargetAtom,
   streamingStateAtom,
   updateChatMessageAtom,
@@ -68,6 +69,8 @@ export function ChatRoom() {
   const messages = useAtomValue(chatMessagesAtom)
   const addMessageToStore = useSetAtom(addChatMessageAtom)
   const updateMessageInStore = useSetAtom(updateChatMessageAtom)
+
+  const resetAll = useSetAtom(resetAllAtom)
 
   const addMessage = useCallback(
     (message: ChatMessage) => {
@@ -94,6 +97,13 @@ export function ChatRoom() {
   const [searchMode, setSearchMode] = useState<SearchMode>("website")
   const [animatingCard, setAnimatingCard] = useState<string | null>(null)
   const [cardAnimationDistance, setCardAnimationDistance] = useState<number>(0)
+
+  // 새 검색 핸들러 - 모든 상태 초기화
+  const handleNewSearch = useCallback(() => {
+    resetAll()
+    setStreamingState(initialStreamingState)
+    setInput("")
+  }, [resetAll, setStreamingState])
 
   // Refs
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -1106,146 +1116,167 @@ export function ChatRoom() {
               </div>
             </div>
           ) : (
-            <ScrollArea
-              className="h-full [&>[data-radix-scroll-area-viewport]]:!overflow-y-scroll"
-              ref={scrollRef}
-            >
-              <div className="p-4 pt-6 space-y-4">
-                {/* 검색 중이고 메시지가 없을 때만 상단에 progress 표시 (메시지가 있으면 메시지 내부에서 표시) */}
-                {isSearching && messages.length === 0 && (
-                  <div className="flex justify-start">
-                    <div className="w-full space-y-4">
-                      <LeadDiscoveryProgress
-                        status={streamingState.status}
-                        message={streamingState.message}
-                        mode={streamingState.mode}
-                        analyzedPages={streamingState.analyzedPages}
-                        customerAnalysisSummary={streamingState.customerAnalysisSummary}
-                        className="max-w-2xl"
-                      />
+            <div className="flex flex-col h-full">
+              {/* 새 검색 버튼 헤더 */}
+              <div className="flex-shrink-0 px-4 pt-3 pb-2 border-b border-border/50 bg-background/95 backdrop-blur-sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNewSearch}
+                  className="gap-1.5 text-xs h-7"
+                >
+                  <ArrowRight className="h-3 w-3 rotate-180" />새 검색
+                </Button>
+              </div>
+              <ScrollArea
+                className="flex-1 min-h-0 [&>[data-radix-scroll-area-viewport]]:!overflow-y-scroll"
+                ref={scrollRef}
+              >
+                <div className="p-4 pt-4 space-y-4">
+                  {/* 검색 중이고 메시지가 없을 때만 상단에 progress 표시 (메시지가 있으면 메시지 내부에서 표시) */}
+                  {isSearching && messages.length === 0 && (
+                    <div className="flex justify-start">
+                      <div className="w-full space-y-4">
+                        <LeadDiscoveryProgress
+                          status={streamingState.status}
+                          message={streamingState.message}
+                          mode={streamingState.mode}
+                          analyzedPages={streamingState.analyzedPages}
+                          customerAnalysisSummary={streamingState.customerAnalysisSummary}
+                          className="max-w-2xl"
+                        />
+                      </div>
                     </div>
-                  </div>
-                )}
-                {messages
-                  // 시간순 정렬 (로딩 중에도 올바른 순서 유지)
-                  .slice()
-                  .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-                  .filter((message) => {
-                    // 빈 assistant 메시지는 스트리밍 메시지 또는 분석 메시지가 아닐 때만 필터링
-                    if (
-                      message.role === "assistant" &&
-                      !message.content &&
-                      message.id !== streamingState.messageId &&
-                      message.id !== streamingState.analysisMessageId
-                    ) {
-                      return false
-                    }
-                    return true
-                  })
-                  .map((message) => (
-                    <div
-                      key={message.id}
-                      className={cn(
-                        "flex",
-                        message.role === "user" ? "justify-end" : "justify-start",
-                      )}
-                    >
-                      {message.role === "user" ? (
-                        <div className="max-w-[85%] rounded-lg px-4 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-foreground">
-                          <p className="text-base whitespace-pre-wrap">{message.content}</p>
-                        </div>
-                      ) : (
-                        <div className="w-full space-y-4">
-                          {/* LangGraph 진행 상태 표시 */}
-                          {message.id === streamingState.messageId && (
-                            <>
-                              {/* 웹사이트 분석 중일 때 (선택 후에는 표시 안 함) */}
-                              {streamingState.status !== "idle" &&
-                                streamingState.status !== "complete" &&
-                                streamingState.status !== "waiting_selection" &&
-                                !streamingState.selectedRecommendationId && (
-                                  <LeadDiscoveryProgress
-                                    status={streamingState.status}
-                                    message={streamingState.message}
-                                    mode={streamingState.mode}
-                                    analyzedPages={streamingState.analyzedPages}
-                                    customerAnalysisSummary={streamingState.customerAnalysisSummary}
-                                    className="max-w-2xl"
-                                  />
+                  )}
+                  {messages
+                    // 시간순 정렬 (로딩 중에도 올바른 순서 유지)
+                    .slice()
+                    .sort(
+                      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+                    )
+                    .filter((message) => {
+                      // 빈 assistant 메시지는 스트리밍 메시지 또는 분석 메시지가 아닐 때만 필터링
+                      if (
+                        message.role === "assistant" &&
+                        !message.content &&
+                        message.id !== streamingState.messageId &&
+                        message.id !== streamingState.analysisMessageId
+                      ) {
+                        return false
+                      }
+                      return true
+                    })
+                    .map((message) => (
+                      <div
+                        key={message.id}
+                        className={cn(
+                          "flex",
+                          message.role === "user" ? "justify-end" : "justify-start",
+                        )}
+                      >
+                        {message.role === "user" ? (
+                          <div className="max-w-[85%] rounded-lg px-4 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-foreground">
+                            <p className="text-base whitespace-pre-wrap">{message.content}</p>
+                          </div>
+                        ) : (
+                          <div className="w-full space-y-4">
+                            {/* LangGraph 진행 상태 표시 */}
+                            {message.id === streamingState.messageId && (
+                              <>
+                                {/* 웹사이트 분석 중일 때 (선택 후에는 표시 안 함) */}
+                                {streamingState.status !== "idle" &&
+                                  streamingState.status !== "complete" &&
+                                  streamingState.status !== "waiting_selection" &&
+                                  !streamingState.selectedRecommendationId && (
+                                    <LeadDiscoveryProgress
+                                      status={streamingState.status}
+                                      message={streamingState.message}
+                                      mode={streamingState.mode}
+                                      analyzedPages={streamingState.analyzedPages}
+                                      customerAnalysisSummary={
+                                        streamingState.customerAnalysisSummary
+                                      }
+                                      className="max-w-2xl"
+                                    />
+                                  )}
+
+                                {/* 선택 후 검색 중 로딩 UI */}
+                                {isSearching && streamingState.selectedRecommendationId && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="flex items-center gap-3 py-4"
+                                  >
+                                    <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                                    <span className="text-base text-muted-foreground">
+                                      선택하신 타겟에 맞는 바이어를 찾고 있어요
+                                    </span>
+                                  </motion.div>
                                 )}
-
-                              {/* 선택 후 검색 중 로딩 UI */}
-                              {isSearching && streamingState.selectedRecommendationId && (
-                                <motion.div
-                                  initial={{ opacity: 0, y: 10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ duration: 0.3 }}
-                                  className="flex items-center gap-3 py-4"
-                                >
-                                  <Loader2 className="h-5 w-5 text-primary animate-spin" />
-                                  <span className="text-base text-muted-foreground">
-                                    선택하신 타겟에 맞는 바이어를 찾고 있어요
-                                  </span>
-                                </motion.div>
-                              )}
-                            </>
-                          )}
-
-                          {/* 메시지 콘텐츠 (검색 결과 등 - 분석 리포트는 BuyerRecommendationCards 내부에서 표시) */}
-                          {message.content && (
-                            <div className="prose prose-sm max-w-none dark:prose-invert text-base">
-                              <ReactMarkdown components={markdownComponents}>
-                                {message.content}
-                              </ReactMarkdown>
-                            </div>
-                          )}
-
-                          {/* 바이어 추천 선택 UI - 첫 번째 응답 메시지에 표시 (분석 중, 추천 중, 선택 후 모두 유지) */}
-                          {message.id === streamingState.analysisMessageId &&
-                            (streamingState.status === "analyzing" ||
-                              streamingState.status === "recommending" ||
-                              streamingState.status === "complete" ||
-                              (streamingState.recommendations.length > 0 &&
-                                (isWaitingSelection ||
-                                  streamingState.selectedRecommendationId))) && (
-                              <BuyerRecommendationCards
-                                recommendations={streamingState.recommendations}
-                                onSelect={handleRecommendationSelect}
-                                disabled={isSearching || !!streamingState.selectedRecommendationId}
-                                selectedId={streamingState.selectedRecommendationId}
-                                analysisSummary={streamingState.analysisSummary}
-                                className="max-w-2xl"
-                                isLoadingRecommendations={streamingState.status === "recommending"}
-                                isAnalysisComplete={
-                                  isWaitingSelection ||
-                                  streamingState.status === "complete" ||
-                                  !!streamingState.selectedRecommendationId
-                                }
-                                isAnalyzing={
-                                  streamingState.status === "analyzing" ||
-                                  streamingState.status === "recommending"
-                                }
-                              />
+                              </>
                             )}
 
-                          {message.customersAdded && message.customersAdded.length > 0 && (
-                            <div className="mt-2 pt-2 border-t border-border/50">
-                              <p className="text-sm opacity-70">
-                                새로 추가된 고객{" "}
-                                {message.customersAdded
-                                  .map((c) => c.company_name || "-")
-                                  .join(", ")}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                {/* 스크롤 앵커 */}
-                <div ref={scrollEndRef} />
-              </div>
-            </ScrollArea>
+                            {/* 메시지 콘텐츠 (검색 결과 등 - 분석 리포트는 BuyerRecommendationCards 내부에서 표시) */}
+                            {message.content && (
+                              <div className="prose prose-sm max-w-none dark:prose-invert text-base">
+                                <ReactMarkdown components={markdownComponents}>
+                                  {message.content}
+                                </ReactMarkdown>
+                              </div>
+                            )}
+
+                            {/* 바이어 추천 선택 UI - 첫 번째 응답 메시지에 표시 (분석 중, 추천 중, 선택 후 모두 유지) */}
+                            {message.id === streamingState.analysisMessageId &&
+                              (streamingState.status === "analyzing" ||
+                                streamingState.status === "recommending" ||
+                                streamingState.status === "complete" ||
+                                (streamingState.recommendations.length > 0 &&
+                                  (isWaitingSelection ||
+                                    streamingState.selectedRecommendationId))) && (
+                                <BuyerRecommendationCards
+                                  recommendations={streamingState.recommendations}
+                                  onSelect={handleRecommendationSelect}
+                                  disabled={
+                                    isSearching || !!streamingState.selectedRecommendationId
+                                  }
+                                  selectedId={streamingState.selectedRecommendationId}
+                                  analysisSummary={streamingState.analysisSummary}
+                                  className="max-w-2xl"
+                                  isLoadingRecommendations={
+                                    streamingState.status === "recommending"
+                                  }
+                                  isAnalysisComplete={
+                                    isWaitingSelection ||
+                                    streamingState.status === "complete" ||
+                                    !!streamingState.selectedRecommendationId
+                                  }
+                                  isAnalyzing={
+                                    streamingState.status === "analyzing" ||
+                                    streamingState.status === "recommending"
+                                  }
+                                />
+                              )}
+
+                            {message.customersAdded && message.customersAdded.length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-border/50">
+                                <p className="text-sm opacity-70">
+                                  새로 추가된 고객{" "}
+                                  {message.customersAdded
+                                    .map((c) => c.company_name || "-")
+                                    .join(", ")}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  {/* 스크롤 앵커 */}
+                  <div ref={scrollEndRef} />
+                </div>
+              </ScrollArea>
+            </div>
           )}
         </div>
 

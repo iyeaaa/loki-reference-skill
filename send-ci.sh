@@ -162,6 +162,8 @@ fi
 # 변경된 파일 확인
 SKIP_ADMIN=false
 SKIP_SERVER=false
+STAGED_ADMIN_FILES=""
+STAGED_SERVER_FILES=""
 
 if [ "$ONLY_CHANGED" = true ]; then
   # staged 파일이 있으면 그것을 사용 (pre-commit용)
@@ -184,6 +186,9 @@ if [ "$ONLY_CHANGED" = true ]; then
     # pre-commit: staged 파일 확인
     ADMIN_CHANGED=$(echo "$STAGED_FILES" | grep "^admin/" | wc -l | tr -d ' ')
     SERVER_CHANGED=$(echo "$STAGED_FILES" | grep "^elysia-server/" | wc -l | tr -d ' ')
+    # lint 후 re-stage를 위해 staged 파일 목록 저장
+    STAGED_ADMIN_FILES=$(echo "$STAGED_FILES" | grep "^admin/" || true)
+    STAGED_SERVER_FILES=$(echo "$STAGED_FILES" | grep "^elysia-server/" || true)
   fi
 
   if [ "$ADMIN_CHANGED" -eq 0 ]; then
@@ -229,7 +234,13 @@ else
         yarn lint > /dev/null 2>&1 && yarn lint:check > /dev/null 2>&1 && yarn type-check > /dev/null 2>&1
         echo $? > "$ADMIN_RESULT"
       fi
-    ) &
+    )
+    ADMIN_EXIT_CODE=$(cat "$ADMIN_RESULT")
+    # lint 후 staged 파일 re-stage (lint가 파일을 수정했을 수 있음)
+    if [ "$ADMIN_EXIT_CODE" = "0" ] && [ -n "$STAGED_ADMIN_FILES" ]; then
+      echo "$STAGED_ADMIN_FILES" | xargs -I {} git add {} 2>/dev/null
+      [ "$QUIET" = false ] && log_admin "Re-staged lint-modified files"
+    fi
   else
     (
       cd admin
@@ -262,9 +273,14 @@ else
         yarn lint > /dev/null 2>&1 && yarn lint:check > /dev/null 2>&1 && yarn type-check > /dev/null 2>&1 && yarn build > /dev/null 2>&1
         echo $? > "$ADMIN_RESULT"
       fi
-    ) &
+    )
+    ADMIN_EXIT_CODE=$(cat "$ADMIN_RESULT")
+    # lint 후 staged 파일 re-stage
+    if [ "$ADMIN_EXIT_CODE" = "0" ] && [ -n "$STAGED_ADMIN_FILES" ]; then
+      echo "$STAGED_ADMIN_FILES" | xargs -I {} git add {} 2>/dev/null
+      [ "$QUIET" = false ] && log_admin "Re-staged lint-modified files"
+    fi
   fi
-  ADMIN_PID=$!
 fi
 
 # Elysia-server 검사
@@ -297,7 +313,13 @@ else
         bun lint > /dev/null 2>&1 && bun lint:check > /dev/null 2>&1 && bun type-check > /dev/null 2>&1
         echo $? > "$SERVER_RESULT"
       fi
-    ) &
+    )
+    SERVER_EXIT_CODE=$(cat "$SERVER_RESULT")
+    # lint 후 staged 파일 re-stage (lint가 파일을 수정했을 수 있음)
+    if [ "$SERVER_EXIT_CODE" = "0" ] && [ -n "$STAGED_SERVER_FILES" ]; then
+      echo "$STAGED_SERVER_FILES" | xargs -I {} git add {} 2>/dev/null
+      [ "$QUIET" = false ] && log_server "Re-staged lint-modified files"
+    fi
   else
     (
       cd elysia-server
@@ -330,18 +352,14 @@ else
         bun lint > /dev/null 2>&1 && bun lint:check > /dev/null 2>&1 && bun type-check > /dev/null 2>&1 && bun run build > /dev/null 2>&1
         echo $? > "$SERVER_RESULT"
       fi
-    ) &
+    )
+    SERVER_EXIT_CODE=$(cat "$SERVER_RESULT")
+    # lint 후 staged 파일 re-stage
+    if [ "$SERVER_EXIT_CODE" = "0" ] && [ -n "$STAGED_SERVER_FILES" ]; then
+      echo "$STAGED_SERVER_FILES" | xargs -I {} git add {} 2>/dev/null
+      [ "$QUIET" = false ] && log_server "Re-staged lint-modified files"
+    fi
   fi
-  SERVER_PID=$!
-fi
-
-# 모든 작업 완료 대기
-if [ ! -z "$ADMIN_PID" ]; then
-  wait $ADMIN_PID
-fi
-
-if [ ! -z "$SERVER_PID" ]; then
-  wait $SERVER_PID
 fi
 
 # 결과 파일에서 exit code 읽기

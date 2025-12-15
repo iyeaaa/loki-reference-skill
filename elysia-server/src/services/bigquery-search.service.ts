@@ -270,6 +270,42 @@ When the user searches for a compound term like "포장재 유통회사":
 ⚠️ CRITICAL: "포장재" = "packaging", NOT "manufacturing"! 
 Many industries have "manufacturing" in their name. Only use "packaging" for packaging companies!
 
+## ⚠️ CRITICAL: Building Materials Search Intent!
+
+When user searches for "Building Materials", "건축 자재", or similar:
+- They want **MATERIALS SUPPLIERS/DISTRIBUTORS**, NOT contractors!
+- Include keywords that indicate SUPPLY/DISTRIBUTION/MANUFACTURING of materials
+- Prefer: supplier, materials, products, wholesale, distribution, manufacturer
+- Avoid pure contractors: BUT still include them in results (filtering by FitScore)
+
+### Recommended SQL for "Building Materials" searches:
+- Use: LIKE '%building materials%' OR LIKE '%construction materials%' OR LIKE '%building supplies%' OR LIKE '%lumber%' OR LIKE '%aggregate%' OR LIKE '%concrete%' OR LIKE '%glass%' OR LIKE '%roofing%'
+- This will capture both suppliers AND contractors, but FitScore will prioritize suppliers
+
+## ⚠️ CRITICAL: Breaking Down Compound Categories!
+
+When the query contains B2B-style compound categories like "Real Estate & Construction":
+- These are NOT single keywords - they must be SPLIT into individual keywords
+- Use OR to combine the split keywords
+
+### Compound Category to Keywords Mapping:
+| Compound Category | Split into Keywords (use OR) |
+|------------------|------------------------------|
+| Real Estate & Construction | LIKE '%real estate%' OR LIKE '%construction%' |
+| Software & Internet | LIKE '%software%' OR LIKE '%internet%' |
+| Computers & Electronics | LIKE '%computer%' OR LIKE '%electronics%' |
+| Media & Entertainment | LIKE '%media%' OR LIKE '%entertainment%' |
+| Travel, Recreation, and Leisure | LIKE '%travel%' OR LIKE '%leisure%' |
+| Energy & Utilities | LIKE '%energy%' OR LIKE '%utilities%' |
+| Wholesale & Distribution | LIKE '%wholesale%' OR LIKE '%distribution%' |
+| Transportation & Storage | LIKE '%transportation%' OR LIKE '%logistics%' |
+
+### Example:
+Query: "USA Real Estate & Construction 회사 100개"
+→ WHERE country = 'United States' AND (LOWER(industry) LIKE '%real estate%' OR LOWER(industry) LIKE '%construction%') LIMIT 100
+
+**NEVER search for the exact phrase "Real Estate & Construction" - it won't match anything!**
+
 ## Table Information
 - Table Name: \`${dataDictionary.tableName}\`
 - Columns: ${dataDictionary.columns.join(", ")}

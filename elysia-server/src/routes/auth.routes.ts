@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia"
 import * as authService from "../services/auth.service"
 import * as oauthService from "../services/oauth.service"
-import * as salesStrategyService from "../services/sales-strategy.service"
+import * as onboardingService from "../services/onboarding.service"
 import * as userService from "../services/user.service"
 import * as workspaceService from "../services/workspace.service"
 import { errorResponse, ResponseCode } from "../types/response.types"
@@ -219,12 +219,21 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
         const { email, username, industry, target, country, experience, lang } = body
 
         // Log onboarding params for debugging
-        console.log("=== Email Registration - Onboarding Params ===")
-        console.log({ email, industry, target, country, experience, lang })
+        console.log("[Auth] ========================================")
+        console.log("[Auth] POST /register-email")
+        console.log("[Auth] Request body:", JSON.stringify(body, null, 2))
+        console.log("[Auth] Onboarding params:")
+        console.log("[Auth]   - email:", email)
+        console.log("[Auth]   - industry:", industry)
+        console.log("[Auth]   - target:", target)
+        console.log("[Auth]   - country:", country)
+        console.log("[Auth]   - experience:", experience)
+        console.log("[Auth]   - lang:", lang)
 
         // Check if user already exists
         const existingUser = await userService.checkAccountExists(email)
         if (existingUser) {
+          console.log("[Auth] ❌ User already exists:", email)
           set.status = 400
           return errorResponse("이미 등록된 이메일입니다.", ResponseCode.BAD_REQUEST)
         }
@@ -233,6 +242,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
           username && username.length >= 3 ? username : email.split("@")[0]
         ) as string
 
+        console.log("[Auth] Creating new user:", finalUsername)
         const newUser = await userService.createUser({
           username: finalUsername,
           email: email,
@@ -241,42 +251,60 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
         })
 
         if (!newUser) {
+          console.log("[Auth] ❌ Failed to create user")
           set.status = 400
           return errorResponse("사용자 생성에 실패했습니다.", ResponseCode.BAD_REQUEST)
         }
 
+        console.log("[Auth] ✅ User created:", newUser.id)
+
         // Create workspace with onboarding params for trial users
+        let workspace = null
         try {
-          const workspace = await workspaceService.createWorkspace({
+          console.log("[Auth] Creating workspace for user...")
+          workspace = await workspaceService.createWorkspace({
             name: `${newUser.username}의 워크스페이스`,
             description: "기본 워크스페이스",
             ownerId: newUser.id,
             isActive: true,
           })
+          console.log("[Auth] ✅ Workspace created:", workspace?.id)
 
-          // Link sales strategy if all 4 fields are provided
-          if (workspace && industry && target && country && experience) {
+          // Link sales strategy and save survey data if all 4 fields are provided
+          const hasAllOnboardingParams = !!(industry && target && country && experience)
+          console.log("[Auth] Has all onboarding params:", hasAllOnboardingParams)
+
+          if (workspace && hasAllOnboardingParams) {
+            // 1. Save survey data to onboarding_progress
             try {
-              await salesStrategyService.findOrCreateAndLinkSalesStrategy(workspace.id, {
-                industry: industry as
-                  | "manufacturing"
-                  | "it_saas"
-                  | "beauty"
-                  | "food"
-                  | "fashion"
-                  | "electronics"
-                  | "healthcare"
-                  | "guitar",
-                target: target as "b2b" | "b2c" | "both",
-                country: country as "jp" | "us" | "sea" | "eu" | "cn" | "ae",
-                experience: experience as "none" | "some" | "experienced",
-              })
-            } catch (strategyError) {
-              console.error("Failed to link sales strategy for email user:", strategyError)
+              console.log("[Auth] Saving survey data to onboarding_progress...")
+              console.log("[Auth] workspaceId:", workspace.id)
+              console.log(
+                "[Auth] surveyData:",
+                JSON.stringify({ industry, target, country, experience, lang }, null, 2),
+              )
+
+              await onboardingService.saveSurveyData(
+                workspace.id,
+                { industry, target, country, experience, lang },
+                newUser.id,
+              )
+              console.log("[Auth] ✅ Survey data saved to onboarding_progress")
+            } catch (surveyError) {
+              console.error("[Auth] ❌ Failed to save survey data:", surveyError)
+              // saveSurveyData already calls findOrCreateAndLinkSalesStrategy internally
+              // so we skip the manual call below if this succeeds
             }
+          } else {
+            console.log("[Auth] ⚠️ Skipping survey data save - missing required fields")
+            console.log("[Auth]   workspace:", !!workspace)
+            console.log("[Auth]   industry:", industry)
+            console.log("[Auth]   target:", target)
+            console.log("[Auth]   country:", country)
+            console.log("[Auth]   experience:", experience)
           }
         } catch (wsError) {
-          console.error("Failed to create default workspace for email user:", wsError)
+          console.error("[Auth] ❌ Failed to create workspace:", wsError)
           // Don't throw error here to avoid breaking user registration
         }
 
@@ -289,6 +317,9 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 
         // Get trial status
         const trialStatus = await userService.checkTrialStatus(newUser.id)
+
+        console.log("[Auth] ✅ Registration complete")
+        console.log("[Auth] ========================================")
 
         return {
           message: "이메일 등록이 완료되었습니다. 체험을 시작하세요!",
@@ -306,6 +337,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
           },
         }
       } catch (error) {
+        console.error("[Auth] ❌ Email registration error:", error)
         logger.error({ err: error }, "Email registration error")
         if (error instanceof Error) {
           if (error.message.includes("duplicate key value")) {

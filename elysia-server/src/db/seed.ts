@@ -25,6 +25,7 @@ import {
   workspaceMembers,
   workspaces,
 } from "./schema"
+import { seedSystemPolicies } from "./seed-iam"
 
 // Type guard helper to filter out falsy values
 function isNotFalsy<T>(value: T | false | null | undefined | 0 | ""): value is T {
@@ -35,6 +36,10 @@ export async function seed() {
   logger.info("Starting seed data creation")
 
   try {
+    // 0. IAM 시스템 정책 시드 (다른 데이터보다 먼저 실행되어야 함)
+    logger.info("Seeding IAM system policies first...")
+    await seedSystemPolicies()
+
     // 1. 부서 데이터 생성
     logger.info("Creating department data")
     const departmentSeeds = [

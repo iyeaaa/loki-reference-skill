@@ -1,4 +1,5 @@
 import { motion } from "framer-motion"
+import { useAtomValue } from "jotai"
 import { Mail } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -13,6 +14,7 @@ import { shouldReduceMotion, staggerContainerVariants, staggerItemVariants } fro
 import { apiFetch } from "@/lib/api/client"
 import { authApi } from "@/lib/api/services/auth"
 import { useAuth } from "@/lib/auth-provider"
+import { isValidSurveyData, surveyDataAtom } from "@/store/survey"
 
 interface GoogleAuthResponse {
   token: string
@@ -32,61 +34,32 @@ interface GoogleAuthResponse {
   }
 }
 
-interface OnboardingParams {
-  industry: string | null
-  target: string | null
-  country: string | null
-  experience: string | null
-  lang: string | null
-}
-
-const ONBOARDING_STORAGE_KEY = "onboarding_params"
-
 export default function NewTrialPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { login } = useAuth()
-  const { t, i18n } = useTranslation("translation")
+  const { t } = useTranslation("translation")
   const [isLoading, setIsLoading] = useState(false)
   const [isProcessingCallback, setIsProcessingCallback] = useState(false)
   const [processedCode, setProcessedCode] = useState<string | null>(null)
   const [email, setEmail] = useState("")
 
-  // Get onboarding params from sessionStorage (set on mount)
-  const getOnboardingParams = useCallback((): OnboardingParams => {
-    const stored = sessionStorage.getItem(ONBOARDING_STORAGE_KEY)
-    if (stored) {
-      try {
-        return JSON.parse(stored) as OnboardingParams
-      } catch {
-        return {
-          industry: null,
-          target: null,
-          country: null,
-          experience: null,
-          lang: i18n.language,
-        }
-      }
-    }
-    return { industry: null, target: null, country: null, experience: null, lang: i18n.language }
-  }, [i18n.language])
+  // Read survey data from Jotai (localStorage)
+  const surveyData = useAtomValue(surveyDataAtom)
+  const hasCompleteSurvey = isValidSurveyData(surveyData)
+
+  console.log("[NewTrialPage] Survey data from Jotai:", surveyData)
+  console.log("[NewTrialPage] Has complete survey:", hasCompleteSurvey)
 
   const handleGoogleCallback = useCallback(
     async (code: string) => {
       setIsProcessingCallback(true)
       try {
-        const onboardingParams = getOnboardingParams()
-        // Filter out null values to avoid validation errors
-        const body: Record<string, string> = { code }
-        if (onboardingParams.industry) body.industry = onboardingParams.industry
-        if (onboardingParams.target) body.target = onboardingParams.target
-        if (onboardingParams.country) body.country = onboardingParams.country
-        if (onboardingParams.experience) body.experience = onboardingParams.experience
-        if (onboardingParams.lang) body.lang = onboardingParams.lang
-
+        // Simple OAuth - just send the code
+        // Survey data is in Jotai/localStorage, will be saved in CompanyInformation
         const response = await apiFetch<GoogleAuthResponse>("/api/v1/auth/google/callback", {
           method: "POST",
-          body: JSON.stringify(body),
+          body: JSON.stringify({ code }),
         })
 
         // Create proper AuthUser format
@@ -113,25 +86,17 @@ export default function NewTrialPage() {
           toast.info(`무료 체험 기간: ${response.user.trialStatus.daysRemaining}일 남음`)
         }
 
-        // If we have onboarding params, show result page first
-        if (
-          onboardingParams.industry &&
-          onboardingParams.target &&
-          onboardingParams.country &&
-          onboardingParams.experience
-        ) {
+        // If survey was completed, show result page first
+        if (hasCompleteSurvey && surveyData) {
           const params = new URLSearchParams({
-            industry: onboardingParams.industry,
-            target: onboardingParams.target,
-            country: onboardingParams.country,
-            experience: onboardingParams.experience,
+            industry: surveyData.industry || "",
+            target: surveyData.target || "",
+            country: surveyData.country || "",
+            experience: surveyData.experience || "",
           })
-          // Clear stored onboarding params after successful login
-          sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
           navigate(`/trial/result?${params.toString()}`)
         } else {
-          // No onboarding params, go directly to company page
-          sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
+          // No survey data, go directly to company page
           navigate("/company")
         }
       } catch (error) {
@@ -142,25 +107,8 @@ export default function NewTrialPage() {
         setIsProcessingCallback(false)
       }
     },
-    [login, navigate, getOnboardingParams],
+    [login, navigate, hasCompleteSurvey, surveyData],
   )
-
-  // Store onboarding params on mount (before OAuth redirect)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Intentionally run only on mount to capture initial URL params
-  useEffect(() => {
-    const industry = searchParams.get("industry")
-    const target = searchParams.get("target")
-    const country = searchParams.get("country")
-    const experience = searchParams.get("experience")
-
-    // Only store if we have onboarding params (coming from /onboarding)
-    if (industry || target || country || experience) {
-      sessionStorage.setItem(
-        ONBOARDING_STORAGE_KEY,
-        JSON.stringify({ industry, target, country, experience, lang: i18n.language }),
-      )
-    }
-  }, [])
 
   // Handle OAuth callback
   useEffect(() => {
@@ -200,18 +148,11 @@ export default function NewTrialPage() {
 
     setIsLoading(true)
     try {
-      const onboardingParams = getOnboardingParams()
-      // Filter out null values to avoid validation errors
-      const body: Record<string, string> = { email }
-      if (onboardingParams.industry) body.industry = onboardingParams.industry
-      if (onboardingParams.target) body.target = onboardingParams.target
-      if (onboardingParams.country) body.country = onboardingParams.country
-      if (onboardingParams.experience) body.experience = onboardingParams.experience
-      if (onboardingParams.lang) body.lang = onboardingParams.lang
-
+      // Simple email registration - just send the email
+      // Survey data is in Jotai/localStorage, will be saved in CompanyInformation
       const response = await apiFetch<GoogleAuthResponse>("/api/v1/auth/register-email", {
         method: "POST",
-        body: JSON.stringify(body),
+        body: JSON.stringify({ email }),
       })
 
       // Create proper AuthUser format
@@ -238,25 +179,17 @@ export default function NewTrialPage() {
         toast.info(`무료 체험 기간: ${response.user.trialStatus.daysRemaining}일 남음`)
       }
 
-      // If we have onboarding params, show result page first
-      if (
-        onboardingParams.industry &&
-        onboardingParams.target &&
-        onboardingParams.country &&
-        onboardingParams.experience
-      ) {
+      // If survey was completed, show result page first
+      if (hasCompleteSurvey && surveyData) {
         const params = new URLSearchParams({
-          industry: onboardingParams.industry,
-          target: onboardingParams.target,
-          country: onboardingParams.country,
-          experience: onboardingParams.experience,
+          industry: surveyData.industry || "",
+          target: surveyData.target || "",
+          country: surveyData.country || "",
+          experience: surveyData.experience || "",
         })
-        // Clear stored onboarding params after successful registration
-        sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
         navigate(`/trial/result?${params.toString()}`)
       } else {
-        // No onboarding params, go directly to company page
-        sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
+        // No survey data, go directly to company page
         navigate("/company")
       }
     } catch (error) {

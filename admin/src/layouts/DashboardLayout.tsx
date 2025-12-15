@@ -204,14 +204,13 @@ function DashboardContent({ children }: DashboardContentProps) {
         onLogout={() => {
           setShowProfileCard(false)
 
-          // Check if user is trial user before clearing localStorage
-          const isTrialUserLogout = isTrialUser
-
           localStorage.removeItem("authToken")
           localStorage.removeItem("user")
+          // Clear Jotai survey data to prevent stale data for next user
+          localStorage.removeItem("rinda_survey_data")
 
-          // Redirect trial users to trial page, others to auth page
-          window.location.href = isTrialUserLogout ? "/trial" : "/auth"
+          // Redirect all users to login page
+          window.location.href = "/auth"
         }}
       />
     </>

@@ -61,12 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
-    // Check if current user is trial user before clearing localStorage
-    const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
-    const isTrialUserLogout = currentUser?.trialStatus?.isTrialActive || false
-
     localStorage.removeItem("authToken")
     localStorage.removeItem("user")
+    // Clear Jotai survey data to prevent stale data for next user
+    localStorage.removeItem("rinda_survey_data")
 
     // Clear onboarding-related session storage
     sessionStorage.removeItem("onboarding_sequence")
@@ -76,8 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setUser(null)
 
-    // Redirect trial users to trial page, others to auth page
-    window.location.href = isTrialUserLogout ? "/trial?from=logout" : "/auth"
+    // Redirect all users to login page
+    window.location.href = "/auth"
   }
 
   return (

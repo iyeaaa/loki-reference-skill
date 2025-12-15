@@ -1,10 +1,12 @@
 import { AnimatePresence, motion } from "framer-motion"
+import { useAtom } from "jotai"
 import { ArrowLeft } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { useNavigate, useParams } from "react-router"
+import { useNavigate, useParams } from "react-router-dom"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { Progress } from "@/components/ui/progress"
+import { surveyDataAtom } from "@/store/survey"
 import { ValuePropsPanel } from "./components/ValuePropsPanel"
 import {
   EXPORT_EXPERIENCES,
@@ -20,10 +22,15 @@ import {
 } from "./types"
 
 export default function OnboardingPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { step } = useParams<{ step: string }>()
   const currentStep = Math.min(Math.max(Number(step) || 1, 1), TOTAL_STEPS)
+
+  // Jotai atom for persistent survey data
+  const [, setSurveyData] = useAtom(surveyDataAtom)
+
+  // Local state for UI
   const [data, setData] = useState<OnboardingData>({
     industry: null,
     target: null,
@@ -48,30 +55,68 @@ export default function OnboardingPage() {
   }
 
   const handleSelectIndustry = (industry: Industry) => {
-    setData({ ...data, industry })
+    const newData = { ...data, industry }
+    setData(newData)
+    // Save to Jotai (localStorage) - partial data is fine
+    setSurveyData({
+      industry,
+      target: data.target,
+      country: data.country,
+      experience: data.experience,
+      lang: i18n.language,
+    })
+    console.log("[OnboardingPage] Industry selected:", industry)
     navigate("/trial/survey/2")
   }
 
   const handleSelectTarget = (target: TargetCustomer) => {
-    setData({ ...data, target })
+    const newData = { ...data, target }
+    setData(newData)
+    // Save to Jotai (localStorage)
+    setSurveyData({
+      industry: data.industry,
+      target,
+      country: data.country,
+      experience: data.experience,
+      lang: i18n.language,
+    })
+    console.log("[OnboardingPage] Target selected:", target)
     navigate("/trial/survey/3")
   }
 
   const handleSelectCountry = (country: TargetCountry) => {
-    setData({ ...data, country })
+    const newData = { ...data, country }
+    setData(newData)
+    // Save to Jotai (localStorage)
+    setSurveyData({
+      industry: data.industry,
+      target: data.target,
+      country,
+      experience: data.experience,
+      lang: i18n.language,
+    })
+    console.log("[OnboardingPage] Country selected:", country)
     navigate("/trial/survey/4")
   }
 
   const handleSelectExperience = (experience: ExportExperience) => {
-    setData({ ...data, experience })
-    // Navigate to /trial with query params
-    const params = new URLSearchParams({
-      industry: data.industry || "",
-      target: data.target || "",
-      country: data.country || "",
-      experience: experience,
-    })
-    navigate(`/trial?${params.toString()}`)
+    const newData = { ...data, experience }
+    setData(newData)
+
+    // Save complete survey data to Jotai (localStorage)
+    const completeSurvey = {
+      industry: data.industry,
+      target: data.target,
+      country: data.country,
+      experience,
+      lang: i18n.language,
+    }
+    setSurveyData(completeSurvey)
+    console.log("[OnboardingPage] Survey completed, saved to Jotai:", completeSurvey)
+
+    // Navigate to /trial (registration page)
+    // No longer need URL params - data is in Jotai/localStorage
+    navigate("/trial")
   }
 
   const renderStep = () => {

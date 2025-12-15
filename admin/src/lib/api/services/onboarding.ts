@@ -60,22 +60,43 @@ export const onboardingApi = {
    * 워크스페이스의 온보딩 진행 상태 조회 (없으면 생성)
    */
   getProgress: (workspaceId: string) => {
+    console.log("[OnboardingApi] getProgress called, workspaceId:", workspaceId)
     return apiFetch<{ data: OnboardingProgressData }>(
       `/api/v1/onboarding/workspace/${workspaceId}`,
-    ).then((res) => res.data)
+    ).then((res) => {
+      console.log("[OnboardingApi] getProgress response:")
+      console.log("[OnboardingApi]   - id:", res.data.id)
+      console.log("[OnboardingApi]   - status:", res.data.status)
+      console.log("[OnboardingApi]   - currentStep:", res.data.currentStep)
+      console.log("[OnboardingApi]   - surveyData:", JSON.stringify(res.data.surveyData, null, 2))
+      return res.data
+    })
   },
 
   /**
    * 설문 데이터 저장 (온보딩 시작)
    */
   saveSurvey: (workspaceId: string, surveyData: OnboardingSurveyData, userId?: string) => {
+    console.log("[OnboardingApi] saveSurvey called")
+    console.log("[OnboardingApi]   - workspaceId:", workspaceId)
+    console.log("[OnboardingApi]   - surveyData:", JSON.stringify(surveyData, null, 2))
+    console.log("[OnboardingApi]   - userId:", userId)
     return apiFetch<{ data: OnboardingProgressData }>(
       `/api/v1/onboarding/workspace/${workspaceId}/survey`,
       {
         method: "POST",
         body: JSON.stringify({ ...surveyData, userId }),
       },
-    ).then((res) => res.data)
+    ).then((res) => {
+      console.log("[OnboardingApi] saveSurvey response:")
+      console.log("[OnboardingApi]   - id:", res.data.id)
+      console.log("[OnboardingApi]   - status:", res.data.status)
+      console.log(
+        "[OnboardingApi]   - surveyData saved:",
+        JSON.stringify(res.data.surveyData, null, 2),
+      )
+      return res.data
+    })
   },
 
   /**

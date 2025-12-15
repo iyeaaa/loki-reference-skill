@@ -86,6 +86,8 @@ export function StepCompanyInfo() {
   // Get user's workspace
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
   const userId = currentUser?.id || ""
+  console.log("[StepCompanyInfo] 1. userId:", userId)
+
   const { data: userWorkspaces, isLoading: isLoadingWorkspaces } = useUserWorkspaces(
     userId,
     !!userId,
@@ -95,32 +97,47 @@ export function StepCompanyInfo() {
   const workspace = userWorkspaces?.[0]
   const isKorean = i18n.language === "ko"
 
+  console.log("[StepCompanyInfo] 2. isLoadingWorkspaces:", isLoadingWorkspaces)
+  console.log("[StepCompanyInfo] 3. workspace:", workspace?.id, workspace?.name)
+
   // Onboarding hooks
-  useOnboardingProgress(workspace?.id || "", !!workspace?.id)
+  const { data: onboardingData } = useOnboardingProgress(workspace?.id || "", !!workspace?.id)
   const completeStep1Mutation = useCompleteStep1()
+
+  console.log("[StepCompanyInfo] 4. onboardingData:", JSON.stringify(onboardingData, null, 2))
 
   // Fetch sales strategy data
   useEffect(() => {
     async function fetchSalesStrategy() {
+      console.log("[StepCompanyInfo] 5. fetchSalesStrategy called, workspace?.id:", workspace?.id)
+
       if (!workspace?.id) {
+        console.log("[StepCompanyInfo] 6. No workspace ID, skipping fetch")
         setIsLoading(false)
         return
       }
 
       try {
         setIsLoading(true)
+        console.log("[StepCompanyInfo] 7. Fetching sales strategy from API...")
         const response = await apiFetch<{
           data: SalesStrategyData
         }>(`/api/v1/workspace-sales-strategies/${workspace.id}`)
 
+        console.log(
+          "[StepCompanyInfo] 8. ✅ Sales strategy fetched:",
+          JSON.stringify(response.data, null, 2),
+        )
         setSalesStrategy(response.data)
         setEditedData({
           ...response.data,
           websiteUrl: response.data.websiteUrl || "",
         })
       } catch (error) {
-        console.error("Failed to fetch sales strategy:", error)
-        // If no strategy found, it's okay - user can still proceed
+        console.error("[StepCompanyInfo] 9. ❌ Failed to fetch sales strategy:", error)
+        // 데이터가 없으면 자동으로 수정 모드(입력 폼)로 시작
+        console.log("[StepCompanyInfo] 10. Setting isEditing=true due to fetch error")
+        setIsEditing(true)
       } finally {
         setIsLoading(false)
       }
@@ -145,21 +162,64 @@ export function StepCompanyInfo() {
   }
 
   const handleSave = async () => {
-    if (!workspace?.id) return
+    console.log("[StepCompanyInfo] handleSave called")
+    console.log("[StepCompanyInfo] workspace?.id:", workspace?.id)
+    console.log("[StepCompanyInfo] editedData:", JSON.stringify(editedData, null, 2))
+
+    if (!workspace?.id) {
+      console.log("[StepCompanyInfo] ❌ No workspace ID, aborting save")
+      return
+    }
+
+    // 필수 필드 검증
+    if (
+      !editedData.industry ||
+      !editedData.target ||
+      !editedData.country ||
+      !editedData.experience
+    ) {
+      console.log("[StepCompanyInfo] ❌ Missing required fields")
+      toast.error(isKorean ? "모든 필드를 입력해주세요" : "Please fill in all fields")
+      return
+    }
 
     setIsSaving(true)
     try {
-      // Update sales strategy
-      await apiFetch(`/api/v1/workspace-sales-strategies/${workspace.id}`, {
+      // 1. onboarding_progress.survey_data 저장
+      console.log(
+        `[StepCompanyInfo] 📤 Saving survey data to /api/v1/onboarding/workspace/${workspace.id}/survey`,
+      )
+      const surveyPayload = {
+        industry: editedData.industry,
+        target: editedData.target,
+        country: editedData.country,
+        experience: editedData.experience,
+        lang: i18n.language,
+        userId,
+      }
+      console.log("[StepCompanyInfo] Survey payload:", JSON.stringify(surveyPayload, null, 2))
+
+      const surveyResponse = await apiFetch(`/api/v1/onboarding/workspace/${workspace.id}/survey`, {
+        method: "POST",
+        body: JSON.stringify(surveyPayload),
+      })
+      console.log("[StepCompanyInfo] ✅ Survey data saved:", surveyResponse)
+
+      // 2. workspace_sales_strategies 업데이트 (websiteUrl 포함)
+      console.log(
+        `[StepCompanyInfo] 📤 Updating sales strategy at /api/v1/workspace-sales-strategies/${workspace.id}`,
+      )
+      const salesResponse = await apiFetch(`/api/v1/workspace-sales-strategies/${workspace.id}`, {
         method: "PUT",
         body: JSON.stringify(editedData),
       })
+      console.log("[StepCompanyInfo] ✅ Sales strategy updated:", salesResponse)
 
       setSalesStrategy(editedData)
       setIsEditing(false)
       toast.success(isKorean ? "저장되었습니다" : "Saved successfully")
     } catch (error) {
-      console.error("Failed to save sales strategy:", error)
+      console.error("[StepCompanyInfo] ❌ Failed to save:", error)
       toast.error(isKorean ? "저장에 실패했습니다" : "Failed to save")
     } finally {
       setIsSaving(false)

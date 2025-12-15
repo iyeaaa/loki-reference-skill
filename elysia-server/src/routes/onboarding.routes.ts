@@ -6,8 +6,17 @@
 
 import { Elysia, t } from "elysia"
 import * as onboardingService from "../services/onboarding.service"
+import { errorResponse, ResponseCode } from "../types/response.types"
 
 export const onboardingRoutes = new Elysia({ prefix: "/api/v1/onboarding" })
+  // 전역 에러 핸들러
+  .onError(({ error, set }) => {
+    if (error instanceof onboardingService.OnboardingValidationError) {
+      set.status = 400
+      return errorResponse(`[${error.code}] ${error.message}`, ResponseCode.BAD_REQUEST)
+    }
+    throw error
+  })
   // ====================================
   // 온보딩 진행 상태 조회
   // ====================================
@@ -16,14 +25,17 @@ export const onboardingRoutes = new Elysia({ prefix: "/api/v1/onboarding" })
   .get(
     "/workspace/:workspaceId",
     async ({ params: { workspaceId } }) => {
-      console.log("[Onboarding API] GET /workspace/:workspaceId called:", { workspaceId })
+      console.log("[Onboarding API] ========================================")
+      console.log("[Onboarding API] GET /workspace/:workspaceId")
+      console.log("[Onboarding API] workspaceId:", workspaceId)
       const progress = await onboardingService.getOrCreateOnboardingProgress(workspaceId)
-      console.log("[Onboarding API] Progress:", {
-        status: progress.status,
-        currentStep: progress.currentStep,
-        generatedSequenceId: progress.generatedSequenceId,
-        completedAt: progress.completedAt,
-      })
+      console.log("[Onboarding API] Response:")
+      console.log("[Onboarding API]   - id:", progress.id)
+      console.log("[Onboarding API]   - status:", progress.status)
+      console.log("[Onboarding API]   - currentStep:", progress.currentStep)
+      console.log("[Onboarding API]   - surveyData:", JSON.stringify(progress.surveyData, null, 2))
+      console.log("[Onboarding API]   - completedAt:", progress.completedAt)
+      console.log("[Onboarding API] ========================================")
       return { data: progress }
     },
     {
@@ -41,8 +53,24 @@ export const onboardingRoutes = new Elysia({ prefix: "/api/v1/onboarding" })
   .post(
     "/workspace/:workspaceId/survey",
     async ({ params: { workspaceId }, body }) => {
+      console.log("[Onboarding API] ========================================")
+      console.log("[Onboarding API] POST /workspace/:workspaceId/survey")
+      console.log("[Onboarding API] workspaceId:", workspaceId)
+      console.log("[Onboarding API] body:", JSON.stringify(body, null, 2))
+
       const { userId, ...surveyData } = body
+      console.log("[Onboarding API] surveyData:", JSON.stringify(surveyData, null, 2))
+      console.log("[Onboarding API] userId:", userId)
+
       const progress = await onboardingService.saveSurveyData(workspaceId, surveyData, userId)
+
+      console.log("[Onboarding API] Survey saved successfully")
+      console.log("[Onboarding API] Progress after save:")
+      console.log("[Onboarding API]   - id:", progress.id)
+      console.log("[Onboarding API]   - status:", progress.status)
+      console.log("[Onboarding API]   - currentStep:", progress.currentStep)
+      console.log("[Onboarding API]   - surveyData:", JSON.stringify(progress.surveyData, null, 2))
+      console.log("[Onboarding API] ========================================")
       return { data: progress }
     },
     {

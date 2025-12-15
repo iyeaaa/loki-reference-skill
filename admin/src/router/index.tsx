@@ -1,8 +1,10 @@
+import { useAtomValue } from "jotai"
 import { lazy } from "react"
 import { createBrowserRouter, Navigate, useSearchParams } from "react-router-dom"
 import { ProtectedRoute, UserProtectedRoute } from "@/components/ProtectedRoute"
 import { AuthProvider } from "@/lib/auth-provider"
 import { PermissionProvider, RouteGuard } from "@/lib/permission"
+import { isValidSurveyData, surveyDataAtom } from "@/store/survey"
 
 // Layouts - 즉시 로드 (모든 페이지에서 필요)
 import DashboardLayout from "../layouts/DashboardLayout"
@@ -88,23 +90,41 @@ function LoginRedirect() {
   return <Navigate to={`/auth${search ? `?${search}` : ""}`} replace />
 }
 
-// Redirect /trial to /trial/survey/1 if no params (except if from=logout)
+// Redirect /trial to /trial/survey/1 if no survey data
 function TrialRedirect() {
   const [searchParams] = useSearchParams()
+  const surveyData = useAtomValue(surveyDataAtom)
+  const hasSurveyData = isValidSurveyData(surveyData)
+
   const isFromLogout = searchParams.get("from") === "logout"
-  const hasParams = searchParams.toString().length > 0
+  const isOAuthCallback = searchParams.has("code") // Google OAuth callback
+  const hasError = searchParams.has("error") // OAuth error
+
+  console.log("[TrialRedirect] Survey data:", surveyData)
+  console.log("[TrialRedirect] Has valid survey data:", hasSurveyData)
+  console.log("[TrialRedirect] Is OAuth callback:", isOAuthCallback)
+
+  // If OAuth callback (has code param), always show NewTrialPage
+  // This prevents flash to survey during Jotai hydration
+  if (isOAuthCallback || hasError) {
+    console.log("[TrialRedirect] ✅ OAuth callback, showing NewTrialPage")
+    return <NewTrialPage />
+  }
 
   // If user logged out, stay on /trial (show login page)
   if (isFromLogout) {
     return <NewTrialPage />
   }
 
-  // If no params, redirect to onboarding survey
-  if (!hasParams) {
-    return <Navigate to="/trial/survey/1" replace />
+  // If survey completed (data in Jotai), show login page
+  if (hasSurveyData) {
+    console.log("[TrialRedirect] ✅ Survey completed, showing NewTrialPage")
+    return <NewTrialPage />
   }
 
-  return <NewTrialPage />
+  // No survey data, redirect to survey
+  console.log("[TrialRedirect] ⚠️ No survey data, redirecting to /trial/survey/1")
+  return <Navigate to="/trial/survey/1" replace />
 }
 
 export const router = createBrowserRouter([

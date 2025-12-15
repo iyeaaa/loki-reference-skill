@@ -75,6 +75,7 @@ export default function SettingsPage() {
   const updateProfileMutation = useUpdateProfileMutation()
   const [activeTab, setActiveTab] = useState("profile")
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isSettingsSidebarCollapsed, setIsSettingsSidebarCollapsed] = useState(false)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
@@ -566,6 +567,8 @@ export default function SettingsPage() {
             // Close sidebar on mobile after selection
             setIsSidebarOpen(false)
           }}
+          collapsed={isSettingsSidebarCollapsed}
+          onCollapsedChange={setIsSettingsSidebarCollapsed}
         />
       </div>
 

@@ -1,6 +1,6 @@
 /**
  * Lead Discovery API Routes
- * Integrates with LangGraph for AI-powered lead discovery
+ * Integrates with LangGraph for AI-powered lead discovery + Simple enrichment
  *
  * interrupt() 처리 방식:
  * - stream() 모드: GraphInterrupt 예외 발생 → catch에서 처리
@@ -22,6 +22,8 @@ import {
 import { clearCheckpoints, createLeadDiscoveryGraph } from "../services/lead-discovery/graph"
 import { leadDiscoveryLogger } from "../services/lead-discovery/logger"
 import type { LeadDiscoveryState } from "../services/lead-discovery/state"
+import { processLeadEnrichment } from "../services/web-extraction.service"
+import { DEFAULT_EXTRACTION_CONFIG } from "../types/web-extraction.types"
 import logger from "../utils/logger"
 import { createSSEResponse } from "../utils/sse-helper"
 
@@ -98,7 +100,6 @@ async function sendInterruptEvent(
 const leadDiscoveryGraph = createLeadDiscoveryGraph()
 
 export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery" })
-  // Health check
   .get(
     "/health",
     () => ({
@@ -662,6 +663,113 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
         summary: "Calculate fit scores for leads",
         description:
           "AI-powered fit score calculation for leads based on website analysis. Returns scores via SSE streaming.",
+      },
+    },
+  )
+
+  /**
+   * POST /api/v1/lead-discovery/enrich
+   * 단일 리드 강화 (항상 환경변수 API 키 사용)
+   * 위의 LangGraph 기반 lead discovery와 별개로 동작하는 단순 enrichment 엔드포인트
+   */
+  .post(
+    "/enrich",
+    async ({ body, set }) => {
+      const { websiteUrl, workspaceId } = body
+
+      logger.info(
+        {
+          workspaceId,
+          websiteUrl,
+        },
+        "[Lead Discovery] Starting lead enrichment with env API key",
+      )
+
+      // URL 유효성 검사
+      if (!websiteUrl || websiteUrl.trim().length < 3) {
+        set.status = 400
+        return {
+          success: false,
+          error: "유효한 웹사이트 URL을 입력해주세요",
+        }
+      }
+
+      // 환경변수 API 키 확인
+      if (!process.env.OPENAI_API_KEY) {
+        set.status = 500
+        return {
+          success: false,
+          error: "서버에 OpenAI API 키가 설정되어 있지 않습니다",
+        }
+      }
+
+      try {
+        // processLeadEnrichment 호출 (Lead Discovery 전용 함수)
+        const result = await processLeadEnrichment(websiteUrl.trim(), DEFAULT_EXTRACTION_CONFIG)
+
+        // 에러가 있는 경우
+        if (result.errorMessage) {
+          return {
+            success: false,
+            error: result.errorMessage,
+            data: {
+              website_url: result.websiteUrl,
+              http_status: result.httpStatus || null,
+              crawl_time_seconds: result.crawlTimeSeconds || null,
+            },
+          }
+        }
+
+        // 성공 응답
+        return {
+          success: true,
+          data: {
+            website_url: result.websiteUrl,
+            found_company_name: result.foundCompanyName || null,
+            description: result.description || null,
+            company_type: result.companyType || null,
+            email: result.email || null,
+            phone_number: result.phoneNumber || null,
+            address: result.address || null,
+            country: result.country || null,
+            city: result.city || null,
+            state: result.state || null,
+            founded_year: result.foundedYear || null,
+            employee_count: result.employeeCount || null,
+            linkedin_url: result.linkedinUrl || null,
+            facebook_url: result.facebookUrl || null,
+            instagram_url: result.instagramUrl || null,
+            twitter_url: result.twitterUrl || null,
+            products: result.products || null,
+            business_sectors: result.businessSectors || null,
+            product_categories: result.productCategories || null,
+            industry_types: result.industryTypes || null,
+            http_status: result.httpStatus || null,
+            crawl_time_seconds: result.crawlTimeSeconds || null,
+            gpt_time_seconds: result.gptTimeSeconds || null,
+            collected_at: result.collectedAt || null,
+          },
+        }
+      } catch (error) {
+        logger.error({ error, websiteUrl }, "[Lead Discovery] Enrichment failed")
+
+        set.status = 500
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "리드 강화 중 오류가 발생했습니다",
+        }
+      }
+    },
+    {
+      body: t.Object({
+        websiteUrl: t.String(),
+        workspaceId: t.String(),
+      }),
+      detail: {
+        tags: ["lead-discovery"],
+        summary: "Simple lead enrichment (env API key only)",
+        description:
+          "Enrich a single lead using environment variable API key. Separate from LangGraph-based discovery.",
       },
     },
   )

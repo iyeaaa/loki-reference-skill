@@ -209,6 +209,7 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
   /**
    * POST /api/v1/admin/web-extraction/analyze
    * 웹데추용 단일 웹사이트 URL 분석 (정형화된 JSON 응답)
+   * Workspace API 키 사용
    */
   .post(
     "/analyze",
@@ -221,7 +222,7 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
           websiteUrl,
           searchCriteriaCount: searchCriteria?.length || 0,
         },
-        "Starting single website analysis (structured)",
+        "[Web Extraction] Starting single website analysis (structured)",
       )
 
       // URL 유효성 검사
@@ -234,7 +235,7 @@ export const webExtractionRoutes = new Elysia({ prefix: "/api/v1/admin/web-extra
       }
 
       try {
-        // processCompanyRecord 호출
+        // processCompanyRecord 호출 (Web Extraction 전용 함수)
         const result = await processCompanyRecord(
           { websiteUrl: websiteUrl.trim() },
           DEFAULT_EXTRACTION_CONFIG,

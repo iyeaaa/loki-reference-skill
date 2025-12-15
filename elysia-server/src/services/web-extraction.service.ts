@@ -546,7 +546,130 @@ export async function fetchWithDepth(
 }
 
 /**
- * GPT를 사용하여 연락처 정보 추출
+ * GPT를 사용하여 연락처 정보 추출 (Lead Discovery 전용)
+ * 항상 환경변수 API 키만 사용
+ */
+export async function extractContactsForLeadDiscovery(
+  pagesContent: Map<string, string>,
+  gptTimeout: number,
+): Promise<ExtractedContacts> {
+  try {
+    // 모든 페이지 내용 합치기
+    const combinedContent = Array.from(pagesContent.values()).join("\n\n")
+
+    if (!combinedContent || combinedContent.length < 50) {
+      return {
+        errorMessage: "웹사이트 콘텐츠가 너무 짧거나 비어있습니다",
+      }
+    }
+
+    // 환경변수 API 키 사용 (Lead Discovery는 항상 환경변수만 사용)
+    const apiKey = process.env.OPENAI_API_KEY
+
+    if (!apiKey) {
+      logger.error("[Lead Discovery] OPENAI_API_KEY not found in environment variables")
+      return {
+        errorMessage: "서버에 OpenAI API 키가 설정되어 있지 않습니다",
+      }
+    }
+
+    logger.info("[Lead Discovery] Using OPENAI_API_KEY from environment variable")
+
+    const prompt = `다음 웹사이트 콘텐츠에서 회사 정보와 연락처를 추출해주세요.
+
+웹사이트 콘텐츠:
+${combinedContent.substring(0, 15000)}
+
+다음 정보를 JSON 형식으로 추출해주세요 (찾을 수 없는 필드는 빈 문자열로):
+{
+  "foundCompanyName": "웹사이트에서 발견한 회사명",
+  "description": "회사 설명 (100자 이내)",
+  "companyType": "업체 유형 (제조업체, 브랜드사, 유통업체, 수입업체, 대리점, 소매업체 등)",
+  "address": "주소",
+  "country": "국가",
+  "city": "도시",
+  "state": "주/도",
+  "foundedYear": "설립년도",
+  "phoneNumber": "전화번호 (여러개면 쉼표로 구분)",
+  "email": "이메일 (여러개면 쉼표로 구분)",
+  "facebookUrl": "페이스북 URL",
+  "instagramUrl": "인스타그램 URL",
+  "twitterUrl": "트위터/X URL",
+  "linkedinUrl": "링크드인 URL",
+  "employeeCount": "직원 수",
+  "products": "주요 제품/서비스 (쉼표로 구분)",
+  "businessSectors": "비즈니스 섹터 (쉼표로 구분)",
+  "productCategories": "제품 카테고리 (쉼표로 구분)",
+  "industryTypes": "산업 유형 (쉼표로 구분)"
+}
+
+중요: 반드시 유효한 JSON만 반환하고, 추가 설명은 포함하지 마세요.`
+
+    const openai = createOpenAI({
+      apiKey: apiKey,
+    })
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), gptTimeout * 1000)
+
+    const { text: responseText } = await generateText({
+      model: openai("gpt-4o-mini"),
+      system:
+        "You are a data extraction assistant. Extract company information from website content and return it as valid JSON only.",
+      prompt: prompt,
+      temperature: 0.1,
+      abortSignal: controller.signal,
+    })
+
+    clearTimeout(timeoutId)
+
+    // JSON 파싱
+    let jsonText = responseText.trim()
+
+    // 백틱 제거
+    if (jsonText.startsWith("`") && jsonText.includes("}")) {
+      const startIdx = jsonText.indexOf("{")
+      const endIdx = jsonText.lastIndexOf("}")
+      if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+        jsonText = jsonText.substring(startIdx, endIdx + 1)
+      }
+    }
+
+    // JSON 객체만 추출
+    if (!jsonText.startsWith("{")) {
+      const jsonObjectMatch = jsonText.match(/\{[\s\S]*\}/)
+      if (jsonObjectMatch?.[0]) {
+        jsonText = jsonObjectMatch[0]
+      }
+    }
+
+    try {
+      const extracted: ExtractedContacts = JSON.parse(jsonText)
+      return extracted
+    } catch (parseError) {
+      logger.error(
+        {
+          parseError: parseError instanceof Error ? parseError.message : "Unknown parse error",
+          responseText,
+          extractedJsonText: jsonText,
+        },
+        "[Lead Discovery] Failed to parse GPT response",
+      )
+      return {
+        errorMessage: "GPT 응답을 파싱할 수 없습니다",
+      }
+    }
+  } catch (error) {
+    logger.error({ error }, "[Lead Discovery] GPT extraction failed")
+    return {
+      errorMessage: error instanceof Error ? error.message : "GPT 추출 실패",
+    }
+  }
+}
+
+/**
+ * GPT를 사용하여 연락처 정보 추출 (Web Extraction 전용)
+ * Workspace API 키를 사용하며, 없으면 환경변수를 fallback으로 사용
  */
 export async function extractContactsWithGPT(
   pagesContent: Map<string, string>,
@@ -627,19 +750,19 @@ customSearchResults의 각 검색 조건에 대해서는:
 5. 예시: "홈페이지에 '기업 고객 대상 솔루션 제공'이라는 문구가 있음", "제품 목록에 산업용 장비 3종(A-100, B-200, C-300)이 나열됨", "회사 소개에 '1987년 설립된 대한민국 대표 기업'이라고 명시됨"
 6. 추상적이거나 일반적인 근거가 아닌, 페이지에서 확인 가능한 구체적인 증거를 제시해주세요`
 
-    // Workspace에 설정된 API 키 가져오기 (round-robin)
+    // Workspace API 키 가져오기 (round-robin)
     let apiKey = workspaceId ? await getNextApiKey(workspaceId) : null
 
-    // Workspace API 키가 없으면 환경변수 사용 (단일 웹사이트 분석용)
+    // Workspace API 키가 없으면 환경변수 사용 (fallback)
     if (!apiKey) {
       apiKey = process.env.OPENAI_API_KEY || null
       if (apiKey) {
-        logger.info("Using OPENAI_API_KEY from environment variable")
+        logger.info("[Web Extraction] Using OPENAI_API_KEY from environment variable (fallback)")
       }
     }
 
     if (!apiKey) {
-      logger.error({ workspaceId }, "No API key available for GPT extraction")
+      logger.error({ workspaceId }, "[Web Extraction] No API key available")
       return {
         errorMessage:
           "워크스페이스에 OpenAI API 키가 등록되어 있지 않습니다. API 키를 먼저 등록해주세요.",
@@ -801,7 +924,95 @@ ${combinedContent.substring(0, 15000)}
 }
 
 /**
- * 단일 회사 레코드 처리
+ * 단일 리드 강화 처리 (Lead Discovery 전용)
+ * 항상 환경변수 API 키 사용, searchCriteria 없음
+ */
+export async function processLeadEnrichment(
+  websiteUrl: string,
+  config: WebExtractionConfig,
+): Promise<CompanyRecord> {
+  const startTime = Date.now()
+  const record: CompanyRecord = { websiteUrl }
+
+  try {
+    // URL 검증
+    if (!websiteUrl || websiteUrl.trim().length < 3) {
+      return {
+        ...record,
+        collectedAt: new Date().toISOString(),
+        errorMessage: "웹사이트 URL이 비어있습니다",
+      }
+    }
+
+    logger.info({ websiteUrl }, "[Lead Discovery] Processing lead enrichment")
+
+    // 랜덤 지연 (봇 탐지 회피)
+    const delay =
+      Math.random() * (config.randomDelayMax - config.randomDelayMin) + config.randomDelayMin
+    await new Promise((resolve) => setTimeout(resolve, delay))
+
+    const crawlStartTime = Date.now()
+
+    // 웹사이트 크롤링
+    const { pagesContent, httpStatus } = await fetchWithDepth(
+      websiteUrl,
+      config.crawlDepth,
+      config.timeoutSeconds,
+    )
+
+    const crawlElapsed = (Date.now() - crawlStartTime) / 1000
+
+    if (pagesContent.size === 0) {
+      return {
+        ...record,
+        httpStatus,
+        crawlTimeSeconds: crawlElapsed,
+        collectedAt: new Date().toISOString(),
+        errorMessage: "웹사이트 콘텐츠를 가져오는데 실패했습니다",
+      }
+    }
+
+    // GPT로 연락처 추출 (Lead Discovery 전용 함수 사용)
+    const gptStartTime = Date.now()
+    const contacts = await extractContactsForLeadDiscovery(pagesContent, config.gptTimeout)
+    const gptElapsed = (Date.now() - gptStartTime) / 1000
+
+    // 결과 병합
+    const result: CompanyRecord = {
+      ...record,
+      ...contacts,
+      httpStatus,
+      crawlTimeSeconds: crawlElapsed,
+      gptTimeSeconds: gptElapsed,
+      collectedAt: new Date().toISOString(),
+    }
+
+    logger.info(
+      {
+        websiteUrl,
+        hasEmail: !!result.email,
+        hasPhone: !!result.phoneNumber,
+        elapsed: (Date.now() - startTime) / 1000,
+      },
+      "[Lead Discovery] Lead enrichment completed",
+    )
+
+    return result
+  } catch (error) {
+    const elapsed = (Date.now() - startTime) / 1000
+    logger.error({ error, websiteUrl }, "[Lead Discovery] Failed to process lead enrichment")
+    return {
+      ...record,
+      crawlTimeSeconds: elapsed,
+      collectedAt: new Date().toISOString(),
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+/**
+ * 단일 회사 레코드 처리 (Web Extraction 전용)
+ * Workspace API 키 사용, searchCriteria 지원
  */
 export async function processCompanyRecord(
   record: CompanyRecord,
@@ -847,7 +1058,7 @@ export async function processCompanyRecord(
       }
     }
 
-    // GPT로 연락처 추출
+    // GPT로 연락처 추출 (Web Extraction 전용 함수 사용)
     const gptStartTime = Date.now()
     const contacts = await extractContactsWithGPT(
       pagesContent,

@@ -4050,6 +4050,7 @@ __metadata:
     openapi-fetch: "npm:^0.15.0"
     openapi-react-query: "npm:^0.5.1"
     openapi-typescript: "npm:^7.10.1"
+    p-limit: "npm:^3.1.0"
     p-retry: "npm:^7.1.1"
     papaparse: "npm:^5.5.3"
     postcss: "npm:^8.5.6"
@@ -8780,7 +8781,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"p-limit@npm:^3.0.2":
+"p-limit@npm:^3.0.2, p-limit@npm:^3.1.0":
   version: 3.1.0
   resolution: "p-limit@npm:3.1.0"
   dependencies:

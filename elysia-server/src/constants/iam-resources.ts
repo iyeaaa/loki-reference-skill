@@ -315,11 +315,35 @@ export const ROUTE_PERMISSIONS: Record<string, { resource: IamResource; action: 
   "POST /leads/import": { resource: IAM_RESOURCES.LEADS, action: IAM_ACTIONS.IMPORT },
   "GET /leads/export": { resource: IAM_RESOURCES.LEADS, action: IAM_ACTIONS.EXPORT },
 
-  // Lead Discovery
+  // Lead Discovery (LangGraph AI + Simple Enrichment)
   "GET /lead-discovery": { resource: IAM_RESOURCES.LEADS_DISCOVERY, action: IAM_ACTIONS.READ },
+  "GET /lead-discovery/health": {
+    resource: IAM_RESOURCES.LEADS_DISCOVERY,
+    action: IAM_ACTIONS.READ,
+  },
   "POST /lead-discovery/search": {
     resource: IAM_RESOURCES.LEADS_DISCOVERY,
     action: IAM_ACTIONS.EXECUTE,
+  },
+  "POST /lead-discovery/select": {
+    resource: IAM_RESOURCES.LEADS_DISCOVERY,
+    action: IAM_ACTIONS.EXECUTE,
+  },
+  "POST /lead-discovery/score": {
+    resource: IAM_RESOURCES.LEADS_DISCOVERY,
+    action: IAM_ACTIONS.EXECUTE,
+  },
+  "POST /lead-discovery/enrich": {
+    resource: IAM_RESOURCES.LEADS_DISCOVERY,
+    action: IAM_ACTIONS.EXECUTE,
+  },
+  "GET /lead-discovery/session/:sessionId": {
+    resource: IAM_RESOURCES.LEADS_DISCOVERY,
+    action: IAM_ACTIONS.READ,
+  },
+  "DELETE /lead-discovery/sessions": {
+    resource: IAM_RESOURCES.LEADS_DISCOVERY,
+    action: IAM_ACTIONS.DELETE,
   },
 
   // Customer Groups

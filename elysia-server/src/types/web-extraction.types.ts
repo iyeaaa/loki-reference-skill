@@ -14,6 +14,7 @@ export interface CompanyRecord {
   httpStatus?: number
   foundCompanyName?: string
   description?: string
+  companyType?: string
   address?: string
   country?: string
   city?: string
@@ -115,6 +116,7 @@ export interface FetchResult {
 export interface ExtractedContacts {
   foundCompanyName?: string
   description?: string
+  companyType?: string
   address?: string
   country?: string
   city?: string

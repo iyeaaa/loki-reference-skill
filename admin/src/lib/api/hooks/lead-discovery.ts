@@ -6,6 +6,7 @@
  */
 
 import { useMutation } from "@tanstack/react-query"
+import pLimit from "p-limit"
 import type {
   AnalyzedPage,
   BigQueryResult,
@@ -673,7 +674,7 @@ export async function calculateFitScores(
 }
 
 // ============================================
-// Lead Enrichment API (Web Extraction 기반)
+// Lead Enrichment API (Lead Discovery 전용)
 // ============================================
 
 export interface EnrichmentResult {
@@ -751,14 +752,14 @@ const hasValidData = (data: EnrichmentResult): boolean => {
   )
 }
 
-// 단일 리드 enrichment (web-extraction API 사용)
+// 단일 리드 enrichment (lead-discovery 전용 API 사용)
 export const enrichLead = async (
   webAddress: string,
   _companyName: string,
   workspaceId: string,
 ): Promise<EnrichLeadResponse> => {
   try {
-    const response = await fetch(`${BASE_URL}/api/v1/admin/web-extraction/analyze`, {
+    const response = await fetch(`${BASE_URL}/api/v1/lead-discovery/enrich`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -819,7 +820,7 @@ export const enrichLead = async (
   }
 }
 
-// 여러 리드 enrichment (순차 처리 - API 부하 방지)
+// 여러 리드 enrichment (p-limit 방식 - 동시성 20개 병렬 처리)
 export const enrichLeads = async (
   leads: Array<{ id: string; webAddress: string; companyName: string }>,
   workspaceId: string,
@@ -832,30 +833,49 @@ export const enrichLeads = async (
 ): Promise<void> => {
   const total = leads.length
   let completed = 0
+  const concurrency = 20 // 동시 처리 개수
 
-  log.info("Starting enrichment", { total, workspaceId })
+  log.info("Starting enrichment with p-limit", { total, workspaceId, concurrency })
 
-  // 순차 처리 (웹 크롤링은 시간이 걸리므로 병렬로 하면 부하가 큼)
-  for (const lead of leads) {
+  // p-limit으로 동시성 제어
+  const limit = pLimit(concurrency)
+
+  // 각 리드 처리 함수
+  const processLead = async (lead: { id: string; webAddress: string; companyName: string }) => {
     try {
+      // 처리 시작 알림
       callbacks.onProgress?.(completed, total, lead.companyName)
 
+      // API 호출
       const response = await enrichLead(lead.webAddress, lead.companyName, workspaceId)
 
+      // 결과 처리
       if (response.success && response.data) {
         callbacks.onResult?.(lead.id, response.data)
         log.info("Enrichment success", { leadId: lead.id, hasEmail: !!response.data.email })
       } else {
         callbacks.onError?.(lead.id, response.error || "Unknown error")
+        log.info("Enrichment failed", { leadId: lead.id, error: response.error })
       }
     } catch (error) {
-      callbacks.onError?.(lead.id, error instanceof Error ? error.message : "Failed to enrich")
+      const errorMsg = error instanceof Error ? error.message : "Failed to enrich"
+      callbacks.onError?.(lead.id, errorMsg)
+      log.error("Enrichment exception", { leadId: lead.id, error })
+    } finally {
+      // 완료 카운트 증가 및 진행 상황 업데이트
+      completed++
+      callbacks.onProgress?.(completed, total, lead.companyName)
     }
-
-    completed++
   }
 
+  // p-limit을 사용하여 모든 리드를 동시성 제어와 함께 처리
+  const promises = leads.map((lead) => limit(() => processLead(lead)))
+
+  // 모든 Promise 완료 대기 (에러가 있어도 모두 실행)
+  await Promise.allSettled(promises)
+
+  // 완료 콜백
   callbacks.onProgress?.(completed, total, "")
   callbacks.onComplete?.()
-  log.info("Enrichment complete", { total, completed })
+  log.info("Enrichment complete", { total, completed, success: completed })
 }

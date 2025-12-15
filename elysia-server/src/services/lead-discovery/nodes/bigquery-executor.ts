@@ -11,7 +11,7 @@ import type { BigQueryResult, LeadDiscoveryState } from "../state"
 // Data Dictionaries for BigQuery tables
 // B2B Leads 테이블 (BigQuery 실제 스키마 기준)
 const B2B_LEADS_DATA_DICTIONARY = {
-  tableName: "gen-lang-client-0140658679.test_lead_01.b2b_leads_all",
+  tableName: "gen-lang-client-0140658679.test_lead_01.b2b_leads_clean",
   columns: [
     "company",
     "website",
@@ -246,7 +246,7 @@ export const CRUNCHBASE_DATA_DICTIONARY = {
 
 // Apollo Leads 테이블 (고품질 데이터 291만개 - industry 자유형식 LIKE 검색)
 const APOLLO_LEADS_DATA_DICTIONARY = {
-  tableName: "gen-lang-client-0140658679.test_lead_01.apollo_leads_all",
+  tableName: "gen-lang-client-0140658679.test_lead_01.apollo_leads_clean",
   columns: ["company", "website", "industry", "employees", "country", "industry_category"],
   // Apollo industry는 자유형식 텍스트 (LIKE 검색용 주요 키워드, 빈도순 - 실제 데이터 분석 기반)
   industries: [
@@ -566,7 +566,7 @@ const APOLLO_LEADS_DATA_DICTIONARY = {
 
 // Fresh Leads 테이블 (Apollo + Phone + Pitchbook 통합 데이터 24만개)
 const FRESH_LEADS_DATA_DICTIONARY = {
-  tableName: "gen-lang-client-0140658679.test_lead_01.fresh_leads",
+  tableName: "gen-lang-client-0140658679.test_lead_01.fresh_leads_clean",
   columns: ["company", "website", "industry", "employees", "country", "industry_category"],
   // industry는 자유형식 텍스트 (LIKE 검색용 주요 키워드 - 실제 데이터 분석 기반)
   industries: [

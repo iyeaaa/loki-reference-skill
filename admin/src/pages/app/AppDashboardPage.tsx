@@ -1,9 +1,9 @@
 import { format } from "date-fns"
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useEmails } from "@/lib/api/hooks/emails"
-import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
+import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { OpenedEmailsTab } from "./components/OpenedEmailsTab"
 import { SalesStrategyTab } from "./components/SalesStrategyTab"
 import { SentEmailsTab } from "./components/SentEmailsTab"
@@ -12,20 +12,19 @@ export default function AppDashboardPage() {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState("sent")
 
-  // Get user's workspace
-  const currentUser = useMemo(() => JSON.parse(localStorage.getItem("user") || "{}"), [])
-  const userId = currentUser?.id || ""
-  const { data: userWorkspaces } = useUserWorkspaces(userId, !!userId)
-  const workspace = userWorkspaces?.[0]
+  // Get selected workspace from sidebar selection
+  const { selectedWorkspace } = useWorkspace()
+  // Use undefined for "all" to fetch from all workspaces
+  const workspaceId = selectedWorkspace?.id === "all" ? undefined : selectedWorkspace?.id
 
   // Fetch email counts
   const { data: openedEmailsData } = useEmails({
-    workspaceId: workspace?.id || "",
+    workspaceId: workspaceId || "",
     status: "opened",
     limit: 100,
   })
   const { data: sentEmailsData } = useEmails({
-    workspaceId: workspace?.id || "",
+    workspaceId: workspaceId || "",
     status: "sent",
     limit: 100,
   })

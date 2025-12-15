@@ -1,33 +1,27 @@
 import { format } from "date-fns"
 import { Loader2, Mail, User } from "lucide-react"
-import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { useEmails } from "@/lib/api/hooks/emails"
-import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
+import { useWorkspace } from "@/lib/hooks/useWorkspace"
 
 export function SentEmailsTab() {
   const { t } = useTranslation()
 
-  // Get user's workspace
-  const currentUser = useMemo(() => JSON.parse(localStorage.getItem("user") || "{}"), [])
-  const userId = currentUser?.id || ""
-  const { data: userWorkspaces, isLoading: isLoadingWorkspace } = useUserWorkspaces(
-    userId,
-    !!userId,
-  )
-  const workspace = userWorkspaces?.[0]
+  // Get selected workspace from sidebar selection
+  const { selectedWorkspace } = useWorkspace()
+  // Use undefined for "all" to fetch from all workspaces
+  const workspaceId = selectedWorkspace?.id === "all" ? undefined : selectedWorkspace?.id
 
   // Fetch emails with status filter
-  const { data: emailsData, isLoading: isLoadingEmails } = useEmails({
-    workspaceId: workspace?.id || "",
+  const { data: emailsData, isLoading } = useEmails({
+    workspaceId: workspaceId || "",
     status: "sent",
     limit: 20,
   })
 
   const emails = emailsData?.emails || []
-  const isLoading = isLoadingWorkspace || isLoadingEmails
 
   if (isLoading) {
     return (

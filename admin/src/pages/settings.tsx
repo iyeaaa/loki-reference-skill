@@ -544,18 +544,18 @@ export default function SettingsPage() {
         <button
           type="button"
           aria-label="Close sidebar"
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden cursor-default"
+          className="fixed inset-0 bg-black/50 z-40 sm:hidden cursor-default"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar - Hidden on mobile, visible on lg+ */}
+      {/* Sidebar - Hidden on mobile, visible on sm+ */}
       <div
         className={`
-          fixed lg:relative inset-y-0 left-0 z-50
+          fixed sm:relative inset-y-0 left-0 z-50
           transform transition-transform duration-300 ease-in-out
-          lg:transform-none
-          ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          sm:transform-none sm:translate-x-0 shrink-0
+          ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
         <SettingsSidebar
@@ -570,7 +570,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto min-w-0">
         <div className="h-full flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
@@ -579,7 +579,7 @@ export default function SettingsPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="lg:hidden"
+                className="sm:hidden"
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               >
                 {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}

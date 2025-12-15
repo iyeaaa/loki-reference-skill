@@ -21,6 +21,7 @@ import {
 } from "../services/lead-discovery/fit-score-calculator"
 import { clearCheckpoints, createLeadDiscoveryGraph } from "../services/lead-discovery/graph"
 import { leadDiscoveryLogger } from "../services/lead-discovery/logger"
+import { getMoreResults } from "../services/lead-discovery/nodes/bigquery-executor"
 import type { LeadDiscoveryState } from "../services/lead-discovery/state"
 import { processLeadEnrichment } from "../services/web-extraction.service"
 import { DEFAULT_EXTRACTION_CONFIG } from "../types/web-extraction.types"
@@ -245,6 +246,9 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
                 websiteAnalysis: state.websiteAnalysis,
                 error: state.error,
                 duration,
+                // 더 가져오기 정보
+                hasMore: state.hasMore,
+                totalAvailable: state.totalAvailable,
               },
             })
 
@@ -441,6 +445,9 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
                 selectedRecommendation: finalStateValues.selectedRecommendation,
                 error: finalStateValues.error,
                 duration,
+                // 더 가져오기 정보
+                hasMore: finalStateValues.hasMore,
+                totalAvailable: finalStateValues.totalAvailable,
               },
             })
 
@@ -541,6 +548,57 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
         tags: ["lead-discovery"],
         summary: "Get session state",
         description: "Retrieve the current state of a lead discovery session.",
+      },
+    },
+  )
+
+  // Get more results (pagination)
+  .post(
+    "/more",
+    async ({ body, set }) => {
+      const { sessionId, offset = 100, limit = 100 } = body
+
+      leadDiscoveryLogger.info(
+        `[더 가져오기] 세션: ${sessionId}, offset: ${offset}, limit: ${limit}`,
+      )
+
+      const moreResults = getMoreResults(sessionId, offset, limit)
+
+      if (!moreResults) {
+        set.status = 404
+        return {
+          success: false,
+          error: "세션을 찾을 수 없거나 결과가 만료되었습니다. 다시 검색해주세요.",
+        }
+      }
+
+      leadDiscoveryLogger.info(
+        `[더 가져오기] 반환: ${moreResults.results.length}개, 남음: ${moreResults.totalAvailable - offset - moreResults.results.length}개`,
+      )
+
+      return {
+        success: true,
+        results: moreResults.results,
+        hasMore: moreResults.hasMore,
+        totalAvailable: moreResults.totalAvailable,
+        offset: offset + moreResults.results.length,
+      }
+    },
+    {
+      body: t.Object({
+        sessionId: t.String({ description: "Session ID from the search request" }),
+        offset: t.Optional(
+          t.Number({ default: 100, description: "Starting offset (default: 100)" }),
+        ),
+        limit: t.Optional(
+          t.Number({ default: 100, description: "Number of results to fetch (default: 100)" }),
+        ),
+      }),
+      detail: {
+        tags: ["lead-discovery"],
+        summary: "Get more search results",
+        description:
+          "Fetch additional results from a previous search. Results are cached for 10 minutes after the initial search.",
       },
     },
   )

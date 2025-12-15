@@ -8,6 +8,41 @@ import { InvalidQueryError, searchBigQuery } from "../../bigquery-search.service
 import { leadDiscoveryLogger } from "../logger"
 import type { BigQueryResult, LeadDiscoveryState } from "../state"
 
+// 세션별 전체 결과 캐시 (더 가져오기 기능용)
+const sessionResultsCache = new Map<string, BigQueryResult[]>()
+
+// 캐시 정리 (10분 후 자동 삭제)
+function cacheResults(sessionId: string, results: BigQueryResult[]) {
+  sessionResultsCache.set(sessionId, results)
+  setTimeout(
+    () => {
+      sessionResultsCache.delete(sessionId)
+      leadDiscoveryLogger.info(`[캐시] 세션 ${sessionId} 결과 캐시 삭제됨`)
+    },
+    10 * 60 * 1000,
+  ) // 10분
+}
+
+// 캐시에서 추가 결과 가져오기
+export function getMoreResults(
+  sessionId: string,
+  offset: number,
+  limit: number = 100,
+): { results: BigQueryResult[]; hasMore: boolean; totalAvailable: number } | null {
+  const cachedResults = sessionResultsCache.get(sessionId)
+  if (!cachedResults) {
+    return null
+  }
+
+  const results = cachedResults.slice(offset, offset + limit)
+  const hasMore = offset + limit < cachedResults.length
+  return {
+    results,
+    hasMore,
+    totalAvailable: cachedResults.length,
+  }
+}
+
 // Data Dictionaries for BigQuery tables
 // B2B Leads 테이블 (BigQuery 실제 스키마 기준)
 const B2B_LEADS_DATA_DICTIONARY = {
@@ -860,6 +895,33 @@ const INDUSTRY_KEYWORD_MAP: Record<string, string[]> = {
   software: ["software", "saas", "tech"],
   healthcare: ["health", "healthcare", "medical"],
   manufacturing: ["manufacturing", "manufacturer"],
+  // 🔥 Interior materials 관련 키워드 (핵심!)
+  "interior materials": [
+    "flooring",
+    "tile",
+    "stone",
+    "marble",
+    "granite",
+    "cabinet",
+    "carpet",
+    "hardwood",
+    "millwork",
+    "drywall",
+    "building materials",
+  ],
+  interior: ["flooring", "tile", "cabinet", "carpet", "hardwood", "millwork", "interior"],
+  flooring: ["flooring", "hardwood", "laminate", "vinyl", "carpet", "tile"],
+  tile: ["tile", "ceramic", "porcelain", "stone", "marble", "granite"],
+  cabinet: ["cabinet", "cabinetry", "millwork", "kitchen cabinet"],
+  "building materials": [
+    "building materials",
+    "construction materials",
+    "lumber",
+    "drywall",
+    "insulation",
+    "roofing",
+  ],
+  distributor: ["distributor", "wholesale", "supplier", "distribution"],
 }
 
 // 쿼리에서 국가 키워드 추출 (특정 국가 검색 여부도 반환)
@@ -923,6 +985,151 @@ function calculateCountryMatchScore(
   return 0
 }
 
+// 🔥 최우선 키워드 (building materials + interior materials 핵심) → +100점
+const TOP_PRIORITY_KEYWORDS = [
+  // Building materials
+  "building materials",
+  "building material",
+  "construction materials",
+  "construction material",
+  "building supplies",
+  "building supply",
+  // Interior materials 핵심
+  "interior materials",
+  "interior material",
+  "flooring materials",
+  "flooring distributor",
+  "tile distributor",
+  "cabinet distributor",
+  "wall covering",
+  "millwork",
+]
+
+// ⭐ 높은 우선순위 키워드 (인테리어 자재 - 바닥재/타일/캐비닛) → +80점
+const HIGH_PRIORITY_KEYWORDS = [
+  // 바닥재
+  "flooring",
+  "hardwood",
+  "laminate flooring",
+  "vinyl flooring",
+  "carpet",
+  "carpet distributor",
+  // 타일/석재
+  "tile",
+  "stone",
+  "marble",
+  "granite",
+  "ceramic",
+  "porcelain",
+  "natural stone",
+  // 캐비닛/목공
+  "cabinet",
+  "cabinetry",
+  "millwork",
+  "molding",
+  "moulding",
+  "trim",
+  // 벽재
+  "drywall",
+  "paneling",
+  "wallpaper",
+  // 기타 건축자재
+  "lumber",
+  "insulation",
+  "roofing materials",
+]
+
+// 중간 우선순위 (일반 도매/유통) → +50점
+const MEDIUM_PRIORITY_KEYWORDS = [
+  "wholesale",
+  "distributor",
+  "supplier",
+  "distribution",
+  "materials",
+  "supplies",
+  "aggregate",
+  "aggregates",
+  "ready-mix",
+  "hardware",
+]
+
+// 낮은 우선순위 (배관/HVAC - interior materials와 간접 관련) → +15점
+const LOW_PRIORITY_KEYWORDS = [
+  "plumbing",
+  "pipe",
+  "fittings",
+  "hvac",
+  "irrigation",
+  "water heater",
+  "bathroom fixtures",
+  "kitchen fixtures",
+  "faucet",
+  "sink",
+  "shower",
+  "vanity",
+]
+
+// 설계/서비스 키워드 (감점)
+const DESIGN_SERVICE_KEYWORDS = [
+  "architect",
+  "architecture",
+  "engineering",
+  "engineer",
+  "design",
+  "landscape",
+  "interior design",
+  "lighting",
+  "planning",
+  "consulting",
+  "management",
+]
+
+// 자재 도매 검색 시 무관한 제품 키워드 (강한 감점 -100점)
+const UNRELATED_PRODUCT_KEYWORDS = [
+  // 화장품/개인용품
+  "cosmetic",
+  "beauty",
+  "skincare",
+  "personal care",
+  "deodorant",
+  "fragrance",
+  "makeup",
+  // 의류/패션
+  "clothing",
+  "apparel",
+  "fashion",
+  "textile",
+  "embroidery",
+  "hat",
+  "hats",
+  "cap",
+  "caps",
+  "snapback",
+  // 보석/액세서리
+  "jewelry",
+  "jewellery",
+  "accessori",
+  "bead",
+  "watch",
+  // 식품/음료
+  "food",
+  "beverage",
+  "restaurant",
+  "catering",
+  "grocery",
+  // 기타 무관
+  "storage services",
+  "moving supplies",
+  "self storage",
+  "gift shop",
+  "pet supplies",
+  "toys",
+  "sporting goods",
+  "electronics",
+  "software",
+  "it services",
+]
+
 // 리드의 산업과 검색 키워드 매칭 점수 계산
 function calculateIndustryMatchScore(lead: BigQueryResult, searchKeywords: string[]): number {
   if (searchKeywords.length === 0) return 0
@@ -930,13 +1137,58 @@ function calculateIndustryMatchScore(lead: BigQueryResult, searchKeywords: strin
   const industry = (lead.mainIndustry || "").toLowerCase()
   const category = (lead.category || "").toLowerCase()
   const subIndustry = (lead.subIndustry || "").toLowerCase()
+  const companyName = (lead.companyName || "").toLowerCase()
+  const combinedText = `${industry} ${category} ${subIndustry} ${companyName}`
 
   let score = 0
+
+  // 0. 무관한 제품 키워드 체크 (최우선 - 강한 감점 -100점)
+  const hasUnrelatedProduct = UNRELATED_PRODUCT_KEYWORDS.some((kw) => combinedText.includes(kw))
+  if (hasUnrelatedProduct) {
+    // 자재 도매 검색에서 완전히 무관한 제품은 최하위로
+    return -100
+  }
+
+  // 1. 기본 키워드 매칭
   for (const keyword of searchKeywords) {
     const kw = keyword.toLowerCase()
     if (industry.includes(kw)) score += 10
     if (category.includes(kw)) score += 8
     if (subIndustry.includes(kw)) score += 6
+  }
+
+  // 2. 계층화된 우선순위 점수 적용
+
+  // 🔥 최우선 (building/interior materials 핵심): +100점
+  const hasTopPriority = TOP_PRIORITY_KEYWORDS.some((kw) => combinedText.includes(kw))
+  if (hasTopPriority) {
+    score += 100
+  }
+
+  // ⭐ 높은 우선순위 (바닥재/타일/캐비닛): +80점
+  const hasHighPriority = HIGH_PRIORITY_KEYWORDS.some((kw) => combinedText.includes(kw))
+  if (hasHighPriority && !hasTopPriority) {
+    score += 80
+  }
+
+  // 중간 우선순위 (일반 도매/유통): +50점
+  const hasMediumPriority = MEDIUM_PRIORITY_KEYWORDS.some((kw) => combinedText.includes(kw))
+  if (hasMediumPriority && !hasTopPriority && !hasHighPriority) {
+    score += 50
+  }
+
+  // 낮은 우선순위 (배관/HVAC): +15점
+  const hasLowPriority = LOW_PRIORITY_KEYWORDS.some((kw) => combinedText.includes(kw))
+  if (hasLowPriority && !hasTopPriority && !hasHighPriority && !hasMediumPriority) {
+    score += 15
+  }
+
+  // 3. 설계/서비스 키워드 감점 (-30점)
+  const hasAnyMaterialsKeyword = hasTopPriority || hasHighPriority || hasMediumPriority
+  const hasDesignKeyword = DESIGN_SERVICE_KEYWORDS.some((kw) => combinedText.includes(kw))
+  if (hasDesignKeyword && !hasAnyMaterialsKeyword) {
+    // 자재 키워드가 없으면서 설계 키워드가 있으면 감점
+    score -= 30
   }
 
   return score
@@ -969,51 +1221,87 @@ function smartShuffle(results: BigQueryResult[], searchQuery: string): BigQueryR
     `[스마트 정렬] 산업 키워드: ${industryKeywords.length > 0 ? industryKeywords.join(", ") : "(없음)"}`,
   )
 
-  // 키워드가 없으면 기존 랜덤 셔플
+  // 키워드가 없어도 소스 기반 우선순위 적용 (Apollo > Fresh > 기타)
   if (countryKeywords.length === 0 && industryKeywords.length === 0) {
-    return shuffleArray(results)
+    leadDiscoveryLogger.info("[스마트 정렬] 키워드 없음 - 소스 기반 우선순위 적용 (Apollo > Fresh)")
+
+    // Apollo 우선, Fresh 다음, 나머지
+    const apolloResults = results.filter((r) => r.source === "apollo")
+    const freshResults = results.filter((r) => r.source === "fresh")
+    const otherResults = results.filter((r) => r.source !== "apollo" && r.source !== "fresh")
+
+    return [
+      ...shuffleArray(apolloResults),
+      ...shuffleArray(freshResults),
+      ...shuffleArray(otherResults),
+    ]
   }
 
-  // 각 리드에 매칭 점수 계산 (국가 + 산업)
-  const scored = results.map((lead) => ({
-    lead,
-    countryScore: calculateCountryMatchScore(lead, countryKeywords, isSpecificCountry),
-    industryScore: calculateIndustryMatchScore(lead, industryKeywords),
-  }))
+  // 각 리드에 매칭 점수 계산 (국가 + 산업 + 소스 보너스)
+  const scored = results.map((lead) => {
+    const countryScore = calculateCountryMatchScore(lead, countryKeywords, isSpecificCountry)
+    let industryScore = calculateIndustryMatchScore(lead, industryKeywords)
+
+    // Apollo 소스 보너스 (+20점)
+    if (lead.source === "apollo") {
+      industryScore += 20
+    }
+    // Fresh 소스 보너스 (+15점)
+    if (lead.source === "fresh") {
+      industryScore += 15
+    }
+
+    return { lead, countryScore, industryScore }
+  })
 
   // 그룹 분류 (국가 매칭 우선, Region은 제외)
-  // 1. 국가 O + 산업 O: 최우선
-  const bothMatch = scored.filter((s) => s.countryScore > 0 && s.industryScore >= 10)
-  // 2. 국가 O + 산업 부분매칭
+  // 자재/도매 핵심 키워드 보너스(+50) 고려하여 기준 조정
+  // 1. 국가 O + 자재/도매 핵심 키워드 (score >= 50): 최우선
+  const priorityMatch = scored.filter((s) => s.countryScore > 0 && s.industryScore >= 50)
+  // 2. 국가 O + 산업 O (score >= 10): 우선
+  const bothMatch = scored.filter(
+    (s) => s.countryScore > 0 && s.industryScore >= 10 && s.industryScore < 50,
+  )
+  // 3. 국가 O + 산업 부분매칭 (score 1-9)
   const countryWithPartialIndustry = scored.filter(
     (s) => s.countryScore > 0 && s.industryScore > 0 && s.industryScore < 10,
   )
-  // 3. 국가 O + 산업 X
-  const countryOnly = scored.filter((s) => s.countryScore > 0 && s.industryScore === 0)
-  // 4. 국가 X + 산업 O (Region 제외)
-  const industryOnly = scored.filter((s) => s.countryScore === 0 && s.industryScore >= 10)
-  // 5. Region 결과 (특정 국가 검색 시 최하단으로)
+  // 4. 국가 O + 산업 X 또는 설계 감점 (score <= 0)
+  const countryOnly = scored.filter((s) => s.countryScore > 0 && s.industryScore <= 0)
+  // 5. 국가 X + 자재/도매 핵심 키워드 (Region 제외)
+  const industryPriority = scored.filter((s) => s.countryScore === 0 && s.industryScore >= 50)
+  // 6. 국가 X + 산업 O (Region 제외)
+  const industryOnly = scored.filter(
+    (s) => s.countryScore === 0 && s.industryScore >= 10 && s.industryScore < 50,
+  )
+  // 7. Region 결과 (특정 국가 검색 시 최하단으로)
   const regionResults = scored.filter((s) => s.countryScore < 0)
-  // 6. 나머지
-  const noMatch = scored.filter((s) => s.countryScore === 0 && s.industryScore < 10)
+  // 8. 나머지 (설계/서비스 업체 포함)
+  const noMatch = scored.filter(
+    (s) => s.countryScore === 0 && s.industryScore < 10 && s.industryScore > -100,
+  )
 
   leadDiscoveryLogger.info(
     `[스마트 정렬] 매칭 결과: ` +
+      `자재도매+국가=${priorityMatch.length}, ` +
       `국가+산업=${bothMatch.length}, ` +
       `국가+부분산업=${countryWithPartialIndustry.length}, ` +
       `국가만=${countryOnly.length}, ` +
+      `자재도매=${industryPriority.length}, ` +
       `산업만=${industryOnly.length}, ` +
       `Region(제외)=${regionResults.length}, ` +
-      `없음=${noMatch.length}`,
+      `기타=${noMatch.length}`,
   )
 
-  // 우선순위대로 결합 (각 그룹 내에서는 랜덤, Region은 최하단)
+  // 우선순위대로 결합 (자재/도매 키워드 매칭이 최상위)
   const sortedResults = [
-    ...shuffleArray(bothMatch).map((s) => s.lead),
-    ...shuffleArray(countryWithPartialIndustry).map((s) => s.lead),
-    ...shuffleArray(countryOnly).map((s) => s.lead),
-    ...shuffleArray(industryOnly).map((s) => s.lead),
-    ...shuffleArray(noMatch).map((s) => s.lead),
+    ...shuffleArray(priorityMatch).map((s) => s.lead), // 자재/도매 + 국가 매칭 (최우선)
+    ...shuffleArray(bothMatch).map((s) => s.lead), // 국가 + 산업 매칭
+    ...shuffleArray(countryWithPartialIndustry).map((s) => s.lead), // 국가 + 부분 산업
+    ...shuffleArray(industryPriority).map((s) => s.lead), // 자재/도매 키워드만 (국가 X)
+    ...shuffleArray(countryOnly).map((s) => s.lead), // 국가만
+    ...shuffleArray(industryOnly).map((s) => s.lead), // 산업만
+    ...shuffleArray(noMatch).map((s) => s.lead), // 기타
     ...shuffleArray(regionResults).map((s) => s.lead), // Region은 최하단
   ]
 
@@ -1021,7 +1309,10 @@ function smartShuffle(results: BigQueryResult[], searchQuery: string): BigQueryR
 }
 
 // Transform Apollo results to our format
-function transformApolloResults(results: Record<string, unknown>[]): BigQueryResult[] {
+function transformApolloResults(
+  results: Record<string, unknown>[],
+  source: "apollo" | "fresh" = "apollo",
+): BigQueryResult[] {
   return results.map((row) => ({
     companyName: row.company as string | undefined,
     webAddress: row.website as string | undefined,
@@ -1033,6 +1324,7 @@ function transformApolloResults(results: Record<string, unknown>[]): BigQueryRes
     subIndustry: "-", // Apollo에는 sub_industry 없음
     email: undefined, // Apollo에는 email 없음
     employee: row.employees?.toString() || undefined,
+    source, // 데이터 소스
   }))
 }
 
@@ -1040,10 +1332,10 @@ function transformApolloResults(results: Record<string, unknown>[]): BigQueryRes
 // 컬럼 순서: 회사명, 웹사이트, Description, Fit Score, Country, Category, Main Industry, Sub Industry, Company Email
 function transformResults(
   results: Record<string, unknown>[],
-  isCrunchbase: boolean,
+  source: "b2b" | "crunchbase",
 ): BigQueryResult[] {
   return results.map((row) => {
-    if (isCrunchbase) {
+    if (source === "crunchbase") {
       // Crunchbase 테이블 컬럼 매핑
       return {
         companyName: row.company as string | undefined,
@@ -1058,6 +1350,7 @@ function transformResults(
         phone: row.phone as string | undefined,
         employee: row.employees as string | undefined,
         revenue: row.revenue as string | undefined,
+        source: "crunchbase",
       }
     }
     // B2B Leads 테이블 컬럼 매핑
@@ -1074,6 +1367,7 @@ function transformResults(
       phone: row.phone as string | undefined,
       employee: row.employees as string | undefined,
       revenue: row.revenue as string | undefined,
+      source: "b2b",
     }
   })
 }
@@ -1124,7 +1418,7 @@ export async function executeBigQuery(
       emitter.progress("executeBigQuery", "네 테이블에서 검색 중...", 20)
     }
 
-    // 네 테이블 병렬 검색
+    // 네 테이블 병렬 검색 (Crunchbase 포함)
     leadDiscoveryLogger.info(`[리드 검색] BigQuery 실행 중 (네 테이블 병렬)...`)
 
     const [b2bResult, crunchbaseResult, apolloResult, freshResult] = await Promise.allSettled([
@@ -1139,7 +1433,7 @@ export async function executeBigQuery(
     let b2bTotal = 0
     let b2bSql = ""
     if (b2bResult.status === "fulfilled") {
-      b2bTransformed = transformResults(b2bResult.value.results, false)
+      b2bTransformed = transformResults(b2bResult.value.results, "b2b")
       b2bTotal = b2bResult.value.totalCount
       b2bSql = b2bResult.value.sql
       leadDiscoveryLogger.info(`[리드 검색] b2b_leads_all: ${b2bTotal.toLocaleString()}개`)
@@ -1152,7 +1446,7 @@ export async function executeBigQuery(
     let crunchbaseTotal = 0
     let crunchbaseSql = ""
     if (crunchbaseResult.status === "fulfilled") {
-      crunchbaseTransformed = transformResults(crunchbaseResult.value.results, true)
+      crunchbaseTransformed = transformResults(crunchbaseResult.value.results, "crunchbase")
       crunchbaseTotal = crunchbaseResult.value.totalCount
       crunchbaseSql = crunchbaseResult.value.sql
       leadDiscoveryLogger.info(`[리드 검색] crunchbase_all: ${crunchbaseTotal.toLocaleString()}개`)
@@ -1166,7 +1460,7 @@ export async function executeBigQuery(
     let apolloSql = ""
     leadDiscoveryLogger.info(`[Apollo] status: ${apolloResult.status}`)
     if (apolloResult.status === "fulfilled") {
-      apolloTransformed = transformApolloResults(apolloResult.value.results)
+      apolloTransformed = transformApolloResults(apolloResult.value.results, "apollo")
       apolloTotal = apolloResult.value.totalCount
       apolloSql = apolloResult.value.sql
       leadDiscoveryLogger.info(`[리드 검색] apollo_leads_all: ${apolloTotal.toLocaleString()}개`)
@@ -1185,7 +1479,7 @@ export async function executeBigQuery(
     let freshSql = ""
     leadDiscoveryLogger.info(`[Fresh] status: ${freshResult.status}`)
     if (freshResult.status === "fulfilled") {
-      freshTransformed = transformApolloResults(freshResult.value.results) // Apollo와 같은 구조
+      freshTransformed = transformApolloResults(freshResult.value.results, "fresh") // Apollo와 같은 구조
       freshTotal = freshResult.value.totalCount
       freshSql = freshResult.value.sql
       leadDiscoveryLogger.info(`[리드 검색] fresh_leads: ${freshTotal.toLocaleString()}개`)
@@ -1214,12 +1508,21 @@ export async function executeBigQuery(
     // 스마트 셔플: 검색 쿼리와 관련 있는 산업군을 앞에 배치
     const combinedResults = smartShuffle(allResults, params.query)
 
+    // 세션 캐시에 전체 결과 저장 (더 가져오기 기능용)
+    const sessionId = state.sessionId
+    cacheResults(sessionId, combinedResults)
+    leadDiscoveryLogger.info(`[캐시] 세션 ${sessionId}: ${combinedResults.length}개 결과 캐시됨`)
+
     // 100개로 제한
     const limitedResults = combinedResults.slice(0, 100)
+    const hasMore = combinedResults.length > 100
     const first5 = limitedResults
       .slice(0, 5)
       .map((r) => `${r.companyName || "unknown"}[${r.country || "-"}/${r.mainIndustry || "-"}]`)
     leadDiscoveryLogger.info(`[스마트 셔플 후] 첫 5개: ${first5.join(", ")}`)
+    leadDiscoveryLogger.info(
+      `[더 가져오기] 전체: ${combinedResults.length}개, 반환: 100개, 남음: ${combinedResults.length - 100}개`,
+    )
     const totalCount = b2bTotal + crunchbaseTotal + apolloTotal + freshTotal
     const combinedSql = `-- B2B Leads:\n${b2bSql}\n\n-- Crunchbase:\n${crunchbaseSql}\n\n-- Apollo:\n${apolloSql}\n\n-- Fresh:\n${freshSql}`
 
@@ -1267,6 +1570,8 @@ export async function executeBigQuery(
       bigQuerySQL: combinedSql,
       bigQueryExplanation: `B2B: ${b2bTotal}개, Crunchbase: ${crunchbaseTotal}개, Apollo: ${apolloTotal}개, Fresh: ${freshTotal}개`,
       executionTime: duration,
+      hasMore,
+      totalAvailable: combinedResults.length,
     }
   } catch (error) {
     const duration = Date.now() - startTime

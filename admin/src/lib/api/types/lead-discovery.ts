@@ -19,6 +19,7 @@ export interface BuyerRecommendation {
 export interface BigQueryResult {
   companyName?: string // 회사명
   webAddress?: string // 웹사이트
+  website?: string // 웹사이트 (alias)
   description?: string // Description
   fitScore?: number // Fit Score (0-100)
   country?: string // Country
@@ -30,6 +31,7 @@ export interface BigQueryResult {
   phone?: string
   employee?: string
   revenue?: string
+  source?: string // 데이터 소스 (apollo, fresh, b2b, crunchbase)
 }
 
 // 분석된 페이지 정보

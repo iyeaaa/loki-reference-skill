@@ -201,6 +201,10 @@ export interface StreamingState {
   customerAnalysisSummary: string
   // 사용자 검색 쿼리 (FitScore 계산용)
   userQuery?: string
+  // 더 가져오기 정보
+  hasMore?: boolean
+  totalAvailable?: number
+  loadedOffset?: number // 현재까지 로드된 offset
 }
 
 export const initialStreamingState: StreamingState = {

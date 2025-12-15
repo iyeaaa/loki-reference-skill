@@ -47,6 +47,9 @@ export interface LeadDiscoveryEventData {
   analysisSummary?: string
   // 고객군 분석 요약 (BigQuery 결과 분석)
   customerAnalysisSummary?: string
+  // 더 가져오기 정보
+  hasMore?: boolean
+  totalAvailable?: number
 }
 
 // Mutation 옵션 (콜백 기반)
@@ -878,4 +881,64 @@ export const enrichLeads = async (
   callbacks.onProgress?.(completed, total, "")
   callbacks.onComplete?.()
   log.info("Enrichment complete", { total, completed, success: completed })
+}
+
+// ============================================
+// Load More Results (더 가져오기)
+// ============================================
+
+interface LoadMoreResponse {
+  success: boolean
+  results?: BigQueryResult[]
+  hasMore?: boolean
+  totalAvailable?: number
+  offset?: number
+  error?: string
+}
+
+/**
+ * 추가 결과 가져오기
+ * @param sessionId 검색 세션 ID
+ * @param offset 시작 offset (기본: 100)
+ * @param limit 가져올 개수 (기본: 100)
+ */
+export async function loadMoreResults(
+  sessionId: string,
+  offset: number = 100,
+  limit: number = 100,
+): Promise<LoadMoreResponse> {
+  console.log(
+    `[load-more] Loading more results: sessionId=${sessionId}, offset=${offset}, limit=${limit}`,
+  )
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/v1/lead-discovery/more`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId, offset, limit }),
+    })
+
+    const data = await response.json()
+
+    if (!data.success) {
+      console.error("[load-more] Failed:", data.error)
+      return { success: false, error: data.error }
+    }
+
+    console.log(
+      `[load-more] Success: ${data.results?.length || 0} results, hasMore=${data.hasMore}`,
+    )
+
+    return {
+      success: true,
+      results: data.results,
+      hasMore: data.hasMore,
+      totalAvailable: data.totalAvailable,
+      offset: data.offset,
+    }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : "Failed to load more results"
+    console.error("[load-more] Exception:", error)
+    return { success: false, error: errorMsg }
+  }
 }

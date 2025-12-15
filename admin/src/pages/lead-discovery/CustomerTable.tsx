@@ -55,10 +55,11 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useCustomerGroupsByWorkspace } from "@/lib/api/hooks/customer-groups"
-import { calculateFitScores, enrichLeads } from "@/lib/api/hooks/lead-discovery"
+import { calculateFitScores, enrichLeads, loadMoreResults } from "@/lib/api/hooks/lead-discovery"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 import {
+  addCustomersAtom,
   type Customer,
   customersAtom,
   enrichmentStateAtom,
@@ -71,6 +72,7 @@ import {
   streamingStateAtom,
   updateCustomerAtom,
   updateFitScoreAtom,
+  updateStreamingStateAtom,
 } from "./store"
 
 // 적합도 배지 컴포넌트
@@ -153,7 +155,9 @@ interface CustomerTableProps {
 export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTableProps) {
   const [customers] = useAtom(customersAtom)
   const removeCustomer = useSetAtom(removeCustomerAtom)
+  const addCustomers = useSetAtom(addCustomersAtom)
   const streamingState = useAtomValue(streamingStateAtom)
+  const updateStreamingState = useSetAtom(updateStreamingStateAtom)
 
   // 적합도 점수 상태
   const fitScoreState = useAtomValue(fitScoreStateAtom)
@@ -181,8 +185,63 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
   const [isEnriching, setIsEnriching] = useState(false)
   const [enrichProgress, setEnrichProgress] = useState({ current: 0, total: 0, name: "" })
 
+  // 더 가져오기 상태
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+
   // API 호출 중 여부 추적
   const isCalculatingRef = useRef(false)
+
+  // 더 가져오기 핸들러
+  const handleLoadMore = useCallback(async () => {
+    if (!streamingState.sessionId || isLoadingMore) return
+
+    setIsLoadingMore(true)
+    try {
+      const offset = streamingState.loadedOffset || customers.length
+      const result = await loadMoreResults(streamingState.sessionId, offset, 100)
+
+      if (result.success && result.results) {
+        // 새 고객 추가
+        const newCustomers: Customer[] = result.results.map((r) => ({
+          id: crypto.randomUUID(),
+          company_name: r.companyName,
+          web_address: r.webAddress || r.website,
+          email: r.email,
+          country: r.country,
+          industry: r.mainIndustry,
+          sub_industry: r.subIndustry,
+          category: r.category,
+          employee: r.employee,
+          revenue: r.revenue,
+          source: r.source || "bigquery",
+          createdAt: new Date(),
+        }))
+        addCustomers(newCustomers)
+
+        // 상태 업데이트
+        updateStreamingState({
+          hasMore: result.hasMore,
+          loadedOffset: result.offset,
+        })
+
+        toast.success(`${result.results.length}개 리드를 추가로 가져왔습니다`)
+      } else {
+        toast.error(result.error || "추가 데이터를 가져오는데 실패했습니다")
+      }
+    } catch (error) {
+      console.error("Load more error:", error)
+      toast.error("추가 데이터를 가져오는데 실패했습니다")
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }, [
+    streamingState.sessionId,
+    streamingState.loadedOffset,
+    customers.length,
+    isLoadingMore,
+    addCustomers,
+    updateStreamingState,
+  ])
 
   // 고객이 있고 선택된 추천이 있으면 적합도 계산 API 호출
   useEffect(() => {
@@ -1034,6 +1093,33 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
           </TableBody>
         </Table>
       </div>
+
+      {/* 더 가져오기 버튼 */}
+      {streamingState.hasMore && streamingState.sessionId && (
+        <div className="flex items-center justify-center p-4 border-t bg-muted/30">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLoadMore}
+            disabled={isLoadingMore}
+            className="gap-2"
+          >
+            {isLoadingMore ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                가져오는 중...
+              </>
+            ) : (
+              <>
+                데이터 더 가져오기
+                <span className="text-muted-foreground">
+                  ({customers.length} / {streamingState.totalAvailable || 0})
+                </span>
+              </>
+            )}
+          </Button>
+        </div>
+      )}
 
       {/* 푸터 - 선택 정보 */}
       {Object.keys(rowSelection).length > 0 && (

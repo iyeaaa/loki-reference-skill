@@ -270,17 +270,64 @@ When the user searches for a compound term like "포장재 유통회사":
 ⚠️ CRITICAL: "포장재" = "packaging", NOT "manufacturing"! 
 Many industries have "manufacturing" in their name. Only use "packaging" for packaging companies!
 
-## ⚠️ CRITICAL: Building Materials Search Intent!
+## ⚠️ CRITICAL: MATERIALS WHOLESALE/DISTRIBUTOR Search - PRECISION IS MANDATORY!
 
-When user searches for "Building Materials", "건축 자재", or similar:
-- They want **MATERIALS SUPPLIERS/DISTRIBUTORS**, NOT contractors!
-- Include keywords that indicate SUPPLY/DISTRIBUTION/MANUFACTURING of materials
-- Prefer: supplier, materials, products, wholesale, distribution, manufacturer
-- Avoid pure contractors: BUT still include them in results (filtering by FitScore)
+When searching for materials wholesale/distributor:
+- MUST include SPECIFIC PRODUCT CATEGORY keywords (interior, flooring, tile, building, etc.)
+- MUST use AND condition: PRODUCT CATEGORY AND wholesale/distributor
+- MUST EXCLUDE unrelated products (cosmetics, food, clothing, jewelry, hats, etc.)
 
-### Recommended SQL for "Building Materials" searches:
-- Use: LIKE '%building materials%' OR LIKE '%construction materials%' OR LIKE '%building supplies%' OR LIKE '%lumber%' OR LIKE '%aggregate%' OR LIKE '%concrete%' OR LIKE '%glass%' OR LIKE '%roofing%'
-- This will capture both suppliers AND contractors, but FitScore will prioritize suppliers
+### ⚠️ INTERIOR vs PLUMBING - DIFFERENT CATEGORIES!
+
+**"Interior materials"** = 바닥재, 타일, 캐비닛, 벽재, 석재 (NOT plumbing!)
+**"Plumbing"** = 배관, 파이프, 수도 설비 (separate category!)
+
+When user searches "interior materials":
+- PRIORITIZE: flooring, tile, stone, marble, granite, cabinet, millwork, carpet, hardwood, drywall
+- DO NOT PRIORITIZE: plumbing, pipe, fittings, HVAC, irrigation
+
+### ⚠️ MANDATORY: PRODUCT + WHOLESALE (AND condition)
+
+| Query | PRODUCT KEYWORDS (PRIORITIZE THESE) | CORRECT SQL |
+|-------|-------------------------------------|-------------|
+| Interior materials distributor | flooring, tile, stone, cabinet, marble, granite, carpet, hardwood | (LIKE '%flooring%' OR LIKE '%tile%' OR LIKE '%stone%' OR LIKE '%cabinet%' OR LIKE '%marble%' OR LIKE '%carpet%' OR LIKE '%hardwood%') AND (LIKE '%distributor%' OR LIKE '%wholesale%') |
+| Building materials wholesale | building material, lumber, concrete, roofing, drywall, insulation | (LIKE '%building material%' OR LIKE '%lumber%' OR LIKE '%concrete%' OR LIKE '%drywall%') AND LIKE '%wholesale%' |
+| Plumbing supplies distributor | plumbing, pipe, fittings, water heater, faucet | (LIKE '%plumbing%' OR LIKE '%pipe%' OR LIKE '%fittings%') AND (LIKE '%distributor%' OR LIKE '%wholesale%') |
+
+### ❌ CRITICAL - THESE ARE WRONG:
+- LIKE '%wholesale%' ONLY → Returns hats, cosmetics, jewelry, food, etc.!
+- LIKE '%distribution%' ONLY → Returns unrelated distributors!
+- "Interior materials" search returning mostly "plumbing" results → WRONG!
+- MUST ALWAYS include SPECIFIC PRODUCT keywords!
+
+### ⚠️ MANDATORY EXCLUSIONS (NOT materials - MUST EXCLUDE):
+- NOT LIKE '%cosmetic%' AND NOT LIKE '%beauty%' AND NOT LIKE '%skincare%'
+- NOT LIKE '%food%' AND NOT LIKE '%beverage%' AND NOT LIKE '%restaurant%'
+- NOT LIKE '%clothing%' AND NOT LIKE '%apparel%' AND NOT LIKE '%fashion%'
+- NOT LIKE '%jewelry%' AND NOT LIKE '%accessori%' AND NOT LIKE '%hat%'
+- NOT LIKE '%storage%' AND NOT LIKE '%moving%' AND NOT LIKE '%retail%'
+- NOT LIKE '%personal care%' AND NOT LIKE '%gift%'
+
+### ✅ CORRECT Example for "Find interior materials distributors in U.S":
+WHERE country = 'United States'
+  AND (
+    LOWER(industry) LIKE '%flooring%' OR 
+    LOWER(industry) LIKE '%tile%' OR 
+    LOWER(industry) LIKE '%stone%' OR
+    LOWER(industry) LIKE '%marble%' OR
+    LOWER(industry) LIKE '%granite%' OR
+    LOWER(industry) LIKE '%cabinet%' OR
+    LOWER(industry) LIKE '%carpet%' OR
+    LOWER(industry) LIKE '%hardwood%' OR
+    LOWER(industry) LIKE '%millwork%' OR
+    LOWER(industry) LIKE '%building material%' OR
+    LOWER(industry) LIKE '%drywall%'
+  )
+  AND (LOWER(industry) LIKE '%wholesale%' OR LOWER(industry) LIKE '%distributor%' OR LIKE '%supplier%')
+  AND LOWER(industry) NOT LIKE '%retail%'
+  AND LOWER(industry) NOT LIKE '%cosmetic%'
+  AND LOWER(industry) NOT LIKE '%food%'
+LIMIT 100
 
 ## ⚠️ CRITICAL: Breaking Down Compound Categories!
 

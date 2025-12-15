@@ -47,6 +47,7 @@ export interface BigQueryResult {
   phone?: string
   employee?: string
   revenue?: string
+  source?: "apollo" | "fresh" | "b2b" | "crunchbase" // 데이터 소스
 }
 
 // Analyzed page info
@@ -127,6 +128,10 @@ export interface LeadDiscoveryState {
   searchResults: BigQueryResult[]
   totalResultCount: number
   executionTime: number
+
+  // 더 가져오기 기능
+  hasMore: boolean
+  totalAvailable: number
 
   // Customer analysis (GPT analysis of search results)
   customerAnalysisSummary?: string
@@ -222,6 +227,14 @@ export const LeadDiscoveryStateAnnotation = Annotation.Root({
     default: () => 0,
   }),
   executionTime: Annotation<number>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => 0,
+  }),
+  hasMore: Annotation<boolean>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => false,
+  }),
+  totalAvailable: Annotation<number>({
     reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => 0,
   }),

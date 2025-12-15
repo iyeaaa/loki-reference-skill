@@ -379,10 +379,15 @@ export function ChatRoom() {
           })
         }
         // status와 messageId를 유지하여 퀵액션 UI가 표시되도록 함
+        // 더 가져오기 정보도 포함
         return {
           ...initialStreamingState,
           status: "complete" as const,
           messageId: prev.messageId,
+          sessionId: data.sessionId,
+          hasMore: data.hasMore,
+          totalAvailable: data.totalAvailable,
+          loadedOffset: 100, // 초기 100개 로드됨
         }
       })
     },
@@ -429,11 +434,16 @@ export function ChatRoom() {
         }
 
         // 웹사이트 분석 결과와 추천 카드는 유지하고, 상태만 완료로 변경
+        // 더 가져오기 정보도 포함
         return {
           ...prev,
           status: "complete" as const,
           message: "",
           progress: 100,
+          sessionId: data.sessionId,
+          hasMore: data.hasMore,
+          totalAvailable: data.totalAvailable,
+          loadedOffset: 100, // 초기 100개 로드됨
         }
       })
     },

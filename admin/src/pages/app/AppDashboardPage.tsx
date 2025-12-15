@@ -10,7 +10,7 @@ import { SentEmailsTab } from "./components/SentEmailsTab"
 
 export default function AppDashboardPage() {
   const { t } = useTranslation()
-  const [activeTab, setActiveTab] = useState("opened")
+  const [activeTab, setActiveTab] = useState("sent")
 
   // Get user's workspace
   const currentUser = useMemo(() => JSON.parse(localStorage.getItem("user") || "{}"), [])
@@ -54,21 +54,21 @@ export default function AppDashboardPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
+          <TabsTrigger value="sent">{t("app.dashboard.sentEmails", "Sent Emails")}</TabsTrigger>
           <TabsTrigger value="opened">
             {t("app.dashboard.openedEmails", "Opened Emails")}
           </TabsTrigger>
-          <TabsTrigger value="sent">{t("app.dashboard.sentEmails", "Sent Emails")}</TabsTrigger>
           <TabsTrigger value="strategy">
             {t("app.dashboard.salesStrategy", "Sales Strategy")}
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="opened" className="mt-4">
-          <OpenedEmailsTab />
-        </TabsContent>
-
         <TabsContent value="sent" className="mt-4">
           <SentEmailsTab />
+        </TabsContent>
+
+        <TabsContent value="opened" className="mt-4">
+          <OpenedEmailsTab />
         </TabsContent>
 
         <TabsContent value="strategy" className="mt-4">

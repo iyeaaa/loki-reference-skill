@@ -1,9 +1,12 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db } from "../db/index"
+import { userEmailAccounts } from "../db/schema/email-accounts"
 import { iamMemberRoles } from "../db/schema/iam"
 import { departments, users } from "../db/schema/users"
 import { workspaceMembers } from "../db/schema/workspaces"
 import { createDefaultRolesForWorkspace, syncMemberRoleToIamRole } from "../db/seed-iam"
+import logger from "../utils/logger"
+import { deleteGrant } from "./nylas.service"
 import * as salesStrategyService from "./sales-strategy.service"
 import * as workspaceService from "./workspace.service"
 
@@ -145,9 +148,86 @@ export async function updateUser(
   return updatedUser
 }
 
-// DeleteUser :exec
+// DeleteUser :exec（ハード削除 - アカウント削除にはsoftDeleteUserを使用）
 export async function deleteUser(id: string) {
   await db.delete(users).where(eq(users.id, id))
+}
+
+// SoftDeleteUser :exec
+// ユーザーアカウントのソフト削除手順:
+// 1. すべてのNylasグラント（メール接続）を取り消し - トランザクション外で実行
+// 2. IAMロール割り当てを削除（ワークスペースメンバー削除前に実行必須）
+// 3. すべてのワークスペースメンバーシップを削除
+// 4. GDPR準拠のため個人データを匿名化
+// 5. isActiveをfalseに設定
+export async function softDeleteUser(id: string) {
+  const timestamp = Date.now()
+  const anonymizedEmail = `deleted_${timestamp}_${id.slice(0, 8)}@deleted.local`
+  const anonymizedUsername = `deleted_user_${timestamp}`
+
+  // 1. このユーザーのメールアカウントのすべてのNylasグラントを取り消し（トランザクション外 - 外部API呼び出し）
+  const emailAccounts = await db
+    .select({ apiKey: userEmailAccounts.apiKey })
+    .from(userEmailAccounts)
+    .where(eq(userEmailAccounts.userId, id))
+
+  for (const account of emailAccounts) {
+    // NylasのgrantIdの場合のみ取り消し（"SG"で始まるSendGrid APIキーは除外）
+    if (account.apiKey && !account.apiKey.startsWith("SG")) {
+      try {
+        await deleteGrant(account.apiKey)
+        logger.info(
+          { grantId: account.apiKey, userId: id },
+          "アカウント削除中にNylasグラントを取り消しました",
+        )
+      } catch (error) {
+        // ログ出力のみで失敗させない - グラントが既に無効な可能性あり
+        logger.warn(
+          { err: error, grantId: account.apiKey, userId: id },
+          "アカウント削除中にNylasグラントの取り消しに失敗しました",
+        )
+      }
+    }
+  }
+
+  // 2-5. データベース操作をトランザクション内で実行
+  await db.transaction(async (tx) => {
+    // 2. 削除前にワークスペースメンバーIDを取得（IAMロールクリーンアップに必要）
+    const memberIds = await tx
+      .select({ id: workspaceMembers.id })
+      .from(workspaceMembers)
+      .where(eq(workspaceMembers.userId, id))
+
+    // 3. すべてのIAMロール割り当てを削除（ワークスペースメンバー削除前に実行必須）
+    if (memberIds.length > 0) {
+      const memberIdList = memberIds.map((m) => m.id)
+      await tx.delete(iamMemberRoles).where(
+        sql`member_id IN (${sql.join(
+          memberIdList.map((mid) => sql`${mid}`),
+          sql`, `,
+        )})`,
+      )
+    }
+
+    // 4. すべてのワークスペースメンバーシップを削除（メールアカウントはカスケード削除される）
+    await tx.delete(workspaceMembers).where(eq(workspaceMembers.userId, id))
+
+    // 5. ユーザーをソフト削除して匿名化
+    await tx
+      .update(users)
+      .set({
+        isActive: false,
+        email: anonymizedEmail,
+        username: anonymizedUsername,
+        passwordHash: null,
+        profilePicture: null,
+        oauthId: null,
+        employeeId: null,
+        departmentId: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+  })
 }
 
 // ====================================

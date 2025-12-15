@@ -148,3 +148,38 @@ export function useUpdateProfileMutation() {
     },
   })
 }
+
+// 4. アカウント削除
+export function useAccountDeletionCheck() {
+  return useQuery({
+    queryKey: [...authKeys.all, "deletion-check"],
+    queryFn: authApi.checkDeletionEligibility,
+    staleTime: 0,
+  })
+}
+
+export function useDeleteAccountMutation() {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationKey: ["auth", "deleteAccount"],
+    mutationFn: authApi.deleteAccount,
+    onSuccess: () => {
+      // すべての認証データをクリア
+      authApi.logout()
+
+      // すべてのクエリをクリア
+      queryClient.removeQueries({ queryKey: authKeys.all })
+      queryClient.clear()
+
+      toast.success("계정이 삭제되었습니다.")
+
+      // 認証ページにリダイレクト
+      navigate("/auth")
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "계정 삭제에 실패했습니다.")
+    },
+  })
+}

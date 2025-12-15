@@ -65,6 +65,9 @@ const AUTH_ONLY_ROUTES = new Set([
   "GET /api/v1/activity-logs/:id",
   "GET /api/v1/activity-logs/entity/:entityType/:entityId",
   "GET /api/v1/activity-logs/user/:userId",
+  // 계정 삭제 (본인만)
+  "GET /api/v1/auth/account/deletion-check",
+  "DELETE /api/v1/auth/account",
 ])
 
 // 라우트별 권한 매핑 (Resource:Action)

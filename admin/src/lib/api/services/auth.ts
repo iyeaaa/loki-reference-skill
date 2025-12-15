@@ -82,4 +82,28 @@ export const authApi = {
       body: JSON.stringify({ idToken }),
     })
   },
+
+  // Account deletion methods
+  checkDeletionEligibility: () => {
+    return apiFetch<{
+      canDelete: boolean
+      ownedWorkspaces: Array<{
+        id: string
+        name: string
+        memberCount: number
+        requiresTransfer: boolean
+      }>
+      workspacesRequiringTransfer: Array<{ id: string; name: string; memberCount: number }>
+      workspacesToBeDeleted: Array<{ id: string; name: string }>
+    }>("/api/v1/auth/account/deletion-check")
+  },
+
+  deleteAccount: () => {
+    return apiFetch<{
+      message: string
+      deletedWorkspaces?: Array<{ id: string; name: string }>
+    }>("/api/v1/auth/account", {
+      method: "DELETE",
+    })
+  },
 }

@@ -681,3 +681,144 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
       body: googleTokenSchema,
     },
   )
+
+  // アカウント削除資格確認エンドポイント
+  .get("/account/deletion-check", async ({ headers, set }) => {
+    const token = headers.authorization?.replace("Bearer ", "")
+    if (!token) {
+      set.status = 401
+      return errorResponse("인증 토큰이 없습니다.", ResponseCode.UNAUTHORIZED)
+    }
+
+    const payload = await authService.verifyToken(token)
+    const ownedWorkspaces = await workspaceService.getWorkspacesByOwner(payload.userId)
+
+    // 各所有ワークスペースについて、ユーザーが唯一のメンバーか他のメンバーがいるかを確認
+    const workspacesWithMembers = await Promise.all(
+      ownedWorkspaces.map(async (ws) => {
+        const members = await workspaceService.getWorkspaceMembers(ws.id)
+        const activeMembers = members.filter((m) => m.status === "active")
+        return {
+          id: ws.id,
+          name: ws.name,
+          memberCount: activeMembers.length,
+          isSoleOwner: activeMembers.length <= 1, // ユーザーが唯一のメンバー
+        }
+      }),
+    )
+
+    // ユーザーが削除できる条件:
+    // 1. 所有ワークスペースがない、または
+    // 2. すべての所有ワークスペースでユーザーが唯一のメンバー（アカウントと一緒に削除される）
+    const workspacesRequiringTransfer = workspacesWithMembers.filter((ws) => !ws.isSoleOwner)
+    const workspacesToBeDeleted = workspacesWithMembers.filter((ws) => ws.isSoleOwner)
+
+    return {
+      canDelete: workspacesRequiringTransfer.length === 0,
+      ownedWorkspaces: workspacesWithMembers.map((ws) => ({
+        id: ws.id,
+        name: ws.name,
+        memberCount: ws.memberCount,
+        requiresTransfer: !ws.isSoleOwner,
+      })),
+      workspacesRequiringTransfer: workspacesRequiringTransfer.map((ws) => ({
+        id: ws.id,
+        name: ws.name,
+        memberCount: ws.memberCount,
+      })),
+      workspacesToBeDeleted: workspacesToBeDeleted.map((ws) => ({
+        id: ws.id,
+        name: ws.name,
+      })),
+    }
+  })
+
+  // アカウント削除エンドポイント
+  .delete("/account", async ({ headers, set }) => {
+    const token = headers.authorization?.replace("Bearer ", "")
+    if (!token) {
+      set.status = 401
+      return errorResponse("인증 토큰이 없습니다.", ResponseCode.UNAUTHORIZED)
+    }
+
+    const payload = await authService.verifyToken(token)
+
+    // 削除前に監査ログ用のユーザー情報を取得
+    const user = await userService.getUser(payload.userId)
+    if (!user) {
+      set.status = 404
+      return errorResponse("사용자를 찾을 수 없습니다.", ResponseCode.NOT_FOUND)
+    }
+
+    // ワークスペースの所有権とメンバー数を再確認（レースコンディション防止）
+    const ownedWorkspaces = await workspaceService.getWorkspacesByOwner(payload.userId)
+
+    // 各ワークスペースで他のメンバーを確認
+    const workspacesWithOtherMembers: { id: string; name: string; memberCount: number }[] = []
+    const workspacesToDelete: { id: string; name: string }[] = []
+
+    for (const ws of ownedWorkspaces) {
+      const members = await workspaceService.getWorkspaceMembers(ws.id)
+      const activeMembers = members.filter((m) => m.status === "active")
+
+      if (activeMembers.length > 1) {
+        // 他のメンバーがいる - 所有権移転が必要
+        workspacesWithOtherMembers.push({
+          id: ws.id,
+          name: ws.name,
+          memberCount: activeMembers.length,
+        })
+      } else {
+        // 唯一のオーナー - 削除可能
+        workspacesToDelete.push({ id: ws.id, name: ws.name })
+      }
+    }
+
+    // 他のメンバーがいるワークスペースがある場合は削除をブロック
+    if (workspacesWithOtherMembers.length > 0) {
+      set.status = 400
+      return errorResponse(
+        "다른 멤버가 있는 워크스페이스가 있습니다. 계정을 삭제하기 전에 먼저 소유권을 이전해주세요.",
+        ResponseCode.BAD_REQUEST,
+      )
+    }
+
+    // ユーザーアカウントをソフト削除（データを匿名化しメンバーシップを削除）
+    try {
+      // 匿名化される前に監査ログ用のメールアドレスを保存
+      const userEmail = user.email
+
+      // ユーザーが唯一のオーナーであるワークスペースを削除（FK問題を回避するためユーザー削除前に実行）
+      for (const ws of workspacesToDelete) {
+        try {
+          await workspaceService.deleteWorkspace(ws.id)
+          logger.info(
+            { workspaceId: ws.id, workspaceName: ws.name, userId: payload.userId },
+            "アカウント削除中にワークスペースを削除しました",
+          )
+        } catch (wsError) {
+          logger.error(
+            { err: wsError, workspaceId: ws.id },
+            "アカウント削除中にワークスペースの削除に失敗しました",
+          )
+          // 他のワークスペースの処理を続行
+        }
+      }
+
+      await userService.softDeleteUser(payload.userId)
+
+      // 構造化ログによる監査証跡（activity_logsテーブルはworkspaceIdが必要だが、システムレベルのアクションには適用されない）
+      logger.info(
+        { userId: payload.userId, email: userEmail, deletedWorkspaces: workspacesToDelete.length },
+        "アカウントが正常に削除されました",
+      )
+      return {
+        message: "계정이 삭제되었습니다.",
+        deletedWorkspaces: workspacesToDelete,
+      }
+    } catch (error) {
+      logger.error({ err: error }, "アカウント削除エラー")
+      set.status = 500
+      return errorResponse("계정 삭제 중 오류가 발생했습니다.", ResponseCode.INTERNAL_ERROR)
+    }
+  })

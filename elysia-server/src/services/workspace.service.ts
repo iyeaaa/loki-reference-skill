@@ -21,6 +21,7 @@ import {
   unregisterWorkflowProgressCallback,
 } from "../shared/mastra/shell/workflows/onboarding-enrichment/onboarding-enrichment"
 import logger from "../utils/logger"
+import { deleteGrant } from "./nylas.service"
 import * as salesStrategyService from "./sales-strategy.service"
 
 // ====================================
@@ -1288,18 +1289,38 @@ export async function deleteWorkspace(id: string) {
     )
   }
 
-  // 2. First, get all user_email_accounts for this workspace
+  // 2. このワークスペースのすべてのuser_email_accountsを取得（Nylas取り消し用のapiKeyを含む）
   const emailAccounts = await db
-    .select({ id: userEmailAccounts.id })
+    .select({ id: userEmailAccounts.id, apiKey: userEmailAccounts.apiKey })
     .from(userEmailAccounts)
     .where(eq(userEmailAccounts.workspaceId, id))
 
   logger.info(
     { workspaceId: id, emailAccountCount: emailAccounts.length },
-    "Found email accounts for workspace",
+    "ワークスペースのメールアカウントを検出しました",
   )
 
-  // 3. Delete sequence_enrollments that reference these email accounts
+  // 3. このワークスペースのすべてのメールアカウントのNylasグラントを取り消し
+  for (const account of emailAccounts) {
+    // NylasのgrantIdの場合のみ取り消し（"SG"で始まるSendGrid APIキーは除外）
+    if (account.apiKey && !account.apiKey.startsWith("SG")) {
+      try {
+        await deleteGrant(account.apiKey)
+        logger.info(
+          { grantId: account.apiKey, workspaceId: id },
+          "ワークスペース削除中にNylasグラントを取り消しました",
+        )
+      } catch (error) {
+        // ログ出力のみで失敗させない - グラントが既に無効な可能性あり
+        logger.warn(
+          { err: error, grantId: account.apiKey, workspaceId: id },
+          "ワークスペース削除中にNylasグラントの取り消しに失敗しました",
+        )
+      }
+    }
+  }
+
+  // 4. これらのメールアカウントを参照するsequence_enrollmentsを削除
   if (emailAccounts.length > 0) {
     const emailAccountIds = emailAccounts.map((acc) => acc.id)
     const enrollmentCondition = or(
@@ -1309,14 +1330,14 @@ export async function deleteWorkspace(id: string) {
       await db.delete(sequenceEnrollments).where(enrollmentCondition)
       logger.info(
         { workspaceId: id, emailAccountIds },
-        "Deleted sequence enrollments for email accounts",
+        "メールアカウントのシーケンス登録を削除しました",
       )
     }
   }
 
-  // 4. Now delete the workspace (RESTRICT constraint ensures emails are checked before deletion)
+  // 5. ワークスペースを削除（RESTRICT制約により削除前にメールがチェックされる）
   await db.delete(workspaces).where(eq(workspaces.id, id))
-  logger.info({ workspaceId: id }, "Workspace deleted successfully")
+  logger.info({ workspaceId: id }, "ワークスペースが正常に削除されました")
 }
 
 // ====================================

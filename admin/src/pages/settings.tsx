@@ -20,13 +20,19 @@ import {
 } from "lucide-react"
 import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
+import { DangerZone } from "@/components/settings/DangerZone"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SettingsSidebar } from "@/components/ui/settings-sidebar"
-import { useCurrentUser, useUpdateProfileMutation } from "@/lib/api/hooks/auth"
+import {
+  useAccountDeletionCheck,
+  useCurrentUser,
+  useDeleteAccountMutation,
+  useUpdateProfileMutation,
+} from "@/lib/api/hooks/auth"
 import { useOnboardingProgress } from "@/lib/api/hooks/onboarding"
 import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import {
@@ -73,6 +79,8 @@ export default function SettingsPage() {
 
   const { data: currentUser, isLoading } = useCurrentUser()
   const updateProfileMutation = useUpdateProfileMutation()
+  const { data: deletionCheck } = useAccountDeletionCheck()
+  const deleteAccountMutation = useDeleteAccountMutation()
   const [activeTab, setActiveTab] = useState("profile")
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isSettingsSidebarCollapsed, setIsSettingsSidebarCollapsed] = useState(false)
@@ -490,6 +498,14 @@ export default function SettingsPage() {
                     : t("settings.profile.saveChanges")}
                 </Button>
               </form>
+
+              <DangerZone
+                canDelete={deletionCheck?.canDelete ?? false}
+                workspacesRequiringTransfer={deletionCheck?.workspacesRequiringTransfer ?? []}
+                workspacesToBeDeleted={deletionCheck?.workspacesToBeDeleted ?? []}
+                onDeleteAccount={() => deleteAccountMutation.mutate()}
+                isDeleting={deleteAccountMutation.isPending}
+              />
             </CardContent>
           </Card>
         )

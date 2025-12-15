@@ -1,7 +1,7 @@
-import { ArrowRight, CheckCircle2, Edit3, Globe, Save, X } from "lucide-react"
+import { ArrowRight, CheckCircle2, Edit3, Globe, Save, Settings, X } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { useSearchParams } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -64,6 +64,7 @@ const EXPERIENCE_OPTIONS = [
 
 export function StepCompanyInfo() {
   const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
   const [, setSearchParams] = useSearchParams()
   const [salesStrategy, setSalesStrategy] = useState<SalesStrategyData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -101,7 +102,10 @@ export function StepCompanyInfo() {
   // Fetch sales strategy data
   useEffect(() => {
     async function fetchSalesStrategy() {
-      if (!workspace?.id) return
+      if (!workspace?.id) {
+        setIsLoading(false)
+        return
+      }
 
       try {
         setIsLoading(true)
@@ -183,6 +187,7 @@ export function StepCompanyInfo() {
     return isKorean ? option.ko : option.en
   }
 
+  // Show loading spinner
   if (isLoadingWorkspaces || isLoading) {
     return (
       <div className="max-w-2xl mx-auto">
@@ -190,6 +195,37 @@ export function StepCompanyInfo() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Show message if no workspace is available
+  if (!workspace) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">
+              {isKorean ? "워크스페이스를 찾을 수 없습니다" : "No Workspace Found"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <p className="text-gray-600 mb-4">
+                {isKorean
+                  ? "온보딩을 진행하려면 워크스페이스가 필요합니다. 워크스페이스를 먼저 생성해주세요."
+                  : "A workspace is required to proceed with onboarding. Please create a workspace first."}
+              </p>
+              <Button
+                onClick={() => navigate("/settings?tab=workspaces")}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                {isKorean ? "워크스페이스 생성하러 가기" : "Go to Create Workspace"}
+              </Button>
             </div>
           </CardContent>
         </Card>

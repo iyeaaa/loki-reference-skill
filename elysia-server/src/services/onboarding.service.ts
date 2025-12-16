@@ -876,7 +876,7 @@ async function enrichLeadsForOnboarding(
       const enrichment = await enrichLead(lead.website, lead.company, {
         hunterApiKey,
         geminiApiKey,
-        skipHunter: false, // Hunter API subscription is now active
+        skipHunter: false,
       })
 
       // Get primary email (highest confidence)

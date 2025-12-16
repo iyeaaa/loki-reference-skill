@@ -208,18 +208,6 @@ export const enrichLead = async (
     socialLinks: {},
   }
 
-  // Hunter.io로 이메일 찾기
-  if (!options.skipHunter && options.hunterApiKey) {
-    const hunterResult = await findEmailsWithHunter(domain, options.hunterApiKey)
-    result.emails = hunterResult.emails
-    if (hunterResult.organization) {
-      result.companyInfo.name = hunterResult.organization
-    }
-    if (hunterResult.description) {
-      result.companyInfo.description = hunterResult.description
-    }
-  }
-
   // Jina Reader로 웹사이트 콘텐츠 추출
   if (!options.skipJina) {
     const jinaResult = await extractWebsiteContent(webAddress)
@@ -247,6 +235,34 @@ export const enrichLead = async (
     }
   }
 
+  // Hunter.io로 이메일 찾기
+  if (!options.skipHunter && options.hunterApiKey) {
+    const hunterResult = await findEmailsWithHunter(domain, options.hunterApiKey)
+    if (hunterResult.emails.length !== 0) {
+      for (const email of hunterResult.emails) {
+        let found = false
+        result.emails.forEach((e) => {
+          if (email.value === e.value) {
+            found = true
+          }
+        })
+        if (found) {
+          continue
+        }
+        result.emails.push({
+          value: email.value,
+          type: email.type,
+        })
+      }
+    }
+    result.emails = hunterResult.emails
+    if (hunterResult.organization) {
+      result.companyInfo.name = hunterResult.organization
+    }
+    if (hunterResult.description) {
+      result.companyInfo.description = hunterResult.description
+    }
+  }
   logger.info(
     { domain, emailCount: result.emails.length, hasDescription: !!result.companyInfo.description },
     "Lead enrichment completed",

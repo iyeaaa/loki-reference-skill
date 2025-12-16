@@ -45,18 +45,28 @@ export async function searchLeadsWithPerplexity(
 When asked about companies, search the web and return ONLY a valid JSON array of companies.
 Each company object must have these exact fields:
 - companyName: string (company name)
-- website: string (company website URL, must start with http or https)
+- website: string (OFFICIAL company website URL only)
 - industry: string (main industry/sector)
 - description: string (brief description in English, max 100 chars)
 - country: string (country name)
 
+CRITICAL RULES FOR WEBSITE:
+- ONLY official company websites (e.g., companyname.com, companyname.co.jp)
+- NEVER include blogs (naver.com, blog.*, ameblo.jp, etc.)
+- NEVER include social media (facebook, instagram, twitter, linkedin)
+- NEVER include marketplaces (amazon, alibaba, rakuten, etc.)
+- NEVER include directory listings (yelp, yellowpages, etc.)
+- If no official website exists, set website to empty string ""
+
 IMPORTANT:
 - Return ONLY the JSON array, no markdown, no explanation
-- Focus on real, active companies with valid websites
+- Focus on real, active companies with valid official websites
 - Prioritize distributors, wholesalers, and suppliers
 - Exclude retailers, salons, and service providers unless specifically requested`
 
     const userPrompt = `Find ${count} companies matching this criteria: "${query}"
+
+IMPORTANT: Only include companies with their OFFICIAL corporate website. No blogs, social media, or marketplace pages.
 
 Return as JSON array. Example format:
 [{"companyName":"Example Inc","website":"https://example.com","industry":"Distribution","description":"Leading distributor of products","country":"United States"}]`
@@ -140,7 +150,7 @@ function parseLeadsFromResponse(content: string): PerplexityLead[] {
       return []
     }
 
-    // 유효한 리드만 필터링
+    // 유효한 리드만 필터링 (비공식 URL 제외)
     const validLeads: PerplexityLead[] = parsed
       .filter(
         (item: Record<string, unknown>) =>
@@ -148,17 +158,75 @@ function parseLeadsFromResponse(content: string): PerplexityLead[] {
       )
       .map((item: Record<string, unknown>) => ({
         companyName: String(item.companyName || ""),
-        website: String(item.website || ""),
+        website: filterOfficialWebsite(String(item.website || "")),
         industry: String(item.industry || ""),
         description: String(item.description || ""),
         country: String(item.country || ""),
       }))
+      .filter((lead) => lead.website.length > 0) // 공식 웹사이트 없는 경우 제외
 
     return validLeads
   } catch (error) {
     logger.warn(`[Perplexity] JSON parsing failed: ${error}`)
     return []
   }
+}
+
+/**
+ * 비공식 URL 필터링 (블로그, 소셜미디어, 마켓플레이스 제외)
+ */
+function filterOfficialWebsite(url: string): string {
+  if (!url || url.length === 0) return ""
+
+  const lowerUrl = url.toLowerCase()
+
+  // 제외할 도메인 패턴
+  const excludePatterns = [
+    // 블로그
+    "blog.",
+    "naver.com",
+    "ameblo.jp",
+    "hatena",
+    "livedoor",
+    "fc2.com",
+    "blogger.com",
+    "wordpress.com",
+    "medium.com",
+    "note.com",
+    // 소셜 미디어
+    "facebook.com",
+    "instagram.com",
+    "twitter.com",
+    "x.com",
+    "linkedin.com",
+    "tiktok.com",
+    "youtube.com",
+    // 마켓플레이스
+    "amazon.",
+    "alibaba.com",
+    "rakuten.co.jp",
+    "yahoo.co.jp/shopping",
+    "mercari.com",
+    "ebay.com",
+    // 디렉토리/리뷰
+    "yelp.com",
+    "yellowpages",
+    "hotfrog",
+    "trustpilot",
+    "glassdoor",
+    // 기타
+    "wikipedia.org",
+    "wikidata.org",
+  ]
+
+  for (const pattern of excludePatterns) {
+    if (lowerUrl.includes(pattern)) {
+      logger.debug(`[Perplexity] Filtered out non-official URL: ${url}`)
+      return ""
+    }
+  }
+
+  return url
 }
 
 /**

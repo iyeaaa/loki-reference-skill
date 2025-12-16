@@ -1,4 +1,12 @@
 #!/bin/bash
+
+# Ensure yarn is available (needed for git hooks where PATH may be limited)
+if ! command -v yarn &> /dev/null; then
+  # Try loading nvm if available
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+fi
+
 # 색상 정의 (Docker 스타일)
 RED=$'\033[0;31m'
 GREEN=$'\033[0;32m'

@@ -3,16 +3,28 @@ import { Loader2, MailOpen, User } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
+import { useEmailAccountByWorkspaceAndUser } from "@/lib/api/hooks/email-accounts"
 import { useEmails } from "@/lib/api/hooks/emails"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
+import { ConnectEmailCard } from "./ConnectEmailCard"
 
 export function OpenedEmailsTab() {
   const { t } = useTranslation()
 
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
+  const userId = currentUser?.id || ""
   // Get selected workspace from sidebar selection
   const { selectedWorkspace } = useWorkspace()
   // Use undefined for "all" to fetch from all workspaces
   const workspaceId = selectedWorkspace?.id === "all" ? undefined : selectedWorkspace?.id
+
+  // Check if user has a trial preview account
+  const { data: emailAccount, isLoading: emailAccountLoading } = useEmailAccountByWorkspaceAndUser(
+    workspaceId || "",
+    userId,
+    !!workspaceId && !!userId,
+  )
+  const isTrialPreviewAccount = emailAccount?.apiKey === "TRIAL_PREVIEW"
 
   // Fetch emails with status filter
   const { data: emailsData, isLoading } = useEmails({
@@ -31,6 +43,14 @@ export function OpenedEmailsTab() {
         </CardContent>
       </Card>
     )
+  }
+
+  // Get user email for connect card
+  const userEmail = currentUser?.email || ""
+
+  // Show connect card for trial preview accounts (regardless of email count)
+  if (isTrialPreviewAccount || (!emailAccount && !emailAccountLoading)) {
+    return <ConnectEmailCard userEmail={userEmail} />
   }
 
   if (emails.length === 0) {

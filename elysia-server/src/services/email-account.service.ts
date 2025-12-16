@@ -361,6 +361,27 @@ export async function getEmailAccountByWorkspaceAndUser(workspaceId: string, use
   return result[0]
 }
 
+// GetEmailAccountByWorkspaceAndUserAny :one (includes inactive/trial accounts)
+// Use this when you need to find accounts regardless of status (e.g., TRIAL_PREVIEW accounts)
+export async function getEmailAccountByWorkspaceAndUserAny(workspaceId: string, userId: string) {
+  const result = await db
+    .select({
+      id: userEmailAccounts.id,
+      userId: userEmailAccounts.userId,
+      workspaceId: userEmailAccounts.workspaceId,
+      emailAddress: userEmailAccounts.emailAddress,
+      apiKey: userEmailAccounts.apiKey, // Need this to check TRIAL_PREVIEW
+      status: userEmailAccounts.status,
+    })
+    .from(userEmailAccounts)
+    .where(
+      and(eq(userEmailAccounts.workspaceId, workspaceId), eq(userEmailAccounts.userId, userId)),
+    )
+    .limit(1)
+
+  return result[0]
+}
+
 // ====================================
 // STATISTICS AND UTILITY QUERIES
 // ====================================

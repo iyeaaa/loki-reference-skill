@@ -55,11 +55,24 @@ export default function NewTrialPage() {
     async (code: string) => {
       setIsProcessingCallback(true)
       try {
-        // Simple OAuth - just send the code
-        // Survey data is in Jotai/localStorage, will be saved in CompanyInformation
+        // Build request body with OAuth code + survey data (if available)
+        const requestBody: Record<string, string> = { code }
+        if (
+          surveyData?.industry &&
+          surveyData?.target &&
+          surveyData?.country &&
+          surveyData?.experience
+        ) {
+          requestBody.industry = surveyData.industry
+          requestBody.target = surveyData.target
+          requestBody.country = surveyData.country
+          requestBody.experience = surveyData.experience
+          if (surveyData.lang) requestBody.lang = surveyData.lang
+        }
+
         const response = await apiFetch<GoogleAuthResponse>("/api/v1/auth/google/callback", {
           method: "POST",
-          body: JSON.stringify({ code }),
+          body: JSON.stringify(requestBody),
         })
 
         // Create proper AuthUser format
@@ -121,11 +134,18 @@ export default function NewTrialPage() {
       return
     }
 
-    if (code && code !== processedCode && !isProcessingCallback) {
+    if (code && code !== processedCode && !isProcessingCallback && surveyData) {
       setProcessedCode(code)
       handleGoogleCallback(code)
     }
-  }, [searchParams, processedCode, isProcessingCallback, handleGoogleCallback, navigate])
+  }, [
+    searchParams,
+    processedCode,
+    isProcessingCallback,
+    handleGoogleCallback,
+    navigate,
+    surveyData,
+  ])
 
   const handleGoogleLogin = async () => {
     setIsLoading(true)
@@ -148,11 +168,24 @@ export default function NewTrialPage() {
 
     setIsLoading(true)
     try {
-      // Simple email registration - just send the email
-      // Survey data is in Jotai/localStorage, will be saved in CompanyInformation
+      // Build request body with email + survey data (if available)
+      const requestBody: Record<string, string> = { email }
+      if (
+        surveyData?.industry &&
+        surveyData?.target &&
+        surveyData?.country &&
+        surveyData?.experience
+      ) {
+        requestBody.industry = surveyData.industry
+        requestBody.target = surveyData.target
+        requestBody.country = surveyData.country
+        requestBody.experience = surveyData.experience
+        if (surveyData.lang) requestBody.lang = surveyData.lang
+      }
+
       const response = await apiFetch<GoogleAuthResponse>("/api/v1/auth/register-email", {
         method: "POST",
-        body: JSON.stringify({ email }),
+        body: JSON.stringify(requestBody),
       })
 
       // Create proper AuthUser format

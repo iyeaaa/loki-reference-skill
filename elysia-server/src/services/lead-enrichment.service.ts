@@ -148,6 +148,8 @@ export const summarizeCompanyInfo = async (
   description: string
   industry?: string
   products?: string
+  attachedEmailValue?: string
+  attachedEmailType?: string
 }> => {
   try {
     const { GoogleGenAI } = await import("@google/genai")
@@ -160,6 +162,8 @@ ${content.slice(0, 3000)}
 
 Respond in JSON format:
 {
+  "attachedEmailValue": "example@example.com",
+  "attachedEmailType": "personal",
   "description": "2-3 sentence description of what the company does (in Korean)",
   "industry": "main industry/sector",
   "products": "main products or services (in Korean)"
@@ -228,6 +232,16 @@ export const enrichLead = async (
         companyName || domain,
         options.geminiApiKey,
       )
+      if (summary.attachedEmailValue) {
+        result.emails = [{ value: summary.attachedEmailValue, type: "personal" }]
+        if (summary.attachedEmailType) {
+          result.emails = [{ value: summary.attachedEmailValue, type: summary.attachedEmailType }]
+        }
+        if (summary.attachedEmailValue === "example@example.com") {
+          result.emails = []
+        }
+      }
+
       result.companyInfo.description = summary.description || result.companyInfo.description
       result.companyInfo.industry = summary.industry
     }

@@ -290,6 +290,19 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
                 newUser.id,
               )
               console.log("[Auth] ✅ Survey data saved to onboarding_progress")
+
+              // Fire and forget - auto-generate onboarding content in background
+              // Note: hasAllOnboardingParams already validates these fields exist
+              console.log("[Auth] 🚀 Starting auto-generate onboarding...")
+              onboardingService
+                .autoGenerateOnboarding(workspace.id, newUser.id, {
+                  industry: industry as string,
+                  target: target as string,
+                  country: country as string,
+                  experience: experience as string,
+                  lang,
+                })
+                .catch((err) => console.error("[Auth] Auto-generate failed:", err))
             } catch (surveyError) {
               console.error("[Auth] ❌ Failed to save survey data:", surveyError)
               // saveSurveyData already calls findOrCreateAndLinkSalesStrategy internally
@@ -529,6 +542,43 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
             profilePicture: googleUser.picture || undefined,
             onboardingParams: { industry, target, country, experience, lang },
           })
+
+          // For new users with all onboarding params, save to onboarding_progress and auto-generate
+          const hasAllOnboardingParams = !!(industry && target && country && experience)
+          if (user && hasAllOnboardingParams) {
+            try {
+              // Get the workspace created for this user
+              const workspaces = await workspaceService.getWorkspacesByOwner(user.id)
+              const workspace = workspaces?.[0]
+
+              if (workspace) {
+                // Save survey data to onboarding_progress
+                console.log("[Auth/Google] Saving survey data to onboarding_progress...")
+                await onboardingService.saveSurveyData(
+                  workspace.id,
+                  { industry, target, country, experience, lang },
+                  user.id,
+                )
+                console.log("[Auth/Google] ✅ Survey data saved")
+
+                // Fire and forget - auto-generate onboarding content in background
+                // Note: hasAllOnboardingParams already validates these fields exist
+                console.log("[Auth/Google] 🚀 Starting auto-generate onboarding...")
+                onboardingService
+                  .autoGenerateOnboarding(workspace.id, user.id, {
+                    industry: industry as string,
+                    target: target as string,
+                    country: country as string,
+                    experience: experience as string,
+                    lang,
+                  })
+                  .catch((err) => console.error("[Auth/Google] Auto-generate failed:", err))
+              }
+            } catch (onboardingError) {
+              console.error("[Auth/Google] ❌ Failed to setup onboarding:", onboardingError)
+              // Don't throw - user can still proceed
+            }
+          }
         }
 
         if (!user) {

@@ -1,5 +1,13 @@
+import { and, asc, eq, lt } from "drizzle-orm"
 import { Elysia, t } from "elysia"
-import { createEmailAccount, getEmailAccount } from "../services/email-account.service"
+import { db } from "../db/index"
+import { emails } from "../db/schema/emails"
+import {
+  createEmailAccount,
+  deleteEmailAccount,
+  getEmailAccount,
+  getEmailAccountByWorkspaceAndUserAny,
+} from "../services/email-account.service"
 import {
   createGoogleConnector,
   deleteGrant,
@@ -122,6 +130,27 @@ export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
           "Nylas grant received successfully",
         )
 
+        // Check for existing email account (might be TRIAL_PREVIEW from onboarding)
+        const existingAccount = await getEmailAccountByWorkspaceAndUserAny(workspaceId, userId)
+
+        if (existingAccount) {
+          if (existingAccount.apiKey === "TRIAL_PREVIEW") {
+            // Delete the trial preview account - user is now connecting a real email
+            logger.info(
+              { existingAccountId: existingAccount.id, userId, workspaceId },
+              "Deleting TRIAL_PREVIEW account before creating real Nylas account",
+            )
+            await deleteEmailAccount(existingAccount.id)
+          } else {
+            // User already has a real email account connected
+            // Just log and add the new one (supports multiple accounts)
+            logger.info(
+              { existingAccountId: existingAccount.id, userId, workspaceId },
+              "User already has a real email account, adding new one",
+            )
+          }
+        }
+
         // Get user to get displayName (username)
         const user = await getUser(userId)
         const displayName = user?.username || grant.email.split("@")[0]
@@ -172,6 +201,60 @@ export const nylasRoutes = new Elysia({ prefix: "/api/v1/nylas" })
           },
           "Email account created successfully",
         )
+
+        // Reschedule any emails that were scheduled in the past
+        // This happens when trial users connect their email account after preview emails were generated
+        try {
+          const now = new Date()
+
+          // Get emails with past scheduledAt for this workspace
+          const pastEmails = await db
+            .select({
+              id: emails.id,
+              scheduledAt: emails.scheduledAt,
+            })
+            .from(emails)
+            .where(
+              and(
+                eq(emails.workspaceId, workspaceId),
+                eq(emails.status, "draft"),
+                lt(emails.scheduledAt, now),
+              ),
+            )
+            .orderBy(asc(emails.scheduledAt))
+
+          if (pastEmails.length > 0) {
+            logger.info(
+              { count: pastEmails.length, workspaceId },
+              "Rescheduling emails with past scheduledAt",
+            )
+
+            // Reschedule each email 1 minute apart, starting from now + 1 minute
+            const baseTime = new Date(now.getTime() + 60 * 1000) // now + 1 minute
+
+            for (let i = 0; i < pastEmails.length; i++) {
+              const email = pastEmails[i]
+              if (!email) continue
+              const newScheduledAt = new Date(baseTime.getTime() + i * 60 * 1000) // +1 minute per email
+
+              await db
+                .update(emails)
+                .set({
+                  scheduledAt: newScheduledAt,
+                  userEmailAccountId: emailAccount.id, // Update to use new real account
+                })
+                .where(eq(emails.id, email.id))
+            }
+
+            logger.info(
+              { count: pastEmails.length, firstScheduledAt: baseTime },
+              "Successfully rescheduled emails",
+            )
+          }
+        } catch (reschedulingError) {
+          logger.error({ err: reschedulingError }, "Failed to reschedule emails (non-fatal)")
+          // Non-fatal - continue with success response
+        }
 
         return successResponse(
           {

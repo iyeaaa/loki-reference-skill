@@ -256,6 +256,20 @@ This email contains confidential information that is protected by law or under t
     try {
       const apiKey = data.apiKey || config.sendgrid.apiKey
 
+      // Trial preview emails - don't actually send, return mock success
+      // These are preview emails created during trial signup with dummy apiKey
+      if (apiKey === "TRIAL_PREVIEW") {
+        logger.info(
+          { toEmail: data.toEmail, subject: data.subject },
+          "Skipping email send - trial preview mode (apiKey=TRIAL_PREVIEW)",
+        )
+        return {
+          success: false,
+          error:
+            "Trial preview mode - email not sent. Please configure a real email account to send emails.",
+        }
+      }
+
       // Route to Nylas if apiKey doesn't start with "SG" (it's a Nylas grantId)
       if (apiKey && !apiKey.startsWith("SG")) {
         return await this.sendEmailViaNylas(data, apiKey)

@@ -124,4 +124,4 @@ dashboard.companies,기업,companies
 dashboard.emailSchedule,이메일 일정,Email Schedule
 dashboard.metrics,성과 지표,Performance Metrics
 dashboard.targetBuyers,타겟 바이어,Target Buyers
-dashboard.greeting,환영합니다! {{opened}}개의 열린 이메일과 {{sent}}개의 발송된 이메일이 있습니다.,"Welcome back! You have {{opened}} opened and {{sent}} sent emails."
+dashboard.greeting,환영합니다! {{opened}}개의 열린 이메일과 {{sent}}개의 발송된 이메일이 있습니다.,Welcome back! You have {{opened}} opened and {{sent}} sent emails.

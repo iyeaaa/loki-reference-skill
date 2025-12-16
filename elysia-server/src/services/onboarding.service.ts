@@ -7,12 +7,25 @@
  * - 온보딩 완료 처리
  */
 
-import { desc, eq, isNull, sql } from "drizzle-orm"
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm"
 import { db } from "../db/index"
+import { userEmailAccounts } from "../db/schema/email-accounts"
+import { emails } from "../db/schema/emails"
+import { leadContacts } from "../db/schema/lead-details"
+import { leads as leadsTable } from "../db/schema/leads"
 import { type OnboardingStatus, onboardingProgress } from "../db/schema/onboarding"
 import { workspaces } from "../db/schema/workspaces"
 import { createLog } from "./activity-log.service"
+import { getAITemplateGenerationService } from "./ai-template-generation.service"
+import { searchBigQuery } from "./bigquery-search.service"
+import { createCustomerGroup } from "./customer-group.service"
+import { bulkAddLeadsToCustomerGroup, bulkCreateLeads } from "./lead.service"
+import { APOLLO_LEADS_DATA_DICTIONARY } from "./lead-discovery/nodes/bigquery-executor"
+import { enrichLead } from "./lead-enrichment.service"
 import * as salesStrategyService from "./sales-strategy.service"
+import { createSequence, createSequenceStep } from "./sequence.service"
+import { getUser } from "./user.service"
+import * as workspaceServiceImport from "./workspace.service"
 
 // ====================================
 // ERROR TYPES
@@ -68,7 +81,7 @@ export interface OnboardingProgressData {
 export async function getOrCreateOnboardingProgress(
   workspaceId: string,
 ): Promise<OnboardingProgressData> {
-  console.log("[OnboardingService] getOrCreateOnboardingProgress called, workspaceId:", workspaceId)
+  // console.log("[OnboardingService] getOrCreateOnboardingProgress called, workspaceId:", workspaceId)
 
   // 먼저 기존 진행 상태 조회
   const [existing] = await db
@@ -79,14 +92,14 @@ export async function getOrCreateOnboardingProgress(
 
   if (existing) {
     console.log("[OnboardingService] Found existing progress:", existing.id)
-    console.log("[OnboardingService]   - status:", existing.status)
-    console.log("[OnboardingService]   - currentStep:", existing.currentStep)
-    console.log("[OnboardingService]   - surveyData:", JSON.stringify(existing.surveyData, null, 2))
+    // console.log("[OnboardingService]   - status:", existing.status)
+    // console.log("[OnboardingService]   - currentStep:", existing.currentStep)
+    // console.log("[OnboardingService]   - surveyData:", JSON.stringify(existing.surveyData, null, 2))
     return existing as OnboardingProgressData
   }
 
   // 없으면 새로 생성
-  console.log("[OnboardingService] No existing progress, creating new one...")
+  // console.log("[OnboardingService] No existing progress, creating new one...")
   const [created] = await db
     .insert(onboardingProgress)
     .values({
@@ -96,7 +109,7 @@ export async function getOrCreateOnboardingProgress(
     })
     .returning()
 
-  console.log("[OnboardingService] Created new progress:", created?.id)
+  // console.log("[OnboardingService] Created new progress:", created?.id)
   return created as OnboardingProgressData
 }
 
@@ -106,7 +119,7 @@ export async function getOrCreateOnboardingProgress(
 export async function getOnboardingProgress(
   workspaceId: string,
 ): Promise<OnboardingProgressData | null> {
-  console.log("[OnboardingService] getOnboardingProgress called, workspaceId:", workspaceId)
+  // console.log("[OnboardingService] getOnboardingProgress called, workspaceId:", workspaceId)
 
   const [result] = await db
     .select()
@@ -115,13 +128,13 @@ export async function getOnboardingProgress(
     .limit(1)
 
   if (result) {
-    console.log("[OnboardingService] getOnboardingProgress result:")
-    console.log("[OnboardingService]   - id:", result.id)
-    console.log("[OnboardingService]   - status:", result.status)
-    console.log("[OnboardingService]   - currentStep:", result.currentStep)
-    console.log("[OnboardingService]   - surveyData:", JSON.stringify(result.surveyData, null, 2))
+    // console.log("[OnboardingService] getOnboardingProgress result:")
+    // console.log("[OnboardingService]   - id:", result.id)
+    // console.log("[OnboardingService]   - status:", result.status)
+    // console.log("[OnboardingService]   - currentStep:", result.currentStep)
+    // console.log("[OnboardingService]   - surveyData:", JSON.stringify(result.surveyData, null, 2))
   } else {
-    console.log("[OnboardingService] getOnboardingProgress: No result found")
+    // console.log("[OnboardingService] getOnboardingProgress: No result found")
   }
 
   return (result as OnboardingProgressData) || null
@@ -156,10 +169,10 @@ export async function saveSurveyData(
   surveyData: OnboardingSurveyData,
   userId?: string,
 ): Promise<OnboardingProgressData> {
-  console.log("[OnboardingService] saveSurveyData called")
-  console.log("[OnboardingService] workspaceId:", workspaceId)
-  console.log("[OnboardingService] surveyData:", JSON.stringify(surveyData, null, 2))
-  console.log("[OnboardingService] userId:", userId)
+  // console.log("[OnboardingService] saveSurveyData called")
+  // console.log("[OnboardingService] workspaceId:", workspaceId)
+  // console.log("[OnboardingService] surveyData:", JSON.stringify(surveyData, null, 2))
+  // console.log("[OnboardingService] userId:", userId)
 
   // 필수 필드 검증
   if (!surveyData.industry || !surveyData.target || !surveyData.country || !surveyData.experience) {
@@ -170,16 +183,16 @@ export async function saveSurveyData(
     )
   }
 
-  console.log("[OnboardingService] Getting or creating onboarding progress...")
+  // console.log("[OnboardingService] Getting or creating onboarding progress...")
   const progress = await getOrCreateOnboardingProgress(workspaceId)
-  console.log("[OnboardingService] Progress ID:", progress.id)
-  console.log(
-    "[OnboardingService] Current surveyData in DB:",
-    JSON.stringify(progress.surveyData, null, 2),
-  )
+  // console.log("[OnboardingService] Progress ID:", progress.id)
+  // console.log(
+  //   "[OnboardingService] Current surveyData in DB:",
+  //   JSON.stringify(progress.surveyData, null, 2),
+  // )
 
   // 트랜잭션으로 survey_data와 sales_strategy를 함께 저장
-  console.log("[OnboardingService] Updating onboarding_progress with surveyData...")
+  // console.log("[OnboardingService] Updating onboarding_progress with surveyData...")
   const [updated] = await db
     .update(onboardingProgress)
     .set({
@@ -191,15 +204,15 @@ export async function saveSurveyData(
     .where(eq(onboardingProgress.id, progress.id))
     .returning()
 
-  console.log("[OnboardingService] ✅ onboarding_progress updated:")
-  console.log("[OnboardingService]   - id:", updated?.id)
-  console.log("[OnboardingService]   - surveyData:", JSON.stringify(updated?.surveyData, null, 2))
-  console.log("[OnboardingService]   - status:", updated?.status)
-  console.log("[OnboardingService]   - currentStep:", updated?.currentStep)
+  // console.log("[OnboardingService] ✅ onboarding_progress updated:")
+  // console.log("[OnboardingService]   - id:", updated?.id)
+  // console.log("[OnboardingService]   - surveyData:", JSON.stringify(updated?.surveyData, null, 2))
+  // console.log("[OnboardingService]   - status:", updated?.status)
+  // console.log("[OnboardingService]   - currentStep:", updated?.currentStep)
 
   // workspace_sales_strategies도 함께 생성/연결
   try {
-    console.log("[OnboardingService] Linking sales strategy...")
+    // console.log("[OnboardingService] Linking sales strategy...")
     await salesStrategyService.findOrCreateAndLinkSalesStrategy(workspaceId, {
       industry: surveyData.industry as Parameters<
         typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
@@ -592,4 +605,667 @@ export async function resetOnboarding(workspaceId: string): Promise<OnboardingPr
     .returning()
 
   return updated as OnboardingProgressData
+}
+
+// ====================================
+// AUTO-GENERATION (TRIAL SIGNUP)
+// ====================================
+
+// Country code → actual Apollo BigQuery country values (must match data exactly)
+// Apollo has individual country names, not regions like "Southeast Asia"
+const COUNTRY_NAMES: Record<string, string> = {
+  jp: "Japan",
+  us: "United States",
+  sea: "Singapore", // Apollo has individual SEA countries - use Singapore as representative
+  eu: "United Kingdom", // Apollo has individual EU countries - use UK as representative
+  cn: "China",
+  ae: "United Arab Emirates",
+}
+
+// Industry code → English keywords for BigQuery LIKE search
+// Apollo uses free-form industry text - these keywords will match via LIKE
+const INDUSTRY_NAMES: Record<string, string> = {
+  beauty: "beauty cosmetics skincare",
+  fashion: "fashion apparel clothing",
+  food: "food beverage",
+  it_saas: "software technology saas",
+  manufacturing: "manufacturing",
+}
+
+/**
+ * Replace template variables with lead data
+ */
+function replaceVariables(
+  template: string,
+  lead: {
+    companyName: string | null
+    contactName?: string | null
+    websiteUrl?: string | null
+    country?: string | null
+  },
+): string {
+  return template
+    .replace(/\{\{companyName\}\}/g, lead.companyName || "귀사")
+    .replace(/\{\{회사명\}\}/g, lead.companyName || "귀사")
+    .replace(/\{\{contactName\}\}/g, lead.contactName || "담당자")
+    .replace(/\{\{담당자명\}\}/g, lead.contactName || "담당자")
+    .replace(/\{\{website\}\}/g, lead.websiteUrl || "")
+    .replace(/\{\{country\}\}/g, lead.country || "")
+}
+
+/**
+ * Generate preview emails for each lead × step combination
+ * Stores in emails table for UI display and eventual sending
+ *
+ * Each lead's emails are staggered by 1 minute to avoid sending all at once
+ * Example: Lead 1 at 10:00, Lead 2 at 10:01, Lead 3 at 10:02, etc.
+ *
+ * @param workspaceId - Workspace ID (required for emails table)
+ * @param userEmailAccountId - Trial email account ID (created for trial users)
+ * @param fromEmail - The from email address (user's email)
+ * @param sequenceId - Sequence ID
+ * @param stepTemplates - Array of step templates with delayDays
+ * @param leadDetails - Array of lead details including contactEmail
+ * @returns Number of emails created
+ */
+async function generatePreviewEmailsForSequence(
+  workspaceId: string,
+  userEmailAccountId: string,
+  fromEmail: string,
+  sequenceId: string,
+  stepTemplates: Array<{
+    stepId: string
+    stepOrder: number
+    delayDays: number
+    emailSubject: string
+    emailBodyText: string
+    emailBodyHtml: string | null
+  }>,
+  leadDetails: Array<{
+    id: string
+    companyName: string | null
+    contactName?: string | null
+    contactEmail?: string | null
+    websiteUrl?: string | null
+    country?: string | null
+    businessType?: string | null
+  }>,
+): Promise<number> {
+  const emailsToCreate = []
+
+  // Base time for scheduling (now + 2 minutes for immediate sending)
+  const baseTime = new Date(Date.now() + 2 * 60 * 1000)
+
+  for (let leadIndex = 0; leadIndex < leadDetails.length; leadIndex++) {
+    const lead = leadDetails[leadIndex]
+    if (!lead) continue
+
+    // Stagger each lead by 1 minute
+    const leadOffset = leadIndex * 60 * 1000 // 1 minute per lead
+
+    for (const step of stepTemplates) {
+      // Replace placeholders with lead data
+      const subject = replaceVariables(step.emailSubject, lead)
+      const bodyText = replaceVariables(step.emailBodyText, lead)
+      const bodyHtml = step.emailBodyHtml ? replaceVariables(step.emailBodyHtml, lead) : null
+
+      // Calculate scheduled time: base + lead offset + delay days
+      const scheduledAt = new Date(
+        baseTime.getTime() + leadOffset + step.delayDays * 24 * 60 * 60 * 1000,
+      )
+
+      emailsToCreate.push({
+        workspaceId,
+        userEmailAccountId, // Real trial email account ID
+        leadId: lead.id,
+        sequenceId,
+        stepId: step.stepId,
+        direction: "outbound" as const,
+        fromEmail, // User's actual email address
+        toEmail: lead.contactEmail || TRIAL_PLACEHOLDER_EMAIL,
+        subject,
+        bodyText,
+        bodyHtml,
+        status: "draft" as const, // Draft status for preview (not yet ready to send)
+        scheduledAt,
+        // Denormalized fields for performance
+        leadName: lead.companyName,
+        leadEmail: lead.contactEmail,
+      })
+    }
+  }
+
+  if (emailsToCreate.length > 0) {
+    await db.insert(emails).values(emailsToCreate)
+  }
+
+  return emailsToCreate.length
+}
+
+/**
+ * Non-interactive lead discovery for auto-generation
+ * Calls BigQuery directly without SSE/LangGraph for background processing
+ *
+ * @param workspaceId - The workspace ID
+ * @param userId - The user ID who created the workspace
+ * @param surveyData - Survey data with industry, country, and target
+ * @returns Object with leadIds array and count
+ */
+async function discoverLeadsForOnboarding(
+  workspaceId: string,
+  userId: string,
+  surveyData: { industry: string; country: string; target: string },
+): Promise<{ leadIds: string[]; count: number }> {
+  // Map codes to actual Apollo BigQuery values
+  const countryName = COUNTRY_NAMES[surveyData.country] || surveyData.country
+  const industryName = INDUSTRY_NAMES[surveyData.industry] || surveyData.industry
+
+  // Build English query for Gemini AI → SQL conversion
+  // Format: "[industry keywords] companies in [country] 20개"
+  const query = `${industryName} companies in ${countryName} 20개`
+
+  console.log(`[LeadDiscovery] Searching: "${query}"`)
+
+  try {
+    // Call BigQuery directly using Apollo data (291만 high-quality leads)
+    const result = await searchBigQuery(query, APOLLO_LEADS_DATA_DICTIONARY)
+
+    if (!result.results.length) {
+      console.log("[LeadDiscovery] No results from BigQuery")
+      return { leadIds: [], count: 0 }
+    }
+
+    console.log(`[LeadDiscovery] Found ${result.results.length} results from BigQuery`)
+
+    // Enrich leads with contact emails and company descriptions
+    const rawLeads = result.results.map((row) => ({
+      company: row.company as string,
+      website: row.website as string,
+      industry: row.industry as string,
+      employees: row.employees?.toString() || "",
+      country: row.country as string,
+    }))
+
+    console.log(`[LeadDiscovery] Enriching ${rawLeads.length} leads...`)
+    const enrichedLeads = await enrichLeadsForOnboarding(rawLeads)
+    console.log(
+      `[LeadDiscovery] Enrichment complete. ${enrichedLeads.filter((l) => l.primaryEmail).length} leads have emails`,
+    )
+
+    console.info({
+      enrichedLeads: enrichedLeads.map((l) => {
+        return {
+          companyName: l.companyName,
+          websiteUrl: l.websiteUrl,
+          primaryEmail: l.primaryEmail,
+        }
+      }),
+    })
+
+    // Transform enriched leads to lead creation format
+    const leadsToCreate = enrichedLeads.map((lead) => ({
+      companyName: lead.companyName,
+      foundCompanyName: lead.companyName,
+      websiteUrl: lead.websiteUrl,
+      businessType: lead.businessType,
+      country: lead.country,
+      employeeCount: lead.employeeCount,
+      description: lead.description,
+      primaryEmail: lead.primaryEmail, // Creates leadContacts record automatically
+      leadSource: "bigquery-auto" as const,
+      leadStatus: "new" as const,
+    }))
+
+    // Create leads in database using bulkCreateLeads
+    const { createdLeads, stats } = await bulkCreateLeads({
+      workspaceId,
+      leads: leadsToCreate,
+      createdBy: userId,
+    })
+
+    console.log(`[LeadDiscovery] Created ${stats.created} leads (${stats.skipped} skipped)`)
+
+    return {
+      leadIds: createdLeads.map((l) => l.id),
+      count: stats.created,
+    }
+  } catch (error) {
+    console.error("[LeadDiscovery] Error during BigQuery search:", error)
+    return { leadIds: [], count: 0 }
+  }
+}
+
+/**
+ * Enrich BigQuery leads with contact emails and company info
+ * Uses Hunter.io for email discovery and Jina/Gemini for company analysis
+ * Rate-limited with 500ms delay between requests to avoid API throttling
+ */
+async function enrichLeadsForOnboarding(
+  leadsToEnrich: Array<{
+    company: string
+    website: string
+    industry: string
+    employees: string
+    country: string
+  }>,
+): Promise<
+  Array<{
+    companyName: string
+    websiteUrl: string
+    businessType: string
+    country: string
+    employeeCount: string
+    description?: string
+    primaryEmail?: string
+  }>
+> {
+  const hunterApiKey = process.env.HUNTER_API_KEY
+  const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY
+
+  const enrichedLeads = []
+
+  for (const lead of leadsToEnrich) {
+    try {
+      if (!lead.website) {
+        // No website = can't enrich, add basic data
+        enrichedLeads.push({
+          companyName: lead.company || "Unknown Company",
+          websiteUrl: lead.website,
+          businessType: lead.industry,
+          country: lead.country,
+          employeeCount: lead.employees?.toString(),
+        })
+        continue
+      }
+
+      const enrichment = await enrichLead(lead.website, lead.company, {
+        hunterApiKey,
+        geminiApiKey,
+        skipHunter: true, // TODO: skip hunter untill the subscription is paid
+      })
+
+      // Get primary email (highest confidence)
+      const primaryEmail = enrichment.emails?.[0]?.value
+
+      enrichedLeads.push({
+        companyName: lead.company || "Unknown Company",
+        websiteUrl: lead.website,
+        businessType: lead.industry,
+        country: lead.country,
+        employeeCount: lead.employees?.toString(),
+        description: enrichment.companyInfo?.description,
+        primaryEmail,
+      })
+
+      console.log(`[LeadEnrichment] Enriched ${lead.company}: email=${primaryEmail || "none"}`)
+
+      // Rate limit: 500ms delay between requests
+      await new Promise((resolve) => setTimeout(resolve, 500))
+    } catch (error) {
+      console.error(`[LeadEnrichment] Failed to enrich ${lead.company}:`, error)
+      // Still add lead without enrichment
+      enrichedLeads.push({
+        companyName: lead.company || "Unknown Company",
+        websiteUrl: lead.website,
+        businessType: lead.industry,
+        country: lead.country,
+        employeeCount: lead.employees?.toString(),
+      })
+    }
+  }
+
+  return enrichedLeads
+}
+
+// 2-touch email sequence for trial signup (optimized based on research)
+// Research shows: First follow-up boosts reply rates by 49-65.8%, 70% of responses come from 2nd-4th email
+// Touch 1: Brief intro with pain point + low-commitment CTA
+// Touch 2: Follow-up with new value + time-bound CTA (3 days later)
+const EMAIL_TYPES_2TOUCH = [
+  {
+    type: "introduction",
+    promptKr:
+      "잠재 고객에게 보내는 첫 이메일을 작성해주세요. 짧고 간결하게(2-5문장) 고객의 핵심 문제점을 언급하고, 우리가 어떻게 도움을 줄 수 있는지 설명하세요. 부담 없는 다음 단계(예: 자료 확인, 짧은 통화)를 제안해주세요.",
+    promptEn:
+      "Write a brief introduction email (2-5 sentences) to a potential customer. Highlight a key pain point they likely face, briefly explain how you can help, and propose a low-commitment next step (e.g., viewing a resource, a quick 10-min call).",
+    delayDays: 0,
+  },
+  {
+    type: "follow_up",
+    promptKr:
+      "이전 이메일의 후속 메시지를 작성해주세요. 첫 이메일을 간략히 언급하고, 새로운 가치(성공 사례, 구체적 혜택, 또는 인사이트)를 추가하세요. 명확하고 시간이 정해진 행동 요청(예: '이번 주 10분 통화')으로 마무리해주세요.",
+    promptEn:
+      "Write a follow-up email referencing your previous outreach. Add new value (a success story, specific benefit, or insight) that wasn't in the first email. End with a clear, time-bound CTA (e.g., '10 minutes this week') to lower the commitment barrier.",
+    delayDays: 3,
+  },
+]
+
+// Placeholder email for leads without contact email
+const TRIAL_PLACEHOLDER_EMAIL = "trial@preview.local"
+
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000
+
+/**
+ * Auto-generate onboarding content after trial signup
+ *
+ * This function runs in the background after a new trial user signs up.
+ * It automatically:
+ * 1. Discovers leads using BigQuery (non-interactive, direct call)
+ * 2. Creates a customer group with discovered leads
+ * 3. Generates email templates using AI
+ * 4. Creates a sequence with immediate scheduling
+ * 5. Updates onboarding progress
+ *
+ * @param workspaceId - The workspace ID
+ * @param userId - The user ID who created the workspace
+ * @param surveyData - Survey data from signup (industry, target, country, experience, lang)
+ */
+export async function autoGenerateOnboarding(
+  workspaceId: string,
+  userId: string,
+  surveyData: {
+    industry: string
+    target: string
+    country: string
+    experience: string
+    lang?: string
+  },
+): Promise<void> {
+  const isKorean = surveyData.lang === "ko"
+
+  console.log(`[AutoGenerate] Starting for workspace ${workspaceId}`)
+
+  try {
+    // Get workspace info for AI template generation
+    const workspace = await workspaceServiceImport.getWorkspace(workspaceId)
+    if (!workspace) {
+      console.error(`[AutoGenerate] Workspace not found: ${workspaceId}`)
+      return
+    }
+
+    // Get user info for email address
+    const user = await getUser(userId)
+    if (!user) {
+      console.error(`[AutoGenerate] User not found: ${userId}`)
+      return
+    }
+
+    // Create trial email account for preview emails
+    // This allows us to store emails in the emails table without FK constraint errors
+    // The apiKey is "TRIAL_PREVIEW" - a dummy value that we can check later to handle special cases
+    let trialEmailAccountId: string | null = null
+    const userEmail = user.email
+
+    // Try to find existing trial email account first
+    const [existingAccount] = await db
+      .select({ id: userEmailAccounts.id })
+      .from(userEmailAccounts)
+      .where(eq(userEmailAccounts.userId, userId))
+      .limit(1)
+
+    if (existingAccount) {
+      trialEmailAccountId = existingAccount.id
+      console.log(`[AutoGenerate] Using existing email account: ${trialEmailAccountId}`)
+    } else {
+      // Create new trial email account
+      const [newAccount] = await db
+        .insert(userEmailAccounts)
+        .values({
+          userId,
+          workspaceId,
+          emailAddress: userEmail,
+          apiKey: "TRIAL_PREVIEW", // Dummy value - emails won't actually send until real API key is set
+          isVerified: false,
+          isDefault: true, // Set as default for the workspace
+          status: "inactive",
+        })
+        .returning({ id: userEmailAccounts.id })
+
+      if (newAccount) {
+        trialEmailAccountId = newAccount.id
+        console.log(`[AutoGenerate] Created trial email account: ${trialEmailAccountId}`)
+      }
+    }
+
+    if (!trialEmailAccountId) {
+      console.error("[AutoGenerate] Failed to get or create email account")
+      return
+    }
+
+    // 1. Discover leads using BigQuery (non-interactive)
+    console.log("[AutoGenerate] Discovering leads...")
+    const { leadIds, count: leadCount } = await discoverLeadsForOnboarding(workspaceId, userId, {
+      industry: surveyData.industry,
+      country: surveyData.country,
+      target: surveyData.target,
+    })
+    console.log(`[AutoGenerate] Discovered ${leadCount} leads`)
+
+    // 2. Create customer group
+    const customerGroup = await createCustomerGroup({
+      workspaceId,
+      name: isKorean ? "데모 리드 그룹" : "Demo Lead Group",
+      description:
+        leadCount > 0
+          ? isKorean
+            ? `트라이얼 가입 시 자동 생성된 리드 그룹 (${leadCount}개 리드 포함)`
+            : `Lead group auto-generated during trial signup (${leadCount} leads included)`
+          : isKorean
+            ? "트라이얼 가입 시 자동 생성된 리드 그룹. 리드 탐색에서 리드를 추가하세요."
+            : "Lead group auto-generated during trial signup. Add leads from Lead Discovery.",
+      createdBy: userId,
+    })
+
+    if (!customerGroup) {
+      console.error("[AutoGenerate] Failed to create customer group")
+      return
+    }
+
+    console.log(`[AutoGenerate] Created customer group ${customerGroup.id}`)
+
+    // 3. Add discovered leads to customer group
+    if (leadIds.length > 0) {
+      await bulkAddLeadsToCustomerGroup(leadIds, customerGroup.id, userId)
+      console.log(`[AutoGenerate] Added ${leadIds.length} leads to customer group`)
+    }
+
+    // 4. Generate email templates using AI (2-touch sequence for trial)
+    const templatesNeeded = EMAIL_TYPES_2TOUCH.length
+    console.log(`[AutoGenerate] Will generate ${templatesNeeded} templates (2-touch sequence)`)
+
+    const aiService = getAITemplateGenerationService()
+    const templates: Array<{
+      stepOrder: number
+      delayDays: number
+      emailSubject: string
+      emailBodyText: string
+      emailBodyHtml: string
+    }> = []
+
+    for (let i = 0; i < templatesNeeded; i++) {
+      const emailType = EMAIL_TYPES_2TOUCH[i]
+      if (!emailType) continue
+
+      const prompt = isKorean ? emailType.promptKr : emailType.promptEn
+      const industryContext = isKorean
+        ? `${surveyData.industry} 산업의 ${surveyData.target} 고객을 대상으로`
+        : `for ${surveyData.target} customers in the ${surveyData.industry} industry`
+
+      try {
+        const template = await aiService.generateEmailTemplate({
+          workspaceName: workspace.name,
+          workspaceDescription: workspace.description || undefined,
+          country: surveyData.country,
+          userPrompt: `${prompt} ${industryContext}`,
+        })
+
+        templates.push({
+          stepOrder: i + 1,
+          delayDays: emailType.delayDays, // 0 for intro, 3 for follow-up
+          emailSubject: template.subject,
+          emailBodyText: template.bodyText,
+          emailBodyHtml: template.bodyHtml,
+        })
+
+        console.log(
+          `[AutoGenerate] Generated template ${i + 1}/${templatesNeeded}: ${emailType.type} (delay: ${emailType.delayDays} days)`,
+        )
+      } catch (error) {
+        console.error(`[AutoGenerate] Failed to generate template ${i + 1}:`, error)
+        // Continue with remaining templates
+      }
+    }
+
+    if (templates.length === 0) {
+      console.error("[AutoGenerate] No templates generated, aborting")
+      return
+    }
+
+    // 5. Create sequence with discovered leads
+    const sequence = await createSequence({
+      workspaceId,
+      name: isKorean ? "데모 이메일 시퀀스" : "Demo Email Sequence",
+      description:
+        leadIds.length > 0
+          ? isKorean
+            ? `트라이얼 가입 시 자동 생성된 데모 시퀀스 (${leadIds.length}개 리드 포함)`
+            : `Demo sequence auto-generated during trial signup (${leadIds.length} leads included)`
+          : isKorean
+            ? "트라이얼 가입 시 자동 생성된 데모 시퀀스. 리드를 추가한 후 실행하세요."
+            : "Demo sequence auto-generated during trial signup. Add leads before running.",
+      status: leadIds.length > 0 ? "ready" : "draft", // Ready if leads exist, draft otherwise
+      customerGroupId: customerGroup.id,
+      createdBy: userId,
+      selectedLeadIds: leadIds.length > 0 ? leadIds : undefined,
+    })
+
+    if (!sequence) {
+      console.error("[AutoGenerate] Failed to create sequence")
+      return
+    }
+
+    console.log(`[AutoGenerate] Created sequence ${sequence.id}`)
+
+    // 6. Create sequence steps with 2-touch timing (Day 0 and Day 3)
+    const now = new Date()
+    const kstNow = new Date(now.getTime() + KST_OFFSET_MS)
+    const scheduledHour = kstNow.getUTCHours()
+    const scheduledMinute = Math.min(59, kstNow.getUTCMinutes() + 2) // 2 min buffer
+
+    // Array to store created steps with their IDs for preview email generation
+    const createdSteps: Array<{
+      stepId: string
+      stepOrder: number
+      delayDays: number
+      emailSubject: string
+      emailBodyText: string
+      emailBodyHtml: string | null
+    }> = []
+
+    for (const template of templates) {
+      const step = await createSequenceStep({
+        sequenceId: sequence.id,
+        stepOrder: template.stepOrder,
+        delayDays: template.delayDays, // From EMAIL_TYPES_2TOUCH: 0 for intro, 3 for follow-up
+        scheduledHour,
+        scheduledMinute,
+        emailSubject: template.emailSubject,
+        emailBodyText: template.emailBodyText,
+        emailBodyHtml: template.emailBodyHtml,
+        generationSource: "ai",
+      })
+
+      if (step) {
+        createdSteps.push({
+          stepId: step.id,
+          stepOrder: step.stepOrder,
+          delayDays: template.delayDays,
+          emailSubject: template.emailSubject,
+          emailBodyText: template.emailBodyText,
+          emailBodyHtml: template.emailBodyHtml,
+        })
+      }
+
+      console.log(
+        `[AutoGenerate] Created sequence step ${template.stepOrder} (delay: ${template.delayDays} days)`,
+      )
+    }
+
+    // 7. Generate preview emails for each lead × step combination
+    // Emails are staggered: each lead gets emails 1 minute after the previous
+    if (leadIds.length > 0 && createdSteps.length > 0) {
+      // Fetch lead details for personalization
+      const leadDetails = await db
+        .select({
+          id: leadsTable.id,
+          companyName: leadsTable.companyName,
+          contactName: leadsTable.contactName,
+          websiteUrl: leadsTable.websiteUrl,
+          country: leadsTable.country,
+          businessType: leadsTable.businessType,
+        })
+        .from(leadsTable)
+        .where(inArray(leadsTable.id, leadIds))
+
+      // Fetch contact emails from leadContacts table (populated during enrichment)
+      const leadEmails = await db
+        .select({
+          leadId: leadContacts.leadId,
+          email: leadContacts.contactValue,
+        })
+        .from(leadContacts)
+        .where(
+          and(
+            inArray(leadContacts.leadId, leadIds),
+            eq(leadContacts.contactType, "email"),
+            eq(leadContacts.isPrimary, true),
+          ),
+        )
+
+      // Create email lookup map
+      const emailMap = new Map(leadEmails.map((e) => [e.leadId, e.email]))
+
+      // Add contactEmail to leadDetails
+      const leadDetailsWithEmail = leadDetails.map((lead) => ({
+        ...lead,
+        contactEmail: emailMap.get(lead.id) || null,
+      }))
+
+      console.log(
+        `[AutoGenerate] Found ${leadEmails.length} contact emails for ${leadDetails.length} leads`,
+      )
+
+      const previewCount = await generatePreviewEmailsForSequence(
+        workspaceId,
+        trialEmailAccountId,
+        userEmail,
+        sequence.id,
+        createdSteps,
+        leadDetailsWithEmail,
+      )
+      console.log(
+        `[AutoGenerate] Generated ${previewCount} preview emails (${leadDetails.length} leads × ${createdSteps.length} steps)`,
+      )
+    }
+
+    // 8. Update onboarding progress
+    // First complete step 1 (company info) - required before step 2/3
+    await completeStep1CompanyInfo(workspaceId, userId)
+    console.log("[AutoGenerate] Completed step 1 (company info)")
+
+    // Complete step 2 (lead search) if leads were found
+    if (leadIds.length > 0) {
+      await completeStep2LeadSearch(workspaceId, leadIds, customerGroup.id, userId)
+      console.log("[AutoGenerate] Completed step 2 (lead search)")
+    }
+    // Complete step 3 (email generation)
+    await completeStep3EmailGeneration(workspaceId, sequence.id, userId)
+
+    console.log(
+      `[AutoGenerate] Success: ${leadCount} leads, ${templates.length} templates, sequence ${sequence.id}`,
+    )
+  } catch (error) {
+    console.error("[AutoGenerate] Failed:", error)
+    // Silently fail - user can still do manual onboarding
+  }
 }

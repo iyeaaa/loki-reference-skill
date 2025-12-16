@@ -8,6 +8,7 @@
  */
 
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm"
+import { config } from "../config"
 import { db } from "../db/index"
 import { userEmailAccounts } from "../db/schema/email-accounts"
 import { emails } from "../db/schema/emails"
@@ -853,8 +854,8 @@ async function enrichLeadsForOnboarding(
     primaryEmail?: string
   }>
 > {
-  const hunterApiKey = process.env.HUNTER_API_KEY
-  const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY
+  const hunterApiKey = config.hunter.apiKey
+  const geminiApiKey = config.gemini.apiKey
 
   const enrichedLeads = []
 
@@ -875,7 +876,7 @@ async function enrichLeadsForOnboarding(
       const enrichment = await enrichLead(lead.website, lead.company, {
         hunterApiKey,
         geminiApiKey,
-        skipHunter: true, // TODO: skip hunter untill the subscription is paid
+        skipHunter: false, // Hunter API subscription is now active
       })
 
       // Get primary email (highest confidence)

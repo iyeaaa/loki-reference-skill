@@ -106,17 +106,29 @@ export const config = {
 
   // Monitoring (optional)
   monitoring: {
-    sentryDsn: process.env.SENTRY_DSN,
+    sentryDsn: getEnvOrDefault("SENTRY_DSN", ""),
   },
 
   // OpenAI (for Mastra)
   openai: {
-    apiKey: process.env.OPENAI_API_KEY || "",
+    apiKey: getEnvOrDefault("OPENAI_API_KEY", ""),
   },
 
   // Gemini (for File Search)
   gemini: {
-    apiKey: process.env.GEMINI_API_KEY || "",
+    apiKey: (() => {
+      const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY
+      if (!key)
+        throw new Error(
+          "❌ Missing required environment variable: GEMINI_API_KEY or GOOGLE_AI_API_KEY",
+        )
+      return key
+    })(),
+  },
+
+  // Hunter.io (Email Verification & Enrichment)
+  hunter: {
+    apiKey: getEnv("HUNTER_API_KEY"),
   },
 
   // External APIs
@@ -139,9 +151,9 @@ export const config = {
 
   // Nylas (Email Integration)
   nylas: {
-    apiKey: process.env.NYLAS_API_KEY || "",
+    apiKey: getEnvOrDefault("NYLAS_API_KEY", ""),
     apiUri: getEnvOrDefault("NYLAS_API_URI", "https://api.us.nylas.com"),
-    clientId: process.env.NYLAS_CLIENT_ID || "",
+    clientId: getEnvOrDefault("NYLAS_CLIENT_ID", ""),
     redirectUri: getEnvOrDefault(
       "NYLAS_REDIRECT_URI",
       "http://localhost:3001/api/v1/nylas/callback",

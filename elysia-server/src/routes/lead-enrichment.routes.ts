@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia"
+import { config } from "../config"
 import { enrichLead } from "../services/lead-enrichment.service"
 import logger from "../utils/logger"
 
@@ -11,13 +12,13 @@ export const leadEnrichmentRoutes = new Elysia({ prefix: "/api/v1/lead-enrichmen
       logger.info({ webAddress, companyName }, "Lead enrichment request received")
 
       try {
-        const hunterApiKey = process.env.HUNTER_API_KEY
-        const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY
+        const hunterApiKey = config.hunter.apiKey
+        const geminiApiKey = config.gemini.apiKey
 
         const result = await enrichLead(webAddress, companyName, {
           hunterApiKey,
           geminiApiKey,
-          skipHunter: !hunterApiKey,
+          skipHunter: false,
         })
 
         return {
@@ -49,15 +50,12 @@ export const leadEnrichmentRoutes = new Elysia({ prefix: "/api/v1/lead-enrichmen
   .get(
     "/health",
     () => {
-      const hasHunterKey = !!process.env.HUNTER_API_KEY
-      const hasGeminiKey = !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY)
-
       return {
         status: "ok",
         services: {
-          hunter: hasHunterKey ? "configured" : "not configured",
+          hunter: "configured",
           jina: "available (free)",
-          gemini: hasGeminiKey ? "configured" : "not configured",
+          gemini: "configured",
         },
       }
     },

@@ -1405,18 +1405,30 @@ export async function executeBigQuery(
     emitter.nodeStart("executeBigQuery", `${targetInfo} 바이어를 검색하고 있어요`)
   }
 
-  try {
-    // Build the natural language query
-    const nlQuery = buildNaturalLanguageQuery(params)
+  // 재시도 설정
+  const MAX_RETRY_COUNT = 3
 
-    leadDiscoveryLogger.info(`[리드 검색] 자연어 쿼리: "${nlQuery}"`)
+  // 내부 검색 함수 (재시도용)
+  // params는 위에서 이미 체크됨
+  const searchParams = params
+  async function executeSearchOnce(attemptNumber: number) {
+    // Build the natural language query
+    const nlQuery = buildNaturalLanguageQuery(searchParams)
+
+    leadDiscoveryLogger.info(
+      `[리드 검색] ${attemptNumber > 1 ? `재시도 ${attemptNumber}/${MAX_RETRY_COUNT} - ` : ""}자연어 쿼리: "${nlQuery}"`,
+    )
     leadDiscoveryLogger.info(
       `[리드 검색] 네 테이블(b2b_leads_all, crunchbase_all, apollo_leads_all, fresh_leads) 모두 검색`,
     )
     leadDiscoveryLogger.bigQueryExecutionStart(nlQuery)
 
     if (emitter) {
-      emitter.progress("executeBigQuery", "네 테이블에서 검색 중...", 20)
+      const progressMsg =
+        attemptNumber > 1
+          ? `재검색 중... (${attemptNumber}/${MAX_RETRY_COUNT})`
+          : "네 테이블에서 검색 중..."
+      emitter.progress("executeBigQuery", progressMsg, 20)
     }
 
     // 네 테이블 병렬 검색 (Crunchbase 포함)
@@ -1428,6 +1440,81 @@ export async function executeBigQuery(
       searchBigQuery(nlQuery, APOLLO_LEADS_DATA_DICTIONARY),
       searchBigQuery(nlQuery, FRESH_LEADS_DATA_DICTIONARY),
     ])
+
+    return { b2bResult, crunchbaseResult, apolloResult, freshResult, nlQuery }
+  }
+
+  try {
+    let attemptCount = 0
+    let searchResults: Awaited<ReturnType<typeof executeSearchOnce>> | null = null
+    let totalResultCount = 0
+
+    // 재시도 루프
+    while (attemptCount < MAX_RETRY_COUNT) {
+      attemptCount++
+      searchResults = await executeSearchOnce(attemptCount)
+
+      const { b2bResult, crunchbaseResult, apolloResult, freshResult } = searchResults
+
+      // 결과 수 계산
+      totalResultCount = 0
+      if (b2bResult.status === "fulfilled") totalResultCount += b2bResult.value.totalCount
+      if (crunchbaseResult.status === "fulfilled")
+        totalResultCount += crunchbaseResult.value.totalCount
+      if (apolloResult.status === "fulfilled") totalResultCount += apolloResult.value.totalCount
+      if (freshResult.status === "fulfilled") totalResultCount += freshResult.value.totalCount
+
+      // 결과가 있으면 루프 종료
+      if (totalResultCount > 0) {
+        leadDiscoveryLogger.info(
+          `[리드 검색] ${attemptCount}번째 시도에서 ${totalResultCount}개 결과 찾음`,
+        )
+        break
+      }
+
+      // 결과 없음 - 재시도
+      if (attemptCount < MAX_RETRY_COUNT) {
+        leadDiscoveryLogger.warn(
+          `[리드 검색] 결과 0개 - 재시도 예정 (${attemptCount}/${MAX_RETRY_COUNT})`,
+        )
+        if (emitter) {
+          emitter.progress(
+            "executeBigQuery",
+            `결과가 없어 다시 검색 중... (${attemptCount + 1}/${MAX_RETRY_COUNT})`,
+            20,
+          )
+        }
+        // 잠시 대기 후 재시도 (API 부하 방지)
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      }
+    }
+
+    // 최종 결과가 없는 경우
+    if (!searchResults || totalResultCount === 0) {
+      leadDiscoveryLogger.warn(`[리드 검색] ${MAX_RETRY_COUNT}번 시도 후에도 결과 없음`)
+      const duration = Date.now() - startTime
+
+      if (emitter) {
+        emitter.nodeComplete("executeBigQuery", "검색 조건에 맞는 결과가 없습니다", {
+          resultCount: 0,
+          totalCount: 0,
+          retryCount: attemptCount,
+        })
+      }
+
+      return {
+        searchResults: [],
+        totalResultCount: 0,
+        bigQuerySQL: "",
+        bigQueryExplanation: `${MAX_RETRY_COUNT}번 검색했지만 결과가 없습니다. 검색 조건을 변경해보세요.`,
+        executionTime: duration,
+        hasMore: false,
+        totalAvailable: 0,
+      }
+    }
+
+    // 결과 처리
+    const { b2bResult, crunchbaseResult, apolloResult, freshResult } = searchResults
 
     // B2B Leads 결과 처리
     let b2bTransformed: ReturnType<typeof transformResults> = []

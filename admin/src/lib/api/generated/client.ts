@@ -21,7 +21,7 @@ export const rqClient = createClient<paths>(client)
 // Add auth token interceptor
 client.use({
   onRequest({ request }) {
-    const token = localStorage.getItem("token")
+    const token = localStorage.getItem("authToken")
     if (token) {
       request.headers.set("Authorization", `Bearer ${token}`)
     }
@@ -30,7 +30,7 @@ client.use({
   onResponse({ response }) {
     // Handle 401 unauthorized
     if (response.status === 401) {
-      localStorage.removeItem("token")
+      localStorage.removeItem("authToken")
       window.location.href = "/auth"
     }
     return response

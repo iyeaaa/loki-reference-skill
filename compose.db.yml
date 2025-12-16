@@ -26,5 +26,16 @@ services:
       - postgres:/var/lib/postgresql
     ports:
       - 5432:5432
+
+  redis:
+    image: redis:alpine
+    restart: always
+    command: redis-server --requirepass sendgrid_redis_password_2024
+    ports:
+      - 6379:6379
+    volumes:
+      - redis:/data
+
 volumes:
   postgres:
+  redis:

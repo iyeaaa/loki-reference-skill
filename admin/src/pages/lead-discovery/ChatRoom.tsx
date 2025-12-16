@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
+import { useNavigate } from "react-router-dom"
 import TextPlus from "@/assets/text-plus.svg"
 import TextRinda from "@/assets/text-rinda.svg"
 import { Button } from "@/components/ui/button"
@@ -36,7 +37,9 @@ import {
   useLeadDiscoveryMutation,
   useLeadDiscoverySelectMutation,
 } from "@/lib/api/hooks/lead-discovery"
+import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 import type { BigQueryResult, BuyerRecommendation } from "@/lib/api/types/lead-discovery"
+import { useAuth } from "@/lib/auth-provider"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 import { BuyerRecommendationCards } from "./components/BuyerRecommendationCards"
@@ -78,6 +81,8 @@ function stripCodeFences(text: string): string {
 type SearchMode = "website" | "detailed"
 
 export function ChatRoom() {
+  const navigate = useNavigate()
+
   // ============================================
   // Jotai 상태 사용 (LeadDiscoveryPage와 동기화)
   // ============================================
@@ -127,6 +132,17 @@ export function ChatRoom() {
   const [input, setInput] = useState("")
   const [searchMode, setSearchMode] = useState<SearchMode>("website")
 
+  // 워크스페이스 선택 대기 중인 쿼리 (워크스페이스 선택 후 자동 검색용)
+  // localStorage 사용: HMR/리렌더링에도 값 유지
+  const getPendingQuery = () => localStorage.getItem("lead-discovery-pending-query")
+  const setPendingQuery = (query: string | null) => {
+    if (query) {
+      localStorage.setItem("lead-discovery-pending-query", query)
+    } else {
+      localStorage.removeItem("lead-discovery-pending-query")
+    }
+  }
+
   // 새 검색 핸들러 - 모든 상태 초기화
   const handleNewSearch = useCallback(() => {
     resetAll()
@@ -140,7 +156,66 @@ export function ChatRoom() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   // 워크스페이스
-  const { selectedWorkspace } = useWorkspace()
+  const { selectedWorkspace, setSelectedWorkspace } = useWorkspace()
+  const { user } = useAuth()
+  const { data: userWorkspaces } = useUserWorkspaces(user?.id || "", !!user?.id)
+  const workspaces = userWorkspaces || []
+
+  // 워크스페이스 선택 핸들러 (pendingQuery가 있으면 자동 검색 실행)
+  const handleSelectWorkspace = useCallback(
+    (workspaceId: string, workspaceName: string) => {
+      console.log("[ChatRoom] handleSelectWorkspace called:", { workspaceId, workspaceName })
+
+      // localStorage 업데이트
+      localStorage.setItem("selectedWorkspace", workspaceId)
+      localStorage.setItem("selectedWorkspaceName", workspaceName)
+
+      // useWorkspace의 state 직접 업데이트 (새로고침 방지)
+      setSelectedWorkspace({ id: workspaceId, name: workspaceName })
+
+      const now = Date.now()
+
+      // pendingQuery를 localStorage에서 확인
+      const savedQuery = getPendingQuery()
+      console.log("[ChatRoom] Checking pendingQuery:", savedQuery)
+
+      if (savedQuery) {
+        console.log("[ChatRoom] Found pendingQuery, executing search:", savedQuery)
+        setPendingQuery(null) // 먼저 초기화
+
+        // 검색 시작 메시지 추가
+        const confirmMessage: ChatMessage = {
+          id: `msg-${now}-workspace-selected`,
+          role: "assistant",
+          content: `**${workspaceName}** 워크스페이스가 선택되었습니다.\n\n"${savedQuery}" 검색을 시작합니다...`,
+          timestamp: new Date(now),
+        }
+        addMessage(confirmMessage)
+
+        // 약간의 지연 후 검색 실행 (state 업데이트 반영)
+        setTimeout(() => {
+          console.log("[ChatRoom] Dispatching executeSearch event")
+          // 검색 실행을 위한 이벤트 디스패치
+          window.dispatchEvent(
+            new CustomEvent("executeSearch", {
+              detail: { query: savedQuery, workspaceId },
+            }),
+          )
+        }, 100)
+      } else {
+        console.log("[ChatRoom] No pendingQuery found")
+        // pendingQuery가 없으면 기존 동작
+        const confirmMessage: ChatMessage = {
+          id: `msg-${now}-workspace-selected`,
+          role: "assistant",
+          content: `**${workspaceName}** 워크스페이스가 선택되었습니다.\n\n이제 검색을 진행해주세요! 🚀`,
+          timestamp: new Date(now),
+        }
+        addMessage(confirmMessage)
+      }
+    },
+    [addMessage, setSelectedWorkspace],
+  )
 
   // 고객 그룹 생성 mutation
   const createGroupMutation = useCreateCustomerGroup()
@@ -404,6 +479,51 @@ export function ChatRoom() {
     },
   })
 
+  // 워크스페이스 선택 후 자동 검색 실행을 위한 이벤트 리스너
+  useEffect(() => {
+    const handleExecuteSearch = (e: CustomEvent<{ query: string; workspaceId: string }>) => {
+      const { query, workspaceId } = e.detail
+      console.log("[ChatRoom] Executing pending search:", query)
+
+      const now = Date.now()
+
+      // 빈 assistant 메시지 추가 (스트리밍용)
+      const assistantMessageId = `msg-${now}-response`
+      const assistantMessage: ChatMessage = {
+        id: assistantMessageId,
+        role: "assistant",
+        content: "",
+        timestamp: new Date(now),
+      }
+      addMessage(assistantMessage)
+
+      // 스트리밍 상태 초기화
+      setStreamingState({
+        messageId: assistantMessageId,
+        analysisMessageId: assistantMessageId,
+        status: "connecting",
+        message: "서버에 연결 중...",
+        progress: 0,
+        recommendations: [],
+        analyzedPages: [],
+        analysisSummary: "",
+        customerAnalysisSummary: "",
+        userQuery: query,
+      })
+
+      // LangGraph API 호출
+      searchMutation.mutate({
+        query,
+        workspaceId,
+      })
+    }
+
+    window.addEventListener("executeSearch", handleExecuteSearch as EventListener)
+    return () => {
+      window.removeEventListener("executeSearch", handleExecuteSearch as EventListener)
+    }
+  }, [addMessage, searchMutation, setStreamingState])
+
   const selectMutation = useLeadDiscoverySelectMutation({
     onStatusChange: (data: LeadDiscoveryEventData) => {
       setStreamingState((prev) => ({
@@ -650,12 +770,15 @@ export function ChatRoom() {
 
       // 워크스페이스 확인
       if (!selectedWorkspace?.id || selectedWorkspace.id === "all") {
+        // 쿼리를 저장하여 워크스페이스 선택 후 자동 검색
+        console.log("[ChatRoom] Setting pendingQuery (handleSearch):", query)
+        setPendingQuery(query)
         const errorMessage: ChatMessage = {
           id: `msg-${now + 1}-error`,
           role: "assistant",
-          content:
-            "워크스페이스를 먼저 선택해주세요.\n\n상단에서 워크스페이스를 선택하면 바로 시작할 수 있어요.",
+          content: "워크스페이스를 선택해주세요.\n\n아래에서 사용할 워크스페이스를 선택하세요.",
           timestamp: new Date(now + 1),
+          type: "workspace_select",
         }
         addMessage(errorMessage)
         return
@@ -730,12 +853,15 @@ export function ChatRoom() {
       // 워크스페이스 확인
       if (!selectedWorkspace?.id || selectedWorkspace.id === "all") {
         console.log("[ChatRoom] No workspace selected")
+        // 쿼리를 저장하여 워크스페이스 선택 후 자동 검색
+        console.log("[ChatRoom] Setting pendingQuery (handleSubmit):", userInput)
+        setPendingQuery(userInput)
         const errorMessage: ChatMessage = {
           id: `msg-${now + 1}-error`,
           role: "assistant",
-          content:
-            "워크스페이스를 먼저 선택해주세요.\n\n상단에서 워크스페이스를 선택하면 바로 시작할 수 있어요.",
+          content: "워크스페이스를 선택해주세요.\n\n아래에서 사용할 워크스페이스를 선택하세요.",
           timestamp: new Date(now + 1),
+          type: "workspace_select",
         }
         addMessage(errorMessage)
         return
@@ -1047,6 +1173,54 @@ export function ChatRoom() {
                                 <ReactMarkdown components={markdownComponents}>
                                   {message.content}
                                 </ReactMarkdown>
+                              </div>
+                            )}
+
+                            {/* 워크스페이스 선택 UI */}
+                            {message.type === "workspace_select" && workspaces.length > 0 && (
+                              <div className="mt-4 space-y-2">
+                                <div className="flex flex-wrap gap-2">
+                                  {workspaces.map((ws) => (
+                                    <Button
+                                      key={ws.id}
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        handleSelectWorkspace(ws.id, ws.name)
+                                      }}
+                                      className="gap-1.5"
+                                    >
+                                      <Globe className="h-3.5 w-3.5" />
+                                      {ws.name}
+                                    </Button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 워크스페이스가 없는 경우 생성 안내 */}
+                            {message.type === "workspace_select" && workspaces.length === 0 && (
+                              <div className="mt-4 p-4 rounded-lg bg-muted/50 border border-border/50">
+                                <p className="text-sm text-muted-foreground mb-3">
+                                  아직 워크스페이스가 없습니다. 워크스페이스를 먼저 생성해주세요.
+                                </p>
+                                <Button
+                                  type="button"
+                                  variant="default"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    navigate("/settings/workspaces")
+                                  }}
+                                  className="gap-1.5"
+                                >
+                                  <FolderPlus className="h-3.5 w-3.5" />
+                                  워크스페이스 생성하기
+                                </Button>
                               </div>
                             )}
 

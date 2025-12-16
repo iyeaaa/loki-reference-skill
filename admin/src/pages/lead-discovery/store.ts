@@ -50,6 +50,7 @@ export interface ChatMessage {
   content: string
   timestamp: Date
   customersAdded?: Customer[]
+  type?: "default" | "workspace_select" // 워크스페이스 선택 UI 표시용
 }
 
 // ============================================

@@ -47,7 +47,7 @@ export interface BigQueryResult {
   phone?: string
   employee?: string
   revenue?: string
-  source?: "apollo" | "fresh" | "b2b" | "crunchbase" // 데이터 소스
+  source?: "apollo" | "fresh" | "b2b" | "crunchbase" | "perplexity" // 데이터 소스
 }
 
 // Analyzed page info

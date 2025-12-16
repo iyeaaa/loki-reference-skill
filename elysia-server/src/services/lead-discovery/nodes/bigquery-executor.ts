@@ -1,10 +1,15 @@
 /**
  * BigQuery Executor Node
  * Executes BigQuery search using the bigquery-search service
- * Analyzes random 50 results with GPT and streams analysis
+ * Now includes Perplexity API for real-time web search
  */
 
 import { InvalidQueryError, searchBigQuery } from "../../bigquery-search.service"
+import {
+  convertPerplexityToBigQueryFormat,
+  optimizeQueryForPerplexity,
+  searchLeadsWithPerplexity,
+} from "../../perplexity-search.service"
 import { leadDiscoveryLogger } from "../logger"
 import type { BigQueryResult, LeadDiscoveryState } from "../state"
 
@@ -1222,24 +1227,35 @@ function smartShuffle(results: BigQueryResult[], searchQuery: string): BigQueryR
     `[스마트 정렬] 산업 키워드: ${industryKeywords.length > 0 ? industryKeywords.join(", ") : "(없음)"}`,
   )
 
-  // 키워드가 없어도 소스 기반 우선순위 적용 (Apollo > Fresh > 기타)
-  if (countryKeywords.length === 0 && industryKeywords.length === 0) {
-    leadDiscoveryLogger.info("[스마트 정렬] 키워드 없음 - 소스 기반 우선순위 적용 (Apollo > Fresh)")
+  // Perplexity 결과는 항상 최상위 (실시간 웹 검색 결과)
+  const perplexityResults = results.filter((r) => r.source === "perplexity")
+  const otherResults = results.filter((r) => r.source !== "perplexity")
 
-    // Apollo 우선, Fresh 다음, 나머지
-    const apolloResults = results.filter((r) => r.source === "apollo")
-    const freshResults = results.filter((r) => r.source === "fresh")
-    const otherResults = results.filter((r) => r.source !== "apollo" && r.source !== "fresh")
+  leadDiscoveryLogger.info(
+    `[스마트 정렬] Perplexity 결과: ${perplexityResults.length}개 (최상위 노출)`,
+  )
+
+  // 키워드가 없어도 소스 기반 우선순위 적용 (Perplexity > Apollo > Fresh > 기타)
+  if (countryKeywords.length === 0 && industryKeywords.length === 0) {
+    leadDiscoveryLogger.info(
+      "[스마트 정렬] 키워드 없음 - 소스 기반 우선순위 적용 (Perplexity > Apollo > Fresh)",
+    )
+
+    // Perplexity 최우선, Apollo 다음, Fresh, 나머지
+    const apolloResults = otherResults.filter((r) => r.source === "apollo")
+    const freshResults = otherResults.filter((r) => r.source === "fresh")
+    const restResults = otherResults.filter((r) => r.source !== "apollo" && r.source !== "fresh")
 
     return [
+      ...perplexityResults, // Perplexity 최상위 (셔플 안 함 - 정확도 순서 유지)
       ...shuffleArray(apolloResults),
       ...shuffleArray(freshResults),
-      ...shuffleArray(otherResults),
+      ...shuffleArray(restResults),
     ]
   }
 
-  // 각 리드에 매칭 점수 계산 (국가 + 산업 + 소스 보너스)
-  const scored = results.map((lead) => {
+  // 각 리드에 매칭 점수 계산 (국가 + 산업 + 소스 보너스) - Perplexity 제외한 나머지
+  const scored = otherResults.map((lead) => {
     const countryScore = calculateCountryMatchScore(lead, countryKeywords, isSpecificCountry)
     let industryScore = calculateIndustryMatchScore(lead, industryKeywords)
 
@@ -1294,9 +1310,10 @@ function smartShuffle(results: BigQueryResult[], searchQuery: string): BigQueryR
       `기타=${noMatch.length}`,
   )
 
-  // 우선순위대로 결합 (자재/도매 키워드 매칭이 최상위)
+  // 우선순위대로 결합 (Perplexity가 최상위, 자재/도매 키워드 매칭이 다음)
   const sortedResults = [
-    ...shuffleArray(priorityMatch).map((s) => s.lead), // 자재/도매 + 국가 매칭 (최우선)
+    ...perplexityResults, // Perplexity 실시간 검색 결과 최상위 (정확도 순서 유지)
+    ...shuffleArray(priorityMatch).map((s) => s.lead), // 자재/도매 + 국가 매칭
     ...shuffleArray(bothMatch).map((s) => s.lead), // 국가 + 산업 매칭
     ...shuffleArray(countryWithPartialIndustry).map((s) => s.lead), // 국가 + 부분 산업
     ...shuffleArray(industryPriority).map((s) => s.lead), // 자재/도매 키워드만 (국가 X)
@@ -1431,17 +1448,22 @@ export async function executeBigQuery(
       emitter.progress("executeBigQuery", progressMsg, 20)
     }
 
-    // 네 테이블 병렬 검색 (Crunchbase 포함)
-    leadDiscoveryLogger.info(`[리드 검색] BigQuery 실행 중 (네 테이블 병렬)...`)
+    // 네 테이블 병렬 검색 + Perplexity 실시간 검색
+    leadDiscoveryLogger.info(`[리드 검색] BigQuery + Perplexity 하이브리드 검색 중...`)
 
-    const [b2bResult, crunchbaseResult, apolloResult, freshResult] = await Promise.allSettled([
-      searchBigQuery(nlQuery, B2B_LEADS_DATA_DICTIONARY),
-      searchBigQuery(nlQuery, CRUNCHBASE_DATA_DICTIONARY),
-      searchBigQuery(nlQuery, APOLLO_LEADS_DATA_DICTIONARY),
-      searchBigQuery(nlQuery, FRESH_LEADS_DATA_DICTIONARY),
-    ])
+    // Perplexity 검색용 쿼리 최적화
+    const perplexityQuery = optimizeQueryForPerplexity(nlQuery)
 
-    return { b2bResult, crunchbaseResult, apolloResult, freshResult, nlQuery }
+    const [b2bResult, crunchbaseResult, apolloResult, freshResult, perplexityResult] =
+      await Promise.allSettled([
+        searchBigQuery(nlQuery, B2B_LEADS_DATA_DICTIONARY),
+        searchBigQuery(nlQuery, CRUNCHBASE_DATA_DICTIONARY),
+        searchBigQuery(nlQuery, APOLLO_LEADS_DATA_DICTIONARY),
+        searchBigQuery(nlQuery, FRESH_LEADS_DATA_DICTIONARY),
+        searchLeadsWithPerplexity(perplexityQuery, 10), // 상위 10개 실시간 검색
+      ])
+
+    return { b2bResult, crunchbaseResult, apolloResult, freshResult, perplexityResult, nlQuery }
   }
 
   try {
@@ -1454,7 +1476,8 @@ export async function executeBigQuery(
       attemptCount++
       searchResults = await executeSearchOnce(attemptCount)
 
-      const { b2bResult, crunchbaseResult, apolloResult, freshResult } = searchResults
+      const { b2bResult, crunchbaseResult, apolloResult, freshResult, perplexityResult } =
+        searchResults
 
       // 결과 수 계산
       totalResultCount = 0
@@ -1463,6 +1486,9 @@ export async function executeBigQuery(
         totalResultCount += crunchbaseResult.value.totalCount
       if (apolloResult.status === "fulfilled") totalResultCount += apolloResult.value.totalCount
       if (freshResult.status === "fulfilled") totalResultCount += freshResult.value.totalCount
+      // Perplexity 결과 추가
+      if (perplexityResult.status === "fulfilled")
+        totalResultCount += perplexityResult.value.totalCount
 
       // 결과가 있으면 루프 종료
       if (totalResultCount > 0) {
@@ -1514,7 +1540,8 @@ export async function executeBigQuery(
     }
 
     // 결과 처리
-    const { b2bResult, crunchbaseResult, apolloResult, freshResult } = searchResults
+    const { b2bResult, crunchbaseResult, apolloResult, freshResult, perplexityResult } =
+      searchResults
 
     // B2B Leads 결과 처리
     let b2bTransformed: ReturnType<typeof transformResults> = []
@@ -1580,17 +1607,47 @@ export async function executeBigQuery(
       leadDiscoveryLogger.error(`[리드 검색] fresh_leads 검색 실패: ${reason}`)
     }
 
+    // Perplexity 결과 처리 (실시간 웹 검색)
+    let perplexityTransformed: BigQueryResult[] = []
+    let perplexityTotal = 0
+    if (perplexityResult.status === "fulfilled") {
+      const pxResults = convertPerplexityToBigQueryFormat(perplexityResult.value.leads)
+      perplexityTransformed = pxResults.map((r) => ({
+        companyName: r.companyName,
+        webAddress: r.webAddress,
+        email: r.email,
+        country: r.country,
+        mainIndustry: r.mainIndustry,
+        subIndustry: r.subIndustry,
+        category: r.category,
+        employee: r.employee,
+        revenue: r.revenue,
+        source: "perplexity" as const,
+      }))
+      perplexityTotal = perplexityResult.value.totalCount
+      leadDiscoveryLogger.info(
+        `[리드 검색] Perplexity (실시간): ${perplexityTransformed.length}개 ⭐`,
+      )
+    } else {
+      const reason =
+        perplexityResult.reason instanceof Error
+          ? perplexityResult.reason.message
+          : String(perplexityResult.reason)
+      leadDiscoveryLogger.warn(`[리드 검색] Perplexity 검색 실패: ${reason}`)
+    }
+
     // 각 테이블 결과 수 로그
     leadDiscoveryLogger.info(
-      `[셔플 전] B2B: ${b2bTransformed.length}, Crunchbase: ${crunchbaseTransformed.length}, Apollo: ${apolloTransformed.length}, Fresh: ${freshTransformed.length}`,
+      `[셔플 전] Perplexity: ${perplexityTransformed.length}, B2B: ${b2bTransformed.length}, Crunchbase: ${crunchbaseTransformed.length}, Apollo: ${apolloTransformed.length}, Fresh: ${freshTransformed.length}`,
     )
 
-    // 결과 합치기
+    // 결과 합치기 (Perplexity 결과를 맨 앞에 배치 - 실시간 검색 결과 상위 노출)
     const allResults = [
+      ...perplexityTransformed, // Perplexity 실시간 검색 결과 최우선
+      ...apolloTransformed, // Apollo BigQuery 결과
+      ...freshTransformed,
       ...b2bTransformed,
       ...crunchbaseTransformed,
-      ...apolloTransformed,
-      ...freshTransformed,
     ]
 
     // 스마트 셔플: 검색 쿼리와 관련 있는 산업군을 앞에 배치
@@ -1611,13 +1668,14 @@ export async function executeBigQuery(
     leadDiscoveryLogger.info(
       `[더 가져오기] 전체: ${combinedResults.length}개, 반환: 100개, 남음: ${combinedResults.length - 100}개`,
     )
-    const totalCount = b2bTotal + crunchbaseTotal + apolloTotal + freshTotal
-    const combinedSql = `-- B2B Leads:\n${b2bSql}\n\n-- Crunchbase:\n${crunchbaseSql}\n\n-- Apollo:\n${apolloSql}\n\n-- Fresh:\n${freshSql}`
+    const totalCount = b2bTotal + crunchbaseTotal + apolloTotal + freshTotal + perplexityTotal
+    const combinedSql = `-- Perplexity (실시간): ${perplexityTotal} results\n\n-- B2B Leads:\n${b2bSql}\n\n-- Crunchbase:\n${crunchbaseSql}\n\n-- Apollo:\n${apolloSql}\n\n-- Fresh:\n${freshSql}`
 
     const duration = Date.now() - startTime
 
     // 상세 로그: 검색 결과
     leadDiscoveryLogger.info(`[리드 검색] 검색 완료:`)
+    leadDiscoveryLogger.info(`  - Perplexity (실시간): ${perplexityTotal}개 ⭐ (상위 노출)`)
     leadDiscoveryLogger.info(`  - B2B Leads: ${b2bTotal.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - Crunchbase: ${crunchbaseTotal.toLocaleString()}개`)
     leadDiscoveryLogger.info(`  - Apollo: ${apolloTotal.toLocaleString()}개`)
@@ -1633,14 +1691,20 @@ export async function executeBigQuery(
 
     // 고객군 분석 없이 바로 결과 반환
     if (emitter) {
-      emitter.nodeComplete("executeBigQuery", `${totalCount.toLocaleString()}개 리드 검색 완료`, {
-        resultCount: limitedResults.length,
-        totalCount: totalCount,
-        b2bCount: b2bTotal,
-        crunchbaseCount: crunchbaseTotal,
-        apolloCount: apolloTotal,
-        freshCount: freshTotal,
-      })
+      const perplexityNote = perplexityTotal > 0 ? ` (실시간 ${perplexityTotal}개 포함)` : ""
+      emitter.nodeComplete(
+        "executeBigQuery",
+        `${totalCount.toLocaleString()}개 리드 검색 완료${perplexityNote}`,
+        {
+          resultCount: limitedResults.length,
+          totalCount: totalCount,
+          perplexityCount: perplexityTotal,
+          b2bCount: b2bTotal,
+          crunchbaseCount: crunchbaseTotal,
+          apolloCount: apolloTotal,
+          freshCount: freshTotal,
+        },
+      )
     }
 
     leadDiscoveryLogger.nodeSuccess("executeBigQuery", duration, {

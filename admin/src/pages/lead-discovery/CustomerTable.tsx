@@ -784,11 +784,23 @@ export function CustomerTable({ isFullscreen, onToggleFullscreen }: CustomerTabl
       {
         accessorKey: "sub_industry",
         header: "Sub Industry",
-        cell: ({ row }) => (
-          <span className="text-xs text-muted-foreground">
-            {row.getValue("sub_industry") || "-"}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const subIndustry = row.getValue("sub_industry") as string | undefined
+          return (
+            <Popover>
+              <PopoverTrigger asChild>
+                <span className="text-xs text-muted-foreground truncate max-w-[150px] block cursor-pointer hover:text-primary">
+                  {subIndustry || "-"}
+                </span>
+              </PopoverTrigger>
+              {subIndustry && (
+                <PopoverContent className="w-[300px] max-h-[200px] overflow-y-auto" align="start">
+                  <p className="text-sm">{subIndustry}</p>
+                </PopoverContent>
+              )}
+            </Popover>
+          )
+        },
       },
       // Company Email
       {

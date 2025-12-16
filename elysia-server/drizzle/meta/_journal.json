@@ -246,6 +246,13 @@
       "when": 1765523337134,
       "tag": "0034_gorgeous_karma",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1765875355954,
+      "tag": "0035_pale_imperial_guard",
+      "breakpoints": true
     }
   ]
 }

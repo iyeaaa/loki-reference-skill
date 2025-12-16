@@ -134,14 +134,17 @@ export function ChatRoom() {
 
   // 워크스페이스 선택 대기 중인 쿼리 (워크스페이스 선택 후 자동 검색용)
   // localStorage 사용: HMR/리렌더링에도 값 유지
-  const getPendingQuery = () => localStorage.getItem("lead-discovery-pending-query")
-  const setPendingQuery = (query: string | null) => {
+  const getPendingQuery = useCallback(
+    () => localStorage.getItem("lead-discovery-pending-query"),
+    [],
+  )
+  const setPendingQuery = useCallback((query: string | null) => {
     if (query) {
       localStorage.setItem("lead-discovery-pending-query", query)
     } else {
       localStorage.removeItem("lead-discovery-pending-query")
     }
-  }
+  }, [])
 
   // 새 검색 핸들러 - 모든 상태 초기화
   const handleNewSearch = useCallback(() => {
@@ -214,7 +217,7 @@ export function ChatRoom() {
         addMessage(confirmMessage)
       }
     },
-    [addMessage, setSelectedWorkspace],
+    [addMessage, setSelectedWorkspace, getPendingQuery, setPendingQuery],
   )
 
   // 고객 그룹 생성 mutation
@@ -824,6 +827,7 @@ export function ChatRoom() {
       searchMutation,
       setStreamingState,
       resetSearchState,
+      setPendingQuery,
     ],
   )
 
@@ -914,6 +918,7 @@ export function ChatRoom() {
       searchMutation,
       setStreamingState,
       resetSearchState,
+      setPendingQuery,
     ],
   )
 

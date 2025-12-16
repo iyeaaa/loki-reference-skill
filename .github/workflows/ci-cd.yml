@@ -103,6 +103,11 @@ jobs:
           docker image prune -f
 
           echo ""
+          echo "[+] Reloading Nginx to update upstream IP addresses"
+          docker exec send-grid-test-nginx-1 nginx -s reload
+          sleep 2
+
+          echo ""
           echo "[+] SendGrinda Container Status:"
           docker compose ps
 
@@ -116,20 +121,20 @@ jobs:
         echo "[+] Verifying SendGrinda deployment from external network (via domain)"
         sleep 5
 
-        # Admin health check via nginx (https://sendgrinda.cloud/health)
-        ADMIN_CHECK=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://sendgrinda.cloud/health || echo "000")
-        # Elysia API health check via nginx (https://sendgrinda.cloud/api/health)
-        ELYSIA_CHECK=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://sendgrinda.cloud/api/health || echo "000")
+        # Admin health check via nginx (https://app.rinda.ai/health)
+        ADMIN_CHECK=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://app.rinda.ai/health || echo "000")
+        # Elysia API health check via nginx (https://app.rinda.ai/api/health)
+        ELYSIA_CHECK=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://app.rinda.ai/api/health || echo "000")
 
         if [ "$ADMIN_CHECK" != "200" ] || [ "$ELYSIA_CHECK" != "200" ]; then
           echo "[!] Deployment verification failed"
-          echo " => Admin service (sendgrinda.cloud/health): $ADMIN_CHECK (expected: 200)"
-          echo " => Elysia service (sendgrinda.cloud/api/health): $ELYSIA_CHECK (expected: 200)"
+          echo " => Admin service (app.rinda.ai/health): $ADMIN_CHECK (expected: 200)"
+          echo " => Elysia service (app.rinda.ai/api/health): $ELYSIA_CHECK (expected: 200)"
           exit 1
         fi
 
         echo "[+] Deployment verified successfully"
-        echo " => Admin service (sendgrinda.cloud/health): $ADMIN_CHECK"
-        echo " => Elysia service (sendgrinda.cloud/api/health): $ELYSIA_CHECK"
+        echo " => Admin service (app.rinda.ai/health): $ADMIN_CHECK"
+        echo " => Elysia service (app.rinda.ai/api/health): $ELYSIA_CHECK"
         echo ""
-        echo "[+] SendGrinda is now live at https://sendgrinda.cloud"
+        echo "[+] SendGrinda is now live at https://app.rinda.ai"

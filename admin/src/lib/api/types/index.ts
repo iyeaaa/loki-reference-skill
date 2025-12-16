@@ -45,4 +45,5 @@ export type {
   UpdateIamRoleRequest,
   UpdatePolicyStatementRequest,
 } from "./iam"
+export type * from "./job-log"
 export type * from "./user"

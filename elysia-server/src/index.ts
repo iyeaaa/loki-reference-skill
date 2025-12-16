@@ -41,6 +41,7 @@ import {
   iamRolesRoutes,
   iamTierBoundariesRoutes,
 } from "./routes/iam.routes"
+import { jobLogsRoutes } from "./routes/job-logs.routes"
 import { leadDiscoveryRoutes } from "./routes/lead-discovery.routes"
 import { leadEnrichmentRoutes } from "./routes/lead-enrichment.routes"
 import { leadImportRoutes } from "./routes/lead-import.routes"
@@ -215,6 +216,8 @@ const app = new Elysia()
   .use(onboardingRoutes)
   // BullMQ Test routes
   .use(bullmqTestRoutes)
+  // Job Logs routes
+  .use(jobLogsRoutes)
 
   .listen(config.port)
 

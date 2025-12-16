@@ -54,6 +54,8 @@ services:
     build:
       context: ./elysia-server
       dockerfile: Dockerfile.worker
+    ports:
+      - "3010:3010"  # Health check endpoint
     depends_on:
       - redis
       - postgres
@@ -63,7 +65,26 @@ services:
       - NODE_ENV=production
       - DB_HOST=postgres          # Docker 네트워크 내 호스트명으로 오버라이드
       - REDIS_HOST=redis          # Docker 네트워크 내 호스트명으로 오버라이드
+      - HEALTH_PORT=3010          # Health server port
+      # BullMQ Worker Performance Tuning
+      - BULLMQ_CONCURRENCY=20     # 동시 처리 job 개수
+      - BULLMQ_RATE_LIMIT_MAX=50  # 초당 최대 처리 개수
+      - BULLMQ_RATE_LIMIT_DURATION=1000  # Rate limit 기간 (ms)
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3010/readyz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     networks:
       - app-network
 
@@ -77,8 +98,21 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: postgres
+      # PostgreSQL Performance Tuning
+      POSTGRES_MAX_CONNECTIONS: 100
+      POSTGRES_SHARED_BUFFERS: 256MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 1GB
+      POSTGRES_WORK_MEM: 8MB
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
     networks:
       - app-network
 
@@ -91,7 +125,23 @@ services:
     restart: always
     env_file:
       - ./elysia-server/.env
-    command: redis-server --appendonly yes --requirepass sendgrid_redis_password_2024
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass sendgrid_redis_password_2024
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 768M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
     networks:
       - app-network
 

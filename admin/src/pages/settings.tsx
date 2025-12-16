@@ -11,6 +11,7 @@ import {
   Mail,
   Menu,
   Package,
+  ScrollText,
   Shield,
   ShieldCheck,
   Upload,
@@ -51,6 +52,7 @@ import { AuditLogsPage, PoliciesPage, RolesPage, TierBoundariesPage } from "./ia
 import LeadImportPage from "./lead-import/index"
 import { BullMQTestPage } from "./settings/BullMQTestPage"
 import { EmailSignatureManagement } from "./settings/EmailSignatureManagement"
+import { JobLogsPage } from "./settings/job-logs"
 import { NylasEmailTest } from "./settings/NylasEmailTest"
 import { WebDataExtraction } from "./settings/WebDataExtraction"
 import UsersPage from "./users/UsersPage"
@@ -337,6 +339,12 @@ export default function SettingsPage() {
         icon: <FlaskConical className="h-4 w-4" />,
         permission: "admin-only",
       },
+      {
+        id: "job-logs",
+        label: "BullMQ 로그",
+        icon: <ScrollText className="h-4 w-4" />,
+        permission: "admin-only",
+      },
     ],
     [t],
   )
@@ -566,6 +574,8 @@ export default function SettingsPage() {
       // Test Pages
       case "bullmq-test":
         return <BullMQTestPage />
+      case "job-logs":
+        return <JobLogsPage />
       default:
         return null
     }

@@ -1,6 +1,6 @@
 import { type JobProgress, QueueEvents } from "bullmq"
 import { Elysia, t } from "elysia"
-import { getAllQueues, testQueue } from "../lib/queue"
+import { addTestJob, addTestJobs, getAllQueues, testQueue } from "../lib/queue"
 import { QUEUE_NAMES, type TestJob } from "../lib/queue/types"
 import { createRedisConnection, redisConnection } from "../lib/redis"
 import logger from "../utils/logger"
@@ -217,7 +217,7 @@ export const bullmqTestRoutes = new Elysia({ prefix: "/api/v1/bullmq-test" })
   )
 
   /**
-   * Add a job to test queue
+   * Add a job to test queue (with DB logging)
    */
   .post(
     "/jobs",
@@ -230,13 +230,14 @@ export const bullmqTestRoutes = new Elysia({ prefix: "/api/v1/bullmq-test" })
           data: body.customData,
         }
 
-        const job = await testQueue.add(body.jobName || "test-job", jobData, {
+        // addTestJob을 사용하여 DB에 로그 기록
+        const job = await addTestJob(body.jobName || "test-job", jobData, {
           delay: body.scheduleDelay,
           priority: body.priority,
           attempts: body.attempts || 3,
         })
 
-        logger.info({ jobId: job.id, data: jobData }, "[BullMQ-Test] Job added")
+        logger.info({ jobId: job.id, data: jobData }, "[BullMQ-Test] Job added with DB logging")
 
         return {
           success: true,
@@ -273,7 +274,7 @@ export const bullmqTestRoutes = new Elysia({ prefix: "/api/v1/bullmq-test" })
   )
 
   /**
-   * Add multiple jobs (bulk)
+   * Add multiple jobs (bulk) with DB logging
    */
   .post(
     "/jobs/bulk",
@@ -293,9 +294,10 @@ export const bullmqTestRoutes = new Elysia({ prefix: "/api/v1/bullmq-test" })
           },
         }))
 
-        const addedJobs = await testQueue.addBulk(jobs)
+        // addTestJobs를 사용하여 DB에 로그 기록
+        const addedJobs = await addTestJobs(jobs)
 
-        logger.info({ count: addedJobs.length }, "[BullMQ-Test] Bulk jobs added")
+        logger.info({ count: addedJobs.length }, "[BullMQ-Test] Bulk jobs added with DB logging")
 
         return {
           success: true,

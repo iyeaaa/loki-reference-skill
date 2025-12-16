@@ -1,5 +1,7 @@
 // Queue exports
 export {
+  addTestJob,
+  addTestJobs,
   campaignEmailQueue,
   closeAllQueues,
   getAllQueues,

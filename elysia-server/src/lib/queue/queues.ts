@@ -154,6 +154,11 @@ export async function addTestJob(
       throw new Error("Job ID is missing")
     }
 
+    // delay가 있으면 delayed 상태로, 없으면 waiting 상태로 생성
+    const delayMs = opts?.delay ?? 0
+    const hasDelay = delayMs > 0
+    const initialStatus = hasDelay ? "delayed" : "waiting"
+
     await jobLogService.createJobLog({
       jobId: job.id,
       queueName: QUEUE_NAMES.TEST_QUEUE,
@@ -161,12 +166,13 @@ export async function addTestJob(
       inputData: { ...data } as unknown as Record<string, unknown>,
       priority: opts?.priority,
       maxAttempts: opts?.attempts ?? 3,
-      delayedUntil: opts?.delay ? new Date(Date.now() + opts.delay) : undefined,
+      delayedUntil: hasDelay ? new Date(Date.now() + delayMs) : undefined,
       jobOptions: opts ? ({ ...opts } as unknown as Record<string, unknown>) : undefined,
+      status: initialStatus,
     })
 
     logger.debug(
-      { jobId: job.id, name, queueName: QUEUE_NAMES.TEST_QUEUE },
+      { jobId: job.id, name, queueName: QUEUE_NAMES.TEST_QUEUE, status: initialStatus },
       "[TestQueue] Job added with DB logging",
     )
   } catch (logError) {
@@ -207,6 +213,11 @@ export async function addTestJobs(
         throw new Error("Job ID is missing")
       }
 
+      // delay가 있으면 delayed 상태로, 없으면 waiting 상태로 생성
+      const delayMs = jobConfig.opts?.delay ?? 0
+      const hasDelay = delayMs > 0
+      const initialStatus = hasDelay ? "delayed" : "waiting"
+
       await jobLogService.createJobLog({
         jobId: job.id,
         queueName: QUEUE_NAMES.TEST_QUEUE,
@@ -214,12 +225,11 @@ export async function addTestJobs(
         inputData: { ...jobConfig.data } as unknown as Record<string, unknown>,
         priority: jobConfig.opts?.priority,
         maxAttempts: jobConfig.opts?.attempts ?? 3,
-        delayedUntil: jobConfig.opts?.delay
-          ? new Date(Date.now() + jobConfig.opts.delay)
-          : undefined,
+        delayedUntil: hasDelay ? new Date(Date.now() + delayMs) : undefined,
         jobOptions: jobConfig.opts
           ? ({ ...jobConfig.opts } as unknown as Record<string, unknown>)
           : undefined,
+        status: initialStatus,
       })
     } catch (logError) {
       logger.warn(

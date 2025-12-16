@@ -25,6 +25,7 @@ interface JobLogCreateParams {
   maxAttempts?: number
   delayedUntil?: Date
   jobOptions?: Record<string, unknown>
+  status?: JobStatus
 }
 
 interface JobLogUpdateParams {
@@ -82,7 +83,7 @@ export async function createJobLog(params: JobLogCreateParams): Promise<string> 
         jobId: params.jobId,
         queueName: params.queueName,
         jobName: params.jobName,
-        status: "waiting",
+        status: params.status ?? "waiting",
         inputData: params.inputData,
         priority: params.priority ?? 0,
         maxAttempts: params.maxAttempts ?? 3,

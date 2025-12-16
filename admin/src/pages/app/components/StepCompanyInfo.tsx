@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, Edit3, Globe, Save, Settings, X } from "lucide-react"
+import { ArrowRight, Building2, CheckCircle2, Edit3, Globe, Save, Settings, X } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate, useSearchParams } from "react-router-dom"
@@ -14,11 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { apiFetch } from "@/lib/api/client"
-import { useCompleteStep1, useOnboardingProgress } from "@/lib/api/hooks/onboarding"
-import { useUserWorkspaces } from "@/lib/api/hooks/workspaces"
+import { useCompleteStep1, useOnboardingProgress, useSaveSurvey } from "@/lib/api/hooks/onboarding"
+import { useSalesStrategy, useUpdateSalesStrategy } from "@/lib/api/hooks/sales-strategy"
+import { useUpdateWorkspace, useUserWorkspaces } from "@/lib/api/hooks/workspaces"
 
 interface SalesStrategyData {
+  companyName: string
   industry: string
   target: string
   country: string
@@ -66,16 +67,15 @@ export function StepCompanyInfo() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const [, setSearchParams] = useSearchParams()
-  const [salesStrategy, setSalesStrategy] = useState<SalesStrategyData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
 
   // Generate unique IDs for form fields
+  const companyNameId = useId()
   const websiteUrlId = useId()
 
   // Form state for editing
   const [editedData, setEditedData] = useState<SalesStrategyData>({
+    companyName: "",
     industry: "",
     target: "",
     country: "",
@@ -103,48 +103,38 @@ export function StepCompanyInfo() {
   // Onboarding hooks
   const { data: onboardingData } = useOnboardingProgress(workspace?.id || "", !!workspace?.id)
   const completeStep1Mutation = useCompleteStep1()
+  const updateWorkspaceMutation = useUpdateWorkspace()
+  const saveSurveyMutation = useSaveSurvey()
+  const updateSalesStrategyMutation = useUpdateSalesStrategy()
+
+  // Sales strategy query
+  const {
+    data: salesStrategy,
+    isLoading: isSalesStrategyLoading,
+    isError: isSalesStrategyError,
+  } = useSalesStrategy(workspace?.id || "", !!workspace?.id)
 
   console.log("[StepCompanyInfo] 4. onboardingData:", JSON.stringify(onboardingData, null, 2))
+  console.log("[StepCompanyInfo] 5. salesStrategy:", JSON.stringify(salesStrategy, null, 2))
 
-  // Fetch sales strategy data
+  // Initialize editedData when salesStrategy loads
   useEffect(() => {
-    async function fetchSalesStrategy() {
-      console.log("[StepCompanyInfo] 5. fetchSalesStrategy called, workspace?.id:", workspace?.id)
-
-      if (!workspace?.id) {
-        console.log("[StepCompanyInfo] 6. No workspace ID, skipping fetch")
-        setIsLoading(false)
-        return
-      }
-
-      try {
-        setIsLoading(true)
-        console.log("[StepCompanyInfo] 7. Fetching sales strategy from API...")
-        const response = await apiFetch<{
-          data: SalesStrategyData
-        }>(`/api/v1/workspace-sales-strategies/${workspace.id}`)
-
-        console.log(
-          "[StepCompanyInfo] 8. ✅ Sales strategy fetched:",
-          JSON.stringify(response.data, null, 2),
-        )
-        setSalesStrategy(response.data)
-        setEditedData({
-          ...response.data,
-          websiteUrl: response.data.websiteUrl || "",
-        })
-      } catch (error) {
-        console.error("[StepCompanyInfo] 9. ❌ Failed to fetch sales strategy:", error)
-        // 데이터가 없으면 자동으로 수정 모드(입력 폼)로 시작
-        console.log("[StepCompanyInfo] 10. Setting isEditing=true due to fetch error")
-        setIsEditing(true)
-      } finally {
-        setIsLoading(false)
-      }
+    if (salesStrategy) {
+      setEditedData({
+        ...salesStrategy,
+        companyName: salesStrategy.companyName || workspace?.name || "",
+        websiteUrl: salesStrategy.websiteUrl || "",
+      })
     }
+  }, [salesStrategy, workspace?.name])
 
-    fetchSalesStrategy()
-  }, [workspace?.id])
+  // Set editing mode if no sales strategy data
+  useEffect(() => {
+    if (isSalesStrategyError && !isEditing) {
+      console.log("[StepCompanyInfo] Setting isEditing=true due to fetch error")
+      setIsEditing(true)
+    }
+  }, [isSalesStrategyError, isEditing])
 
   const handleEdit = () => {
     setIsEditing(true)
@@ -155,11 +145,17 @@ export function StepCompanyInfo() {
     if (salesStrategy) {
       setEditedData({
         ...salesStrategy,
+        companyName: salesStrategy.companyName || workspace?.name || "",
         websiteUrl: salesStrategy.websiteUrl || "",
       })
     }
     setIsEditing(false)
   }
+
+  const isSaving =
+    saveSurveyMutation.isPending ||
+    updateSalesStrategyMutation.isPending ||
+    updateWorkspaceMutation.isPending
 
   const handleSave = async () => {
     console.log("[StepCompanyInfo] handleSave called")
@@ -172,6 +168,12 @@ export function StepCompanyInfo() {
     }
 
     // 필수 필드 검증
+    if (!editedData.companyName?.trim()) {
+      console.log("[StepCompanyInfo] ❌ Missing company name")
+      toast.error(isKorean ? "회사 이름을 입력해주세요" : "Please enter your company name")
+      return
+    }
+
     if (
       !editedData.industry ||
       !editedData.target ||
@@ -183,46 +185,43 @@ export function StepCompanyInfo() {
       return
     }
 
-    setIsSaving(true)
     try {
       // 1. onboarding_progress.survey_data 저장
-      console.log(
-        `[StepCompanyInfo] 📤 Saving survey data to /api/v1/onboarding/workspace/${workspace.id}/survey`,
-      )
-      const surveyPayload = {
-        industry: editedData.industry,
-        target: editedData.target,
-        country: editedData.country,
-        experience: editedData.experience,
-        lang: i18n.language,
+      console.log(`[StepCompanyInfo] 📤 Saving survey data`)
+      await saveSurveyMutation.mutateAsync({
+        workspaceId: workspace.id,
+        surveyData: {
+          industry: editedData.industry,
+          target: editedData.target,
+          country: editedData.country,
+          experience: editedData.experience,
+          lang: i18n.language,
+        },
         userId,
-      }
-      console.log("[StepCompanyInfo] Survey payload:", JSON.stringify(surveyPayload, null, 2))
-
-      const surveyResponse = await apiFetch(`/api/v1/onboarding/workspace/${workspace.id}/survey`, {
-        method: "POST",
-        body: JSON.stringify(surveyPayload),
       })
-      console.log("[StepCompanyInfo] ✅ Survey data saved:", surveyResponse)
+      console.log("[StepCompanyInfo] ✅ Survey data saved")
 
       // 2. workspace_sales_strategies 업데이트 (websiteUrl 포함)
-      console.log(
-        `[StepCompanyInfo] 📤 Updating sales strategy at /api/v1/workspace-sales-strategies/${workspace.id}`,
-      )
-      const salesResponse = await apiFetch(`/api/v1/workspace-sales-strategies/${workspace.id}`, {
-        method: "PUT",
-        body: JSON.stringify(editedData),
+      console.log(`[StepCompanyInfo] 📤 Updating sales strategy`)
+      await updateSalesStrategyMutation.mutateAsync({
+        workspaceId: workspace.id,
+        data: editedData,
       })
-      console.log("[StepCompanyInfo] ✅ Sales strategy updated:", salesResponse)
+      console.log("[StepCompanyInfo] ✅ Sales strategy updated")
 
-      setSalesStrategy(editedData)
+      // 3. 워크스페이스 이름 업데이트 (회사 이름으로)
+      console.log(`[StepCompanyInfo] 📤 Updating workspace name to "${editedData.companyName}"`)
+      await updateWorkspaceMutation.mutateAsync({
+        workspaceId: workspace.id,
+        data: { name: editedData.companyName.trim(), isActive: true },
+      })
+      console.log("[StepCompanyInfo] ✅ Workspace name updated")
+
       setIsEditing(false)
       toast.success(isKorean ? "저장되었습니다" : "Saved successfully")
     } catch (error) {
       console.error("[StepCompanyInfo] ❌ Failed to save:", error)
       toast.error(isKorean ? "저장에 실패했습니다" : "Failed to save")
-    } finally {
-      setIsSaving(false)
     }
   }
 
@@ -248,7 +247,7 @@ export function StepCompanyInfo() {
   }
 
   // Show loading spinner
-  if (isLoadingWorkspaces || isLoading) {
+  if (isLoadingWorkspaces || isSalesStrategyLoading) {
     return (
       <div className="max-w-2xl mx-auto">
         <Card>
@@ -319,6 +318,29 @@ export function StepCompanyInfo() {
             // Edit mode
             <>
               <div className="space-y-4">
+                {/* Company Name */}
+                <div className="space-y-2">
+                  <Label htmlFor={companyNameId} className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    {isKorean ? "회사 이름" : "Company Name"}
+                    <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id={companyNameId}
+                    type="text"
+                    placeholder={isKorean ? "회사 이름을 입력하세요" : "Enter your company name"}
+                    value={editedData.companyName}
+                    onChange={(e) =>
+                      setEditedData((prev) => ({ ...prev, companyName: e.target.value }))
+                    }
+                  />
+                  <p className="text-xs text-gray-500">
+                    {isKorean
+                      ? "이메일 발송 시 발신자 회사 이름으로 사용됩니다"
+                      : "This will be used as your company name when sending emails"}
+                  </p>
+                </div>
+
                 {/* Website URL */}
                 <div className="space-y-2">
                   <Label htmlFor={websiteUrlId} className="flex items-center gap-2">
@@ -451,6 +473,21 @@ export function StepCompanyInfo() {
             // Display mode
             <>
               <div className="space-y-4">
+                {/* Company Name */}
+                <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <Building2 className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-700">
+                      {isKorean ? "회사 이름" : "Company Name"}
+                    </div>
+                    <div className="text-base font-semibold text-gray-900 mt-1">
+                      {salesStrategy.companyName ||
+                        workspace?.name ||
+                        (isKorean ? "미입력" : "Not entered")}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Website URL */}
                 <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
                   <Globe className="w-5 h-5 text-gray-600 mt-0.5 flex-shrink-0" />

@@ -44,7 +44,6 @@ import { FilterSearchForm } from "./components/FilterSearchForm"
 import { LeadDiscoveryProgress } from "./components/LeadDiscoveryProgress"
 import {
   addChatMessageAtom,
-  addCustomersAtom,
   bulkEnrichmentStateAtom,
   type ChatMessage,
   type Customer,
@@ -56,7 +55,9 @@ import {
   finishEnrichmentAtom,
   initialStreamingState,
   resetAllAtom,
+  resetSearchStateAtom,
   selectedTargetAtom,
+  setCustomersAtom,
   startBulkEnrichmentAtom,
   startCreateGroupAtom,
   startEnrichmentAtom,
@@ -102,9 +103,10 @@ export function ChatRoom() {
   )
 
   // Jotai 고객 상태
-  const addCustomers = useSetAtom(addCustomersAtom)
+  const setCustomers = useSetAtom(setCustomersAtom)
   const customers = useAtomValue(customersAtom)
   const updateCustomer = useSetAtom(updateCustomerAtom)
+  const resetSearchState = useSetAtom(resetSearchStateAtom)
 
   // Bulk Enrichment 상태 (프로필 고도화)
   const bulkEnrichmentState = useAtomValue(bulkEnrichmentStateAtom)
@@ -330,8 +332,8 @@ export function ChatRoom() {
     },
     onResults: (results, totalCount) => {
       console.log("[ChatRoom] Lead discovery results:", totalCount)
-      const customers = convertResultsToCustomers(results)
-      addCustomers(customers)
+      const newCustomers = convertResultsToCustomers(results)
+      setCustomers(newCustomers)  // Replace instead of append for new search
 
       // "원하는 조건으로 찾기" 모드에서 FitScore 계산을 위해 selectedTarget 자동 설정
       if (results.length > 0) {
@@ -415,8 +417,8 @@ export function ChatRoom() {
     },
     onResults: (results, totalCount) => {
       console.log("[ChatRoom] Selection results:", totalCount)
-      const customers = convertResultsToCustomers(results)
-      addCustomers(customers)
+      const newCustomers = convertResultsToCustomers(results)
+      setCustomers(newCustomers)  // Replace instead of append for selection results
     },
     onComplete: (data) => {
       const recInfo = data.selectedRecommendation
@@ -659,6 +661,9 @@ export function ChatRoom() {
         return
       }
 
+      // 이전 검색 상태 초기화 (고객 목록, 적합도 점수 등)
+      resetSearchState()
+
       // 빈 assistant 메시지 추가 (스트리밍용)
       const assistantMessageId = `msg-${now + 1}-response`
       const assistantMessage: ChatMessage = {
@@ -689,7 +694,7 @@ export function ChatRoom() {
         workspaceId: selectedWorkspace.id,
       })
     },
-    [isSearching, selectedWorkspace, addMessage, searchMutation, setStreamingState],
+    [isSearching, selectedWorkspace, addMessage, searchMutation, setStreamingState, resetSearchState],
   )
 
   const handleSubmit = useCallback(
@@ -734,6 +739,9 @@ export function ChatRoom() {
         workspaceId: selectedWorkspace.id,
       })
 
+      // 이전 검색 상태 초기화 (고객 목록, 적합도 점수 등)
+      resetSearchState()
+
       // 빈 assistant 메시지 먼저 추가 (스트리밍용) - 1ms 후의 timestamp로 순서 보장
       const assistantMessageId = `msg-${now + 1}-response`
       const assistantMessage: ChatMessage = {
@@ -772,6 +780,7 @@ export function ChatRoom() {
       addMessage,
       searchMutation,
       setStreamingState,
+      resetSearchState,
     ],
   )
 

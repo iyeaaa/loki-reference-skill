@@ -59,10 +59,15 @@ export interface ChatMessage {
 // 발견된 고객 목록
 export const customersAtom = atom<Customer[]>([])
 
-// 고객 추가 액션
+// 고객 추가 액션 (Load More용 - 기존 고객에 추가)
 export const addCustomersAtom = atom(null, (get, set, newCustomers: Customer[]) => {
   const customers = get(customersAtom)
   set(customersAtom, [...customers, ...newCustomers])
+})
+
+// 고객 목록 교체 액션 (새 검색용 - 기존 고객 대체)
+export const setCustomersAtom = atom(null, (_get, set, newCustomers: Customer[]) => {
+  set(customersAtom, newCustomers)
 })
 
 // 고객 삭제 액션
@@ -342,6 +347,14 @@ export const setFitScoreLoadingAtom = atom(
 // 적합도 상태 리셋
 export const resetFitScoreStateAtom = atom(null, (_get, set) => {
   set(fitScoreStateAtom, initialFitScoreState)
+})
+
+// 새 검색 시작 시 검색 관련 상태만 리셋 (채팅 메시지는 유지)
+export const resetSearchStateAtom = atom(null, (_get, set) => {
+  set(customersAtom, [])
+  set(fitScoreStateAtom, initialFitScoreState)
+  set(selectedTargetAtom, null)
+  set(enrichmentStateAtom, initialEnrichmentState)
 })
 
 // ============================================

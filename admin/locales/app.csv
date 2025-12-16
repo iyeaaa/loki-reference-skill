@@ -125,3 +125,18 @@ dashboard.emailSchedule,이메일 일정,Email Schedule
 dashboard.metrics,성과 지표,Performance Metrics
 dashboard.targetBuyers,타겟 바이어,Target Buyers
 dashboard.greeting,환영합니다! {{opened}}개의 열린 이메일과 {{sent}}개의 발송된 이메일이 있습니다.,Welcome back! You have {{opened}} opened and {{sent}} sent emails.
+dashboard.attachments,첨부파일,Attachments
+dashboard.clickedAt,클릭 시간,Clicked At
+dashboard.clicks,클릭,Clicks
+dashboard.emailContent,메일 내용,Email Content
+dashboard.emailDetails,이메일 상세 정보,Email Details
+dashboard.engagement,참여도,Engagement
+dashboard.from,보낸 사람,From
+dashboard.noContent,내용이 없습니다,No content available
+dashboard.notSent,미발송,Not sent
+dashboard.openedAt,읽은 시간,Opened At
+dashboard.opens,열람,Opens
+dashboard.sentAt,발송 시간,Sent At
+dashboard.sequence,시퀀스,Sequence
+dashboard.selectWorkspace,[NO TRANSLATION] app.dashboard.selectWorkspace,[NO TRANSLATION] app.dashboard.selectWorkspace
+dashboard.selectWorkspaceDesc,[NO TRANSLATION] app.dashboard.selectWorkspaceDesc,[NO TRANSLATION] app.dashboard.selectWorkspaceDesc

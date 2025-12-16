@@ -82,13 +82,7 @@ export function StepEmailLink() {
   const isTrialPreviewAccount = emailAccount?.apiKey === "TRIAL_PREVIEW"
 
   // If email account exists and is NOT a trial preview, show the linked accounts view
-  if (
-    emailAccount &&
-    workspace &&
-    !isRefetchError &&
-    !emailAccountError &&
-    !isTrialPreviewAccount
-  ) {
+  if (emailAccount && workspace && !isTrialPreviewAccount) {
     return (
       <LinkedEmailAccountsView
         emailAccount={emailAccount}

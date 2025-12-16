@@ -729,13 +729,7 @@ export default function TrialResultPage() {
             {resultData.totalLeadsCount}{" "}
             {isKorean ? "잠재 고객 준비 완료!" : "Potential Customers Ready!"}
           </span>
-          <div className="flex items-center gap-3">
-            <LanguageSwitcher />
-            <Button onClick={handleGetStarted} className="bg-blue-600 hover:bg-blue-700 rounded-xl">
-              {isKorean ? "지금 시작" : "Start Now"}
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
-          </div>
+          <LanguageSwitcher />
         </div>
       </div>
 
@@ -757,7 +751,7 @@ export default function TrialResultPage() {
         </div>
 
         {/* 2-Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
           {/* Left Column */}
           <div className="space-y-6">
             {/* Market Cards Row */}
@@ -837,12 +831,32 @@ export default function TrialResultPage() {
               </div>
             </Card>
 
-            {/* What RINDA Does Automatically */}
+            {/* Export Ready Checklist - Moved from right column */}
+            <Card className="p-4 bg-white border border-gray-200">
+              <h3 className="font-semibold text-gray-900 mb-4">
+                {isKorean ? "수출 준비 완료" : "Export Ready"}
+              </h3>
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {resultData.lindaSolution.checklist.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <span className="text-sm text-gray-700">
+                      {isKorean ? item.item_kr : item.item_en}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* Right Column - Sidebar */}
+          <div className="lg:sticky lg:top-20 lg:self-start space-y-4">
+            {/* What RINDA Does Automatically - Moved from left column */}
             <Card className="p-4 bg-white border border-gray-200">
               <h3 className="font-semibold text-gray-900 mb-4">
                 {isKorean ? "RINDA가 자동으로 하는 일" : "What RINDA Does Automatically"}
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 {rindaActions.map((action, idx) => {
                   const Icon = action.icon
                   return (
@@ -858,33 +872,14 @@ export default function TrialResultPage() {
                 })}
               </div>
             </Card>
-          </div>
-
-          {/* Right Column - Sidebar */}
-          <div className="lg:sticky lg:top-20 lg:self-start">
-            <Card className="p-4 bg-white border border-gray-200">
-              <h3 className="font-semibold text-gray-900 mb-4">
-                {isKorean ? "수출 준비 완료" : "Export Ready"}
-              </h3>
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                {resultData.lindaSolution.checklist.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    <span className="text-sm text-gray-700">
-                      {isKorean ? item.item_kr : item.item_en}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <Button
-                onClick={handleGetStarted}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                {isKorean ? "캠페인 활성화" : "Activate Campaign"}
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </Card>
+            <Button
+              onClick={handleGetStarted}
+              className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-base"
+            >
+              <Sparkles className="w-5 h-5 mr-2" />
+              {isKorean ? "캠페인 시작" : "Start Campaign"}
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
           </div>
         </div>
       </div>

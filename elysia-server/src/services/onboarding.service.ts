@@ -440,37 +440,31 @@ export async function completeOnboarding(
 ): Promise<OnboardingProgressData> {
   const progress = await getOrCreateOnboardingProgress(workspaceId)
 
-  // 설문 데이터 검증
-  if (!progress.surveyData) {
-    throw new OnboardingValidationError(
-      "온보딩을 완료할 수 없습니다. 설문 데이터가 없습니다.",
-      "MISSING_SURVEY_DATA",
-    )
-  }
-
-  // workspace_sales_strategies 검증 및 자동 생성
-  const salesStrategies = await salesStrategyService.getWorkspaceSalesStrategies(workspaceId)
-  if (salesStrategies.length === 0) {
-    const surveyData = progress.surveyData as OnboardingSurveyData
-    if (surveyData.industry && surveyData.target && surveyData.country && surveyData.experience) {
-      try {
-        await salesStrategyService.findOrCreateAndLinkSalesStrategy(workspaceId, {
-          industry: surveyData.industry as Parameters<
-            typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
-          >[1]["industry"],
-          target: surveyData.target as Parameters<
-            typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
-          >[1]["target"],
-          country: surveyData.country as Parameters<
-            typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
-          >[1]["country"],
-          experience: surveyData.experience as Parameters<
-            typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
-          >[1]["experience"],
-        })
-        console.log("[Onboarding] Auto-created sales strategy on completion")
-      } catch (error) {
-        console.error("[Onboarding] Failed to auto-create sales strategy on completion:", error)
+  // 설문 데이터가 있는 경우에만 sales strategy 자동 생성 시도
+  if (progress.surveyData) {
+    const salesStrategies = await salesStrategyService.getWorkspaceSalesStrategies(workspaceId)
+    if (salesStrategies.length === 0) {
+      const surveyData = progress.surveyData as OnboardingSurveyData
+      if (surveyData.industry && surveyData.target && surveyData.country && surveyData.experience) {
+        try {
+          await salesStrategyService.findOrCreateAndLinkSalesStrategy(workspaceId, {
+            industry: surveyData.industry as Parameters<
+              typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
+            >[1]["industry"],
+            target: surveyData.target as Parameters<
+              typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
+            >[1]["target"],
+            country: surveyData.country as Parameters<
+              typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
+            >[1]["country"],
+            experience: surveyData.experience as Parameters<
+              typeof salesStrategyService.findOrCreateAndLinkSalesStrategy
+            >[1]["experience"],
+          })
+          console.log("[Onboarding] Auto-created sales strategy on completion")
+        } catch (error) {
+          console.error("[Onboarding] Failed to auto-create sales strategy on completion:", error)
+        }
       }
     }
   }

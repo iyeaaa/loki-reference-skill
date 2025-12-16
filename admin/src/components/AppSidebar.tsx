@@ -128,12 +128,6 @@ interface MenuItem {
  */
 const getMainMenuItems = (t: (key: string) => string): MenuItem[] => [
   {
-    title: t("sidebar.menu.home"),
-    url: "/dashboard",
-    icon: Home,
-    permission: "public",
-  },
-  {
     title: t("sidebar.menu.analytics"),
     url: "/analytics",
     icon: BarChart3,
@@ -162,6 +156,12 @@ const getMainMenuItems = (t: (key: string) => string): MenuItem[] => [
     url: "/replied-emails",
     icon: Mail,
     permission: { resource: IAM_RESOURCES.EMAILS, action: IAM_ACTIONS.LIST },
+  },
+  {
+    title: t("sidebar.menu.home"),
+    url: "/dashboard",
+    icon: Home,
+    permission: "public",
   },
   // {
   //   title: t("sidebar.menu.geminiSearch"),

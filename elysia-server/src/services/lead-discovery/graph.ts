@@ -11,6 +11,7 @@ import { executeBigQuery } from "./nodes/bigquery-executor"
 import { generateBigQueryParams } from "./nodes/bigquery-param-generator"
 import { recommendBuyers } from "./nodes/buyer-recommender"
 import { routeMode } from "./nodes/mode-router"
+import { understandQuery } from "./nodes/understand-query"
 import { analyzeWebsite } from "./nodes/website-analyzer"
 import type { LeadDiscoveryState } from "./state"
 import { LeadDiscoveryStateAnnotation } from "./state"
@@ -18,6 +19,7 @@ import { LeadDiscoveryStateAnnotation } from "./state"
 // Node names as constants
 const NODE_NAMES = {
   ROUTE_MODE: "routeMode",
+  UNDERSTAND_QUERY: "understandQuery",
   ANALYZE_WEBSITE: "analyzeWebsite",
   RECOMMEND_BUYERS: "recommendBuyers",
   GENERATE_PARAMS: "generateParams",
@@ -139,11 +141,31 @@ function routeAfterModeDetection(state: LeadDiscoveryState): NodeName {
     return NODE_NAMES.ANALYZE_WEBSITE
   }
 
-  // Advanced mode - skip to BigQuery params
+  // Advanced mode - go through understandQuery for clarification
   leadDiscoveryLogger.routeDecision(
     NODE_NAMES.ROUTE_MODE,
+    NODE_NAMES.UNDERSTAND_QUERY,
+    "advanced mode - checking query clarity",
+  )
+  return NODE_NAMES.UNDERSTAND_QUERY
+}
+
+function routeAfterUnderstandQuery(state: LeadDiscoveryState): NodeName {
+  if (state.error) {
+    leadDiscoveryLogger.routeDecision(
+      NODE_NAMES.UNDERSTAND_QUERY,
+      NODE_NAMES.HANDLE_ERROR,
+      "query understanding failed",
+    )
+    return NODE_NAMES.HANDLE_ERROR
+  }
+
+  // If clarification is needed, the node will interrupt
+  // After resume, we proceed to generate params
+  leadDiscoveryLogger.routeDecision(
+    NODE_NAMES.UNDERSTAND_QUERY,
     NODE_NAMES.GENERATE_PARAMS,
-    "advanced mode - direct search",
+    `query understood - proceeding to param generation`,
   )
   return NODE_NAMES.GENERATE_PARAMS
 }
@@ -237,6 +259,7 @@ export function createLeadDiscoveryGraph() {
 
   // Add nodes
   workflow.addNode(NODE_NAMES.ROUTE_MODE, routeMode)
+  workflow.addNode(NODE_NAMES.UNDERSTAND_QUERY, understandQuery)
   workflow.addNode(NODE_NAMES.ANALYZE_WEBSITE, analyzeWebsite)
   workflow.addNode(NODE_NAMES.RECOMMEND_BUYERS, recommendBuyers)
   workflow.addNode(NODE_NAMES.GENERATE_PARAMS, generateBigQueryParams)
@@ -252,6 +275,12 @@ export function createLeadDiscoveryGraph() {
   // @ts-expect-error - LangGraph type inference issue
   workflow.addConditionalEdges(NODE_NAMES.ROUTE_MODE, routeAfterModeDetection, {
     [NODE_NAMES.ANALYZE_WEBSITE]: NODE_NAMES.ANALYZE_WEBSITE,
+    [NODE_NAMES.UNDERSTAND_QUERY]: NODE_NAMES.UNDERSTAND_QUERY,
+    [NODE_NAMES.HANDLE_ERROR]: NODE_NAMES.HANDLE_ERROR,
+  })
+
+  // @ts-expect-error - LangGraph type inference issue
+  workflow.addConditionalEdges(NODE_NAMES.UNDERSTAND_QUERY, routeAfterUnderstandQuery, {
     [NODE_NAMES.GENERATE_PARAMS]: NODE_NAMES.GENERATE_PARAMS,
     [NODE_NAMES.HANDLE_ERROR]: NODE_NAMES.HANDLE_ERROR,
   })

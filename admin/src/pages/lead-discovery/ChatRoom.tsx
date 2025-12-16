@@ -34,6 +34,7 @@ import { useCreateCustomerGroup } from "@/lib/api/hooks/customer-groups"
 import {
   enrichLeads,
   type LeadDiscoveryEventData,
+  useLeadDiscoveryClarifyMutation,
   useLeadDiscoveryMutation,
   useLeadDiscoverySelectMutation,
 } from "@/lib/api/hooks/lead-discovery"
@@ -43,6 +44,7 @@ import { useAuth } from "@/lib/auth-provider"
 import { useWorkspace } from "@/lib/hooks/useWorkspace"
 import { cn } from "@/lib/utils"
 import { BuyerRecommendationCards } from "./components/BuyerRecommendationCards"
+import { ClarificationCards } from "./components/ClarificationCards"
 import { FilterSearchForm } from "./components/FilterSearchForm"
 import { LeadDiscoveryProgress } from "./components/LeadDiscoveryProgress"
 import {
@@ -408,6 +410,14 @@ export function ChatRoom() {
         sessionId,
       }))
     },
+    onClarificationRequired: (clarificationData, sessionId) => {
+      console.log("[ChatRoom] Clarification required:", clarificationData)
+      setStreamingState((prev) => ({
+        ...prev,
+        clarificationData,
+        sessionId,
+      }))
+    },
     onResults: (results, totalCount) => {
       console.log("[ChatRoom] Lead discovery results:", totalCount)
       const newCustomers = convertResultsToCustomers(results)
@@ -583,9 +593,62 @@ export function ChatRoom() {
     },
   })
 
+  // Clarify mutation for handling clarification answers
+  const clarifyMutation = useLeadDiscoveryClarifyMutation({
+    onStatusChange: (data: LeadDiscoveryEventData) => {
+      setStreamingState((prev) => ({
+        ...prev,
+        status: data.status,
+        message: data.message,
+        progress: data.progress,
+        mode: data.mode,
+        customerAnalysisSummary: data.customerAnalysisSummary || prev.customerAnalysisSummary,
+      }))
+    },
+    onResults: (results, totalCount) => {
+      console.log("[ChatRoom] Clarify results:", totalCount)
+      const newCustomers = convertResultsToCustomers(results)
+      setCustomers(newCustomers)
+    },
+    onComplete: (data) => {
+      setStreamingState((prev) => {
+        if (prev.messageId) {
+          updateMessage(prev.messageId, {
+            content: `**${(data.totalCount ?? 0).toLocaleString()}개 리드**를 탐색했습니다.\n\n오른쪽 테이블에서 결과를 확인하세요.`,
+          })
+        }
+
+        return {
+          ...prev,
+          status: "complete" as const,
+          message: "",
+          progress: 100,
+          sessionId: data.sessionId,
+          hasMore: data.hasMore,
+          totalAvailable: data.totalAvailable,
+          loadedOffset: 100,
+          clarificationData: undefined, // Clear clarification data after completion
+        }
+      })
+    },
+    onError: (error) => {
+      console.error("[ChatRoom] Clarify error:", error)
+      setStreamingState((prev) => {
+        if (prev.messageId) {
+          updateMessage(prev.messageId, {
+            content: `오류가 발생했습니다: ${error}`,
+          })
+        }
+        return initialStreamingState
+      })
+    },
+  })
+
   // 파생 상태
-  const isSearching = searchMutation.isPending || selectMutation.isPending
+  const isSearching =
+    searchMutation.isPending || selectMutation.isPending || clarifyMutation.isPending
   const isWaitingSelection = streamingState.status === "waiting_selection"
+  const isWaitingClarification = streamingState.status === "waiting_clarification"
 
   // Markdown components for consistent styling
   const markdownComponents = useMemo(
@@ -754,6 +817,58 @@ export function ChatRoom() {
       setStreamingState,
       setSelectedTarget,
     ],
+  )
+
+  // 확인 질문 답변 핸들러
+  const handleClarificationSubmit = useCallback(
+    (answers: Record<string, string>) => {
+      if (!selectedWorkspace?.id || selectedWorkspace.id === "all") return
+      if (!streamingState.sessionId) {
+        console.error("[ChatRoom] No session ID for clarification")
+        return
+      }
+
+      const now = Date.now()
+
+      // 답변 메시지 추가
+      const answerText = Object.entries(answers)
+        .map(([field, value]) => `${field}: ${value}`)
+        .join(", ")
+      const answerMessage: ChatMessage = {
+        id: `msg-${now}-clarify`,
+        role: "user",
+        content: answerText,
+        timestamp: new Date(now),
+      }
+      addMessage(answerMessage)
+
+      // 새 응답 메시지 추가
+      const responseId = `msg-${now + 1}-response`
+      const responseMessage: ChatMessage = {
+        id: responseId,
+        role: "assistant",
+        content: "",
+        timestamp: new Date(now + 1),
+      }
+      addMessage(responseMessage)
+
+      // 스트리밍 상태 업데이트
+      setStreamingState((prev) => ({
+        ...prev,
+        messageId: responseId,
+        status: "searching",
+        message: "검색 쿼리를 준비하고 있어요",
+        progress: 40,
+      }))
+
+      // Clarify API 호출
+      clarifyMutation.mutate({
+        sessionId: streamingState.sessionId,
+        answers,
+        workspaceId: selectedWorkspace.id,
+      })
+    },
+    [selectedWorkspace, streamingState.sessionId, addMessage, clarifyMutation, setStreamingState],
   )
 
   // 필터 검색 핸들러 (드롭다운 폼에서 호출)
@@ -1258,6 +1373,19 @@ export function ChatRoom() {
                                     streamingState.status === "analyzing" ||
                                     streamingState.status === "recommending"
                                   }
+                                />
+                              )}
+
+                            {/* 확인 질문 UI - 모호한 검색어에 대해 확인 질문 표시 */}
+                            {message.id === streamingState.messageId &&
+                              isWaitingClarification &&
+                              streamingState.clarificationData && (
+                                <ClarificationCards
+                                  clarificationData={streamingState.clarificationData}
+                                  onSubmit={handleClarificationSubmit}
+                                  disabled={isSearching}
+                                  isSubmitting={clarifyMutation.isPending}
+                                  className="max-w-2xl"
                                 />
                               )}
 

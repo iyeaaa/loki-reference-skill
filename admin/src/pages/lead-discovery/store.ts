@@ -184,7 +184,7 @@ export const resetAllAtom = atom(null, (_get, set) => {
 // Streaming State (로컬스토리지에 저장하여 새로고침 후에도 유지)
 // ============================================
 
-import type { LeadDiscoveryStatus } from "@/lib/api/hooks/lead-discovery"
+import type { ClarificationData, LeadDiscoveryStatus } from "@/lib/api/hooks/lead-discovery"
 import type { AnalyzedPage, BuyerRecommendation } from "@/lib/api/types/lead-discovery"
 
 // 스트리밍 상태 인터페이스
@@ -211,6 +211,8 @@ export interface StreamingState {
   hasMore?: boolean
   totalAvailable?: number
   loadedOffset?: number // 현재까지 로드된 offset
+  // 확인 질문 상태 (Human-in-the-Loop Clarification)
+  clarificationData?: ClarificationData
 }
 
 export const initialStreamingState: StreamingState = {

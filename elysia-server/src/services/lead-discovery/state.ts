@@ -9,6 +9,28 @@ import type { NodeEventEmitter } from "../chatbot/sse-context"
 // Search modes
 export type SearchMode = "basic" | "advanced"
 
+// Clarification question for ambiguous queries
+export interface ClarificationQuestion {
+  field: "country" | "industry" | "employeeRange"
+  label: string
+  options: string[]
+  required: boolean
+}
+
+// Clarification state for human-in-the-loop query refinement
+export interface ClarificationState {
+  needed: boolean
+  questions: ClarificationQuestion[]
+  answers: Record<string, string>
+  confidence: number
+  understood: {
+    country?: string
+    industry?: string
+    employeeRange?: string
+    keywords?: string[]
+  }
+}
+
 // Buyer recommendation from AI analysis
 export interface BuyerRecommendation {
   id: string
@@ -146,6 +168,10 @@ export interface LeadDiscoveryState {
   // Human-in-the-loop confirmation
   isConfirmed: boolean
   confirmationMessage?: string
+
+  // Clarification for ambiguous queries (advanced mode)
+  clarification?: ClarificationState
+  needsClarification: boolean
 }
 
 // LangGraph State Annotation
@@ -261,5 +287,13 @@ export const LeadDiscoveryStateAnnotation = Annotation.Root({
   confirmationMessage: Annotation<string | undefined>({
     reducer: (prev, next) => (next !== undefined ? next : prev),
     default: () => undefined,
+  }),
+  clarification: Annotation<ClarificationState | undefined>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => undefined,
+  }),
+  needsClarification: Annotation<boolean>({
+    reducer: (prev, next) => (next !== undefined ? next : prev),
+    default: () => false,
   }),
 })

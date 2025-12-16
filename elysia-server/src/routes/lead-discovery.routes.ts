@@ -40,7 +40,7 @@ async function sendInterruptEvent(
   const stateValues = interruptState.values as LeadDiscoveryState
   const duration = Date.now() - startTime
 
-  // ⭐ interrupt() payload에서 recommendations 추출
+  // ⭐ interrupt() payload에서 데이터 추출
   // interrupt()가 예외를 던지기 때문에 state에는 저장되지 않고
   // tasks[].interrupts[].value에 payload가 저장됨
   type InterruptTask = {
@@ -57,44 +57,80 @@ async function sendInterruptEvent(
           estimatedLeadCount?: number
           keywords?: string[]
         }>
+        // Clarification-specific fields
+        questions?: Array<{
+          field: string
+          label: string
+          options: string[]
+          required: boolean
+        }>
+        understood?: {
+          country?: string
+          industry?: string
+          employeeRange?: string
+          keywords?: string[]
+        }
+        confidence?: number
       }
     }>
   }
 
   const tasks = interruptState.tasks as InterruptTask[] | undefined
   const interruptPayload = tasks?.[0]?.interrupts?.[0]?.value
-
-  // payload에서 recommendations 가져오기 (state보다 우선)
-  const recommendations =
-    interruptPayload?.recommendations || stateValues.buyerRecommendations || []
+  const interruptType = interruptPayload?.type || "buyer_selection_required"
 
   leadDiscoveryLogger.info(
-    `[SSE] Interrupt payload: hasPayload=${!!interruptPayload} payloadRecs=${interruptPayload?.recommendations?.length || 0} stateRecs=${stateValues.buyerRecommendations?.length || 0}`,
+    `[SSE] Interrupt payload: type=${interruptType} hasPayload=${!!interruptPayload}`,
   )
 
-  session.push({
-    event: "interrupt",
-    data: {
-      type: interruptPayload?.type || "buyer_selection_required",
-      message: interruptPayload?.message || "원하시는 바이어 타겟을 선택해주세요",
-      sessionId,
-      recommendations: recommendations.map((r) => ({
-        id: r.id,
-        country: r.country,
-        industry: r.industry,
-        subIndustry: r.subIndustry,
-        reasoning: r.reasoning,
-        estimatedLeadCount: r.estimatedLeadCount,
-        keywords: r.keywords,
-      })),
-      websiteAnalysis: stateValues.websiteAnalysis,
-      duration,
-    },
-  })
+  // Handle different interrupt types
+  if (interruptType === "clarification_required") {
+    // Clarification interrupt - send questions to frontend
+    session.push({
+      event: "interrupt",
+      data: {
+        type: "clarification_required",
+        message: interruptPayload?.message || "검색 조건을 더 명확히 해주세요",
+        sessionId,
+        questions: interruptPayload?.questions || [],
+        understood: interruptPayload?.understood || {},
+        confidence: interruptPayload?.confidence || 0,
+        duration,
+      },
+    })
 
-  leadDiscoveryLogger.info(
-    `[SSE] Interrupt event sent with ${recommendations.length} recommendations`,
-  )
+    leadDiscoveryLogger.info(
+      `[SSE] Clarification interrupt sent with ${interruptPayload?.questions?.length || 0} questions`,
+    )
+  } else {
+    // Buyer selection interrupt - send recommendations to frontend
+    const recommendations =
+      interruptPayload?.recommendations || stateValues.buyerRecommendations || []
+
+    session.push({
+      event: "interrupt",
+      data: {
+        type: interruptPayload?.type || "buyer_selection_required",
+        message: interruptPayload?.message || "원하시는 바이어 타겟을 선택해주세요",
+        sessionId,
+        recommendations: recommendations.map((r) => ({
+          id: r.id,
+          country: r.country,
+          industry: r.industry,
+          subIndustry: r.subIndustry,
+          reasoning: r.reasoning,
+          estimatedLeadCount: r.estimatedLeadCount,
+          keywords: r.keywords,
+        })),
+        websiteAnalysis: stateValues.websiteAnalysis,
+        duration,
+      },
+    })
+
+    leadDiscoveryLogger.info(
+      `[SSE] Buyer selection interrupt sent with ${recommendations.length} recommendations`,
+    )
+  }
 }
 
 // Create graph instance
@@ -488,6 +524,178 @@ export const leadDiscoveryRoutes = new Elysia({ prefix: "/api/v1/lead-discovery"
         tags: ["lead-discovery"],
         summary: "Resume search with user's buyer selection",
         description: "Called after user selects a buyer recommendation from the interrupt.",
+      },
+    },
+  )
+
+  // Resume with clarification answers (for clarification interrupt flow)
+  .post(
+    "/clarify",
+    async ({ body }) => {
+      const { sessionId, answers } = body
+      const startTime = Date.now()
+
+      leadDiscoveryLogger.info(
+        `[Clarify] Received answers for session ${sessionId}: ${JSON.stringify(answers)}`,
+      )
+
+      // Use createSSEResponse for real-time event streaming
+      return createSSEResponse(
+        async (session) => {
+          try {
+            // Create emitter that pushes directly to SSE session
+            const emitter = createNodeEmitter(session)
+
+            session.push({
+              event: "connected",
+              data: { sessionId, resuming: true, clarifying: true, timestamp: Date.now() },
+            })
+
+            const config = {
+              configurable: {
+                thread_id: sessionId,
+              },
+            }
+
+            // Get current state
+            const currentState = await leadDiscoveryGraph.getState(config)
+            const state = currentState.values as LeadDiscoveryState
+
+            leadDiscoveryLogger.info(
+              `[Clarify] Current state - clarification: ${JSON.stringify(state.clarification)}`,
+            )
+
+            // Build updated clarification state with answers
+            const updatedClarification = {
+              ...(state.clarification || {
+                needed: false,
+                questions: [],
+                confidence: 0,
+                understood: {},
+              }),
+              answers,
+              needed: false,
+            }
+
+            // Resume graph with clarification answers
+            const resumeCommand = new Command({
+              resume: { clarificationAnswers: answers, confirmed: true },
+              update: {
+                clarification: updatedClarification,
+                needsClarification: false,
+                _emitter: emitter,
+              },
+            })
+
+            leadDiscoveryLogger.info(`[Clarify] Resuming graph with answers`)
+
+            // Stream resumed execution
+            for await (const _event of await leadDiscoveryGraph.stream(
+              resumeCommand as unknown as null,
+              {
+                ...config,
+                streamMode: "values",
+              },
+            )) {
+              // Check for client disconnect
+              if (session.closed) {
+                leadDiscoveryLogger.warn("[SSE] Client disconnected during clarify streaming")
+                break
+              }
+            }
+
+            // Get final state
+            const finalState = await leadDiscoveryGraph.getState(config)
+            const finalStateValues = finalState.values as LeadDiscoveryState
+
+            // Check if another interrupt occurred (e.g., still needs more clarification)
+            const isInterrupted = finalState.next && finalState.next.length > 0
+            const hasInterruptTasks = finalState.tasks?.some(
+              (task: { interrupts?: unknown[] }) => task.interrupts && task.interrupts.length > 0,
+            )
+
+            if (isInterrupted || hasInterruptTasks) {
+              leadDiscoveryLogger.info(`[Clarify] Another interrupt detected after clarification`)
+              await sendInterruptEvent(session, leadDiscoveryGraph, config, sessionId, startTime)
+              await new Promise((resolve) => setTimeout(resolve, 300))
+              return
+            }
+
+            const duration = Date.now() - startTime
+            const success = !finalStateValues.error && finalStateValues.searchResults.length > 0
+
+            leadDiscoveryLogger.sessionEnd(
+              sessionId,
+              duration,
+              success,
+              finalStateValues.totalResultCount,
+            )
+
+            session.push({
+              event: "complete",
+              data: {
+                sessionId,
+                success,
+                resultCount: finalStateValues.searchResults.length,
+                totalCount: finalStateValues.totalResultCount,
+                results: finalStateValues.searchResults,
+                sql: finalStateValues.bigQuerySQL,
+                explanation: finalStateValues.bigQueryExplanation,
+                error: finalStateValues.error,
+                duration,
+                hasMore: finalStateValues.hasMore,
+                totalAvailable: finalStateValues.totalAvailable,
+              },
+            })
+
+            // Give client time to process final events
+            await new Promise((resolve) => setTimeout(resolve, 300))
+          } catch (error) {
+            // GraphInterrupt is normal interrupt behavior
+            if (error instanceof GraphInterrupt) {
+              leadDiscoveryLogger.info(`[Clarify] GraphInterrupt caught - another interrupt needed`)
+              const config = { configurable: { thread_id: sessionId } }
+              await sendInterruptEvent(session, leadDiscoveryGraph, config, sessionId, startTime)
+              await new Promise((resolve) => setTimeout(resolve, 300))
+              return
+            }
+
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            leadDiscoveryLogger.error("Clarify resume failed", { error: errorMessage })
+
+            session.push({
+              event: "error",
+              data: {
+                sessionId,
+                error: errorMessage,
+                timestamp: Date.now(),
+              },
+            })
+          }
+        },
+        {
+          keepAlive: true,
+          keepAliveInterval: 30000,
+          onClose: () => {
+            leadDiscoveryLogger.info(
+              `[SSE] Client disconnected from /clarify (session: ${sessionId})`,
+            )
+          },
+        },
+      )
+    },
+    {
+      body: t.Object({
+        sessionId: t.String({ description: "Session ID from the search request" }),
+        answers: t.Record(t.String(), t.String(), {
+          description: "Map of field names to selected values",
+        }),
+        workspaceId: t.String({ format: "uuid" }),
+      }),
+      detail: {
+        tags: ["lead-discovery"],
+        summary: "Resume search with clarification answers",
+        description: "Called after user answers clarification questions from the interrupt.",
       },
     },
   )

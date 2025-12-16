@@ -23,9 +23,30 @@ export type LeadDiscoveryStatus =
   | "analyzing"
   | "recommending"
   | "waiting_selection"
+  | "waiting_clarification"
   | "searching"
   | "complete"
   | "error"
+
+// Clarification question type
+export interface ClarificationQuestion {
+  field: "country" | "industry" | "employeeRange"
+  label: string
+  options: string[]
+  required: boolean
+}
+
+// Clarification data from interrupt
+export interface ClarificationData {
+  questions: ClarificationQuestion[]
+  understood: {
+    country?: string
+    industry?: string
+    employeeRange?: string
+    keywords?: string[]
+  }
+  confidence: number
+}
 
 // SSE 이벤트 데이터 타입
 export interface LeadDiscoveryEventData {
@@ -58,6 +79,7 @@ export interface UseLeadDiscoveryMutationOptions {
   onStatusChange?: (data: LeadDiscoveryEventData) => void
   onWebsiteAnalysis?: (analysis: WebsiteAnalysis) => void
   onRecommendations?: (recommendations: BuyerRecommendation[], sessionId: string) => void
+  onClarificationRequired?: (data: ClarificationData, sessionId: string) => void
   onResults?: (results: BigQueryResult[], totalCount: number) => void
   onComplete?: (data: LeadDiscoveryEventData) => void
   onError?: (error: string) => void
@@ -345,9 +367,45 @@ async function processSSEStream(
       }
 
       case "interrupt": {
-        // Human-in-the-loop: 사용자 선택 필요
-        log.response("interrupt", { type: data.type, hasRecommendations: !!data.recommendations })
+        // Human-in-the-loop: 사용자 선택 또는 확인 질문 필요
+        const interruptType = data.type as string
+        log.response("interrupt", {
+          type: interruptType,
+          hasRecommendations: !!data.recommendations,
+          hasQuestions: !!data.questions,
+        })
 
+        // Handle clarification_required interrupt
+        if (interruptType === "clarification_required") {
+          const questions = (data.questions as ClarificationQuestion[]) || []
+          const understood = (data.understood as ClarificationData["understood"]) || {}
+          const confidence = (data.confidence as number) || 0
+
+          log.info(
+            `Clarification interrupt: ${questions.length} questions, confidence=${confidence}`,
+          )
+
+          const clarificationData: ClarificationData = {
+            questions,
+            understood,
+            confidence,
+          }
+
+          options.onClarificationRequired?.(clarificationData, sessionIdRef.current || "")
+
+          const eventData: LeadDiscoveryEventData = {
+            status: "waiting_clarification",
+            message: (data.message as string) || "검색 조건을 더 명확히 해주세요",
+            progress: 30,
+            mode: currentMode,
+            sessionId: sessionIdRef.current,
+          }
+          options.onStatusChange?.(eventData)
+          lastEventData = eventData
+          break
+        }
+
+        // Handle buyer_selection_required interrupt (existing logic)
         // recommendations는 data에 직접 있거나 payload 안에 있을 수 있음
         const recommendations =
           (data.recommendations as BuyerRecommendation[]) ||
@@ -559,11 +617,71 @@ export function useLeadDiscoverySelectMutation(options: UseLeadDiscoveryMutation
   })
 }
 
+// Clarify request type
+interface ClarifyRequest {
+  sessionId: string
+  answers: Record<string, string>
+  workspaceId: string
+}
+
+/**
+ * TanStack Query mutation for clarification answers
+ * 확인 질문 답변 후 검색 재개
+ */
+export function useLeadDiscoveryClarifyMutation(options: UseLeadDiscoveryMutationOptions) {
+  const sessionIdRef = { current: undefined as string | undefined }
+
+  return useMutation({
+    mutationKey: ["lead-discovery", "clarify"],
+    mutationFn: async (request: ClarifyRequest) => {
+      sessionIdRef.current = request.sessionId
+      const url = `${BASE_URL}/api/v1/lead-discovery/clarify`
+
+      log.request("Clarify", {
+        url,
+        sessionId: request.sessionId,
+        answers: request.answers,
+      })
+
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "text/event-stream",
+          },
+          body: JSON.stringify({
+            sessionId: request.sessionId,
+            answers: request.answers,
+            workspaceId: request.workspaceId,
+          }),
+        })
+
+        log.response("HTTP Response", { status: response.status, ok: response.ok })
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          log.error("HTTP Error", { status: response.status, body: errorText })
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+
+        return processSSEStream(response, options, sessionIdRef)
+      } catch (error) {
+        log.error("Clarify fetch failed", error)
+        throw error
+      }
+    },
+    retry: 1,
+    retryDelay: 1000,
+  })
+}
+
 // Query Keys (향후 히스토리 기능용)
 export const leadDiscoveryKeys = {
   all: ["lead-discovery"] as const,
   search: () => [...leadDiscoveryKeys.all, "search"] as const,
   select: () => [...leadDiscoveryKeys.all, "select"] as const,
+  clarify: () => [...leadDiscoveryKeys.all, "clarify"] as const,
 }
 
 // ============================================

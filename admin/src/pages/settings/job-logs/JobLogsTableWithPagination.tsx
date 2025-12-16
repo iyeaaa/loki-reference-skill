@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  ArrowUp,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -180,6 +181,9 @@ export function JobLogsTableWithPagination({
                   상태
                 </th>
                 <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  우선순위
+                </th>
+                <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   시도
                 </th>
                 <th className="p-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -199,7 +203,7 @@ export function JobLogsTableWithPagination({
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {logs.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={10} className="p-8 text-center text-muted-foreground">
                     {isFetching ? "로딩 중..." : "Job 로그가 없습니다"}
                   </td>
                 </tr>
@@ -245,6 +249,16 @@ export function JobLogsTableWithPagination({
                           {statusConfig.icon}
                           {statusConfig.label}
                         </Badge>
+                      </td>
+                      <td className="p-2 text-sm text-gray-600 dark:text-gray-400">
+                        {log.priority !== null && log.priority !== 0 ? (
+                          <span className="flex items-center gap-1">
+                            <ArrowUp className="h-3 w-3 text-orange-500" />
+                            {log.priority}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </td>
                       <td className="p-2 text-sm text-gray-600 dark:text-gray-400">
                         {log.attemptsMade}/{log.maxAttempts}
@@ -433,6 +447,19 @@ export function JobLogsTableWithPagination({
                   <span className="ml-2">{formatDuration(selectedLog.durationMs)}</span>
                 </div>
                 <div>
+                  <span className="text-muted-foreground">우선순위:</span>
+                  <span className="ml-2">
+                    {selectedLog.priority !== null && selectedLog.priority !== 0 ? (
+                      <span className="inline-flex items-center gap-1 text-orange-600">
+                        <ArrowUp className="h-3 w-3" />
+                        {selectedLog.priority}
+                      </span>
+                    ) : (
+                      "-"
+                    )}
+                  </span>
+                </div>
+                <div>
                   <span className="text-muted-foreground">Worker:</span>
                   <span className="ml-2 font-mono text-xs">{selectedLog.workerName || "-"}</span>
                 </div>
@@ -440,6 +467,14 @@ export function JobLogsTableWithPagination({
                   <span className="text-muted-foreground">처리 서버:</span>
                   <span className="ml-2 font-mono text-xs">{selectedLog.processedBy || "-"}</span>
                 </div>
+                {selectedLog.delayedUntil && (
+                  <div>
+                    <span className="text-muted-foreground">지연 예정:</span>
+                    <span className="ml-2 text-orange-600">
+                      {new Date(selectedLog.delayedUntil).toLocaleString("ko-KR")}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Timestamps */}

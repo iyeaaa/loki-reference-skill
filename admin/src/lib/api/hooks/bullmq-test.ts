@@ -9,6 +9,7 @@ import type {
   JobCounts,
   TestQueueParams,
 } from "../types/bullmq-test"
+import { jobLogKeys } from "./job-logs"
 
 // Query Keys
 export const bullmqTestKeys = {
@@ -396,10 +397,14 @@ export function useBullMQSSE(options: UseBullMQSSEOptions = {}) {
                 event.type === "job-failed" ||
                 event.type === "job-active" ||
                 event.type === "job-waiting" ||
-                event.type === "job-removed"
+                event.type === "job-removed" ||
+                event.type === "job-progress" ||
+                event.type === "job-stalled"
               ) {
-                queryClient.invalidateQueries({ queryKey: bullmqTestKeys.testQueue() })
-                queryClient.invalidateQueries({ queryKey: bullmqTestKeys.queues() })
+                // Invalidate BullMQ test queries
+                queryClient.invalidateQueries({ queryKey: bullmqTestKeys.all })
+                // Also invalidate Job Logs queries for real-time sync
+                queryClient.invalidateQueries({ queryKey: jobLogKeys.all })
               }
             } catch {
               console.warn("[BullMQ-SSE] Failed to parse event:", currentData)
